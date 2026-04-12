@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>WebGPU Message/Text Test</title>
+  <link rel="icon" href="data:," />
+  <style>
+    html, body {
+      margin: 0;
+      background: #243123;
+      color: #d8e6ff;
+      font-family: "Courier New", monospace;
+    }
+    canvas {
+      display: block;
+      width: 960px;
+      height: 720px;
+    }
+    #hud {
+      position: fixed;
+      left: 10px;
+      top: 8px;
+      padding: 4px 8px;
+      background: rgba(12, 18, 12, 0.35);
+      border-radius: 4px;
+      white-space: pre;
+      pointer-events: none;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="canvas" width="960" height="720"></canvas>
+  <div id="hud">message/text test</div>
+  <script type="module" src="./main.js"></script>
+</body>
+</html>

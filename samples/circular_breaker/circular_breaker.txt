@@ -1,0 +1,40 @@
+サンプル: circular_breaker
+
+概要
+- webgの基本機能（シーン管理、衝突、HUD、音）をまとめて使った3Dブロック崩しの統合サンプルです。
+- ゲーム実装時の「複数Shape再利用」「ノード更新」「入力反映」の参考実装として使えます。
+- キャンバスはPC/スマホともにブラウザのviewport全体へ追従して表示されます。
+- 縦長画面ではFOVを自動調整して視野を確保します。
+- gameplay 中の短い状態表示は `drawHud()` の canvas HUD に残しつつ、操作説明は `WebgApp.createHelpPanel()` で左上の help panel へ分けています。
+
+このサンプルで使うwebg機能
+- app 側 `GameStateManager`: `intro / play / pause / stage-clear / result` の top-level phase 管理
+- `Space` / `Node`: ゲームオブジェクト管理
+- `Shape`: 床・壁・ブロック・パドル・パック生成
+- `SmoothShader`: 法線マップ付き/無しブロック描画を 1 本で扱う標準材質
+- `ParticleEmitter`: ブロック破壊時の spark effect をまとめて管理
+- `Texture`: ブロック用の手続きテクスチャ生成
+- `Message`: `drawHud()` から描く gameplay 専用 HUD
+- `Touch`: `← / → / A / D / R` の固定ボタン
+- `GameAudioSynth`: melody preset と SE catalog を使った BGM/SE再生
+
+確認ポイント
+- パドル移動と回転に対してパックの反射方向が安定して更新されるかを確認し、衝突応答ロジックの基礎品質を検証します
+- パックを `paddleNode` ローカルZ正側へ入れた瞬間に `PACK` 残数が1減ること、領域に留まり続けても追加減算されないことを確認します
+- `PACK` が 0 になったフレームでゲーム終了し、終了HUDにハイスコア上位5件が表示されることを確認します
+- 緑色の補給ブロック（法線/テクスチャ無し、`SmoothShader` の単色経路）を破壊したときに `PACK` 残数が1増える演出が出ることを確認します
+- ブロック破壊時にスコアや進捗表示（`(現数/目標数)`）が即時更新されるかを確認し、`drawHud()` による gameplay HUD 連携が正しいことを確認します
+- 左上の help panel に操作説明が表示され、`Hide Help` を押すと `Show Help` button だけが残り、`Show Help` で再表示できることを確認します
+- SE/BGM がゲーム状態に応じて再生されるか（BGM preset, 通知SE, 衝突SE）が整理されているかを確認します
+
+操作説明
+- 左上 help panel の `Hide Help` / `Show Help`: 操作説明本文の表示 / 非表示
+- `ArrowLeft` / `ArrowRight`: パドルを長軸方向に移動
+- `A` / `D`: パドルを回転
+- `R`: プレイ中はパック位置をリセット、ゲーム終了後はゲームを再スタート
+- `K`: 一時停止のON/OFF
+- `O`: ゲームオーバーを強制
+- `P`: スクリーンショット保存
+- 任意キーまたはクリック: ステージ開始待機中の開始トリガ
+- スマホ（coarse pointer）では画面下にタッチボタン `← / → / A / D / R` を表示
+- スマホUIに `O / P / K` は表示しない

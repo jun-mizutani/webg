@@ -1,0 +1,353 @@
+<!doctype html>
+<!-- book/examples/28_01.html 2026/04/10 -->
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>28_01 bone と marker で skinning を検証する例</title>
+  <link rel="stylesheet" href="./example.css" />
+</head>
+<body>
+  <div class="page">
+    <h1>book/examples</h1>
+    <h2>28_01 bone と marker で skinning を検証する例</h2>
+    <div class="section-card">
+      <p>`book/28_スキニング.md` の数式部分だけを検証するために、bone と marker だけを表示する実行例です</p>
+      <p class="note">gray / red / green / cyan は、28章の `buildSkinMatrix()`、`transformVertexByBone()`、`blendVertex()` を CPU 側でそのまま実行して得た位置です。内部では bone node に固定した参照点も持ち、chapter の式と同じ結果になっているかを status 行で確認できます</p>
+    </div>
+
+    <div class="canvas-block">
+      <canvas id="canvas" width="960" height="720"></canvas>
+    </div>
+
+    <pre id="code"></pre>
+
+    <script type="module" id="example-source">
+import WebgApp from "../../webg/WebgApp.js";
+import SmoothShader from "../../webg/SmoothShader.js";
+import EyeRig from "../../webg/EyeRig.js";
+import Primitive from "../../webg/Primitive.js";
+import Shape from "../../webg/Shape.js";
+import Skeleton from "../../webg/Skeleton.js";
+
+const CYLINDER_HEIGHT = 8.0;
+const CYLINDER_RADIUS = 0.45;
+const CYLINDER_RINGS = 14;
+const CYLINDER_SEGMENTS = 24;
+const MARKER_PROBE_RADIUS = 1.15;
+const REPRESENTATIVE_VERTEX = {
+  ring: 8,
+  segment: 0
+};
+const HELP_LINES = [
+  "Drag: orbit camera  Wheel: zoom",
+  "Space: pause  B: show bones  R: reset camera",
+  "gray=rest  red=bone0 only  green=bone1 only  cyan=weighted average"
+];
+
+// 28_01 は mesh を混ぜず、2 本の bone 階層だけを作って座標系の確認に集中する
+const createTwoBoneSkeleton = (height = CYLINDER_HEIGHT) => {
+  const skeleton = new Skeleton();
+  const rootBone = skeleton.addBone(null, "rootBone");
+  const childBone = skeleton.addBone(rootBone, "childBone");
+
+  // rootBone は円柱の下端、childBone は関節位置に相当する中央付近へ置く
+  rootBone.setRestPosition(0.0, 0.0, 0.0);
+  childBone.setRestPosition(0.0, height * 0.5, 0.0);
+
+  skeleton.bindRestPose();
+  skeleton.setBoneOrder(["rootBone", "childBone"]);
+  return { skeleton, rootBone, childBone };
+};
+
+// debugBone を通常ライティングで描き、joint の向きと曲がる位置を追いやすくする
+const createDebugBoneShape = (gpu, shader, size = 0.45) => {
+  const shape = new Shape(gpu);
+  shape.applyPrimitiveAsset(Primitive.debugBone(size, shape.getPrimitiveOptions()));
+  shape.endShape();
+  shape.setShader(shader);
+  shape.setMaterial("smooth-shader", {
+    has_bone: 0,
+    use_texture: 0,
+    color: [1.0, 0.45, 0.18, 1.0],
+    ambient: 0.46,
+    specular: 0.24,
+    power: 12.0
+  });
+  return shape;
+};
+
+// 代表頂点の移動先を可視化する marker は、比較しやすい小球にそろえる
+const createMarkerShape = (gpu, shader, color, radius = 0.12) => {
+  const shape = new Shape(gpu);
+  shape.applyPrimitiveAsset(Primitive.sphere(radius, 16, 12, shape.getPrimitiveOptions()));
+  shape.endShape();
+  shape.setShader(shader);
+  shape.setMaterial("smooth-shader", {
+    has_bone: 0,
+    use_texture: 0,
+    color,
+    ambient: 0.42,
+    specular: 0.84,
+    power: 24.0
+  });
+  return shape;
+};
+
+// 28章本文の helper をそのまま動かすため、
+// skeleton.updateMatrixPalette() 後に bone.worldMatrix を currentBoneMatrixLocal として読む
+const buildSkinMatrix = (bone) => {
+  const skin = bone.worldMatrix.clone();
+  skin.mul(bone.getBofMatrix());
+  return skin;
+};
+
+// 1 本の bone だけで rest 頂点を変形した object local 位置を返す
+const transformVertexByBone = (restPosition, bone) => {
+  const skin = buildSkinMatrix(bone);
+  return skin.mulVector(restPosition);
+};
+
+// 複数 bone の変形結果を weight 付きで混ぜ、shader と同じ考え方で最終位置を得る
+const blendVertex = (restPosition, influences) => {
+  const out = [0.0, 0.0, 0.0];
+  for (let i = 0; i < influences.length; i++) {
+    const moved = transformVertexByBone(restPosition, influences[i].bone);
+    out[0] += moved[0] * influences[i].weight;
+    out[1] += moved[1] * influences[i].weight;
+    out[2] += moved[2] * influences[i].weight;
+  }
+  return out;
+};
+
+// 表示用 helper として短い vec3 を整形する
+const vec3ToText = (v) => {
+  return `(${v[0].toFixed(2)}, ${v[1].toFixed(2)}, ${v[2].toFixed(2)})`;
+};
+
+// objectNode ローカル座標の頂点を、現在の objectNode 配置込みの world 座標へ変換する
+const toWorldPosition = (node, localPosition) => {
+  return node.getWorldMatrix().mulVector(localPosition);
+};
+
+const vec3Distance = (a, b) => {
+  const dx = a[0] - b[0];
+  const dy = a[1] - b[1];
+  const dz = a[2] - b[2];
+  return Math.sqrt(dx * dx + dy * dy + dz * dz);
+};
+
+const app = new WebgApp({
+  document,
+  messageFontTexture: "../../webg/font512.png",
+  clearColor: [0.07, 0.09, 0.13, 1.0],
+  lightPosition: [12.0, 20.0, 28.0, 1.0],
+  layoutMode: "embedded",
+  fixedCanvasSize: {
+    width: 720,
+    height: 540,
+    useDevicePixelRatio: false
+  },
+  camera: {
+    target: [0.0, 0.2, 0.0],
+    distance: 13.0,
+    yaw: 24.0,
+    pitch: -12.0
+  }
+});
+await app.init();
+
+const orbit = new EyeRig(app.cameraRig, app.cameraRod, app.eye, {
+  document,
+  element: app.screen.canvas,
+  input: app.input,
+  type: "orbit",
+  orbit: {
+    target: [0.0, 0.2, 0.0],
+    distance: 13.0,
+    yaw: 24.0,
+    pitch: -12.0,
+    minDistance: 7.0,
+    maxDistance: 24.0,
+    wheelZoomStep: 1.0
+  }
+});
+orbit.attachPointer();
+
+const helperShader = new SmoothShader(app.getGL());
+await helperShader.init();
+helperShader.setLightPosition([12.0, 20.0, 28.0, 1.0]);
+helperShader.setProjectionMatrix(app.projectionMatrix);
+
+const floorShape = new Shape(app.getGL());
+floorShape.applyPrimitiveAsset(Primitive.cuboid(12.0, 0.25, 12.0, floorShape.getPrimitiveOptions()));
+floorShape.endShape();
+floorShape.setShader(helperShader);
+floorShape.setMaterial("smooth-shader", {
+  has_bone: 0,
+  use_texture: 0,
+  color: [0.08, 0.22, 0.34, 1.0],
+  ambient: 0.34,
+  specular: 0.06,
+  power: 8.0
+});
+const floorNode = app.space.addNode(null, "floor");
+floorNode.setPosition(0.0, -4.25, 0.0);
+floorNode.addShape(floorShape);
+
+const { skeleton, rootBone, childBone } = createTwoBoneSkeleton(CYLINDER_HEIGHT);
+skeleton.setBoneShape(createDebugBoneShape(app.getGL(), helperShader, 0.45));
+skeleton.setAttachable(true);
+skeleton.showBone(true);
+
+const objectNode = app.space.addNode(null, "skinningFrame");
+objectNode.setPosition(0.0, -4.0, 0.0);
+rootBone.setParent(objectNode);
+objectNode.addChild(rootBone);
+
+const markerNodes = {
+  // visible marker は chapter 本文の CPU helper が返した結果を world 化して置く
+  rest: app.space.addNode(null, "restMarker"),
+  rootOnly: app.space.addNode(null, "rootOnlyMarker"),
+  childOnly: app.space.addNode(null, "childOnlyMarker"),
+  blended: app.space.addNode(null, "blendedMarker")
+};
+markerNodes.rest.addShape(createMarkerShape(
+  app.getGL(),
+  helperShader,
+  [0.72, 0.76, 0.82, 1.0],
+  0.12
+));
+markerNodes.rootOnly.addShape(createMarkerShape(app.getGL(), helperShader, [1.0, 0.30, 0.26, 1.0], 0.12));
+markerNodes.childOnly.addShape(createMarkerShape(app.getGL(), helperShader, [0.36, 0.92, 0.42, 1.0]));
+markerNodes.blended.addShape(createMarkerShape(app.getGL(), helperShader, [0.26, 0.88, 1.0, 1.0], 0.14));
+
+const representativeAngle = (REPRESENTATIVE_VERTEX.segment / CYLINDER_SEGMENTS) * Math.PI * 2.0;
+const restPosition = [
+  Math.cos(representativeAngle) * MARKER_PROBE_RADIUS,
+  CYLINDER_HEIGHT * (REPRESENTATIVE_VERTEX.ring / CYLINDER_RINGS),
+  -Math.sin(representativeAngle) * MARKER_PROBE_RADIUS
+];
+const representativeT = REPRESENTATIVE_VERTEX.ring / CYLINDER_RINGS;
+const representativeWeights = {
+  root: 1.0 - representativeT,
+  child: representativeT
+};
+const rootBoneLocalMarker = rootBone.getBofMatrix().mulVector(restPosition);
+const childBoneLocalMarker = childBone.getBofMatrix().mulVector(restPosition);
+
+const referenceNodes = {
+  // 参照点は bone node に直接アタッチし、
+  // その world 座標が CPU helper の結果と一致することを確認に使う
+  rootOnly: app.space.addNode(rootBone, "rootOnlyReference"),
+  childOnly: app.space.addNode(childBone, "childOnlyReference")
+};
+referenceNodes.rootOnly.setPosition(
+  rootBoneLocalMarker[0],
+  rootBoneLocalMarker[1],
+  rootBoneLocalMarker[2]
+);
+referenceNodes.childOnly.setPosition(
+  childBoneLocalMarker[0],
+  childBoneLocalMarker[1],
+  childBoneLocalMarker[2]
+);
+
+const state = {
+  paused: false,
+  showBones: true
+};
+
+const applyViewState = () => {
+  skeleton.showBone(state.showBones);
+};
+applyViewState();
+
+app.attachInput({
+  onKeyDown: (key, ev) => {
+    if (ev.repeat) return;
+    if (key === " ") {
+      state.paused = !state.paused;
+    } else if (key === "b") {
+      state.showBones = !state.showBones;
+      applyViewState();
+    } else if (key === "r") {
+      orbit.setAngles(24.0, -12.0);
+      orbit.setDistance(13.0);
+    }
+  }
+});
+
+app.createHelpPanel({
+  id: "example2801Help",
+  lines: HELP_LINES
+});
+
+let elapsedSec = 0.0;
+let lastRest = toWorldPosition(objectNode, restPosition);
+let lastRootOnly = [...lastRest];
+let lastChildOnly = [...lastRest];
+let lastBlended = [...lastRest];
+let lastRootReference = [...lastRest];
+let lastChildReference = [...lastRest];
+
+app.start({
+  onUpdate: ({ deltaSec }) => {
+    orbit.update(deltaSec);
+    if (!state.paused) {
+      elapsedSec += deltaSec;
+    }
+
+    // floor node は独立して静止させたまま、2 本の bone を別々に動かす
+    // 28章の例に合わせて bone を更新し、続いて CPU helper と同じ式で代表頂点を追跡する
+    rootBone.setAttitude(0.0, Math.sin(elapsedSec * 1.1) * 30.0, 0.0);
+    childBone.setAttitude(0.0, 0.0, Math.sin(elapsedSec * 1.7) * 58.0);
+
+    // bone.worldMatrix は updateMatrixPalette() 後に object local の current pose を持つ
+    skeleton.updateMatrixPalette();
+
+    const rootOnlyLocal = transformVertexByBone(restPosition, rootBone);
+    const childOnlyLocal = transformVertexByBone(restPosition, childBone);
+    const blendedLocal = blendVertex(restPosition, [
+      { bone: rootBone, weight: representativeWeights.root },
+      { bone: childBone, weight: representativeWeights.child }
+    ]);
+
+    lastRest = toWorldPosition(objectNode, restPosition);
+    lastRootOnly = toWorldPosition(objectNode, rootOnlyLocal);
+    lastChildOnly = toWorldPosition(objectNode, childOnlyLocal);
+    lastBlended = toWorldPosition(objectNode, blendedLocal);
+    lastRootReference = referenceNodes.rootOnly.getWorldPosition();
+    lastChildReference = referenceNodes.childOnly.getWorldPosition();
+
+    markerNodes.rest.setPosition(lastRest[0], lastRest[1], lastRest[2]);
+    markerNodes.rootOnly.setPosition(lastRootOnly[0], lastRootOnly[1], lastRootOnly[2]);
+    markerNodes.childOnly.setPosition(lastChildOnly[0], lastChildOnly[1], lastChildOnly[2]);
+    markerNodes.blended.setPosition(lastBlended[0], lastBlended[1], lastBlended[2]);
+
+    app.setStatusLines([
+      `weights: root=${representativeWeights.root.toFixed(2)} child=${representativeWeights.child.toFixed(2)} bones=${state.showBones ? "on" : "off"}`,
+      `rest=${vec3ToText(lastRest)}`,
+      `rootOnly=${vec3ToText(lastRootOnly)} childOnly=${vec3ToText(lastChildOnly)}`,
+      `blended=${vec3ToText(lastBlended)}`,
+      `verify: rootDiff=${vec3Distance(lastRootOnly, lastRootReference).toExponential(2)} childDiff=${vec3Distance(lastChildOnly, lastChildReference).toExponential(2)}`
+    ], {
+      anchor: "top-left",
+      x: 0,
+      y: 0
+    });
+  },
+  onAfterDraw3d: () => {
+    if (state.showBones) {
+      rootBone.drawBones();
+    }
+  }
+});
+    </script>
+    <script>
+      document.getElementById("code").textContent =
+        document.getElementById("example-source").textContent.trim();
+    </script>
+  </div>
+</body>
+</html>

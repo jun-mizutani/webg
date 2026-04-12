@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>WebGPU Background Demo</title>
+  <link rel="icon" href="data:," />
+  <style>
+    html, body {
+      margin: 0;
+      background: #182118;
+      overflow: auto;
+    }
+    #canvas {
+      display: block;
+      width: 800px;
+      height: 600px;
+    }
+    #status {
+      position: fixed;
+      left: 12px;
+      top: 10px;
+      color: #d6e6ff;
+      font: 14px/1.35 monospace;
+      background: rgba(12, 20, 12, 0.60);
+      padding: 6px 8px;
+      border-radius: 6px;
+      pointer-events: none;
+      white-space: pre-wrap;
+      max-width: calc(100vw - 24px);
+    }
+  </style>
+</head>
+<body>
+  <canvas id="canvas" width="800" height="600"></canvas>
+  <div id="status">initializing...</div>
+  <script type="module" src="./main.js"></script>
+</body>
+</html>

@@ -1,0 +1,243 @@
+<!doctype html>
+<!-- book/examples/20_01.html 2026/04/10 -->
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>20_01 BloomPass</title>
+  <link rel="stylesheet" href="./example.css" />
+</head>
+<body>
+  <div class="page">
+    <h1>book/examples</h1>
+    <h2>20_01 BloomPass</h2>
+    <div class="section-card">
+      <p>`book/20_ポストプロセス.md` の最小 bloom 例を、本文の途中でそのまま試せる埋め込み page にしたものです</p>
+      <p class="note">中央の bright sphere と周回する発光球に `BloomPass` を掛けています。`B` で ON / OFF、`V` で composite / scene / extract / blurA を切り替えられます</p>
+    </div>
+
+    <div class="canvas-block">
+      <canvas id="canvas" width="960" height="720"></canvas>
+    </div>
+
+    <pre id="code"></pre>
+
+    <script type="module" id="example-source">
+import WebgApp from "../../webg/WebgApp.js";
+import EyeRig from "../../webg/EyeRig.js";
+import Shape from "../../webg/Shape.js";
+import Primitive from "../../webg/Primitive.js";
+import BloomPass from "../../webg/BloomPass.js";
+import FullscreenPass from "../../webg/FullscreenPass.js";
+
+const app = new WebgApp({
+  document,
+  messageFontTexture: "../../webg/font512.png",
+  autoDrawScene: false,
+  clearColor: [0.03, 0.04, 0.08, 1.0],
+  layoutMode: "embedded",
+  fixedCanvasSize: {
+    width: 720,
+    height: 540,
+    useDevicePixelRatio: false
+  },
+  camera: {
+    target: [0.0, 0.0, 0.0],
+    distance: 20.0,
+    yaw: 28.0,
+    pitch: -10.0
+  }
+});
+await app.init();
+
+const orbit = new EyeRig(app.cameraRig, app.cameraRod, app.eye, {
+  document,
+  element: app.screen.canvas,
+  input: app.input,
+  type: "orbit",
+  orbit: {
+    target: [0.0, 0.0, 0.0],
+    distance: 20.0,
+    yaw: 28.0,
+    pitch: -10.0,
+    minDistance: 10.0,
+    maxDistance: 36.0
+  }
+});
+orbit.attachPointer();
+
+const makeShape = (builder, material) => {
+  const shape = new Shape(app.getGL());
+  builder(shape);
+  shape.endShape();
+  shape.setMaterial("smooth-shader", {
+    has_bone: 0,
+    ...material
+  });
+  return shape;
+};
+
+const floorShape = makeShape((shape) => {
+  shape.applyPrimitiveAsset(Primitive.cuboid(32.0, 0.8, 32.0, shape.getPrimitiveOptions()));
+}, {
+  use_texture: 0,
+  color: [0.08, 0.10, 0.16, 1.0],
+  ambient: 0.16,
+  specular: 0.18,
+  power: 12.0,
+  emissive: 0.0
+});
+const floor = app.space.addNode(null, "floor");
+floor.setPosition(0.0, -3.0, 0.0);
+floor.addShape(floorShape);
+
+const centerShape = makeShape((shape) => {
+  shape.applyPrimitiveAsset(Primitive.sphere(3.2, 28, 20, shape.getPrimitiveOptions()));
+}, {
+  use_texture: 0,
+  color: [1.0, 0.98, 0.88, 1.0],
+  ambient: 0.74,
+  specular: 1.05,
+  power: 60.0,
+  emissive: 1.2
+});
+const centerNode = app.space.addNode(null, "center");
+centerNode.setPosition(0.0, 0.0, 0.0);
+centerNode.addShape(centerShape);
+
+const orbitRoot = app.space.addNode(null, "orb-root");
+const orbColors = [
+  [1.0, 0.62, 0.28, 1.0],
+  [0.96, 0.42, 0.76, 1.0],
+  [0.34, 0.78, 1.0, 1.0],
+  [0.72, 1.0, 0.46, 1.0]
+];
+const orbs = [];
+for (let i = 0; i < orbColors.length; i++) {
+  const orbShape = makeShape((shape) => {
+    shape.applyPrimitiveAsset(Primitive.sphere(0.9, 24, 18, shape.getPrimitiveOptions()));
+  }, {
+    use_texture: 0,
+    color: orbColors[i],
+    ambient: 0.24,
+    specular: 0.72,
+    power: 34.0,
+    emissive: 1.8
+  });
+  const orb = app.space.addNode(null, `orb-${i}`);
+  orb.addShape(orbShape);
+  orb.attach(orbitRoot);
+  orbs.push(orb);
+}
+
+const bloom = new BloomPass(app.getGL(), {
+  width: app.screen.getWidth(),
+  height: app.screen.getHeight(),
+  threshold: 0.62,
+  extractIntensity: 1.15,
+  softKnee: 0.34,
+  bloomStrength: 1.45,
+  exposure: 1.0,
+  toneMapMode: 0,
+  blurScale: 1.0,
+  blurIterations: 2,
+  blurRadius: 1.4
+});
+await bloom.ready;
+
+const debugPass = new FullscreenPass(app.getGL(), {
+  targetFormat: app.getGL().format
+});
+await debugPass.init();
+
+const state = {
+  bloomView: "composite"
+};
+
+const bloomViews = ["composite", "scene", "extract", "blurA"];
+
+const getDebugSource = () => {
+  if (state.bloomView === "scene") return bloom.getSceneTarget();
+  if (state.bloomView === "extract") return bloom.getExtractTarget();
+  if (state.bloomView === "blurA") return bloom.getBlurTargetA();
+  return null;
+};
+
+app.createHelpPanel({
+  id: "example2001Help",
+  lines: [
+    "Drag: orbit camera",
+    "B: bloom on/off",
+    "V: composite / scene / extract / blurA"
+  ]
+});
+
+app.attachInput({
+  onKeyDown: (key, ev) => {
+    if (ev.repeat) return;
+    if (key === "b") {
+      bloom.setEnabled(!bloom.enabled);
+    } else if (key === "v") {
+      const index = bloomViews.indexOf(state.bloomView);
+      state.bloomView = bloomViews[(index + 1) % bloomViews.length];
+    }
+  }
+});
+
+let elapsedSec = 0.0;
+
+app.start({
+  onUpdate: ({ deltaSec, screen }) => {
+    elapsedSec += deltaSec;
+    orbit.update(deltaSec);
+    bloom.resizeToScreen(screen);
+
+    orbitRoot.setAttitude(elapsedSec * 35.0, 0.0, 0.0);
+    for (let i = 0; i < orbs.length; i++) {
+      const angle = (Math.PI * 2.0 * i) / orbs.length;
+      const radius = 8.0;
+      const height = 1.6 + Math.sin(elapsedSec * 1.6 + angle) * 1.2;
+      orbs[i].setPosition(Math.cos(angle) * radius, height, Math.sin(angle) * radius);
+    }
+
+    app.setStatusLines([
+      `bloom=${bloom.enabled ? "on" : "off"}`,
+      `view=${state.bloomView}`,
+      "BloomPass sample"
+    ], {
+      anchor: "top-left",
+      x: 0,
+      y: 0
+    });
+  },
+  onBeforeDraw: () => {
+    bloom.beginScene(app.screen, app.clearColor);
+    app.space.draw(app.eye);
+  },
+  onAfterDraw3d: () => {
+    bloom.render(app.screen, {
+      source: bloom.getSceneTarget(),
+      clearColor: app.clearColor
+    });
+
+    const debugSource = getDebugSource();
+    if (debugSource) {
+      app.screen.beginPass({
+        clearColor: app.clearColor,
+        colorLoadOp: "clear",
+        depthView: null
+      });
+      debugPass.draw(debugSource);
+    }
+
+    app.screen.clearDepthBuffer();
+  }
+});
+    </script>
+    <script>
+      document.getElementById("code").textContent =
+        document.getElementById("example-source").textContent.trim();
+    </script>
+  </div>
+</body>
+</html>

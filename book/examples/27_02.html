@@ -1,0 +1,182 @@
+<!doctype html>
+<!-- book/examples/27_02.html 2026/04/10 -->
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>27_02 mobius strip</title>
+  <link rel="stylesheet" href="./example.css" />
+</head>
+<body>
+  <div class="page">
+    <h1>book/examples</h1>
+    <h2>27_02 mobius strip</h2>
+    <div class="section-card">
+      <p>`book/27_プロシージャル形状の教材.md` の `mobius strip` を、両面が見える状態で試せる実行ページです</p>
+      <p class="note">頂点グリッドを先に作ってから面を張る流れと、最後の ring を複製して seam を閉じる構成をそのまま確認できます</p>
+    </div>
+
+    <div class="canvas-block">
+      <canvas id="canvas" width="960" height="720"></canvas>
+    </div>
+
+    <pre id="code"></pre>
+
+    <script type="module" id="example-source">
+import WebgApp from "../../webg/WebgApp.js";
+import EyeRig from "../../webg/EyeRig.js";
+import Shape from "../../webg/Shape.js";
+import SmoothShader from "../../webg/SmoothShader.js";
+
+function buildMobiusStrip(shape, options = {}) {
+  const radius = Number(options.radius ?? 2.2);
+  const halfWidth = Number(options.halfWidth ?? 0.45);
+  const uSegments = Math.max(3, Math.floor(options.uSegments ?? 96));
+  const vSegments = Math.max(1, Math.floor(options.vSegments ?? 12));
+
+  shape.setAutoCalcNormals(true);
+
+  const grid = [];
+
+  for (let iu = 0; iu <= uSegments; iu++) {
+    const row = [];
+    const u01 = iu / uSegments;
+    const theta = u01 * Math.PI * 2.0;
+    const halfTheta = theta * 0.5;
+
+    for (let iv = 0; iv <= vSegments; iv++) {
+      const v01 = iv / vSegments;
+      const offset = (v01 - 0.5) * 2.0 * halfWidth;
+      const x = (radius + offset * Math.cos(halfTheta)) * Math.cos(theta);
+      const z = (radius + offset * Math.cos(halfTheta)) * Math.sin(theta);
+      const y = offset * Math.sin(halfTheta);
+      const index = shape.addVertexUV(x, y, z, u01, v01) - 1;
+      row.push(index);
+    }
+
+    grid.push(row);
+  }
+
+  for (let iu = 0; iu < uSegments; iu++) {
+    for (let iv = 0; iv < vSegments; iv++) {
+      const p00 = grid[iu][iv];
+      const p10 = grid[iu + 1][iv];
+      const p11 = grid[iu + 1][iv + 1];
+      const p01 = grid[iu][iv + 1];
+      shape.addTriangle(p00, p10, p11);
+      shape.addTriangle(p00, p11, p01);
+    }
+  }
+
+  return {
+    rows: grid.length,
+    cols: grid[0]?.length ?? 0,
+    triangleCount: uSegments * vSegments * 2
+  };
+}
+
+class MobiusSmoothShader extends SmoothShader {
+  constructor(gpu) {
+    super(gpu, {
+      cullMode: "none"
+    });
+    // メビウス帯は裏面も同じ帯の連続面として見せたいので、
+    // この example では back face 側だけ法線を反転して両面の陰影をそろえる
+    this.wgslSrc = this.wgslSrc.replace(
+      "var nnormal = normalize(input.vNormal);",
+      `let facing = select(-1.0, 1.0, input.frontFacing);
+        var nnormal = normalize(input.vNormal) * facing;`
+    );
+  }
+}
+
+const app = new WebgApp({
+  document,
+  shaderClass: MobiusSmoothShader,
+  messageFontTexture: "../../webg/font512.png",
+  clearColor: [0.11, 0.08, 0.07, 1.0],
+  layoutMode: "embedded",
+  fixedCanvasSize: {
+    width: 720,
+    height: 540,
+    useDevicePixelRatio: false
+  },
+  camera: {
+    target: [0.0, 0.0, 0.0],
+    distance: 9.0,
+    yaw: 34.0,
+    pitch: -12.0
+  }
+});
+await app.init();
+
+const orbit = new EyeRig(app.cameraRig, app.cameraRod, app.eye, {
+  document,
+  element: app.screen.canvas,
+  input: app.input,
+  type: "orbit",
+  orbit: {
+    target: [0.0, 0.0, 0.0],
+    distance: 9.0,
+    yaw: 34.0,
+    pitch: -12.0,
+    minDistance: 4.0,
+    maxDistance: 20.0,
+    wheelZoomStep: 1.0
+  }
+});
+orbit.attachPointer();
+
+const shape = new Shape(app.getGL());
+const info = buildMobiusStrip(shape, {
+  radius: 2.4,
+  halfWidth: 0.50,
+  uSegments: 96,
+  vSegments: 12
+});
+shape.endShape();
+shape.setMaterial("smooth-shader", {
+  has_bone: 0,
+  use_texture: 0,
+  color: [0.94, 0.64, 0.42, 1.0],
+  ambient: 0.24,
+  specular: 0.96,
+  power: 32.0
+});
+
+const node = app.space.addNode(null, "mobius");
+node.addShape(shape);
+
+app.createHelpPanel({
+  id: "example2702Help",
+  lines: [
+    "Drag: orbit camera",
+    "Wheel: zoom",
+    "Mobius strip = parametric surface"
+  ]
+});
+
+app.start({
+  onUpdate: ({ deltaSec }) => {
+    orbit.update(deltaSec);
+    node.rotateY(0.8);
+    node.rotateZ(0.4);
+    app.setStatusLines([
+      `rows=${info.rows} cols=${info.cols}`,
+      `triangles=${info.triangleCount}`,
+      `camera=${orbit.orbit.distance.toFixed(1)}`
+    ], {
+      anchor: "top-left",
+      x: 0,
+      y: 0
+    });
+  }
+});
+    </script>
+    <script>
+      document.getElementById("code").textContent =
+        document.getElementById("example-source").textContent.trim();
+    </script>
+  </div>
+</body>
+</html>

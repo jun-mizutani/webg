@@ -1,0 +1,178 @@
+<!doctype html>
+<!-- book/examples/27_03.html 2026/04/10 -->
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>27_03 Sierpinski tetrahedron</title>
+  <link rel="stylesheet" href="./example.css" />
+</head>
+<body>
+  <div class="page">
+    <h1>book/examples</h1>
+    <h2>27_03 Sierpinski tetrahedron</h2>
+    <div class="section-card">
+      <p>`book/27_プロシージャル形状の教材.md` の `Sierpinski tetrahedron` を、そのまま回して観察できる実行ページです</p>
+      <p class="note">面ごとに頂点を複製して、フラクタルの edge を丸めずに保つ構成です。再帰で tetra を増やす流れを status の数字からも追えます</p>
+    </div>
+
+    <div class="canvas-block">
+      <canvas id="canvas" width="960" height="720"></canvas>
+    </div>
+
+    <pre id="code"></pre>
+
+    <script type="module" id="example-source">
+import WebgApp from "../../webg/WebgApp.js";
+import EyeRig from "../../webg/EyeRig.js";
+import Shape from "../../webg/Shape.js";
+
+function buildSierpinskiTetrahedron(shape, options = {}) {
+  const radius = Number(options.radius ?? 2.2);
+  const depth = Math.max(0, Math.floor(options.depth ?? 3));
+
+  shape.setAutoCalcNormals(true);
+
+  const scale = radius / Math.sqrt(3.0);
+  const v0 = [ scale,  scale,  scale];
+  const v1 = [-scale, -scale,  scale];
+  const v2 = [-scale,  scale, -scale];
+  const v3 = [ scale, -scale, -scale];
+
+  let triangleCount = 0;
+
+  const midpoint = (a, b) => ([
+    (a[0] + b[0]) * 0.5,
+    (a[1] + b[1]) * 0.5,
+    (a[2] + b[2]) * 0.5
+  ]);
+
+  const pushFace = (a, b, c) => {
+    const p0 = shape.addVertexUV(a[0], a[1], a[2], 0.0, 0.0) - 1;
+    const p1 = shape.addVertexUV(b[0], b[1], b[2], 1.0, 0.0) - 1;
+    const p2 = shape.addVertexUV(c[0], c[1], c[2], 0.5, 1.0) - 1;
+    shape.addTriangle(p0, p1, p2);
+    triangleCount++;
+  };
+
+  const addTetraFaces = (a, b, c, d) => {
+    pushFace(a, c, b);
+    pushFace(a, b, d);
+    pushFace(a, d, c);
+    pushFace(b, c, d);
+  };
+
+  const recurse = (a, b, c, d, level) => {
+    if (level <= 0) {
+      addTetraFaces(a, b, c, d);
+      return 1;
+    }
+    const ab = midpoint(a, b);
+    const ac = midpoint(a, c);
+    const ad = midpoint(a, d);
+    const bc = midpoint(b, c);
+    const bd = midpoint(b, d);
+    const cd = midpoint(c, d);
+    return (
+      recurse(a,  ab, ac, ad, level - 1) +
+      recurse(ab, b,  bc, bd, level - 1) +
+      recurse(ac, bc, c,  cd, level - 1) +
+      recurse(ad, bd, cd, d, level - 1)
+    );
+  };
+
+  const tetraCount = recurse(v0, v1, v2, v3, depth);
+
+  return {
+    depth,
+    tetraCount,
+    triangleCount
+  };
+}
+
+const app = new WebgApp({
+  document,
+  messageFontTexture: "../../webg/font512.png",
+  clearColor: [0.12, 0.10, 0.06, 1.0],
+  layoutMode: "embedded",
+  fixedCanvasSize: {
+    width: 720,
+    height: 540,
+    useDevicePixelRatio: false
+  },
+  camera: {
+    target: [0.0, 0.0, 0.0],
+    distance: 10.0,
+    yaw: 32.0,
+    pitch: -18.0
+  }
+});
+await app.init();
+
+const orbit = new EyeRig(app.cameraRig, app.cameraRod, app.eye, {
+  document,
+  element: app.screen.canvas,
+  input: app.input,
+  type: "orbit",
+  orbit: {
+    target: [0.0, 0.0, 0.0],
+    distance: 10.0,
+    yaw: 32.0,
+    pitch: -18.0,
+    minDistance: 4.0,
+    maxDistance: 24.0,
+    wheelZoomStep: 1.0
+  }
+});
+orbit.attachPointer();
+
+const shape = new Shape(app.getGL());
+const info = buildSierpinskiTetrahedron(shape, {
+  radius: 2.6,
+  depth: 3
+});
+shape.endShape();
+shape.setMaterial("smooth-shader", {
+  has_bone: 0,
+  use_texture: 0,
+  color: [0.96, 0.78, 0.42, 1.0],
+  ambient: 0.16,
+  specular: 0.90,
+  power: 36.0
+});
+
+const node = app.space.addNode(null, "sierpinski");
+node.addShape(shape);
+
+app.createHelpPanel({
+  id: "example2703Help",
+  lines: [
+    "Drag: orbit camera",
+    "Wheel: zoom",
+    "Sierpinski tetrahedron = recursive tetra split"
+  ]
+});
+
+app.start({
+  onUpdate: ({ deltaSec }) => {
+    orbit.update(deltaSec);
+    node.rotateY(0.8);
+    app.setStatusLines([
+      `depth=${info.depth} tetra=${info.tetraCount}`,
+      `triangles=${info.triangleCount}`,
+      `camera=${orbit.orbit.distance.toFixed(1)}`
+    ], {
+      anchor: "top-left",
+      x: 0,
+      y: 0
+    });
+  }
+});
+    </script>
+    <script>
+      document.getElementById("code").textContent =
+        document.getElementById("example-source").textContent.trim();
+    </script>
+  </div>
+</body>
+</html>

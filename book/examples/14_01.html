@@ -1,0 +1,191 @@
+<!doctype html>
+<!-- book/examples/14_01.html 2026/04/10 -->
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>14_01 HUD と overlay</title>
+  <link rel="stylesheet" href="./example.css" />
+</head>
+<body>
+  <div class="page">
+    <h1>book/examples</h1>
+    <h2>14_01 HUD と overlay</h2>
+    <div class="section-card">
+      <p>`book/14_UI表示の設計.md` の `setGuideLines()`、`setStatusLines()`、`startDialogue()`、`showFixedFormatPanel()` を 1 つの埋め込み page に集めた例です</p>
+      <p class="note">短い HUD は canvas 上、日本語の説明や長文は DOM overlay へ分ける構成を、そのまま見比べられます。`D` で dialogue を出し直し、`F` で fixed-format panel を開閉できます</p>
+    </div>
+
+    <div class="canvas-block">
+      <canvas id="canvas" width="960" height="720"></canvas>
+    </div>
+
+    <pre id="code"></pre>
+
+    <script type="module" id="example-source">
+import WebgApp from "../../webg/WebgApp.js";
+import EyeRig from "../../webg/EyeRig.js";
+import Shape from "../../webg/Shape.js";
+import Primitive from "../../webg/Primitive.js";
+
+const app = new WebgApp({
+  document,
+  messageFontTexture: "../../webg/font512.png",
+  clearColor: [0.05, 0.07, 0.11, 1.0],
+  layoutMode: "embedded",
+  fixedCanvasSize: {
+    width: 720,
+    height: 540,
+    useDevicePixelRatio: false
+  },
+  camera: {
+    target: [0.0, 0.8, 0.0],
+    distance: 9.0,
+    yaw: 20.0,
+    pitch: -10.0
+  }
+});
+await app.init();
+
+const orbit = new EyeRig(app.cameraRig, app.cameraRod, app.eye, {
+  document,
+  element: app.screen.canvas,
+  input: app.input,
+  type: "orbit",
+  orbit: {
+    target: [0.0, 0.8, 0.0],
+    distance: 9.0,
+    yaw: 20.0,
+    pitch: -10.0,
+    minDistance: 5.0,
+    maxDistance: 18.0
+  }
+});
+orbit.attachPointer();
+
+const shape = new Shape(app.getGL());
+shape.applyPrimitiveAsset(Primitive.cube(2.0, shape.getPrimitiveOptions()));
+shape.endShape();
+shape.setMaterial("smooth-shader", {
+  has_bone: 0,
+  use_texture: 0,
+  color: [1.0, 0.5, 0.3, 1.0],
+  ambient: 0.26,
+  specular: 0.86,
+  power: 40.0
+});
+
+const node = app.space.addNode(null, "ui-box");
+node.addShape(shape);
+
+const dialogueEntries = [
+  {
+    speaker: "guide",
+    title: "UI design example",
+    lines: [
+      "短い status は canvas HUD へ出します",
+      "長い説明文は DOM overlay へ分けます"
+    ]
+  },
+  {
+    speaker: "guide",
+    lines: [
+      "この分離を先に決めておくと",
+      "役割が混ざりにくくなります"
+    ]
+  }
+];
+
+const openDialogue = () => {
+  app.startDialogue(dialogueEntries, {
+    title: "Dialogue overlay",
+    footer: "Enter / Space: next  D: restart dialogue"
+  });
+};
+
+const panelText = [
+  "FixedFormatPanel",
+  "",
+  "showFixedFormatPanel() は",
+  "長い説明や診断結果を",
+  "落ち着いて読むための場所です",
+  "",
+  "Message と同じ canvas HUD へ",
+  "長文を詰め込まないことを",
+  "この章では勧めています"
+].join("\n");
+
+const toggleFixedPanel = () => {
+  if (app.hasFixedFormatPanel("ui-design-note")) {
+    app.clearFixedFormatPanel("ui-design-note");
+    return;
+  }
+  app.showFixedFormatPanel(panelText, {
+    id: "ui-design-note",
+    title: "Fixed-format note"
+  });
+};
+
+app.createHelpPanel({
+  id: "example1401Help",
+  lines: [
+    "Drag: orbit camera",
+    "D: restart dialogue",
+    "F: toggle fixed-format panel"
+  ]
+});
+
+app.attachInput({
+  onKeyDown: (key, ev) => {
+    if (ev.repeat) return;
+    if (key === "d") {
+      openDialogue();
+    } else if (key === "f") {
+      toggleFixedPanel();
+    }
+  }
+});
+
+openDialogue();
+
+let elapsedSec = 0.0;
+
+app.start({
+  onUpdate: ({ deltaSec }) => {
+    elapsedSec += deltaSec;
+    orbit.update(deltaSec);
+    node.rotateY(0.8);
+    node.rotateX(0.3);
+
+    const dialogueState = app.getDialogueState();
+    app.setGuideLines([
+      "guide lines -> short操作説明",
+      "status lines -> current state",
+      "dialogue / panel -> 日本語と長文"
+    ], {
+      anchor: "bottom-left",
+      x: 0,
+      y: -2,
+      width: 38,
+      wrap: true
+    });
+
+    app.setStatusLines([
+      `dialogue=${dialogueState?.active ? "active" : "idle"}`,
+      `fixed-panel=${app.hasFixedFormatPanel("ui-design-note") ? "open" : "closed"}`,
+      `time=${elapsedSec.toFixed(1)} sec`
+    ], {
+      anchor: "top-left",
+      x: 0,
+      y: 0
+    });
+  }
+});
+    </script>
+    <script>
+      document.getElementById("code").textContent =
+        document.getElementById("example-source").textContent.trim();
+    </script>
+  </div>
+</body>
+</html>

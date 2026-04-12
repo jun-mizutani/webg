@@ -1,0 +1,22 @@
+サンプル: primitive_wireframe
+
+概要
+- `Primitive` が返す代表的な基本形状を 3x3 で並べ、solid 表示と wireframe 表示の切替が破綻しないかを確認する unittest です。
+- texture や normal map は使わず、`Shape.setWireframe()` の切替結果だけを最小構成で観察します。
+
+このサンプルで使うwebg機能
+- `Primitive.sphere` / `Primitive.cone` / `Primitive.truncated_cone` / `Primitive.double_cone`
+- `Primitive.prism` / `Primitive.donut` / `Primitive.cube` / `Primitive.cuboid` / `Primitive.arrow`
+- `Shape.setWireframe`
+- `SmoothShader`: solid / wireframe 切替時の共通 shader と基本ライティング
+- `UnitTestApp`: Screen 初期化、resize、status 表示の共通 helper
+
+確認ポイント
+- 球、回転体、多角柱、トーラス、直方体、矢印で、solid と wireframe の切替後も描画が消えたり崩れたりしないことを確認します。
+- 回転中でも wireframe 線が極端に欠けず、形状の輪郭を追えることを確認します。
+- `1` から `9` で個別 primitive の wireframe を反転したとき、一部だけ線表示にして比較しても他の shape に影響しないことを確認します。
+
+操作説明
+- `Space`: 回転の一時停止 / 再開
+- `1` - `9`: 対応する primitive の wireframe を個別切替
+- `W`: 全 primitive の wireframe 一括切替

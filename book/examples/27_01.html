@@ -1,0 +1,194 @@
+<!doctype html>
+<!-- book/examples/27_01.html 2026/04/10 -->
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>27_01 icosphere</title>
+  <link rel="stylesheet" href="./example.css" />
+</head>
+<body>
+  <div class="page">
+    <h1>book/examples</h1>
+    <h2>27_01 icosphere</h2>
+    <div class="section-card">
+      <p>`book/27_プロシージャル形状の教材.md` の `icosphere` を、そのまま本文で確認できる実行ページです</p>
+      <p class="note">正二十面体から edge midpoint subdivision を行い、各頂点を球面へ押し戻して mesh を作ります。ドラッグで orbit しながら三角形の増え方を確認できます</p>
+    </div>
+
+    <div class="canvas-block">
+      <canvas id="canvas" width="960" height="720"></canvas>
+    </div>
+
+    <pre id="code"></pre>
+
+    <script type="module" id="example-source">
+import WebgApp from "../../webg/WebgApp.js";
+import EyeRig from "../../webg/EyeRig.js";
+import Shape from "../../webg/Shape.js";
+
+function buildIcosphere(shape, radius = 1.0, subdivisions = 2) {
+  shape.setAutoCalcNormals(false);
+
+  const vertices = [];
+  let faces = [];
+
+  const addSphereVertex = (x, y, z) => {
+    const len = Math.hypot(x, y, z);
+    const nx = x / len;
+    const ny = y / len;
+    const nz = z / len;
+    const index = shape.addVertexUV(nx * radius, ny * radius, nz * radius, 0.0, 0.0) - 1;
+    shape.setVertNormal(index, nx, ny, nz);
+    vertices.push([nx * radius, ny * radius, nz * radius]);
+    return index;
+  };
+
+  const t = (1.0 + Math.sqrt(5.0)) * 0.5;
+
+  addSphereVertex(-1,  t,  0);
+  addSphereVertex( 1,  t,  0);
+  addSphereVertex(-1, -t,  0);
+  addSphereVertex( 1, -t,  0);
+  addSphereVertex( 0, -1,  t);
+  addSphereVertex( 0,  1,  t);
+  addSphereVertex( 0, -1, -t);
+  addSphereVertex( 0,  1, -t);
+  addSphereVertex( t,  0, -1);
+  addSphereVertex( t,  0,  1);
+  addSphereVertex(-t,  0, -1);
+  addSphereVertex(-t,  0,  1);
+
+  faces = [
+    [0, 11, 5], [0, 5, 1], [0, 1, 7], [0, 7, 10], [0, 10, 11],
+    [1, 5, 9], [5, 11, 4], [11, 10, 2], [10, 7, 6], [7, 1, 8],
+    [3, 9, 4], [3, 4, 2], [3, 2, 6], [3, 6, 8], [3, 8, 9],
+    [4, 9, 5], [2, 4, 11], [6, 2, 10], [8, 6, 7], [9, 8, 1]
+  ];
+
+  const getMidpoint = (cache, ia, ib) => {
+    const key = ia < ib ? `${ia}:${ib}` : `${ib}:${ia}`;
+    if (cache.has(key)) {
+      return cache.get(key);
+    }
+    const a = vertices[ia];
+    const b = vertices[ib];
+    const mx = (a[0] + b[0]) * 0.5;
+    const my = (a[1] + b[1]) * 0.5;
+    const mz = (a[2] + b[2]) * 0.5;
+    const index = addSphereVertex(mx, my, mz);
+    cache.set(key, index);
+    return index;
+  };
+
+  for (let level = 0; level < subdivisions; level++) {
+    const nextFaces = [];
+    const midpointCache = new Map();
+    for (let i = 0; i < faces.length; i++) {
+      const [a, b, c] = faces[i];
+      const ab = getMidpoint(midpointCache, a, b);
+      const bc = getMidpoint(midpointCache, b, c);
+      const ca = getMidpoint(midpointCache, c, a);
+      nextFaces.push([a, ab, ca]);
+      nextFaces.push([b, bc, ab]);
+      nextFaces.push([c, ca, bc]);
+      nextFaces.push([ab, bc, ca]);
+    }
+    faces = nextFaces;
+  }
+
+  for (let i = 0; i < faces.length; i++) {
+    const [a, b, c] = faces[i];
+    shape.addTriangle(a, b, c);
+  }
+
+  return {
+    vertexCount: vertices.length,
+    faceCount: faces.length
+  };
+}
+
+const app = new WebgApp({
+  document,
+  messageFontTexture: "../../webg/font512.png",
+  clearColor: [0.05, 0.08, 0.12, 1.0],
+  layoutMode: "embedded",
+  fixedCanvasSize: {
+    width: 720,
+    height: 540,
+    useDevicePixelRatio: false
+  },
+  camera: {
+    target: [0.0, 0.0, 0.0],
+    distance: 7.8,
+    yaw: 28.0,
+    pitch: -14.0
+  }
+});
+await app.init();
+
+const orbit = new EyeRig(app.cameraRig, app.cameraRod, app.eye, {
+  document,
+  element: app.screen.canvas,
+  input: app.input,
+  type: "orbit",
+  orbit: {
+    target: [0.0, 0.0, 0.0],
+    distance: 7.8,
+    yaw: 28.0,
+    pitch: -14.0,
+    minDistance: 3.2,
+    maxDistance: 18.0,
+    wheelZoomStep: 0.9
+  }
+});
+orbit.attachPointer();
+
+const shape = new Shape(app.getGL());
+const info = buildIcosphere(shape, 2.0, 2);
+shape.endShape();
+shape.setMaterial("smooth-shader", {
+  has_bone: 0,
+  use_texture: 0,
+  color: [0.52, 0.78, 0.96, 1.0],
+  ambient: 0.22,
+  specular: 0.92,
+  power: 42.0
+});
+
+const node = app.space.addNode(null, "icosphere");
+node.addShape(shape);
+
+app.createHelpPanel({
+  id: "example2701Help",
+  lines: [
+    "Drag: orbit camera",
+    "Wheel: zoom",
+    "Icosphere = midpoint subdivision"
+  ]
+});
+
+app.start({
+  onUpdate: ({ deltaSec }) => {
+    orbit.update(deltaSec);
+    node.rotateY(0.9);
+    node.rotateX(0.2);
+    app.setStatusLines([
+      `vertices=${info.vertexCount}`,
+      `triangles=${info.faceCount}`,
+      `camera=${orbit.orbit.distance.toFixed(1)}`
+    ], {
+      anchor: "top-left",
+      x: 0,
+      y: 0
+    });
+  }
+});
+    </script>
+    <script>
+      document.getElementById("code").textContent =
+        document.getElementById("example-source").textContent.trim();
+    </script>
+  </div>
+</body>
+</html>

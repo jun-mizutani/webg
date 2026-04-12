@@ -1,0 +1,29 @@
+サンプル: shapes
+
+概要
+- primitive 系 sample 群の中では、texture / image normal / procedural normal の見え方比較を 1 本へ寄せる主入口です。
+- 「texture を貼った見え」「法線マップの差」「wireframe」を同じ構図のまま切り替えて比較できます。
+- `Message` は 3x3 配置の番号ラベルだけに使い、操作説明と状態表示は `WebgApp` 側の標準 HUD に寄せています。
+
+このサンプルで使うwebg機能
+- `Primitive`: sphere / cone / donut / cube などの基本形状生成
+- `Shape.setWireframe`: ワイヤーフレーム表示切替
+- `Texture`: `num256.png` の読み込み
+- `Texture.buildNormalMapFromProceduralHeight`: noise/dots 法線生成
+- `SmoothShader`: texture + normal map と wireframe 切替を同じ入口で扱う描画
+- `Message`: 3x3 配置の primitive 番号ラベルだけを重ねる
+
+確認ポイント
+- `C` / `T` / `I` / `N` / `D` で surface mode を切り替えたとき、同じ geometry のまま texture / image normal / procedural normal の差だけが変わることを確認します
+- `T` で texture 比較、`I` で image normal 比較、`N` / `D` で procedural normal 比較が同じ sample 内で読めることを確認します
+- `1` - `9` のワイヤーフレーム切替でトポロジが想定どおりかを確認し、surface mode を変えても線表示が破綻しないことを確認します
+- cube / cuboid / mapCube を含む 9 形状で、texture と normal の両方が極端に破綻せず比較できることを確認します
+
+操作説明
+- `C`: solid color 表示
+- `T`: texture 表示
+- `N`: noise normal 表示
+- `D`: dots normal 表示
+- `1` - `9`: 対応シェイプのワイヤーフレームON/OFF
+- `Space`: 回転の一時停止 / 再開
+- touch ボタン: `C/T/I/N/D` と `1-9`、`Pause` を keyboard と同じ key 名で扱う

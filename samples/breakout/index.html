@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>breakout sample</title>
+  <link rel="icon" href="data:," />
+  <style>
+    html, body {
+      margin: 0;
+      background: #16221a;
+      color: #d7e6ff;
+      font-family: "Courier New", monospace;
+      overflow: hidden;
+    }
+    #canvas {
+      display: block;
+      width: 100vw;
+      height: 100vh;
+      background: #16221a;
+    }
+    #status {
+      position: fixed;
+      right: 10px;
+      bottom: 10px;
+      padding: 6px 8px;
+      background: rgba(12, 20, 12, 0.54);
+      border: 1px solid rgba(120, 164, 224, 0.26);
+      border-radius: 6px;
+      white-space: pre-wrap;
+      pointer-events: none;
+      max-width: calc(100vw - 20px);
+      text-align: right;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="canvas" width="960" height="720"></canvas>
+  <div id="status">initializing...</div>
+  <script type="module" src="./main.js"></script>
+</body>
+</html>

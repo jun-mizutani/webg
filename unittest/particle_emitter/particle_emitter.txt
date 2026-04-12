@@ -1,0 +1,32 @@
+particle_emitter unittest
+
+この test は、`ParticleEmitter` を「動作確認のための単体テスト」と「そのまま使い方が分かる sample」の両方として扱うためのものです。
+最初に fake renderer を使った自動テストで `preset / emit / update / draw / clear` の流れを確かめ、そのあと WebgApp の実画面へ切り替えて、本当に particle が画面で動くことを確認します。
+
+この test で見たいのは、particle が増えることだけではありません。
+`setPreset()` で procedural billboard texture が作り直されること、`emit()` で source 位置と shadowY を指定して burst を出せること、`update()` で life と位置が進むこと、`draw()` で billboard と shadow billboard の両方へ流れることを見ます。
+さらに、実画面側では keyboard と touch ボタンの両方を同じ action 名へ流し込み、ゲームで使うときの入力の組み方まで読めるようにしています。
+
+操作の流れ:
+- 画面を開くと、まず自動テストが走る
+- そのあと WebgApp の実画面へ切り替わり、particle が描画される
+- `Space` / `Enter` または `Burst` ボタンで burst を出す
+- `1` / `2` / `3` / `4` または preset ボタンで `spark` / `smoke` / `debris` / `pickup` を切り替える
+- `ArrowLeft` / `ArrowRight` / `A` / `D` または touch の `←` / `→` で emission point を動かす
+- `C` または `Clear` で現在の particle を消す
+- `R` または `Reset` で source を中央へ戻す
+- `[` / `]` または `-` / `+` ボタンで 1 回の burst 数を調整する
+- touch の action ボタンは押した瞬間に反応し、次 frame の edge と重ならないようにしてある
+
+確認ポイント:
+- `ParticleEmitter.getPreset()` が preset 名を返すか
+- `setPreset()` が texture の再生成まで行うか
+- `emit()` が指定 count の particle を生むか
+- `update()` が position と life を進めるか
+- `draw()` が billboard と shadow billboard へ流せるか
+- `clear()` が active particle を消せるか
+- 実画面で keyboard と touch が同じ action 名へ集約されるか
+
+この test は、`ParticleEmitter` を使った sample を新しく作るときの最小の実例にもなっています。
+source の位置、preset の切り替え、burst 数の調整、shadow billboard の見え方を 1 本にまとめてあるので、別のゲームや演出 sample へ流用しやすい構成です。
+あわせて、strict 化後の `ParticleEmitter.emit()` では `position`、`velocity`、`gravity`、`color` とそれぞれの spread を省略せず明示する使い方を、この unittest の manual phase でそのまま示しています。

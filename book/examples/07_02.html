@@ -1,0 +1,226 @@
+<!doctype html>
+<!-- book/examples/07_02.html 2026/04/12 -->
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>07_02 SmoothShader 4経路の比較</title>
+  <link rel="stylesheet" href="./example.css" />
+</head>
+<body>
+  <div class="page">
+    <h1>book/examples</h1>
+    <h2>07_02 SmoothShader 4経路の比較</h2>
+    <div class="section-card">
+      <p>`book/07_シェーダーとマテリアル.md` の `SmoothShader` が、static / skinned / normal map の 4 経路を 1 本で扱うことを確認する実行例です</p>
+      <p class="note">上段は `has_bone = 0` の static mesh、下段は `has_bone = 1` の skinned mesh です。右列だけ `use_normal_map = 1` にしており、同じ `SmoothShader` に対して材質パラメータだけで経路が切り替わることを見比べられます</p>
+    </div>
+
+    <div class="canvas-block">
+      <canvas id="canvas" width="960" height="720"></canvas>
+    </div>
+
+    <pre id="code"></pre>
+
+    <script type="module" id="example-source">
+import WebgApp from "../../webg/WebgApp.js";
+import EyeRig from "../../webg/EyeRig.js";
+import Shape from "../../webg/Shape.js";
+import Primitive from "../../webg/Primitive.js";
+import {
+  buildImageNormalMap,
+  createTwoBoneSkinnedPrism,
+  loadTextureFlipX
+} from "../../unittest/_shared/SkinningTestUtils.js";
+
+const LIGHT = [0.0, 30.0, 48.0, 1.0];
+
+// static mesh 用の Shape を作る
+// has_bone = 0 のまま texture / normal map の切替だけを確認する
+const createStaticShape = (app, texture, normalTexture, useNormalMap, color) => {
+  const shape = new Shape(app.getGL());
+  shape.applyPrimitiveAsset(Primitive.mapCube(8, shape.getPrimitiveOptions()));
+  shape.endShape();
+  shape.setShader(app.shader);
+  shape.setMaterial("smooth-shader", {
+    has_bone: 0,
+    use_texture: 1,
+    texture,
+    use_normal_map: useNormalMap ? 1 : 0,
+    normal_texture: useNormalMap ? normalTexture : null,
+    normal_strength: 1.0,
+    color,
+    ambient: 0.26,
+    specular: 0.84,
+    power: 44.0,
+    emissive: 0.0
+  });
+  return shape;
+};
+
+// skinned mesh 用の最小 rig を作る
+// 2 ボーン prism を使い、SmoothShader の bone palette 経路を見やすくする
+const createSkinnedRig = (app, texture, normalTexture, useNormalMap, color) => {
+  const rig = createTwoBoneSkinnedPrism(app.getGL(), { flipU: true });
+  rig.shape.setShader(app.shader);
+  rig.shape.setMaterial("smooth-shader", {
+    has_bone: 1,
+    use_texture: 1,
+    texture,
+    use_normal_map: useNormalMap ? 1 : 0,
+    normal_texture: useNormalMap ? normalTexture : null,
+    normal_strength: 1.0,
+    color,
+    ambient: 0.35,
+    specular: 0.80,
+    power: 40.0,
+    emissive: 0.0,
+    weight_debug: 0
+  });
+  return rig;
+};
+
+const app = new WebgApp({
+  document,
+  messageFontTexture: "../../webg/font512.png",
+  clearColor: [0.1, 0.15, 0.1, 1.0],
+  lightPosition: LIGHT,
+  layoutMode: "embedded",
+  fixedCanvasSize: {
+    width: 720,
+    height: 540,
+    useDevicePixelRatio: false
+  },
+  camera: {
+    target: [0.0, 0.0, 0.0],
+    distance: 58.0,
+    yaw: 14.0,
+    pitch: -8.0
+  }
+});
+await app.init();
+app.shader.setLightPosition(LIGHT);
+
+const orbit = new EyeRig(app.cameraRig, app.cameraRod, app.eye, {
+  document,
+  element: app.screen.canvas,
+  input: app.input,
+  type: "orbit",
+  orbit: {
+    target: [0.0, 0.0, 0.0],
+    distance: 58.0,
+    yaw: 14.0,
+    pitch: -8.0,
+    minDistance: 34.0,
+    maxDistance: 90.0
+  }
+});
+orbit.attachPointer();
+
+const { texture, rgba, width, height } = await loadTextureFlipX(app.getGL(), "../../webg/num256.png");
+const normalTexture = await buildImageNormalMap(app.getGL(), rgba, width, height);
+
+const floorShape = new Shape(app.getGL());
+floorShape.applyPrimitiveAsset(Primitive.cuboid(64.0, 1.0, 52.0, floorShape.getPrimitiveOptions()));
+floorShape.endShape();
+floorShape.setShader(app.shader);
+floorShape.setMaterial("smooth-shader", {
+  has_bone: 0,
+  use_texture: 0,
+  use_normal_map: 0,
+  color: [0.14, 0.16, 0.22, 1.0],
+  ambient: 0.20,
+  specular: 0.10,
+  power: 10.0,
+  emissive: 0.0
+});
+const floorNode = app.space.addNode(null, "floor");
+floorNode.setPosition(0.0, -19.5, 0.0);
+floorNode.addShape(floorShape);
+
+const staticPlainShape = createStaticShape(app, texture, normalTexture, false, [0.94, 0.70, 0.58, 1.0]);
+const staticNormalShape = createStaticShape(app, texture, normalTexture, true, [0.62, 0.82, 0.96, 1.0]);
+const skinnedPlainRig = createSkinnedRig(app, texture, normalTexture, false, [0.95, 0.68, 0.48, 1.0]);
+const skinnedNormalRig = createSkinnedRig(app, texture, normalTexture, true, [0.58, 0.86, 0.92, 1.0]);
+
+const staticPlainNode = app.space.addNode(null, "staticPlain");
+staticPlainNode.setPosition(-18.0, 14.0, 0.0);
+staticPlainNode.addShape(staticPlainShape);
+
+const staticNormalNode = app.space.addNode(null, "staticNormal");
+staticNormalNode.setPosition(18.0, 14.0, 0.0);
+staticNormalNode.addShape(staticNormalShape);
+
+const skinnedPlainNode = app.space.addNode(null, "skinnedPlain");
+skinnedPlainNode.setPosition(-18.0, -14.0, 0.0);
+skinnedPlainNode.setAttitude(45.0, 0.0, 0.0);
+skinnedPlainNode.addShape(skinnedPlainRig.shape);
+
+const skinnedNormalNode = app.space.addNode(null, "skinnedNormal");
+skinnedNormalNode.setPosition(18.0, -14.0, 0.0);
+skinnedNormalNode.setAttitude(45.0, 0.0, 0.0);
+skinnedNormalNode.addShape(skinnedNormalRig.shape);
+
+app.space.scanSkeletons();
+
+const state = {
+  paused: false
+};
+
+app.attachInput({
+  onKeyDown: (key, ev) => {
+    if (ev.repeat) return;
+    if (key === " ") {
+      state.paused = !state.paused;
+    } else if (key === "r") {
+      orbit.setAngles(14.0, -8.0);
+      orbit.setDistance(58.0);
+    }
+  }
+});
+
+app.createHelpPanel({
+  id: "example0702Help",
+  lines: [
+    "Drag: orbit camera  Wheel: zoom",
+    "Space: pause animation  R: reset camera",
+    "top row = has_bone 0  bottom row = has_bone 1"
+  ]
+});
+
+let elapsedSec = 0.0;
+
+app.start({
+  onUpdate: ({ deltaSec }) => {
+    orbit.update(deltaSec);
+    if (!state.paused) {
+      elapsedSec += deltaSec;
+      staticPlainNode.rotateX(0.28);
+      staticPlainNode.rotateY(0.42);
+      staticNormalNode.rotateX(0.28);
+      staticNormalNode.rotateY(0.42);
+      skinnedPlainRig.j0.setAttitude(0.0, Math.sin(elapsedSec * 0.8) * 8.0, 0.0);
+      skinnedPlainRig.j1.setAttitude(0.0, 0.0, Math.sin(elapsedSec * 1.2) * 60.0);
+      skinnedNormalRig.j0.setAttitude(0.0, Math.sin(elapsedSec * 0.8) * 8.0, 0.0);
+      skinnedNormalRig.j1.setAttitude(0.0, 0.0, Math.sin(elapsedSec * 1.2) * 60.0);
+    }
+
+    app.setStatusLines([
+      "same shader = SmoothShader",
+      "left column: normal map off  right column: normal map on",
+      "upper row: static  lower row: skinned"
+    ], {
+      anchor: "top-left",
+      x: 0,
+      y: 0
+    });
+  }
+});
+    </script>
+    <script>
+      document.getElementById("code").textContent =
+        document.getElementById("example-source").textContent.trim();
+    </script>
+  </div>
+</body>
+</html>

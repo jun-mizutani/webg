@@ -1,0 +1,197 @@
+<!doctype html>
+<!-- book/examples/07_01.html 2026/04/10 -->
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>07_01 material と fog</title>
+  <link rel="stylesheet" href="./example.css" />
+</head>
+<body>
+  <div class="page">
+    <h1>book/examples</h1>
+    <h2>07_01 material と fog</h2>
+    <div class="section-card">
+      <p>`book/07_シェーダーとマテリアル.md` の `setMaterial()`、`shaderParameter()`、fog 既定値を 1 ページで確認できる実行例です</p>
+      <p class="note">左の cube は `setMaterial()` で置いた初期状態を保ち、右の sphere は `shaderParameter()` で emissive を脈動させています。`F` で fog の ON / OFF も切り替えられます</p>
+    </div>
+
+    <div class="canvas-block">
+      <canvas id="canvas" width="960" height="720"></canvas>
+    </div>
+
+    <pre id="code"></pre>
+
+    <script type="module" id="example-source">
+import WebgApp from "../../webg/WebgApp.js";
+import EyeRig from "../../webg/EyeRig.js";
+import Shape from "../../webg/Shape.js";
+import Primitive from "../../webg/Primitive.js";
+
+const app = new WebgApp({
+  document,
+  messageFontTexture: "../../webg/font512.png",
+  clearColor: [0.08, 0.10, 0.15, 1.0],
+  layoutMode: "embedded",
+  fixedCanvasSize: {
+    width: 720,
+    height: 540,
+    useDevicePixelRatio: false
+  },
+  camera: {
+    target: [0.0, 1.5, 0.0],
+    distance: 15.0,
+    yaw: 24.0,
+    pitch: -10.0
+  }
+});
+await app.init();
+
+const orbit = new EyeRig(app.cameraRig, app.cameraRod, app.eye, {
+  document,
+  element: app.screen.canvas,
+  input: app.input,
+  type: "orbit",
+  orbit: {
+    target: [0.0, 1.5, 0.0],
+    distance: 15.0,
+    yaw: 24.0,
+    pitch: -10.0,
+    minDistance: 8.0,
+    maxDistance: 26.0
+  }
+});
+orbit.attachPointer();
+
+const makeShape = (builder, material) => {
+  const shape = new Shape(app.getGL());
+  builder(shape);
+  shape.endShape();
+  shape.setMaterial("smooth-shader", {
+    has_bone: 0,
+    ...material
+  });
+  return shape;
+};
+
+const floorShape = makeShape((shape) => {
+  shape.applyPrimitiveAsset(Primitive.cuboid(30.0, 0.8, 30.0, shape.getPrimitiveOptions()));
+}, {
+  use_texture: 0,
+  color: [0.14, 0.16, 0.22, 1.0],
+  ambient: 0.20,
+  specular: 0.18,
+  power: 12.0,
+  emissive: 0.0
+});
+const floor = app.space.addNode(null, "floor");
+floor.setPosition(0.0, -0.4, 0.0);
+floor.addShape(floorShape);
+
+const leftShape = makeShape((shape) => {
+  shape.applyPrimitiveAsset(Primitive.cube(2.4, shape.getPrimitiveOptions()));
+}, {
+  color: [0.24, 0.64, 1.0, 1.0],
+  use_texture: 0,
+  ambient: 0.26,
+  specular: 0.86,
+  power: 46.0,
+  emissive: 0.0
+});
+const leftNode = app.space.addNode(null, "left-box");
+leftNode.setPosition(-3.4, 1.2, 0.0);
+leftNode.addShape(leftShape);
+
+const rightShape = makeShape((shape) => {
+  shape.applyPrimitiveAsset(Primitive.sphere(1.5, 24, 20, shape.getPrimitiveOptions()));
+}, {
+  color: [1.0, 0.84, 0.48, 1.0],
+  use_texture: 0,
+  ambient: 0.22,
+  specular: 0.96,
+  power: 60.0,
+  emissive: 0.0
+});
+const rightNode = app.space.addNode(null, "right-sphere");
+rightNode.setPosition(3.6, 1.5, 0.0);
+rightNode.addShape(rightShape);
+
+const backShape = makeShape((shape) => {
+  shape.applyPrimitiveAsset(Primitive.cuboid(2.2, 5.0, 2.2, shape.getPrimitiveOptions()));
+}, {
+  color: [0.52, 0.96, 0.62, 1.0],
+  use_texture: 0,
+  ambient: 0.24,
+  specular: 0.50,
+  power: 28.0,
+  emissive: 0.0
+});
+const backNode = app.space.addNode(null, "back-column");
+backNode.setPosition(0.0, 2.5, -8.5);
+backNode.addShape(backShape);
+
+const applyFog = (enabled) => {
+  app.shader.setDefaultParam("fog_color", [0.82, 0.90, 1.0, 1.0]);
+  app.shader.setDefaultParam("fog_near", 10.0);
+  app.shader.setDefaultParam("fog_far", 24.0);
+  app.shader.setDefaultParam("fog_mode", enabled ? 1.0 : 0.0);
+};
+
+const state = {
+  fogEnabled: true
+};
+applyFog(state.fogEnabled);
+
+app.createHelpPanel({
+  id: "example0701Help",
+  lines: [
+    "Drag: orbit camera",
+    "F: toggle fog",
+    "right sphere: shaderParameter(emissive)"
+  ]
+});
+
+app.attachInput({
+  onKeyDown: (key, ev) => {
+    if (ev.repeat) return;
+    if (key === "f") {
+      state.fogEnabled = !state.fogEnabled;
+      applyFog(state.fogEnabled);
+    }
+  }
+});
+
+let elapsedSec = 0.0;
+
+app.start({
+  onUpdate: ({ deltaSec }) => {
+    elapsedSec += deltaSec;
+    orbit.update(deltaSec);
+
+    leftNode.rotateY(0.7);
+    rightNode.rotateY(-0.5);
+    backNode.rotateY(0.3);
+
+    const pulse = 0.5 + 0.5 * Math.sin(elapsedSec * 2.1);
+    rightShape.shaderParameter("emissive", 0.15 + pulse * 0.85);
+    rightShape.shaderParameter("ambient", 0.18 + pulse * 0.20);
+
+    app.setStatusLines([
+      `fog=${state.fogEnabled ? "on" : "off"}`,
+      `emissive=${(0.15 + pulse * 0.85).toFixed(2)}`,
+      "setMaterial + shaderParameter sample"
+    ], {
+      anchor: "top-left",
+      x: 0,
+      y: 0
+    });
+  }
+});
+    </script>
+    <script>
+      document.getElementById("code").textContent =
+        document.getElementById("example-source").textContent.trim();
+    </script>
+  </div>
+</body>
+</html>

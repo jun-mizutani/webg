@@ -1,0 +1,62 @@
+サンプル: dof
+
+概要
+- `DofPass` を使って、3D scene を一度 offscreen `RenderTarget` へ描いたあと、depth を参照して focus 面だけ sharp に残す最小の被写界深度サンプルです。
+- `SeparableBlurPass` を bloom 以外でも再利用できることを確認するための sample です。
+- `WebgApp` は起動と HUD 表示に使い、3D scene 本体は `autoDrawScene: false` で postprocess 経由の描画に切り替えています。
+- 床は置かず、近距離 / 焦点付近 / 遠距離に小さめの球を多めに配置し、focus 面の移動を見分けやすくしています。
+- 現在の `focusDistance` には十字状の小さな guide を 3D scene 内へ置き、debug view を開かなくても focus 面の位置を追いやすくしています。
+- 球の geometry は unit sphere を 1 回だけ作り、各 node は `Shape` instance と uniform scale で半径差を表す構成にしているため、色だけを変えつつ mesh build の重複を避けています。
+- 操作説明は `WebgApp.createHelpPanel()` を使って左上の畳める help panel へ出し、現在値は canvas HUD 側へ分けて表示します。
+
+このサンプルで使うwebg機能
+- `WebgApp`: Screen / Shader / Space / Input / Message の初期化と HUD 表示
+- `WebgApp.createHelpPanel()`: 左上の help panel を標準形式で生成し、操作説明の表示 / 非表示を切り替える
+- `Shape.createInstance()`: unit sphere の shared resource を再利用し、色違いの球を individual material + node scale で並べる
+- `RenderTarget(sampleDepth=true)`: 3D scene の color と depth を後段 pass から読めるようにする offscreen 描画先
+- `EyeRig(type="orbit")`: depth 配置を見回すオービット視点
+
+インスタンス化の観測結果
+- インスタンス化前
+  `vertexCount=12252`
+  `triangleCount=22436`
+  `boneCount=0`
+  `nodeCount=27`
+  `shapeCount=23`
+  `meshCount=23`
+- インスタンス化後
+  `vertexCount=681`
+  `triangleCount=1156`
+  `boneCount=0`
+  `nodeCount=27`
+  `shapeCount=23`
+  `meshCount=4`
+- `shapeCount` が変わらないのは、scene に置いている球の個数そのものは同じだからです
+- `meshCount`、`vertexCount`、`triangleCount` が大きく減るのは、unit sphere の geometry を 1 回だけ build し、その shared resource を複数の `Shape` instance が再利用するためです
+
+確認ポイント
+- `B` で DOF の ON / OFF を切り替えると、focus 面から外れた球ほど blur されることを確認します
+- カメラを回したときも床で視界が隠れず、複数の小球が前後の層として見えることを確認します
+- `1` / `2` で `focusDistance` を動かしたとき、sharp に見える深度帯が前後へ移動することを確認します
+- `1` / `2` で `focusDistance` を動かしたとき、3D scene 内の十字 guide も同じ距離へ前後移動することを確認します
+- 左上の help panel に操作説明が表示され、`Hide Help` を押すと `Show Help` button だけが残り、`Show Help` で再表示できることを確認します
+- `3` / `4` で `focusRange` を動かしたとき、sharp に残る範囲が狭く / 広く変わることを確認します
+- `5` / `6` で blur radius を変えたとき、focus 外のにじみ方がどう変わるかを確認します
+- `7` / `8` で `maxBlurMix` を変えたとき、blur を scene にどこまで強く混ぜるかが変化することを確認します
+- `U` で `full / half` blur quality を切り替えたとき、blur target サイズと見え方の違いを確認します
+- `V` で `composite / scene / depth / focusMask / blurA / blurB` を切り替え、depth の分布と focus 面の mask を直接確認できることを確認します
+  `focusMask` は手前ぼけを暖色、focus 帯を明るい色、奥ぼけを寒色で表示します
+
+操作説明
+- 左上 help panel の `Hide Help` / `Show Help`: 操作説明本文の表示 / 非表示
+- ドラッグ / 矢印キー: オービットカメラ回転
+- ホイール / `[` / `]`: ズーム
+- `B`: DOF の ON / OFF
+- `1` / `2`: focus distance を下げる / 上げる
+- `3` / `4`: focus range を狭める / 広げる
+- `5` / `6`: blur radius を下げる / 上げる
+- `7` / `8`: max blur を下げる / 上げる
+- `Q` / `W`: blur iteration を減らす / 増やす
+- `U`: blur quality を `full / half` で切り替える
+- `V`: `composite / scene / depth / focusMask / blurA / blurB` 表示切り替え
+- `R`: DOF パラメータを初期値へ戻す

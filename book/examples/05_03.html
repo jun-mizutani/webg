@@ -1,0 +1,120 @@
+<!doctype html>
+<!-- book/examples/05_03.html 2026/04/12 -->
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>05_03 fixedCanvasSize と embedded</title>
+  <link rel="stylesheet" href="./example.css" />
+</head>
+<body>
+  <div class="page">
+    <h1>book/examples</h1>
+    <h2>05_03 fixedCanvasSize と embedded</h2>
+    <div class="section-card">
+      <p>`book/05_WebgAppによるアプリ構成.md` の `fixedCanvasSize`、`layoutMode: "embedded"`、`EyeRig`、`takeScreenshot()` を 1 ページでまとめて試せる埋め込み例です</p>
+      <p>このページは本文スクロールを残したまま canvas と help panel を一緒に埋め込む形にしてあります。マウスドラッグでカメラを回し、`S` でスクリーンショット保存を試してください</p>
+    </div>
+
+    <div class="section-card">
+      <p>前置きの本文です。教材ページでは、3D の説明文を読み進めながら、その途中で実際の描画結果を確認したくなることがあります</p>
+      <p>この例では `layoutMode: "embedded"` を使って、canvas と help panel が本文の流れの中に入るようにしています。ページ全体は通常どおりスクロールでき、canvas の周囲に説明文やコードを置けます</p>
+    </div>
+
+    <div class="canvas-block">
+      <canvas id="canvas" width="960" height="720"></canvas>
+    </div>
+
+    <div class="section-card">
+      <p>canvas の下にも説明文を続けられます。`fixedCanvasSize` を使うと、比較用スクリーンショットや教材のレイアウト調整で、表示サイズを一定に保ちやすくなります</p>
+      <p class="note">この例は添付してもらった `user/WebgApp01.html` の構成を整理し直して、`book/examples` 用の相対 path へ合わせたものです</p>
+    </div>
+
+    <pre id="code"></pre>
+
+    <script type="module" id="example-source">
+import WebgApp from "../../webg/WebgApp.js";
+import Shape from "../../webg/Shape.js";
+import Primitive from "../../webg/Primitive.js";
+import EyeRig from "../../webg/EyeRig.js";
+
+const app = new WebgApp({
+  document,
+  fixedCanvasSize: {
+    width: 720,
+    height: 540,
+    useDevicePixelRatio: false
+  },
+  messageFontTexture: "../../webg/font512.png",
+  clearColor: [0.1, 0.15, 0.1, 1.0],
+  layoutMode: "embedded",
+  camera: {
+    target: [0.0, 0.0, 0.0],
+    distance: 8.0,
+    yaw: 0.0,
+    pitch: 0.0
+  }
+});
+
+await app.init();
+
+const shape = new Shape(app.getGL());
+shape.applyPrimitiveAsset(Primitive.cube(2.0, shape.getPrimitiveOptions()));
+shape.endShape();
+shape.setMaterial("smooth-shader", {
+  has_bone: 0,
+  use_texture: 0,
+  color: [1.0, 0.5, 0.3, 1.0]
+});
+
+const node = app.space.addNode(null, "box");
+node.setPosition(0.0, 0.0, 0.0);
+node.addShape(shape);
+
+const orbit = new EyeRig(app.cameraRig, app.cameraRod, app.eye, {
+  document,
+  element: app.screen.canvas,
+  input: app.input,
+  type: "orbit",
+  orbit: {
+    target: [0.0, 0.0, 0.0],
+    distance: 8.0,
+    yaw: 0.0,
+    pitch: 0.0
+  }
+});
+orbit.attachPointer();
+
+app.createHelpPanel({
+  id: "example0503Help",
+  lines: [
+    "mouse drag: rotate",
+    "S: screen shot",
+    "F9 then M: toggle debug mode"
+  ]
+});
+
+app.attachInput({
+  onKeyDown: (key, ev) => {
+    if (ev.repeat) return;
+    if (key === "s") {
+      app.takeScreenshot({ prefix: "book_example_0503" });
+    }
+  }
+});
+
+app.start({
+  onUpdate({ deltaSec }) {
+    orbit.update(deltaSec);
+    node.rotateY(0.8);
+    node.rotateX(0.4);
+  }
+});
+    </script>
+    <script>
+      document.getElementById("code").textContent =
+        document.getElementById("example-source").textContent.trim();
+    </script>
+  </div>
+</body>
+</html>

@@ -1,0 +1,40 @@
+サンプル: janken
+
+概要
+- `samples/gltf_loader/hand.glb` の手モデルと `AnimationState` を使って、ジャンケンを行うサンプルです。
+- 手を 2 つ同時に表示し、左側は user、右側は app が担当します。
+- user は `G` / `C` / `P` で手を決め、app 側は同じ frame で乱数から手を決めます。
+- 画面下には touch ボタンも表示し、PC でも `G` / `C` / `P` を直接押して操作できます。
+- `hand.glb` は 1 回だけ build し、その runtime から player / cpu の 2 hand を `instantiate()` しているため、geometry / GPU buffer は共有しつつ animation runtime は別々に進みます。
+- 各 hand は独立した `Action` と `AnimationState` を持ち、同じ asset を使っても別々に animation を再生できます。
+- 操作ガイドは `WebgApp.setGuideLines()`、現在状態は `WebgApp.setStatusLines()` でそろえ、勝敗だけを 2 倍スケールの短い `Message` で中央表示します。
+- 2 つの hand は少し引いた距離からやや見上げ気味に見えるようにし、左右に約 30 度ロールさせています。
+- ジャンケンの手遷移は `entryDurationMs = 250` にそろえ、0.25 秒程度で次の手へ移る設定です。
+
+このサンプルで使うwebg機能
+- `WebgApp`: Screen / Shader / Space / Input / Message をまとめて初期化し、`setGuideLines()` / `setStatusLines()` と `loadModel(..., { format: "gltf", instantiate: false })` で shared runtime を 1 回 build したあと、`runtime.instantiate()` で 2 hand を起こす
+- `Action`: hand の key 区間を `N0` / `N2` / `N5` の action として再生する
+- `Message`: 勝敗結果の短い ASCII title を大きく中央表示する
+
+確認ポイント
+- `G` は hand の `N0=12-13`, `C` は `N2=4-5`, `P` は `N5=10-11` に対応する pose になっていることを確認します。
+- 同じ手を連続で入力しても self-transition により animation が再始動することを確認します。
+- guide は画面下、status は画面上へ分かれ、勝敗だけが中央の大きな `Message` で表示されることを確認します。
+
+操作説明
+- `G`: グーを出す
+- `C`: チョキを出す
+- `P`: パーを出す
+- `Space`: round と表示を初期状態へ戻す
+- touch ボタン: `G` / `C` / `P` を PC と mobile の両方で表示し、keyboard と同じ key 名で扱う
+
+補足
+- この sample では hand asset の pose 対応を次のように使います
+  - グー: hand の `N0=12-13`
+  - チョキ: hand の `N2=4-5`
+  - パー: hand の `N5=10-11`
+- `AnimationState` は再生品質自体を変えるものではなく、どの hand action を始めるかを整理するために使っています
+- `janken` では入力イベントごとに `AnimationState.setState(..., force: true)` を呼び、同じ手でも action を再始動できる構成にしています
+- 2 つの hand は `runtime.instantiate()` で別々に生成しているため、同じ mesh resource を共有していても `Skeleton` と `Animation` の runtime 状態は別です
+- 現在の `hand.glb` では、`G` は `N0` の `12-13`、`C` は `N2` の `4-5`、`P` は `N5` の `10-11` を使います
+- `idle` を「グーからパーへの遷移の 10% 程度をゆっくり再生する形」で安定して作るには、現行の integer key 範囲だけを持つ pattern 定義より、idle 専用 key または中間 pose を別に持つ方が自然です

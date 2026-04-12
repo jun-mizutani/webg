@@ -1,0 +1,107 @@
+<!doctype html>
+<!-- book/examples/05_01.html 2026/04/12 -->
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>05_01 ローレベルで立方体を 1 個表示する例</title>
+  <link rel="stylesheet" href="./example.css" />
+</head>
+<body>
+  <div class="page">
+    <h1>book/examples</h1>
+    <h2>05_01 ローレベルで立方体を 1 個表示する例</h2>
+    <div class="section-card">
+      <p>`book/05_WebgAppによるアプリ構成.md` の「5.6 ローレベルで立方体を 1 個表示する例」を、そのまま確認できる実行ページです</p>
+      <p class="note">`CoordinateSystem` で作った pose を `Node` へ流し込み、`Shape` が単独では表示されないことも追いやすくしています</p>
+    </div>
+
+    <div class="canvas-block">
+      <canvas id="canvas" width="960" height="720"></canvas>
+    </div>
+
+    <pre id="code"></pre>
+
+    <script type="module" id="example-source">
+import Screen from "../../webg/Screen.js";
+import Space from "../../webg/Space.js";
+import Shape from "../../webg/Shape.js";
+import Primitive from "../../webg/Primitive.js";
+import SmoothShader from "../../webg/SmoothShader.js";
+import Matrix from "../../webg/Matrix.js";
+import CoordinateSystem from "../../webg/CoordinateSystem.js";
+
+const CANVAS_W = 720;
+const CANVAS_H = 540;
+
+const screen = new Screen(document);
+await screen.ready;
+screen.setClearColor([0.1, 0.15, 0.1, 1.0]);
+
+const shader = new SmoothShader(screen.getGL());
+await shader.init();
+
+const projection = new Matrix();
+const applyViewportLayout = () => {
+  screen.resize(CANVAS_W, CANVAS_H);
+  projection.makeProjectionMatrix(
+    0.1,
+    1000.0,
+    screen.getRecommendedFov(55.0),
+    screen.getAspect()
+  );
+  shader.setProjectionMatrix(projection);
+};
+applyViewportLayout();
+window.addEventListener("resize", applyViewportLayout);
+window.addEventListener("orientationchange", applyViewportLayout);
+
+shader.setLightPosition([120.0, 180.0, 140.0, 1.0]);
+
+const space = new Space();
+
+const eye = space.addNode(null, "eye");
+eye.setPosition(0.0, 0.0, 10.0);
+space.setEye(eye);
+
+// CoordinateSystem は見えない変換の基盤なので、
+// ここでは pose を作ってから Node へ値を写している
+const pose = new CoordinateSystem(null, "boxPose");
+pose.setPosition(0.0, 0.0, 0.0);
+pose.setAttitude(25.0, -10.0, 0.0);
+
+const shape = new Shape(screen.getGL());
+shape.setShader(shader);
+shape.applyPrimitiveAsset(Primitive.cube(2.0, shape.getPrimitiveOptions()));
+shape.endShape();
+shape.setMaterial("smooth-shader", {
+  has_bone: 0,
+  use_texture: 0,
+  color: [1.0, 0.5, 0.3, 1.0],
+  ambient: 0.18,
+  specular: 0.90,
+  power: 40.0
+});
+
+const box = space.addNode(null, "box");
+box.setPosition(...pose.getPosition());
+box.setAttitude(...pose.getLocalAttitude());
+box.addShape(shape);
+
+const loop = () => {
+  box.rotateY(0.8);
+  box.rotateX(0.3);
+  screen.clear();
+  space.draw(eye);
+  screen.present();
+  requestAnimationFrame(loop);
+};
+loop();
+    </script>
+    <script>
+      document.getElementById("code").textContent =
+        document.getElementById("example-source").textContent.trim();
+    </script>
+  </div>
+</body>
+</html>

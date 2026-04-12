@@ -1,0 +1,115 @@
+<!doctype html>
+<!-- book/examples/04_02.html 2026/04/12 -->
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>04_02 WebgApp の標準例</title>
+  <link rel="stylesheet" href="./example.css" />
+</head>
+<body>
+  <div class="page">
+    <h1>book/examples</h1>
+    <h2>04_02 WebgApp の標準例</h2>
+    <div class="section-card">
+      <p>`book/04_WebGPUとwebgの最小描画.md` の「4.11 `WebgApp` の標準例」を、埋め込み教材ページ向けに固定 canvas 化した実行ページです</p>
+      <p class="note">ドラッグで orbit、ホイールで zoom、左上の help panel と status lines も一緒に確認できます</p>
+    </div>
+
+    <div class="canvas-block">
+      <canvas id="canvas" width="960" height="720"></canvas>
+    </div>
+
+    <pre id="code"></pre>
+
+    <script type="module" id="example-source">
+import WebgApp from "../../webg/WebgApp.js";
+import Shape from "../../webg/Shape.js";
+import Primitive from "../../webg/Primitive.js";
+import EyeRig from "../../webg/EyeRig.js";
+
+const CAMERA_CONFIG = {
+  target: [0.0, 0.0, 0.0],
+  distance: 8.0,
+  yaw: 0.0,
+  pitch: 0.0,
+  bank: 0.0
+};
+
+const app = new WebgApp({
+  document,
+  messageFontTexture: "../../webg/font512.png",
+  clearColor: [0.1, 0.15, 0.1, 1.0],
+  layoutMode: "embedded",
+  fixedCanvasSize: {
+    width: 720,
+    height: 540,
+    useDevicePixelRatio: false
+  },
+  camera: CAMERA_CONFIG
+});
+
+await app.init();
+
+const shape = new Shape(app.getGL());
+shape.applyPrimitiveAsset(Primitive.cube(2.0, shape.getPrimitiveOptions()));
+shape.endShape();
+shape.setMaterial("smooth-shader", {
+  has_bone: 0,
+  use_texture: 0,
+  color: [1.0, 0.5, 0.3, 1.0]
+});
+
+const obj = app.space.addNode(null, "obj");
+obj.addShape(shape);
+
+const orbit = new EyeRig(app.cameraRig, app.cameraRod, app.eye, {
+  document,
+  element: app.screen.canvas,
+  input: app.input,
+  type: "orbit",
+  orbit: {
+    target: CAMERA_CONFIG.target,
+    distance: CAMERA_CONFIG.distance,
+    yaw: 24.0,
+    pitch: -12.0,
+    minDistance: 4.0,
+    maxDistance: 18.0,
+    wheelZoomStep: 1.0
+  }
+});
+orbit.attachPointer();
+
+app.createHelpPanel({
+  id: "example0402Help",
+  lines: [
+    "Drag: orbit",
+    "Wheel: zoom",
+    "F9 then M: toggle debug mode"
+  ]
+});
+
+app.setStatusLines([
+  "Manual example",
+  "WebgApp + EyeRig"
+], {
+  anchor: "top-left",
+  x: 0,
+  y: 0
+});
+
+app.start({
+  onUpdate: ({ deltaSec }) => {
+    orbit.update(deltaSec);
+    obj.rotateY(0.8);
+    obj.rotateX(0.4);
+  }
+});
+    </script>
+    <script>
+      document.getElementById("code").textContent =
+        document.getElementById("example-source").textContent.trim();
+    </script>
+  </div>
+</body>
+</html>

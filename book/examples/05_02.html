@@ -1,0 +1,98 @@
+<!doctype html>
+<!-- book/examples/05_02.html 2026/04/12 -->
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>05_02 WebgApp で短く書く</title>
+  <link rel="stylesheet" href="./example.css" />
+</head>
+<body>
+  <div class="page">
+    <h1>book/examples</h1>
+    <h2>05_02 WebgApp で短く書く</h2>
+    <div class="section-card">
+      <p>`book/05_WebgAppによるアプリ構成.md` の「5.7 同じことを `WebgApp` で短く書く」を、固定 canvas の教材ページでそのまま試せる形にした例です</p>
+      <p class="note">`WebgApp` が `Screen`、camera rig、入力、HUD の土台をまとめて初期化する流れを見やすくしています</p>
+    </div>
+
+    <div class="canvas-block">
+      <canvas id="canvas" width="960" height="720"></canvas>
+    </div>
+
+    <pre id="code"></pre>
+
+    <script type="module" id="example-source">
+import WebgApp from "../../webg/WebgApp.js";
+import Shape from "../../webg/Shape.js";
+import Primitive from "../../webg/Primitive.js";
+
+const app = new WebgApp({
+  document,
+  messageFontTexture: "../../webg/font512.png",
+  clearColor: [0.1, 0.15, 0.1, 1.0],
+  layoutMode: "embedded",
+  fixedCanvasSize: {
+    width: 720,
+    height: 540,
+    useDevicePixelRatio: false
+  },
+  camera: {
+    target: [0.0, 0.0, 0.0],
+    distance: 8.0,
+    yaw: 0.0,
+    pitch: 0.0
+  }
+});
+
+await app.init();
+
+const shape = new Shape(app.getGL());
+shape.applyPrimitiveAsset(Primitive.cube(2.0, shape.getPrimitiveOptions()));
+shape.endShape();
+shape.setMaterial("smooth-shader", {
+  has_bone: 0,
+  use_texture: 0,
+  color: [1.0, 0.5, 0.3, 1.0]
+});
+
+const box = app.space.addNode(null, "box");
+box.setPosition(0.0, 0.0, 0.0);
+box.addShape(shape);
+
+app.createHelpPanel({
+  id: "example0502Help",
+  lines: [
+    "ArrowLeft / ArrowRight: rotate",
+    "F9 then M: toggle debug mode"
+  ]
+});
+
+app.setStatusLines([
+  "Sample cube",
+  "WebgApp minimum"
+], {
+  anchor: "top-left",
+  x: 0,
+  y: 0
+});
+
+app.start({
+  onUpdate(ctx) {
+    if (ctx.input.has("arrowleft")) {
+      box.rotateY(-1.2);
+    }
+    if (ctx.input.has("arrowright")) {
+      box.rotateY(1.2);
+    }
+    box.rotateX(0.3);
+  }
+});
+    </script>
+    <script>
+      document.getElementById("code").textContent =
+        document.getElementById("example-source").textContent.trim();
+    </script>
+  </div>
+</body>
+</html>

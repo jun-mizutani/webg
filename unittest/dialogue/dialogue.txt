@@ -1,0 +1,46 @@
+サンプル: dialogue
+
+最終更新: 2026-03-26 JST
+
+この unittest は、会話や tutorial の文面をどう標準化するかを確認するための DOM overlay test です。実際の標準化先は UTF-8 をそのまま出せる canvas 外の DOM 側に寄せます。ここでは、`DialogueOverlay` と `WebgApp.startDialogue()` / `nextDialogue()` / `chooseDialogue()` の進行モデルが、どの段階で次へ進み、どの段階で選択肢を選び、どの段階で branch が差し込まれるかを追えるようにしています。
+
+`DialogueOverlay` の役割は、会話の 1 行 1 行を毎回手で HUD 化する負担を減らし、tutorial の進行を queue と choice で扱いやすくすることです。`MessageQueue` はその下で text / lines を順番に保つ小さな管理層として動きます。ゲームでは、導入文、操作説明、分岐のある案内、再表示可能なヘルプ文を、毎回別々に組むより、この helper を通したほうが流れを読みやすくなります。
+
+この unittest では、`Enter` / `Space` で次へ進み、`1` / `2` で選択肢を選び、`R` で最初からやり直せるようにしています。`DialogueOverlay` が現在の speaker、本文、選択肢、最後に選んだ branch をそのまま DOM overlay へ流し込むため、操作を繰り返したときにどの文が表示されるかをすぐ確認できます。
+
+この helper は、`creature_care` のような会話付き sample や、最初の操作説明を出したい tutorial room に向いています。会話が短いゲームでも、`DialogueOverlay` を使うと「最初の案内」「操作の説明」「分岐の選択」「再開」の流れを統一しやすくなります。主経路は DOM overlay に寄せています。
+
+## この unittest の役割
+
+`dialogue` は、会話と tutorial の進行モデルを、`UIPanel` 上の DOM 表示でどう扱うかを確認するための最小確認です。`WebgApp.startDialogue(entries, options)` で流れを始め、`nextDialogue()` で次の文へ進み、`chooseDialogue(index)` で branch を差し込みます。`MessageQueue.enqueue(entries)` は、後から追加した案内文を順番に積みたいときに使います。
+
+`WebgApp` 側から見ると、`startDialogue()`、`nextDialogue()`、`chooseDialogue()`、`enqueueDialogue()` の形で使えるため、sample 側は「どの文を表示するか」より「今どの段階か」だけを見ればよくなります。ここでは DOM overlay が標準経路です。
+
+## 確認ポイント
+
+`Enter` / `Space` を押すと、会話が 1 ステップずつ進むことを確認します。選択肢のある場面では、`1` / `2` を押したときに選んだ branch の文が挿入され、以後の表示が選択に応じて変わることを確認します。`R` を押すと最初の案内に戻り、何度でも同じ tutorial を繰り返せることを確認します。
+
+画面上では、speaker、本文、選択肢、footer prompt が DOM overlay へ展開され、`DialogueOverlay` の state が status でも追えるようにしています。会話の流れとしてまとめるとどう見えるかを、この unittest で確かめるのが狙いです。
+
+## この unittest で使う webg 機能
+
+この unittest では、`WebgApp`、`UIPanel`、`DialogueOverlay`、`MessageQueue` を使います。`WebgApp` は screen / input / HUD をまとめて起こし、`DialogueOverlay` は会話の進行を queue にまとめ、`UIPanel` はその結果を scene の上へ重ねる DOM overlay として描画します。`MessageQueue` は、tutorial 文の並び順を保ちつつ、branch の差し込みを簡単にします。
+
+## 操作説明
+
+`Enter` / `Space` で次へ進みます。`1` / `2` で選択肢を選びます。`R` で最初からやり直します。会話の順番と分岐を手で確認したいときは、この 3 種類の操作だけ覚えれば十分です。
+
+## つまずきやすい点
+
+`DialogueOverlay` は DOM overlay を使う helper なので、`WebgApp` から使う場合は、`app.init()` のあとに `startDialogue()` を呼ぶ流れにすると安全です。
+
+`choose(index)` は、現在の文に選択肢があるときだけ意味を持ちます。選択肢が無い場面で `1` / `2` を押しても、文は変わりません。`next()` も、choice がある場面では選択をしないまま飛び越えにくいようにしてあります。
+
+## 関連文書
+
+- [14_UI表示の設計.md](../../book/14_UI表示の設計.md)
+- [15_HUDとオーバーレイ.md](../../book/15_HUDとオーバーレイ.md)
+- [UIPanel.js](../../webg/UIPanel.js)
+- [WebgApp.js](../../webg/WebgApp.js)
+- [DialogueOverlay.js](../../webg/DialogueOverlay.js)
+`DialogueOverlay` は、会話や tutorial の流れを `UIPanel` 上で扱うための helper です。

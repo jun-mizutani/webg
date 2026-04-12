@@ -1,0 +1,38 @@
+サンプル: breakout
+
+概要
+- `webg` のゲーム向け基礎機能を使って、3D 見えのシンプルなブロック崩しを作る sample です。
+- `WebgApp` を入口にして、入力、HUD、scene phase、collision body、表示メッセージを 1 本の処理フローへまとめています。
+- 盤面は `title / play / pause / result` の 4 状態で進み、入力の押下と collision の結果で自然に切り替わります。
+- 見た目は 2D に近いですが、Paddle / Ball / Brick / Wall を 3D shape と collision body の両方で持つので、`webg` のゲーム組み込み API を読む教材にも使えます。
+- `Message` 系 HUD で score / combo / time / lives を出し、画面上の状態だけでゲーム進行を追えるようにしています。
+
+このサンプルで使うwebg機能
+- `WebgApp`: Screen / Shader / Space / Input / Message / HUD をまとめて初期化する
+- app 側 `GameStateManager`: title / play / pause / result の状態遷移を整理する
+- `InputController`: `event.key.toLowerCase()` 系の入力を action 名へ束ねる
+- `Touch`: 左右移動と start / pause / restart をタッチボタンで出す
+- `Shape`: 任意サイズの box 形状と球形メッシュを作る
+- `Primitive`: Ball の球メッシュを生成する
+- `Space`: collision body の enter を使って、壁反射 / パドル反射 / ブロック破壊 / ミス判定をまとめる
+
+確認ポイント
+- `Enter` / `Space` で title から play に入り、Ball がパドルから打ち出されることを確認します
+- `ArrowLeft` / `ArrowRight` / `A` / `D` で Paddle が即時に動き、touch ボタンの `←` / `→` でも同じ動きになることを確認します
+- `P` / `Esc` で pause に入り、`Enter` / `Space` で play に戻ることを確認します
+- Brick に Ball が当たると 1 個だけ消え、score と combo が更新されることを確認します
+- 左右壁と天井で Ball が反射し、床センサーに入ると lives が減ることを確認します
+- bricks が全消し、または time が 0 になると result に入り、`R` で title へ戻れることを確認します
+
+操作説明
+- `ArrowLeft` / `A`: Paddle を左へ動かす
+- `ArrowRight` / `D`: Paddle を右へ動かす
+- `Enter` / `Space`: title から開始、pause から再開、serve 後の Ball 打ち出し
+- `P` / `Esc`: pause
+- `R`: result から title へ戻る
+- touch ボタン: `← / → / Start / Pause / R`
+
+補足
+- この sample は、ゲーム向け API の最小確認として、見た目の派手さよりも state / input / collision の流れを追いやすいことを優先しています
+- Ball は `sphere`、Paddle / Brick / Wall は `aabb` として collision body を持ち、`Space.stepCollisions()` の enter 結果を中心に処理しています
+- `result` 画面は clear / game over / time up を同じ phase へまとめ、終了理由だけを文言で切り替える構成にしています

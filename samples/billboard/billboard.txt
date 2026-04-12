@@ -1,0 +1,33 @@
+サンプル: billboard
+
+概要
+- `Billboard` クラスで、常に camera 正面を向く particle 表現を描画するサンプルです
+- `Texture.buildProceduralBillboardTexture` で生成した手続き texture を使い、smoke と debris の 2 系統を切り替えて比較できます
+- 背景には小さめの sphere と床を置き、world light と地面 shadow billboard で particle の奥行き関係も読みやすくしています
+
+このサンプルで使うwebg機能
+- `Billboard`: インスタンス型ビルボード描画
+- `BillboardShader`: 位置・スケール・色を持つ粒子描画シェーダ
+- `Texture`: 円形マスク + ノイズ合成の手続きテクスチャ生成
+- `Space` / `Node` / `Shape` / `SmoothShader`: 背景3Dシーンの描画
+- `Billboard.drawGround`: 地面へ寝かせる shadow billboard 描画
+
+確認ポイント
+- particle が camera 回転に追従して常に正面を向くことを確認し、billboard の向き計算が正しいかを検証します
+- `1` / `2` で smoke と debris を切り替えたとき、同じ particle 更新式でも texture の性格だけで見えが大きく変わることを確認します
+- `-` / `=` で centerBoost を変えたとき、中心部の濃さと edge の見え方がどう変わるかを確認します
+- 同じ particle 数で mesh 方式より頂点数を抑えられる構成として、実運用の effect 基盤に使えることを確認します
+- sphere に highlight が入り、camera を回しても lighting の向きが自然に見えることを確認します
+- particle の真下に薄い shadow billboard が落ち、高さに応じて影の濃さが変わることを確認します
+
+操作説明
+- `Space`: 粒子バーストを生成
+- `1`: smoke texture へ切り替え
+- `2`: debris texture へ切り替え
+- `[` / `]`: 粒子サイズを縮小/拡大
+- `-` / `=`: 現在 mode の centerBoost を下げる/上げる
+- `ArrowLeft` / `ArrowRight`: カメラ水平回転
+- `ArrowUp` / `ArrowDown`: カメラ上下回転
+- `R`: カメラ角度をリセット
+- `C`: 粒子を全消去
+- スマホ（coarse pointer）では画面下にタッチボタン `← / → / ↑ / ↓ / BURST / 1 / 2 / C / [ / ] / - / +` を表示

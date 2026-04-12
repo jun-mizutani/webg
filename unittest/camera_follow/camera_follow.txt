@@ -1,0 +1,34 @@
+camera_follow unittest
+
+この test は、`WebgApp` の camera follow helper を確認するためのものです。
+まず headless の自動テストで helper の値の流れを確認し、そのあと実際の canvas 上で target と camera の関係を確認します。
+
+この test で見たいのは、camera が動くことだけではありません。
+`followNode()` が target node を登録して追従を開始すること、`lockOn()` が camera を target へ即時に合わせること、`clearCameraTarget()` が追従を解除することを確認します。
+visual phase では target を角のあるループで動かし、`follow` では camera が少し遅れて角を曲がり、`lock` ではその場でぴたりと合う違いを見ます。
+
+`yaw-follow` は、この test の中でいちばん意味を取り違えやすい部分です。
+ここでは `followNode(targetRoot, { inheritTargetYaw: true, targetYawOffset: 180.0 })` を使い、camera の位置は target に追従しつつ、camera yaw も target heading に合わせて変わるかを見ます。
+つまり、`follow` が「位置だけを追う」見え方なのに対して、`yaw-follow` は「位置に加えて向きも一緒に変わる」見え方です。
+この違いが見えるように、visual phase では target heading と camera yaw を manual panel に表示しています。
+
+操作の流れ:
+- 画面を開くと自動で確認が走る
+- そのあと canvas へ 3D scene が出て、target が動き続ける
+- `follow` で camera が target の位置を追う
+- `lock` で camera が target に即時に合う
+- target が角を曲がるときに follow の遅れが見える
+- `yaw-follow` で target heading と camera yaw の変化を見比べる
+- `clear` で追従を解除する
+- `reset` で初期状態へ戻す
+- `Space` で target motion を止めたり再開したりする
+
+確認ポイント:
+- `followNode()` が camera follow を有効化するか
+- `updateCameraTarget()` が target position を camera に反映するか
+- `lockOn()` が即時反映になるか
+- `clearCameraTarget()` が追従を解除するか
+- `yaw-follow` で target heading と camera yaw が一緒に変わるか
+
+この test は、動きを複雑にしすぎず、camera helper の違いだけを読み取りやすくすることを優先している。
+target の motion はあえてゆっくりにしてあり、`yaw-follow` のときだけ heading と yaw の関係が画面上で追いやすいようにしている。

@@ -1,0 +1,31 @@
+サンプル: vignette
+
+概要
+- `VignettePass` の最小 visual test です。
+- 3D scene を一度 offscreen `RenderTarget` へ描き、その結果を `VignettePass` で canvas へ戻す経路だけを確認します。
+- 明るめの背板と四隅付近の object を置き、周辺減衰が raw scene と見比べやすい構成にしています。
+
+このサンプルで使うwebg機能
+- `RenderTarget`: 3D scene の offscreen 描画先
+- `FullscreenPass`: raw scene をそのまま canvas へ戻す比較用 pass
+- `VignettePass`: 周辺減衰を掛ける最小 postprocess
+- `Space` / `Shape` / `Primitive` / `SmoothShader`
+- `UnitTestApp`: Screen 初期化、resize、status 表示の共通 helper
+
+確認ポイント
+- `view=vignette` で、画面周辺だけが `radius` / `softness` / `strength` に応じて暗くなることを確認します。
+- `view=scene` に切り替えたとき、source scene 自体は変わらず、postprocess の有無だけが変わることを確認します。
+- `tint` を切り替えたとき、黒だけでなく暖色 / 寒色寄りの vignette も同じ経路で掛かることを確認します。
+- `center` を少しずらしたとき、減衰の中心が追従し、offscreen scene の内容には影響しないことを確認します。
+
+操作説明
+- `Space`: 回転の一時停止 / 再開
+- `V`: `scene` / `vignette` 表示切り替え
+- `B`: vignette の ON / OFF
+- `Q` / `A`: strength を増減
+- `W` / `S`: radius を増減
+- `E` / `D`: softness を増減
+- `J` / `L`: centerX を左右へ移動
+- `I` / `K`: centerY を上下へ移動
+- `C`: tint 切り替え
+- `R`: parameter を初期値へ戻す

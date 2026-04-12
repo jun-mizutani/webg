@@ -1,0 +1,201 @@
+<!doctype html>
+<!-- book/examples/22_01.html 2026/04/10 -->
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>22_01 TileMap の最小 build 例</title>
+  <link rel="stylesheet" href="./example.css" />
+</head>
+<body>
+  <div class="page">
+    <h1>book/examples</h1>
+    <h2>22_01 TileMap の最小 build 例</h2>
+    <div class="section-card">
+      <p>`book/22_タイルマップとは.md` の `scene.tileMap`、`tiles`、`displayArea`、`terrainMaterials`、`app.loadScene(scene)` をそのまま試せる実行例です</p>
+      <p class="note">このページは TileMap の build 入口に絞り、盤面定義から runtime が作られることを確認します。見た目を回しながら、`displayArea` によって見えている cell が絞られていることも status 行で追えます</p>
+    </div>
+
+    <div class="canvas-block">
+      <canvas id="canvas" width="960" height="720"></canvas>
+    </div>
+
+    <pre id="code"></pre>
+
+    <script type="module" id="example-source">
+import WebgApp from "../../webg/WebgApp.js";
+import EyeRig from "../../webg/EyeRig.js";
+
+const terrainFromHeight = (height) => {
+  if (height >= 2) return "peak";
+  if (height >= 1) return "slope";
+  return "floor";
+};
+
+const HEIGHT_MAP = [
+  [0, 0, 1, 1, 2, 2],
+  [0, 1, 1, 1, 2, 3],
+  [0, 1, 2, 2, 2, 3],
+  [0, 0, 1, 2, 3, 3],
+  [0, 0, 1, 1, 2, 2]
+];
+
+const buildTileDefinitions = () => {
+  const tiles = [];
+  for (let row = 0; row < HEIGHT_MAP.length; row++) {
+    for (let col = 0; col < HEIGHT_MAP[row].length; col++) {
+      const height = HEIGHT_MAP[row][col];
+      tiles.push({
+        x: col,
+        y: row,
+        height,
+        terrain: terrainFromHeight(height)
+      });
+    }
+  }
+  return tiles;
+};
+
+const SCENE = {
+  version: "1.0",
+  type: "webg-scene",
+  meta: {
+    name: "book-example-22-01"
+  },
+  camera: {
+    target: [12.0, 0.0, 10.0],
+    distance: 35.0,
+    yaw: 28.0,
+    pitch: -30.0,
+    bank: 0.0,
+    viewAngle: 44.0,
+    near: 0.1,
+    far: 1000.0
+  },
+  tileMap: {
+    name: "example-22-map",
+    width: 6,
+    height: 5,
+    cellSize: 4.0,
+    cellGap: 0.18,
+    floorY: -0.3,
+    baseTopY: 0.72,
+    heightStepY: 1.12,
+    displayArea: {
+      x: 1,
+      y: 1,
+      width: 4,
+      height: 3
+    },
+    tiles: buildTileDefinitions(),
+    terrainMaterials: {
+      floor: {
+        materialId: "smooth-shader",
+        has_bone: 0,
+        color: [0.40, 0.76, 0.40, 1.0],
+        ambient: 0.28,
+        specular: 0.20,
+        power: 10.0,
+        use_texture: 0
+      },
+      slope: {
+        materialId: "smooth-shader",
+        has_bone: 0,
+        color: [0.56, 0.74, 1.0, 1.0],
+        ambient: 0.24,
+        specular: 0.38,
+        power: 18.0,
+        use_texture: 0
+      },
+      peak: {
+        materialId: "smooth-shader",
+        has_bone: 0,
+        color: [0.98, 0.78, 0.34, 1.0],
+        ambient: 0.20,
+        specular: 0.54,
+        power: 26.0,
+        use_texture: 0
+      }
+    }
+  }
+};
+
+const displayAreaToText = (displayArea) => {
+  if (!displayArea) return "(none)";
+  return `(${displayArea.minCol},${displayArea.minRow})-(${displayArea.maxCol},${displayArea.maxRow})`;
+};
+
+const app = new WebgApp({
+  document,
+  messageFontTexture: "../../webg/font512.png",
+  clearColor: [0.07, 0.10, 0.15, 1.0],
+  lightPosition: [30.0, 80.0, 120.0, 1.0],
+  layoutMode: "embedded",
+  fixedCanvasSize: {
+    width: 720,
+    height: 540,
+    useDevicePixelRatio: false
+  }
+});
+await app.init();
+
+const runtime = await app.loadScene(SCENE);
+const tileMap = runtime.tileMap;
+
+const orbit = new EyeRig(app.cameraRig, app.cameraRod, app.eye, {
+  document,
+  element: app.screen.canvas,
+  input: app.input,
+  type: "orbit",
+  orbit: {
+    target: [...SCENE.camera.target],
+    distance: SCENE.camera.distance,
+    yaw: SCENE.camera.yaw,
+    pitch: SCENE.camera.pitch,
+    minDistance: 10.0,
+    maxDistance: 56.0
+  }
+});
+orbit.attachPointer();
+
+app.attachInput({
+  onKeyDown: (key, ev) => {
+    if (ev.repeat) return;
+    if (key === "r") {
+      orbit.setAngles(SCENE.camera.yaw, SCENE.camera.pitch);
+      orbit.setDistance(SCENE.camera.distance);
+    }
+  }
+});
+
+app.createHelpPanel({
+  id: "example2201Help",
+  lines: [
+    "Drag: orbit camera  Wheel: zoom",
+    "R: reset camera",
+    "scene.tileMap -> app.loadScene(scene) -> runtime.tileMap"
+  ]
+});
+
+app.start({
+  onUpdate: ({ deltaSec }) => {
+    orbit.update(deltaSec);
+    app.setStatusLines([
+      `cells=${tileMap.cells.length} visible=${tileMap.visibleCells.length} displayArea=${displayAreaToText(tileMap.displayArea)}`,
+      `cellSize=${tileMap.cellSize.toFixed(2)} gap=${tileMap.cellGap.toFixed(2)} floorY=${tileMap.floorY.toFixed(2)} stepY=${tileMap.heightStepY.toFixed(2)}`,
+      "TileMap build from Scene JSON is complete"
+    ], {
+      anchor: "top-left",
+      x: 0,
+      y: 0
+    });
+  }
+});
+    </script>
+    <script>
+      document.getElementById("code").textContent =
+        document.getElementById("example-source").textContent.trim();
+    </script>
+  </div>
+</body>
+</html>

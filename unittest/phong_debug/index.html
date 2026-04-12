@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>webg unittest phong_debug</title>
+  <link rel="icon" href="data:," />
+  <style>
+    html, body {
+      margin: 0;
+      background: #1b291d;
+      color: #d9e7ff;
+      font-family: "Courier New", monospace;
+    }
+    canvas {
+      display: block;
+      width: 1200px;
+      height: 780px;
+      background: #162016;
+    }
+    #status {
+      position: fixed;
+      left: 10px;
+      top: 8px;
+      padding: 6px 8px;
+      background: rgba(12, 18, 12, 0.42);
+      border-radius: 4px;
+      white-space: pre;
+      pointer-events: none;
+      max-width: calc(100vw - 24px);
+    }
+  </style>
+</head>
+<body>
+  <canvas id="canvas" width="1200" height="780"></canvas>
+  <div id="status">creating screen...</div>
+  <script type="module" src="./main.js"></script>
+</body>
+</html>

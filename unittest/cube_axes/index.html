@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Cube Axes Rotation Demo</title>
+  <link rel="icon" href="data:," />
+  <style>
+    html, body {
+      margin: 0;
+      background: #ffffff;
+    }
+    #canvas {
+      display: block;
+      width: 800px;
+      height: 600px;
+    }
+    #axisLabel {
+      position: fixed;
+      left: 12px;
+      top: 10px;
+      color: #e8f2ff;
+      font: 14px/1.4 monospace;
+      background: rgba(12, 20, 12, 0.65);
+      padding: 6px 8px;
+      border-radius: 6px;
+      pointer-events: none;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="canvas" width="800" height="600"></canvas>
+  <div id="axisLabel">Axis: Y</div>
+  <script type="module" src="./main.js"></script>
+</body>
+</html>

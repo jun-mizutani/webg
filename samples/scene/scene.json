@@ -1,0 +1,145 @@
+{
+  "version": "1.0",
+  "type": "webg-scene",
+  "meta": {
+    "name": "scene-sample",
+    "generator": "samples/scene"
+  },
+  "camera": {
+    "target": [0.0, 4.5, 0.0],
+    "distance": 38.0,
+    "yaw": 24.0,
+    "pitch": -14.0,
+    "bank": 0.0,
+    "viewAngle": 53.0,
+    "near": 0.1,
+    "far": 1000.0
+  },
+  "hud": {
+    "guideLines": [
+      {
+        "x": 0,
+        "y": 1,
+        "text": "scene sample",
+        "color": [1.0, 0.86, 0.42]
+      },
+      {
+        "x": 0,
+        "y": 3,
+        "text": "Arrow keys or drag: orbit camera",
+        "color": [0.86, 0.95, 1.0]
+      },
+      {
+        "x": 0,
+        "y": 4,
+        "text": "[ / ] or wheel: zoom",
+        "color": [0.86, 0.95, 1.0]
+      },
+      {
+        "x": 0,
+        "y": 5,
+        "text": "[p] pause scene animation  [1] replay model",
+        "color": [0.86, 0.95, 1.0]
+      },
+      {
+        "x": 0,
+        "y": 6,
+        "text": "[2] toggle floor wireframe  [r] reset camera  [d] download scene json",
+        "color": [0.86, 0.95, 1.0]
+      }
+    ],
+    "statusLines": [
+      {
+        "x": 0,
+        "y": 8,
+        "text": "scene json loaded",
+        "color": [1.0, 0.88, 0.72]
+      }
+    ]
+  },
+  "input": {
+    "bindings": [
+      {
+        "key": "p",
+        "action": "toggle-pause",
+        "description": "pause or resume scene animation"
+      },
+      {
+        "key": "1",
+        "action": "replay-model",
+        "description": "restart the loaded model animation"
+      },
+      {
+        "key": "2",
+        "action": "toggle-floor-wireframe",
+        "description": "toggle wireframe display on the floor primitive"
+      },
+      {
+        "key": "r",
+        "action": "reset-camera",
+        "description": "reset orbit camera"
+      },
+      {
+        "key": "d",
+        "action": "download-scene",
+        "description": "download current scene json"
+      }
+    ]
+  },
+  "primitives": [
+    {
+      "id": "floor",
+      "type": "cube",
+      "args": [16],
+      "transform": {
+        "translation": [0.0, -10.0, 0.0],
+        "rotation": [0.0, 0.0, 0.0, 1.0],
+        "scale": [1.0, 0.08, 1.0]
+      },
+      "material": {
+        "id": "smooth-shader",
+        "shaderParams": {
+          "use_texture": 0,
+          "color": [0.28, 0.38, 0.48, 1.0],
+          "ambient": 0.28,
+          "specular": 0.76,
+          "power": 40.0
+        }
+      }
+    },
+    {
+      "id": "marker",
+      "type": "sphere",
+      "args": [2.4, 16, 16],
+      "transform": {
+        "translation": [-14.0, 1.8, -8.0],
+        "rotation": [0.0, 0.0, 0.0, 1.0],
+        "scale": [1.0, 1.0, 1.0]
+      },
+      "material": {
+        "id": "smooth-shader",
+        "shaderParams": {
+          "use_texture": 0,
+          "color": [0.90, 0.54, 0.22, 1.0],
+          "ambient": 0.24,
+          "specular": 0.88,
+          "power": 56.0
+        }
+      }
+    }
+  ],
+  "models": [
+    {
+      "id": "hero",
+      "source": "../json_loader/modelasset.json",
+      "transform": {
+        "translation": [0.0, 0.0, 0.0],
+        "rotation": [0.0, 0.0, 0.0, 1.0],
+        "scale": [1.5, 1.5, 1.5]
+      },
+      "bindAnimations": true,
+      "startAnimations": true,
+      "playOnUpdate": true
+    }
+  ]
+}

@@ -1,0 +1,224 @@
+<!doctype html>
+<!-- book/examples/27_04.html 2026/04/10 -->
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>27_04 fractal terrain</title>
+  <link rel="stylesheet" href="./example.css" />
+</head>
+<body>
+  <div class="page">
+    <h1>book/examples</h1>
+    <h2>27_04 fractal terrain</h2>
+    <div class="section-card">
+      <p>`book/27_プロシージャル形状の教材.md` のフラクタル地形コードを、そのまま埋め込み page で見られる実行例です</p>
+      <p class="note">高さ配列を先に作り、`vertexGrid[row][col]` を経由して `addPlane()` で四角形を張る流れをそのまま使っています</p>
+    </div>
+
+    <div class="canvas-block">
+      <canvas id="canvas" width="960" height="720"></canvas>
+    </div>
+
+    <pre id="code"></pre>
+
+    <script type="module" id="example-source">
+import WebgApp from "../../webg/WebgApp.js";
+import EyeRig from "../../webg/EyeRig.js";
+import Shape from "../../webg/Shape.js";
+
+function buildFractalTerrain(shape, options = {}) {
+  const cols = Math.max(2, Math.floor(options.cols ?? 48));
+  const rows = Math.max(2, Math.floor(options.rows ?? 48));
+  const sizeX = Number(options.sizeX ?? 10.0);
+  const sizeZ = Number(options.sizeZ ?? 10.0);
+  const heightScale = Number(options.heightScale ?? 2.4);
+  const octaves = Math.max(1, Math.floor(options.octaves ?? 5));
+  const persistence = Number(options.persistence ?? 0.52);
+  const lacunarity = Number(options.lacunarity ?? 2.0);
+  const seed = Number(options.seed ?? 1337);
+
+  shape.setAutoCalcNormals(true);
+
+  const vertexGrid = Array.from({ length: rows + 1 }, () => new Array(cols + 1).fill(0));
+
+  const hashNoise = (ix, iz, localSeed = seed) => {
+    let h = localSeed | 0;
+    h ^= Math.imul(ix + 1, 374761393);
+    h ^= Math.imul(iz + 1, 668265263);
+    h = Math.imul(h ^ (h >>> 13), 1274126177);
+    h ^= h >>> 16;
+    return (h >>> 0) / 4294967295;
+  };
+
+  const lerp = (a, b, t) => a + (b - a) * t;
+  const fade = (t) => t * t * (3.0 - 2.0 * t);
+
+  const valueNoise2d = (x, z) => {
+    const x0 = Math.floor(x);
+    const z0 = Math.floor(z);
+    const x1 = x0 + 1;
+    const z1 = z0 + 1;
+    const tx = x - x0;
+    const tz = z - z0;
+    const n00 = hashNoise(x0, z0);
+    const n10 = hashNoise(x1, z0);
+    const n01 = hashNoise(x0, z1);
+    const n11 = hashNoise(x1, z1);
+    const sx = fade(tx);
+    const sz = fade(tz);
+    const nx0 = lerp(n00, n10, sx);
+    const nx1 = lerp(n01, n11, sx);
+    return lerp(nx0, nx1, sz);
+  };
+
+  const fbm = (x, z) => {
+    let amplitude = 1.0;
+    let frequency = 1.0;
+    let sum = 0.0;
+    let norm = 0.0;
+    for (let octave = 0; octave < octaves; octave++) {
+      sum += valueNoise2d(x * frequency, z * frequency) * amplitude;
+      norm += amplitude;
+      amplitude *= persistence;
+      frequency *= lacunarity;
+    }
+    return norm > 0.0 ? sum / norm : 0.0;
+  };
+
+  const radialFalloff = (u, v) => {
+    const dx = u - 0.5;
+    const dz = v - 0.5;
+    const d = Math.sqrt(dx * dx + dz * dz) * 2.0;
+    return Math.max(0.0, 1.0 - d * d * 0.55);
+  };
+
+  for (let row = 0; row <= rows; row++) {
+    const v = row / rows;
+    const z = (v - 0.5) * sizeZ;
+
+    for (let col = 0; col <= cols; col++) {
+      const u = col / cols;
+      const x = (u - 0.5) * sizeX;
+      const coarse = fbm(u * 3.0 + 1.7, v * 3.0 + 2.9);
+      const detail = fbm(u * 10.0 + 7.1, v * 10.0 + 5.3);
+      const falloff = radialFalloff(u, v);
+      const h01 = Math.max(0.0, coarse * 0.78 + detail * 0.22);
+      const lifted = Math.pow(h01, 1.55);
+      const y = (lifted * falloff - 0.12) * heightScale;
+      const index = shape.addVertexUV(x, y, z, u, v) - 1;
+      vertexGrid[row][col] = index;
+    }
+  }
+
+  for (let row = 0; row < rows; row++) {
+    for (let col = 0; col < cols; col++) {
+      const p00 = vertexGrid[row][col];
+      const p10 = vertexGrid[row][col + 1];
+      const p11 = vertexGrid[row + 1][col + 1];
+      const p01 = vertexGrid[row + 1][col];
+      shape.addPlane([p00, p01, p11, p10]);
+    }
+  }
+
+  return {
+    rows,
+    cols,
+    vertexCount: (rows + 1) * (cols + 1),
+    quadCount: rows * cols
+  };
+}
+
+const app = new WebgApp({
+  document,
+  messageFontTexture: "../../webg/font512.png",
+  clearColor: [0.05, 0.09, 0.08, 1.0],
+  layoutMode: "embedded",
+  fixedCanvasSize: {
+    width: 720,
+    height: 540,
+    useDevicePixelRatio: false
+  },
+  camera: {
+    target: [0.0, 0.2, 0.0],
+    distance: 13.5,
+    yaw: 32.0,
+    pitch: -28.0
+  }
+});
+await app.init();
+
+const orbit = new EyeRig(app.cameraRig, app.cameraRod, app.eye, {
+  document,
+  element: app.screen.canvas,
+  input: app.input,
+  type: "orbit",
+  orbit: {
+    target: [0.0, 0.2, 0.0],
+    distance: 13.5,
+    yaw: 32.0,
+    pitch: -28.0,
+    minDistance: 5.0,
+    maxDistance: 30.0,
+    wheelZoomStep: 1.2
+  }
+});
+orbit.attachPointer();
+
+const shape = new Shape(app.getGL());
+const info = buildFractalTerrain(shape, {
+  cols: 56,
+  rows: 56,
+  sizeX: 12.0,
+  sizeZ: 12.0,
+  heightScale: 2.8,
+  octaves: 5,
+  persistence: 0.54,
+  lacunarity: 2.0,
+  seed: 2026
+});
+shape.endShape();
+shape.setMaterial("smooth-shader", {
+  has_bone: 0,
+  use_texture: 0,
+  color: [0.40, 0.72, 0.38, 1.0],
+  ambient: 0.20,
+  specular: 0.42,
+  power: 18.0
+});
+
+const node = app.space.addNode(null, "terrain");
+node.setPosition(0.0, -0.5, 0.0);
+node.addShape(shape);
+
+app.createHelpPanel({
+  id: "example2704Help",
+  lines: [
+    "Drag: orbit camera",
+    "Wheel: zoom",
+    "Terrain = height field + addPlane()"
+  ]
+});
+
+app.start({
+  onUpdate: ({ deltaSec }) => {
+    orbit.update(deltaSec);
+    app.setStatusLines([
+      `rows=${info.rows} cols=${info.cols}`,
+      `vertices=${info.vertexCount}`,
+      `quads=${info.quadCount}`
+    ], {
+      anchor: "top-left",
+      x: 0,
+      y: 0
+    });
+  }
+});
+    </script>
+    <script>
+      document.getElementById("code").textContent =
+        document.getElementById("example-source").textContent.trim();
+    </script>
+  </div>
+</body>
+</html>

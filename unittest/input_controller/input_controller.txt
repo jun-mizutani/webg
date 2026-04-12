@@ -1,0 +1,24 @@
+input_controller unittest
+
+この test は、InputController の設計をゲーム向けの土台として確認するためのものです。
+
+ここで見たいのは、単にキーが押せるかどうかではありません。
+physical key の継続状態が `keyState` で保たれるか、`registerActionMap()` で複数のキーを 1 つの action に束ねられるか、そして `pulseAction()` が touch ボタンや menu 系の one-shot 操作としてその frame にだけ見えるかを確認します。
+
+`getAction()` は継続入力を見る入口で、`wasActionPressed()` と `wasActionReleased()` は edge を見る入口です。
+この test では、まず自動チェックで Enter / Space のような鍵盤入力が action に反映されることと、`pulseAction()` で与えた action が同じ frame では `getAction()` からも見えて次の frame では消えることを確かめます。
+
+その後の manual フェーズでは、画面に表示した touch ボタンを実際に押し、keyboard の ArrowLeft / A / ArrowRight / D / Space / Enter / R と同じ action 名で動くかを確認します。`left` / `right` は hold、`fire` / `reset` は action として扱い、keyboard と touch の両方で同じ見え方になるかを見る test です。
+
+操作:
+- 画面を開くと自動で確認が走る
+- 自動確認のあと、下に出る touch ボタンと keyboard を実際に操作する
+- `ArrowLeft / A` と `touch ←`、`ArrowRight / D` と `touch →` をそれぞれ押して同じ移動になるかを見る
+- `Space / Enter` と `Fire`、`R` と `Reset` を押して同じ action として扱われるかを見る
+
+確認ポイント:
+- `normalizeKey()` が space / esc / trim を正規化できるか
+- `registerActionMap()` が action と binding を対応づけるか
+- `keydown` / `keyup` の default を抑えてゲーム入力向けに扱えるか
+- `pulseAction()` が one-shot action として扱えるか
+- touch ボタンが keyboard と同じ action 名で動くか

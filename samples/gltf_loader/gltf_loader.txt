@@ -1,0 +1,70 @@
+サンプル: gltf_loader
+
+概要
+- `main.js` 内で指定した glTF / GLB ファイルを読み込み、`ModelAsset` に正規化してから表示するサンプルです。
+- `WebgApp.loadModel()` から glTF facade を呼び、内部で `ModelAsset` と runtime が組み立てられる流れを確認できます。
+- 読み込んだ `ModelAsset` は `D` キーで JSON ファイルとしてダウンロードできます。
+- static な親 node transform が付いた glTF では、importer 側で skinned mesh 用の親回転 / 親スケールを bake し、runtime 側へ複雑さを持ち込まない方針です。
+- Blender から glTF / GLB を export する場合は、Y-up で出力したファイルを前提とします。
+- loader の model origin policy は、スキニングモデルでは skeleton root、非スキニングモデルでは mesh node を原点とします。
+
+このサンプルで使うwebg機能
+- `WebgApp`: 標準初期化、描画ループ、操作ガイド表示
+- `WebgApp.loadModel`: glTF facade の高レベル入口
+- `ModelLoader`: glTF / GLB を `ModelAsset` へ正規化し build / instantiate をまとめる
+- `ModelAsset`: 検証済みデータの保持と JSON ダウンロード
+- `ModelAsset.getClipNames`: build 前の clip 一覧確認
+- `ModelBuilder`: `ModelAsset` から `Shape` / `Skeleton` / `Animation` を構築
+- `ModelBuilder.animationMap`: clip id から runtime Animation を引く
+- `build()` 結果 helper: `instantiate()` / `createNodeTree()` / `bindAnimationBindings()` / `getAnimation()` / `getAnimationNames()` / `restartAnimation()` / `pauseAnimation()` / `resumeAnimation()` / `startAllAnimations()` / `playAllAnimations()` / `setAnimationsPaused()`
+- `EyeRig(type="orbit")`: world bbox 基準のオービット視点
+
+処理フロー
+- sample は `WebgApp.loadModel(GLTF_FILE, { format: "gltf" ... })` を呼び、loader の format 判定から glTF facade へ入ります。
+- `ModelLoader` は file を読み込み、`GltfShape` に parse と正規化を委ねます。
+- `GltfShape` は material / mesh / skeleton / animation / node を `ModelAsset` 形式へそろえます。
+- このとき、static な親 node transform を持つ glTF では `buildStaticBakePlans()` が走り、skinned mesh には親回転 / 親スケールを mesh / skeleton / animation へ bake します。
+- non-skinned mesh では static uniform scale を geometry bake で処理する経路も残しつつ、runtime node 側でも uniform scale を扱えます。
+- `ModelBuilder` は `ModelAsset` から runtime の `Shape` / `Skeleton` / `Animation` / `Node` を組み立てます。
+
+ダウンロードした JSON の見方
+- `meta.source` は `glTF`、`meta.upAxis` は `Y` になっている前提です。
+- `meshes[].meta.staticBake` は importer が static bake を適用した mesh だけに現れます。
+- `meshes[].meta.bakedNodeIndex` は、どの glTF node の transform を geometry へ反映したかを見るための index です。
+- `skeletons[].meta.staticBake` は、skinned mesh の root joint 側へ親 transform bake を入れた場合に記録されます。
+- `nodes[].matrix` は runtime 側へ残した structural transform で、skinned bake 済み node では identity になります。
+- `nodes[].animationBindings` と `animations[].targetSkeleton` を見ると、どの clip がどの skeleton に接続されているかを追えます。
+- `gltfNodeIndex` と `gltfSkinIndex` を見ると、JSON 上の node と元 glTF の node / skin の対応を後から追跡できます。
+
+確認ポイント
+- `GLTF_FILE` で指定したファイルが読み込まれ、shape / skeleton / animation が正しく構築されるかを確認します
+- facade 1 回の呼び出しで、glTF の node 復元と animation binding が他形式と同じ共通 helper で行えることを確認します
+- skinned mesh を含む glTF でも、static な親回転や uniform scale が importer 側で bake され、static mesh と skinned mesh の向きが大きく食い違わないことを確認します
+- `D` キーで保存した `ModelAsset` JSON に `staticBake` meta が残り、どの node / skeleton へ bake が適用されたかを後から確認できることを確認します
+- raw glTF の animation sampler に `CUBICSPLINE` が入っている場合は、中間値を抜いて `LINEAR` に変換され、固定パネルと `animationInterpolation=LINEAR converted=CUBICSPLINE->LINEAR:...` が表示されることを確認します
+- 大きい glTF / GLB を読み込むときでも、起動中は固定パネルに `stage=...` が表示され、少なくともどの段階まで進んだかを確認できることを確認します
+- Rigify 系モデルでは `required=...` に加えて `helperWeighted=...`、`helperAncestor=...`、`helperPruned=...` を見ることで、helper 骨が実際に weight で使われているのか、親子関係維持のために残っているだけなのか、あるいは importer が焼き込んで削除できたのかを判断できることを確認します
+- HUD に clip 名一覧と先頭 clip の track 数 / key 数 / duration が表示され、facade からも animation 定義が引けることを確認します
+- HUD に clip0 / selectedState / clip0Bound が表示され、先頭 clip の再生状態と runtime 接続状態が確認できることを確認します
+- `1` キーで先頭 clip を `restartAnimation(clipId)` により名前指定で再始動できることを確認します
+- `2` / `3` キーで先頭 clip を `pauseAnimation(clipId)` / `resumeAnimation(clipId)` により個別停止・再開できることを確認します
+- glTF node の親 transform を含む world bbox に応じてカメラ距離が自動設定され、初期表示でモデル全体が見えるかを確認します
+- `D` キーで出力した JSON を `json_loader` に渡して再表示できることを確認します
+- 初期表示でモデルが少し下寄りに見え、`Q` / `E` で視点の上下位置を微調整できることを確認します
+
+AI / 利用者向けの読み取りポイント
+- 「表示は合っているが scale がどこで反映されたか分からない」ときは、まず `meshes[].meta.staticBake` と `nodes[].matrix` を見ます。
+- 「animation はあるが再生されない」ときは、`animations[].targetSkeleton` と `nodes[].animationBindings` の対応を見ます。
+- 「clip 名は見えるが node に bind されない」ときは、runtime HUD の `clip0Bound` と JSON の binding を見比べます。
+- 「親 node を持つ skinned mesh の向きが怪しい」ときは、`skeletons[].meta.staticBake` が入っているか、対象 asset が scale animation / non-uniform scale を含んでいないかを確認します。
+
+操作説明
+- ドラッグ / 矢印キー: オービットカメラ回転
+- ホイール / `[` / `]`: ズーム
+- `Q` / `E`: カメラの注視点を上 / 下へ移動
+- `Space`: アニメーション一時停止
+- `1`: 先頭 clip を再生し直す
+- `2`: 先頭 clip を一時停止
+- `3`: 先頭 clip を再開
+- `D`: `ModelAsset` JSON をダウンロード
+- `R`: カメラをバウンディングボックス基準の初期位置へ戻す

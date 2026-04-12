@@ -1,0 +1,20 @@
+サンプル: skinning_basic
+
+概要
+- `SmoothShader` の skinning 経路だけを最小構成で確認する unittest です。
+- 少数ボーンで曲がる円柱側面メッシュと debugBone 表示だけに絞り、教材向けの操作や比較 UI は持たせません。
+
+このサンプルで使うwebg機能
+- `SmoothShader`: `setMaterial("smooth-shader", ...)` を入口にした smooth skinning 描画
+- `Skeleton` / `Shape.addVertexWeight`: 2 ボーンの最小ウェイト設定
+- `Space.drawBones`: ボーン表示
+- `UnitTestApp`: Screen 初期化、status / error 表示の共通化
+
+確認ポイント
+- メッシュ変形が継続し、ボーン表示と曲がる位置が一致することを確認します
+- `num256.png` を貼った状態でも UV が極端に崩れず、skinning shader の基本表示が成立することを確認します
+- shader や matrix palette を触った変更後に、最小の SmoothShader skinning 経路が壊れていないかを素早く確認します
+
+操作説明
+- キー入力: なし
+- マウス操作: なし

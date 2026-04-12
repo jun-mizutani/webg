@@ -1,0 +1,178 @@
+<!doctype html>
+<!-- book/examples/21_01.html 2026/04/10 -->
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>21_01 ParticleEmitter の最小例</title>
+  <link rel="stylesheet" href="./example.css" />
+</head>
+<body>
+  <div class="page">
+    <h1>book/examples</h1>
+    <h2>21_01 ParticleEmitter の最小例</h2>
+    <div class="section-card">
+      <p>`book/21_パーティクルと軽量エフェクト.md` の `WebgApp.createParticleEmitter()` と `emit()` を、そのまま埋め込み page で試せる実行例です</p>
+      <p class="note">`Space` か `Enter` で burst、`1`〜`4` で preset 切り替えです。`WebgApp.start()` を使っているので emitter の update / draw は自動で流れます</p>
+    </div>
+
+    <div class="canvas-block">
+      <canvas id="canvas" width="960" height="720"></canvas>
+    </div>
+
+    <pre id="code"></pre>
+
+    <script type="module" id="example-source">
+import WebgApp from "../../webg/WebgApp.js";
+import Primitive from "../../webg/Primitive.js";
+import Shape from "../../webg/Shape.js";
+
+const PRESETS = ["spark", "smoke", "debris", "pickup"];
+
+const app = new WebgApp({
+  document,
+  messageFontTexture: "../../webg/font512.png",
+  clearColor: [0.07, 0.09, 0.13, 1.0],
+  layoutMode: "embedded",
+  fixedCanvasSize: {
+    width: 720,
+    height: 540,
+    useDevicePixelRatio: false
+  },
+  camera: {
+    target: [0.0, -1.0, 0.0],
+    distance: 16.0,
+    yaw: 20.0,
+    pitch: -14.0
+  }
+});
+await app.init();
+
+const floorShape = new Shape(app.getGL());
+floorShape.applyPrimitiveAsset(Primitive.cuboid(18.0, 0.8, 18.0, floorShape.getPrimitiveOptions()));
+floorShape.endShape();
+floorShape.setMaterial("smooth-shader", {
+  has_bone: 0,
+  use_texture: 0,
+  color: [0.16, 0.20, 0.26, 1.0],
+  ambient: 0.22,
+  specular: 0.18,
+  power: 12.0
+});
+const floor = app.space.addNode(null, "floor");
+floor.setPosition(0.0, -3.0, 0.0);
+floor.addShape(floorShape);
+
+const beaconShape = new Shape(app.getGL());
+beaconShape.applyPrimitiveAsset(Primitive.sphere(0.65, 18, 16, beaconShape.getPrimitiveOptions()));
+beaconShape.endShape();
+beaconShape.setMaterial("smooth-shader", {
+  has_bone: 0,
+  use_texture: 0,
+  color: [1.0, 0.84, 0.42, 1.0],
+  ambient: 0.78,
+  specular: 0.92,
+  power: 52.0,
+  emissive: 0.7
+});
+const beacon = app.space.addNode(null, "beacon");
+beacon.setPosition(0.0, -1.0, 0.0);
+beacon.addShape(beaconShape);
+
+const emitter = await app.createParticleEmitter({
+  name: "exampleEmitter",
+  maxParticles: 320,
+  useShadow: true,
+  groundY: -2.6,
+  preset: "spark",
+  seed: 31
+});
+
+const state = {
+  presetIndex: 0,
+  burstCount: 24,
+  autoTimer: 0.0,
+  lastEvent: "startup burst"
+};
+
+const emitBurst = () => {
+  const position = beacon.getWorldPosition();
+  const preset = PRESETS[state.presetIndex];
+  emitter.emit(state.burstCount, {
+    position,
+    positionSpread: [0.25, 0.25, 0.25],
+    velocity: preset === "smoke" ? [0.0, 3.0, 0.0] : [0.0, 9.0, 0.0],
+    velocitySpread: preset === "pickup" ? [2.0, 2.0, 2.0] : [6.0, 4.0, 6.0],
+    gravity: preset === "smoke" ? [0.0, 1.0, 0.0] : [0.0, -14.0, 0.0],
+    drag: preset === "smoke" ? 0.05 : 0.08,
+    life: preset === "smoke" ? 1.4 : 0.8,
+    lifeSpread: preset === "smoke" ? 0.3 : 0.18,
+    size: preset === "smoke" ? 1.4 : 0.8,
+    sizeSpread: preset === "smoke" ? 0.4 : 0.2,
+    color: preset === "smoke"
+      ? [0.92, 0.92, 0.92, 1.0]
+      : preset === "pickup"
+        ? [0.95, 1.0, 0.60, 1.0]
+        : [1.0, 0.85, 0.40, 1.0],
+    colorSpread: [0.06, 0.08, 0.10, 0.0],
+    shadowAlpha: 0.32,
+    shadowScale: 1.2,
+    shadowY: -2.6
+  });
+};
+
+app.attachInput({
+  onKeyDown: (key, ev) => {
+    if (ev.repeat) return;
+    if (key === " " || key === "space" || key === "enter") {
+      state.lastEvent = "manual burst";
+      emitBurst();
+    } else if (key === "1" || key === "2" || key === "3" || key === "4") {
+      state.presetIndex = Number(key) - 1;
+      emitter.setPreset(PRESETS[state.presetIndex]);
+      state.lastEvent = `preset=${PRESETS[state.presetIndex]}`;
+      emitBurst();
+    }
+  }
+});
+
+app.createHelpPanel({
+  id: "example2101Help",
+  lines: [
+    "Enter / Space: burst",
+    "1 / 2 / 3 / 4: spark / smoke / debris / pickup",
+    "ParticleEmitter update/draw runs automatically in WebgApp.start()"
+  ]
+});
+
+emitBurst();
+
+app.start({
+  onUpdate: ({ deltaSec }) => {
+    state.autoTimer += deltaSec;
+    beacon.rotateY(0.8);
+    if (state.autoTimer >= 1.0) {
+      state.autoTimer = 0.0;
+      state.lastEvent = "auto burst";
+      emitBurst();
+    }
+
+    app.setStatusLines([
+      `preset=${PRESETS[state.presetIndex]}`,
+      `alive=${emitter.getAliveCount()} / 320`,
+      `event=${state.lastEvent}`
+    ], {
+      anchor: "top-left",
+      x: 0,
+      y: 0
+    });
+  }
+});
+    </script>
+    <script>
+      document.getElementById("code").textContent =
+        document.getElementById("example-source").textContent.trim();
+    </script>
+  </div>
+</body>
+</html>

@@ -1,0 +1,40 @@
+サンプル: embedded
+
+最終更新: 2026-04-09 JST
+
+この unittest は、`WebgApp` の `layoutMode: "embedded"` と `fixedCanvasSize` を組み合わせたときに、固定サイズ canvas を HTML 文書の途中へ置き、その上に重なる DOM overlay も同じ host 要素を基準に動くかを確認するための test です。通常の fullscreen sample では、canvas と overlay は viewport 全体を前提にしていても気付きにくいのですが、教材ページのように本文の前後へ説明文やコード例を置く構成では、scroll 中に overlay が canvas から外れて見えないことが重要になります。
+
+ここでは、canvas のまわりへ長い本文を意図的に置き、ページ自体は普通にスクロールできるようにしています。そのうえで `HelpPanel`、`DialogueOverlay`、`FixedFormatPanel`、`Touch` を同時に出し、右側の status で host / canvas / overlay の矩形差分を毎フレーム表示します。これにより、単に「見た目で何となく追従している」だけでなく、「left / top / right / bottom の差分がどの程度か」も数値で追えます。
+
+この unittest の役割は、`embedded` を使った教材ページ、解説記事、社内ドキュメント用ページを作る前に、`WebgApp` 側の埋め込み配置が崩れていないかを一通りまとめて確認することです。`fixedCanvasSize` だけでなく、`app.takeScreenshot()`、`app.createHelpPanel()`、`app.startDialogue()`、`app.showFixedFormatPanel()`、`InputController.installTouchControls()` の組み合わせが同じ host 要素で揃うかを見ます。
+
+## この unittest で確認すること
+
+最初に確認したいのは、ページ全体をスクロールしたときに canvas が文書フローの一部として動き、その上の HelpPanel、dialogue、fixed panel、touch controls も一緒に移動することです。status の `canvas-host`、`help`、`dialogue`、`fixed`、`touch` が PASS のまま変わらないことを見ます。
+
+次に確認したいのは、HelpPanel を閉じたときの見え方です。`H` で show / hide を切り替えたとき、`Show Help` ボタンだけが小さく残り、panel 枠が host 全幅へ帯状に広がらないことを見ます。これは embedded 向けに追加した幅調整が効いているかの確認です。
+
+さらに、`Enter` / `Space` で dialogue を進め、`D` で dialogue、`F` で fixed panel を切り替え、`S` で screenshot を予約し、`R` で camera を初期状態へ戻しても embedded の配置が崩れないことを確認します。`1`、`2`、`3` では先頭、canvas、末尾へ scroll できるため、長いページの途中にある canvas を往復しやすくしています。
+
+## この unittest で使う webg 機能
+
+この unittest では、`WebgApp`、`EyeRig`、`UIPanel`、`DialogueOverlay`、`FixedFormatPanel`、`InputController`、`Touch`、`Shape`、`Primitive` を使います。`WebgApp` は embedded host と overlay の共通配置を担当し、`EyeRig` は orbit camera、`UIPanel` と `DialogueOverlay` は HelpPanel / 会話表示、`FixedFormatPanel` は長文 panel、`InputController` と `Touch` は keyboard / touch の共通入力を担当します。3D 表示自体は立方体 1 個だけに絞り、配置確認を主役にしています。
+
+## 操作説明
+
+マウスドラッグで orbit camera を動かせます。`ArrowLeft` / `ArrowRight` と touch の左右ボタンは cube の回転位相を変えます。`Enter` / `Space` で dialogue を次へ進めます。`H` で HelpPanel の表示切替、`D` で dialogue の表示切替、`F` で fixed panel の表示切替、`S` で screenshot、`R` で camera reset を行います。`1`、`2`、`3` はページ先頭、canvas 位置、末尾へ scroll する補助です。
+
+## つまずきやすい点
+
+この unittest が動いていても、実際の教材ページ側で `html, body { overflow: hidden; }` を付けたままだとページはスクロールしません。`layoutMode: "embedded"` は canvas と overlay を本文フローへ戻すための option であり、文書自体の scroll は HTML / CSS 側で許可する必要があります。
+
+また、`Touch` はここでは desktop でも確認できるよう `touchDeviceOnly: false` で常時表示しています。実アプリで mobile だけに出したい場合は既定値へ戻してください。
+
+## 関連文書
+
+- [05_WebgAppによるアプリ構成.md](../../book/05_WebgAppによるアプリ構成.md)
+- [15_HUDとオーバーレイ.md](../../book/15_HUDとオーバーレイ.md)
+- [WebgApp.js](../../webg/WebgApp.js)
+- [UIPanel.js](../../webg/UIPanel.js)
+- [DialogueOverlay.js](../../webg/DialogueOverlay.js)
+- [Touch.js](../../webg/Touch.js)

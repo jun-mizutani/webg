@@ -1,0 +1,143 @@
+<!doctype html>
+<!-- book/examples/06_01.html 2026/04/12 -->
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>06_01 orbit camera</title>
+  <link rel="stylesheet" href="./example.css" />
+</head>
+<body>
+  <div class="page">
+    <h1>book/examples</h1>
+    <h2>06_01 orbit camera</h2>
+    <div class="section-card">
+      <p>`book/06_カメラ制御とEyeRig.md` の「6.6 まずは orbit camera を動かす」を、視点変化が分かりやすい複数 object 付きで実行できるようにした例です</p>
+      <p class="note">ドラッグで orbit、ホイールで zoom しながら、`cameraRig -> cameraRod -> eye` に対して `EyeRig` がどう働くかを確認できます</p>
+    </div>
+
+    <div class="canvas-block">
+      <canvas id="canvas" width="960" height="720"></canvas>
+    </div>
+
+    <pre id="code"></pre>
+
+    <script type="module" id="example-source">
+import WebgApp from "../../webg/WebgApp.js";
+import EyeRig from "../../webg/EyeRig.js";
+import Shape from "../../webg/Shape.js";
+import Primitive from "../../webg/Primitive.js";
+
+const app = new WebgApp({
+  document,
+  messageFontTexture: "../../webg/font512.png",
+  clearColor: [0.1, 0.15, 0.1, 1.0],
+  layoutMode: "embedded",
+  fixedCanvasSize: {
+    width: 720,
+    height: 540,
+    useDevicePixelRatio: false
+  },
+  camera: {
+    target: [0.0, 0.0, 0.0],
+    distance: 8.0,
+    yaw: 0.0,
+    pitch: 0.0,
+    bank: 0.0
+  }
+});
+await app.init();
+
+const makeBox = (size, color) => {
+  const shape = new Shape(app.getGL());
+  shape.applyPrimitiveAsset(Primitive.cube(size, shape.getPrimitiveOptions()));
+  shape.endShape();
+  shape.setMaterial("smooth-shader", {
+    has_bone: 0,
+    use_texture: 0,
+    color
+  });
+  return shape;
+};
+
+const floorShape = new Shape(app.getGL());
+floorShape.applyPrimitiveAsset(Primitive.cuboid(16.0, 0.35, 16.0, floorShape.getPrimitiveOptions()));
+floorShape.endShape();
+floorShape.setMaterial("smooth-shader", {
+  has_bone: 0,
+  use_texture: 0,
+  color: [0.30, 0.38, 0.48, 1.0],
+  ambient: 0.24,
+  specular: 0.22,
+  power: 12.0
+});
+const floor = app.space.addNode(null, "floor");
+floor.setPosition(0.0, -2.2, 0.0);
+floor.addShape(floorShape);
+
+const centerShape = makeBox(1.6, [0.24, 0.66, 0.96, 1.0]);
+const center = app.space.addNode(null, "center");
+center.setPosition(0.0, 0.0, 0.0);
+center.addShape(centerShape);
+
+const leftShape = makeBox(1.2, [0.96, 0.52, 0.30, 1.0]);
+const left = app.space.addNode(null, "left");
+left.setPosition(-3.2, 0.0, -1.0);
+left.addShape(leftShape);
+
+const rightShape = makeBox(1.0, [0.62, 0.92, 0.36, 1.0]);
+const right = app.space.addNode(null, "right");
+right.setPosition(3.0, 0.6, 2.0);
+right.addShape(rightShape);
+
+const orbit = new EyeRig(app.cameraRig, app.cameraRod, app.eye, {
+  document,
+  element: app.screen.canvas,
+  input: app.input,
+  type: "orbit",
+  orbit: {
+    target: [0.0, 0.0, 0.0],
+    distance: 8.0,
+    yaw: 24.0,
+    pitch: -12.0,
+    minDistance: 4.0,
+    maxDistance: 18.0,
+    wheelZoomStep: 1.0
+  }
+});
+orbit.attachPointer();
+
+app.createHelpPanel({
+  id: "example0601Help",
+  lines: [
+    "Drag: orbit camera",
+    "Wheel: zoom",
+    "F9 then M: toggle debug mode"
+  ]
+});
+
+app.setStatusLines([
+  "EyeRig orbit sample",
+  "base -> rod -> eye"
+], {
+  anchor: "top-left",
+  x: 0,
+  y: 0
+});
+
+app.start({
+  onUpdate: ({ deltaSec }) => {
+    orbit.update(deltaSec);
+    center.rotateY(0.9);
+    left.rotateX(0.6);
+    right.rotateZ(0.5);
+  }
+});
+    </script>
+    <script>
+      document.getElementById("code").textContent =
+        document.getElementById("example-source").textContent.trim();
+    </script>
+  </div>
+</body>
+</html>

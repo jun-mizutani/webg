@@ -1,0 +1,112 @@
+<!doctype html>
+<!-- book/examples/26_01.html 2026/04/12 -->
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>26_01 Shape の高水準経路</title>
+  <link rel="stylesheet" href="./example.css" />
+</head>
+<body>
+  <div class="page">
+    <h1>book/examples</h1>
+    <h2>26_01 Shape の高水準経路</h2>
+    <div class="section-card">
+      <p>`book/26_Shapeとメッシュ構築.md` の高水準経路、つまり `Primitive` を `Shape` へ流し込む最小例です</p>
+      <p class="note">`Primitive.cube()` で geometry を受け取り、`endShape()` で GPU buffer を確定し、`setMaterial()` で見た目を与える順をそのまま追えます</p>
+    </div>
+
+    <div class="canvas-block">
+      <canvas id="canvas" width="960" height="720"></canvas>
+    </div>
+
+    <pre id="code"></pre>
+
+    <script type="module" id="example-source">
+import WebgApp from "../../webg/WebgApp.js";
+import EyeRig from "../../webg/EyeRig.js";
+import Shape from "../../webg/Shape.js";
+import Primitive from "../../webg/Primitive.js";
+
+const app = new WebgApp({
+  document,
+  messageFontTexture: "../../webg/font512.png",
+  clearColor: [0.1, 0.15, 0.1, 1.0],
+  layoutMode: "embedded",
+  fixedCanvasSize: {
+    width: 720,
+    height: 540,
+    useDevicePixelRatio: false
+  },
+  camera: {
+    target: [0.0, 0.0, 0.0],
+    distance: 8.0,
+    yaw: 18.0,
+    pitch: -10.0
+  }
+});
+await app.init();
+
+const orbit = new EyeRig(app.cameraRig, app.cameraRod, app.eye, {
+  document,
+  element: app.screen.canvas,
+  input: app.input,
+  type: "orbit",
+  orbit: {
+    target: [0.0, 0.0, 0.0],
+    distance: 8.0,
+    yaw: 18.0,
+    pitch: -10.0,
+    minDistance: 4.0,
+    maxDistance: 18.0
+  }
+});
+orbit.attachPointer();
+
+const shape = new Shape(app.getGL());
+shape.applyPrimitiveAsset(
+  Primitive.cube(2.0, shape.getPrimitiveOptions())
+);
+shape.endShape();
+shape.setMaterial("smooth-shader", {
+  has_bone: 0,
+  use_texture: 0,
+  color: [1.0, 0.5, 0.3, 1.0]
+});
+
+const node = app.space.addNode(null, "cube");
+node.addShape(shape);
+
+app.createHelpPanel({
+  id: "example2601Help",
+  lines: [
+    "Drag: orbit camera",
+    "Wheel: zoom",
+    "Shape high-level path"
+  ]
+});
+
+app.start({
+  onUpdate: ({ deltaSec }) => {
+    orbit.update(deltaSec);
+    node.rotateY(0.9);
+    node.rotateX(0.4);
+    app.setStatusLines([
+      "Shape.applyPrimitiveAsset()",
+      "Primitive.cube() -> endShape()",
+      `camera=${orbit.orbit.distance.toFixed(1)}`
+    ], {
+      anchor: "top-left",
+      x: 0,
+      y: 0
+    });
+  }
+});
+    </script>
+    <script>
+      document.getElementById("code").textContent =
+        document.getElementById("example-source").textContent.trim();
+    </script>
+  </div>
+</body>
+</html>

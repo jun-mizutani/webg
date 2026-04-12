@@ -1,0 +1,131 @@
+<!doctype html>
+<!-- book/examples/15_01.html 2026/04/09 -->
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>15_01 Text と Message</title>
+  <link rel="stylesheet" href="./example.css" />
+</head>
+<body>
+  <div class="page">
+    <h1>book/examples</h1>
+    <h2>15_01 Text と Message</h2>
+    <div class="section-card">
+      <p>`book/15_HUDとオーバーレイ.md` の `Text` と `Message` の違いを、同じ canvas 上で見比べるための実行例です</p>
+      <p class="note">上側は `writeAt()` で座標を直接指定する `Text`、下側は `setLine()` と `setBlock()` で意味単位に置く `Message` です</p>
+    </div>
+
+    <div class="canvas-block">
+      <canvas id="canvas" width="960" height="720"></canvas>
+    </div>
+
+    <pre id="code"></pre>
+
+    <script type="module" id="example-source">
+import Screen from "../../webg/Screen.js";
+import Text from "../../webg/Text.js";
+import Message from "../../webg/Message.js";
+
+const CANVAS_W = 720;
+const CANVAS_H = 540;
+
+const screen = new Screen(document);
+await screen.ready;
+screen.fitToViewport = false;
+screen.useDevicePixelRatio = false;
+screen.setClearColor([0.05, 0.06, 0.09, 1.0]);
+
+const applyViewportLayout = () => {
+  screen.resize(CANVAS_W, CANVAS_H);
+};
+applyViewportLayout();
+window.addEventListener("resize", applyViewportLayout);
+window.addEventListener("orientationchange", applyViewportLayout);
+
+const gpu = screen.getGL();
+const text = new Text(gpu, { cols: 80, rows: 25 });
+const message = new Message(gpu, { cols: 80, rows: 25 });
+await text.init("../../webg/font512.png");
+await message.init("../../webg/font512.png");
+text.charOffset = 0;
+message.charOffset = 0;
+text.shader.setScale(1.0);
+message.shader.setScale(1.0);
+
+const draw = () => {
+  const frame = screen.getFrameCount();
+  const blink = (Math.floor(frame / 30) % 2) === 0 ? "ON " : "OFF";
+
+  screen.clear();
+
+  text.clearScreen();
+  text.writeAt(0, 0, "Text.js area");
+  text.writeAt(0, 1, "writeAt(x, y, text) で座標を直接指定");
+  text.writeAt(0, 2, `frame=${frame} blink=${blink}`);
+  text.writeAt(0, 4, "ASCII upper: ABCDEFGHIJKLMNOPQRSTUVWXYZ");
+  text.writeAt(0, 5, "ASCII lower: abcdefghijklmnopqrstuvwxyz");
+  text.writeAt(0, 6, "digits     : 0123456789");
+  text.writeAt(0, 8, "Text は terminal 風の低レベル表示に向く");
+  text.drawScreen();
+
+  message.replaceAll([
+    {
+      id: "title",
+      text: "Message.js area",
+      x: 0,
+      y: 13,
+      color: [1.0, 0.84, 0.54]
+    },
+    {
+      id: "status",
+      lines: [
+        "setLine / setBlock / replaceAll",
+        `frame=${frame} blink=${blink}`,
+        "anchor 付き HUD を意味単位で更新"
+      ],
+      x: 0,
+      y: 14,
+      color: [0.34, 0.96, 0.68]
+    },
+    {
+      id: "guide",
+      lines: [
+        "top-right anchor",
+        "bottom-left block",
+        "ASCII short HUD"
+      ],
+      anchor: "top-right",
+      x: -1,
+      y: 13,
+      color: [0.46, 0.84, 1.0]
+    },
+    {
+      id: "footer",
+      lines: [
+        "Message は短い HUD を置くための高レベル API",
+        "長い日本語本文は DOM overlay 側へ分ける"
+      ],
+      anchor: "bottom-left",
+      x: 0,
+      y: -2,
+      width: 50,
+      wrap: true,
+      color: [0.92, 0.96, 1.0]
+    }
+  ]);
+  message.drawScreen();
+
+  screen.present();
+  requestAnimationFrame(draw);
+};
+
+draw();
+    </script>
+    <script>
+      document.getElementById("code").textContent =
+        document.getElementById("example-source").textContent.trim();
+    </script>
+  </div>
+</body>
+</html>

@@ -1,0 +1,27 @@
+サンプル: detouch
+
+概要
+- ノードの親子関係を実行中に `attach` / `detach` で切り替えるサンプルです。
+- 「見た目の位置を保ったまま親を差し替える」階層操作を、実際の動きと HUD の両方から学ぶための教材サンプルです。
+
+このサンプルで使うwebg機能
+- `WebgApp`: Screen / Shader / Space / Camera / Input / Message の標準初期化
+- `Node.attach` / `Node.detach`
+- `Node.getWorldPosition` / `getWorldAttitude`
+- `WebgApp.setGuideLines` / `setStatusLines`: 階層状態と姿勢表示
+- `Texture` + `SmoothShader`: 球の可視化
+- `InputController` / `Touch`: キー入力とタッチ入力を同じ操作へ束ねる
+
+確認ポイント
+- 左右の回転アームの先端に対して球の親を切り替えても、球の見た目位置と姿勢が急に飛ばないことを確認し、ワールド座標保持の実装を観察します
+- `sphere parent`、`world h/p/b`、`local h/p/b` の status 表示を見比べ、親変更後に local 値は変わっても見た目の world 側が保たれることを確認します
+- `detach/attach right` と `exchange parent` の違いを見比べ、親を `null` に外す場合と別親へつなぎ替える場合の処理フロー差を確認します
+
+操作説明
+- `W` / `Z`: カメラのピッチ回転
+- `A` / `S`: カメラのヨー回転
+- `F` / `G`: ズームイン / ズームアウト
+- `D`: 右先端ノードとの detach/attach 切替
+- `Space`: 球オブジェクトの親ノードを左右で入れ替え
+- `Q`: アニメーション停止
+- `X`: アニメーション再開

@@ -1,0 +1,102 @@
+/* book/examples/example.css 2026/04/09 */
+
+html, body {
+  margin: 0;
+  background: #eef1f6;
+  color: #202638;
+  font: 16px/1.7 "Hiragino Sans", "Yu Gothic UI", "Yu Gothic", sans-serif;
+}
+
+body {
+  padding: 24px 20px 80px;
+}
+
+.page {
+  max-width: 980px;
+  margin: 0 auto;
+}
+
+h1 {
+  margin: 0 0 12px;
+  font-size: 28px;
+}
+
+h2 {
+  margin: 24px 0 10px;
+  padding: 10px 14px;
+  background: #dfe7f4;
+  border-left: 6px solid #5877b7;
+  font-size: 20px;
+}
+
+p {
+  margin: 10px 0;
+}
+
+.note {
+  color: #51607e;
+}
+
+.canvas-block {
+  margin: 18px 0 24px;
+  overflow-x: auto;
+}
+
+canvas {
+  display: block;
+  width: 720px;
+  height: 540px;
+  background: #10151f;
+  border: 1px solid #b9c5e0;
+  box-shadow: 0 8px 24px rgba(31, 42, 68, 0.18);
+}
+
+pre {
+  margin: 18px 0 0;
+  padding: 16px 18px;
+  overflow: auto;
+  border-radius: 10px;
+  background: #18202d;
+  color: #e9efff;
+  font: 13px/1.6 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+.section-card {
+  margin: 18px 0;
+  padding: 18px 20px;
+  background: #ffffff;
+  border: 1px solid #d6deee;
+  border-radius: 12px;
+}
+
+a {
+  color: #365d9d;
+}
+
+.index-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 16px;
+  margin: 20px 0 0;
+}
+
+.index-card {
+  padding: 18px 20px;
+  background: #ffffff;
+  border: 1px solid #d6deee;
+  border-radius: 12px;
+}
+
+.index-card h3 {
+  margin: 0 0 10px;
+  font-size: 18px;
+}
+
+.index-card ul {
+  margin: 10px 0 0;
+  padding-left: 20px;
+}
+
+.index-card li {
+  margin: 8px 0;
+}

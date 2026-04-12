@@ -1,0 +1,23 @@
+game_api unittest
+
+この test は、ゲーム向けに追加した API を 1 本の小さな流れとして確認するための sample です。
+WebgApp で画面と HUD をまとめて初期化し、InputController で action 名を扱い、app 側の GameStateManager で title / play / pause / result を切り替え、Space と Shape の collision helper で player と target の重なりを拾います。
+
+画面上では、左側の player cube を左右入力で動かし、右側の target cube を拾うと score が増え、toast が出て、combo も更新されます。
+timeLeft が 0 になるか score が一定値に達すると result に入り、R で title に戻せます。
+
+この test で見たいのは、単に cube が動くことではありません。
+入力の edge と hold が分かれているか、scene phase が自然に切り替わるか、collision body の enter を使って 1 回だけ加点できるか、そして score / timer / toast が Message 系 HUD へ崩れずに重なるかを確認します。
+
+操作:
+Enter / Start で pause/result から play へ戻る
+P / Pause で pause 切り替え
+R で play を再初期化
+ArrowLeft / ArrowRight / A / D で player を移動
+
+確認ポイント:
+- `InputController.registerActionMap()` で keyboard と touch を同じ action に束ねられるか
+- app 側 `GameStateManager` が title / play / pause / result を分けて扱えるか
+- `Shape.setCollisionShape()` の sphere 定義が `Space.addCollisionBody()` に渡るか
+- `WebgApp.setScore()` / `setTimer()` / `setCombo()` / `pushToast()` が HUD として自然に出るか
+- `WebgApp.setControlRows()` が canvas HUD と debug dock の両方に流せる形になっているか

@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>webg unittest raycast</title>
+  <link rel="icon" href="data:," />
+  <style>
+    html, body {
+      margin: 0;
+      background: #1a261a;
+      color: #dfe7ff;
+      font: 13px/1.45 monospace;
+    }
+    #canvas {
+      display: block;
+      width: 900px;
+      height: 700px;
+    }
+    #hud {
+      position: fixed;
+      left: 10px;
+      top: 10px;
+      background: rgba(10, 18, 10, 0.72);
+      border: 1px solid rgba(157, 183, 255, 0.32);
+      border-radius: 6px;
+      padding: 7px 9px;
+      white-space: pre;
+      pointer-events: none;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="canvas" width="900" height="700"></canvas>
+  <div id="hud">initializing...</div>
+  <script type="module" src="./main.js"></script>
+</body>
+</html>

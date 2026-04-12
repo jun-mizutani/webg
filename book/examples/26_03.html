@@ -1,0 +1,121 @@
+<!doctype html>
+<!-- book/examples/26_03.html 2026/04/10 -->
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>26_03 addPlane の最小例</title>
+  <link rel="stylesheet" href="./example.css" />
+</head>
+<body>
+  <div class="page">
+    <h1>book/examples</h1>
+    <h2>26_03 addPlane の最小例</h2>
+    <div class="section-card">
+      <p>`book/26_Shapeとメッシュ構築.md` の `addPlane()` を、4 頂点の平面としてそのまま試せる実行ページです</p>
+      <p class="note">`addPlane([p0, p1, p2, p3])` が内部で三角形へ展開される入口だと分かるように、1 枚の panel を回転表示しています</p>
+    </div>
+
+    <div class="canvas-block">
+      <canvas id="canvas" width="960" height="720"></canvas>
+    </div>
+
+    <pre id="code"></pre>
+
+    <script type="module" id="example-source">
+import WebgApp from "../../webg/WebgApp.js";
+import EyeRig from "../../webg/EyeRig.js";
+import Shape from "../../webg/Shape.js";
+
+const app = new WebgApp({
+  document,
+  messageFontTexture: "../../webg/font512.png",
+  clearColor: [0.08, 0.09, 0.11, 1.0],
+  lightPosition: [34.0, 72.0, 110.0, 1.0],
+  layoutMode: "embedded",
+  fixedCanvasSize: {
+    width: 720,
+    height: 540,
+    useDevicePixelRatio: false
+  },
+  camera: {
+    target: [0.0, 0.0, 0.0],
+    distance: 6.8,
+    yaw: 26.0,
+    pitch: -16.0
+  }
+});
+await app.init();
+
+const orbit = new EyeRig(app.cameraRig, app.cameraRod, app.eye, {
+  document,
+  element: app.screen.canvas,
+  input: app.input,
+  type: "orbit",
+  orbit: {
+    target: [0.0, 0.0, 0.0],
+    distance: 6.8,
+    yaw: 26.0,
+    pitch: -16.0,
+    minDistance: 3.0,
+    maxDistance: 14.0
+  }
+});
+orbit.attachPointer();
+
+const shape = new Shape(app.getGL());
+shape.setShader(app.shader);
+
+const p0 = shape.addVertexUV(-1.4, -1.4, 0.0, 0.0, 0.0) - 1;
+const p1 = shape.addVertexUV(-1.4,  1.4, 0.0, 0.0, 1.0) - 1;
+const p2 = shape.addVertexUV( 1.4,  1.4, 0.0, 1.0, 1.0) - 1;
+const p3 = shape.addVertexUV( 1.4, -1.4, 0.0, 1.0, 0.0) - 1;
+
+shape.addPlane([p0, p3, p2, p1]);
+
+shape.endShape();
+shape.setMaterial("smooth-shader", {
+  has_bone: 0,
+  use_texture: 0,
+  color: [0.44, 0.78, 0.98, 1.0],
+  ambient: 0.42,
+  specular: 0.94,
+  power: 30.0
+});
+
+const node = app.space.addNode(null, "plane");
+node.addShape(shape);
+
+app.createHelpPanel({
+  id: "example2603Help",
+  lines: [
+    "Drag: orbit camera",
+    "Wheel: zoom",
+    "addPlane() fan triangulation"
+  ]
+});
+
+app.start({
+  onUpdate: ({ deltaSec }) => {
+    orbit.update(deltaSec);
+    node.rotateY(0.8);
+    node.rotateX(0.3);
+    app.setStatusLines([
+      "addPlane([p0, p1, p2, p3])",
+      "internally expands to triangles",
+      `camera=${orbit.orbit.distance.toFixed(1)}`
+    ], {
+      anchor: "top-left",
+      x: 0,
+      y: 0
+    });
+  }
+});
+    </script>
+    <script>
+      document.getElementById("code").textContent =
+        document.getElementById("example-source").textContent.trim();
+    </script>
+  </div>
+</body>
+</html>

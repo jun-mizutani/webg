@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>webg unittest</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      line-height: 1.6;
+      margin: 24px;
+      color: #16202a;
+      background: #fbfcfe;
+    }
+    .guide {
+      background: #eef6ff;
+      border: 1px solid #bfd4ea;
+      padding: 16px;
+      margin: 20px 0;
+    }
+    .group {
+      margin: 28px 0;
+    }
+    code {
+      background: #f1f5f9;
+      padding: 1px 4px;
+      border-radius: 4px;
+    }
+  </style>
+</head>
+<body>
+  <h1>webg unittest</h1>
+  <p><code>unittest</code> は、公開 sample 一覧とは分けて管理する内部確認用の置き場です。</p>
+  <div class="guide">
+    <h2>この一覧の目的</h2>
+    <p>ここでは、単体確認、回帰確認、最小表示確認に向いた app をまとめます。</p>
+    <p>外部へ見せる sample は <a href="../samples/index.html">samples/index.html</a> に残し、ここではテスト対象 1 件だけを確認しやすい構成を優先します。</p>
+    <p>文字表示と情報表示の整理は <a href="../book/14_UI表示の設計.md">14_UI表示の設計.md</a> にまとめています。`message` は短い ASCII HUD、`dialogue` は UTF-8 の会話を scene の上へ重ねる DOM overlay、`theme` は `DebugDock` / `FixedFormatPanel` / `UIPanel` の比較として読むと役割が見えやすくなります。</p>
+    <p>`message`、`touch`、`tilemap` は、raw `Message` や最小 HUD を残して挙動を切り分ける内部 test です。新しい sample の標準経路としては `breakout`、`bloom` / `dof`、`scene`、`dialogue` を先に参照するほうが判断しやすくなります。</p>
+    <p>今後は debug mode 固定、UI 最小化、共通 helper 化をさらに進める予定です。現在は `background`、`message`、`cube_axes`、`touch`、`raycast` が `_shared/UnitTestApp.js` を使う移行例で、`theme` は `WebgApp` の UI theme 切替確認用 app です。`axis` は `samples/axis` に移し、座標系と FOV を学ぶ教育用 sample として扱います。`phong_debug` は `Phong`、`NormPhong`、`BonePhong`、`BoneNormPhong` の debug を見比べる test で、折れ板と筒状メッシュで表裏や normal map、weight debug を確認できます。`game_api` は game 向けに追加した action map、scene state、collision body、HUD helper をまとめて見る test です。`input_controller` は `InputController` の physical key / action map / pulse action を自動確認したあと、touch ボタンも含めて手で確認する test です。`tween` は `Tween`、`Node.animateRotation()`、`Shape.animateParameter()`、`Space.updateNodeAnimations()`、`Space.updateShapeAnimations()`、`WebgApp.createTween()`、`shakeCamera()`、`flashMessage()` の動きをまとめて確認する test です。`particle_emitter` は `ParticleEmitter` の preset / emit / update / draw / clear を自動確認したあと、WebgApp の実画面で burst と preset 切替も確認する test です。`camera_follow` は `WebgApp` の followNode / lockOn / clearCameraTarget を自動確認したあと、canvas 上で target が動き続け、`yaw-follow` では target heading と camera yaw の関係も確認できる test です。`dialogue` は `UIPanel` 上の DOM overlay を使う会話 / tutorial の標準 test で、`Dialogue.start()` / `next()` / `choose()` の考え方を確認します。`tilemap` は core 側へ組み込んだ TileMap の確認用 unittest で、displayArea の scroll と camera pivot の追従も含めて、同じ高さ付き盤面の見え方と移動ルールを build した runtime から確認します。こちらも touch で orbit / pan / zoom を確認できます。旧 `tilemap_poc` と `tile_shape_poc` は <a href="../../discontinued/index.html">../../discontinued/index.html</a> に保管しました。`unittest/*/*.txt` には、それぞれの test が何を確認しているかを文章で残しています。</p>
+  </div>
+  <section class="group">
+    <h2>詳細テキスト</h2>
+    <ul>
+      <li><a href="./background/background.txt">background.txt</a>: 背景画像の全画面描画、色乗算、アスペクト補正を確認する説明</li>
+      <li><a href="./cube_axes/cube_axes.txt">cube_axes.txt</a>: `addVertex` / `addPlane` のみで作る立方体と軸回転を確認する説明</li>
+      <li><a href="./detouch_min/detouch_min.txt">detouch_min.txt</a>: `attach` / `detach` で world 位置を保つ確認をまとめた説明</li>
+      <li><a href="./game_api/game_api.txt">game_api.txt</a>: ゲーム向け action map、scene state、collision body、HUD helper の確認説明</li>
+      <li><a href="./input_controller/input_controller.txt">input_controller.txt</a>: `InputController` の action map、pulse action、touch/manual 確認の説明</li>
+      <li><a href="./tween/tween.txt">tween.txt</a>: `Tween`、`Node.animateRotation()`、`Shape.animateParameter()`、`shakeCamera()`、`flashMessage()` の確認説明</li>
+      <li><a href="./particle_emitter/particle_emitter.txt">particle_emitter.txt</a>: `ParticleEmitter` の auto test と visual sample の確認説明</li>
+      <li><a href="./camera_follow/camera_follow.txt">camera_follow.txt</a>: `WebgApp` の camera follow と実画面 visual sample の確認説明</li>
+      <li><a href="./dialogue/dialogue.txt">dialogue.txt</a>: `UIPanel` 上の DOM overlay で会話と tutorial の順番表示を確認する説明</li>
+      <li><a href="./embedded/embedded.txt">embedded.txt</a>: `WebgApp` の embedded layout で canvas と overlay が本文スクロールに追従するかを確認する説明</li>
+      <li><a href="./tilemap/tilemap.txt">tilemap.txt</a>: core に組み込んだ TileMap の runtime 化と表示域 scroll / 移動確認説明</li>
+      <li><a href="./smooth_shader/smooth_shader.txt">smooth_shader.txt</a>: `SmoothShader` 1 本で 4 経路をまとめて確認する説明</li>
+      <li><a href="./phong_debug/phong_debug.txt">phong_debug.txt</a>: `Phong` 系シェーダの裏面表示、normal map、weight / UV の確認説明</li>
+    </ul>
+  </section>
+  <section class="group">
+    <h2>visual test</h2>
+    <ul>
+      <li><a href="./background/index.html">background</a>: <code>Background</code> の描画範囲、色乗算、アスペクト補正の確認</li>
+      <li><a href="./message/index.html">message</a>: <code>Text</code> と <code>Message</code> の HUD 文字描画比較</li>
+      <li><a href="./textdemo/index.html">textdemo</a>: <code>Text</code> 単体の文字バッファ描画とフォント atlas 参照の確認</li>
+      <li><a href="./cube_axes/index.html">cube_axes</a>: <code>addVertex</code> / <code>addPlane</code> だけで組んだ手組み mesh の基本確認</li>
+      <li><a href="./detouch_min/index.html">detouch_min</a>: <code>attach</code> / <code>detach</code> の world 位置保持だけを確認する最小 test</li>
+      <li><a href="./smooth_shader/index.html">smooth_shader</a>: <code>SmoothShader</code> 1 本で static / skinned / normal map の 4 経路を確認する test</li>
+      <li><a href="./skinning_basic/index.html">skinning_basic</a>: <code>SmoothShader</code> の最小 skinning 経路を確認する test</li>
+      <li><a href="./skinning_normal_map/index.html">skinning_normal_map</a>: <code>SmoothShader</code> の normal map 付き skinning 経路を確認する test</li>
+      <li><a href="./phong_debug/index.html">phong_debug</a>: <code>Phong</code>、<code>NormPhong</code>、<code>BonePhong</code>、<code>BoneNormPhong</code> の debug をまとめて確認する test</li>
+      <li><a href="./vignette/index.html">vignette</a>: <code>VignettePass</code> の offscreen -> fullscreen 合成経路を確認する最小 test</li>
+      <li><a href="./primitive_texture_uv/index.html">primitive_texture_uv</a>: primitive ごとの texture mapping と UV 崩れを最小構成で確認する test</li>
+      <li><a href="./primitive_wireframe/index.html">primitive_wireframe</a>: primitive 群の solid / wireframe 切替を最小構成で確認する test</li>
+      <li><a href="./primitive_normal_map/index.html">primitive_normal_map</a>: <code>SmoothShader</code> で primitive と normal source の違いを 3x3 で見比べる最小 test</li>
+      <li><a href="./primitive_modelasset/index.html">primitive_modelasset</a>: Primitive から ModelAsset / validator / builder 経路を最小確認する test</li>
+      <li><a href="./game_api/index.html">game_api</a>: action map、GameStateManager、collision helper、HUD helper をまとめて確認する test</li>
+      <li><a href="./input_controller/index.html">input_controller</a>: `InputController` の key normalize、action pulse、touch/manual 確認を行う test</li>
+      <li><a href="./tween/index.html">tween</a>: `Tween`、`Node.animateRotation()`、`Shape.animateParameter()`、`shakeCamera()`、`flashMessage()` を確認する test</li>
+      <li><a href="./particle_emitter/index.html">particle_emitter</a>: `ParticleEmitter` の auto test 後に実画面で burst と preset 切替を確認する test</li>
+      <li><a href="./camera_follow/index.html">camera_follow</a>: `WebgApp` の followNode / lockOn / clearCameraTarget を自動確認し、canvas 上で角のある target 追従と yaw-follow の向き継承を確認する test</li>
+      <li><a href="./dialogue/index.html">dialogue</a>: `UIPanel` 上の DOM overlay で会話と tutorial の順番表示と branch 差し込みを確認する test</li>
+      <li><a href="./embedded/index.html">embedded</a>: `WebgApp` の `layoutMode: "embedded"` と `fixedCanvasSize` を組み合わせ、本文中に置いた canvas と HelpPanel / dialogue / fixed panel / touch が scroll 中も同じ host を基準に動くかを確認する test</li>
+      <li><a href="./tilemap/index.html">tilemap</a>: core に組み込んだ TileMap の runtime 化、orbit camera、displayArea scroll と camera pivot 追従、camera 向きに合わせた矢印キー移動、click / tap 選択、touch の orbit / pan / zoom を確認する test</li>
+      <li><a href="./theme/index.html">theme</a>: `WebgUiTheme` の preset 切替で debug dock / `FixedFormatPanel` / `UIPanel` の見え方を確認する test</li>
+      <li><a href="./touch/index.html">touch</a>: `Touch.js` の hold / action 入力と PC 常時表示の touch ボタンを確認する test</li>
+      <li><a href="./raycast/index.html">raycast</a>: マウス座標からの ray 生成と `space.raycast` のヒット判定を確認する test</li>
+    </ul>
+  </section>
+  <section class="group">
+    <h2>discontinued に移した POC</h2>
+    <ul>
+      <li><a href="../../discontinued/unittest/tilemap_poc/index.html">tilemap_poc</a>: TileMap 開発初期のクリック・球移動・scroll 確認用 POC</li>
+      <li><a href="../../discontinued/unittest/tile_shape_poc/index.html">tile_shape_poc</a>: `shapeKind` と `Node.setShape()` の探索用 POC</li>
+    </ul>
+  </section>
+</body>
+</html>

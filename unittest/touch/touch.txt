@@ -1,0 +1,21 @@
+unittest: touch
+
+概要
+- `webg/Touch.js` の汎用タッチボタンUIを使い、押下中入力（hold）と単発入力（action）を確認する内部テストです。
+- キーボード入力とタッチ入力を同じ状態管理に流し、操作実装を1系統にまとめる方法を確認します。
+
+このサンプルで使うwebg機能
+- `Touch`: 仮想ボタンUI生成、hold/actionイベント通知
+- `Message`: 入力状態と操作ガイド表示
+- `Space` / `Node` / `Shape` / `SmoothShader`: 3D立方体の移動・回転表示
+
+確認ポイント
+- `← / → / A / D` のholdボタンが押下中のみ有効で、離した瞬間に停止することを確認します
+- `R` のactionボタンがワンショットで姿勢リセットされることを確認します
+- キーボード操作とタッチ操作が同じ挙動になることを確認し、入力実装の共通化ができていることを検証します
+- URLオプション `?touchButtons=<数>` でボタン総数を増やし、`Touch.js` の密度モード（normal/dense/compact）とサイズ変化を確認します
+
+操作説明
+- キーボード: `ArrowLeft` / `ArrowRight` / `A` / `D` / `R`
+- タッチUI: `←` / `→` / `A` / `D` / `R`
+- デバッグ用URL例: `index.html?touchButtons=5` / `index.html?touchButtons=8` / `index.html?touchButtons=12`

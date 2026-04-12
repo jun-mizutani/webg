@@ -1,0 +1,287 @@
+<!doctype html>
+<!-- book/examples/19_01.html 2026/04/10 -->
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>19_01 diagnostics の最小例</title>
+  <link rel="stylesheet" href="./example.css" />
+</head>
+<body>
+  <div class="page">
+    <h1>book/examples</h1>
+    <h2>19_01 diagnostics の最小例</h2>
+    <div class="section-card">
+      <p>`book/19_診断情報とテスト.md` の `debugTools`、`setDiagnosticsStage()`、`mergeDiagnosticsStats()`、`checkEnvironment()`、`configureDiagnosticsCapture()` をまとめて確認できる実行例です</p>
+      <p class="note">`F9` のあとに `M` / `C` / `V`、または `P` / `J` で one-shot probe を試せます。canvas 上にも diagnostics の要点を常に表示します</p>
+    </div>
+
+    <div class="canvas-block">
+      <canvas id="canvas" width="960" height="720"></canvas>
+    </div>
+
+    <pre id="code"></pre>
+
+    <script type="module" id="example-source">
+import WebgApp from "../../webg/WebgApp.js";
+import EyeRig from "../../webg/EyeRig.js";
+import Primitive from "../../webg/Primitive.js";
+import Shape from "../../webg/Shape.js";
+import Diagnostics from "../../webg/Diagnostics.js";
+
+const PALETTES = [
+  {
+    cube: [0.30, 0.64, 1.0, 1.0],
+    sphere: [1.0, 0.72, 0.34, 1.0]
+  },
+  {
+    cube: [0.32, 0.92, 0.70, 1.0],
+    sphere: [0.96, 0.44, 0.44, 1.0]
+  },
+  {
+    cube: [0.90, 0.54, 0.96, 1.0],
+    sphere: [0.94, 0.90, 0.42, 1.0]
+  }
+];
+
+const app = new WebgApp({
+  document,
+  messageFontTexture: "../../webg/font512.png",
+  clearColor: [0.08, 0.11, 0.16, 1.0],
+  lightPosition: [160.0, 220.0, 260.0, 1.0],
+  layoutMode: "embedded",
+  fixedCanvasSize: {
+    width: 720,
+    height: 540,
+    useDevicePixelRatio: false
+  },
+  debugTools: {
+    mode: "debug",
+    system: "book_example_19_01",
+    source: "book/examples/19_01.html",
+    probeDefaultAfterFrames: 1
+  },
+  camera: {
+    target: [0.0, -1.0, 0.0],
+    distance: 28.0,
+    yaw: 24.0,
+    pitch: -12.0
+  }
+});
+await app.init();
+app.setDiagnosticsStage("runtime");
+
+const orbit = new EyeRig(app.cameraRig, app.cameraRod, app.eye, {
+  document,
+  element: app.screen.canvas,
+  input: app.input,
+  type: "orbit",
+  orbit: {
+    target: [0.0, -1.0, 0.0],
+    distance: 28.0,
+    yaw: 24.0,
+    pitch: -12.0,
+    minDistance: 12.0,
+    maxDistance: 64.0
+  }
+});
+orbit.attachPointer();
+
+const createShape = (asset, color, material = {}) => {
+  const shape = new Shape(app.getGL());
+  shape.applyPrimitiveAsset(asset);
+  shape.endShape();
+  shape.setMaterial("smooth-shader", {
+    has_bone: 0,
+    use_texture: 0,
+    color: [...color],
+    ambient: 0.24,
+    specular: 0.82,
+    power: 34.0,
+    ...material
+  });
+  return shape;
+};
+
+const floorShape = createShape(
+  Primitive.cuboid(28.0, 1.0, 22.0, Primitive.getOptions()),
+  [0.18, 0.22, 0.28, 1.0],
+  { ambient: 0.18, specular: 0.10, power: 8.0 }
+);
+const floor = app.space.addNode(null, "floor");
+floor.setPosition(0.0, -7.0, 0.0);
+floor.addShape(floorShape);
+
+const cubeShape = createShape(
+  Primitive.cube(9.5, Primitive.getOptions()),
+  [...PALETTES[0].cube]
+);
+const sphereShape = createShape(
+  Primitive.sphere(5.6, 20, 18, Primitive.getOptions()),
+  [...PALETTES[0].sphere]
+);
+
+const cubeNode = app.space.addNode(null, "cube");
+cubeNode.setPosition(-7.0, -0.8, 0.0);
+cubeNode.addShape(cubeShape);
+
+const sphereNode = app.space.addNode(null, "sphere");
+sphereNode.setPosition(8.0, 1.8, -2.0);
+sphereNode.addShape(sphereShape);
+
+const state = {
+  paused: false,
+  wireframe: false,
+  paletteIndex: 0,
+  lastEvent: "startup",
+  probeRequests: 0
+};
+
+const applyPalette = () => {
+  const palette = PALETTES[state.paletteIndex];
+  cubeShape.updateMaterial({ color: [...palette.cube] });
+  sphereShape.updateMaterial({ color: [...palette.sphere] });
+};
+
+const refreshDiagnosticsStats = (frameCount = app.screen.getFrameCount()) => {
+  const envReport = app.checkEnvironment({
+    stage: "runtime-check",
+    shapes: [cubeShape, sphereShape, floorShape]
+  });
+  app.mergeDiagnosticsStats({
+    frameCount,
+    paused: state.paused ? "yes" : "no",
+    wireframe: state.wireframe ? "yes" : "no",
+    palette: state.paletteIndex + 1,
+    orbitYaw: orbit.orbit.yaw.toFixed(2),
+    orbitPitch: orbit.orbit.pitch.toFixed(2),
+    orbitDistance: orbit.orbit.distance.toFixed(2),
+    envOk: envReport.ok ? "yes" : "no",
+    envWarning: envReport.warnings?.[0] ?? "-"
+  });
+  return envReport;
+};
+
+const makeProbeReport = (frameCount) => {
+  const envReport = app.checkEnvironment({
+    stage: "runtime-probe",
+    shapes: [cubeShape, sphereShape, floorShape]
+  });
+  const report = app.createProbeReport("runtime-probe");
+  Diagnostics.addDetail(report, `paused=${state.paused ? "yes" : "no"}`);
+  Diagnostics.addDetail(report, `wireframe=${state.wireframe ? "yes" : "no"}`);
+  Diagnostics.addDetail(report, `palette=${state.paletteIndex + 1}`);
+  Diagnostics.addDetail(
+    report,
+    `orbitYaw=${orbit.orbit.yaw.toFixed(2)} orbitPitch=${orbit.orbit.pitch.toFixed(2)} orbitDistance=${orbit.orbit.distance.toFixed(2)}`
+  );
+  Diagnostics.addDetail(report, `lastEvent=${state.lastEvent}`);
+  if (envReport.warnings?.length) {
+    Diagnostics.addDetail(report, `envWarning=${envReport.warnings[0]}`);
+  }
+  Diagnostics.mergeStats(report, {
+    frameCount,
+    paused: state.paused ? "yes" : "no",
+    wireframe: state.wireframe ? "yes" : "no",
+    palette: state.paletteIndex + 1,
+    envOk: envReport.ok ? "yes" : "no"
+  });
+  return report;
+};
+
+app.configureDiagnosticsCapture({
+  labelPrefix: "book_example_19_01",
+  collect: () => makeProbeReport(app.screen.getFrameCount())
+});
+app.configureDebugKeyInput();
+app.attachInput({
+  onKeyDown: (key, ev) => {
+    if (ev.repeat) return;
+    if (key === " ") {
+      state.paused = !state.paused;
+      state.lastEvent = `paused=${state.paused ? "yes" : "no"}`;
+      app.addDiagnosticsDetail(`paused=${state.paused ? "yes" : "no"}`);
+    } else if (key === "w") {
+      state.wireframe = !state.wireframe;
+      cubeShape.setWireframe(state.wireframe);
+      sphereShape.setWireframe(state.wireframe);
+      state.lastEvent = `wireframe=${state.wireframe ? "yes" : "no"}`;
+      app.addDiagnosticsDetail(state.lastEvent);
+    } else if (key === "1" || key === "2" || key === "3") {
+      state.paletteIndex = Number(key) - 1;
+      applyPalette();
+      state.lastEvent = `palette=${state.paletteIndex + 1}`;
+      app.addDiagnosticsDetail(state.lastEvent);
+    } else if (key === "p") {
+      state.probeRequests += 1;
+      state.lastEvent = "probe summary requested";
+      app.captureDiagnosticsSummary({
+        afterFrames: 1,
+        label: `book_example_19_01_summary_${state.probeRequests}`
+      });
+    } else if (key === "j") {
+      state.probeRequests += 1;
+      state.lastEvent = "probe json requested";
+      app.captureDiagnosticsReportJSON({
+        afterFrames: 1,
+        label: `book_example_19_01_json_${state.probeRequests}`
+      });
+    } else if (key === "r") {
+      orbit.setAngles(24.0, -12.0);
+      orbit.setDistance(28.0);
+      state.lastEvent = "camera reset";
+      app.addDiagnosticsDetail(state.lastEvent);
+    }
+  }
+});
+
+app.createHelpPanel({
+  id: "example1901Help",
+  lines: [
+    "Drag: orbit camera  Wheel: zoom",
+    "Space: pause  W: wireframe  1 / 2 / 3: palette",
+    "P: snapshot summary  J: snapshot json  R: reset camera",
+    ...app.getDebugKeyGuideLines()
+  ]
+});
+
+applyPalette();
+
+app.start({
+  onUpdate: ({ deltaSec, screen }) => {
+    orbit.update(deltaSec);
+    if (!state.paused) {
+      cubeNode.rotateX(18.0 * deltaSec);
+      cubeNode.rotateY(26.0 * deltaSec);
+      sphereNode.rotateY(-22.0 * deltaSec);
+      sphereNode.setPosition(
+        8.0 + Math.sin(screen.getFrameCount() * 0.03) * 1.6,
+        1.8 + Math.sin(screen.getFrameCount() * 0.02) * 1.4,
+        -2.0
+      );
+    }
+
+    const envReport = refreshDiagnosticsStats(screen.getFrameCount());
+    app.updateDebugProbe();
+    const lines = [
+      "Diagnostics sample",
+      "[space] pause  [w] wireframe  [1][2][3] palette",
+      "[p] summary probe  [j] json probe  [r] reset camera",
+      ...app.getDebugKeyGuideLines(),
+      `palette=${state.paletteIndex + 1} paused=${state.paused ? "ON" : "OFF"} wireframe=${state.wireframe ? "ON" : "OFF"}`,
+      `yaw=${orbit.orbit.yaw.toFixed(1)} pitch=${orbit.orbit.pitch.toFixed(1)} dist=${orbit.orbit.distance.toFixed(1)}`,
+      `env=${envReport.ok ? "OK" : "WARN"} lastEvent=${state.lastEvent}`,
+      app.getDiagnosticsStatusLine(),
+      app.isDebugUiEnabled() ? app.getProbeStatusLine() : ""
+    ].filter(Boolean);
+    app.setControlRows(app.makeTextControlRows(lines));
+  }
+});
+    </script>
+    <script>
+      document.getElementById("code").textContent =
+        document.getElementById("example-source").textContent.trim();
+    </script>
+  </div>
+</body>
+</html>

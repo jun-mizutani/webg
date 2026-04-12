@@ -1,0 +1,344 @@
+<!doctype html>
+<!-- book/examples/23_01.html 2026/04/10 -->
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>23_01 TileMap runtime API の最小例</title>
+  <link rel="stylesheet" href="./example.css" />
+</head>
+<body>
+  <div class="page">
+    <h1>book/examples</h1>
+    <h2>23_01 TileMap runtime API の最小例</h2>
+    <div class="section-card">
+      <p>`book/23_タイルマップの使い方.md` の `placeNodeOnCell()`、`canMove()`、`followCell()`、`pickCell()`、`findPath()`、`refreshTileColors()` をまとめて確認できる実行例です</p>
+      <p class="note">赤い marker が player です。矢印キーで移動し、クリックで cell を選択できます。`displayArea` は player を追従し、status 行には path 長と hit face が出ます</p>
+    </div>
+
+    <div class="canvas-block">
+      <canvas id="canvas" width="960" height="720"></canvas>
+    </div>
+
+    <pre id="code"></pre>
+
+    <script type="module" id="example-source">
+import WebgApp from "../../webg/WebgApp.js";
+import EyeRig from "../../webg/EyeRig.js";
+import Primitive from "../../webg/Primitive.js";
+import Shape from "../../webg/Shape.js";
+import Matrix from "../../webg/Matrix.js";
+import { resolveCameraRelativeGridMove } from "../../webg/TileMap.js";
+
+const terrainFromHeight = (height) => {
+  if (height >= 2) return "peak";
+  if (height >= 1) return "slope";
+  return "floor";
+};
+
+const HEIGHT_MAP = [
+  [0, 0, 1, 1, 2, 2, 2, 2],
+  [0, 1, 1, 1, 2, 2, 3, 3],
+  [0, 1, 2, 2, 2, 3, 3, 3],
+  [0, 1, 2, 3, 3, 3, 3, 3],
+  [0, 0, 1, 2, 3, 3, 2, 2],
+  [0, 0, 1, 1, 2, 2, 2, 2],
+  [0, 0, 0, 1, 1, 1, 2, 2],
+  [0, 0, 0, 0, 1, 1, 1, 1]
+];
+
+const buildTileDefinitions = () => {
+  const tiles = [];
+  for (let row = 0; row < HEIGHT_MAP.length; row++) {
+    for (let col = 0; col < HEIGHT_MAP[row].length; col++) {
+      const height = HEIGHT_MAP[row][col];
+      tiles.push({
+        x: col,
+        y: row,
+        height,
+        terrain: terrainFromHeight(height)
+      });
+    }
+  }
+  tiles.find((tile) => tile.x === 5 && tile.y === 2).terrain = "wall";
+  tiles.find((tile) => tile.x === 5 && tile.y === 3).terrain = "wall";
+  return tiles;
+};
+
+const SCENE = {
+  version: "1.0",
+  type: "webg-scene",
+  meta: {
+    name: "book-example-23-01"
+  },
+  camera: {
+    target: [16.0, 0.0, 16.0],
+    distance: 35.0,
+    yaw: 28.0,
+    pitch: -30.0,
+    bank: 0.0,
+    viewAngle: 42.0,
+    near: 0.1,
+    far: 1000.0
+  },
+  tileMap: {
+    name: "example-23-map",
+    width: 8,
+    height: 8,
+    cellSize: 4.0,
+    cellGap: 0.18,
+    floorY: -0.30,
+    baseTopY: 0.72,
+    heightStepY: 1.12,
+    displayArea: {
+      x: 2,
+      y: 2,
+      width: 4,
+      height: 4
+    },
+    displayFollowCol: 1,
+    displayFollowRow: 1,
+    tiles: buildTileDefinitions(),
+    terrainMaterials: {
+      floor: {
+        materialId: "smooth-shader",
+        has_bone: 0,
+        color: [0.38, 0.74, 0.38, 1.0],
+        ambient: 0.28,
+        specular: 0.18,
+        power: 10.0,
+        use_texture: 0
+      },
+      slope: {
+        materialId: "smooth-shader",
+        has_bone: 0,
+        color: [0.58, 0.74, 1.0, 1.0],
+        ambient: 0.24,
+        specular: 0.34,
+        power: 18.0,
+        use_texture: 0
+      },
+      peak: {
+        materialId: "smooth-shader",
+        has_bone: 0,
+        color: [0.96, 0.78, 0.32, 1.0],
+        ambient: 0.22,
+        specular: 0.52,
+        power: 24.0,
+        use_texture: 0
+      },
+      wall: {
+        materialId: "smooth-shader",
+        has_bone: 0,
+        color: [0.54, 0.30, 0.30, 1.0],
+        ambient: 0.20,
+        specular: 0.18,
+        power: 12.0,
+        use_texture: 0
+      }
+    }
+  }
+};
+
+const displayAreaToText = (displayArea) => {
+  if (!displayArea) return "(none)";
+  return `(${displayArea.minCol},${displayArea.minRow})-(${displayArea.maxCol},${displayArea.maxRow})`;
+};
+
+const cssToNdc = (canvas, clientX, clientY) => {
+  const rect = canvas.getBoundingClientRect();
+  const x = ((clientX - rect.left) / rect.width) * 2.0 - 1.0;
+  const y = 1.0 - ((clientY - rect.top) / rect.height) * 2.0;
+  return [x, y];
+};
+
+const makeRayFromMouse = (canvas, clientX, clientY, eyeNode, proj, view) => {
+  const [nx, ny] = cssToNdc(canvas, clientX, clientY);
+  const invVp = proj.clone();
+  invVp.mul(view);
+  invVp.inverse_strict();
+  const far = invVp.mulVector([nx, ny, 1.0]);
+  const eyePos = eyeNode.getWorldPosition();
+  return {
+    origin: eyePos,
+    dir: [
+      far[0] - eyePos[0],
+      far[1] - eyePos[1],
+      far[2] - eyePos[2]
+    ]
+  };
+};
+
+const pathToText = (path) => {
+  if (!path) return "blocked";
+  return `${path.length} cells`;
+};
+
+const app = new WebgApp({
+  document,
+  messageFontTexture: "../../webg/font512.png",
+  clearColor: [0.07, 0.10, 0.15, 1.0],
+  lightPosition: [30.0, 80.0, 120.0, 1.0],
+  layoutMode: "embedded",
+  fixedCanvasSize: {
+    width: 720,
+    height: 540,
+    useDevicePixelRatio: false
+  }
+});
+await app.init();
+
+const runtime = await app.loadScene(SCENE);
+const tileMap = runtime.tileMap;
+
+const orbit = new EyeRig(app.cameraRig, app.cameraRod, app.eye, {
+  document,
+  element: app.screen.canvas,
+  input: app.input,
+  type: "orbit",
+  orbit: {
+    target: [...SCENE.camera.target],
+    distance: SCENE.camera.distance,
+    yaw: SCENE.camera.yaw,
+    pitch: SCENE.camera.pitch,
+    minDistance: 10.0,
+    maxDistance: 56.0
+  }
+});
+orbit.attachPointer();
+
+const markerShape = new Shape(app.getGL());
+markerShape.applyPrimitiveAsset(Primitive.sphere(0.9, 16, 16, markerShape.getPrimitiveOptions()));
+markerShape.endShape();
+markerShape.setMaterial("smooth-shader", {
+  has_bone: 0,
+  use_texture: 0,
+  color: [1.0, 0.26, 0.28, 1.0],
+  ambient: 0.28,
+  specular: 0.82,
+  power: 32.0
+});
+
+const markerNode = app.space.addNode(null, "playerMarker");
+markerNode.addShape(markerShape);
+
+let playerCell = tileMap.getTile(3, 3);
+const goalCell = tileMap.getTile(7, 7);
+let selected = {
+  cell: playerCell,
+  hitFace: "top",
+  hitHeight: playerCell.topY,
+  point: [playerCell.center[0], playerCell.topY, playerCell.center[2]]
+};
+let moveTween = null;
+let pathText = pathToText(tileMap.findPath(playerCell, goalCell));
+let lastMoveText = "startup";
+
+tileMap.placeNodeOnCell(markerNode, playerCell, 0.04, 0.82);
+tileMap.refreshTileColors(selected);
+
+const updatePath = () => {
+  pathText = pathToText(tileMap.findPath(playerCell, goalCell));
+};
+
+const refreshTileDisplay = () => {
+  tileMap.refreshTileColors(selected);
+  updatePath();
+};
+
+const tryMoveBy = (dx, dy) => {
+  if (moveTween && !moveTween.isFinished()) {
+    return false;
+  }
+  const nextCell = tileMap.getTile(playerCell.col + dx, playerCell.row + dy);
+  if (!tileMap.canMove(playerCell, nextCell)) {
+    lastMoveText = `blocked (${playerCell.col + dx},${playerCell.row + dy})`;
+    return false;
+  }
+
+  const targetPosition = tileMap.getNodePositionOnCell(nextCell, 0.04, 0.82);
+  tileMap.followCell(nextCell, {
+    width: 4,
+    height: 4,
+    followCol: 1,
+    followRow: 1
+  });
+  moveTween = markerNode.animatePosition(targetPosition, {
+    durationMs: 250,
+    easing: "outCubic",
+    onComplete: () => {
+      moveTween = null;
+      playerCell = nextCell;
+      selected = {
+        cell: playerCell,
+        hitFace: "top",
+        hitHeight: playerCell.topY,
+        point: [playerCell.center[0], playerCell.topY, playerCell.center[2]]
+      };
+      lastMoveText = `moved to (${playerCell.col},${playerCell.row})`;
+      refreshTileDisplay();
+    }
+  });
+  return true;
+};
+
+app.screen.canvas.addEventListener("click", (ev) => {
+  app.eye.setWorldMatrix();
+  const view = new Matrix();
+  view.makeView(app.eye.worldMatrix);
+  const ray = makeRayFromMouse(app.screen.canvas, ev.clientX, ev.clientY, app.eye, app.projectionMatrix, view);
+  const hit = tileMap.pickCell(ray.origin, ray.dir);
+  if (!hit) {
+    return;
+  }
+  selected = hit;
+  lastMoveText = `picked (${hit.cell.col},${hit.cell.row}) ${hit.hitFace}`;
+  refreshTileDisplay();
+});
+
+app.attachInput({
+  onKeyDown: (key, ev) => {
+    if (ev.repeat) return;
+    if (key === "arrowup" || key === "arrowdown" || key === "arrowleft" || key === "arrowright") {
+      const move = resolveCameraRelativeGridMove(orbit.orbit.yaw, key);
+      tryMoveBy(move.dx, move.dy);
+    } else if (key === "r") {
+      orbit.setAngles(SCENE.camera.yaw, SCENE.camera.pitch);
+      orbit.setDistance(SCENE.camera.distance);
+      lastMoveText = "camera reset";
+    }
+  }
+});
+
+app.createHelpPanel({
+  id: "example2301Help",
+  lines: [
+    "Arrow keys: move marker by camera-relative grid direction",
+    "Click: pick cell  Drag: orbit camera  Wheel: zoom",
+    "TileMap uses canMove / followCell / pickCell / refreshTileColors"
+  ]
+});
+
+app.start({
+  onUpdate: ({ deltaSec }) => {
+    orbit.update(deltaSec);
+    app.setStatusLines([
+      `player=(${playerCell.col},${playerCell.row}) goal=(${goalCell.col},${goalCell.row}) path=${pathText}`,
+      `selected=${selected ? `(${selected.cell.col},${selected.cell.row}) ${selected.hitFace}` : "(none)"} displayArea=${displayAreaToText(tileMap.displayArea)}`,
+      `move=${lastMoveText} moving=${moveTween && !moveTween.isFinished() ? "yes" : "no"}`,
+      "placeNodeOnCell() / canMove() / followCell() / pickCell() / findPath()"
+    ], {
+      anchor: "top-left",
+      x: 0,
+      y: 0
+    });
+  }
+});
+    </script>
+    <script>
+      document.getElementById("code").textContent =
+        document.getElementById("example-source").textContent.trim();
+    </script>
+  </div>
+</body>
+</html>

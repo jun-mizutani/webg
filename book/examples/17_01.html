@@ -1,0 +1,305 @@
+<!doctype html>
+<!-- book/examples/17_01.html 2026/04/10 -->
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>17_01 raycast と collision の最小例</title>
+  <link rel="stylesheet" href="./example.css" />
+</head>
+<body>
+  <div class="page">
+    <h1>book/examples</h1>
+    <h2>17_01 raycast と collision の最小例</h2>
+    <div class="section-card">
+      <p>`book/17_衝突判定・raycast・picking.md` の `Space.raycast()`、`checkCollisions()`、`checkCollisionsDetailed()` を 1 つの埋め込み page で確認できる実行例です</p>
+      <p class="note">object をクリックすると raycast の hit を赤で強調します。moving sphere は torus の近くを往復し、AABB の broad phase と triangle 詳細判定の差が見える瞬間を作ります</p>
+    </div>
+
+    <div class="canvas-block">
+      <canvas id="canvas" width="960" height="720"></canvas>
+    </div>
+
+    <pre id="code"></pre>
+
+    <script type="module" id="example-source">
+import WebgApp from "../../webg/WebgApp.js";
+import EyeRig from "../../webg/EyeRig.js";
+import Primitive from "../../webg/Primitive.js";
+import Shape from "../../webg/Shape.js";
+import Matrix from "../../webg/Matrix.js";
+
+const app = new WebgApp({
+  document,
+  messageFontTexture: "../../webg/font512.png",
+  clearColor: [0.07, 0.10, 0.16, 1.0],
+  lightPosition: [150.0, 220.0, 260.0, 1.0],
+  layoutMode: "embedded",
+  fixedCanvasSize: {
+    width: 720,
+    height: 540,
+    useDevicePixelRatio: false
+  },
+  camera: {
+    target: [0.0, -1.0, -18.0],
+    distance: 46.0,
+    yaw: 24.0,
+    pitch: -10.0
+  }
+});
+await app.init();
+
+const orbit = new EyeRig(app.cameraRig, app.cameraRod, app.eye, {
+  document,
+  element: app.screen.canvas,
+  input: app.input,
+  type: "orbit",
+  orbit: {
+    target: [0.0, -1.0, -18.0],
+    distance: 46.0,
+    yaw: 24.0,
+    pitch: -10.0,
+    minDistance: 18.0,
+    maxDistance: 80.0
+  }
+});
+orbit.attachPointer();
+
+const createShape = (asset, color, material = {}) => {
+  const shape = new Shape(app.getGL());
+  shape.applyPrimitiveAsset(asset);
+  shape.endShape();
+  shape.setMaterial("smooth-shader", {
+    has_bone: 0,
+    use_texture: 0,
+    color: [...color],
+    ambient: 0.24,
+    specular: 0.72,
+    power: 28.0,
+    ...material
+  });
+  return shape;
+};
+
+const cssToNdc = (canvas, clientX, clientY) => {
+  const rect = canvas.getBoundingClientRect();
+  const x = ((clientX - rect.left) / rect.width) * 2.0 - 1.0;
+  const y = 1.0 - ((clientY - rect.top) / rect.height) * 2.0;
+  return [x, y];
+};
+
+const makeRayFromMouse = (canvas, clientX, clientY, eyeNode, proj, view) => {
+  const [nx, ny] = cssToNdc(canvas, clientX, clientY);
+  const invVp = proj.clone();
+  invVp.mul(view);
+  invVp.inverse_strict();
+  const far = invVp.mulVector([nx, ny, 1.0]);
+  const eyePos = eyeNode.getWorldPosition();
+  return {
+    origin: eyePos,
+    dir: [
+      far[0] - eyePos[0],
+      far[1] - eyePos[1],
+      far[2] - eyePos[2]
+    ],
+    ndc: [nx, ny]
+  };
+};
+
+const state = {
+  paused: false,
+  selectedShape: null,
+  selectedName: "(none)",
+  lastRayInfo: "ndc=(-,-)",
+  broadCount: 0,
+  detailedCount: 0
+};
+
+const groundShape = createShape(
+  Primitive.cuboid(40.0, 1.0, 30.0, Primitive.getOptions()),
+  [0.18, 0.22, 0.28, 1.0],
+  { ambient: 0.18, specular: 0.12, power: 10.0 }
+);
+const ground = app.space.addNode(null, "ground");
+ground.setPosition(0.0, -8.0, -18.0);
+ground.addShape(groundShape);
+
+const entryDefs = [
+  {
+    name: "mover",
+    shape: createShape(
+      Primitive.sphere(4.5, 18, 18, Primitive.getOptions()),
+      [0.28, 0.72, 1.0, 1.0],
+      { ambient: 0.28, specular: 0.90, power: 42.0 }
+    ),
+    position: [0.0, -0.8, -18.0]
+  },
+  {
+    name: "torus",
+    shape: createShape(
+      Primitive.donut(10.5, 1.8, 26, 22, Primitive.getOptions()),
+      [1.0, 0.74, 0.32, 1.0],
+      { ambient: 0.18, specular: 0.84, power: 36.0 }
+    ),
+    position: [0.0, -0.8, -18.0],
+    rotateX: 30.0,
+    rotateY: 18.0
+  },
+  {
+    name: "cube",
+    shape: createShape(
+      Primitive.cube(9.0, Primitive.getOptions()),
+      [0.42, 0.90, 0.64, 1.0],
+      { ambient: 0.22, specular: 0.74, power: 30.0 }
+    ),
+    position: [16.0, -1.6, -23.0],
+    rotateY: 14.0
+  },
+  {
+    name: "cone",
+    shape: createShape(
+      Primitive.cone(14.0, 6.0, 22, Primitive.getOptions()),
+      [0.88, 0.46, 0.38, 1.0],
+      { ambient: 0.22, specular: 0.70, power: 26.0 }
+    ),
+    position: [-16.0, -1.2, -22.0],
+    rotateY: -22.0
+  }
+];
+
+const entries = entryDefs.map((def) => {
+  const node = app.space.addNode(null, def.name);
+  node.setPosition(def.position[0], def.position[1], def.position[2]);
+  if (Number.isFinite(def.rotateX)) node.rotateX(def.rotateX);
+  if (Number.isFinite(def.rotateY)) node.rotateY(def.rotateY);
+  node.addShape(def.shape);
+  return {
+    ...def,
+    node,
+    baseColor: [...def.shape.getMaterial().params.color]
+  };
+});
+
+const mover = entries.find((entry) => entry.name === "mover");
+let timeSec = 0.0;
+
+const setEntryColor = (entry, color) => {
+  entry.shape.updateMaterial({ color: [...color] });
+};
+
+const updateEntryColors = (broadPairs, detailedPairs) => {
+  const broadShapes = new Set();
+  const detailedShapes = new Set();
+  for (let i = 0; i < broadPairs.length; i++) {
+    broadShapes.add(broadPairs[i].shapeA);
+    broadShapes.add(broadPairs[i].shapeB);
+  }
+  for (let i = 0; i < detailedPairs.length; i++) {
+    detailedShapes.add(detailedPairs[i].shapeA);
+    detailedShapes.add(detailedPairs[i].shapeB);
+  }
+  for (let i = 0; i < entries.length; i++) {
+    const entry = entries[i];
+    let color = entry.baseColor;
+    if (broadShapes.has(entry.shape)) {
+      color = [1.0, 0.86, 0.36, 1.0];
+    }
+    if (detailedShapes.has(entry.shape)) {
+      color = [1.0, 0.54, 0.28, 1.0];
+    }
+    if (state.selectedShape === entry.shape) {
+      color = [1.0, 0.18, 0.22, 1.0];
+    }
+    setEntryColor(entry, color);
+  }
+};
+
+app.screen.canvas.addEventListener("click", (ev) => {
+  app.eye.setWorldMatrix();
+  const view = new Matrix();
+  view.makeView(app.eye.worldMatrix);
+  const ray = makeRayFromMouse(
+    app.screen.canvas,
+    ev.clientX,
+    ev.clientY,
+    app.eye,
+    app.projectionMatrix,
+    view
+  );
+  const hit = app.space.raycast(ray.origin, ray.dir, {
+    firstHit: true,
+    filter: ({ node, shape }) => node !== app.eye && node !== ground && !shape.isHidden
+  });
+  state.selectedShape = hit?.shape ?? null;
+  state.selectedName = hit?.node?.name ?? "(none)";
+  state.lastRayInfo = `ndc=(${ray.ndc[0].toFixed(3)}, ${ray.ndc[1].toFixed(3)})`;
+});
+
+app.attachInput({
+  onKeyDown: (key, ev) => {
+    if (ev.repeat) return;
+    if (key === " ") {
+      state.paused = !state.paused;
+    } else if (key === "r") {
+      orbit.setAngles(24.0, -10.0);
+      orbit.setDistance(46.0);
+    }
+  }
+});
+
+app.createHelpPanel({
+  id: "example1701Help",
+  lines: [
+    "Click: Space.raycast()  Drag: orbit camera  Wheel: zoom",
+    "Space: pause mover  R: reset camera",
+    "yellow=AABB broad hit  orange=triangle detailed hit  red=selected"
+  ]
+});
+
+app.start({
+  onUpdate: ({ deltaSec }) => {
+    orbit.update(deltaSec);
+    if (!state.paused) {
+      timeSec += deltaSec;
+      mover.node.setPosition(
+        Math.sin(timeSec * 0.95) * 12.5,
+        -0.8 + Math.cos(timeSec * 1.25) * 2.2,
+        -18.0
+      );
+      entries[1].node.rotateY(28.0 * deltaSec);
+      entries[2].node.rotateY(-18.0 * deltaSec);
+      entries[3].node.rotateY(14.0 * deltaSec);
+    }
+
+    const broadPairs = app.space.checkCollisions({
+      firstHit: false,
+      filter: ({ node, shape }) => node !== ground && !shape.isHidden
+    });
+    const detailedPairs = app.space.checkCollisionsDetailed({
+      firstHit: false,
+      maxTrianglePairs: 80000,
+      filter: ({ node, shape }) => node !== ground && !shape.isHidden
+    });
+    state.broadCount = broadPairs.length;
+    state.detailedCount = detailedPairs.length;
+    updateEntryColors(broadPairs, detailedPairs);
+
+    app.setStatusLines([
+      `raycast hit=${state.selectedName}  ${state.lastRayInfo}`,
+      `broad=${state.broadCount} detailed=${state.detailedCount} paused=${state.paused ? "yes" : "no"}`,
+      "Space.raycast() / checkCollisions() / checkCollisionsDetailed()"
+    ], {
+      anchor: "top-left",
+      x: 0,
+      y: 0
+    });
+  }
+});
+    </script>
+    <script>
+      document.getElementById("code").textContent =
+        document.getElementById("example-source").textContent.trim();
+    </script>
+  </div>
+</body>
+</html>

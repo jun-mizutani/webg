@@ -1,0 +1,198 @@
+<!doctype html>
+<!-- book/examples/09_01.html 2026/04/10 -->
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>09_01 SmoothShader と Wireframe の最小例</title>
+  <link rel="stylesheet" href="./example.css" />
+</head>
+<body>
+  <div class="page">
+    <h1>book/examples</h1>
+    <h2>09_01 SmoothShader と Wireframe の最小例</h2>
+    <div class="section-card">
+      <p>`book/09_シェーダーの実装.md` の `SmoothShader` と `Wireframe` の入口を 1 ページで試せる実行例です</p>
+      <p class="note">左は matte、中央は glossy、右は wireframe overlay を重ねた torus です。`W` で全体の wireframe を切り替えると、`Shape.setWireframe()` が内部の `Wireframe` 経路を使うことを確認できます</p>
+    </div>
+
+    <div class="canvas-block">
+      <canvas id="canvas" width="960" height="720"></canvas>
+    </div>
+
+    <pre id="code"></pre>
+
+    <script type="module" id="example-source">
+import WebgApp from "../../webg/WebgApp.js";
+import EyeRig from "../../webg/EyeRig.js";
+import Primitive from "../../webg/Primitive.js";
+import Shape from "../../webg/Shape.js";
+
+const app = new WebgApp({
+  document,
+  messageFontTexture: "../../webg/font512.png",
+  clearColor: [0.08, 0.10, 0.15, 1.0],
+  lightPosition: [130.0, 180.0, 220.0, 1.0],
+  layoutMode: "embedded",
+  fixedCanvasSize: {
+    width: 720,
+    height: 540,
+    useDevicePixelRatio: false
+  },
+  camera: {
+    target: [0.0, -1.0, 0.0],
+    distance: 34.0,
+    yaw: 20.0,
+    pitch: -12.0
+  }
+});
+await app.init();
+
+const orbit = new EyeRig(app.cameraRig, app.cameraRod, app.eye, {
+  document,
+  element: app.screen.canvas,
+  input: app.input,
+  type: "orbit",
+  orbit: {
+    target: [0.0, -1.0, 0.0],
+    distance: 34.0,
+    yaw: 20.0,
+    pitch: -12.0,
+    minDistance: 16.0,
+    maxDistance: 64.0
+  }
+});
+orbit.attachPointer();
+
+const createShape = (asset, material) => {
+  const shape = new Shape(app.getGL());
+  shape.applyPrimitiveAsset(asset);
+  shape.endShape();
+  shape.setMaterial("smooth-shader", {
+    has_bone: 0,
+    use_texture: 0,
+    ...material
+  });
+  return shape;
+};
+
+const matteShape = createShape(
+  Primitive.cube(9.0, Primitive.getOptions()),
+  {
+    color: [0.32, 0.72, 1.0, 1.0],
+    ambient: 0.34,
+    specular: 0.16,
+    power: 8.0
+  }
+);
+const glossyShape = createShape(
+  Primitive.sphere(5.6, 22, 20, Primitive.getOptions()),
+  {
+    color: [1.0, 0.76, 0.36, 1.0],
+    ambient: 0.18,
+    specular: 0.96,
+    power: 72.0
+  }
+);
+const torusShape = createShape(
+  Primitive.donut(7.0, 2.1, 28, 22, Primitive.getOptions()),
+  {
+    color: [0.48, 0.90, 0.62, 1.0],
+    ambient: 0.22,
+    specular: 0.72,
+    power: 30.0
+  }
+);
+torusShape.setWireframe(true);
+
+const matteNode = app.space.addNode(null, "matteCube");
+matteNode.setPosition(-12.0, -1.5, 0.0);
+matteNode.addShape(matteShape);
+
+const glossyNode = app.space.addNode(null, "glossySphere");
+glossyNode.setPosition(0.0, -0.5, 0.0);
+glossyNode.addShape(glossyShape);
+
+const torusNode = app.space.addNode(null, "wireTorus");
+torusNode.setPosition(12.0, -1.0, 0.0);
+torusNode.rotateX(20.0);
+torusNode.addShape(torusShape);
+
+const groundShape = createShape(
+  Primitive.cuboid(36.0, 1.0, 20.0, Primitive.getOptions()),
+  {
+    color: [0.18, 0.22, 0.28, 1.0],
+    ambient: 0.16,
+    specular: 0.10,
+    power: 8.0
+  }
+);
+const groundNode = app.space.addNode(null, "ground");
+groundNode.setPosition(0.0, -7.0, 0.0);
+groundNode.addShape(groundShape);
+
+const state = {
+  paused: false,
+  wireframeEnabled: true
+};
+
+const syncWireframe = () => {
+  matteShape.setWireframe(state.wireframeEnabled);
+  glossyShape.setWireframe(state.wireframeEnabled);
+  torusShape.setWireframe(true);
+};
+
+app.attachInput({
+  onKeyDown: (key, ev) => {
+    if (ev.repeat) return;
+    if (key === " ") {
+      state.paused = !state.paused;
+    } else if (key === "w") {
+      state.wireframeEnabled = !state.wireframeEnabled;
+      syncWireframe();
+    } else if (key === "r") {
+      orbit.setAngles(20.0, -12.0);
+      orbit.setDistance(34.0);
+    }
+  }
+});
+
+syncWireframe();
+
+app.createHelpPanel({
+  id: "example0901Help",
+  lines: [
+    "Drag: orbit camera  Wheel: zoom",
+    "W: toggle wireframe overlay  Space: pause rotation  R: reset camera",
+    "left=matte  center=glossy  right=wireframe emphasis"
+  ]
+});
+
+app.start({
+  onUpdate: ({ deltaSec }) => {
+    orbit.update(deltaSec);
+    if (!state.paused) {
+      matteNode.rotateY(24.0 * deltaSec);
+      glossyNode.rotateX(18.0 * deltaSec);
+      glossyNode.rotateY(-28.0 * deltaSec);
+      torusNode.rotateY(20.0 * deltaSec);
+    }
+    app.setStatusLines([
+      `matte ambient=0.34 specular=0.16 power=8`,
+      `glossy ambient=0.18 specular=0.96 power=72  wireframe=${state.wireframeEnabled ? "on" : "off"}`,
+      "Shape.setMaterial(\"smooth-shader\", ...) + Shape.setWireframe(true)"
+    ], {
+      anchor: "top-left",
+      x: 0,
+      y: 0
+    });
+  }
+});
+    </script>
+    <script>
+      document.getElementById("code").textContent =
+        document.getElementById("example-source").textContent.trim();
+    </script>
+  </div>
+</body>
+</html>

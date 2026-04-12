@@ -1,0 +1,25 @@
+サンプル: theme
+
+概要
+- `WebgApp.setUiTheme()` で `debugDock`、`fixedFormatPanel`、`uiPanel` をまとめて差し替えられるかを確認する unittest です
+- dark / light / sunset / forest の 4 preset を runtime 中に切り替え、配色だけでなく panel の透明度や文字の読みやすさも見比べます
+
+このサンプルで使うwebg機能
+- `WebgApp`: Screen、Input、Message、debug dock、`FixedFormatPanel` をまとめて初期化
+- `WebgUiTheme`: 既定 theme preset と追加 preset の切替元
+- `UIPanel`: scene の上に重ねる DOM UI の共通 CSS と theme 適用を JS 側でまとめる部品
+- `Primitive` / `Shape`: 背景越しに見える最小 3D object を構成
+- `Diagnostics`: probe / debug 操作で現在 theme 情報を記録
+
+確認ポイント
+- `[1]` から `[4]` の切替で、`debugDock`、`FixedFormatPanel`、`UIPanel` が同じ preset にそろって更新されるかを確認します
+- 半透明 overlay 越しに cube が十分見え、文字色と border が dark / light の両方で読めるかを確認します
+- preview panel の表示中に theme を切り替えても panel が崩れず、新しい `fixedFormatPanel` 色へ更新されるかを確認します
+
+操作説明
+- キー入力: `[1]-[4]` theme 切替、`[n]` 次の theme、`[p]` preview panel 表示切替、`[space]` 回転停止、`[r]` camera reset
+- マウス操作: drag で orbit、ホイールで zoom
+
+関連文書
+- [14_UI表示の設計.md](../../book/14_UI表示の設計.md)
+- [15_HUDとオーバーレイ.md](../../book/15_HUDとオーバーレイ.md)

@@ -1,0 +1,143 @@
+<!doctype html>
+<!-- book/examples/10_01.html 2026/04/10 -->
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>10_01 ModelAsset の最小例</title>
+  <link rel="stylesheet" href="./example.css" />
+</head>
+<body>
+  <div class="page">
+    <h1>book/examples</h1>
+    <h2>10_01 ModelAsset の最小例</h2>
+    <div class="section-card">
+      <p>`book/10_モデルアセットとランタイム.md` の `ModelAsset`、`validate()`、`build()`、`instantiate()`、`scaleUniform()` を 1 ページで確認できる実行例です</p>
+      <p class="note">左は元の asset、右は `scaleUniform(0.65)` を掛けた clone です。どちらも `build()` は 1 回ずつ、表示は `instantiate()` から始まることをそのまま追えます</p>
+    </div>
+
+    <div class="canvas-block">
+      <canvas id="canvas" width="960" height="720"></canvas>
+    </div>
+
+    <pre id="code"></pre>
+
+    <script type="module" id="example-source">
+import WebgApp from "../../webg/WebgApp.js";
+import EyeRig from "../../webg/EyeRig.js";
+import Primitive from "../../webg/Primitive.js";
+import ModelAsset from "../../webg/ModelAsset.js";
+
+const app = new WebgApp({
+  document,
+  messageFontTexture: "../../webg/font512.png",
+  clearColor: [0.10, 0.12, 0.17, 1.0],
+  layoutMode: "embedded",
+  fixedCanvasSize: {
+    width: 720,
+    height: 540,
+    useDevicePixelRatio: false
+  },
+  camera: {
+    target: [0.0, 0.0, 0.0],
+    distance: 12.0,
+    yaw: 20.0,
+    pitch: -12.0
+  }
+});
+await app.init();
+
+const orbit = new EyeRig(app.cameraRig, app.cameraRod, app.eye, {
+  document,
+  element: app.screen.canvas,
+  input: app.input,
+  type: "orbit",
+  orbit: {
+    target: [0.0, 0.0, 0.0],
+    distance: 12.0,
+    yaw: 20.0,
+    pitch: -12.0,
+    minDistance: 6.0,
+    maxDistance: 24.0
+  }
+});
+orbit.attachPointer();
+
+const asset = Primitive.mapCube(2.4);
+const report = asset.validate();
+if (!report.ok) {
+  throw new Error("Primitive.mapCube() should produce a valid ModelAsset");
+}
+
+const runtime = asset.build(app.getGL());
+const original = runtime.instantiate(app.space);
+
+const scaledAsset = ModelAsset.fromData(
+  asset.cloneJSONValue(asset.getData())
+);
+scaledAsset.scaleUniform(0.65);
+scaledAsset.assertValid();
+const scaledRuntime = scaledAsset.build(app.getGL());
+const scaled = scaledRuntime.instantiate(app.space);
+
+const originalNode = original.nodeMap.get("map_cuboid_node");
+const scaledNode = scaled.nodeMap.get("map_cuboid_node");
+
+originalNode.setPosition(-2.8, 0.0, 0.0);
+scaledNode.setPosition(2.8, 0.0, 0.0);
+
+for (const shape of original.shapes) {
+  shape.setMaterial("smooth-shader", {
+    has_bone: 0,
+    use_texture: 0,
+    color: [0.24, 0.64, 1.0, 1.0],
+    ambient: 0.24,
+    specular: 0.84,
+    power: 38.0
+  });
+}
+
+for (const shape of scaled.shapes) {
+  shape.setMaterial("smooth-shader", {
+    has_bone: 0,
+    use_texture: 0,
+    color: [1.0, 0.72, 0.34, 1.0],
+    ambient: 0.24,
+    specular: 0.84,
+    power: 38.0
+  });
+}
+
+app.createHelpPanel({
+  id: "example1001Help",
+  lines: [
+    "Drag: orbit camera",
+    "Wheel: zoom",
+    "left=original  right=scaleUniform(0.65)"
+  ]
+});
+
+app.start({
+  onUpdate: ({ deltaSec }) => {
+    orbit.update(deltaSec);
+    originalNode.rotateY(0.8);
+    scaledNode.rotateY(-0.8);
+    app.setStatusLines([
+      `validate.ok=${report.ok ? "yes" : "no"}`,
+      `original shapes=${original.shapes.length} scaled shapes=${scaled.shapes.length}`,
+      "ModelAsset -> build() -> instantiate()"
+    ], {
+      anchor: "top-left",
+      x: 0,
+      y: 0
+    });
+  }
+});
+    </script>
+    <script>
+      document.getElementById("code").textContent =
+        document.getElementById("example-source").textContent.trim();
+    </script>
+  </div>
+</body>
+</html>

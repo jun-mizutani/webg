@@ -1,0 +1,273 @@
+<!doctype html>
+<!-- book/examples/28_02.html 2026/04/10 -->
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>28_02 2-bone 円柱の skinning 表示</title>
+  <link rel="stylesheet" href="./example.css" />
+</head>
+<body>
+  <div class="page">
+    <h1>book/examples</h1>
+    <h2>28_02 2-bone 円柱の skinning 表示</h2>
+    <div class="section-card">
+      <p>`book/28_スキニング.md` の円柱 mesh と weight 分布だけを確認する実行例です</p>
+      <p class="note">marker は出しません。white が通常表示、`V` で weight debug、`B` で bone 表示を切り替えて、mesh 側の見え方だけを独立に確認できます</p>
+    </div>
+
+    <div class="canvas-block">
+      <canvas id="canvas" width="960" height="720"></canvas>
+    </div>
+
+    <pre id="code"></pre>
+
+    <script type="module" id="example-source">
+import WebgApp from "../../webg/WebgApp.js";
+import SmoothShader from "../../webg/SmoothShader.js";
+import EyeRig from "../../webg/EyeRig.js";
+import Primitive from "../../webg/Primitive.js";
+import Shape from "../../webg/Shape.js";
+import Skeleton from "../../webg/Skeleton.js";
+
+const CYLINDER_HEIGHT = 8.0;
+const CYLINDER_RADIUS = 0.45;
+const CYLINDER_RINGS = 14;
+const CYLINDER_SEGMENTS = 24;
+const HELP_LINES = [
+  "Drag: orbit camera  Wheel: zoom",
+  "Space: pause  V: weight debug  B: show bones  R: reset camera",
+  "This page isolates cylinder skinning without marker probes"
+];
+
+const createTwoBoneCylinder = (gpu, options = {}) => {
+  const height = Number(options.height ?? CYLINDER_HEIGHT);
+  const radius = Number(options.radius ?? CYLINDER_RADIUS);
+  const rings = Math.max(2, Math.floor(options.rings ?? CYLINDER_RINGS));
+  const segments = Math.max(3, Math.floor(options.segments ?? CYLINDER_SEGMENTS));
+
+  const shape = new Shape(gpu);
+  shape.setAutoCalcNormals(true);
+
+  const skeleton = new Skeleton();
+  shape.setSkeleton(skeleton);
+
+  const rootBone = skeleton.addBone(null, "rootBone");
+  const childBone = skeleton.addBone(rootBone, "childBone");
+
+  rootBone.setRestPosition(0.0, 0.0, 0.0);
+  childBone.setRestPosition(0.0, height * 0.5, 0.0);
+
+  skeleton.bindRestPose();
+  skeleton.setBoneOrder(["rootBone", "childBone"]);
+
+  for (let ring = 0; ring <= rings; ring++) {
+    const v = ring / rings;
+    const y = height * v;
+    for (let segment = 0; segment < segments; segment++) {
+      const u = segment / segments;
+      const angle = u * Math.PI * 2.0;
+      const x = Math.cos(angle) * radius;
+      const z = -Math.sin(angle) * radius;
+      const vIndex = shape.addVertexUV(x, y, z, u, v) - 1;
+      shape.addVertexWeight(vIndex, 0, 1.0 - v);
+      shape.addVertexWeight(vIndex, 1, v);
+    }
+  }
+
+  for (let ring = 0; ring < rings; ring++) {
+    const row0 = ring * segments;
+    const row1 = (ring + 1) * segments;
+    for (let segment = 0; segment < segments; segment++) {
+      const next = (segment + 1) % segments;
+      const a = row0 + segment;
+      const b = row0 + next;
+      const c = row1 + segment;
+      const d = row1 + next;
+      shape.addTriangle(a, c, b);
+      shape.addTriangle(b, c, d);
+    }
+  }
+
+  shape.endShape();
+  return { shape, skeleton, rootBone, childBone };
+};
+
+const createDebugBoneShape = (gpu, shader, size = 0.45) => {
+  const shape = new Shape(gpu);
+  shape.applyPrimitiveAsset(Primitive.debugBone(size, shape.getPrimitiveOptions()));
+  shape.endShape();
+  shape.setShader(shader);
+  shape.setMaterial("smooth-shader", {
+    has_bone: 0,
+    use_texture: 0,
+    color: [1.0, 0.45, 0.18, 1.0],
+    ambient: 0.46,
+    specular: 0.24,
+    power: 12.0
+  });
+  return shape;
+};
+
+const app = new WebgApp({
+  document,
+  shaderClass: SmoothShader,
+  messageFontTexture: "../../webg/font512.png",
+  clearColor: [0.07, 0.09, 0.13, 1.0],
+  lightPosition: [12.0, 20.0, 28.0, 1.0],
+  layoutMode: "embedded",
+  fixedCanvasSize: {
+    width: 720,
+    height: 540,
+    useDevicePixelRatio: false
+  },
+  camera: {
+    target: [0.0, 0.2, 0.0],
+    distance: 13.0,
+    yaw: 24.0,
+    pitch: -12.0
+  }
+});
+await app.init();
+
+const orbit = new EyeRig(app.cameraRig, app.cameraRod, app.eye, {
+  document,
+  element: app.screen.canvas,
+  input: app.input,
+  type: "orbit",
+  orbit: {
+    target: [0.0, 0.2, 0.0],
+    distance: 13.0,
+    yaw: 24.0,
+    pitch: -12.0,
+    minDistance: 7.0,
+    maxDistance: 24.0,
+    wheelZoomStep: 1.0
+  }
+});
+orbit.attachPointer();
+
+const helperShader = new SmoothShader(app.getGL());
+await helperShader.init();
+helperShader.setLightPosition([12.0, 20.0, 28.0, 1.0]);
+helperShader.setProjectionMatrix(app.projectionMatrix);
+
+const floorShape = new Shape(app.getGL());
+floorShape.applyPrimitiveAsset(Primitive.cuboid(12.0, 0.25, 12.0, floorShape.getPrimitiveOptions()));
+floorShape.endShape();
+floorShape.setShader(helperShader);
+floorShape.setMaterial("smooth-shader", {
+  has_bone: 0,
+  use_texture: 0,
+  color: [0.08, 0.22, 0.34, 1.0],
+  ambient: 0.34,
+  specular: 0.06,
+  power: 8.0
+});
+const floorNode = app.space.addNode(null, "floor");
+floorNode.setPosition(0.0, -4.25, 0.0);
+floorNode.addShape(floorShape);
+
+const { shape, skeleton, rootBone, childBone } = createTwoBoneCylinder(app.getGL());
+shape.setShader(app.shader);
+shape.setMaterial("smooth-shader", {
+  has_bone: 1,
+  use_texture: 0,
+  color: [0.92, 0.94, 1.0, 1.0],
+  ambient: 0.34,
+  specular: 0.86,
+  power: 42.0,
+  emissive: 0.0,
+  weight_debug: 0
+});
+skeleton.setBoneShape(createDebugBoneShape(app.getGL(), helperShader, 0.45));
+skeleton.showBone(true);
+
+const objectNode = app.space.addNode(null, "skinnedCylinder");
+objectNode.setPosition(0.0, -4.0, 0.0);
+objectNode.addShape(shape);
+app.space.scanSkeletons();
+
+const state = {
+  paused: false,
+  weightDebug: false,
+  showBones: true
+};
+
+const applyViewState = () => {
+  shape.hide(false);
+  shape.setMaterial("smooth-shader", {
+    has_bone: 1,
+    use_texture: 0,
+    color: [0.92, 0.94, 1.0, 1.0],
+    ambient: 0.34,
+    specular: 0.86,
+    power: 42.0,
+    emissive: 0.0,
+    weight_debug: state.weightDebug ? 1 : 0
+  });
+  skeleton.showBone(state.showBones);
+  app.space.scanSkeletons();
+};
+applyViewState();
+
+app.attachInput({
+  onKeyDown: (key, ev) => {
+    if (ev.repeat) return;
+    if (key === " ") {
+      state.paused = !state.paused;
+    } else if (key === "v") {
+      state.weightDebug = !state.weightDebug;
+      applyViewState();
+    } else if (key === "b") {
+      state.showBones = !state.showBones;
+      applyViewState();
+    } else if (key === "r") {
+      orbit.setAngles(24.0, -12.0);
+      orbit.setDistance(13.0);
+    }
+  }
+});
+
+app.createHelpPanel({
+  id: "example2802Help",
+  lines: HELP_LINES
+});
+
+let elapsedSec = 0.0;
+
+app.start({
+  onUpdate: ({ deltaSec }) => {
+    orbit.update(deltaSec);
+    if (!state.paused) {
+      elapsedSec += deltaSec;
+    }
+
+    rootBone.setAttitude(0.0, Math.sin(elapsedSec * 1.1) * 10.0, 0.0);
+    childBone.setAttitude(0.0, 0.0, Math.sin(elapsedSec * 1.7) * 58.0);
+
+    app.setStatusLines([
+      `weightDebug=${state.weightDebug ? "on" : "off"} bones=${state.showBones ? "on" : "off"}`,
+      `rootYaw=${(Math.sin(elapsedSec * 1.1) * 10.0).toFixed(1)} childBank=${(Math.sin(elapsedSec * 1.7) * 58.0).toFixed(1)}`,
+      "Cylinder-only view for mesh / weight verification"
+    ], {
+      anchor: "top-left",
+      x: 0,
+      y: 0
+    });
+  },
+  onAfterDraw3d: () => {
+    if (state.showBones) {
+      app.space.scanSkeletons();
+      app.space.drawBones();
+    }
+  }
+});
+    </script>
+    <script>
+      document.getElementById("code").textContent =
+        document.getElementById("example-source").textContent.trim();
+    </script>
+  </div>
+</body>
+</html>

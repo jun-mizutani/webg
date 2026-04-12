@@ -1,0 +1,20 @@
+tween unittest
+
+この test は、ゲームでよく使う「少しだけ変化する」処理を確認するための sample です。
+数値や配列を時間で補間する `Tween`、`Shape.animateParameter()` による material parameter の変化、`Node.animateRotation()` による local rotation の補間、`Space.updateShapeAnimations()` / `Space.updateNodeAnimations()` による毎 frame の反映、そして `WebgApp.createTween()` / `shakeCamera()` / `flashMessage()` がゲーム向けの演出として崩れずに動くかを見ます。
+
+この test が確認したいのは、単に値が 0 から 1 に動くことではありません。
+`outCubic` のような easing が途中値をどう変えるか、`Shape` 側の parameter animation が `Space` 経由で進むか、`Node.animateRotation()` が local rotation を 500ms で滑らかに変えられるか、`WebgApp` が tween と camera shake をまとめて管理しても sample 側の state を壊さないかを確認します。
+
+操作:
+- 画面を開くと自動で確認が走る
+- 途中値、終端値、camera shake、toast の結果を status で読む
+
+確認ポイント:
+- `Tween` が object / array の両方を補間できるか
+- `Shape.animateParameter()` が material parameter を更新できるか
+- `Node.animateRotation()` が local rotation を補間できるか
+- `Space.updateShapeAnimations()` が Shape の補間を毎 frame 進められるか
+- `Space.updateNodeAnimations()` が Node の rotation 補間を毎 frame 進められるか
+- `WebgApp.createTween()` が sample から使いやすい入口になっているか
+- `WebgApp.shakeCamera()` と `flashMessage()` が HUD や camera の基本的な演出として使えるか

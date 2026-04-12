@@ -1,0 +1,47 @@
+unittest: tilemap
+
+概要
+- `SceneLoader` と `TileMap` を使って、高さ付き tile 盤面を scene 定義から組み立てる test です。tile 面の描画は `SmoothShader` を使い、procedural noise 由来の texture と normal map を terrain ごとに流し込みます。高さ 0 の cell は green の grass block として見え、noise は少し細かめにしてあります。ball は移動中に少し大きめに hop するので、隣の cell へ滑るだけでなく軽く跳ねる見え方も確認できます。
+- `tilemap_poc` で確認した高さ付き盤面の考え方を core 側へ移し、`SceneLoader` が `tileMap` を runtime に変換できるかを確かめます。
+- 盤面の表示は ball に追従して scroll し、camera pivot も displayArea の中心へ寄せるので、表示域が定義域内を動く様子を POC に近い見え方で追いやすくしています。矢印キーは camera の向きに合わせて grid の移動方向を変えるため、この sample では ArrowUp が cell 座標の count down として扱われますが、右キーで画面上の右へ動かす確認はできます。
+- `hitFace` と `hitHeight`、高さ差 1 以内の移動可否、奥側 `y=1` の高さ差 2 以上のブロックをまとめて確認します。
+- 選択した cell の `edgeCutMask` も HUD に出し、4方向の cut が 1 つの mask にまとまる様子をその場で追えるようにします。
+
+このサンプルで使うwebg機能
+- `SceneAsset`: scene object から `SceneLoader` へ渡す入口
+- `SceneLoader`: `tileMap` 定義の実体化
+- `TileMap`: cell / pickCell / canMove / displayArea / path helper と camera-relative movement helper
+- `Space`: tile 盤面と marker の Node 階層
+- `Primitive.sphere`: marker の表示
+- `SmoothShader`: tile 面の陰影と texture / normal map
+- `Message`: 画面上の操作ガイド
+- `Matrix`: クリック位置からの ray 生成
+
+確認ポイント
+- scene 定義の `tileMap` が `SceneLoader` 経由で runtime になることを確認します。
+- `TileMap.pickCell()` で上面と壁面の `hitFace` が分かれることを確認します。
+- `TileMap.canMove()` で高さ差 1 以内の移動だけが通ることを確認します。
+- 奥側 `y=1` の ridge で高さ差 2 以上の移動が blocked になることを確認します。
+- ball を動かすと `TileMap.followCell()` により displayArea が scroll することを確認します。
+- ball が移動中に少し大きめに hop し、cell 間の移動に軽い弾みが見えることを確認します。
+- ball の上に置いた細長い marker が `Node.animateRotation()` で 250ms かけて Y 軸回りに回るので、回転補間の確認もできます。
+- tile 面の texture と normal map が `terrainMaterials` 経由で見え、green の grass block と slope / peak の色差も追えることを確認します。
+- 矢印キーで camera 向きに合わせて ball の移動方向が変わり、ArrowUp が cell 座標の count down になることを確認します。
+- マウスでは drag で camera を orbit 回転し、touch では 1本指 drag で同じ回転ができることを確認します。
+- touch では 2本指 drag で camera を ground 上で移動でき、pinch / wheel で zoom できることを確認します。
+- `findPath()` が start / goal の間の path を返し、必要なら blocked も表せることを確認します。
+
+操作説明
+- 1本指 drag / drag: camera を orbit 回転
+- 2本指 drag: camera を ground 上で移動
+- pinch / wheel: zoom
+- tap / クリック: tile の上面または壁面を選択
+- 矢印キー: ball を上下左右の隣接 cell へ移動
+- `1` / `2` / `3`: camera preset を切り替える
+- `c`: 選択を解除する
+- `r`: camera を初期位置へ戻す
+
+保存済み POC
+- `tilemap_poc` は、TileMap の視点と移動ルールを詰める前段の POC として、現在は `../../../discontinued/index.html` に保管しています。
+- この `tilemap` は、core 側に組み込まれた TileMap の確認用 unittest として使い、表示域が ball に追従して scroll する見え方と camera 向きに合わせた矢印キー移動を確認します。ball は `Node.animatePosition()` と `Space.update()` を使って 250ms で隣の cell へ滑らかに移動し、displayArea の中心は 350ms で少し遅れて追従するので、瞬間移動ではなく移動中の見え方も確認します。
+- この `tilemap` では、camera 相対の移動と TileMap の論理 `row` / `col` を同一視せず、視点を回したときの操作感と盤面上の座標更新を別々に確認します。`ArrowUp` は cell 座標で count down として読んでいます。

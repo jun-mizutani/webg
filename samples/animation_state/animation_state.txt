@@ -1,0 +1,44 @@
+サンプル: animation_state
+
+概要
+- `samples/gltf_loader/hand.glb` の手を読み込み、各指ポーズの action 自体は `Action` で再生しつつ、「今どの action を選ぶか」は `AnimationState` が決める構成を確認できます。
+- `1` - `6` で desired state を切り替えるだけで、対応する action が始まる構成にしてあり、状態制御と action 再生の役割分担を追いやすくしています。
+- 操作説明は `WebgApp.createHelpPanel()` を使って左上の畳める help panel へ出し、現在状態は canvas HUD 側へ分けて表示します。
+
+このサンプルで使うwebg機能
+- `WebgApp`: Screen / Shader / Space / Input / Message をまとめて初期化し、`loadModel(..., { format: "gltf" })` で hand.glb を読み込む
+- `Skeleton` / `Bone`: ボーン表示と回転
+- `Action`: 指ポーズの pattern / action 再生を担当
+- `AnimationState`: desired state と遷移条件から、どの action を開始するかを決める最小 state machine
+- 各 pose の action は単発再生で扱い、state が変わるまで最後に到達した pose を表示し続けます
+- `WebgApp.createHelpPanel()`: 左上の help panel を標準形式で生成し、操作説明の表示 / 非表示を切り替える
+- `Message`: HUD と状態表示
+
+確認ポイント
+- 左上の help panel に操作説明が表示され、`Hide Help` を押すと `Show Help` button だけが残り、`Show Help` で再表示できることを確認します。
+- HUD に desired state / current state / current action / current pattern / transition が表示され、状態遷移と action 再生の役割分担を画面上から追えることを確認します。
+- `P` で auto cycle を有効にすると、一定時間ごとに desired state が変わり、state machine が連続して action を切り替えることを確認します。
+- 現在の `hand.glb` では、`0:レスト`, `1:グー`, `2-3:1本伸ばす`, `4-5:チョキ`, `6-7:3本伸ばす`, `8-9:4本伸ばす`, `10-11:パー`, `12-13:グー` の保持区間に対応します。
+
+操作説明
+- 左上 help panel の `Hide Help` / `Show Help`: 操作説明本文の表示 / 非表示
+- `W` / `S`: モデルを X 軸回転
+- `A` / `D`: モデルを Y 軸回転
+- `Z` / `X`: モデルを Z 軸回転
+- `E` / `R`: 選択中ボーンを X 軸回転
+- `Y` / `U`: 選択中ボーンを Y 軸回転
+- `C` / `V`: 選択中ボーンを Z 軸回転
+- `N` / `M`: メッシュ選択を前後切替
+- `O` / `I`: 選択メッシュの非表示 / 表示
+- `9` / `0`: ボーン表示 / 非表示
+- `1` - `5`: desired state を pose1 - pose5 に変更
+- `6`: desired state を pose0 に変更
+- `/`: 次の desired state へ進む
+- `@`: 現在 state を再始動
+- `P`: auto cycle の ON / OFF
+- `7` / `8`: 描画 ON / OFF
+- `K`: 遅延描画モード ON
+
+補足
+- `AnimationState` は clip データを持たず、既存 `Action` を controller として受ける薄い制御層です
+- この sample では `state.action -> Action.start(actionId)` の接続だけを使い、cross-fade や blend はまだ入れていません

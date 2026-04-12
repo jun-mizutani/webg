@@ -1,0 +1,21 @@
+サンプル: skinning_normal_map
+
+概要
+- `SmoothShader` の skinning + normal map 経路だけを最小構成で確認する unittest です。
+- 同じ `num256.png` から生成した法線マップを使い、ボーン変形中でも陰影が破綻しないかを狭く確認します。
+
+このサンプルで使うwebg機能
+- `SmoothShader`: `setMaterial("smooth-shader", ...)` を入口にした skinning + normal map 描画
+- `Texture.buildNormalMapFromHeightMap`: 同一画像から normal map を生成
+- `Skeleton` / `Shape.addVertexWeight`: 2 ボーンの最小ウェイト設定
+- `Space.drawBones`: ボーン表示
+- `UnitTestApp`: Screen 初期化、status / error 表示の共通化
+
+確認ポイント
+- メッシュ変形中でも normal map 由来の陰影が破綻せず追従することを確認します
+- `SmoothShader` の shader 変更後に、最小の normal map 付き skinning 経路が壊れていないかを素早く確認します
+- seam や不自然なハイライトが極端に出ず、normal map OFF の smooth skinning 経路との差が陰影として読み取れることを確認します
+
+操作説明
+- キー入力: なし
+- マウス操作: なし

@@ -1,0 +1,89 @@
+サンプル: tile_sim
+
+概要
+- この sample の目的は、TileMap 上で高さが戦術と補給へどう効くかを見せることと、`DialogueOverlay` を日本語の tutorial / briefing / report / inspection に使えるかを確認することです
+- guide / status HUD は常用せず、mission の説明、turn ごとの報告、警告 event、tile inspection を `DialogueOverlay` で完結させる構成にしています
+- player が直接動かす前衛 `Alpha` に加え、支援役 `Bravo` と補給役 `Mule`、敵側の `Warden` にも色違いの `human.glb` を載せ、Alpha が動いたあとに各部隊が 1 step 反応するようにしています
+- `human.glb` は 1 回だけ build し、その shared runtime から `Alpha / Bravo / Mule / Warden` を `instantiate()` しているため、geometry / GPU buffer は共有しつつ各 unit の skeleton と animation runtime は独立しています
+- mission には shortest route hint と budget を持たせていますが、budget は停止条件ではなく作戦上の目安として表示しています
+- Alpha は 250ms で cell から cell へ滑らかに移動し、Bravo / Mule / Warden も同じ TileMap 上で補助移動します
+- beacon marker と goal marker を使い、TileMap 上の目的地と `DialogueOverlay` の報告を対応づけて読めるようにしています
+- 右下寄りには小さい 2D tactical map overlay を追加し、盤面全体の高さ帯、Alpha / Bravo / Mule / Warden、beacon、goal、選択中 cell を一目で確認できるようにしています
+- Alpha と support unit には `food / arms` の軽い resource 進行を持たせ、1 手ごとに高地では維持が重く、低地では補給が進みやすい違いが出るようにしています
+- `Warden` にも `food / arms` を持たせ、高地では arms 維持が強いが food は苦しく、低地では補給しやすい差が出るようにしています
+- terrain は `SmoothShader` 前提で、procedural noise の texture と normal map を貼っています
+- height 0 は青、1 と 2 は green、3 と 4 は orange 系、5 は白系として見えるので、高さ差が色でも追いやすくなっています
+
+このサンプルで何をするか
+- 最初に `DialogueOverlay` の導入説明を読み、会話が閉じたら Enter / Space または `GO` で mission を始めます
+- play 中は Alpha だけを直接動かします。Alpha を 1 手動かすたびに、Bravo、Mule、Warden が順に反応し、beacon 回収や warning のような重要な変化があれば `DialogueOverlay` に turn report が追加されます
+- 右側 `STATE` 欄には moves used と budget が出ますが、budget を超えても mission はそのまま継続します
+- 目的は beacon をすべて回収し、その後に開く goal へ Alpha を入れることです
+- 盤面を click / tap すると、その cell の高さ、terrain、beacon / goal の有無を `DialogueOverlay` で調べられます
+- 高地は戦闘向きですが food 消費が重く、低地は補給向きですが戦闘では不利なので、右側 `STATE` 欄の数値と敵接近や objective 進行の report を見比べながら、どの unit をどこへ寄せるかを確認します
+
+部隊の見方
+- `Alpha`: 薄い赤寄りに見せた `human.glb` の前衛です。player が直接操作するのはこの unit だけで、TileMap 上を動く土台 node に skinned mesh をぶら下げ、静止中も短い idle animation を続けます
+- `Bravo`: 水色寄りに色を変えた `human.glb` の支援役です。Alpha のあとに自動で動き、高い地形へ寄って見張りと射撃位置の確保を担当します
+- `Mule`: 緑寄りに色を変えた `human.glb` の補給役です。低い地形へ寄って `food / arms` を貯め、補給線を維持する後方役です
+- `Warden`: 赤寄りに色を変えた `human.glb` の敵監視部隊です。高地や goal 周辺へ寄って Alpha の進路へ圧力を掛けます
+
+DialogueOverlay の見方
+- 左の大きいウィンドウは `司令部` 側の本文で、導入、作戦説明、重要な turn report、警告 event、tile inspection の本体を表示します
+- 右の `STATE` ウィンドウは、現在の発話者、見出し、選択肢数、直近の選択、進行状態を確認する欄です
+- `STATE` は tutorial を作る側や、どの段階の会話が出ているかを確認したい利用者向けの補助情報として使います
+- `DialogueOverlay` が開いている間は移動を受け付けず、会話を閉じてから次の 1 手へ進みます
+
+2D tactical map の見方
+- 右下寄りの小さい overlay は、盤面全体を 2D で俯瞰する補助 map です
+- cell の色は高さ帯を表し、青が低地、緑が中低地、橙が高地、白が最高地です
+- `Alpha` は薄い赤の丸、`Bravo` は水色の丸、`Mule` は緑の四角、`Warden` は赤の四角で表示します
+- 未回収 beacon は diamond、goal は四角枠、選択中 cell は白枠で表示します
+- 3D 側で一部が隠れていても、現在の盤面全体と各 unit の配置を 2D で確認できます
+
+このサンプルで使うwebg機能
+- `WebgApp`: Screen / Shader / Space / Input / Message をまとめて初期化し、TileMap と `DialogueOverlay` の進行を sample から扱う
+- `ModelLoader` / `ModelBuilder`: `human.glb` を 1 回 build して shared runtime を作り、`runtime.instantiate()` で Alpha / Bravo / Mule / Warden の fresh runtime を起こす
+- `DialogueOverlay`: UTF-8 の briefing / event / result / inspection 文を DOM overlay として重ね、`Enter / Space / 1 / 2` の進行を確認する
+- DOM canvas overlay: 小さい 2D tactical map を固定表示し、盤面全体と unit 配置を俯瞰表示する
+- `SceneAsset`: Scene JSON の tileMap を WebgApp 上へ build する
+- `TileMap`: 盤面の生成、displayArea の追従、raycast、cell の選択、移動判定、path 探索をまとめる
+- `TileMap.surfaceShading`: flat な tile と smooth な cap の見え方を scene 定義だけで切り替える
+- `SmoothShader`: tile の texture と normal map を描く標準材質
+- `Texture`: procedural noise texture と normal map を作る
+- `Shape` / `Primitive`: beacon marker、goal marker と、味方 / 敵 unit 用 proxy node の geometry を shared resource として作り、各 node には instance をぶら下げる
+- `Animation`: `human.glb` の clip 全体を loop 再生し、`key2 == key0` を利用して Alpha / Bravo / Mule / Warden の idle animation を `0 -> 1 -> 0` に見える形で繰り返す
+
+確認ポイント
+- title で `DialogueOverlay` の導入説明が出て、左の本文欄と右の `STATE` 欄の役割を読めることを確認します
+- play 開始時に `DialogueOverlay` の briefing が出て、操作方法と Alpha / Bravo / Mule / Warden の役割を日本語で確認できることを確認します
+- play briefing の方針選択で `1 / 2` の branch が動作することを確認します
+- Alpha が arrow key / touch button で camera の向きに合わせて移動することを確認します
+- Alpha / Bravo / Mule / Warden に色違いの `human.glb` が表示され、足元が cell 上面付近に収まり、cell 移動に追従しながら静止中も idle animation が loop することを確認します
+- Alpha の移動後に Bravo と Mule が AI advisor の推奨に沿って 1 step 反応することを確認します
+- Alpha と支援部隊の移動後に `Warden` が高地や goal 側を守る方向へ 1 step 反応することを確認します
+- 同じ cell に味方が重なったとき、Alpha は背後寄り、Bravo は左、Mule は右へ少しずれて見えやすくなることを確認します
+- 右側 `STATE` 欄と title / briefing に budget が表示され、budget を超えても mission が継続することを確認します
+- Alpha の移動後に `TURN` が進み、Alpha / Bravo / Mule / Warden の `food / arms` が地形に応じて更新されることを確認します
+- beacon 回収、goal 開放、接敵 warning など、重要な変化が起きた turn だけ `DialogueOverlay` report が追加されることを確認します
+- beacon 回収、goal 開放、接敵 warning などの重要 event が `DialogueOverlay` 側へ追加されることを確認します
+- beacon を踏むと marker が消え、overlay report でも回収数が進むことを確認します
+- すべての beacon 回収後に goal marker の色が変わり、goal が開くことを確認します
+- 右下寄りの 2D tactical map で、盤面全体の高さ帯と Alpha / Bravo / Mule / Warden / beacon / goal の位置が追えることを確認します
+- 3D 側で click した cell を変えると、2D tactical map 側でも白枠の選択位置が追従することを確認します
+- 盤面を click / tap したとき、その cell の terrain / height / objective 情報が `DialogueOverlay` に出ることを確認します
+- goal へ到達すると clear result へ切り替わり、Enter / Space / GO で mission を最初からやり直せることを確認します
+- マウスでは drag で camera orbit、wheel で zoom でき、touch では 1本指 drag で orbit、2本指 drag で camera 移動、pinch で zoom できることを確認します
+- clear result で `DialogueOverlay` の debrief が出て、閉じたあとに retry できることを確認します
+
+操作説明
+- Enter / Space: `DialogueOverlay` を進める、または mission を開始 / 再開
+- `1` / `2`: `DialogueOverlay` の choice を選ぶ
+- arrow keys: Alpha を移動
+- click / tap: cell を選択して inspection を開く
+- drag: camera orbit
+- 2本指 drag: camera を平行移動
+- pinch / wheel: zoom
+- touch buttons: `← / ↑ / ↓ / → / GO / 1 / 2 / 3 / R`
+- `3`: orbit preset
+- `R`: camera を reset

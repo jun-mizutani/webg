@@ -1,0 +1,43 @@
+サンプル: json_loader
+
+概要
+- `main.js` 内で指定した `ModelAsset` JSON ファイルを読み込み、そのまま表示するサンプルです。
+- `gltf_loader` や `collada_loader` が `D` キーで出力した JSON を、ファイル名を合わせてこのサンプルで再表示できます。
+- `WebgApp.loadModel()` から JSON facade を呼び、形式差を意識せず `ModelAsset` と runtime を得るサンプルです。
+- 現在の検証用 `modelasset.json` には、同じ元 clip を複製して `ArmatureAction_skeleton_0` と `ArmatureAction_skeleton_0_copy` の 2 clip を入れてあります。
+
+このサンプルで使うwebg機能
+- `WebgApp`: 標準初期化、描画ループ、操作ガイド表示
+- `WebgApp.loadModel`: JSON facade の高レベル入口
+- `ModelLoader`: JSON load / validate / build / instantiate をまとめる
+- `ModelAsset.load`: JSON ファイルをロード
+- `ModelAsset.getClipNames`: JSON に含まれる clip 一覧確認
+- `ModelAsset.build`: JSON から `Shape` / `Skeleton` / `Animation` を構築
+- `ModelBuilder.animationMap`: clip id から runtime Animation を引く
+- `build()` 結果 helper: `instantiate()` / `createNodeTree()` / `bindAnimationBindings()` / `getAnimation()` / `getAnimationNames()` / `startAllAnimations()` / `playAllAnimations()` / `setAnimationsPaused()`
+- `EyeRig(type="orbit")`: バウンディングボックス基準のオービット視点
+
+確認ポイント
+- `MODEL_ASSET_FILE` で指定した JSON が validator を通過し、そのまま描画できることを確認します
+- HUD に clip 名一覧と先頭 clip の track 数 / key 数 / duration が表示され、build 前の JSON だけでも animation 定義を確認できることを確認します
+- HUD に selectedClip / selectedState / selectedBound が表示され、現在選択中 clip の再生状態と runtime 接続状態が確認できることを確認します
+- sample 内では facade の戻り値 `runtime` を使って node 復元と animation binding を共通化し、`animationMap` 直参照ではなく `getAnimation()` / `getAnimationNames()` を使って接続確認できることを確認します
+- `4` / `5` キーで対象 clip を切り替え、`1` / `2` / `3` が現在選択中 clip に対して動作することを確認します
+- `4` / `5` キーで `ArmatureAction_skeleton_0` と `ArmatureAction_skeleton_0_copy` を切り替えられることを確認します
+- `1` キーで選択中 clip を `restartAnimation(clipId)` により名前指定で再始動できることを確認します
+- `2` / `3` キーで選択中 clip を `pauseAnimation(clipId)` / `resumeAnimation(clipId)` により個別停止・再開できることを確認します
+- カメラ距離がバウンディングボックスのサイズに応じて自動設定され、モデル全体を見失わないことを確認します
+- 初期表示でモデルが少し下寄りに見え、`Q` / `E` で視点の上下位置を微調整できることを確認します
+
+操作説明
+- ドラッグ / 矢印キー: オービットカメラ回転
+- ホイール / `[` / `]`: ズーム
+- `Q` / `E`: カメラの注視点を上 / 下へ移動
+- `Space`: アニメーション一時停止
+- `1`: 選択中 clip を再生し直す
+- `2`: 選択中 clip を一時停止
+- `3`: 選択中 clip を再開
+- `4`: 前の clip を選択
+- `5`: 次の clip を選択
+- `D`: 現在の JSON を再ダウンロード
+- `R`: カメラをバウンディングボックス基準の初期位置へ戻す

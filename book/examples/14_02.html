@@ -1,0 +1,170 @@
+<!doctype html>
+<!-- book/examples/14_02.html 2026/04/10 -->
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>14_02 theme switch</title>
+  <link rel="stylesheet" href="./example.css" />
+</head>
+<body>
+  <div class="page">
+    <h1>book/examples</h1>
+    <h2>14_02 theme switch</h2>
+    <div class="section-card">
+      <p>`book/14_UI表示の設計.md` の `WebgApp.setUiTheme()` を、既定 preset の切り替えだけに絞って確かめる実行例です</p>
+      <p class="note">`WebgApp` が管理する help panel / fixed panel と、sample 側で直接作る `UIPanel` を同じ preset へそろえる流れを短い code で見られます。button または `[1]` から `[4]` で theme を切り替えます</p>
+    </div>
+
+    <div class="canvas-block">
+      <canvas id="canvas" width="960" height="720"></canvas>
+    </div>
+
+    <pre id="code"></pre>
+
+    <script type="module" id="example-source">
+import WebgApp from "../../webg/WebgApp.js";
+import UIPanel from "../../webg/UIPanel.js";
+import { UI_THEME_PRESETS } from "../../webg/WebgUiTheme.js";
+
+const app = new WebgApp({
+  document,
+  messageFontTexture: "../../webg/font512.png",
+  clearColor: [0.06, 0.08, 0.11, 1.0],
+  layoutMode: "embedded",
+  fixedCanvasSize: {
+    width: 720,
+    height: 540,
+    useDevicePixelRatio: false
+  }
+});
+await app.init();
+
+const host = app.ensureCanvasHost();
+const uiPanels = new UIPanel({
+  document,
+  theme: app.uiTheme.uiPanel
+});
+const layout = uiPanels.createLayout({
+  id: "theme-switcher",
+  containerElement: host,
+  positioningMode: "absolute",
+  leftWidth: "minmax(0, 320px)",
+  rightWidth: "minmax(0, 260px)",
+  top: 12,
+  left: 12,
+  right: 12,
+  compactWidth: 700,
+  collapseWidth: 880
+});
+
+const panel = uiPanels.createPanel(layout.left, { stack: true });
+uiPanels.createEyebrow(panel, "Theme");
+uiPanels.createTitle(panel, "WebgApp.setUiTheme()", 1);
+uiPanels.createHint(panel, "Buttons or [1]-[4] to switch presets");
+const buttonGrid = uiPanels.createButtonGrid(panel, { columns: 2 });
+
+const infoPanel = uiPanels.createPanel(layout.right, { stack: true });
+uiPanels.createEyebrow(infoPanel, "Preview");
+uiPanels.createTitle(infoPanel, "Current preset", 2);
+const overview = uiPanels.createTextBlock(infoPanel, {
+  text: "theme=dark\nbutton / border / panel colors"
+});
+const status = uiPanels.createStatusBlock(layout, {
+  id: "theme-status",
+  text: "theme: dark"
+});
+
+const presetEntries = [
+  { key: "1", id: "dark" },
+  { key: "2", id: "light" },
+  { key: "3", id: "sunset" },
+  { key: "4", id: "forest" }
+];
+
+let currentThemeId = "dark";
+
+function applyThemePreset(themeId) {
+  const nextTheme = UI_THEME_PRESETS[themeId];
+  if (!nextTheme) {
+    throw new Error(`Unknown UI theme preset: ${themeId}`);
+  }
+
+  currentThemeId = themeId;
+  app.setUiTheme(nextTheme);
+  uiPanels.setTheme(app.uiTheme.uiPanel);
+  overview.textContent = [
+    `theme=${themeId}`,
+    `panel=${app.uiTheme.uiPanel.panelBackground}`,
+    `button=${app.uiTheme.uiPanel.buttonBackground}`
+  ].join("\n");
+  status.textContent = `theme: ${themeId}`;
+  app.showFixedFormatPanel([
+    `theme=${themeId}`,
+    `dockBg=${app.uiTheme.debugDock.rootBackground}`,
+    `fixedBg=${app.uiTheme.fixedFormatPanel.errorBackground}`,
+    `panelBg=${app.uiTheme.uiPanel.panelBackground}`
+  ].join("\n"), {
+    id: "theme-preview",
+    title: "Theme Preview"
+  });
+}
+
+for (const entry of presetEntries) {
+  const button = uiPanels.createButton(buttonGrid, {
+    text: `[${entry.key}] ${entry.id}`
+  });
+  button.addEventListener("click", () => applyThemePreset(entry.id));
+}
+
+app.createHelpPanel({
+  id: "themeExampleHelp",
+  lines: [
+    "[1]-[4]: switch theme preset",
+    "help / fixed panel / overlay update together"
+  ]
+});
+
+app.attachInput({
+  onKeyDown: (key, ev) => {
+    if (ev.repeat) return;
+    const entry = presetEntries.find((item) => item.key === key);
+    if (entry) {
+      applyThemePreset(entry.id);
+    }
+  }
+});
+
+applyThemePreset("dark");
+
+let elapsedSec = 0.0;
+
+app.start({
+  onUpdate: ({ deltaSec }) => {
+    elapsedSec += deltaSec;
+    app.setGuideLines([
+      "theme switch example",
+      "DOM UI changes, HUD stays simple"
+    ], {
+      anchor: "bottom-left",
+      x: 0,
+      y: -2
+    });
+    app.setStatusLines([
+      `theme=${currentThemeId}`,
+      `time=${elapsedSec.toFixed(1)} sec`
+    ], {
+      anchor: "top-left",
+      x: 0,
+      y: 0
+    });
+  }
+});
+    </script>
+    <script>
+      document.getElementById("code").textContent =
+        document.getElementById("example-source").textContent.trim();
+    </script>
+  </div>
+</body>
+</html>
