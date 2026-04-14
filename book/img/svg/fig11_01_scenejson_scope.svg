@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="760" viewBox="0 0 1280 760" role="img" aria-label="Scene JSON の守備範囲図">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#fbfdff"/>
+      <stop offset="100%" stop-color="#eef4fb"/>
+    </linearGradient>
+    <marker id="arrow" viewBox="0 0 10 10" refX="8.4" refY="5" markerWidth="4.1" markerHeight="4.1" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="context-stroke"/>
+    </marker>
+  </defs>
+  <rect width="1280" height="760" fill="url(#bg)"/>
+  
+    <text x="56" y="58" text-anchor="start" font-size="22" font-weight="700" fill="#374151" font-family="'Segoe UI', 'Hiragino Sans', 'Yu Gothic UI', sans-serif"><tspan x="56" dy="0">第11章</tspan></text>
+    <text x="56" y="98" text-anchor="start" font-size="38" font-weight="700" fill="#111827" font-family="'Segoe UI', 'Hiragino Sans', 'Yu Gothic UI', sans-serif"><tspan x="56" dy="0">Scene JSON の守備範囲図</tspan></text>
+    <line x1="56" y1="122" x2="1224" y2="122" stroke="#d8e3f4" stroke-width="2"/>
+  
+  
+    <rect x="500" y="280" width="280" height="120" rx="20" ry="20" fill="#eef5ff" stroke="#2f537f" stroke-width="2.5"/><text x="640" y="340" text-anchor="middle" font-size="34" font-weight="600" fill="#111827" font-family="'Segoe UI', 'Hiragino Sans', 'Yu Gothic UI', sans-serif"><tspan x="640" dy="0">Scene JSON</tspan></text>
+
+    <rect x="170" y="172" width="180" height="82" rx="20" ry="20" fill="#f7fbff" stroke="#2f537f" stroke-width="2.5"/><text x="260" y="213" text-anchor="middle" font-size="26" font-weight="600" fill="#111827" font-family="'Segoe UI', 'Hiragino Sans', 'Yu Gothic UI', sans-serif"><tspan x="260" dy="0">camera</tspan></text>
+    <rect x="170" y="322" width="180" height="82" rx="20" ry="20" fill="#f7fbff" stroke="#2f537f" stroke-width="2.5"/><text x="260" y="363" text-anchor="middle" font-size="26" font-weight="600" fill="#111827" font-family="'Segoe UI', 'Hiragino Sans', 'Yu Gothic UI', sans-serif"><tspan x="260" dy="-0.675em">HUD / guide /</tspan><tspan x="260" dy="1.35em">status</tspan></text>
+    <rect x="170" y="472" width="180" height="82" rx="20" ry="20" fill="#f7fbff" stroke="#2f537f" stroke-width="2.5"/><text x="260" y="513" text-anchor="middle" font-size="26" font-weight="600" fill="#111827" font-family="'Segoe UI', 'Hiragino Sans', 'Yu Gothic UI', sans-serif"><tspan x="260" dy="-0.675em">input</tspan><tspan x="260" dy="1.35em">actions</tspan></text>
+
+    <rect x="930" y="160" width="180" height="82" rx="20" ry="20" fill="#f7fbff" stroke="#2f537f" stroke-width="2.5"/><text x="1020" y="201" text-anchor="middle" font-size="26" font-weight="600" fill="#111827" font-family="'Segoe UI', 'Hiragino Sans', 'Yu Gothic UI', sans-serif"><tspan x="1020" dy="-0.675em">primitive</tspan><tspan x="1020" dy="1.35em">entries</tspan></text>
+    <rect x="930" y="290" width="180" height="82" rx="20" ry="20" fill="#f7fbff" stroke="#2f537f" stroke-width="2.5"/><text x="1020" y="331" text-anchor="middle" font-size="26" font-weight="600" fill="#111827" font-family="'Segoe UI', 'Hiragino Sans', 'Yu Gothic UI', sans-serif"><tspan x="1020" dy="-0.675em">model</tspan><tspan x="1020" dy="1.35em">entries</tspan></text>
+    <rect x="930" y="420" width="180" height="82" rx="20" ry="20" fill="#f7fbff" stroke="#2f537f" stroke-width="2.5"/><text x="1020" y="461" text-anchor="middle" font-size="26" font-weight="600" fill="#111827" font-family="'Segoe UI', 'Hiragino Sans', 'Yu Gothic UI', sans-serif"><tspan x="1020" dy="0">tileMap</tspan></text>
+    <rect x="930" y="550" width="180" height="82" rx="20" ry="20" fill="#f7fbff" stroke="#2f537f" stroke-width="2.5"/><text x="1020" y="591" text-anchor="middle" font-size="26" font-weight="600" fill="#111827" font-family="'Segoe UI', 'Hiragino Sans', 'Yu Gothic UI', sans-serif"><tspan x="1020" dy="-0.675em">animation /</tspan><tspan x="1020" dy="1.35em">metadata</tspan></text>
+    <rect x="930" y="674" width="180" height="72" rx="20" ry="20" fill="#fff8ef" stroke="#bc8752" stroke-width="2.5"/><text x="1020" y="710" text-anchor="middle" font-size="26" font-weight="600" fill="#111827" font-family="'Segoe UI', 'Hiragino Sans', 'Yu Gothic UI', sans-serif"><tspan x="1020" dy="0">ModelAsset</tspan></text>
+
+    <line x1="350" y1="214" x2="500" y2="314" stroke="#4b5563" stroke-width="3"  marker-end="url(#arrow)"/>
+    <line x1="350" y1="364" x2="500" y2="340" stroke="#4b5563" stroke-width="3"  marker-end="url(#arrow)"/>
+    <line x1="350" y1="514" x2="500" y2="366" stroke="#4b5563" stroke-width="3"  marker-end="url(#arrow)"/>
+    <line x1="780" y1="314" x2="930" y2="201" stroke="#4b5563" stroke-width="3"  marker-end="url(#arrow)"/>
+    <line x1="780" y1="340" x2="930" y2="331" stroke="#4b5563" stroke-width="3"  marker-end="url(#arrow)"/>
+    <line x1="780" y1="366" x2="930" y2="461" stroke="#4b5563" stroke-width="3"  marker-end="url(#arrow)"/>
+    <line x1="780" y1="392" x2="930" y2="591" stroke="#4b5563" stroke-width="3"  marker-end="url(#arrow)"/>
+    <line x1="1020" y1="372" x2="1020" y2="674" stroke="#bc8752" stroke-width="3" stroke-dasharray="10 8" marker-end="url(#arrow)"/><text x="1066" y="534" text-anchor="middle" font-size="20" font-weight="500" fill="#374151" font-family="'Segoe UI', 'Hiragino Sans', 'Yu Gothic UI', sans-serif"><tspan x="1066" dy="0">参照</tspan></text>
+
+    <text x="640" y="468" text-anchor="middle" font-size="26" font-weight="500" fill="#374151" font-family="'Segoe UI', 'Hiragino Sans', 'Yu Gothic UI', sans-serif"><tspan x="640" dy="-0.675em">1 モデルではなく</tspan><tspan x="640" dy="1.35em">シーン全体の初期状態を宣言する</tspan></text>
+  
+</svg>

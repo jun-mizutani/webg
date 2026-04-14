@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="760" viewBox="0 0 1280 760" role="img" aria-label="判定 API の選び分け">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#fbfdff"/>
+      <stop offset="100%" stop-color="#eef4fb"/>
+    </linearGradient>
+    <marker id="arrow" viewBox="0 0 10 10" refX="8.4" refY="5" markerWidth="4.1" markerHeight="4.1" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="context-stroke"/>
+    </marker>
+  </defs>
+  <rect width="1280" height="760" fill="url(#bg)"/>
+  
+    <text x="56" y="58" text-anchor="start" font-size="22" font-weight="700" fill="#374151" font-family="'Segoe UI', 'Hiragino Sans', 'Yu Gothic UI', sans-serif"><tspan x="56" dy="0">第17章</tspan></text>
+    <text x="56" y="98" text-anchor="start" font-size="38" font-weight="700" fill="#111827" font-family="'Segoe UI', 'Hiragino Sans', 'Yu Gothic UI', sans-serif"><tspan x="56" dy="0">判定 API の選び分け</tspan></text>
+    <line x1="56" y1="122" x2="1224" y2="122" stroke="#d8e3f4" stroke-width="2"/>
+  
+  
+    <rect x="468" y="170" width="344" height="92" rx="20" ry="20" fill="#eef5ff" stroke="#2f537f" stroke-width="2.5"/><text x="640" y="216" text-anchor="middle" font-size="34" font-weight="600" fill="#111827" font-family="'Segoe UI', 'Hiragino Sans', 'Yu Gothic UI', sans-serif"><tspan x="640" dy="0">今やりたい判定は何か</tspan></text>
+
+    <rect x="98" y="358" width="246" height="96" rx="20" ry="20" fill="#f7fbff" stroke="#2f537f" stroke-width="2.5"/><text x="221" y="406" text-anchor="middle" font-size="26" font-weight="600" fill="#111827" font-family="'Segoe UI', 'Hiragino Sans', 'Yu Gothic UI', sans-serif"><tspan x="221" dy="-0.675em">クリック / タップで</tspan><tspan x="221" dy="1.35em">何に当たったか知りたい</tspan></text>
+    <rect x="388" y="358" width="246" height="96" rx="20" ry="20" fill="#f7fbff" stroke="#2f537f" stroke-width="2.5"/><text x="511" y="406" text-anchor="middle" font-size="26" font-weight="600" fill="#111827" font-family="'Segoe UI', 'Hiragino Sans', 'Yu Gothic UI', sans-serif"><tspan x="511" dy="-0.675em">scene 内の object 同士が</tspan><tspan x="511" dy="1.35em">重なったか知りたい</tspan></text>
+    <rect x="678" y="358" width="246" height="96" rx="20" ry="20" fill="#f7fbff" stroke="#2f537f" stroke-width="2.5"/><text x="801" y="406" text-anchor="middle" font-size="26" font-weight="600" fill="#111827" font-family="'Segoe UI', 'Hiragino Sans', 'Yu Gothic UI', sans-serif"><tspan x="801" dy="-0.675em">TileMap のどの cell に</tspan><tspan x="801" dy="1.35em">当たったか知りたい</tspan></text>
+    <rect x="968" y="358" width="214" height="96" rx="20" ry="20" fill="#f7fbff" stroke="#2f537f" stroke-width="2.5"/><text x="1075" y="406" text-anchor="middle" font-size="26" font-weight="600" fill="#111827" font-family="'Segoe UI', 'Hiragino Sans', 'Yu Gothic UI', sans-serif"><tspan x="1075" dy="-0.675em">AABB 候補を</tspan><tspan x="1075" dy="1.35em">さらに絞りたい</tspan></text>
+
+    <rect x="98" y="566" width="246" height="86" rx="20" ry="20" fill="#f7fbff" stroke="#2f537f" stroke-width="2.5"/><text x="221" y="609" text-anchor="middle" font-size="26" font-weight="600" fill="#111827" font-family="'Segoe UI', 'Hiragino Sans', 'Yu Gothic UI', sans-serif"><tspan x="221" dy="0">Space.raycast()</tspan></text>
+    <rect x="388" y="566" width="246" height="86" rx="20" ry="20" fill="#f7fbff" stroke="#2f537f" stroke-width="2.5"/><text x="511" y="609" text-anchor="middle" font-size="26" font-weight="600" fill="#111827" font-family="'Segoe UI', 'Hiragino Sans', 'Yu Gothic UI', sans-serif"><tspan x="511" dy="0">checkCollisions()</tspan></text>
+    <rect x="678" y="566" width="246" height="86" rx="20" ry="20" fill="#f7fbff" stroke="#2f537f" stroke-width="2.5"/><text x="801" y="609" text-anchor="middle" font-size="26" font-weight="600" fill="#111827" font-family="'Segoe UI', 'Hiragino Sans', 'Yu Gothic UI', sans-serif"><tspan x="801" dy="0">TileMap.pickCell()</tspan></text>
+    <rect x="968" y="566" width="214" height="86" rx="20" ry="20" fill="#f7fbff" stroke="#2f537f" stroke-width="2.5"/><text x="1075" y="609" text-anchor="middle" font-size="26" font-weight="600" fill="#111827" font-family="'Segoe UI', 'Hiragino Sans', 'Yu Gothic UI', sans-serif"><tspan x="1075" dy="0">checkCollisionsDetailed()</tspan></text>
+
+    <line x1="640" y1="262" x2="221" y2="358" stroke="#4b5563" stroke-width="3"  marker-end="url(#arrow)"/>
+    <line x1="640" y1="262" x2="511" y2="358" stroke="#4b5563" stroke-width="3"  marker-end="url(#arrow)"/>
+    <line x1="640" y1="262" x2="801" y2="358" stroke="#4b5563" stroke-width="3"  marker-end="url(#arrow)"/>
+    <line x1="640" y1="262" x2="1075" y2="358" stroke="#4b5563" stroke-width="3"  marker-end="url(#arrow)"/>
+
+    <line x1="221" y1="454" x2="221" y2="566" stroke="#4b5563" stroke-width="3"  marker-end="url(#arrow)"/>
+    <line x1="511" y1="454" x2="511" y2="566" stroke="#4b5563" stroke-width="3"  marker-end="url(#arrow)"/>
+    <line x1="801" y1="454" x2="801" y2="566" stroke="#4b5563" stroke-width="3"  marker-end="url(#arrow)"/>
+    <line x1="1075" y1="454" x2="1075" y2="566" stroke="#4b5563" stroke-width="3"  marker-end="url(#arrow)"/>
+    <line x1="634" y1="609" x2="968" y2="609" stroke="#4b5563" stroke-width="3" stroke-dasharray="10 8" marker-end="url(#arrow)"/><text x="800" y="574" text-anchor="middle" font-size="20" font-weight="500" fill="#374151" font-family="'Segoe UI', 'Hiragino Sans', 'Yu Gothic UI', sans-serif"><tspan x="800" dy="0">候補が多すぎるときだけ詳細版へ</tspan></text>
+
+    <text x="640" y="706" text-anchor="middle" font-size="22" font-weight="500" fill="#374151" font-family="'Segoe UI', 'Hiragino Sans', 'Yu Gothic UI', sans-serif"><tspan x="640" dy="0">まず用途ごとに API を分けて選ぶと、判定結果の読み方がかなり整理しやすくなる</tspan></text>
+  
+</svg>

@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="760" viewBox="0 0 1280 760" role="img" aria-label="AudioSynth とバス構成の全体像">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#fbfdff"/>
+      <stop offset="100%" stop-color="#eef4fb"/>
+    </linearGradient>
+    <marker id="arrow" viewBox="0 0 10 10" refX="8.4" refY="5" markerWidth="4.1" markerHeight="4.1" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="context-stroke"/>
+    </marker>
+  </defs>
+  <rect width="1280" height="760" fill="url(#bg)"/>
+  
+    <text x="56" y="58" text-anchor="start" font-size="22" font-weight="700" fill="#374151" font-family="'Segoe UI', 'Hiragino Sans', 'Yu Gothic UI', sans-serif"><tspan x="56" dy="0">第18章</tspan></text>
+    <text x="56" y="98" text-anchor="start" font-size="38" font-weight="700" fill="#111827" font-family="'Segoe UI', 'Hiragino Sans', 'Yu Gothic UI', sans-serif"><tspan x="56" dy="0">AudioSynth とバス構成の全体像</tspan></text>
+    <line x1="56" y1="122" x2="1224" y2="122" stroke="#d8e3f4" stroke-width="2"/>
+  
+  
+    
+    <rect x="70" y="170" width="280" height="460" rx="28" ry="28" fill="#eef4ff" stroke="#9db4d7" stroke-width="2.2"/>
+    <text x="94" y="208" text-anchor="start" font-size="24" font-weight="700" fill="#374151" font-family="'Segoe UI', 'Hiragino Sans', 'Yu Gothic UI', sans-serif"><tspan x="94" dy="0">利用者 / sample 側</tspan></text>
+  
+    
+    <rect x="392" y="170" width="496" height="460" rx="28" ry="28" fill="#eef4ff" stroke="#9db4d7" stroke-width="2.2"/>
+    <text x="416" y="208" text-anchor="start" font-size="24" font-weight="700" fill="#374151" font-family="'Segoe UI', 'Hiragino Sans', 'Yu Gothic UI', sans-serif"><tspan x="416" dy="0">AudioSynth の基盤</tspan></text>
+  
+    
+    <rect x="930" y="170" width="280" height="460" rx="28" ry="28" fill="#eef4ff" stroke="#9db4d7" stroke-width="2.2"/>
+    <text x="954" y="208" text-anchor="start" font-size="24" font-weight="700" fill="#374151" font-family="'Segoe UI', 'Hiragino Sans', 'Yu Gothic UI', sans-serif"><tspan x="954" dy="0">出力経路</tspan></text>
+  
+
+    <rect x="106" y="232" width="208" height="72" rx="20" ry="20" fill="#f7fbff" stroke="#2f537f" stroke-width="2.5"/><text x="210" y="268" text-anchor="middle" font-size="26" font-weight="600" fill="#111827" font-family="'Segoe UI', 'Hiragino Sans', 'Yu Gothic UI', sans-serif"><tspan x="210" dy="-0.675em">ボタン操作</tspan><tspan x="210" dy="1.35em">クリック / タップ</tspan></text>
+    <rect x="106" y="336" width="208" height="72" rx="20" ry="20" fill="#f7fbff" stroke="#2f537f" stroke-width="2.5"/><text x="210" y="372" text-anchor="middle" font-size="26" font-weight="600" fill="#111827" font-family="'Segoe UI', 'Hiragino Sans', 'Yu Gothic UI', sans-serif"><tspan x="210" dy="-0.675em">GameAudioSynth</tspan><tspan x="210" dy="1.35em">preset / SE 名</tspan></text>
+    <rect x="106" y="440" width="208" height="72" rx="20" ry="20" fill="#f7fbff" stroke="#2f537f" stroke-width="2.5"/><text x="210" y="476" text-anchor="middle" font-size="26" font-weight="600" fill="#111827" font-family="'Segoe UI', 'Hiragino Sans', 'Yu Gothic UI', sans-serif"><tspan x="210" dy="-0.675em">sample helper</tspan><tspan x="210" dy="1.35em">BGM preset / event sound</tspan></text>
+
+    <rect x="448" y="218" width="176" height="72" rx="20" ry="20" fill="#f7fbff" stroke="#2f537f" stroke-width="2.5"/><text x="536" y="254" text-anchor="middle" font-size="26" font-weight="600" fill="#111827" font-family="'Segoe UI', 'Hiragino Sans', 'Yu Gothic UI', sans-serif"><tspan x="536" dy="0">resume()</tspan></text>
+    <rect x="656" y="218" width="176" height="72" rx="20" ry="20" fill="#f7fbff" stroke="#2f537f" stroke-width="2.5"/><text x="744" y="254" text-anchor="middle" font-size="26" font-weight="600" fill="#111827" font-family="'Segoe UI', 'Hiragino Sans', 'Yu Gothic UI', sans-serif"><tspan x="744" dy="-0.675em">AudioContext</tspan><tspan x="744" dy="1.35em">ensureContext()</tspan></text>
+    <rect x="448" y="334" width="176" height="72" rx="20" ry="20" fill="#f7fbff" stroke="#2f537f" stroke-width="2.5"/><text x="536" y="370" text-anchor="middle" font-size="26" font-weight="600" fill="#111827" font-family="'Segoe UI', 'Hiragino Sans', 'Yu Gothic UI', sans-serif"><tspan x="536" dy="0">SE bus</tspan></text>
+    <rect x="656" y="334" width="176" height="72" rx="20" ry="20" fill="#f7fbff" stroke="#2f537f" stroke-width="2.5"/><text x="744" y="370" text-anchor="middle" font-size="26" font-weight="600" fill="#111827" font-family="'Segoe UI', 'Hiragino Sans', 'Yu Gothic UI', sans-serif"><tspan x="744" dy="0">BGM bus</tspan></text>
+    <rect x="448" y="450" width="176" height="72" rx="20" ry="20" fill="#f7fbff" stroke="#2f537f" stroke-width="2.5"/><text x="536" y="486" text-anchor="middle" font-size="26" font-weight="600" fill="#111827" font-family="'Segoe UI', 'Hiragino Sans', 'Yu Gothic UI', sans-serif"><tspan x="536" dy="0">delay</tspan></text>
+    <rect x="656" y="450" width="176" height="72" rx="20" ry="20" fill="#f7fbff" stroke="#2f537f" stroke-width="2.5"/><text x="744" y="486" text-anchor="middle" font-size="26" font-weight="600" fill="#111827" font-family="'Segoe UI', 'Hiragino Sans', 'Yu Gothic UI', sans-serif"><tspan x="744" dy="0">reverb / IR</tspan></text>
+
+    <rect x="986" y="252" width="168" height="72" rx="20" ry="20" fill="#f7fbff" stroke="#2f537f" stroke-width="2.5"/><text x="1070" y="288" text-anchor="middle" font-size="26" font-weight="600" fill="#111827" font-family="'Segoe UI', 'Hiragino Sans', 'Yu Gothic UI', sans-serif"><tspan x="1070" dy="0">master</tspan></text>
+    <rect x="986" y="378" width="168" height="72" rx="20" ry="20" fill="#f7fbff" stroke="#2f537f" stroke-width="2.5"/><text x="1070" y="414" text-anchor="middle" font-size="26" font-weight="600" fill="#111827" font-family="'Segoe UI', 'Hiragino Sans', 'Yu Gothic UI', sans-serif"><tspan x="1070" dy="0">speaker / device</tspan></text>
+    <rect x="986" y="504" width="168" height="72" rx="20" ry="20" fill="#f7fbff" stroke="#2f537f" stroke-width="2.5"/><text x="1070" y="540" text-anchor="middle" font-size="26" font-weight="600" fill="#111827" font-family="'Segoe UI', 'Hiragino Sans', 'Yu Gothic UI', sans-serif"><tspan x="1070" dy="0">聞こえ方の調整</tspan></text>
+
+    <line x1="314" y1="268" x2="448" y2="254" stroke="#4b5563" stroke-width="3"  marker-end="url(#arrow)"/>
+    <line x1="314" y1="372" x2="448" y2="370" stroke="#4b5563" stroke-width="3"  marker-end="url(#arrow)"/>
+    <line x1="314" y1="476" x2="448" y2="488" stroke="#4b5563" stroke-width="3"  marker-end="url(#arrow)"/>
+    <line x1="624" y1="254" x2="656" y2="254" stroke="#4b5563" stroke-width="3"  marker-end="url(#arrow)"/>
+    <line x1="624" y1="370" x2="986" y2="288" stroke="#4b5563" stroke-width="3"  marker-end="url(#arrow)"/>
+    <line x1="832" y1="370" x2="986" y2="288" stroke="#4b5563" stroke-width="3"  marker-end="url(#arrow)"/>
+    <line x1="624" y1="486" x2="986" y2="540" stroke="#4b5563" stroke-width="3"  marker-end="url(#arrow)"/>
+    <line x1="832" y1="486" x2="986" y2="540" stroke="#4b5563" stroke-width="3"  marker-end="url(#arrow)"/>
+    <line x1="1070" y1="324" x2="1070" y2="378" stroke="#4b5563" stroke-width="3"  marker-end="url(#arrow)"/>
+
+    <text x="640" y="676" text-anchor="middle" font-size="22" font-weight="500" fill="#374151" font-family="'Segoe UI', 'Hiragino Sans', 'Yu Gothic UI', sans-serif"><tspan x="640" dy="0">SE と BGM は別バスで持ち、delay / reverb は量と性格を分けて調整する</tspan></text>
+  
+</svg>

@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="760" viewBox="0 0 1280 760" role="img" aria-label="UI 部品選択表">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#fbfdff"/>
+      <stop offset="100%" stop-color="#eef4fb"/>
+    </linearGradient>
+    <marker id="arrow" viewBox="0 0 10 10" refX="8.4" refY="5" markerWidth="4.1" markerHeight="4.1" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="context-stroke"/>
+    </marker>
+  </defs>
+  <rect width="1280" height="760" fill="url(#bg)"/>
+  
+    <text x="56" y="58" text-anchor="start" font-size="22" font-weight="700" fill="#374151" font-family="'Segoe UI', 'Hiragino Sans', 'Yu Gothic UI', sans-serif"><tspan x="56" dy="0">第14章</tspan></text>
+    <text x="56" y="98" text-anchor="start" font-size="38" font-weight="700" fill="#111827" font-family="'Segoe UI', 'Hiragino Sans', 'Yu Gothic UI', sans-serif"><tspan x="56" dy="0">UI 部品選択表</tspan></text>
+    <line x1="56" y1="122" x2="1224" y2="122" stroke="#d8e3f4" stroke-width="2"/>
+  
+  
+    <rect x="452" y="170" width="376" height="112" rx="20" ry="20" fill="#eef5ff" stroke="#2f537f" stroke-width="2.5"/><text x="640" y="226" text-anchor="middle" font-size="34" font-weight="600" fill="#111827" font-family="'Segoe UI', 'Hiragino Sans', 'Yu Gothic UI', sans-serif"><tspan x="640" dy="0">今ほしい UI は何か</tspan></text>
+    <rect x="120" y="404" width="220" height="96" rx="20" ry="20" fill="#f7fbff" stroke="#2f537f" stroke-width="2.5"/><text x="230" y="452" text-anchor="middle" font-size="26" font-weight="600" fill="#111827" font-family="'Segoe UI', 'Hiragino Sans', 'Yu Gothic UI', sans-serif"><tspan x="230" dy="-0.675em">短い情報を</tspan><tspan x="230" dy="1.35em">常時見せたい</tspan></text>
+    <rect x="390" y="404" width="220" height="96" rx="20" ry="20" fill="#f7fbff" stroke="#2f537f" stroke-width="2.5"/><text x="500" y="452" text-anchor="middle" font-size="26" font-weight="600" fill="#111827" font-family="'Segoe UI', 'Hiragino Sans', 'Yu Gothic UI', sans-serif"><tspan x="500" dy="-0.675em">長文を</tspan><tspan x="500" dy="1.35em">読ませたい</tspan></text>
+    <rect x="660" y="404" width="220" height="96" rx="20" ry="20" fill="#f7fbff" stroke="#2f537f" stroke-width="2.5"/><text x="770" y="452" text-anchor="middle" font-size="26" font-weight="600" fill="#111827" font-family="'Segoe UI', 'Hiragino Sans', 'Yu Gothic UI', sans-serif"><tspan x="770" dy="-0.675em">操作ボタンを</tspan><tspan x="770" dy="1.35em">出したい</tspan></text>
+    <rect x="930" y="404" width="220" height="96" rx="20" ry="20" fill="#f7fbff" stroke="#2f537f" stroke-width="2.5"/><text x="1040" y="452" text-anchor="middle" font-size="26" font-weight="600" fill="#111827" font-family="'Segoe UI', 'Hiragino Sans', 'Yu Gothic UI', sans-serif"><tspan x="1040" dy="-0.675em">診断情報を</tspan><tspan x="1040" dy="1.35em">共有したい</tspan></text>
+
+    <rect x="120" y="580" width="220" height="90" rx="20" ry="20" fill="#f9fcff" stroke="#2f537f" stroke-width="2.5"/><text x="230" y="625" text-anchor="middle" font-size="26" font-weight="600" fill="#111827" font-family="'Segoe UI', 'Hiragino Sans', 'Yu Gothic UI', sans-serif"><tspan x="230" dy="0">Text / Message</tspan></text>
+    <rect x="390" y="580" width="220" height="90" rx="20" ry="20" fill="#f9fcff" stroke="#2f537f" stroke-width="2.5"/><text x="500" y="625" text-anchor="middle" font-size="26" font-weight="600" fill="#111827" font-family="'Segoe UI', 'Hiragino Sans', 'Yu Gothic UI', sans-serif"><tspan x="500" dy="-0.675em">FixedFormatPanel /</tspan><tspan x="500" dy="1.35em">DialogueOverlay</tspan></text>
+    <rect x="660" y="580" width="220" height="90" rx="20" ry="20" fill="#f9fcff" stroke="#2f537f" stroke-width="2.5"/><text x="770" y="625" text-anchor="middle" font-size="26" font-weight="600" fill="#111827" font-family="'Segoe UI', 'Hiragino Sans', 'Yu Gothic UI', sans-serif"><tspan x="770" dy="0">UIPanel / Touch</tspan></text>
+    <rect x="930" y="580" width="220" height="90" rx="20" ry="20" fill="#f9fcff" stroke="#2f537f" stroke-width="2.5"/><text x="1040" y="625" text-anchor="middle" font-size="26" font-weight="600" fill="#111827" font-family="'Segoe UI', 'Hiragino Sans', 'Yu Gothic UI', sans-serif"><tspan x="1040" dy="-0.675em">Diagnostics /</tspan><tspan x="1040" dy="1.35em">DebugDock</tspan></text>
+
+    <line x1="640" y1="282" x2="230" y2="404" stroke="#4b5563" stroke-width="3"  marker-end="url(#arrow)"/>
+    <line x1="640" y1="282" x2="500" y2="404" stroke="#4b5563" stroke-width="3"  marker-end="url(#arrow)"/>
+    <line x1="640" y1="282" x2="770" y2="404" stroke="#4b5563" stroke-width="3"  marker-end="url(#arrow)"/>
+    <line x1="640" y1="282" x2="1040" y2="404" stroke="#4b5563" stroke-width="3"  marker-end="url(#arrow)"/>
+
+    <line x1="230" y1="500" x2="230" y2="580" stroke="#4b5563" stroke-width="3"  marker-end="url(#arrow)"/>
+    <line x1="500" y1="500" x2="500" y2="580" stroke="#4b5563" stroke-width="3"  marker-end="url(#arrow)"/>
+    <line x1="770" y1="500" x2="770" y2="580" stroke="#4b5563" stroke-width="3"  marker-end="url(#arrow)"/>
+    <line x1="1040" y1="500" x2="1040" y2="580" stroke="#4b5563" stroke-width="3"  marker-end="url(#arrow)"/>
+  
+</svg>

@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="760" viewBox="0 0 1280 760" role="img" aria-label="論理位置と見た目位置の分離図">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#fbfdff"/>
+      <stop offset="100%" stop-color="#eef4fb"/>
+    </linearGradient>
+    <marker id="arrow" viewBox="0 0 10 10" refX="8.4" refY="5" markerWidth="4.1" markerHeight="4.1" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="context-stroke"/>
+    </marker>
+  </defs>
+  <rect width="1280" height="760" fill="url(#bg)"/>
+  
+    <text x="56" y="58" text-anchor="start" font-size="22" font-weight="700" fill="#374151" font-family="'Segoe UI', 'Hiragino Sans', 'Yu Gothic UI', sans-serif"><tspan x="56" dy="0">第23章</tspan></text>
+    <text x="56" y="98" text-anchor="start" font-size="38" font-weight="700" fill="#111827" font-family="'Segoe UI', 'Hiragino Sans', 'Yu Gothic UI', sans-serif"><tspan x="56" dy="0">論理位置と見た目位置の分離図</tspan></text>
+    <line x1="56" y1="122" x2="1224" y2="122" stroke="#d8e3f4" stroke-width="2"/>
+  
+  
+    
+    <rect x="104" y="204" width="404" height="372" rx="28" ry="28" fill="#eef4ff" stroke="#9db4d7" stroke-width="2.2"/>
+    <text x="128" y="242" text-anchor="start" font-size="24" font-weight="700" fill="#374151" font-family="'Segoe UI', 'Hiragino Sans', 'Yu Gothic UI', sans-serif"><tspan x="128" dy="0">論理層</tspan></text>
+  
+    
+    <rect x="772" y="204" width="404" height="372" rx="28" ry="28" fill="#eef4ff" stroke="#9db4d7" stroke-width="2.2"/>
+    <text x="796" y="242" text-anchor="start" font-size="24" font-weight="700" fill="#374151" font-family="'Segoe UI', 'Hiragino Sans', 'Yu Gothic UI', sans-serif"><tspan x="796" dy="0">見た目層</tspan></text>
+  
+
+    <rect x="180" y="296" width="252" height="94" rx="20" ry="20" fill="#f7fbff" stroke="#2f537f" stroke-width="2.5"/><text x="306" y="343" text-anchor="middle" font-size="26" font-weight="600" fill="#111827" font-family="'Segoe UI', 'Hiragino Sans', 'Yu Gothic UI', sans-serif"><tspan x="306" dy="0">cell (x, y)</tspan></text>
+    <rect x="180" y="430" width="252" height="94" rx="20" ry="20" fill="#f7fbff" stroke="#2f537f" stroke-width="2.5"/><text x="306" y="477" text-anchor="middle" font-size="26" font-weight="600" fill="#111827" font-family="'Segoe UI', 'Hiragino Sans', 'Yu Gothic UI', sans-serif"><tspan x="306" dy="-0.675em">canMove /</tspan><tspan x="306" dy="1.35em">findPath</tspan></text>
+
+    <rect x="848" y="264" width="252" height="94" rx="20" ry="20" fill="#f7fbff" stroke="#2f537f" stroke-width="2.5"/><text x="974" y="311" text-anchor="middle" font-size="26" font-weight="600" fill="#111827" font-family="'Segoe UI', 'Hiragino Sans', 'Yu Gothic UI', sans-serif"><tspan x="974" dy="-0.675em">world target</tspan><tspan x="974" dy="1.35em">position</tspan></text>
+    <rect x="848" y="398" width="252" height="94" rx="20" ry="20" fill="#f7fbff" stroke="#2f537f" stroke-width="2.5"/><text x="974" y="445" text-anchor="middle" font-size="26" font-weight="600" fill="#111827" font-family="'Segoe UI', 'Hiragino Sans', 'Yu Gothic UI', sans-serif"><tspan x="974" dy="0">Node.animatePosition()</tspan></text>
+    <rect x="848" y="532" width="252" height="94" rx="20" ry="20" fill="#f7fbff" stroke="#2f537f" stroke-width="2.5"/><text x="974" y="579" text-anchor="middle" font-size="26" font-weight="600" fill="#111827" font-family="'Segoe UI', 'Hiragino Sans', 'Yu Gothic UI', sans-serif"><tspan x="974" dy="-0.675em">displayArea</tspan><tspan x="974" dy="1.35em">scroll</tspan></text>
+
+    <line x1="306" y1="390" x2="306" y2="430" stroke="#4b5563" stroke-width="3"  marker-end="url(#arrow)"/>
+    <line x1="432" y1="343" x2="848" y2="311" stroke="#4b5563" stroke-width="3"  marker-end="url(#arrow)"/>
+    <line x1="974" y1="358" x2="974" y2="398" stroke="#4b5563" stroke-width="3"  marker-end="url(#arrow)"/>
+    <line x1="432" y1="364" x2="848" y2="566" stroke="#4b5563" stroke-width="3" stroke-dasharray="10 8" marker-end="url(#arrow)"/><text x="646" y="514" text-anchor="middle" font-size="20" font-weight="500" fill="#374151" font-family="'Segoe UI', 'Hiragino Sans', 'Yu Gothic UI', sans-serif"><tspan x="646" dy="0">同じ cell から計算</tspan></text>
+
+    <text x="306" y="560" text-anchor="middle" font-size="22" font-weight="500" fill="#374151" font-family="'Segoe UI', 'Hiragino Sans', 'Yu Gothic UI', sans-serif"><tspan x="306" dy="0">盤面上でどこにいるか</tspan></text>
+    <text x="974" y="660" text-anchor="middle" font-size="22" font-weight="500" fill="#374151" font-family="'Segoe UI', 'Hiragino Sans', 'Yu Gothic UI', sans-serif"><tspan x="974" dy="0">画面上でどう見せるか</tspan></text>
+  
+</svg>

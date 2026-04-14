@@ -1,0 +1,420 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   width="1280"
+   height="760"
+   viewBox="0 0 1280 760"
+   role="img"
+   aria-label="座標系と回転の基準"
+   version="1.1"
+   id="svg23"
+   sodipodi:docname="fig03_01_coordinate_rotation_basics.svg"
+   inkscape:version="1.4.3 (0d15f75, 2025-12-25)"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <sodipodi:namedview
+     id="namedview23"
+     pagecolor="#ffffff"
+     bordercolor="#000000"
+     borderopacity="0.25"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1"
+     showguides="true"
+     inkscape:zoom="3.271196"
+     inkscape:cx="1042.7379"
+     inkscape:cy="519.68759"
+     inkscape:window-width="1583"
+     inkscape:window-height="915"
+     inkscape:window-x="97"
+     inkscape:window-y="33"
+     inkscape:window-maximized="0"
+     inkscape:current-layer="svg23" />
+  <defs
+     id="defs2">
+    <marker
+       style="overflow:visible"
+       id="ConcaveTriangle"
+       refX="0"
+       refY="0"
+       orient="auto-start-reverse"
+       inkscape:stockid="Concave triangle arrow"
+       markerWidth="1"
+       markerHeight="1"
+       viewBox="0 0 1 1"
+       inkscape:isstock="true"
+       inkscape:collect="always"
+       preserveAspectRatio="xMidYMid">
+      <path
+         transform="scale(0.7)"
+         d="M -2,-4 9,0 -2,4 c 2,-2.33 2,-5.66 0,-8 z"
+         style="fill:context-stroke;fill-rule:evenodd;stroke:none"
+         id="path7" />
+    </marker>
+    <marker
+       style="overflow:visible"
+       id="ArrowTriangleStylized"
+       refX="0"
+       refY="0"
+       orient="auto-start-reverse"
+       inkscape:stockid="Stylized triangle arrow"
+       markerWidth="1"
+       markerHeight="1"
+       viewBox="0 0 1 1"
+       inkscape:isstock="true"
+       inkscape:collect="always"
+       preserveAspectRatio="xMidYMid">
+      <path
+         transform="scale(0.5)"
+         style="fill:context-stroke;fill-rule:evenodd;stroke:context-stroke;stroke-width:1pt"
+         d="m 6,0 c -3,1 -7,3 -9,5 0,0 0,-4 2,-5 -2,-1 -2,-5 -2,-5 2,2 6,4 9,5 z"
+         id="path4" />
+    </marker>
+    <marker
+       style="overflow:visible"
+       id="Triangle"
+       refX="0"
+       refY="0"
+       orient="auto-start-reverse"
+       inkscape:stockid="Triangle arrow"
+       markerWidth="1"
+       markerHeight="1"
+       viewBox="0 0 1 1"
+       inkscape:isstock="true"
+       inkscape:collect="always"
+       preserveAspectRatio="xMidYMid">
+      <path
+         transform="scale(0.5)"
+         style="fill:context-stroke;fill-rule:evenodd;stroke:context-stroke;stroke-width:1pt"
+         d="M 5.77,0 -2.88,5 V -5 Z"
+         id="path135" />
+    </marker>
+    <linearGradient
+       id="bg"
+       x1="0"
+       y1="0"
+       x2="1"
+       y2="1">
+      <stop
+         offset="0%"
+         stop-color="#fbfdff"
+         id="stop1" />
+      <stop
+         offset="100%"
+         stop-color="#eef4fb"
+         id="stop2" />
+    </linearGradient>
+    <marker
+       id="arrow"
+       viewBox="0 0 10 10"
+       refX="7.4"
+       refY="5"
+       markerWidth="4.1"
+       markerHeight="4.1"
+       orient="auto-start-reverse">
+      <path
+         d="M 0 0 L 10 5 L 0 10 z"
+         fill="context-stroke"
+         id="path2" />
+    </marker>
+  </defs>
+  <rect
+     width="1280"
+     height="760"
+     fill="url(#bg)"
+     id="rect2" />
+  <text
+     x="56"
+     y="58"
+     text-anchor="start"
+     font-size="22"
+     font-weight="700"
+     fill="#374151"
+     font-family="'Segoe UI', 'Hiragino Sans', 'Yu Gothic UI', sans-serif"
+     id="text2"><tspan
+       x="56"
+       dy="0"
+       id="tspan2">第3章</tspan></text>
+  <text
+     x="56"
+     y="98"
+     text-anchor="start"
+     font-size="38"
+     font-weight="700"
+     fill="#111827"
+     font-family="'Segoe UI', 'Hiragino Sans', 'Yu Gothic UI', sans-serif"
+     id="text3"><tspan
+       x="56"
+       dy="0"
+       id="tspan3">座標系と回転の基準</tspan></text>
+  <line
+     x1="56"
+     y1="122"
+     x2="1224"
+     y2="122"
+     stroke="#d8e3f4"
+     stroke-width="2"
+     id="line3" />
+  <rect
+     x="102.4222"
+     y="156.70491"
+     width="282"
+     height="190"
+     rx="20"
+     ry="20"
+     fill="#eef5ff"
+     stroke="#2f537f"
+     stroke-width="2.5"
+     id="rect3" />
+  <text
+     x="238.48482"
+     y="270.22009"
+     text-anchor="middle"
+     font-size="30px"
+     font-weight="600"
+     fill="#111827"
+     font-family="'Segoe UI', 'Hiragino Sans', 'Yu Gothic UI', sans-serif"
+     id="text7"><tspan
+       x="238.48482"
+       dy="-60.750004"
+       id="tspan4">右手系</tspan><tspan
+       x="238.48482"
+       dy="40.5"
+       id="tspan5">+X = 右</tspan><tspan
+       x="238.48482"
+       dy="40.5"
+       id="tspan6">+Y = 上</tspan><tspan
+       x="238.48482"
+       dy="40.5"
+       id="tspan7">+Z = 前</tspan></text>
+  <rect
+     x="488"
+     y="214"
+     width="296"
+     height="226"
+     rx="20"
+     ry="20"
+     fill="#f9fcff"
+     stroke="#2f537f"
+     stroke-width="2.5"
+     id="rect7" />
+  <text
+     x="636"
+     y="327"
+     text-anchor="middle"
+     font-size="28"
+     font-weight="600"
+     fill="#111827"
+     font-family="'Segoe UI', 'Hiragino Sans', 'Yu Gothic UI', sans-serif"
+     id="text11"><tspan
+       x="636"
+       dy="-2.0250000000000004em"
+       id="tspan8">回転の対応</tspan><tspan
+       x="636"
+       dy="1.35em"
+       id="tspan9">head = yaw = Y軸</tspan><tspan
+       x="636"
+       dy="1.35em"
+       id="tspan10">pitch = pitch = X軸</tspan><tspan
+       x="636"
+       dy="1.35em"
+       id="tspan11">bank = roll = Z軸</tspan></text>
+  <rect
+     x="896"
+     y="232"
+     width="248"
+     height="190"
+     rx="20"
+     ry="20"
+     fill="#fff8ef"
+     stroke="#bc8752"
+     stroke-width="2.5"
+     id="rect11" />
+  <text
+     x="1020"
+     y="327"
+     text-anchor="middle"
+     font-size="30"
+     font-weight="600"
+     fill="#111827"
+     font-family="'Segoe UI', 'Hiragino Sans', 'Yu Gothic UI', sans-serif"
+     id="text14"><tspan
+       x="1020"
+       dy="-1.35em"
+       id="tspan12">正の head</tspan><tspan
+       x="1020"
+       dy="1.35em"
+       id="tspan13">前 +Z が</tspan><tspan
+       x="1020"
+       dy="1.35em"
+       id="tspan14">右 +X へ回る</tspan></text>
+  <g
+     id="g24">
+    <line
+       x1="177.3886"
+       y1="535.69427"
+       x2="331.38861"
+       y2="535.69427"
+       stroke="#4b5563"
+       stroke-width="5"
+       marker-end="url(#arrow)"
+       id="line14"
+       style="display:inline;fill:#ff0000;fill-opacity:1;fill-rule:evenodd;stroke:#ea0006;stroke-opacity:1" />
+  </g>
+  <line
+     x1="178"
+     y1="536"
+     x2="178"
+     y2="404"
+     stroke="#4a9c83"
+     stroke-width="6"
+     marker-end="url(#arrow)"
+     id="line15" />
+  <line
+     x1="178"
+     y1="536"
+     x2="104"
+     y2="602"
+     stroke="#bc8752"
+     stroke-width="6"
+     marker-end="url(#arrow)"
+     id="line16" />
+  <text
+     x="348"
+     y="540"
+     text-anchor="start"
+     font-size="24"
+     font-weight="500"
+     fill="#111827"
+     font-family="'Segoe UI', 'Hiragino Sans', 'Yu Gothic UI', sans-serif"
+     id="text16"><tspan
+       x="348"
+       dy="0"
+       id="tspan16">+X</tspan></text>
+  <text
+     x="178"
+     y="386"
+     text-anchor="middle"
+     font-size="24"
+     font-weight="500"
+     fill="#111827"
+     font-family="'Segoe UI', 'Hiragino Sans', 'Yu Gothic UI', sans-serif"
+     id="text17"><tspan
+       x="178"
+       dy="0"
+       id="tspan17">+Y</tspan></text>
+  <text
+     x="88"
+     y="626"
+     text-anchor="start"
+     font-size="24"
+     font-weight="500"
+     fill="#111827"
+     font-family="'Segoe UI', 'Hiragino Sans', 'Yu Gothic UI', sans-serif"
+     id="text18"><tspan
+       x="88"
+       dy="0"
+       id="tspan18">+Z</tspan></text>
+  <circle
+     cx="1018"
+     cy="532"
+     r="92"
+     fill="none"
+     stroke="#bc8752"
+     stroke-width="4"
+     stroke-dasharray="10 8"
+     id="circle18" />
+  <line
+     x1="1018"
+     y1="532"
+     x2="1018"
+     y2="426"
+     stroke="#4a9c83"
+     stroke-width="6"
+     marker-end="url(#arrow)"
+     id="line18" />
+  <line
+     x1="1018"
+     y1="532"
+     x2="1110"
+     y2="532"
+     stroke="#4b5563"
+     stroke-width="5"
+     marker-end="url(#arrow)"
+     id="line19" />
+  <circle
+     cx="1018"
+     cy="440"
+     r="8"
+     fill="#bc8752"
+     id="circle19" />
+  <path
+     d="M 1018 440 A 92 92 0 0 1 1100 494"
+     fill="none"
+     stroke="#bc8752"
+     stroke-width="5"
+     marker-end="url(#arrow)"
+     id="path19" />
+  <text
+     x="1134"
+     y="536"
+     text-anchor="start"
+     font-size="24"
+     font-weight="500"
+     fill="#111827"
+     font-family="'Segoe UI', 'Hiragino Sans', 'Yu Gothic UI', sans-serif"
+     id="text19"><tspan
+       x="1134"
+       dy="0"
+       id="tspan19">+X</tspan></text>
+  <text
+     x="1018"
+     y="406"
+     text-anchor="middle"
+     font-size="24"
+     font-weight="500"
+     fill="#111827"
+     font-family="'Segoe UI', 'Hiragino Sans', 'Yu Gothic UI', sans-serif"
+     id="text20"><tspan
+       x="1018"
+       dy="0"
+       id="tspan20">+Y</tspan></text>
+  <text
+     x="980"
+     y="428"
+     text-anchor="end"
+     font-size="24"
+     font-weight="500"
+     fill="#111827"
+     font-family="'Segoe UI', 'Hiragino Sans', 'Yu Gothic UI', sans-serif"
+     id="text21"><tspan
+       x="980"
+       dy="0"
+       id="tspan21">+Z</tspan></text>
+  <text
+     x="1136"
+     y="476"
+     text-anchor="start"
+     font-size="22"
+     font-weight="500"
+     fill="#111827"
+     font-family="'Segoe UI', 'Hiragino Sans', 'Yu Gothic UI', sans-serif"
+     id="text22"><tspan
+       x="1136"
+       dy="0"
+       id="tspan22">head +90</tspan></text>
+  <text
+     x="640"
+     y="626"
+     text-anchor="middle"
+     font-size="24"
+     font-weight="500"
+     fill="#374151"
+     font-family="'Segoe UI', 'Hiragino Sans', 'Yu Gothic UI', sans-serif"
+     id="text23"><tspan
+       x="640"
+       dy="0"
+       id="tspan23">第3章では、軸の向きと回転軸の対応を最初に固定して読むと後続の章がつながりやすい</tspan></text>
+</svg>

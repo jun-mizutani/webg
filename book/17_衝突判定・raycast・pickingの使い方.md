@@ -170,7 +170,7 @@ const pickCellAt = (clientX, clientY) => {
 
 次に、current 実装の `raycast()` と `checkCollisions()` は AABB ベースだという点を意識しておく必要があります。戻り値の `boundsOnly` は、この判定が「メッシュ表面の厳密ヒット」ではなく「境界ボックスのヒット」であることを示します。細い棒、斜めの円柱、中空形状の近くでは、見た目と少しずれる候補が出ることがあります。ここを最初に理解しておくと、「当たっているように見えるのに違う」「違うように見えるのに当たっている」といった混乱をかなり減らせます。 
 
-また、`filter` を書かずに使い始めると、camera 自身、補助 shape、非表示 object まで候補へ入り、意図した判定が見えにくくなります。最初から `node !== app.eye`、`!shape.isHidden`、`ground を除外する` といった条件を入れておくと、sample を実アプリへ育てやすくなります。TileMap では、`pickCell()` が「現在見えている cell」を対象にしていることも忘れないほうが安全です。map 全体の cell から探索経路を作る処理とは責務が異なるため、選択 UI と path finding を同じ API で賄おうとしないほうが整理しやすくなります。
+また、`filter` を書かずに使い始めると、camera 自身、補助 shape、非表示 object まで候補へ入り、意図した判定が見えにくくなります。最初から `node !== app.eye`、`!shape.isHidden`、`ground を除外する` といった条件を入れておくと、sample を実アプリへ育てやすくなります。TileMap では、`pickCell()` が「現在見えている cell」を対象にしていることも忘れないほうが安全です。map 全体の cell から探索経路を作る処理とは役割が異なるため、選択 UI と path finding を同じ API で賄おうとしないほうが整理しやすくなります。
 
 ## 関連 sample
 

@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="760" viewBox="0 0 1280 760" role="img" aria-label="Shape と Shader への値の渡し分け">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#fbfdff"/>
+      <stop offset="100%" stop-color="#eef4fb"/>
+    </linearGradient>
+    <marker id="arrow" viewBox="0 0 10 10" refX="8.4" refY="5" markerWidth="4.1" markerHeight="4.1" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="context-stroke"/>
+    </marker>
+  </defs>
+  <rect width="1280" height="760" fill="url(#bg)"/>
+  
+    <text x="56" y="58" text-anchor="start" font-size="22" font-weight="700" fill="#374151" font-family="'Segoe UI', 'Hiragino Sans', 'Yu Gothic UI', sans-serif"><tspan x="56" dy="0">第7章</tspan></text>
+    <text x="56" y="98" text-anchor="start" font-size="38" font-weight="700" fill="#111827" font-family="'Segoe UI', 'Hiragino Sans', 'Yu Gothic UI', sans-serif"><tspan x="56" dy="0">Shape と Shader への値の渡し分け</tspan></text>
+    <line x1="56" y1="122" x2="1224" y2="122" stroke="#d8e3f4" stroke-width="2"/>
+  
+  
+    
+    <rect x="64" y="172" width="364" height="460" rx="28" ry="28" fill="#eef4ff" stroke="#9db4d7" stroke-width="2.2"/>
+    <text x="88" y="210" text-anchor="start" font-size="24" font-weight="700" fill="#374151" font-family="'Segoe UI', 'Hiragino Sans', 'Yu Gothic UI', sans-serif"><tspan x="88" dy="0">Shape 側へ持たせる値</tspan></text>
+  
+    
+    <rect x="458" y="172" width="364" height="460" rx="28" ry="28" fill="#eef4ff" stroke="#9db4d7" stroke-width="2.2"/>
+    <text x="482" y="210" text-anchor="start" font-size="24" font-weight="700" fill="#374151" font-family="'Segoe UI', 'Hiragino Sans', 'Yu Gothic UI', sans-serif"><tspan x="482" dy="0">描画直前の受け渡し</tspan></text>
+  
+    
+    <rect x="852" y="172" width="364" height="460" rx="28" ry="28" fill="#eef4ff" stroke="#9db4d7" stroke-width="2.2"/>
+    <text x="876" y="210" text-anchor="start" font-size="24" font-weight="700" fill="#374151" font-family="'Segoe UI', 'Hiragino Sans', 'Yu Gothic UI', sans-serif"><tspan x="876" dy="0">Shader 側で共有する値</tspan></text>
+  
+
+    <rect x="126" y="246" width="240" height="86" rx="20" ry="20" fill="#f7fbff" stroke="#2f537f" stroke-width="2.5"/><text x="246" y="289" text-anchor="middle" font-size="26" font-weight="600" fill="#111827" font-family="'Segoe UI', 'Hiragino Sans', 'Yu Gothic UI', sans-serif"><tspan x="246" dy="-0.675em">color / texture</tspan><tspan x="246" dy="1.35em">normal map</tspan></text>
+    <rect x="126" y="368" width="240" height="86" rx="20" ry="20" fill="#f7fbff" stroke="#2f537f" stroke-width="2.5"/><text x="246" y="411" text-anchor="middle" font-size="26" font-weight="600" fill="#111827" font-family="'Segoe UI', 'Hiragino Sans', 'Yu Gothic UI', sans-serif"><tspan x="246" dy="-0.675em">ambient / specular</tspan><tspan x="246" dy="1.35em">power / emissive</tspan></text>
+    <rect x="126" y="490" width="240" height="86" rx="20" ry="20" fill="#f7fbff" stroke="#2f537f" stroke-width="2.5"/><text x="246" y="533" text-anchor="middle" font-size="26" font-weight="600" fill="#111827" font-family="'Segoe UI', 'Hiragino Sans', 'Yu Gothic UI', sans-serif"><tspan x="246" dy="-0.675em">has_bone</tspan><tspan x="246" dy="1.35em">weight_debug</tspan></text>
+
+    <rect x="516" y="310" width="248" height="120" rx="20" ry="20" fill="#f7fbff" stroke="#2f537f" stroke-width="2.5"/><text x="640" y="370" text-anchor="middle" font-size="26" font-weight="600" fill="#111827" font-family="'Segoe UI', 'Hiragino Sans', 'Yu Gothic UI', sans-serif"><tspan x="640" dy="-1.35em">Shape.materialParams</tspan><tspan x="640" dy="1.35em">-&gt; shader.doParameter()</tspan><tspan x="640" dy="1.35em">-&gt; setter へ流す</tspan></text>
+
+    <rect x="914" y="246" width="240" height="86" rx="20" ry="20" fill="#f7fbff" stroke="#2f537f" stroke-width="2.5"/><text x="1034" y="289" text-anchor="middle" font-size="26" font-weight="600" fill="#111827" font-family="'Segoe UI', 'Hiragino Sans', 'Yu Gothic UI', sans-serif"><tspan x="1034" dy="0">light position</tspan></text>
+    <rect x="914" y="368" width="240" height="86" rx="20" ry="20" fill="#f7fbff" stroke="#2f537f" stroke-width="2.5"/><text x="1034" y="411" text-anchor="middle" font-size="26" font-weight="600" fill="#111827" font-family="'Segoe UI', 'Hiragino Sans', 'Yu Gothic UI', sans-serif"><tspan x="1034" dy="0">fog default</tspan></text>
+    <rect x="914" y="490" width="240" height="86" rx="20" ry="20" fill="#f7fbff" stroke="#2f537f" stroke-width="2.5"/><text x="1034" y="533" text-anchor="middle" font-size="26" font-weight="600" fill="#111827" font-family="'Segoe UI', 'Hiragino Sans', 'Yu Gothic UI', sans-serif"><tspan x="1034" dy="-0.675em">bind group / palette</tspan><tspan x="1034" dy="1.35em">shared state</tspan></text>
+
+    <line x1="366" y1="289" x2="516" y2="340" stroke="#4b5563" stroke-width="3"  marker-end="url(#arrow)"/>
+    <line x1="366" y1="411" x2="516" y2="370" stroke="#4b5563" stroke-width="3"  marker-end="url(#arrow)"/>
+    <line x1="366" y1="533" x2="516" y2="400" stroke="#4b5563" stroke-width="3"  marker-end="url(#arrow)"/>
+    <line x1="764" y1="340" x2="914" y2="289" stroke="#4b5563" stroke-width="3" stroke-dasharray="10 8" marker-end="url(#arrow)"/><text x="844" y="252" text-anchor="middle" font-size="20" font-weight="500" fill="#374151" font-family="'Segoe UI', 'Hiragino Sans', 'Yu Gothic UI', sans-serif"><tspan x="844" dy="0">draw ごとに使い分け</tspan></text>
+    <line x1="764" y1="370" x2="914" y2="411" stroke="#4b5563" stroke-width="3"  marker-end="url(#arrow)"/>
+    <line x1="764" y1="400" x2="914" y2="533" stroke="#4b5563" stroke-width="3"  marker-end="url(#arrow)"/>
+
+    <text x="246" y="674" text-anchor="middle" font-size="22" font-weight="500" fill="#374151" font-family="'Segoe UI', 'Hiragino Sans', 'Yu Gothic UI', sans-serif"><tspan x="246" dy="0">オブジェクトごとの差として変わる値</tspan></text>
+    <text x="1034" y="674" text-anchor="middle" font-size="22" font-weight="500" fill="#374151" font-family="'Segoe UI', 'Hiragino Sans', 'Yu Gothic UI', sans-serif"><tspan x="1034" dy="0">複数 Shape で共有するほうが自然な値</tspan></text>
+  
+</svg>

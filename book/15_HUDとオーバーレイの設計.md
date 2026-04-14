@@ -12,7 +12,7 @@
 
 この分担にしている理由は、表示内容の性格が大きく異なるためです。スコアや FPS は一瞬で読める位置が重要ですが、エラー全文は落ち着いて読めるパネルのほうが向いています。ボタンを押させる UI では、さらに別の配慮が必要です。canvas 上の文字 HUD は短い情報に絞り、DOM オーバーレイ側は長文や操作 UI を引き受けるように分けておくと、サンプルを読むときも新しいアプリを組むときも、「どこへ何を出すか」の判断を役割から行いやすくなります。
 
-ここで先に意識しておきたいのは、`Text` と `Message` は ASCII 前提だという点です。`Text.js` は文字を `charCodeAt()` と `charOffset` でグリフインデックスへ変換して描画し、標準の外部フォントアトラスも `0x00..0x7F` を前提にしています。そのため、日本語や一般的な UTF-8 本文を扱うなら、最初から `UIPanel` や `FixedFormatPanel` のような DOM 側へ寄せるほうが自然です。短い ASCII HUD は canvas、非 ASCII を含む説明や操作 UI は DOM という分担が、現在の `webg` 実装にもっとも合っています。
+ここで先に意識しておきたいのは、`Text` と `Message` は ASCII 前提だという点です。`Text.js` は文字を `charCodeAt()` と `charOffset` でグリフインデックスへ変換して描画し、標準の外部フォントアトラスも `0x00..0x7F` を前提にしています。そのため、日本語や一般的な UTF-8 本文を扱うなら、最初から `UIPanel` や `FixedFormatPanel` のような DOM 側で扱うほうが自然です。短い ASCII HUD は canvas、非 ASCII を含む説明や操作 UI は DOM という分担が、現在の `webg` 実装にもっとも合っています。
 
 ## 短いHUDを出す: `Text` と `Message`
 
@@ -127,7 +127,7 @@ message.replaceAll([
 ]);
 ```
 
-通常のサンプルでは `Message` を直接触る代わりに、`WebgApp` のヘルパーを使うほうが簡潔です。短い操作説明や状態表示は `setGuideLines()`、`setStatusLines()`、必要なら `setHudRows()` に寄せると流れがそろいます。HUD や診断情報を後から無理に付け足すより、初期段階からアプリ構造に含めておくほうが扱いやすい、という `webg` 全体の方針にも合います。
+通常のサンプルでは `Message` を直接触る代わりに、`WebgApp` のヘルパーを使うほうが簡潔です。短い操作説明や状態表示は `setGuideLines()`、`setStatusLines()`、必要なら `setHudRows()` にまとめると流れがそろいます。HUD や診断情報を後から無理に付け足すより、初期段階からアプリ構造に含めておくほうが扱いやすい、という `webg` 全体の方針にも合います。
 
 ```js
 app.setGuideLines([
@@ -220,7 +220,7 @@ try {
 }
 ```
 
-`FixedFormatPanel` は DOM の `<pre>` を使うため、ASCII に制限されません。日本語や長文の補足を出したいときは、短い HUD に無理に詰め込まず、このパネル側へ寄せるほうが自然です。
+`FixedFormatPanel` は DOM の `<pre>` を使うため、ASCII に制限されません。日本語や長文の補足を出したいときは、短い HUD に無理に詰め込まず、このパネル側で扱うほうが自然です。
 
 ```js
 app.showFixedFormatPanel([

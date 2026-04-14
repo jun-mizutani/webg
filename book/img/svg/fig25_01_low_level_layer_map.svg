@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="760" viewBox="0 0 1280 760" role="img" aria-label="ローレベル API の 3 層構造">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#fbfdff"/>
+      <stop offset="100%" stop-color="#eef4fb"/>
+    </linearGradient>
+    <marker id="arrow" viewBox="0 0 10 10" refX="8.4" refY="5" markerWidth="4.1" markerHeight="4.1" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="context-stroke"/>
+    </marker>
+  </defs>
+  <rect width="1280" height="760" fill="url(#bg)"/>
+  
+    <text x="56" y="58" text-anchor="start" font-size="22" font-weight="700" fill="#374151" font-family="'Segoe UI', 'Hiragino Sans', 'Yu Gothic UI', sans-serif"><tspan x="56" dy="0">第25章</tspan></text>
+    <text x="56" y="98" text-anchor="start" font-size="38" font-weight="700" fill="#111827" font-family="'Segoe UI', 'Hiragino Sans', 'Yu Gothic UI', sans-serif"><tspan x="56" dy="0">ローレベル API の 3 層構造</tspan></text>
+    <line x1="56" y1="122" x2="1224" y2="122" stroke="#d8e3f4" stroke-width="2"/>
+  
+  
+    
+    <rect x="118" y="166" width="1044" height="150" rx="28" ry="28" fill="#eef4ff" stroke="#9db4d7" stroke-width="2.2"/>
+    <text x="142" y="204" text-anchor="start" font-size="24" font-weight="700" fill="#374151" font-family="'Segoe UI', 'Hiragino Sans', 'Yu Gothic UI', sans-serif"><tspan x="142" dy="0">GPU 側の入口</tspan></text>
+  
+    
+    <rect x="118" y="346" width="1044" height="170" rx="28" ry="28" fill="#eef4ff" stroke="#9db4d7" stroke-width="2.2"/>
+    <text x="142" y="384" text-anchor="start" font-size="24" font-weight="700" fill="#374151" font-family="'Segoe UI', 'Hiragino Sans', 'Yu Gothic UI', sans-serif"><tspan x="142" dy="0">シーン変換と配置</tspan></text>
+  
+    
+    <rect x="118" y="546" width="1044" height="140" rx="28" ry="28" fill="#eef4ff" stroke="#9db4d7" stroke-width="2.2"/>
+    <text x="142" y="584" text-anchor="start" font-size="24" font-weight="700" fill="#374151" font-family="'Segoe UI', 'Hiragino Sans', 'Yu Gothic UI', sans-serif"><tspan x="142" dy="0">数理の土台</tspan></text>
+  
+
+    <rect x="218" y="210" width="220" height="72" rx="20" ry="20" fill="#f7fbff" stroke="#2f537f" stroke-width="2.5"/><text x="328" y="246" text-anchor="middle" font-size="26" font-weight="600" fill="#111827" font-family="'Segoe UI', 'Hiragino Sans', 'Yu Gothic UI', sans-serif"><tspan x="328" dy="-0.675em">Screen</tspan><tspan x="328" dy="1.35em">canvas / device / context</tspan></text>
+    <rect x="530" y="210" width="220" height="72" rx="20" ry="20" fill="#f7fbff" stroke="#2f537f" stroke-width="2.5"/><text x="640" y="246" text-anchor="middle" font-size="26" font-weight="600" fill="#111827" font-family="'Segoe UI', 'Hiragino Sans', 'Yu Gothic UI', sans-serif"><tspan x="640" dy="-0.675em">Shader</tspan><tspan x="640" dy="1.35em">pipeline / uniform / bind group</tspan></text>
+    <rect x="842" y="210" width="220" height="72" rx="20" ry="20" fill="#f7fbff" stroke="#2f537f" stroke-width="2.5"/><text x="952" y="246" text-anchor="middle" font-size="26" font-weight="600" fill="#111827" font-family="'Segoe UI', 'Hiragino Sans', 'Yu Gothic UI', sans-serif"><tspan x="952" dy="-0.675em">Shape</tspan><tspan x="952" dy="1.35em">mesh / material</tspan></text>
+
+    <rect x="170" y="394" width="210" height="84" rx="20" ry="20" fill="#f7fbff" stroke="#2f537f" stroke-width="2.5"/><text x="275" y="436" text-anchor="middle" font-size="26" font-weight="600" fill="#111827" font-family="'Segoe UI', 'Hiragino Sans', 'Yu Gothic UI', sans-serif"><tspan x="275" dy="-0.675em">CoordinateSystem</tspan><tspan x="275" dy="1.35em">position / attitude</tspan></text>
+    <rect x="430" y="394" width="210" height="84" rx="20" ry="20" fill="#f7fbff" stroke="#2f537f" stroke-width="2.5"/><text x="535" y="436" text-anchor="middle" font-size="26" font-weight="600" fill="#111827" font-family="'Segoe UI', 'Hiragino Sans', 'Yu Gothic UI', sans-serif"><tspan x="535" dy="-0.675em">Node</tspan><tspan x="535" dy="1.35em">shape を置く実体</tspan></text>
+    <rect x="690" y="394" width="210" height="84" rx="20" ry="20" fill="#f7fbff" stroke="#2f537f" stroke-width="2.5"/><text x="795" y="436" text-anchor="middle" font-size="26" font-weight="600" fill="#111827" font-family="'Segoe UI', 'Hiragino Sans', 'Yu Gothic UI', sans-serif"><tspan x="795" dy="-0.675em">Space</tspan><tspan x="795" dy="1.35em">scene 全体を draw</tspan></text>
+    <rect x="950" y="394" width="160" height="84" rx="20" ry="20" fill="#f7fbff" stroke="#2f537f" stroke-width="2.5"/><text x="1030" y="436" text-anchor="middle" font-size="26" font-weight="600" fill="#111827" font-family="'Segoe UI', 'Hiragino Sans', 'Yu Gothic UI', sans-serif"><tspan x="1030" dy="-0.675em">eye</tspan><tspan x="1030" dy="1.35em">視点 node</tspan></text>
+
+    <rect x="324" y="580" width="220" height="72" rx="20" ry="20" fill="#f7fbff" stroke="#2f537f" stroke-width="2.5"/><text x="434" y="616" text-anchor="middle" font-size="26" font-weight="600" fill="#111827" font-family="'Segoe UI', 'Hiragino Sans', 'Yu Gothic UI', sans-serif"><tspan x="434" dy="-0.675em">Matrix</tspan><tspan x="434" dy="1.35em">projection / view / transform</tspan></text>
+    <rect x="736" y="580" width="220" height="72" rx="20" ry="20" fill="#f7fbff" stroke="#2f537f" stroke-width="2.5"/><text x="846" y="616" text-anchor="middle" font-size="26" font-weight="600" fill="#111827" font-family="'Segoe UI', 'Hiragino Sans', 'Yu Gothic UI', sans-serif"><tspan x="846" dy="-0.675em">Quat</tspan><tspan x="846" dy="1.35em">回転保持 / 補間</tspan></text>
+
+    <line x1="438" y1="246" x2="530" y2="246" stroke="#4b5563" stroke-width="3"  marker-end="url(#arrow)"/>
+    <line x1="750" y1="246" x2="842" y2="246" stroke="#4b5563" stroke-width="3"  marker-end="url(#arrow)"/>
+    <line x1="544" y1="478" x2="842" y2="282" stroke="#4b5563" stroke-width="3" stroke-dasharray="10 8" marker-end="url(#arrow)"/><text x="708" y="330" text-anchor="middle" font-size="20" font-weight="500" fill="#374151" font-family="'Segoe UI', 'Hiragino Sans', 'Yu Gothic UI', sans-serif"><tspan x="708" dy="0">Shape は Shader で描かれる</tspan></text>
+    <line x1="380" y1="620" x2="275" y2="478" stroke="#4b5563" stroke-width="3"  marker-end="url(#arrow)"/>
+    <line x1="846" y1="620" x2="275" y2="478" stroke="#4b5563" stroke-width="3"  marker-end="url(#arrow)"/>
+    <line x1="535" y1="478" x2="690" y2="478" stroke="#4b5563" stroke-width="3"  marker-end="url(#arrow)"/>
+    <line x1="900" y1="478" x2="950" y2="478" stroke="#4b5563" stroke-width="3"  marker-end="url(#arrow)"/>
+
+    <text x="640" y="718" text-anchor="middle" font-size="22" font-weight="500" fill="#374151" font-family="'Segoe UI', 'Hiragino Sans', 'Yu Gothic UI', sans-serif"><tspan x="640" dy="0">第25章は、この 3 層のどこを読んでいるかを見失わないことが最も大切</tspan></text>
+  
+</svg>

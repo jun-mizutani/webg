@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="760" viewBox="0 0 1280 760" role="img" aria-label="UV とノーマルマップの読み方">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#fbfdff"/>
+      <stop offset="100%" stop-color="#eef4fb"/>
+    </linearGradient>
+    <marker id="arrow" viewBox="0 0 10 10" refX="8.4" refY="5" markerWidth="4.1" markerHeight="4.1" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="context-stroke"/>
+    </marker>
+  </defs>
+  <rect width="1280" height="760" fill="url(#bg)"/>
+  
+    <text x="56" y="58" text-anchor="start" font-size="22" font-weight="700" fill="#374151" font-family="'Segoe UI', 'Hiragino Sans', 'Yu Gothic UI', sans-serif"><tspan x="56" dy="0">第3章</tspan></text>
+    <text x="56" y="98" text-anchor="start" font-size="38" font-weight="700" fill="#111827" font-family="'Segoe UI', 'Hiragino Sans', 'Yu Gothic UI', sans-serif"><tspan x="56" dy="0">UV とノーマルマップの読み方</tspan></text>
+    <line x1="56" y1="122" x2="1224" y2="122" stroke="#d8e3f4" stroke-width="2"/>
+  
+  
+    
+    <rect x="94" y="186" width="454" height="442" rx="28" ry="28" fill="#eef4ff" stroke="#9db4d7" stroke-width="2.2"/>
+    <text x="118" y="224" text-anchor="start" font-size="24" font-weight="700" fill="#374151" font-family="'Segoe UI', 'Hiragino Sans', 'Yu Gothic UI', sans-serif"><tspan x="118" dy="0">UV 座標</tspan></text>
+  
+    
+    <rect x="732" y="186" width="454" height="442" rx="28" ry="28" fill="#eef4ff" stroke="#9db4d7" stroke-width="2.2"/>
+    <text x="756" y="224" text-anchor="start" font-size="24" font-weight="700" fill="#374151" font-family="'Segoe UI', 'Hiragino Sans', 'Yu Gothic UI', sans-serif"><tspan x="756" dy="0">normal map</tspan></text>
+  
+
+    <rect x="166" y="276" width="308" height="236" fill="#ffffff" stroke="#2f537f" stroke-width="3"/>
+    <line x1="166" y1="512" x2="474" y2="512" stroke="#4b5563" stroke-width="4" marker-end="url(#arrow)"/>
+    <line x1="166" y1="512" x2="166" y2="250" stroke="#4a9c83" stroke-width="5" marker-end="url(#arrow)"/>
+    <text x="492" y="520" text-anchor="start" font-size="24" font-weight="500" fill="#111827" font-family="'Segoe UI', 'Hiragino Sans', 'Yu Gothic UI', sans-serif"><tspan x="492" dy="0">U</tspan></text>
+    <text x="166" y="236" text-anchor="middle" font-size="24" font-weight="500" fill="#111827" font-family="'Segoe UI', 'Hiragino Sans', 'Yu Gothic UI', sans-serif"><tspan x="166" dy="0">V</tspan></text>
+    <text x="162" y="540" text-anchor="start" font-size="22" font-weight="500" fill="#111827" font-family="'Segoe UI', 'Hiragino Sans', 'Yu Gothic UI', sans-serif"><tspan x="162" dy="0">(0,0)</tspan></text>
+    <text x="474" y="540" text-anchor="middle" font-size="22" font-weight="500" fill="#111827" font-family="'Segoe UI', 'Hiragino Sans', 'Yu Gothic UI', sans-serif"><tspan x="474" dy="0">(1,0)</tspan></text>
+    <text x="474" y="258" text-anchor="middle" font-size="22" font-weight="500" fill="#111827" font-family="'Segoe UI', 'Hiragino Sans', 'Yu Gothic UI', sans-serif"><tspan x="474" dy="0">(1,1)</tspan></text>
+    <text x="166" y="258" text-anchor="start" font-size="22" font-weight="500" fill="#111827" font-family="'Segoe UI', 'Hiragino Sans', 'Yu Gothic UI', sans-serif"><tspan x="166" dy="0">(0,1)</tspan></text>
+
+    <rect x="810" y="282" width="126" height="126" fill="#d48383" stroke="#2f537f" stroke-width="2"/>
+    <rect x="936" y="282" width="126" height="126" fill="#81c89b" stroke="#2f537f" stroke-width="2"/>
+    <rect x="873" y="408" width="126" height="126" fill="#7d9dde" stroke="#2f537f" stroke-width="2"/>
+    <text x="873" y="348" text-anchor="middle" font-size="22" font-weight="700" fill="#ffffff" font-family="'Segoe UI', 'Hiragino Sans', 'Yu Gothic UI', sans-serif"><tspan x="873" dy="0">R -&gt; X</tspan></text>
+    <text x="999" y="348" text-anchor="middle" font-size="22" font-weight="700" fill="#ffffff" font-family="'Segoe UI', 'Hiragino Sans', 'Yu Gothic UI', sans-serif"><tspan x="999" dy="0">G -&gt; Y</tspan></text>
+    <text x="936" y="474" text-anchor="middle" font-size="22" font-weight="700" fill="#ffffff" font-family="'Segoe UI', 'Hiragino Sans', 'Yu Gothic UI', sans-serif"><tspan x="936" dy="0">B -&gt; Z</tspan></text>
+    <text x="936" y="566" text-anchor="middle" font-size="24" font-weight="500" fill="#374151" font-family="'Segoe UI', 'Hiragino Sans', 'Yu Gothic UI', sans-serif"><tspan x="936" dy="-0.675em">0..1 の色を</tspan><tspan x="936" dy="1.35em">-1..1 の方向ベクトルへ戻して使う</tspan></text>
+  
+</svg>

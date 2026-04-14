@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="760" viewBox="0 0 1280 760" role="img" aria-label="クォータニオンと glTF の並び順">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#fbfdff"/>
+      <stop offset="100%" stop-color="#eef4fb"/>
+    </linearGradient>
+    <marker id="arrow" viewBox="0 0 10 10" refX="8.4" refY="5" markerWidth="4.1" markerHeight="4.1" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="context-stroke"/>
+    </marker>
+  </defs>
+  <rect width="1280" height="760" fill="url(#bg)"/>
+  
+    <text x="56" y="58" text-anchor="start" font-size="22" font-weight="700" fill="#374151" font-family="'Segoe UI', 'Hiragino Sans', 'Yu Gothic UI', sans-serif"><tspan x="56" dy="0">第3章</tspan></text>
+    <text x="56" y="98" text-anchor="start" font-size="38" font-weight="700" fill="#111827" font-family="'Segoe UI', 'Hiragino Sans', 'Yu Gothic UI', sans-serif"><tspan x="56" dy="0">クォータニオンと glTF の並び順</tspan></text>
+    <line x1="56" y1="122" x2="1224" y2="122" stroke="#d8e3f4" stroke-width="2"/>
+  
+  
+    <rect x="120" y="256" width="360" height="158" rx="20" ry="20" fill="#eef5ff" stroke="#2f537f" stroke-width="2.5"/><text x="300" y="335" text-anchor="middle" font-size="34" font-weight="600" fill="#111827" font-family="'Segoe UI', 'Hiragino Sans', 'Yu Gothic UI', sans-serif"><tspan x="300" dy="-0.675em">webg Quat</tspan><tspan x="300" dy="1.35em">[w, x, y, z]</tspan></text>
+    <rect x="800" y="256" width="360" height="158" rx="20" ry="20" fill="#fff8ef" stroke="#bc8752" stroke-width="2.5"/><text x="980" y="335" text-anchor="middle" font-size="34" font-weight="600" fill="#111827" font-family="'Segoe UI', 'Hiragino Sans', 'Yu Gothic UI', sans-serif"><tspan x="980" dy="-0.675em">glTF / GLB</tspan><tspan x="980" dy="1.35em">[x, y, z, w]</tspan></text>
+    <rect x="460" y="504" width="360" height="110" rx="20" ry="20" fill="#eef8f5" stroke="#4a9c83" stroke-width="2.5"/><text x="640" y="559" text-anchor="middle" font-size="28" font-weight="600" fill="#111827" font-family="'Segoe UI', 'Hiragino Sans', 'Yu Gothic UI', sans-serif"><tspan x="640" dy="-0.675em">読み込み時に並び替えてから</tspan><tspan x="640" dy="1.35em">行列や runtime 姿勢へ変換する</tspan></text>
+
+    <line x1="480" y1="334" x2="800" y2="334" stroke="#4b5563" stroke-width="3" stroke-dasharray="10 8" marker-end="url(#arrow)"/><text x="640" y="296" text-anchor="middle" font-size="20" font-weight="500" fill="#374151" font-family="'Segoe UI', 'Hiragino Sans', 'Yu Gothic UI', sans-serif"><tspan x="640" dy="0">順序が違う</tspan></text>
+    <line x1="980" y1="414" x2="640" y2="504" stroke="#4a9c83" stroke-width="3"  marker-end="url(#arrow)"/><text x="822" y="470" text-anchor="middle" font-size="20" font-weight="500" fill="#374151" font-family="'Segoe UI', 'Hiragino Sans', 'Yu Gothic UI', sans-serif"><tspan x="822" dy="0">loader が変換</tspan></text>
+    <line x1="300" y1="414" x2="640" y2="504" stroke="#4a9c83" stroke-width="3"  marker-end="url(#arrow)"/>
+
+    <text x="640" y="668" text-anchor="middle" font-size="24" font-weight="500" fill="#374151" font-family="'Segoe UI', 'Hiragino Sans', 'Yu Gothic UI', sans-serif"><tspan x="640" dy="0">第3章では [w,x,y,z] と [x,y,z,w] を混同しないことが重要</tspan></text>
+  
+</svg>

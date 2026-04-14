@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="760" viewBox="0 0 1280 760" role="img" aria-label="ModelAsset -&gt; build -&gt; instantiate">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#fbfdff"/>
+      <stop offset="100%" stop-color="#eef4fb"/>
+    </linearGradient>
+    <marker id="arrow" viewBox="0 0 10 10" refX="8.4" refY="5" markerWidth="4.1" markerHeight="4.1" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="context-stroke"/>
+    </marker>
+  </defs>
+  <rect width="1280" height="760" fill="url(#bg)"/>
+  
+    <text x="56" y="58" text-anchor="start" font-size="22" font-weight="700" fill="#374151" font-family="'Segoe UI', 'Hiragino Sans', 'Yu Gothic UI', sans-serif"><tspan x="56" dy="0">第10章</tspan></text>
+    <text x="56" y="98" text-anchor="start" font-size="38" font-weight="700" fill="#111827" font-family="'Segoe UI', 'Hiragino Sans', 'Yu Gothic UI', sans-serif"><tspan x="56" dy="0">ModelAsset -&gt; build -&gt; instantiate</tspan></text>
+    <line x1="56" y1="122" x2="1224" y2="122" stroke="#d8e3f4" stroke-width="2"/>
+  
+  
+    
+    <rect x="58" y="174" width="228" height="404" rx="28" ry="28" fill="#eef4ff" stroke="#9db4d7" stroke-width="2.2"/>
+    <text x="82" y="212" text-anchor="start" font-size="24" font-weight="700" fill="#374151" font-family="'Segoe UI', 'Hiragino Sans', 'Yu Gothic UI', sans-serif"><tspan x="82" dy="0">入力形式</tspan></text>
+  
+    <rect x="92" y="232" width="160" height="72" rx="20" ry="20" fill="#f7fbff" stroke="#2f537f" stroke-width="2.5"/><text x="172" y="268" text-anchor="middle" font-size="26" font-weight="600" fill="#111827" font-family="'Segoe UI', 'Hiragino Sans', 'Yu Gothic UI', sans-serif"><tspan x="172" dy="0">glTF / GLB</tspan></text>
+    <rect x="92" y="340" width="160" height="72" rx="20" ry="20" fill="#f7fbff" stroke="#2f537f" stroke-width="2.5"/><text x="172" y="376" text-anchor="middle" font-size="26" font-weight="600" fill="#111827" font-family="'Segoe UI', 'Hiragino Sans', 'Yu Gothic UI', sans-serif"><tspan x="172" dy="0">Collada</tspan></text>
+    <rect x="92" y="448" width="160" height="72" rx="20" ry="20" fill="#f7fbff" stroke="#2f537f" stroke-width="2.5"/><text x="172" y="484" text-anchor="middle" font-size="26" font-weight="600" fill="#111827" font-family="'Segoe UI', 'Hiragino Sans', 'Yu Gothic UI', sans-serif"><tspan x="172" dy="0">imported JSON</tspan></text>
+
+    <rect x="358" y="320" width="204" height="102" rx="20" ry="20" fill="#f7fbff" stroke="#2f537f" stroke-width="2.5"/><text x="460" y="371" text-anchor="middle" font-size="26" font-weight="600" fill="#111827" font-family="'Segoe UI', 'Hiragino Sans', 'Yu Gothic UI', sans-serif"><tspan x="460" dy="-0.675em">ModelAsset</tspan><tspan x="460" dy="1.35em">CPU 側の共通データ</tspan></text>
+    <rect x="632" y="246" width="184" height="76" rx="20" ry="20" fill="#f7fbff" stroke="#2f537f" stroke-width="2.5"/><text x="724" y="284" text-anchor="middle" font-size="26" font-weight="600" fill="#111827" font-family="'Segoe UI', 'Hiragino Sans', 'Yu Gothic UI', sans-serif"><tspan x="724" dy="0">validate</tspan></text>
+    <rect x="632" y="366" width="184" height="76" rx="20" ry="20" fill="#f7fbff" stroke="#2f537f" stroke-width="2.5"/><text x="724" y="404" text-anchor="middle" font-size="26" font-weight="600" fill="#111827" font-family="'Segoe UI', 'Hiragino Sans', 'Yu Gothic UI', sans-serif"><tspan x="724" dy="0">build()</tspan></text>
+    <rect x="874" y="274" width="312" height="120" rx="20" ry="20" fill="#f7fbff" stroke="#2f537f" stroke-width="2.5"/><text x="1030" y="334" text-anchor="middle" font-size="26" font-weight="600" fill="#111827" font-family="'Segoe UI', 'Hiragino Sans', 'Yu Gothic UI', sans-serif"><tspan x="1030" dy="-1.35em">model runtime</tspan><tspan x="1030" dy="1.35em">shared GPU buffers</tspan><tspan x="1030" dy="1.35em">textures / skeleton</tspan></text>
+    <rect x="886" y="444" width="240" height="72" rx="20" ry="20" fill="#f7fbff" stroke="#2f537f" stroke-width="2.5"/><text x="1006" y="480" text-anchor="middle" font-size="26" font-weight="600" fill="#111827" font-family="'Segoe UI', 'Hiragino Sans', 'Yu Gothic UI', sans-serif"><tspan x="1006" dy="0">instantiate() -&gt; A</tspan></text>
+    <rect x="886" y="544" width="240" height="72" rx="20" ry="20" fill="#f7fbff" stroke="#2f537f" stroke-width="2.5"/><text x="1006" y="580" text-anchor="middle" font-size="26" font-weight="600" fill="#111827" font-family="'Segoe UI', 'Hiragino Sans', 'Yu Gothic UI', sans-serif"><tspan x="1006" dy="0">instantiate() -&gt; B</tspan></text>
+    <rect x="886" y="644" width="240" height="72" rx="20" ry="20" fill="#f7fbff" stroke="#2f537f" stroke-width="2.5"/><text x="1006" y="680" text-anchor="middle" font-size="26" font-weight="600" fill="#111827" font-family="'Segoe UI', 'Hiragino Sans', 'Yu Gothic UI', sans-serif"><tspan x="1006" dy="0">instantiate() -&gt; C</tspan></text>
+
+    <line x1="252" y1="268" x2="358" y2="356" stroke="#4b5563" stroke-width="3"  marker-end="url(#arrow)"/>
+    <line x1="252" y1="376" x2="358" y2="371" stroke="#4b5563" stroke-width="3"  marker-end="url(#arrow)"/>
+    <line x1="252" y1="484" x2="358" y2="386" stroke="#4b5563" stroke-width="3"  marker-end="url(#arrow)"/>
+    <line x1="562" y1="371" x2="632" y2="284" stroke="#4b5563" stroke-width="3"  marker-end="url(#arrow)"/>
+    <line x1="562" y1="371" x2="632" y2="404" stroke="#4b5563" stroke-width="3"  marker-end="url(#arrow)"/>
+    <line x1="816" y1="404" x2="874" y2="334" stroke="#4b5563" stroke-width="3"  marker-end="url(#arrow)"/>
+    <line x1="1030" y1="394" x2="1030" y2="444" stroke="#4b5563" stroke-width="3"  marker-end="url(#arrow)"/>
+    <line x1="1030" y1="516" x2="1030" y2="544" stroke="#4b5563" stroke-width="3"  marker-end="url(#arrow)"/>
+    <line x1="1030" y1="616" x2="1030" y2="644" stroke="#4b5563" stroke-width="3"  marker-end="url(#arrow)"/>
+
+    <text x="1030" y="420" text-anchor="middle" font-size="24" font-weight="500" fill="#374151" font-family="'Segoe UI', 'Hiragino Sans', 'Yu Gothic UI', sans-serif"><tspan x="1030" dy="0">build は 1 回</tspan></text>
+    <text x="1142" y="736" text-anchor="start" font-size="22" font-weight="500" fill="#374151" font-family="'Segoe UI', 'Hiragino Sans', 'Yu Gothic UI', sans-serif"><tspan x="1142" dy="0">必要な数だけ instance を作る</tspan></text>
+  
+</svg>

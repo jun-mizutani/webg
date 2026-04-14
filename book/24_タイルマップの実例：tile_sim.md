@@ -1,18 +1,23 @@
 # タイルマップの実例：tile_sim
 
-TileMap を単独で理解するだけでは、実際のアプリで actor、animation、camera、入力系とどう共存させるかはまだ見えてきません。`tile_sim` は、その複数の要素を同時に成立させている統合事例です。本章では、TileMap の論理位置、可視 actor、animation runtime、camera gesture をどのように分離し、どの責務をどこへ置いているかを整理します。 
+TileMap を単独で理解するだけでは、実際のアプリで actor、animation、camera、入力系とどう共存させるかはまだ見えてきません。`tile_sim` は、その複数の要素を同時に成立させている統合事例です。本章では、TileMap の論理位置、可視 actor、animation runtime、camera gesture をどのように分離し、どの役割をどこへ置いているかを整理します。 
 
 ここで最初に押さえたいのは、`tile_sim` の中心が「TileMap の論理位置」と「glb の見た目」を別 node として持つことにある、という点です。TileMap 側は「どの cell にいるか」を決め、visible actor 側は「どう見せるか」を担当します。また、`human.glb` は 1 回だけ build し、各 unit は `instantiate()` で独立した animation runtime を持つ構成にすると、GPU resource と runtime state を自然に分けられます。さらに、`tile_sim` は TileMap actor の移動用アクションボタンと、canvas 上の orbit / pan / pinch gesture を分けて持つ現在のサンプルです。つまり、盤面ロジック、可視 actor、入力経路の 3 つを分離していることが、この sample の最も重要な設計上の特徴です。 
 
 ## `tile_sim` をどう読むか
+<!-- 図候補: 図24-1 tile_sim 構成図 -->
 
-`tile_sim` を読むときにまず見るべきなのは、「1 つの player object をそのまま TileMap の上へ載せている」のではないことです。実際には、盤面上の論理位置、見た目の actor、入力処理、camera の追従がそれぞれ別層として保たれています。ここを最初に見落とすと、移動、回転、アニメーション、camera 追従の責務がどこにあるのか分かりにくくなります。 
+![図24-1 tile_sim 構成図](img/svg/fig24_01_tilesim_structure.svg)
+
+*図24-1 `tile_sim` は 1 ファイル完結の sample ではなく、TileMap、actor、camera、mission を役割ごとに分けた実践例として読むと整理しやすくなります。*
+
+`tile_sim` を読むときにまず見るべきなのは、「1 つの player object をそのまま TileMap の上へ載せている」のではないことです。実際には、盤面上の論理位置、見た目の actor、入力処理、camera の追従がそれぞれ別層として保たれています。ここを最初に見落とすと、移動、回転、アニメーション、camera 追従の役割がどこにあるのか分かりにくくなります。 
 
 本章では、最初に glb actor を TileMap 上でどう動かすかを見て、そのあとで clip 構成の違い、`human.glb` の実測値、size 決定のコード、ワールド規格へのつなぎ方、汎用化候補、フレームループの組み立て方へ進みます。つまり、「まず動く構造を見る」「次に `human.glb` がなぜその構造でうまくいったかを見る」「最後に共通化できる部分を整理する」という順で読むと理解しやすくなります。 
 
 ## TileMap 上の glb actor をどう構成するか
 
-TileMap 上の自キャラを球ではなく glb のキャラクターにしたい場合も、考え方は同じです。違うのは、`playerNode` が単純な primitive node ではなく、「スキンとボーンを持つ glb runtime の root node」になることと、位置 tween に加えて animation controller も進める必要があることです。ここで大切なのは、「TileMap 上の論理位置」と「glb の見た目の移動」を 1 つの node に押し込めないことです。`tile_sim` を理解するときは、まずこの責務分担から入るほうが整理しやすくなります。 
+TileMap 上の自キャラを球ではなく glb のキャラクターにしたい場合も、考え方は同じです。違うのは、`playerNode` が単純な primitive node ではなく、「スキンとボーンを持つ glb runtime の root node」になることと、位置 tween に加えて animation controller も進める必要があることです。ここで大切なのは、「TileMap 上の論理位置」と「glb の見た目の移動」を 1 つの node に押し込めないことです。`tile_sim` を理解するときは、まずこの役割分担から入るほうが整理しやすくなります。 
 
 この分け方にすると、TileMap は「どこへ進めるか」を返し、visible actor は「どう見せるか」を受け持ちます。つまり、盤面ロジックと actor の見え方を別層として保てます。 
 
@@ -287,7 +292,7 @@ runtimeNodeScale = desiredDisplayScale / importedRootScale
 
 ### TileMap ワールドの規格に合わせる
 
-`tile_sim` の `alpha_actor.js` では、bounding box と imported root scale を次のように使っています。ここで見てほしいのは、bounding box 計測、root scale 解決、最終 node scale の逆算が別の関数へ分離されていることです。つまり、サイズ決定の責務を一塊の式にせず、読みやすい手順へ分けています。 
+`tile_sim` の `alpha_actor.js` では、bounding box と imported root scale を次のように使っています。ここで見てほしいのは、bounding box 計測、root scale 解決、最終 node scale の逆算が別の関数へ分離されていることです。つまり、サイズ決定の役割を一塊の式にせず、読みやすい手順へ分けています。 
 
 ```js
 const measureRuntimeShapeBounds = (app, shapes) => {
@@ -391,6 +396,6 @@ app.start({
 
 ## まとめ
 
-この章で最も大事なのは、`tile_sim` を「TileMap 上へ glb を載せたサンプル」とだけ見ないことです。実際には、TileMap の論理位置、proxy node、visible actor、animation runtime、camera gesture、Touch ボタンを別経路として保ちながら、それらを 1 つのフレームループへ統合している事例です。つまり、TileMap と skinned actor を両立させるときの責務分担そのものが、この章の主題です。 
+この章で最も大事なのは、`tile_sim` を「TileMap 上へ glb を載せたサンプル」とだけ見ないことです。実際には、TileMap の論理位置、proxy node、visible actor、animation runtime、camera gesture、Touch ボタンを別経路として保ちながら、それらを 1 つのフレームループへ統合している事例です。つまり、TileMap と skinned actor を両立させるときの役割分担そのものが、この章の主題です。 
 
 とくに重要なのは、次の 4 点です。TileMap の論理位置と glb の見た目を別 node として持つこと。`instantiate()` を使って共有 GPU resource と個別 runtime state を分けること。skinned mesh には `BonePhong` 系が必要であること。サイズは `bboxHeight`、`importedRootScale`、`runtimeNodeScale` を分けて逆算することです。この 4 点を押さえると、`tile_sim` の構造がかなり読みやすくなり、別アセットへ差し替えるときにも判断しやすくなります。続く第25章以降の low-level 章を読むと、ここで使っている見た目側の構造もさらに理解しやすくなります。 
