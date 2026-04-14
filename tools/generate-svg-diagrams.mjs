@@ -10,6 +10,50 @@ const TEXT_PRIMARY = "#111827";
 const TEXT_SECONDARY = "#374151";
 const ARROW_COLOR = "#4b5563";
 
+function getLineUnits(line) {
+  let units = 0;
+  for (const char of String(line)) {
+    if (char === " ") {
+      units += 0.35;
+    } else if (/[\u0000-\u00ff]/.test(char)) {
+      units += /[A-Z0-9]/.test(char) ? 0.72 : 0.62;
+    } else if (/[\u3000-\u303f\u30a0-\u30ff]/.test(char)) {
+      units += 0.92;
+    } else {
+      units += 1.0;
+    }
+  }
+  return units;
+}
+
+function fitTextSize(text, maxWidth, maxHeight, preferredSize, leading, options = {}) {
+  const {
+    minSize = 16,
+    widthPadding = 28,
+    heightPadding = 24
+  } = options;
+  const lines = String(text).split("\n");
+  const maxUnits = Math.max(...lines.map((line) => getLineUnits(line)), 1);
+  const lineCount = Math.max(lines.length, 1);
+  const usableWidth = Math.max(maxWidth - widthPadding * 2, 1);
+  const usableHeight = Math.max(maxHeight - heightPadding * 2, 1);
+  const widthLimitedSize = usableWidth / Math.max(maxUnits * 0.96, 1);
+  const heightLimitedSize = usableHeight / Math.max(1 + (lineCount - 1) * leading, 1);
+  return Math.max(minSize, Math.min(preferredSize, widthLimitedSize, heightLimitedSize));
+}
+
+function estimateBoxWidth(text, preferredSize, options = {}) {
+  const {
+    minWidth = 120,
+    maxWidth = 420,
+    paddingX = 28
+  } = options;
+  const lines = String(text).split("\n");
+  const maxUnits = Math.max(...lines.map((line) => getLineUnits(line)), 1);
+  const estimatedWidth = maxUnits * preferredSize * 0.96 + paddingX * 2;
+  return Math.max(minWidth, Math.min(maxWidth, estimatedWidth));
+}
+
 function esc(text) {
   return String(text)
     .replaceAll("&", "&amp;")
@@ -43,15 +87,41 @@ function box(x, y, w, h, title, options = {}) {
     radius = 20,
     titleSize = 26,
     titleFill = TEXT_PRIMARY,
-    titleWeight = 600
+    titleWeight = 600,
+    titleLeading = 1.35,
+    minTitleSize = 16,
+    titlePaddingX = 28,
+    titlePaddingY = 22
   } = options;
+  const fittedTitleSize = fitTextSize(title, w, h, titleSize, titleLeading, {
+    minSize: minTitleSize,
+    widthPadding: titlePaddingX,
+    heightPadding: titlePaddingY
+  });
   const rect = `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${radius}" ry="${radius}" fill="${fill}" stroke="${stroke}" stroke-width="${strokeWidth}"/>`;
   const label = svgText(x + w / 2, y + h / 2, title, {
-    size: titleSize,
+    size: fittedTitleSize,
     fill: titleFill,
-    weight: titleWeight
+    weight: titleWeight,
+    leading: titleLeading
   });
   return `${rect}${label}`;
+}
+
+function autoWidthBox(centerX, y, h, title, options = {}) {
+  const {
+    titleSize = 26,
+    minWidth = 120,
+    maxWidth = 420,
+    titlePaddingX = 28
+  } = options;
+  const width = estimateBoxWidth(title, titleSize, {
+    minWidth,
+    maxWidth,
+    paddingX: titlePaddingX
+  });
+  const x = centerX - width / 2;
+  return box(x, y, width, h, title, options);
 }
 
 function panel(x, y, w, h, label, options = {}) {
@@ -82,11 +152,10 @@ function arrow(x1, y1, x2, y2, options = {}) {
   return `${line}${svgText(labelX ?? (x1 + x2) / 2, labelY ?? (y1 + y2) / 2 - 12, label, { size: 20, fill: labelColor })}`;
 }
 
-function titleBlock(chapter, title) {
+function titleBlock(_chapter, title) {
   return `
-    ${svgText(56, 58, `${chapter}`, { size: 22, fill: TEXT_SECONDARY, anchor: "start", weight: 700 })}
-    ${svgText(56, 98, title, { size: 38, fill: TEXT_PRIMARY, anchor: "start", weight: 700 })}
-    <line x1="56" y1="122" x2="${WIDTH - 56}" y2="122" stroke="#d8e3f4" stroke-width="2"/>
+    ${svgText(56, 98, title, { size: 33, fill: TEXT_PRIMARY, anchor: "start", weight: 700 })}
+    <line x1="56" y1="118" x2="${WIDTH - 56}" y2="118" stroke="#d8e3f4" stroke-width="2"/>
   `;
 }
 
@@ -195,9 +264,9 @@ const figures = [
     "第3章",
     "クォータニオンと glTF の並び順",
     `
-    ${box(120, 256, 360, 158, "webg Quat\n[w, x, y, z]", { fill: "#eef5ff", titleSize: 34 })}
-    ${box(800, 256, 360, 158, "glTF / GLB\n[x, y, z, w]", { fill: "#fff8ef", stroke: "#bc8752", titleFill: TEXT_PRIMARY, titleSize: 34 })}
-    ${box(460, 504, 360, 110, "読み込み時に並び替えてから\n行列や runtime 姿勢へ変換する", { fill: "#eef8f5", stroke: "#4a9c83", titleFill: TEXT_PRIMARY, titleSize: 28 })}
+    ${autoWidthBox(300, 256, 158, "webg Quat\n[w, x, y, z]", { fill: "#eef5ff", titleSize: 34, minWidth: 240, maxWidth: 300 })}
+    ${autoWidthBox(980, 256, 158, "glTF / GLB\n[x, y, z, w]", { fill: "#fff8ef", stroke: "#bc8752", titleFill: TEXT_PRIMARY, titleSize: 34, minWidth: 240, maxWidth: 310 })}
+    ${autoWidthBox(640, 504, 110, "読み込み時に並び替えてから\n行列や runtime 姿勢へ変換する", { fill: "#eef8f5", stroke: "#4a9c83", titleFill: TEXT_PRIMARY, titleSize: 28, minWidth: 280, maxWidth: 350 })}
 
     ${arrow(480, 334, 800, 334, { dashed: true, label: "順序が違う", labelX: 640, labelY: 296 })}
     ${arrow(980, 414, 640, 504, { color: "#4a9c83", label: "loader が変換", labelX: 822, labelY: 470 })}
@@ -284,11 +353,11 @@ const figures = [
     "第6章",
     "base -> rod -> eye カメラ構成図",
     `
-    ${box(142, 316, 230, 112, "base\n水平位置 / yaw", { fill: "#f9fcff" })}
-    ${box(506, 316, 230, 112, "rod\npitch / distance", { fill: "#f9fcff" })}
-    ${box(870, 316, 230, 112, "eye\n実際の視点", { fill: "#f9fcff" })}
-    ${box(870, 524, 230, 90, "target\n注視点", { fill: "#fff8ef", stroke: "#bc8752", titleFill: TEXT_PRIMARY })}
-    ${box(506, 170, 230, 92, "WebgApp\nviewAngle / near / far", { fill: "#eef8f5", stroke: "#4a9c83", titleFill: TEXT_PRIMARY })}
+    ${autoWidthBox(257, 316, 112, "base\n水平位置 / yaw", { fill: "#f9fcff", minWidth: 160, maxWidth: 190 })}
+    ${autoWidthBox(621, 316, 112, "rod\npitch / distance", { fill: "#f9fcff", minWidth: 180, maxWidth: 220 })}
+    ${autoWidthBox(985, 316, 112, "eye\n実際の視点", { fill: "#f9fcff", minWidth: 150, maxWidth: 180 })}
+    ${autoWidthBox(985, 524, 90, "target\n注視点", { fill: "#fff8ef", stroke: "#bc8752", titleFill: TEXT_PRIMARY, minWidth: 150, maxWidth: 180 })}
+    ${autoWidthBox(621, 170, 92, "WebgApp\nviewAngle / near / far", { fill: "#eef8f5", stroke: "#4a9c83", titleFill: TEXT_PRIMARY, minWidth: 190, maxWidth: 240 })}
 
     ${arrow(372, 372, 506, 372)}
     ${arrow(736, 372, 870, 372)}
@@ -309,22 +378,22 @@ const figures = [
     ${panel(458, 172, 364, 460, "描画直前の受け渡し")}
     ${panel(852, 172, 364, 460, "Shader 側で共有する値")}
 
-    ${box(126, 246, 240, 86, "color / texture\nnormal map")}
-    ${box(126, 368, 240, 86, "ambient / specular\npower / emissive")}
-    ${box(126, 490, 240, 86, "has_bone\nweight_debug")}
+    ${box(126, 246, 240, 86, "color / texture\nnormal map", { titleSize: 25, titlePaddingX: 14, titlePaddingY: 12 })}
+    ${box(126, 368, 240, 86, "ambient / specular\npower / emissive", { titleSize: 23, titlePaddingX: 10, titlePaddingY: 12 })}
+    ${box(126, 490, 240, 86, "has_bone\nweight_debug", { titleSize: 23, titlePaddingX: 16, titlePaddingY: 12 })}
 
-    ${box(516, 310, 248, 120, "Shape.materialParams\n-> shader.doParameter()\n-> setter へ流す")}
+    ${box(491, 310, 297, 120, "Shape.materialParams\n-> shader.doParameter()\n-> setter へ流す", { titleSize: 22.8, titlePaddingX: 12, titlePaddingY: 12, radius: 24, strokeWidth: 2.73 })}
 
-    ${box(914, 246, 240, 86, "light position")}
-    ${box(914, 368, 240, 86, "fog default")}
-    ${box(914, 490, 240, 86, "bind group / palette\nshared state")}
+    ${box(914, 246, 240, 86, "light position", { titleSize: 22.8, titlePaddingX: 12, titlePaddingY: 12 })}
+    ${box(914, 368, 240, 86, "fog default", { titleSize: 22.5, titlePaddingX: 12, titlePaddingY: 12 })}
+    ${box(914, 490, 240, 86, "bind group / palette\nshared state", { titleSize: 24.2, titlePaddingX: 10, titlePaddingY: 12 })}
 
-    ${arrow(366, 289, 516, 340)}
-    ${arrow(366, 411, 516, 370)}
-    ${arrow(366, 533, 516, 400)}
-    ${arrow(764, 340, 914, 289, { dashed: true, label: "draw ごとに使い分け", labelX: 844, labelY: 252 })}
-    ${arrow(764, 370, 914, 411)}
-    ${arrow(764, 400, 914, 533)}
+    ${arrow(365.93, 288.87, 487.51, 339.92)}
+    ${arrow(365.93, 411.0, 487.51, 369.95)}
+    ${arrow(365.93, 533.13, 487.51, 399.99)}
+    ${arrow(793.88, 339.9, 914.22, 288.83, { dashed: true, label: "描画ごとに\n使い分け", labelX: 836.82, labelY: 283.26 })}
+    ${arrow(793.88, 369.94, 914.22, 411.0)}
+    ${arrow(793.88, 399.99, 914.22, 533.17)}
 
     ${svgText(246, 674, "オブジェクトごとの差として変わる値", { size: 22, fill: TEXT_SECONDARY })}
     ${svgText(1034, 674, "複数 Shape で共有するほうが自然な値", { size: 22, fill: TEXT_SECONDARY })}
@@ -340,13 +409,13 @@ const figures = [
     ${box(92, 340, 160, 72, "Collada")}
     ${box(92, 448, 160, 72, "imported JSON")}
 
-    ${box(358, 320, 204, 102, "ModelAsset\nCPU 側の共通データ")}
-    ${box(632, 246, 184, 76, "validate")}
-    ${box(632, 366, 184, 76, "build()")}
-    ${box(874, 274, 312, 120, "model runtime\nshared GPU buffers\ntextures / skeleton")}
-    ${box(886, 444, 240, 72, "instantiate() -> A")}
-    ${box(886, 544, 240, 72, "instantiate() -> B")}
-    ${box(886, 644, 240, 72, "instantiate() -> C")}
+    ${autoWidthBox(460, 320, 102, "ModelAsset\nCPU 側の共通データ", { minWidth: 190, maxWidth: 240 })}
+    ${autoWidthBox(724, 246, 76, "validate", { minWidth: 120, maxWidth: 150 })}
+    ${autoWidthBox(724, 366, 76, "build()", { minWidth: 120, maxWidth: 150 })}
+    ${autoWidthBox(1030, 274, 120, "model runtime\nshared GPU buffers\ntextures / skeleton", { minWidth: 240, maxWidth: 310 })}
+    ${autoWidthBox(1006, 444, 72, "instantiate() -> A", { minWidth: 180, maxWidth: 220 })}
+    ${autoWidthBox(1006, 544, 72, "instantiate() -> B", { minWidth: 180, maxWidth: 220 })}
+    ${autoWidthBox(1006, 644, 72, "instantiate() -> C", { minWidth: 180, maxWidth: 220 })}
 
     ${arrow(252, 268, 358, 356)}
     ${arrow(252, 376, 358, 371)}
@@ -386,7 +455,7 @@ const figures = [
     ${arrow(780, 340, 930, 331)}
     ${arrow(780, 366, 930, 461)}
     ${arrow(780, 392, 930, 591)}
-    ${arrow(1020, 372, 1020, 674, { dashed: true, color: "#bc8752", label: "参照", labelX: 1066, labelY: 534 })}
+    ${arrow(1020, 632, 1020, 674, { dashed: true, color: "#bc8752", label: "参照", labelX: 1066, labelY: 640 })}
 
     ${svgText(640, 468, "1 モデルではなく\nシーン全体の初期状態を宣言する", { size: 26, fill: TEXT_SECONDARY })}
   `
@@ -448,14 +517,14 @@ const figures = [
     `
     ${box(468, 170, 344, 92, "今やりたい判定は何か", { fill: "#eef5ff", titleSize: 34 })}
 
-    ${box(98, 358, 246, 96, "クリック / タップで\n何に当たったか知りたい")}
-    ${box(388, 358, 246, 96, "scene 内の object 同士が\n重なったか知りたい")}
-    ${box(678, 358, 246, 96, "TileMap のどの cell に\n当たったか知りたい")}
+    ${box(98, 358, 246, 96, "クリック / タップで\n何に当たったか")}
+    ${box(388, 358, 246, 96, "TileMap のどの cell に\n当たったか")}
+    ${box(678, 358, 246, 96, "scene 内の object 同士が\n重なったか")}
     ${box(968, 358, 214, 96, "AABB 候補を\nさらに絞りたい")}
 
     ${box(98, 566, 246, 86, "Space.raycast()")}
-    ${box(388, 566, 246, 86, "checkCollisions()")}
-    ${box(678, 566, 246, 86, "TileMap.pickCell()")}
+    ${box(388, 566, 246, 86, "TileMap.pickCell()")}
+    ${box(678, 566, 246, 86, "checkCollisions()")}
     ${box(968, 566, 214, 86, "checkCollisionsDetailed()")}
 
     ${arrow(640, 262, 221, 358)}
@@ -467,7 +536,7 @@ const figures = [
     ${arrow(511, 454, 511, 566)}
     ${arrow(801, 454, 801, 566)}
     ${arrow(1075, 454, 1075, 566)}
-    ${arrow(634, 609, 968, 609, { dashed: true, label: "候補が多すぎるときだけ詳細版へ", labelX: 800, labelY: 574 })}
+    ${arrow(924, 609, 968, 609, { dashed: true, label: "候補が多すぎるときだけ\n詳細版へ", labelX: 946, labelY: 536 })}
 
     ${svgText(640, 706, "まず用途ごとに API を分けて選ぶと、判定結果の読み方がかなり整理しやすくなる", { size: 22, fill: TEXT_SECONDARY })}
   `
@@ -514,13 +583,13 @@ const figures = [
     "第20章",
     "ポストプロセス描画フロー図",
     `
-    ${box(78, 314, 168, 94, "beginScene()")}
-    ${box(300, 314, 168, 94, "space.draw()")}
-    ${box(522, 298, 224, 126, "offscreen\ncolor + depth", { fill: "#eef8f5", stroke: "#4a9c83", titleFill: TEXT_PRIMARY })}
-    ${box(800, 314, 198, 94, "Bloom / DOF /\nVignette")}
-    ${box(1052, 314, 168, 94, "render to\ncanvas")}
-    ${box(800, 534, 198, 84, "clearDepthBuffer()", { fill: "#fff8ef", stroke: "#bc8752", titleFill: TEXT_PRIMARY })}
-    ${box(1052, 528, 168, 96, "Message /\nHUD / overlay")}
+    ${autoWidthBox(162, 314, 94, "beginScene()", { minWidth: 132, maxWidth: 160 })}
+    ${autoWidthBox(384, 314, 94, "space.draw()", { minWidth: 132, maxWidth: 160 })}
+    ${autoWidthBox(634, 298, 126, "offscreen\ncolor + depth", { fill: "#eef8f5", stroke: "#4a9c83", titleFill: TEXT_PRIMARY, minWidth: 180, maxWidth: 220 })}
+    ${autoWidthBox(899, 314, 94, "Bloom / DOF /\nVignette", { minWidth: 160, maxWidth: 190 })}
+    ${autoWidthBox(1136, 314, 94, "render to\ncanvas", { minWidth: 132, maxWidth: 160 })}
+    ${autoWidthBox(899, 534, 84, "clearDepthBuffer()", { fill: "#fff8ef", stroke: "#bc8752", titleFill: TEXT_PRIMARY, minWidth: 180, maxWidth: 220 })}
+    ${autoWidthBox(1136, 528, 96, "Message /\nHUD / overlay", { minWidth: 160, maxWidth: 190 })}
 
     ${arrow(246, 361, 300, 361)}
     ${arrow(468, 361, 522, 361)}
@@ -592,25 +661,25 @@ const figures = [
     ${panel(118, 346, 1044, 170, "シーン変換と配置")}
     ${panel(118, 546, 1044, 140, "数理の土台")}
 
-    ${box(218, 210, 220, 72, "Screen\ncanvas / device / context")}
-    ${box(530, 210, 220, 72, "Shader\npipeline / uniform / bind group")}
-    ${box(842, 210, 220, 72, "Shape\nmesh / material")}
+    ${box(168, 210, 300, 72, "Screen\ncanvas / device / context", { titleSize: 24, titlePaddingX: 8, titlePaddingY: 8 })}
+    ${box(458, 210, 364, 72, "Shader\npipeline / uniform / bind group", { titleSize: 24, titlePaddingX: 8, titlePaddingY: 8 })}
+    ${box(842, 210, 230, 72, "Shape\nmesh / material", { titleSize: 24, titlePaddingX: 8, titlePaddingY: 8 })}
 
-    ${box(170, 394, 210, 84, "CoordinateSystem\nposition / attitude")}
-    ${box(430, 394, 210, 84, "Node\nshape を置く実体")}
-    ${box(690, 394, 210, 84, "Space\nscene 全体を draw")}
-    ${box(950, 394, 160, 84, "eye\n視点 node")}
+    ${box(115, 394, 320, 84, "CoordinateSystem\nposition / attitude", { titleSize: 24, titlePaddingX: 8, titlePaddingY: 10 })}
+    ${box(415, 394, 240, 84, "Node\nshape を置く実体", { titleSize: 24, titlePaddingX: 10, titlePaddingY: 10 })}
+    ${box(670, 394, 250, 84, "Space\nscene 全体を draw", { titleSize: 24, titlePaddingX: 10, titlePaddingY: 10 })}
+    ${box(940, 394, 180, 84, "eye\n視点 node", { titleSize: 24, titlePaddingX: 10, titlePaddingY: 10 })}
 
-    ${box(324, 580, 220, 72, "Matrix\nprojection / view / transform")}
-    ${box(736, 580, 220, 72, "Quat\n回転保持 / 補間")}
+    ${box(254, 580, 360, 72, "Matrix\nprojection / view / transform", { titleSize: 24, titlePaddingX: 8, titlePaddingY: 8 })}
+    ${box(736, 580, 220, 72, "Quat\n回転保持 / 補間", { titleSize: 24, titlePaddingX: 10, titlePaddingY: 8 })}
 
-    ${arrow(438, 246, 530, 246)}
-    ${arrow(750, 246, 842, 246)}
-    ${arrow(544, 478, 842, 282, { dashed: true, label: "Shape は Shader で描かれる", labelX: 708, labelY: 330 })}
-    ${arrow(380, 620, 275, 478)}
+    ${arrow(468, 246, 458, 246)}
+    ${arrow(822, 246, 842, 246)}
+    ${arrow(655, 478, 842, 282, { dashed: true, label: "Shape は Shader で描かれる", labelX: 748, labelY: 330 })}
+    ${arrow(364, 620, 275, 478)}
     ${arrow(846, 620, 275, 478)}
-    ${arrow(535, 478, 690, 478)}
-    ${arrow(900, 478, 950, 478)}
+    ${arrow(535, 478, 670, 478)}
+    ${arrow(920, 478, 940, 478)}
 
     ${svgText(640, 718, "第25章は、この 3 層のどこを読んでいるかを見失わないことが最も大切", { size: 22, fill: TEXT_SECONDARY })}
   `

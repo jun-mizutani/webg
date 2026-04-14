@@ -1,0 +1,39 @@
+@startuml
+title 論理位置と見た目位置の分離
+
+left to right direction
+skinparam backgroundColor white
+skinparam shadowing true
+skinparam dpi 150
+skinparam defaultFontName Yu Gothic UI
+skinparam defaultFontSize 18
+skinparam rectangle {
+  RoundCorner 24
+  BorderColor black
+  BackgroundColor #f7fbff
+  FontColor black
+}
+skinparam ArrowColor black
+skinparam ranksep 20
+skinparam nodesep 20
+
+rectangle "cell (x, y)" as Cell
+rectangle "canMove /\nfindPath" as Logic
+rectangle "world target\nposition" as WorldTarget
+rectangle "Node.animatePosition()" as AnimatePosition
+rectangle "displayArea\nscroll" as DisplayArea
+
+Cell -down-> Logic
+Cell --> WorldTarget
+Logic ..> DisplayArea : 同じ cell から計算
+WorldTarget -down-> AnimatePosition
+AnimatePosition -down-> DisplayArea
+
+note top of Cell
+論理層
+end note
+
+note top of WorldTarget
+見た目層
+end note
+@enduml

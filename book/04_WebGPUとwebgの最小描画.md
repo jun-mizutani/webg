@@ -16,7 +16,7 @@
 
 ## 最初のアプリを組む標準フロー
 
-![図4-1 最小描画から WebgApp への流れ](img/svg/fig04_01_minimum_to_webgapp_flow.svg)
+![図4-1 最小描画から WebgApp への流れ](fig04_01_minimum_to_webgapp_flow.jpg)
 
 *図4-1 最初は `Screen`、`Shader`、`Space`、`Shape`、描画ループの骨格を押さえ、そのあとで `WebgApp` の標準構成へ進むと、補助機能の位置づけが見えやすくなります。*
 

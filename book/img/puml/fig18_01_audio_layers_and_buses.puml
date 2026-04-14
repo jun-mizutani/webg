@@ -1,0 +1,56 @@
+@startuml
+title AudioSynth とバス構成の全体像
+
+left to right direction
+skinparam backgroundColor white
+skinparam shadowing true
+skinparam dpi 150
+skinparam defaultFontName Yu Gothic UI
+skinparam defaultFontSize 18
+skinparam rectangle {
+  RoundCorner 24
+  BorderColor black
+  BackgroundColor #f7fbff
+  FontColor black
+}
+skinparam ArrowColor black
+skinparam ranksep 20
+skinparam nodesep 20
+
+rectangle "ボタン操作\nクリック / タップ" as UserInput
+rectangle "GameAudioSynth\npreset / SE 名" as GameAudioSynth
+rectangle "sample helper\nBGM preset / event sound" as SampleHelper
+
+rectangle "resume()" as Resume
+rectangle "AudioContext\nensureContext()" as AudioContext
+rectangle "SE bus" as SeBus
+rectangle "BGM bus" as BgmBus
+rectangle "delay" as Delay
+rectangle "reverb" as Reverb
+
+rectangle "master" as Master
+rectangle "speaker / device" as Speaker
+rectangle "聞こえ方の調整" as MixAdjust
+
+UserInput --> Resume
+GameAudioSynth --> SeBus
+Resume --> AudioContext
+SampleHelper --> Delay
+SeBus --> Master
+BgmBus --> Master
+Delay --> MixAdjust
+Reverb --> MixAdjust
+Master --> Speaker
+
+note top of UserInput
+利用者
+end note
+
+note top of Resume
+AudioSynth作動
+end note
+
+note top of Master
+出力
+end note
+@enduml

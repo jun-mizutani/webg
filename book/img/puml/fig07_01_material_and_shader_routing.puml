@@ -1,0 +1,44 @@
+@startuml
+title Shape と Shader への値の渡し分け
+
+'left to right direction
+top to bottom direction
+skinparam backgroundColor white
+skinparam shadowing true
+skinparam dpi 150
+skinparam defaultFontName Yu Gothic UI
+skinparam defaultFontSize 18
+skinparam rectangle {
+  RoundCorner 24
+  BorderColor black
+  BackgroundColor #f7fbff
+  FontColor black
+}
+skinparam ArrowColor black
+skinparam ranksep 20
+skinparam nodesep 20
+
+rectangle "色 / テクスチャ\n法線マップ" as ColorParams
+rectangle "ambient / specular\npower / emissive" as LightingParams
+rectangle "has_bone\nweight_debug" as DebugParams
+rectangle "Shape.materialParams\n-> shader.doParameter()\n-> setter へ流す" as MaterialRouting #eef5ff
+rectangle "light position" as LightPosition
+rectangle "fog default" as FogDefault
+rectangle "bind group / palette\nshared state" as SharedState
+
+ColorParams --> MaterialRouting
+LightingParams --> MaterialRouting
+DebugParams --> MaterialRouting
+
+MaterialRouting ..> LightPosition : 描画ごとに\n使い分け
+MaterialRouting --> FogDefault
+MaterialRouting --> SharedState
+
+note top of ColorParams
+オブジェクトごとの差として変わる値
+end note
+
+note top of LightPosition
+複数 Shape で共有するほうが自然な値
+end note
+@enduml

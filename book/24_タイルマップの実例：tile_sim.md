@@ -7,7 +7,7 @@ TileMap を単独で理解するだけでは、実際のアプリで actor、ani
 ## `tile_sim` をどう読むか
 <!-- 図候補: 図24-1 tile_sim 構成図 -->
 
-![図24-1 tile_sim 構成図](img/svg/fig24_01_tilesim_structure.svg)
+![図24-1 tile_sim 構成図](fig24_01_tilesim_structure.jpg)
 
 *図24-1 `tile_sim` は 1 ファイル完結の sample ではなく、TileMap、actor、camera、mission を役割ごとに分けた実践例として読むと整理しやすくなります。*
 

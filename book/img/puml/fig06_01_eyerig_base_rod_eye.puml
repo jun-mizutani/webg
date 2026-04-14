@@ -1,0 +1,33 @@
+@startuml
+title base -> rod -> eye カメラ構成図
+
+top to bottom direction
+skinparam backgroundColor white
+skinparam shadowing true
+skinparam dpi 150
+skinparam defaultFontName Yu Gothic UI
+skinparam defaultFontSize 18
+skinparam rectangle {
+  RoundCorner 24
+  BorderColor black
+  BackgroundColor #f7fbff
+  FontColor black
+}
+skinparam ArrowColor black
+skinparam ranksep 20
+skinparam nodesep 20
+
+rectangle "見ている物体" as Target
+rectangle "向きの変わるカメラ" as Eye
+rectangle "長さの変わるロッド" as Rod
+rectangle "移動する土台" as Base
+
+'WebgApp ..> Eye : 投影設定
+Base -up-> Rod
+Rod -right-> Eye
+Eye .down.> Target
+
+'Base -[hidden]right-> Rod
+'Rod -[hidden]right-> Eye
+'Eye -[hidden]down-> Target
+@enduml

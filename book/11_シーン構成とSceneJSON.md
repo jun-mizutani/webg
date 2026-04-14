@@ -9,7 +9,7 @@
 ## なぜ Scene JSON を使うのか
 <!-- 図候補: 図11-1 Scene JSON の守備範囲図 -->
 
-![図11-1 Scene JSON の守備範囲図](img/svg/fig11_01_scenejson_scope.svg)
+![図11-1 Scene JSON の守備範囲図](fig11_01_scenejson_scope.jpg)
 
 *図11-1 Scene JSON は、モデル 1 体ではなく、camera、HUD、input、primitive、model、tileMap を含むシーン全体の初期状態を表します。*
 

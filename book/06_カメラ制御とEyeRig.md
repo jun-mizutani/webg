@@ -13,7 +13,7 @@
 ## なぜ `base / rod / eye` の3段構成なのか
 <!-- 図候補: 図6-1 base -> rod -> eye カメラ構成図 -->
 
-![図6-1 base rod eye カメラ構成図](img/svg/fig06_01_eyerig_base_rod_eye.svg)
+![図6-1 base rod eye カメラ構成図](fig06_01_eyerig_base_rod_eye.jpg)
 
 *図6-1 `EyeRig` は `base`、`rod`、`eye` の 3 段に分けることで、水平回転、高低角、最終視点を独立して扱いやすくしています。*
 

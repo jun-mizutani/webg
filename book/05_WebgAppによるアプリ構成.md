@@ -9,7 +9,7 @@
 ## `WebgApp` を理解する前に、3D シーンの基本要素を押さえる
 <!-- 図候補: 図5-1 WebgApp 全体構成図 -->
 
-![図5-1 WebgApp 全体構成図](img/svg/fig05_01_webgapp_overview.svg)
+![図5-1 WebgApp 全体構成図](fig05_01_webgapp_overview.jpg)
 
 *図5-1 `WebgApp` は、描画、scene graph、camera rig、入力、HUD、diagnostics をまとめて初期化し、利用者コードの入口を整理します。*
 

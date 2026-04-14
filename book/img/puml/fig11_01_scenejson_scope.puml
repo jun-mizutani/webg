@@ -1,0 +1,54 @@
+@startuml
+title Scene JSON の守備範囲図
+
+top to bottom direction
+skinparam backgroundColor white
+skinparam shadowing true
+skinparam dpi 150
+skinparam defaultFontName Yu Gothic UI
+skinparam defaultFontSize 18
+skinparam rectangle {
+  RoundCorner 24
+  BorderColor black
+  BackgroundColor #f7fbff
+  FontColor black
+}
+skinparam ArrowColor black
+skinparam ranksep 20
+skinparam nodesep 20
+
+rectangle "camera" as Camera
+rectangle "HUD / guide /\nstatus" as Hud
+rectangle "input\nactions" as InputActions
+rectangle "Scene JSON" as SceneJson #e0f0ff
+rectangle "primitive\nentries" as PrimitiveEntries
+rectangle "model\nentries" as ModelEntries
+rectangle "tileMap" as TileMap
+rectangle "animation /\nmetadata" as Metadata
+rectangle "ModelAsset" as ModelAsset #fff8ef
+
+Camera --> SceneJson
+Hud --> SceneJson
+InputActions --> SceneJson
+
+SceneJson --> PrimitiveEntries
+SceneJson --> ModelEntries
+SceneJson --> TileMap
+SceneJson -right-> Metadata
+Metadata .right.> ModelAsset : 参照
+
+'Camera -[hidden]down-> Hud
+'Hud -[hidden]down-> InputActions
+'PrimitiveEntries -[hidden]down-> ModelEntries
+'ModelEntries -[hidden]down-> TileMap
+'TileMap -[hidden]down-> Metadata
+'Metadata -[hidden]down-> ModelAsset
+'InputActions -[hidden]right-> SceneJson
+'SceneJson -[hidden]right-> PrimitiveEntries
+
+note left of SceneJson
+1 モデルではなくシーン全体の
+初期状態を宣言する
+end note
+
+@enduml

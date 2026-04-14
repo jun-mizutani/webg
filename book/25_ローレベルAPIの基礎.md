@@ -8,7 +8,7 @@
 
 ## `webg` のローレベル層をどう捉えるか
 
-![図25-1 ローレベル API の 3 層構造](img/svg/fig25_01_low_level_layer_map.svg)
+![図25-1 ローレベル API の 3 層構造](fig25_01_low_level_layer_map.jpg)
 
 *図25-1 第25章では、`Screen` / `Shader` を GPU 側の入口、`CoordinateSystem` / `Node` / `Shape` / `Space` をシーン変換と配置、`Matrix` / `Quat` を数理の土台として読むと、いまどの層の説明かを見失いにくくなります。*
 
