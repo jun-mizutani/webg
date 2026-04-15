@@ -5,11 +5,11 @@ TileMap を単独で理解するだけでは、実際のアプリで actor、ani
 ここで最初に押さえたいのは、`tile_sim` の中心が「TileMap の論理位置」と「glb の見た目」を別 node として持つことにある、という点です。TileMap 側は「どの cell にいるか」を決め、visible actor 側は「どう見せるか」を担当します。また、`human.glb` は 1 回だけ build し、各 unit は `instantiate()` で独立した animation runtime を持つ構成にすると、GPU resource と runtime state を自然に分けられます。さらに、`tile_sim` は TileMap actor の移動用アクションボタンと、canvas 上の orbit / pan / pinch gesture を分けて持つ現在のサンプルです。つまり、盤面ロジック、可視 actor、入力経路の 3 つを分離していることが、この sample の最も重要な設計上の特徴です。 
 
 ## `tile_sim` をどう読むか
-<!-- 図候補: 図24-1 tile_sim 構成図 -->
+<!-- 図候補: tile_sim 構成図 -->
 
-![図24-1 tile_sim 構成図](fig24_01_tilesim_structure.jpg)
+![tile_sim 構成図](fig24_01_tilesim_structure.jpg)
 
-*図24-1 `tile_sim` は 1 ファイル完結の sample ではなく、TileMap、actor、camera、mission を役割ごとに分けた実践例として読むと整理しやすくなります。*
+*tile_sim は 1 ファイル完結の sample ではなく、TileMap、actor、camera、mission を役割ごとに分けた実践例として読むと整理しやすくなります。*
 
 `tile_sim` を読むときにまず見るべきなのは、「1 つの player object をそのまま TileMap の上へ載せている」のではないことです。実際には、盤面上の論理位置、見た目の actor、入力処理、camera の追従がそれぞれ別層として保たれています。ここを最初に見落とすと、移動、回転、アニメーション、camera 追従の役割がどこにあるのか分かりにくくなります。 
 

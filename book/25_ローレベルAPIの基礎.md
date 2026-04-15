@@ -8,9 +8,9 @@
 
 ## `webg` のローレベル層をどう捉えるか
 
-![図25-1 ローレベル API の 3 層構造](fig25_01_low_level_layer_map.jpg)
+![ローレベル API の 3 層構造](fig25_01_low_level_layer_map.jpg)
 
-*図25-1 第25章では、`Screen` / `Shader` を GPU 側の入口、`CoordinateSystem` / `Node` / `Shape` / `Space` をシーン変換と配置、`Matrix` / `Quat` を数理の土台として読むと、いまどの層の説明かを見失いにくくなります。*
+*第25章では、Screen / Shader を GPU 側の入口、CoordinateSystem / Node / Shape / Space をシーン変換と配置、Matrix / Quat を数理の土台として読むと、いまどの層の説明かを見失いにくくなります。*
 
 ブラウザで 3D を描くとき、本来は次のような WebGPU の構成要素を自分でつなぐ必要があります。canvas と GPU デバイス、レンダーパイプライン、uniform buffer、頂点バッファとインデックスバッファ、カメラ用の行列、オブジェクトごとのモデル変換です。`webg` のローレベル層は、この生の WebGPU の部品を「3D アプリを組む単位」へ少し引き上げています。具体的には、`Screen` が canvas と WebGPU コンテキスト、`Shader` がパイプラインと uniform、`Shape` が頂点 / インデックスデータとマテリアル、`CoordinateSystem` が位置・回転・スケール、`Node` が `Shape` を置くシーングラフ上のノード、`Matrix` / `Quat` が変換計算を担当します。 
 

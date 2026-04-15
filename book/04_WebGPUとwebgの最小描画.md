@@ -16,9 +16,9 @@
 
 ## 最初のアプリを組む標準フロー
 
-![図4-1 最小描画から WebgApp への流れ](fig04_01_minimum_to_webgapp_flow.jpg)
+![最小描画から WebgApp への流れ](fig04_01_minimum_to_webgapp_flow.jpg)
 
-*図4-1 最初は `Screen`、`Shader`、`Space`、`Shape`、描画ループの骨格を押さえ、そのあとで `WebgApp` の標準構成へ進むと、補助機能の位置づけが見えやすくなります。*
+*最初は Screen、Shader、Space、Shape、描画ループの骨格を押さえ、そのあとで WebgApp の標準構成へ進むと、補助機能の位置づけが見えやすくなります。*
 
 `webg` で最初のアプリを組むときは、次の順で進めると組み立てやすくなります。まず `Screen` を作って `await screen.ready` を待ち、次にシェーダーと projection を初期化し、そのあと `Space` と視点ノードを用意します。続いて `Shape` を作り、`endShape()` で確定し、最後に `clear -> draw -> present` のループを組みます。必要に応じて、そのあとで `WebgApp` へ移し、HUD、カメラ、タッチ入力、診断情報を加えていく、という順です。 
 

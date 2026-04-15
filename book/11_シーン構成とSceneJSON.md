@@ -7,11 +7,11 @@
 また、Scene JSON を使うときは、次の順で考えると迷いにくくなります。まず Scene JSON または JavaScript オブジェクトを `SceneAsset` として持ち、`validate()` または `assertValid()` で構造を確認します。次に `build(target)` または `app.loadScene(scene)` でシーンを実体化し、`sceneRuntime.getEntry(id)` や `sceneRuntime.createInputHandler()` で JavaScript 側の処理へつなぎます。必要なら `sceneRuntime.update()` を毎フレーム呼んでアニメーションを進めます。つまり、Scene JSON は「シーン全体の初期配置表」であり、`SceneLoader` はその配置表をランタイムへ変換する層です。ここを最初に押さえると、`ModelAsset` と `SceneAsset` の役割も混ざりにくくなります。
 
 ## なぜ Scene JSON を使うのか
-<!-- 図候補: 図11-1 Scene JSON の守備範囲図 -->
+<!-- 図候補: Scene JSON の守備範囲図 -->
 
-![図11-1 Scene JSON の守備範囲図](fig11_01_scenejson_scope.jpg)
+![Scene JSON の守備範囲図](fig11_01_scenejson_scope.jpg)
 
-*図11-1 Scene JSON は、モデル 1 体ではなく、camera、HUD、input、primitive、model、tileMap を含むシーン全体の初期状態を表します。*
+*Scene JSON は、モデル 1 体ではなく、camera、HUD、input、primitive、model、tileMap を含むシーン全体の初期状態を表します。*
 
 3D アプリでは、1 つのモデルを表示できても、それだけではサンプルやゲームは完成しません。カメラの向き、画面左上のガイドテキスト、どのキーがどのアクション名へ対応するか、地面をプリミティブで作るのか tileMap で作るのか、といった「シーン全体の初期状態」が必要になります。これをすべて JavaScript の手書き初期化コードへ散らすと、サンプルごとに書き方が変わりやすくなります。`webg` では、その差を減らすために Scene JSON を置いています。人間が読むときも、生成 AI が構造を生成するときも、「このシーンは何を初期状態として持つか」を JSON から直接追えるようにすることが目的です。
 
