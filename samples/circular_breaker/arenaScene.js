@@ -51,9 +51,9 @@ const createArenaFloorPatterns = ({ space, gpu }) => {
     shape.applyPrimitiveAsset(Primitive.donut(radius, 0.34, 12, 84, shape.getPrimitiveOptions()));
     shape.endShape();
     if ((i % 2) === 0) {
-      colorize(shape, [0.26, 0.48, 0.76, 1.0], 0.74, 0.30, 34.0, 0.03);
+      colorize(shape, [0.76, 0.48, 0.56, 1.0], 0.74, 0.30, 34.0, 0.03);
     } else {
-      colorize(shape, [0.18, 0.34, 0.56, 1.0], 0.66, 0.26, 30.0, 0.02);
+      colorize(shape, [0.5, 0.8, 0.56, 1.0], 0.66, 0.26, 30.0, 0.02);
     }
     node.addShape(shape);
     node.setPosition(0.0, FLOOR_PATTERN_Y, 0.0);

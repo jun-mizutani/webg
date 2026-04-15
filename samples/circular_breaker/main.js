@@ -63,7 +63,7 @@ const start = async () => {
     document,
     shaderClass: SmoothShader,
     messageFontTexture: FONT_FILE,
-    clearColor: [0.03, 0.07, 0.16, 1.0],
+    clearColor: [0.1, 0.1, 0.2, 1.0],
     viewAngle: 52.0,
     projectionFar: 2000.0,
     lightPosition: [0.0, 110.0, 90.0, 1.0],
@@ -72,12 +72,6 @@ const start = async () => {
     }
   });
   await app.init();
-  // gameplay HUD は Message で独自描画するが、操作説明は他 sample と同じ help panel へ出して
-  // release mode でも「どう操作するか」が常に読めるようにする
-  app.createHelpPanel({
-    id: "circularBreakerHelpOverlay",
-    lines: HELP_LINES
-  });
 
   const screen = app.screen;
   const gpu = app.getGL();
