@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// ShapeResource.js  2026/04/02
+// ShapeResource.js  2026/04/15
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // ---------------------------------------------
@@ -10,7 +10,7 @@ export default class ShapeResource {
   // 共有可能な mesh / GPU resource 状態だけをまとめて初期化する
   constructor(gpu) {
     // ShapeResource は geometry、GPU buffer、static bounding box を保持する
-    // ShapeInstance 側の hidden / material差分 / skeleton runtime はここへ置かない
+    // Shape 側の hidden / material差分 / skeleton runtime はここへ置かない
     this.isShapeResource = true;
     this.gpu = gpu;
     this.name = "anonymous";
