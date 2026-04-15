@@ -22,13 +22,13 @@
      inkscape:pageopacity="0.0"
      inkscape:pagecheckerboard="0"
      inkscape:deskcolor="#d1d1d1"
-     inkscape:zoom="0.82515963"
-     inkscape:cx="662.90204"
-     inkscape:cy="516.86969"
+     inkscape:zoom="0.54158069"
+     inkscape:cx="1035.8567"
+     inkscape:cy="181.87502"
      inkscape:window-width="1674"
      inkscape:window-height="910"
-     inkscape:window-x="211"
-     inkscape:window-y="272"
+     inkscape:window-x="85"
+     inkscape:window-y="141"
      inkscape:window-maximized="0"
      inkscape:current-layer="svg17" />
   <defs
@@ -117,22 +117,22 @@
      xml:space="preserve"><tspan
        x="262"
        y="256"
-       id="tspan1">狭い FOV
+       id="tspan3">狭い FOV
 </tspan><tspan
        x="262"
        y="293.50001"
-       id="tspan8">50°
+       id="tspan4">50°
 </tspan><tspan
        x="262"
        y="331.00001"
-       id="tspan9">望遠
+       id="tspan5">望遠
 </tspan><tspan
        x="262"
        y="368.50001"
-       id="tspan14">写る範囲は狭い</tspan></text>
+       id="tspan6">写る範囲は狭い</tspan></text>
   <text
-     x="261.65839"
-     y="548.55811"
+     x="257.74042"
+     y="575.10242"
      text-anchor="middle"
      font-size="29.385px"
      font-weight="600"
@@ -143,9 +143,9 @@
      style="stroke-width:0.979498"><tspan
        sodipodi:role="line"
        id="tspan19"
-       x="261.65839"
-       y="548.55811"><tspan
-         x="261.65839"
+       x="257.74042"
+       y="575.10242"><tspan
+         x="257.74042"
          id="tspan3-6"
          style="stroke-width:0.979498"
          dy="0 0 0">50°</tspan></tspan></text>
@@ -170,15 +170,45 @@
      font-family="'Segoe UI', 'Hiragino Sans', 'Yu Gothic UI', sans-serif"
      id="text9"
      style="white-space:pre;inline-size:696.588"
-     transform="matrix(1.1589013,0,0,1.208619,-96.077627,-33.570752)"
+     transform="matrix(1.0647497,0,0,1.0930354,-33.075224,-6.322675)"
      xml:space="preserve"><tspan
        x="610"
        y="244"
-       id="tspan18">標準 FOV
+       id="tspan7">標準 FOV
 </tspan><tspan
        x="610"
        y="281.50001"
-       id="tspan20">90°</tspan></text>
+       id="tspan8">90°</tspan></text>
+  <text
+     x="610"
+     y="244"
+     text-anchor="middle"
+     font-size="30px"
+     font-weight="600"
+     fill="#111827"
+     font-family="'Segoe UI', 'Hiragino Sans', 'Yu Gothic UI', sans-serif"
+     id="text9-9"
+     style="white-space:pre;inline-size:696.588"
+     transform="matrix(0.94119711,0,0,0.91694929,36.520292,285.75315)"
+     xml:space="preserve"><tspan
+       x="610"
+       y="244"
+       id="tspan9">90°</tspan></text>
+  <text
+     x="610"
+     y="244"
+     text-anchor="middle"
+     font-size="30px"
+     font-weight="600"
+     fill="#111827"
+     font-family="'Segoe UI', 'Hiragino Sans', 'Yu Gothic UI', sans-serif"
+     id="text9-9-2"
+     style="white-space:pre;inline-size:696.588"
+     transform="matrix(0.94119711,0,0,0.91694929,445.78337,283.50607)"
+     xml:space="preserve"><tspan
+       x="610"
+       y="244"
+       id="tspan10">120°</tspan></text>
   <rect
      x="832.15143"
      y="142.20311"
@@ -204,19 +234,19 @@
      xml:space="preserve"><tspan
        x="1018"
        y="270"
-       id="tspan21">広い FOV
+       id="tspan11">広い FOV
 </tspan><tspan
        x="1018"
        y="307.50001"
-       id="tspan22">120°
+       id="tspan12">120°
 </tspan><tspan
        x="1018"
        y="345.00001"
-       id="tspan23">広角
+       id="tspan13">広角
 </tspan><tspan
        x="1018"
        y="382.50001"
-       id="tspan24">写る範囲は広い</tspan></text>
+       id="tspan14">写る範囲は広い</tspan></text>
   <path
      d="M 157.35207,366.37523 262.60595,657.05001 367.85982,366.37523 Z"
      fill="none"
@@ -230,10 +260,10 @@
      stroke-width="4.55888"
      id="path14" />
   <path
-     d="m 834.62513,424.03203 186.40457,135.4226 186.4047,-135.4226 z"
+     d="M 846.68649,423.84335 1021.0297,535.36349 1195.3731,423.84335 Z"
      fill="none"
      stroke="#bc8752"
-     stroke-width="4.71894"
+     stroke-width="4.14142"
      id="path15" />
   <text
      x="262"
