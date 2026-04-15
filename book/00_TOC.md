@@ -526,7 +526,7 @@
   - 1.9 `Background`
   - 1.10 `Wireframe`
   - 1.11 `SmoothShader`
-  - 1.12 `FlatShader`
+  - 1.12 `SmoothShader` の `flat_shading`
   - 1.13 `Phong` / `NormPhong` / `BonePhong` / `BoneNormPhong`
   - 1.14 `BillboardShader`
 - 2. ジオメトリ / シーングラフ

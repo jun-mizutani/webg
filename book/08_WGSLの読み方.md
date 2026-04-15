@@ -1,6 +1,6 @@
 # WGSLの読み方
 
-この章は、`webg` のシェーダーを読むために必要な WGSL の基礎を、日本語で順に追いやすい形にまとめた章です。単に構文を列挙するのではなく、「CPU 側の setter で入れた値が、WGSL のどこへ届くのか」「サンプルを読むときに、どこから見始めるとよいのか」まで含めて整理します。`webg` の利用者が、すぐに WGSL を書き始める必要はありません。ただし、ノーマルマップがなぜ効くのか、フラットシェーディングで面単位の陰影がどう作られるのか、スキニングがどこで起きるのか、binding が増えたときに何をそろえるべきかを理解するには、WGSL の見方を避けて通れません。ここでは `book/examples/Phong.js`、`webg/FlatShader.js`、`book/examples/NormPhong.js`、`book/examples/BonePhong.js`、`book/examples/BoneNormPhong.js`、`webg/SmoothShader.js` を読む前提で説明します。`Phong` 系 4 本は webgのコア機能ではなく、比較のために `book/examples` に置かれた教材用ファイルです。`webg/SmoothShader.js` は `Phong` 系 の 4 本の機能をすべて含んでいます。
+この章は、`webg` のシェーダーを読むために必要な WGSL の基礎を、日本語で順に追いやすい形にまとめた章です。単に構文を列挙するのではなく、「CPU 側の setter で入れた値が、WGSL のどこへ届くのか」「サンプルを読むときに、どこから見始めるとよいのか」まで含めて整理します。`webg` の利用者が、すぐに WGSL を書き始める必要はありません。ただし、ノーマルマップがなぜ効くのか、フラットシェーディングで面単位の陰影がどう作られるのか、スキニングがどこで起きるのか、binding が増えたときに何をそろえるべきかを理解するには、WGSL の見方を避けて通れません。ここでは `book/examples/Phong.js`、`book/examples/NormPhong.js`、`book/examples/BonePhong.js`、`book/examples/BoneNormPhong.js`、`webg/SmoothShader.js` を読む前提で説明します。`Phong` 系 4 本は webgのコア機能ではなく、比較のために `book/examples` に置かれた教材用ファイルです。`webg/SmoothShader.js` は `Phong` 系 の 4 本の機能に加え、flat shading の切替も含んでいます。
 
 この章で最初に押さえたいのは、WGSL を「GPU に渡す文字列」としてではなく、CPU 側の実装と対になったものとして読むことです。たとえば `setAmbientLight(0.3)` と書いたとき、値は JavaScript の変数に入って終わりではありません。ユニフォームバッファの特定のオフセットへ書き込まれ、`queue.writeBuffer()` で GPU へ送られ、WGSL の `uniforms.params0.x` のようなフィールドから読まれます。WGSL を単体で眺めても全体は見えません。CPU 側の setter と対にして読むことが大切です。 
 
@@ -118,11 +118,11 @@ let baseColor = textureSample(uTexture, uSampler, input.uv);
 
 ## ノーマルマップとフラットシェーディングをどう読むか
 
-`NormPhong` と `BoneNormPhong` は接線ベクトル属性を必須にしていません。その代わり、フラグメントシェーダー内で `dpdx` / `dpdy` と UV の微分から接線ベクトル / 従法線ベクトルを再構成して TBN を組みます。同じ微分演算は、`FlatShader` で「いま描いている三角形の面法線そのもの」を作る用途にも使えます。 
+`NormPhong` と `BoneNormPhong` は接線ベクトル属性を必須にしていません。その代わり、フラグメントシェーダー内で `dpdx` / `dpdy` と UV の微分から接線ベクトル / 従法線ベクトルを再構成して TBN を組みます。同じ微分演算は、`SmoothShader` の `flat_shading` で「いま描いている三角形の面法線そのもの」を作る用途にも使えます。 
 
 `NormPhong` では、ノーマルマップを読む流れを次の順で追うと分かりやすくなります。まず `normal_texture` を読む行を見る。次に、サンプリングした法線を、どの範囲からどの範囲へ変換しているかを見る。そのあと TBN をどう組んでいるかを見る。最後に `normal_strength` でどこを補間しているかを見る。この順で追うと、ノーマルマップの見え方が強すぎる、弱すぎるといった調整がどこで起きるのかが分かります。 
 
-一方、`FlatShader` は `SmoothShader` と同じ bind group 構成、同じ texture / normal map / fog / skinning パラメータを持ちながら、法線の作り方だけを変えています。`SmoothShader` は頂点法線を頂点シェーダーからフラグメントシェーダーへ補間して使いますが、`FlatShader` はビュー空間位置 `vPosition` の微分から、現在のフラグメントが属する三角形の面法線を直接作ります。 
+一方、`SmoothShader` では `flat_shading` を有効にすると、同じ bind group 構成、同じ texture / normal map / fog / skinning パラメータを保ったまま、法線の作り方だけを切り替えられます。通常の `SmoothShader` は頂点法線を頂点シェーダーからフラグメントシェーダーへ補間して使いますが、`flat_shading` を有効にした経路では、ビュー空間位置 `vPosition` の微分から、現在のフラグメントが属する三角形の面法線を直接作ります。 
 
 ```wgsl
 let faceNormal = normalize(cross(dpdy(input.vPosition), dpdx(input.vPosition)));
@@ -130,7 +130,7 @@ let facing = select(-1.0, 1.0, input.frontFacing);
 let nnormal = faceNormal * facing;
 ```
 
-読み方の要点は単純です。`input.vPosition` は頂点シェーダーで `modelView * position` したビュー空間位置であること。`dpdx` と `dpdy` は、その位置が画面上でどちらへどれだけ変化しているかを表すこと。2 本の変化ベクトルの外積を取ると、その三角形の面法線が得られること。`frontFacing` を使って向きをそろえると、両面描画や `backface_debug` と並べても読みやすいことです。この方法では頂点法線を補間しないため、同じ mesh でも面ごとの陰影がはっきり出ます。WGSL を読むときは、「どの計算で最終法線 `nnormal` を作っているか」に注目すると、`SmoothShader`、`FlatShader`、`BoneNormPhong` の違いがかなり整理しやすくなります。 
+読み方の要点は単純です。`input.vPosition` は頂点シェーダーで `modelView * position` したビュー空間位置であること。`dpdx` と `dpdy` は、その位置が画面上でどちらへどれだけ変化しているかを表すこと。2 本の変化ベクトルの外積を取ると、その三角形の面法線が得られること。`frontFacing` を使って向きをそろえると、両面描画や `backface_debug` と並べても読みやすいことです。この方法では頂点法線を補間しないため、同じ mesh でも面ごとの陰影がはっきり出ます。WGSL を読むときは、「どの計算で最終法線 `nnormal` を作っているか」に注目すると、通常の `SmoothShader`、`flat_shading` を有効にした `SmoothShader`、`BoneNormPhong` の違いがかなり整理しやすくなります。 
 
 ## スキニングをどう読むか
 

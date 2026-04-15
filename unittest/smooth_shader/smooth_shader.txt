@@ -1,21 +1,22 @@
 サンプル: smooth_shader
 
 概要
-- `SmoothShader` 1 本で、static / skinned / normal map の 4 経路を同じ画面へ並べて確認する unittest です
-- 既存の smooth 系 4 経路をまとめるための新しい surface shader が、共通パラメータ入口で成立するかを最小構成で見ます
+- `SmoothShader` 1 本で、static / skinned / normal map / flat shading の 5 経路を同じ画面へ並べて確認する unittest です
+- 既存の smooth 系 5 経路をまとめるための新しい surface shader が、共通パラメータ入口で成立するかを最小構成で見ます
 
 このサンプルで使うwebg機能
-- `SmoothShader`: static / skinned / texture / normal map を 1 本で扱う統合 smooth shader
+- `SmoothShader`: static / skinned / texture / normal map / flat shading を 1 本で扱う統合 smooth shader
 - `Skeleton` / `Shape.addVertexWeight`: 2 ボーン prism の最小 skinning 設定
 - `Space.drawBones`: skinned 2 体の debugBone 表示
 - `UnitTestApp`: Screen 初期化、status / error 表示の共通化
 
 確認ポイント
-- 左上の static mesh が `has_bone = 0` でも通常描画され、崩れないことを確認します
+- 左上の共有頂点 sphere が `has_bone = 0` でも通常描画され、滑らかな陰影になることを確認します
+- 上中央の共有頂点 sphere で `flat_shading = 1` を有効にしたとき、同じ geometry / texture のまま面単位の陰影へ切り替わることを確認します
 - 右上の static mesh で normal map を ON にしたとき、陰影だけが増え、geometry 自体は変わらないことを確認します
 - 左下の skinned mesh で bone 変形が継続し、bone 表示と曲がる位置が一致することを確認します
 - 右下の skinned mesh で、bone 変形と normal map の両方が同時に効くことを確認します
-- shader 実装を触った変更後に、smooth 系統合 shader の 4 経路が同時に壊れていないかを素早く確認します
+- shader 実装を触った変更後に、smooth 系統合 shader の 5 経路が同時に壊れていないかを素早く確認します
 
 操作説明
 - キー入力: `Space` で pause / resume

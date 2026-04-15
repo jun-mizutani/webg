@@ -1,6 +1,6 @@
 // -------------------------------------------------
 // SkinningTestUtils.js
-//   SkinningTestUtils.js 2026/04/10
+//   SkinningTestUtils.js 2026/04/15
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // -------------------------------------------------
@@ -107,16 +107,16 @@ export const createTwoBoneSkinnedPrism = (gpu, options = {}) => {
 
   const j0 = skeleton.addBone(null, "j0");
   const j1 = skeleton.addBone(j0, "j1");
-  j0.setRestPosition(0.0, -10.0, 0.0);
-  j1.setRestPosition(0.0, 10.0, 0.0);
+  const radius = options.radius ?? 2.0;
+  const yMin = options.yMin ?? -10.0;
+  const yMax = options.yMax ?? 10.0;
+  j0.setRestPosition(0.0, yMin, 0.0);
+  j1.setRestPosition(0.0, yMax, 0.0);
   skeleton.bindRestPose();
   skeleton.setBoneOrder(["j0", "j1"]);
 
-  const radius = 2.0;
   const rings = 16;
   const segments = 24;
-  const yMin = -10.0;
-  const yMax = 10.0;
   const height = yMax - yMin;
   const flipU = options.flipU ?? false;
 

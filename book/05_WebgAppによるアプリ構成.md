@@ -188,7 +188,7 @@ app.start({
 
 ## コンストラクタと初期化後の主な使いどころ
 
-`WebgApp` を使い始めるとき、最初に意識するのはコンストラクタで渡すオプションです。`document` には通常のブラウザの `document` を渡します。`messageFontTexture` は canvas HUD を使うなら指定しておくほうが安全です。`clearColor` は背景色であり、サンプル全体の印象を決める最初の入口になります。`shaderClass` は既定では `SmoothShader` が使われ、static mesh と skinned mesh を同じ入口で扱いたい場合に追加指定なしで進められるようになっています。`FlatShader` や教材用の `Phong` / `NormPhong` に全体既定を切り替えたいときだけ指定します。`useMessage` は canvas HUD が不要なら `false` にできますが、最初は既定値のままで問題ありません。 
+`WebgApp` を使い始めるとき、最初に意識するのはコンストラクタで渡すオプションです。`document` には通常のブラウザの `document` を渡します。`messageFontTexture` は canvas HUD を使うなら指定しておくほうが安全です。`clearColor` は背景色であり、サンプル全体の印象を決める最初の入口になります。`shaderClass` は既定では `SmoothShader` が使われ、static mesh と skinned mesh を同じ入口で扱いたい場合に追加指定なしで進められるようになっています。面単位の陰影にしたいときも、まずは `SmoothShader` を使ったまま `flat_shading` を Shape ごとに切り替える考え方が自然です。教材用の `Phong` / `NormPhong` に全体既定を切り替えたいときだけ `shaderClass` を明示します。`useMessage` は canvas HUD が不要なら `false` にできますが、最初は既定値のままで問題ありません。 
 
 初期視点は `camera` で指定します。まずは `target` と `distance` を把握すれば十分です。ここで重要なのは、`WebgApp` の既定カメラが `follow` でも `orbit` でもないことです。`init()` では、`cameraRig -> cameraRod -> eye` という標準リグを 1 回作り、その位置と向きを `camera.target`、`camera.distance`、`camera.yaw`、`camera.pitch`、`camera.bank` で決めます。つまり、最初の状態は「固定された初期視点」であり、追従や周回視点が自動で始まるわけではありません。`follow` にしたいときは `followNode()` または `lockOn()` を明示的に使います。`orbit` にしたいときは、この章の後半に出てくる `EyeRig` の例のように `type: "orbit"` を与えて pointer 操作を接続します。最初の 1 画面を確実に見せたい段階では、この静的な既定視点のまま始めたほうが、カメラ制御由来の要因を減らしやすくなります。
 

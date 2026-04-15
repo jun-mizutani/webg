@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// SmoothShader.js 2026/04/12
+// SmoothShader.js 2026/04/15
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // ---------------------------------------------
@@ -65,6 +65,7 @@ export default class SmoothShader extends Shader {
       fog_far: 80.0,
       fog_density: 0.03,
       fog_mode: 0.0,
+      flat_shading: 0,
       backface_debug: options.backfaceDebug ? 1 : 0,
       backface_color: [1.0, 0.0, 1.0, 1.0]
     };
@@ -201,6 +202,13 @@ export default class SmoothShader extends Shader {
         let uEmit = u.params.w;
 
         var nnormal = normalize(input.vNormal);
+        if (u.debugFlags.y != 0.0) {
+          // flat_shading では、補間済み頂点法線ではなく
+          // 現在 fragment が属する三角形の面法線を微分から再構成する
+          // frontFacing に合わせて向きをそろえ、両面描画でも陰影を安定させる
+          let facing = select(-1.0, 1.0, input.frontFacing);
+          nnormal = normalize(cross(dpdy(input.vPosition), dpdx(input.vPosition))) * facing;
+        }
         if (u.flags.w != 0.0) {
           // 接線属性を持たない mesh でも normal map を使えるよう、
           // fragment 微分から TBN を再構成して接線空間法線を view 空間へ戻す
@@ -404,6 +412,7 @@ export default class SmoothShader extends Shader {
     this.setFogFar(this.default.fog_far);
     this.setFogDensity(this.default.fog_density);
     this.setFogMode(this.default.fog_mode);
+    this.setFlatShading(this.default.flat_shading);
     this.setBackfaceDebug(this.default.backface_debug);
     this.setBackfaceColor(this.default.backface_color);
   }
@@ -717,6 +726,13 @@ export default class SmoothShader extends Shader {
     this.setFogMode(flag ? fogMode : 0.0);
   }
 
+  // 面単位法線を使う flat shading を設定する
+  // 0 なら頂点法線を補間し、1 なら fragment 微分から面法線を再構成する
+  setFlatShading(flag) {
+    this.uniformData[this.OFF_DEBUG_FLAGS + 1] = flag ? 1.0 : 0.0;
+    this.updateUniforms();
+  }
+
   // 裏面色のデバッグ表示を設定する
   setBackfaceDebug(flag) {
     this.uniformData[this.OFF_DEBUG_FLAGS + 0] = flag ? 1.0 : 0.0;
@@ -782,6 +798,7 @@ export default class SmoothShader extends Shader {
     this.updateParam(param, "fog_density", this.setFogDensity);
     this.updateParam(param, "fog_mode", this.setFogMode);
     this.updateParam(param, "use_fog", this.setUseFog);
+    this.updateParam(param, "flat_shading", this.setFlatShading);
     this.updateParam(param, "backface_debug", this.setBackfaceDebug);
     this.updateParam(param, "backface_color", this.setBackfaceColor);
     this.updateTexture(param);
@@ -808,6 +825,7 @@ export default class SmoothShader extends Shader {
     else if (key === "fog_density") this.setFogDensity(value);
     else if (key === "fog_mode") this.setFogMode(value);
     else if (key === "use_fog") this.setFogMode(value ? 1.0 : 0.0);
+    else if (key === "flat_shading") this.setFlatShading(value);
     else if (key === "backface_debug") this.setBackfaceDebug(value);
     else if (key === "backface_color") this.setBackfaceColor(value);
   }

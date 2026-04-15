@@ -10,7 +10,7 @@
 - `Shape.setWireframe`: ワイヤーフレーム表示切替
 - `Texture`: `num256.png` の読み込み
 - `Texture.buildNormalMapFromProceduralHeight`: noise/dots 法線生成
-- `SmoothShader`: texture + normal map と wireframe 切替を同じ入口で扱う描画
+- `SmoothShader`: texture + normal map と wireframe を同じ入口で扱う描画。flat shading も同じ shader 側の機能として切り替えられる
 - `Message`: 3x3 配置の primitive 番号ラベルだけを重ねる
 
 確認ポイント

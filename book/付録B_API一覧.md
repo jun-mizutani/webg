@@ -194,7 +194,7 @@
 - `doParameter(param)`: shape 側 parameter をまとめて反映する
 
 ### `SmoothShader`
-`SmoothShader` は、現在の標準 3D 材質です。static mesh、skinned mesh、texture、normal map、fog を 1 本の入口で扱います。
+`SmoothShader` は、現在の標準 3D 材質です。static mesh、skinned mesh、texture、normal map、fog、flat shading を 1 本の入口で扱います。
 
 - `constructor(gpu, options = {})`: smooth shading 用の標準 shader を初期化する。`backfaceDebug`、`cullMode`、`frontFace`、depth 設定もここで受ける
 - `createResources()`: uniform buffer、bind group layout、pipeline など GPU 資源を作る
@@ -221,6 +221,7 @@
 - `setWeightDebug(flag)`: bone weight の RGB 可視化を切り替える
 - `useNormalMap(flag)`: normal map を使うかを切り替える
 - `setNormalStrength(value)`: normal map の効きの強さを設定する
+- `setFlatShading(flag)`: 補間頂点法線ではなく面法線を使う flat shading を切り替える
 - `setFogColor(color)`: fog 色を設定する
 - `setFogNear(value)`: linear fog の開始距離を設定する
 - `setFogFar(value)`: linear fog の終了距離を設定する
@@ -235,14 +236,8 @@
 - `doParameter(param)`: `shape.shaderParameter()` や `shape.setMaterial()` で渡した値をまとめて反映する
 - `setDefaultParam(param)`: 既定パラメータを差し替える
 
-### `FlatShader`
-`FlatShader` は `SmoothShader` と同じ API を持ち、最終法線だけを面法線へ切り替える材質です。
-
-- `constructor(gpu, options = {})`: `SmoothShader` を土台に初期化し、フラグメント側の法線生成を flat shading 用へ差し替える
-- `SmoothShader` の各メソッド: `setColor()`、`useTexture()`、`useNormalMap()`、`setHasBone()`、`setMatrixPalette()`、`setFog...()` などはそのまま同じ意味で使える
-
 ### `Phong` / `NormPhong` / `BonePhong` / `BoneNormPhong`
-これらは分割構成の旧来 shader 群です。現行の標準入口は `SmoothShader` / `FlatShader` ですが、個別実装を読むときや差分比較では引き続き参照します。
+これらは分割構成の旧来 shader 群です。現行の標準入口は `SmoothShader` ですが、個別実装を読むときや差分比較では引き続き参照します。
 
 - `Phong`: 標準のライティング shader。`setLightPosition()`、`useTexture()`、`setAmbientLight()`、`setSpecular()`、`setSpecularPower()`、`setColor()`、`setFogColor()`、`setFogNear()`、`setFogFar()`、`setFogDensity()`、`setFogMode()`、`setUseFog()`、`setProjectionMatrix()`、`setModelViewMatrix()`、`setNormalMatrix()`、`updateTexture()`、`doParameter()` を持つ
 - `NormPhong`: `Phong` に normal map を足した版。`useNormalMap()`、`setNormalStrength()`、`createDefaultNormalTexture()` で凹凸表現を追加する

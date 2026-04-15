@@ -1,19 +1,19 @@
 <!doctype html>
-<!-- book/examples/08_01.html 2026/04/10 -->
+<!-- book/examples/08_01.html 2026/04/15 -->
 <html lang="ja">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>08_01 FlatShader と SmoothShader の比較</title>
+  <title>08_01 SmoothShader の flat_shading 比較</title>
   <link rel="stylesheet" href="./example.css" />
 </head>
 <body>
   <div class="page">
     <h1>book/examples</h1>
-    <h2>08_01 FlatShader と SmoothShader の比較</h2>
+    <h2>08_01 SmoothShader の flat_shading 比較</h2>
     <div class="section-card">
-      <p>`book/08_WGSLの読み方.md` の `FlatShader` を、同じ low-poly sphere を `SmoothShader` と並べて見比べる実行例です</p>
-      <p class="note">左は `FlatShader` で面法線を `dpdy` / `dpdx` から再構成し、右は `SmoothShader` で頂点法線を補間します。同じ mesh でも法線の取り方だけで見え方が変わることを確認できます</p>
+      <p>`book/08_WGSLの読み方.md` の flat shading を、同じ low-poly sphere を `SmoothShader` 1 本の中で切り替えて見比べる実行例です</p>
+      <p class="note">左は `flat_shading = 1` にした `SmoothShader` で面法線を `dpdy` / `dpdx` から再構成し、右は既定の `SmoothShader` で頂点法線を補間します。同じ mesh でも法線の取り方だけで見え方が変わることを確認できます</p>
     </div>
 
     <div class="canvas-block">
@@ -25,7 +25,6 @@
     <script type="module" id="example-source">
 import WebgApp from "../../webg/WebgApp.js";
 import EyeRig from "../../webg/EyeRig.js";
-import FlatShader from "../../webg/FlatShader.js";
 import Primitive from "../../webg/Primitive.js";
 import Shape from "../../webg/Shape.js";
 
@@ -67,20 +66,16 @@ const orbit = new EyeRig(app.cameraRig, app.cameraRod, app.eye, {
 });
 orbit.attachPointer();
 
-const flatShader = new FlatShader(app.getGL());
-await flatShader.init();
-flatShader.setLightPosition(LIGHT);
-flatShader.setProjectionMatrix(app.projectionMatrix);
-
 const sphereAsset = Primitive.sphere(1.8, 8, 12);
 
-const makeSphere = (shader, materialId) => {
+const makeSphere = (flatShading = 0) => {
   const shape = new Shape(app.getGL());
   shape.applyPrimitiveAsset(sphereAsset);
   shape.endShape();
-  shape.setShader(shader);
-  shape.setMaterial(materialId, {
-    ...(materialId === "smooth-shader" ? { has_bone: 0 } : {}),
+  shape.setShader(app.shader);
+  shape.setMaterial("smooth-shader", {
+    has_bone: 0,
+    flat_shading: flatShading,
     use_texture: 0,
     color: [0.28, 0.72, 0.98, 1.0],
     ambient: 0.24,
@@ -110,18 +105,18 @@ floor.addShape(floorShape);
 
 const flatNode = app.space.addNode(null, "flatSphere");
 flatNode.setPosition(-3.2, 1.8, 0.0);
-flatNode.addShape(makeSphere(flatShader, "flat-shader"));
+flatNode.addShape(makeSphere(1));
 
 const smoothNode = app.space.addNode(null, "smoothSphere");
 smoothNode.setPosition(3.2, 1.8, 0.0);
-smoothNode.addShape(makeSphere(app.shader, "smooth-shader"));
+smoothNode.addShape(makeSphere(0));
 
 app.createHelpPanel({
   id: "example0801Help",
   lines: [
     "Drag: orbit camera",
-    "left: FlatShader",
-    "right: SmoothShader"
+    "left: SmoothShader flat_shading=1",
+    "right: SmoothShader flat_shading=0"
   ]
 });
 
@@ -135,8 +130,8 @@ app.start({
     smoothNode.rotateY(0.5);
 
     app.setStatusLines([
-      "left = FlatShader",
-      "right = SmoothShader",
+      "left = SmoothShader flat_shading=1",
+      "right = SmoothShader flat_shading=0",
       `time=${elapsedSec.toFixed(1)} sec`
     ], {
       anchor: "top-left",
