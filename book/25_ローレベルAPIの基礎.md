@@ -4,7 +4,7 @@
 
 ここで最初に押さえたいのは、`webg` のローレベル API は、生の WebGPU をそのまま露出する層ではなく、「3D アプリを組む単位」へ少し引き上げた中間層だということです。ブラウザで 3D を描くとき、本来は canvas と GPU デバイス、レンダーパイプライン、uniform buffer、頂点バッファ、インデックスバッファ、カメラ行列、モデル変換を自分でつなぐ必要があります。`webg` では、これらをそのまま 1 枚の API へ押し込めず、役割ごとにいくつかのクラスへ分けています。 
 
-その分け方を先に言うと、`Screen` と `Shader` は GPU に近い入口です。canvas / device / pipeline / uniform の初期化は、この 2 つに集まっています。一方で `CoordinateSystem` と `Node` はシーン上の姿勢と配置の基礎で、位置、回転、親子関係、`Shape` を置く単位という役割をここで切り分けます。さらに `Matrix` と `Quat` は、その上の層が前提にしている変換計算の土台です。projection、行列積、クォータニオン補間など、他の層はこれらを前提に動いています。つまりこの章では、「GPU 側の入口」「シーン変換の基礎」「数理の土台」という 3 層構造として読むと整理しやすくなります。 
+その分け方を先に言うと、`Screen` と `Shader` は GPU に近い入口です。canvas / device / pipeline / uniform の初期化は、この 2 つに集まっています。一方で `CoordinateSystem` と `Node` はシーン上の姿勢と配置の基礎で、位置、回転、親子関係、`Shape` を置く単位という役割をここで切り分けます。さらに `Matrix` と `Quat` は、その上の層が土台にしている変換計算の基盤です。projection、行列積、クォータニオン補間など、他の層はこれらを土台に動いています。つまりこの章では、「GPU 側の入口」「シーン変換の基礎」「数理の土台」という 3 層構造として読むと整理しやすくなります。 
 
 ## `webg` のローレベル層をどう捉えるか
 
@@ -41,7 +41,7 @@ const gpu = screen.getGL();
 console.log(gpu.device, gpu.context);
 ```
 
-この例で見るべきなのは、`await screen.ready` を待つまでは、WebGPU デバイスと context が使える前提に立たないことです。ローレベルコードで最初につまずきやすいのは、device 準備前に shader や buffer を作ろうとする点なので、`Screen` はまず非同期初期化を持つクラスだと覚えておくほうが安全です。 
+この例で見るべきなのは、`await screen.ready` を待つまでは、WebGPU デバイスと context を使える状態として扱わないことです。ローレベルコードで最初につまずきやすいのは、device 準備前に shader や buffer を作ろうとする点なので、`Screen` はまず非同期初期化を持つクラスだと覚えておくほうが安全です。 
 
 また、`resize()` は単なる canvas サイズ変更ではありません。内部では depth texture の再構築も行うため、画面サイズを変えたあとは projection 行列も更新する、という一連の流れで考えるほうが自然です。つまり、`Screen` の resize は見た目だけでなく描画条件の更新と一緒に扱う必要があります。 
 
@@ -117,7 +117,7 @@ console.log(cs.getWorldPosition());
 console.log(cs.getWorldAttitude());
 ```
 
-ここでとくに重要なのは、回転順が `head / pitch / bank = Y / X / Z` だという点です。これは後の `Matrix` や `Quat` の節でも一貫して前提になります。つまり、`CoordinateSystem` を読むときは位置 API だけでなく、この回転順の前提も一緒に押さえるほうが安全です。 
+ここでとくに重要なのは、回転順が `head / pitch / bank = Y / X / Z` だという点です。これは後の `Matrix` や `Quat` の節でも一貫した共通規約になります。つまり、`CoordinateSystem` を読むときは位置 API だけでなく、この回転順の約束も一緒に押さえるほうが安全です。 
 
 ## `Node`
 
@@ -148,7 +148,7 @@ box.addShape(shape);
 
 ## `Matrix`
 
-3D では、回転、移動、projection 行列、ビュー変換をすべて行列で扱います。`webg` の `Matrix` は列優先の 4×4 行列です。`CoordinateSystem`、`Node`、`Shader`、`Space` は内部で `Matrix` を使っています。つまり、ローレベル層の上にあるほとんどの変換は最終的にここへ集まります。だから `Matrix` は単独の数学クラスというより、他の層が前提にしている変換土台として読むほうが自然です。 
+3D では、回転、移動、projection 行列、ビュー変換をすべて行列で扱います。`webg` の `Matrix` は列優先の 4×4 行列です。`CoordinateSystem`、`Node`、`Shader`、`Space` は内部で `Matrix` を使っています。つまり、ローレベル層の上にあるほとんどの変換は最終的にここへ集まります。だから `Matrix` は単独の数学クラスというより、他の層が土台にしている変換基盤として読むほうが自然です。 
 
 `Matrix` がしてくれることは、4×4 行列を持つこと、オイラー角やクォータニオンから回転行列を作ること、平行移動を入れること、projection 行列を作ること、ビュー行列を作ること、ベクトルへ掛けることです。ここで重要なのは、`Matrix` が projection と local/world 変換の両方に使われることです。つまり、「カメラ用の特別な行列」と「オブジェクト用の変換行列」が別クラスになっているわけではなく、同じ `Matrix` が用途に応じて使われています。これが `Shader` 節や `CoordinateSystem` 節との接点になります。 
 
@@ -307,6 +307,6 @@ loop();
 
 ## よくある注意点
 
-ローレベル API を触り始めたときに最も外しやすい前提は、`await screen.ready` を忘れないこと、`await shader.init()` を忘れないこと、`shape.endShape()` を忘れないこと、`Shape` だけでは表示されないこと、`Node` を作っても `Space.draw(eye)` しなければ見えないこと、`Matrix` は列優先で `Quat` は `[w, x, y, z]` だということ、回転順は `head / pitch / bank = Y / X / Z` だということ、この 7 点です。とくに非同期初期化、`Shape` と `Node` の役割差、回転順と quaternion の並び順は混同しやすいので、最初に固定して覚えるほうが安全です。 
+ローレベル API を触り始めたときに最も外しやすい要点は、`await screen.ready` を忘れないこと、`await shader.init()` を忘れないこと、`shape.endShape()` を忘れないこと、`Shape` だけでは表示されないこと、`Node` を作っても `Space.draw(eye)` しなければ見えないこと、`Matrix` は列優先で `Quat` は `[w, x, y, z]` だということ、回転順は `head / pitch / bank = Y / X / Z` だということ、この 7 点です。とくに非同期初期化、`Shape` と `Node` の役割差、回転順と quaternion の並び順は混同しやすいので、最初に固定して覚えるほうが安全です。 
 
 この章の次に読むものとしては、もっとも自然なのは `Shape` の章です。この章で `Screen`、`Shader`、`CoordinateSystem`、`Node`、`Matrix`、`Quat` の骨格を押さえておくと、次章で geometry と material の話へ進んだときに、「いま shape だけを読めばよい」という状態を作りやすくなります。つまり、この第25章はローレベル API 全体の地図を先に固める章として位置づけると整理しやすくなります。 
