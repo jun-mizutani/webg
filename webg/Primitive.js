@@ -1,5 +1,5 @@
 // ---------------------------------------------
-//  Primitive.js     2026/03/14
+//  Primitive.js     2026/04/16
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // ---------------------------------------------
@@ -20,6 +20,7 @@ class GeometryWriter {
     this.positions = [];
     this.uvs = [];
     this.indices = [];
+    this.polygonLoops = [];
     this.altVertices = [];
   }
 
@@ -129,11 +130,23 @@ class GeometryWriter {
     this.altVertices.push(source, duplicate);
   }
 
-  // 多角形を扇形に三角形化して追加する
-  addPlane(indices) {
+  // 多角形を追加する
+  // geometry 本体は triangle list 用に扇形分解するが、
+  // wireframe 側で元の辺ループを復元できるよう polygonLoops へも保持する
+  addPolygon(indices) {
+    if (!Array.isArray(indices) || indices.length < 3) {
+      return;
+    }
+    this.polygonLoops.push([...indices]);
     for (let i = 0; i < indices.length - 2; i++) {
       this.addTriangle(indices[0], indices[i + 1], indices[i + 2]);
     }
+  }
+
+  // 既存の addPlane() 呼び出しはそのまま受けつつ、
+  // 内部では addPolygon() を使って辺ループも残す
+  addPlane(indices) {
+    this.addPolygon(indices);
   }
 
   // ModelAsset geometry に変換する
@@ -144,6 +157,7 @@ class GeometryWriter {
       positions: this.positions,
       uvs: this.uvs,
       indices: this.indices,
+      polygonLoops: this.polygonLoops,
       altVertices: this.altVertices
     };
   }

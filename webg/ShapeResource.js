@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// ShapeResource.js  2026/04/15
+// ShapeResource.js  2026/04/16
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // ---------------------------------------------
@@ -24,6 +24,7 @@ export default class ShapeResource {
     this.positionArray = [];
     this.normalArray = [];
     this.indicesArray = [];
+    this.polygonLoops = [];
     this.texCoordsArray = [];
     this.altVertices = [];
     this.vertexStride = 8 * Float32Array.BYTES_PER_ELEMENT;

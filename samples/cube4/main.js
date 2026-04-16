@@ -85,13 +85,14 @@ const LAYER_CLEAR_COUNT = Math.ceil(LAYER_CELL_COUNT * LAYER_CLEAR_RATIO);
 let app = null;
 let orbit = null;
 let audio = null;
+const blockShapeSources = new Map();
 
 const cloneCells = (cells) => cells.map((cell) => [...cell]);
 const colorKey = (color) => color.map((value) => value.toFixed(3)).join(",");
 const materialKey = (material = {}) => JSON.stringify({
   ambient: material.ambient ?? 0.22,
-  specular: material.specular ?? 0.88,
-  power: material.power ?? 54.0,
+  specular: material.specular ?? 1.08,
+  power: material.power ?? 30.0,
   emissive: material.emissive ?? 0.0,
   flat_shading: material.flat_shading ?? 0
 });
@@ -125,8 +126,8 @@ const setShapeColor = (shape, color, material = {}) => {
     use_texture: 0,
     color: [...color],
     ambient: material.ambient ?? 0.22,
-    specular: material.specular ?? 0.88,
-    power: material.power ?? 54.0,
+    specular: material.specular ?? 1.08,
+    power: material.power ?? 30.0,
     emissive: material.emissive ?? 0.0,
     flat_shading: material.flat_shading ?? 0
   });
@@ -145,10 +146,14 @@ const createBeveledBoxShape = (gpu, width, height, depth, bevel, color, material
   const hx = width * 0.5;
   const hy = height * 0.5;
   const hz = depth * 0.5;
-  const b = Math.max(0.01, Math.min(bevel, Math.min(hx, hy, hz) * 0.45));
+  const b = Math.max(0.01, Math.min(bevel * 0.3, Math.min(hx, hy, hz) * 0.45));
   const ix = hx - b;
   const iy = hy - b;
   const iz = hz - b;
+  const panelLift = Math.max(0.01, Math.min(b * 0.3, Math.min(ix, iy, iz) * 0.18));
+  const jx = Math.max(0.01, ix - b * 2.0);
+  const jy = Math.max(0.01, iy - b * 2.0);
+  const jz = Math.max(0.01, iz - b * 2.0);
 
   const addFace = (pts) => {
     const n = pts.length;
@@ -175,12 +180,40 @@ const createBeveledBoxShape = (gpu, width, height, depth, bevel, color, material
     shape.addPlane(indices);
   };
 
-  addFace([[-ix, -iy, hz], [ix, -iy, hz], [ix, iy, hz], [-ix, iy, hz]]);
-  addFace([[-ix, -iy, -hz], [-ix, iy, -hz], [ix, iy, -hz], [ix, -iy, -hz]]);
-  addFace([[hx, -iy, -iz], [hx, iy, -iz], [hx, iy, iz], [hx, -iy, iz]]);
-  addFace([[-hx, -iy, -iz], [-hx, -iy, iz], [-hx, iy, iz], [-hx, iy, -iz]]);
-  addFace([[-ix, hy, -iz], [-ix, hy, iz], [ix, hy, iz], [ix, hy, -iz]]);
-  addFace([[-ix, -hy, -iz], [ix, -hy, -iz], [ix, -hy, iz], [-ix, -hy, iz]]);
+  const addRaisedPanel = (outerPts, innerPts) => {
+    // 外周面に対して中央を少し持ち上げ、段差付きの面を作る
+    // これにより既存の外周ベベルを残したまま、中央面にふくらみを追加する
+    addFace(innerPts);
+    for (let i = 0; i < outerPts.length; i++) {
+      const next = (i + 1) % outerPts.length;
+      addFace([outerPts[i], outerPts[next], innerPts[next], innerPts[i]]);
+    }
+  };
+
+  addRaisedPanel(
+    [[-ix, -iy, hz], [ix, -iy, hz], [ix, iy, hz], [-ix, iy, hz]],
+    [[-jx, -jy, hz + panelLift], [jx, -jy, hz + panelLift], [jx, jy, hz + panelLift], [-jx, jy, hz + panelLift]]
+  );
+  addRaisedPanel(
+    [[-ix, -iy, -hz], [-ix, iy, -hz], [ix, iy, -hz], [ix, -iy, -hz]],
+    [[-jx, -jy, -hz - panelLift], [-jx, jy, -hz - panelLift], [jx, jy, -hz - panelLift], [jx, -jy, -hz - panelLift]]
+  );
+  addRaisedPanel(
+    [[hx, -iy, -iz], [hx, iy, -iz], [hx, iy, iz], [hx, -iy, iz]],
+    [[hx + panelLift, -jy, -jz], [hx + panelLift, jy, -jz], [hx + panelLift, jy, jz], [hx + panelLift, -jy, jz]]
+  );
+  addRaisedPanel(
+    [[-hx, -iy, -iz], [-hx, -iy, iz], [-hx, iy, iz], [-hx, iy, -iz]],
+    [[-hx - panelLift, -jy, -jz], [-hx - panelLift, -jy, jz], [-hx - panelLift, jy, jz], [-hx - panelLift, jy, -jz]]
+  );
+  addRaisedPanel(
+    [[-ix, hy, -iz], [-ix, hy, iz], [ix, hy, iz], [ix, hy, -iz]],
+    [[-jx, hy + panelLift, -jz], [-jx, hy + panelLift, jz], [jx, hy + panelLift, jz], [jx, hy + panelLift, -jz]]
+  );
+  addRaisedPanel(
+    [[-ix, -hy, -iz], [ix, -hy, -iz], [ix, -hy, iz], [-ix, -hy, iz]],
+    [[-jx, -hy - panelLift, -jz], [jx, -hy - panelLift, -jz], [jx, -hy - panelLift, jz], [-jx, -hy - panelLift, jz]]
+  );
 
   addFace([[-ix, iy, hz], [ix, iy, hz], [ix, hy, iz], [-ix, hy, iz]]);
   addFace([[-ix, -hy, iz], [ix, -hy, iz], [ix, -iy, hz], [-ix, -iy, hz]]);
@@ -210,9 +243,156 @@ const createBeveledBoxShape = (gpu, width, height, depth, bevel, color, material
   shape.endShape();
   setShapeColor(shape, color, {
     ...material,
-    flat_shading: material.flat_shading ?? 1
+    flat_shading: material.flat_shading ?? 0
   });
   return shape;
+};
+
+const createSharedBeveledBoxShape = (gpu, width, height, depth, bevel, color, material = {}) => {
+  const shape = new Shape(gpu);
+  const hx = width * 0.5;
+  const hy = height * 0.5;
+  const hz = depth * 0.5;
+  const b = Math.max(0.01, Math.min(bevel * 0.3, Math.min(hx, hy, hz) * 0.45));
+  const ix = hx - b;
+  const iy = hy - b;
+  const iz = hz - b;
+  const panelLift = Math.max(0.01, Math.min(b * 0.3, Math.min(ix, iy, iz) * 0.18));
+  const jx = Math.max(0.01, ix - b * 2.0);
+  const jy = Math.max(0.01, iy - b * 2.0);
+  const jz = Math.max(0.01, iz - b * 2.0);
+
+  // 同じ位置の頂点を 1 度だけ登録し、以後は同じ index を再利用する
+  // これにより面をまたいで本当に shared vertex を使う形状を試せる
+  const vertexMap = new Map();
+  const addSharedVertex = (x, y, z) => {
+    const key = `${x.toFixed(6)},${y.toFixed(6)},${z.toFixed(6)}`;
+    const existing = vertexMap.get(key);
+    if (existing !== undefined) return existing;
+    const index = shape.addVertex(x, y, z) - 1;
+    vertexMap.set(key, index);
+    return index;
+  };
+
+  const addFace = (pts) => {
+    const n = pts.length;
+    const cx = pts.reduce((sum, p) => sum + p[0], 0) / n;
+    const cy = pts.reduce((sum, p) => sum + p[1], 0) / n;
+    const cz = pts.reduce((sum, p) => sum + p[2], 0) / n;
+    const [p0, p1, p2] = pts;
+    const ux = p1[0] - p0[0];
+    const uy = p1[1] - p0[1];
+    const uz = p1[2] - p0[2];
+    const vx = p2[0] - p0[0];
+    const vy = p2[1] - p0[1];
+    const vz = p2[2] - p0[2];
+    const nx = uy * vz - uz * vy;
+    const ny = uz * vx - ux * vz;
+    const nz = ux * vy - uy * vx;
+    const outward = nx * cx + ny * cy + nz * cz;
+    const ordered = outward >= 0.0 ? pts : [...pts].reverse();
+    const indices = [];
+    for (let i = 0; i < ordered.length; i++) {
+      const p = ordered[i];
+      indices.push(addSharedVertex(p[0], p[1], p[2]));
+    }
+    shape.addPlane(indices);
+  };
+
+  const addRaisedPanel = (outerPts, innerPts) => {
+    // 既存版と同じ段構成を保ったまま、頂点 index だけを共有化する
+    // 共有頂点化の有無による法線処理の違いを比較しやすくするため、この面構成自体は変えない
+    addFace(innerPts);
+    for (let i = 0; i < outerPts.length; i++) {
+      const next = (i + 1) % outerPts.length;
+      addFace([outerPts[i], outerPts[next], innerPts[next], innerPts[i]]);
+    }
+  };
+
+  addRaisedPanel(
+    [[-ix, -iy, hz], [ix, -iy, hz], [ix, iy, hz], [-ix, iy, hz]],
+    [[-jx, -jy, hz + panelLift], [jx, -jy, hz + panelLift], [jx, jy, hz + panelLift], [-jx, jy, hz + panelLift]]
+  );
+  addRaisedPanel(
+    [[-ix, -iy, -hz], [-ix, iy, -hz], [ix, iy, -hz], [ix, -iy, -hz]],
+    [[-jx, -jy, -hz - panelLift], [-jx, jy, -hz - panelLift], [jx, jy, -hz - panelLift], [jx, -jy, -hz - panelLift]]
+  );
+  addRaisedPanel(
+    [[hx, -iy, -iz], [hx, iy, -iz], [hx, iy, iz], [hx, -iy, iz]],
+    [[hx + panelLift, -jy, -jz], [hx + panelLift, jy, -jz], [hx + panelLift, jy, jz], [hx + panelLift, -jy, jz]]
+  );
+  addRaisedPanel(
+    [[-hx, -iy, -iz], [-hx, -iy, iz], [-hx, iy, iz], [-hx, iy, -iz]],
+    [[-hx - panelLift, -jy, -jz], [-hx - panelLift, -jy, jz], [-hx - panelLift, jy, jz], [-hx - panelLift, jy, -jz]]
+  );
+  addRaisedPanel(
+    [[-ix, hy, -iz], [-ix, hy, iz], [ix, hy, iz], [ix, hy, -iz]],
+    [[-jx, hy + panelLift, -jz], [-jx, hy + panelLift, jz], [jx, hy + panelLift, jz], [jx, hy + panelLift, -jz]]
+  );
+  addRaisedPanel(
+    [[-ix, -hy, -iz], [ix, -hy, -iz], [ix, -hy, iz], [-ix, -hy, iz]],
+    [[-jx, -hy - panelLift, -jz], [jx, -hy - panelLift, -jz], [jx, -hy - panelLift, jz], [-jx, -hy - panelLift, jz]]
+  );
+
+  addFace([[-ix, iy, hz], [ix, iy, hz], [ix, hy, iz], [-ix, hy, iz]]);
+  addFace([[-ix, -hy, iz], [ix, -hy, iz], [ix, -iy, hz], [-ix, -iy, hz]]);
+  addFace([[-ix, hy, -iz], [ix, hy, -iz], [ix, iy, -hz], [-ix, iy, -hz]]);
+  addFace([[-ix, -iy, -hz], [ix, -iy, -hz], [ix, -hy, -iz], [-ix, -hy, -iz]]);
+
+  addFace([[ix, -iy, hz], [ix, iy, hz], [hx, iy, iz], [hx, -iy, iz]]);
+  addFace([[-hx, -iy, iz], [-hx, iy, iz], [-ix, iy, hz], [-ix, -iy, hz]]);
+  addFace([[-ix, -iy, -hz], [-ix, iy, -hz], [-hx, iy, -iz], [-hx, -iy, -iz]]);
+  addFace([[hx, -iy, -iz], [hx, iy, -iz], [ix, iy, -hz], [ix, -iy, -hz]]);
+
+  addFace([[ix, hy, -iz], [ix, hy, iz], [hx, iy, iz], [hx, iy, -iz]]);
+  addFace([[-hx, iy, -iz], [-hx, iy, iz], [-ix, hy, iz], [-ix, hy, -iz]]);
+  addFace([[-ix, -hy, -iz], [-ix, -hy, iz], [-hx, -iy, iz], [-hx, -iy, -iz]]);
+  addFace([[hx, -iy, -iz], [hx, -iy, iz], [ix, -hy, iz], [ix, -hy, -iz]]);
+
+  addFace([[ix, iy, hz], [hx, iy, iz], [ix, hy, iz]]);
+  addFace([[-ix, iy, hz], [-ix, hy, iz], [-hx, iy, iz]]);
+  addFace([[ix, -iy, hz], [ix, -hy, iz], [hx, -iy, iz]]);
+  addFace([[-ix, -iy, hz], [-hx, -iy, iz], [-ix, -hy, iz]]);
+
+  addFace([[ix, iy, -hz], [ix, hy, -iz], [hx, iy, -iz]]);
+  addFace([[-ix, iy, -hz], [-hx, iy, -iz], [-ix, hy, -iz]]);
+  addFace([[ix, -iy, -hz], [hx, -iy, -iz], [ix, -hy, -iz]]);
+  addFace([[-ix, -iy, -hz], [-ix, -hy, -iz], [-hx, -iy, -iz]]);
+
+  shape.endShape();
+  setShapeColor(shape, color, {
+    ...material,
+    flat_shading: material.flat_shading ?? 0
+  });
+  return shape;
+};
+
+const getSharedBlockShapeSource = (gpu, options = {}) => {
+  const size = options.size ?? BOARD.cell * 0.90;
+  const bevel = options.bevel ?? BOARD.cell * 0.12;
+  const shapeKey = `${size.toFixed(4)}:${bevel.toFixed(4)}`;
+  const cached = blockShapeSources.get(shapeKey);
+  if (cached) return cached;
+
+  // block slot は色と材質だけを頻繁に切り替える一方、形状そのものはサイズごとに共通である
+  // そのため geometry は source shape を 1 回だけ作り、各 slot では instance を使って再利用する
+  const sourceShape = createSharedBeveledBoxShape(
+    gpu,
+    size,
+    size,
+    size,
+    bevel,
+    [1.0, 1.0, 1.0, 1.0],
+    {
+      ambient: 0.22,
+      specular: 1.08,
+      power: 30.0,
+      emissive: 0.0,
+      flat_shading: 0
+    }
+  );
+  blockShapeSources.set(shapeKey, sourceShape);
+  return sourceShape;
 };
 
 const createCuboidShape = (gpu, width, height, depth, color, material = {}) => {
@@ -223,20 +403,22 @@ const createCuboidShape = (gpu, width, height, depth, color, material = {}) => {
   return shape;
 };
 
+const createWireframeLayerWallShape = (gpu, width, height, depth, color, material = {}) => {
+  const shape = createCuboidShape(gpu, width, height, depth, color, material);
+  shape.setWireframe(true);
+  return shape;
+};
+
 const createSlot = (space, name, gpu, options = {}, parentNode = null) => {
   const node = space.addNode(parentNode, name);
-  const shape = createBeveledBoxShape(
-    gpu,
-    options.size ?? BOARD.cell * 0.90,
-    options.size ?? BOARD.cell * 0.90,
-    options.size ?? BOARD.cell * 0.90,
-    options.bevel ?? BOARD.cell * 0.12,
-    options.color ?? [0.9, 0.9, 0.9, 1.0],
-    {
-      emissive: 0.5,
-      ...(options.material ?? {})
-    }
-  );
+  // 現行の非共有頂点版は createBeveledBoxShape() として残してある
+  // block 表示側では shared vertex 版 source を 1 回だけ作り、各 slot へ instance を配る
+  const sourceShape = getSharedBlockShapeSource(gpu, options);
+  const shape = sourceShape.createInstance();
+  setShapeColor(shape, options.color ?? [0.9, 0.9, 0.9, 1.0], {
+    emissive: 0.5,
+    ...(options.material ?? {})
+  });
   node.addShape(shape);
   node.hide(true);
   return {
@@ -412,8 +594,8 @@ const createDemoGallery = (space, gpu) => {
         color: def.color,
         material: {
           ambient: 0.22,
-          specular: 0.92,
-          power: 68.0,
+          specular: 1.18,
+          power: 34.0,
           emissive: 0.0
         }
       }, root)
@@ -440,10 +622,10 @@ const createDemoGallery = (space, gpu) => {
         def.color,
         {
           ambient: 0.22,
-          specular: 0.92,
-          power: 68.0,
+          specular: 1.18,
+          power: 34.0,
           emissive: 0.0,
-          flat_shading: 1
+          flat_shading: 0
         },
         1.0
       );
@@ -514,8 +696,8 @@ const makeRuntime = (space, gpu) => {
           size: BOARD.cell * 0.86,
           material: {
             ambient: 0.24,
-            specular: 0.82,
-            power: 48.0
+            specular: 1.02,
+            power: 28.0
           }
         }));
       }
@@ -529,8 +711,8 @@ const makeRuntime = (space, gpu) => {
       size: BOARD.cell * 0.90,
       material: {
         ambient: 0.20,
-        specular: 1.08,
-        power: 76.0,
+        specular: 1.28,
+        power: 36.0,
         emissive: 0.5
       }
     })
@@ -542,8 +724,8 @@ const makeRuntime = (space, gpu) => {
       color: [0.35, 0.44, 0.58, 1.0],
       material: {
         ambient: 0.64,
-        specular: 0.16,
-        power: 14.0
+        specular: 0.28,
+        power: 8.0
       }
     })
   );
@@ -553,8 +735,8 @@ const makeRuntime = (space, gpu) => {
       size: BOARD.cell * 0.68,
       material: {
         ambient: 0.24,
-        specular: 0.96,
-        power: 52.0
+        specular: 1.16,
+        power: 30.0
       }
     })
   );
@@ -812,12 +994,12 @@ const renderBoard = (runtime) => {
           true,
           worldFromGrid(x, y, z),
           cellColor,
-          {
-            ambient: 0.26,
-            specular: 0.78,
-            power: 48.0,
-            flat_shading: 1
-          }
+        {
+          ambient: 0.26,
+          specular: 1.00,
+          power: 28.0,
+          flat_shading: 0
+        }
         );
       }
     }
@@ -838,10 +1020,10 @@ const renderBoard = (runtime) => {
         runtime.active.color,
         {
           ambient: 0.18,
-          specular: 1.10,
-          power: 82.0,
+          specular: 1.32,
+          power: 38.0,
           emissive: 0.8,
-          flat_shading: 1
+          flat_shading: 0
         }
       );
     }
@@ -855,9 +1037,9 @@ const renderBoard = (runtime) => {
         [0.32, 0.40, 0.54, 1.0],
         {
           ambient: 0.66,
-          specular: 0.12,
-          power: 12.0,
-          flat_shading: 1
+          specular: 0.22,
+          power: 8.0,
+          flat_shading: 0
         }
       );
     }
@@ -882,9 +1064,9 @@ const renderBoard = (runtime) => {
         runtime.next.color,
         {
           ambient: 0.22,
-          specular: 0.94,
-          power: 54.0,
-          flat_shading: 1
+          specular: 1.14,
+          power: 30.0,
+          flat_shading: 0
         }
       );
     }
@@ -919,6 +1101,8 @@ const createDecor = (space, gpu) => {
   const boardWidth = BOARD.width * BOARD.cell;
   const boardDepth = BOARD.depth * BOARD.cell;
   const boardHeight = BOARD.height * BOARD.cell;
+  const wallWidth = boardWidth + BOARD.cell * 0.10;
+  const wallDepth = boardDepth + BOARD.cell * 0.10;
 
   const floorNode = space.addNode(null, "floor");
   floorNode.setPosition(center[0], BASE_Y - BOARD.cell * 0.9, center[2]);
@@ -949,6 +1133,28 @@ const createDecor = (space, gpu) => {
       power: 6.0
     }
   ));
+
+  const wallRoot = space.addNode(null, "layer_walls");
+  const wallShape = createWireframeLayerWallShape(
+    gpu,
+    wallWidth,
+    BOARD.cell,
+    wallDepth,
+    [0.40, 0.76, 0.98, 1.0],
+    {
+      ambient: 0.18,
+      specular: 0.12,
+      power: 8.0,
+      emissive: 0.08
+    }
+  );
+  for (let y = 0; y < BOARD.height; y++) {
+    // 各層を 1 セルぶんの高さで囲む
+    // ワイヤーフレーム表示にすることで、厚みを持たせずに層境界だけを見せる
+    const layerWallNode = space.addNode(wallRoot, `layer_wall_${y}`);
+    layerWallNode.setPosition(center[0], BASE_Y + y * BOARD.cell, center[2]);
+    layerWallNode.addShape(wallShape);
+  }
 
   const beaconShape = createCubeShape(gpu, [0.96, 0.42, 0.24, 1.0], BOARD.cell * 0.26, {
     ambient: 0.30,

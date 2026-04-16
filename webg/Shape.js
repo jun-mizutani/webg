@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// Shape.js        2026/04/10
+// Shape.js        2026/04/16
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // ---------------------------------------------
@@ -25,6 +25,7 @@ const SHARED_RESOURCE_FIELDS = [
   "positionArray",
   "normalArray",
   "indicesArray",
+  "polygonLoops",
   "texCoordsArray",
   "altVertices",
   "vertexStride",
@@ -616,13 +617,26 @@ export default class Shape {
         edgeMap.set(key, [i0, i1]);
       }
     };
-    for (let i = 0; i + 2 < this.indicesArray.length; i += 3) {
-      const a = this.indicesArray[i];
-      const b = this.indicesArray[i + 1];
-      const c = this.indicesArray[i + 2];
-      pushEdge(a, b);
-      pushEdge(b, c);
-      pushEdge(c, a);
+    if (Array.isArray(this.polygonLoops) && this.polygonLoops.length > 0) {
+      for (let i = 0; i < this.polygonLoops.length; i++) {
+        const loop = this.polygonLoops[i];
+        if (!Array.isArray(loop) || loop.length < 2) continue;
+        for (let j = 0; j < loop.length; j++) {
+          const a = loop[j];
+          const b = loop[(j + 1) % loop.length];
+          pushEdge(a, b);
+        }
+      }
+    } else {
+      // polygon 情報が無い旧データだけ、従来どおり triangle 辺から線枠を作る
+      for (let i = 0; i + 2 < this.indicesArray.length; i += 3) {
+        const a = this.indicesArray[i];
+        const b = this.indicesArray[i + 1];
+        const c = this.indicesArray[i + 2];
+        pushEdge(a, b);
+        pushEdge(b, c);
+        pushEdge(c, a);
+      }
     }
 
     const wireIndices = [];
@@ -667,6 +681,7 @@ export default class Shape {
     this.positionArray = [];
     this.normalArray = [];
     this.indicesArray = [];
+    this.polygonLoops = [];
     this.texCoordsArray = [];
     this.altVertices = [];
     this.vObj = [];
@@ -1097,11 +1112,22 @@ export default class Shape {
     this.primitiveCount++;
   }
 
-  // 四角面を2三角形として追加する
-  addPlane(indices) {
+  // 多角形を追加する
+  // 描画本体は扇形三角形へ分解するが、
+  // wireframe 用には元の辺ループも保持し、三角形の対角線が見えないようにする
+  addPolygon(indices) {
+    if (!Array.isArray(indices) || indices.length < 3) {
+      return;
+    }
+    this.polygonLoops.push([...indices]);
     for (let i = 0; i < indices.length - 2; i++) {
       this.addTriangle(indices[0], indices[i + 1], indices[i + 2]);
     }
+  }
+
+  // 既存 API 名は維持しつつ、内部では addPolygon() へ委譲する
+  addPlane(indices) {
+    this.addPolygon(indices);
   }
 
   // 現在設定に基づくUVを計算する
@@ -1210,6 +1236,9 @@ export default class Shape {
     this.primitiveCount = geometry.polygonCount ?? Math.floor((geometry.indices?.length ?? 0) / 3);
     this.positionArray = [...(geometry.positions ?? [])];
     this.indicesArray = [...(geometry.indices ?? [])];
+    this.polygonLoops = geometry.polygonLoops
+      ? geometry.polygonLoops.map((loop) => [...loop])
+      : [];
     this.texCoordsArray = geometry.uvs
       ? [...geometry.uvs]
       : new Array(this.vertexCount * 2).fill(0);
