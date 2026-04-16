@@ -333,6 +333,8 @@ const sceneRuntime = await app.loadScene(sceneData);
 
 `WebgApp` を使う場合は、スクリーンショットの保存も `Screen` を直接たどるのではなく、`app.takeScreenshot()` から始められます。このヘルパーは、その場で直ちに PNG を生成するのではなく、次の `present()` のあとに現在の canvas 内容を保存するよう予約します。通常のサンプルでは、キー入力の中から呼び出せば十分です。保存名を完全に固定したいときは文字列をそのまま渡せます。ここでも、内部構造へ直接触れず、高レベル API だけで完結できるようになっていることが分かります。 
 
+`app.attachInput()` の `onKeyDown(key, ev)` に渡る `key` は、生の `KeyboardEvent.key` ではなく、`InputController.normalizeKey()` によって正規化された比較名です。英字は lower-case で渡り、`Space` は `" "` ではなく `space`、`Esc` は `escape` として比較します。キー名の詳しい一覧は第16章「タッチ機能と入力」を参照してください。
+
 ```js
 app.attachInput({
   onKeyDown: (key, ev) => {

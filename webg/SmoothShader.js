@@ -253,15 +253,11 @@ export default class SmoothShader extends Shader {
         let eyeVec = normalize(-input.vPosition);
         let refVec = normalize(reflect(-litVec, nnormal));
 
-        var diff : f32 = 0.0;
-        var ispec : f32 = 0.0;
-        if (uEmit == 0.0) {
-          diff = max(dot(nnormal, litVec), 0.0) * (1.0 - uAmb);
-          ispec = uSpec * pow(max(dot(refVec, eyeVec), 0.0), uSpecPower);
-        } else {
-          diff = 1.0 - uAmb;
-          ispec = 0.0;
-        }
+        let litDiff = max(dot(nnormal, litVec), 0.0) * (1.0 - uAmb);
+        let litSpec = uSpec * pow(max(dot(refVec, eyeVec), 0.0), uSpecPower);
+        let emissiveBlend = clamp(uEmit, 0.0, 1.0);
+        let diff = mix(litDiff, 1.0 - uAmb, emissiveBlend);
+        let ispec = litSpec * (1.0 - emissiveBlend);
 
         var finalColor : vec4<f32>;
         if (u.flags.y != 0.0) {
@@ -654,9 +650,16 @@ export default class SmoothShader extends Shader {
     this.updateUniforms();
   }
 
-  // 発光フラグを設定する
-  setEmissive(flag) {
-    this.uniformData[this.OFF_PARAMS + 3] = flag ? 1.0 : 0.0;
+  // 発光量を設定する
+  // 旧来の true/false も受けるが、数値なら 0.0-1.0 の連続量として扱う
+  setEmissive(value) {
+    let numeric = 0.0;
+    if (typeof value === "boolean") {
+      numeric = value ? 1.0 : 0.0;
+    } else {
+      numeric = Number.isFinite(Number(value)) ? Number(value) : 0.0;
+    }
+    this.uniformData[this.OFF_PARAMS + 3] = Math.max(0.0, Math.min(1.0, numeric));
     this.updateUniforms();
   }
 

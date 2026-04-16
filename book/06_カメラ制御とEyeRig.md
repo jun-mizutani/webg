@@ -2,13 +2,13 @@
 
 `WebgApp` でアプリの土台がそろうと、次に迷いやすいのは「視点をどのような単位で動かすか」です。`webg` では、視点そのものを特別な型で持つのではなく、`Space` の中にある `cameraRig`、`cameraRod`、`eye` の3段ノードを組み合わせてカメラを表します。`EyeRig` は、その3段構成に対して orbit、first-person、follow の3つの視点操作を同じ考え方で与えるヘルパーです。
 
-この章では、`webg/EyeRig.js` と `webg/WebgApp.js` を土台にしながら、どのノードが何を担当しているのか、なぜ3段に分かれているのか、利用者コードではどこを触ればよいのかを順番に整理します。まず背景と考え方をつかみ、そのあとで orbit、first-person、follow の使い方を current 実装に沿ったコードで確認します。第5章で見た `WebgApp` の標準リグの上に、どのように視点操作を載せるかを読む章だと考えるとつながりが分かりやすくなります。
+この章では、`webg/EyeRig.js` と `webg/WebgApp.js` を土台にしながら、どのノードが何を担当しているのか、なぜ3段に分かれているのか、利用者コードではどこを触ればよいのかを順番に整理します。まず背景と考え方をつかみ、そのあとで orbit、first-person、follow の使い方を現在の実装に沿ったコードで確認します。第5章で見た `WebgApp` の標準リグの上に、どのように視点操作を載せるかを読む章だと考えるとつながりが分かりやすくなります。
 
 この章で最初に押さえておきたいのは、視点の本体は `EyeRig` ではなく、`Space.setEye(node)` で選ばれた `eye` ノードだという点です。`EyeRig` はカメラを描画するクラスではありません。`cameraRig`、`cameraRod`、`eye` という3つの `Node` に、一定の規則で位置と回転を与えるヘルパーです。画面へ何が映るかを決めている本体は、あくまで `eye` ノードです。
 
 また、`base -> rod -> eye` に分ける構成は、回転と距離の役割を分離しやすくするためのものです。orbit では注視点、follow では追従対象、first-person では体の向きと視線の向きを分けて考えたくなります。ここでさらに重要なのが、`setAngles()` と `setLookAngles()` の違いです。`setAngles()` は `base` や `rod` の向きを変える操作で、視点の土台そのものを動かします。これに対して `setLookAngles()` は `eye` 側の独立視線で、進行方向とは少し違う方向を見るための補助です。
 
-もうひとつ大切なのは、`attachPointer()` だけでは視点制御は完成しないことです。`attachPointer()` は mouse / touch / pen の入力口を取り付けるだけであり、実際の mode 切り替え、follow target の追従、keyboard 操作の反映は `update(deltaSec)` が進めます。入力を付けたのに視点が動かない場合は、この2つのどちらが抜けているかを先に確認すると切り分けやすくなります。
+もうひとつ大切なのは、`attachPointer()` だけでは視点制御は完成しないことです。`attachPointer()` は mouse / touch / pen の入力口を取り付けるだけであり、実際のモード切り替え、follow target の追従、keyboard 操作の反映は `update(deltaSec)` が進めます。入力を付けたのに視点が動かない場合は、この2つのどちらが抜けているかを先に確認すると切り分けやすくなります。
 
 ## なぜ `base / rod / eye` の3段構成なのか
 <!-- 図候補: base -> rod -> eye カメラ構成図 -->
@@ -17,7 +17,7 @@
 
 *EyeRig は base、rod、eye の 3 段に分けることで、水平回転、高低角、最終視点を独立して扱いやすくしています。*
 
-3D アプリでは、「どこを見るか」だけでなく、「どこを中心に回るか」「誰を追いかけるか」「体の向きと視線の向きを分けるか」を場面ごとに切り替えたくなります。視点を1つの座標だけで扱うと、最初は簡単でも、あとから orbit と first-person を同居させたときに意味が混ざりやすくなります。`webg` が `base -> rod -> eye` の3段を採るのは、この分担を保ちやすくするためです。注視点や追従対象に追随する基準位置は `base`、そこからの回転や距離は `rod`、最後の独立視線は `eye` に置くと、mode が変わっても考え方を保ちやすくなります。
+3D アプリでは、「どこを見るか」だけでなく、「どこを中心に回るか」「誰を追いかけるか」「体の向きと視線の向きを分けるか」を場面ごとに切り替えたくなります。視点を1つの座標だけで扱うと、最初は簡単でも、あとから orbit と first-person を同居させたときに意味が混ざりやすくなります。`webg` が `base -> rod -> eye` の3段を採るのは、この分担を保ちやすくするためです。注視点や追従対象に追随する基準位置は `base`、そこからの回転や距離は `rod`、最後の独立視線は `eye` に置くと、モードが変わっても考え方を保ちやすくなります。
 
 `WebgApp.createCameraRig()` も、この考え方に沿って標準の camera ノードを作ります。
 
@@ -32,7 +32,7 @@ createCameraRig() {
 
 ここで大切なのは、`EyeRig` がなければ視点が作れないわけではないことです。`EyeRig` は、すでにある3段構成へ orbit / first-person / follow の意味を与えるヘルパーだと考えると位置づけが分かりやすくなります。`WebgApp.init()` は標準の `cameraRig`、`cameraRod`、`eye` を作成し、`space.setEye(this.eye)` まで行うので、利用者はその上に `EyeRig` を載せれば十分です。
 
-mode ごとの見方も、この3段構成で整理できます。orbit では `base` が注視点、`rod` が yaw / pitch、`eye` が distance を持ちます。first-person では `base` が体の位置と body yaw、`rod` が eye height、`eye` が独立視線を持ちます。follow では `base` が追従対象の現在位置、`rod` が後方から見下ろす向き、`eye` が追従距離を持ちます。同じ scene に対して「全景を回しながら見る」「主人公の目線で歩く」「対象の後ろから追いかける」を同じ型で扱えるのは、この共通構造があるためです。
+モードごとの見方も、この3段構成で整理できます。orbit では `base` が注視点、`rod` が yaw / pitch、`eye` が distance を持ちます。first-person では `base` が体の位置と body yaw、`rod` が eye height、`eye` が独立視線を持ちます。follow では `base` が追従対象の現在位置、`rod` が後方から見下ろす向き、`eye` が追従距離を持ちます。同じ scene に対して「全景を回しながら見る」「主人公の目線で歩く」「対象の後ろから追いかける」を同じ型で扱えるのは、この共通構造があるためです。
 
 ## 視野角と投影行列は `EyeRig` ではなく `WebgApp` が扱う
 
@@ -206,11 +206,11 @@ app.start({
 });
 ```
 
-`targetNode` を差し替えるときは `setTargetNode()`、追従位置を少し上げたいときは `setTargetOffset()` を使います。`inheritTargetYaw: true` を指定すると、対象ノードの向きに応じて後方視点を保ちやすくなります。`samples/camera_controller` の follow mode はこの考え方で構成されており、移動ターゲットが円軌道を回っても視点の意味が崩れにくくなっています。follow camera は、キャラクターを主役にした移動系サンプルや、TileMap 上の駒を追いながら周囲も見せたい場面で使いやすく、orbit より対象への集中を保ちやすく、first-person より周囲の状況を見失いにくいのが強みです。
+`targetNode` を差し替えるときは `setTargetNode()`、追従位置を少し上げたいときは `setTargetOffset()` を使います。`inheritTargetYaw: true` を指定すると、対象ノードの向きに応じて後方視点を保ちやすくなります。`samples/camera_controller` の follow モードはこの考え方で構成されており、移動ターゲットが円軌道を回っても視点の意味が崩れにくくなっています。follow camera は、キャラクターを主役にした移動系サンプルや、TileMap 上の駒を追いながら周囲も見せたい場面で使いやすく、orbit より対象への集中を保ちやすく、first-person より周囲の状況を見失いにくいのが強みです。
 
 ## `EyeRig` の補助 API
 
-`EyeRig` は mode を切り替えるだけでなく、いくつかの補助 API を持っています。利用者が触ることが多いのは、`setType(type)`、`setDistance(distance)` / `setRodLength(length)`、`setTarget(x, y, z)` / `setTargetNode(node)` / `setTargetOffset(x, y, z)`、`setAngles(...)`、`setLookAngles(...)` といった一群です。`setType(type)` は `"orbit"`、`"first-person"`、`"follow"` を切り替えます。未知の型を渡すと例外になるため、文字列を曖昧に補正してくれる前提では使わないほうが安全です。`setDistance(distance)` と `setRodLength(length)` は orbit と follow の距離を変える API で、内部では `minDistance` と `maxDistance` に収まるよう clamp されます。first-person では距離ではなく位置と eyeHeight を使うため、これらを主役にしません。 
+`EyeRig` はモードを切り替えるだけでなく、いくつかの補助 API を持っています。利用者が触ることが多いのは、`setType(type)`、`setDistance(distance)` / `setRodLength(length)`、`setTarget(x, y, z)` / `setTargetNode(node)` / `setTargetOffset(x, y, z)`、`setAngles(...)`、`setLookAngles(...)` といった一群です。`setType(type)` は `"orbit"`、`"first-person"`、`"follow"` を切り替えます。未知の型を渡すと例外になるため、文字列を曖昧に補正してくれる前提では使わないほうが安全です。`setDistance(distance)` と `setRodLength(length)` は orbit と follow の距離を変える API で、内部では `minDistance` と `maxDistance` に収まるよう clamp されます。first-person では距離ではなく位置と eyeHeight を使うため、これらを主役にしません。 
 
 また、対象を point として固定したいときは `setTarget(x, y, z)`、特定ノードを追従したいときは `setTargetNode(node)`、追従位置を頭上や胸元へずらしたいときは `setTargetOffset(x, y, z)` を使います。`setAngles()` は `base` や `rod` の向きを変え、`setLookAngles()` は `eye` の独立視線を変えます。ここでも、土台の向きと独立視線を分けて考えるほうが混乱しにくくなります。
 

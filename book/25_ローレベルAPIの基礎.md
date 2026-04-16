@@ -123,7 +123,7 @@ console.log(cs.getWorldAttitude());
 
 `Node` は `CoordinateSystem` に `Shape` の保持と描画機能を足したクラスです。シーンにオブジェクトを置く実体だと考えると分かりやすくなります。ここで `CoordinateSystem` との違いをはっきりさせると、`CoordinateSystem` は変換だけの基底、`Node` はその変換の上に「何を描くか」を載せた実体です。つまり、変換と描画の境目がこのクラスにあります。 
 
-ローレベルでは `Space.addNode()` で `Node` を作り、そこへ `Shape` を載せます。視点も通常は `Node` として置きます。つまり `Node` は「シーンにあるもの一般」を表すクラスであり、必ずしも visible object に限りません。camera も marker も object も同じシーングラフの node です。 `Node` がしてくれることは、`Shape` を持てること、`CoordinateSystem` と同じ変換 API を使えること、親子階層を持てること、描画時に自分と子孫を再帰的に描画することです。ここで重要なのは、「shape を持つ node」と「shape を持たない node」の両方が自然に存在することです。後者は camera rig や pivot、offset 用の親 node としてよく使います。 
+ローレベルでは `Space.addNode()` で `Node` を作り、そこへ `Shape` を載せます。視点も通常は `Node` として置きます。つまり `Node` は「シーンにあるもの一般」を表すクラスであり、必ずしも visible object に限りません。camera も marker もオブジェクトも同じシーングラフの node です。 `Node` がしてくれることは、`Shape` を持てること、`CoordinateSystem` と同じ変換 API を使えること、親子階層を持てること、描画時に自分と子孫を再帰的に描画することです。ここで重要なのは、「shape を持つ node」と「shape を持たない node」の両方が自然に存在することです。後者は camera rig や pivot、offset 用の親 node としてよく使います。 
 
 最小のコード例は次のようになります。
 
@@ -137,7 +137,7 @@ const eye = space.addNode(null, "eye");
 eye.setPosition(0.0, 0.0, 10.0);
 space.setEye(eye);
 
-// 描画 object 用 Node
+// 描画オブジェクト用 Node
 const box = space.addNode(null, "box");
 box.setPosition(0.0, 0.0, 0.0);
 box.setAttitude(0.0, 20.0, 0.0);
@@ -150,7 +150,7 @@ box.addShape(shape);
 
 3D では、回転、移動、projection 行列、ビュー変換をすべて行列で扱います。`webg` の `Matrix` は列優先の 4×4 行列です。`CoordinateSystem`、`Node`、`Shader`、`Space` は内部で `Matrix` を使っています。つまり、ローレベル層の上にあるほとんどの変換は最終的にここへ集まります。だから `Matrix` は単独の数学クラスというより、他の層が前提にしている変換土台として読むほうが自然です。 
 
-`Matrix` がしてくれることは、4×4 行列を持つこと、オイラー角やクォータニオンから回転行列を作ること、平行移動を入れること、projection 行列を作ること、ビュー行列を作ること、ベクトルへ掛けることです。ここで重要なのは、`Matrix` が projection と local/world 変換の両方に使われることです。つまり、「カメラ用の特別な行列」と「object 用の変換行列」が別クラスになっているわけではなく、同じ `Matrix` が用途に応じて使われています。これが `Shader` 節や `CoordinateSystem` 節との接点になります。 
+`Matrix` がしてくれることは、4×4 行列を持つこと、オイラー角やクォータニオンから回転行列を作ること、平行移動を入れること、projection 行列を作ること、ビュー行列を作ること、ベクトルへ掛けることです。ここで重要なのは、`Matrix` が projection と local/world 変換の両方に使われることです。つまり、「カメラ用の特別な行列」と「オブジェクト用の変換行列」が別クラスになっているわけではなく、同じ `Matrix` が用途に応じて使われています。これが `Shader` 節や `CoordinateSystem` 節との接点になります。 
 
 最小のコード例は次のとおりです。
 
@@ -182,7 +182,7 @@ projection.makeProjectionMatrix(
 );
 ```
 
-この 2 つの例を並べて見ると、`Matrix` は object 変換にも camera projection にも使われることが分かります。つまり「行列を作る」という操作は 1 つでも、どこに渡すかで意味が変わります。ここを意識して読むと、`Shader` や `Space` のコードも追いやすくなります。 
+この 2 つの例を並べて見ると、`Matrix` はオブジェクト変換にも camera projection にも使われることが分かります。つまり「行列を作る」という操作は 1 つでも、どこに渡すかで意味が変わります。ここを意識して読むと、`Shader` や `Space` のコードも追いやすくなります。 
 
 ## `Quat`
 

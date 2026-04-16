@@ -1,6 +1,6 @@
 # 衝突判定・raycast・pickingの使い方
 
-入力を受け取れるようになると、次に必要になるのは、その入力が 3D 空間の何に当たったのか、あるいは scene 内の何が重なったのかを判断することです。クリックで object を選びたいのか、object 同士の接触を調べたいのか、TileMap 上のどの cell を押したかを知りたいのかによって、使う API は変わります。`webg` では、この役割を `Space.raycast()`、`Space.checkCollisions()`、`Space.checkCollisionsDetailed()`、`TileMap.pickCell()` が分担しています。 
+入力を受け取れるようになると、次に必要になるのは、その入力が 3D 空間の何に当たったのか、あるいは scene 内の何が重なったのかを判断することです。クリックでオブジェクトを選びたいのか、オブジェクト同士の接触を調べたいのか、TileMap 上のどの cell を押したかを知りたいのかによって、使う API は変わります。`webg` では、この役割を `Space.raycast()`、`Space.checkCollisions()`、`Space.checkCollisionsDetailed()`、`TileMap.pickCell()` が分担しています。 
 
 ここで重要なのは、これらが似た「判定 API」ではあっても、起点が異なることです。`raycast()` は 1 本の ray から見て何に当たるかを調べる API であり、collision 系は scene 内の shape 同士が重なっているかを調べる API です。`TileMap.pickCell()` はさらに別で、一般 shape ではなく「現在見えている TileMap のどの cell に当たったか」を返します。つまり本章の中心は、API 名を覚えることよりも、「どんな判定をしたいときにどの API を選ぶべきか」を整理することにあります。 
 
@@ -8,7 +8,7 @@
 
 ## 空間判定をどう使い分けるか
 
-3D アプリでは、見た目だけでなく「選択」「接触」「移動可否」を空間上で判断する必要があります。クリックした object を選びたいなら raycast、動いている object が他の object と重なったかを知りたいなら collision、TileMap 上のどの cell を指したかを知りたいなら picking が必要になります。ここを 1 つの API で無理に考えず、起点ごとに分けて捉えると整理しやすくなります。 
+3D アプリでは、見た目だけでなく「選択」「接触」「移動可否」を空間上で判断する必要があります。クリックしたオブジェクトを選びたいなら raycast、動いているオブジェクトが他のオブジェクトと重なったかを知りたいなら collision、TileMap 上のどの cell を指したかを知りたいなら picking が必要になります。ここを 1 つの API で無理に考えず、起点ごとに分けて捉えると整理しやすくなります。 
 
 要するに、`raycast()` は「この位置を指したら何に当たるか」、collision 系は「scene に存在するもの同士が今重なっているか」、`TileMap.pickCell()` は「盤面のどの cell のどの面を押したか」を返す API です。この違いが見えると、あとで `TileMap` の path 探索や `displayArea` の考え方とも混ざりにくくなります。
 
@@ -74,7 +74,7 @@ canvas.addEventListener("click", (ev) => {
 
 ## scene 内の重なりを調べる
 
-scene 内の object 同士を一括で調べたいときは、raycast ではなく collision 系を使います。`samples/collisions` は mover と複数 shape を動かしながら、この違いを見やすくしています。ここでの考え方は、まず広域判定で候補を見つけ、そのあと必要なら詳細判定へ進む、という 2 段構えです。 
+scene 内のオブジェクト同士を一括で調べたいときは、raycast ではなく collision 系を使います。`samples/collisions` は mover と複数 shape を動かしながら、この違いを見やすくしています。ここでの考え方は、まず広域判定で候補を見つけ、そのあと必要なら詳細判定へ進む、という 2 段構えです。 
 
 ### `checkCollisions()`
 
@@ -162,7 +162,7 @@ const pickCellAt = (clientX, clientY) => {
 
 ## どの API を選ぶべきか
 
-マウスやタップで object を選択したいなら `Space.raycast()` が入口です。クリック位置から 3D ray を作り、1 件目の hit を読むだけで scene の選択 UI を組めます。scene 内の object 同士が重なったかを知りたいなら `checkCollisions()` を使います。ゲームロジックの最初の当たり判定や、どの pair が候補に入っているかを確認するときに向いています。境界ボックスだけでは候補が多すぎる場合に、`checkCollisionsDetailed()` で三角形判定へ進みます。ただしこれは絞り込み用であり、常に最初から使う前提ではありません。TileMap 上の選択なら `TileMap.pickCell()` が最も素直です。cell、面、当たった高さまで返るため、TileMap 独自の移動ルールや inspect UI へつなぎやすくなります。 
+マウスやタップでオブジェクトを選択したいなら `Space.raycast()` が入口です。クリック位置から 3D ray を作り、1 件目の hit を読むだけで scene の選択 UI を組めます。scene 内のオブジェクト同士が重なったかを知りたいなら `checkCollisions()` を使います。ゲームロジックの最初の当たり判定や、どの pair が候補に入っているかを確認するときに向いています。境界ボックスだけでは候補が多すぎる場合に、`checkCollisionsDetailed()` で三角形判定へ進みます。ただしこれは絞り込み用であり、常に最初から使う前提ではありません。TileMap 上の選択なら `TileMap.pickCell()` が最も素直です。cell、面、当たった高さまで返るため、TileMap 独自の移動ルールや inspect UI へつなぎやすくなります。 
 
 ## 注意点
 
@@ -170,8 +170,8 @@ const pickCellAt = (clientX, clientY) => {
 
 次に、current 実装の `raycast()` と `checkCollisions()` は AABB ベースだという点を意識しておく必要があります。戻り値の `boundsOnly` は、この判定が「メッシュ表面の厳密ヒット」ではなく「境界ボックスのヒット」であることを示します。細い棒、斜めの円柱、中空形状の近くでは、見た目と少しずれる候補が出ることがあります。ここを最初に理解しておくと、「当たっているように見えるのに違う」「違うように見えるのに当たっている」といった混乱をかなり減らせます。 
 
-また、`filter` を書かずに使い始めると、camera 自身、補助 shape、非表示 object まで候補へ入り、意図した判定が見えにくくなります。最初から `node !== app.eye`、`!shape.isHidden`、`ground を除外する` といった条件を入れておくと、sample を実アプリへ育てやすくなります。TileMap では、`pickCell()` が「現在見えている cell」を対象にしていることも忘れないほうが安全です。map 全体の cell から探索経路を作る処理とは役割が異なるため、選択 UI と path finding を同じ API で賄おうとしないほうが整理しやすくなります。
+また、`filter` を書かずに使い始めると、camera 自身、補助 shape、非表示オブジェクトまで候補へ入り、意図した判定が見えにくくなります。最初から `node !== app.eye`、`!shape.isHidden`、`ground を除外する` といった条件を入れておくと、サンプルを実アプリへ育てやすくなります。TileMap では、`pickCell()` が「現在見えている cell」を対象にしていることも忘れないほうが安全です。map 全体の cell から探索経路を作る処理とは役割が異なるため、選択 UI と path finding を同じ API で賄おうとしないほうが整理しやすくなります。
 
-## 関連 sample
+## 関連サンプル
 
 raycast の最小例は `unittest/raycast`、collision の比較は `samples/collisions`、TileMap 上の選択は `samples/tile_sim` と `unittest/tilemap` が分かりやすくなります。入力とのつながりは前章の [16_タッチ入力の設計.md](./16_タッチ入力の設計.md) を合わせて読むと、tap と drag を同じ canvas で共存させる流れを追いやすくなります。TileMap ランタイムとの接続は、第23章の `pickCell()`、`followCell()`、`refreshTileColors()` の節と合わせて読むと、選択 UI が盤面運用へどうつながるかがさらに見えやすくなります。

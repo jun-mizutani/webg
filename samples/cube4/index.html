@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>webg cube4</title>
+  <style>
+    html, body {
+      margin: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background:
+        radial-gradient(circle at top, #1c2840 0%, #0f1623 45%, #070b12 100%);
+      color: #e9f3ff;
+      font-family: "Hiragino Sans", "Yu Gothic", sans-serif;
+    }
+    canvas {
+      display: block;
+      width: 100vw;
+      height: 100vh;
+    }
+    #caption {
+      position: fixed;
+      right: 14px;
+      bottom: 14px;
+      padding: 10px 12px;
+      border-radius: 12px;
+      background: rgba(8, 12, 20, 0.56);
+      border: 1px solid rgba(198, 223, 255, 0.18);
+      font-size: 12px;
+      line-height: 1.45;
+      pointer-events: none;
+      backdrop-filter: blur(10px);
+    }
+  </style>
+</head>
+<body>
+  <canvas id="canvas" width="1280" height="900"></canvas>
+  <div id="caption">webg / 3D cube4</div>
+  <script type="module" src="./main.js"></script>
+</body>
+</html>

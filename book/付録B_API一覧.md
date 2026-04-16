@@ -1125,6 +1125,8 @@ runtime.instantiate(app.space);
 ### `WebgApp`
 `WebgApp` は、`Screen`、`Shader`、`Space`、`Input`、`Message`、デバッグ補助、loadModel/loadScene をまとめる高レベル入口です。
 
+入力 callback に渡るキー名は `InputController.normalizeKey()` 済みです。英字は lower-case になり、`Space` は `space`、`Esc` は `escape` として比較します。
+
 サンプルの多くは `WebgApp` を使うことで、初期化の重複を減らしています。
 
 役割は「3D アプリの土台を最短で作ること」で、`Screen`、projection、カメラリグ、HUD、input、診断情報、ローダー、dialogue、progress 保存までを 1 か所へ集約します。
@@ -1360,6 +1362,8 @@ hold は `pointerdown` / `pointerup` で key state に流し込み、action は 
 `InputController` は、keyboard、pointer、touch button を同じ key state へまとめる class です。
 
 `normalizeKey()` により、`event.key` の揺れを小文字の比較名へ整え、サンプル側が入力元ごとの差を意識せず `"w"`、`"space"`、`"arrowleft"` のような名前で扱えるようにします。
+
+比較は raw の `event.key` ではなく、この正規化後の名前で行います。たとえば `Space` は `" "` ではなく `space`、`Escape` は `escape` として受け取る前提です。
 
 `WebgApp.attachInput()` や `EyeRig` も最終的にはこの層の key 状態を使います。
 

@@ -134,21 +134,25 @@ export default class CoordinateSystem {
     this.position[0] = x;
     this.position[1] = y;
     this.position[2] = z;
+    this.dirty = true;
   }
 
   // X位置のみ設定する
   setPositionX(x) {
     this.position[0] = x;
+    this.dirty = true;
   }
 
   // Y位置のみ設定する
   setPositionY(y) {
     this.position[1] = y;
+    this.dirty = true;
   }
 
   // Z位置のみ設定する
   setPositionZ(z) {
     this.position[2] = z;
+    this.dirty = true;
   }
 
   // local uniform scale を返す
