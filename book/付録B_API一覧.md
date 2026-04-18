@@ -1,6 +1,6 @@
 # 付録 API一覧
 
-最終更新：2026-04-18 JST
+最終更新：2026-04-19 JST
 
 この付録は、`webg` の公開 API をカテゴリごとに引くための一覧です。前置きの説明は最小限にとどめ、クラス、関数、代表的メソッドを実装名に合わせて確認できる構成にしています。
 
@@ -1134,7 +1134,7 @@ runtime.instantiate(app.space);
 注意点として、このショートカットは `WebgApp` の入力処理に乗っている場合だけに有効です。サンプル側が raw `InputController` を直接使って keyboard を処理している構成では、自動では有効になりません。その場合はサンプル側で同等の mode 切替を実装してください。
 
 #### 起動 / 構成
-- `constructor(options = {})`: `Screen`、`Space`、`Message`、デバッグ補助をまとめる。`fixedCanvasSize: { width, height, useDevicePixelRatio }` を渡すと固定 canvas サイズで起動し、`layoutMode: "embedded"` を渡すと canvas と DOM overlay を文書フロー内へ埋め込める
+- `constructor(options = {})`: `Screen`、`Space`、`Message`、デバッグ補助をまとめる。`fixedCanvasSize: { width, height, useDevicePixelRatio }` を渡すと固定 canvas サイズで起動し、`layoutMode: "embedded"` を渡すと canvas と DOM overlay を文書フロー内へ埋め込める。`renderMode: "ondemand" | "continuous"` も受け付け、既定は `ondemand`
 - `getGL()`: 現在の GPU context を返す
 - `setUiTheme(theme = {})`: HTML UI テーマを差し替える
 - `attachInput(handlers = {})`: keyboard / pointer 入力を接続する。`WebgApp` の debug key 処理もこの経路で有効になる
@@ -1144,8 +1144,9 @@ runtime.instantiate(app.space);
 - `checkEnvironment(options = {})`: 実行環境の診断レポートを作る
 - `updateProjection(viewAngle = this.viewAngle)`: projection matrix を更新する
 - `setLoopHandlers(handlers = {})`: 毎フレーム呼ぶ handler を設定する
-- `start(handlers = {})`: main loop を開始する
+- `start(handlers = {})`: main loop を開始する。`renderMode: "ondemand"` では page が visible かつ focus を持つ間だけ進み、非 active 中は pause と同じように更新が止まる
 - `stop()`: main loop を止める
+- `requestRender()`: `ondemand` mode で frame を 1 本予約する。page が inactive の間は予約しない
 - `frame(timeMs)`: 1 フレーム分の処理を進める
 - `getFrameContext(timeMs)`: frame 用の context 情報を返す
 - `formatScreenshotTimestamp(date = new Date())`: screenshot 用 timestamp 文字列を作る
