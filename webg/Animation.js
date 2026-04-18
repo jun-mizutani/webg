@@ -137,7 +137,7 @@ export default class Animation {
     qB.matrixToQuat(matB);
     let dp = qA.dotProduct(qB);
     if (dp < 0) { qB.negate(); }  // shortest path
-    qA.condugate();
+    qA.conjugate();
     quat = qB.clone();
     quat.lmulQuat(qA);
     pos[1] = posB[1] - posA[1];

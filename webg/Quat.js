@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// Quat.js        2026/03/10
+// Quat.js        2026/04/18
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // ---------------------------------------------
@@ -55,8 +55,8 @@ export default class Quat {
     this.q[3] = b0 * q3 + b3 * q0 + b1 * q2 - b2 * q1;
   }
 
-  // 共役クォータニオンを作る（実装名は `condugate`）
-  condugate() {
+  // 共役クォータニオンを作る
+  conjugate() {
     //  this.q[0] =  this.q[0];
     this.q[1] = -this.q[1];
     this.q[2] = -this.q[2];
