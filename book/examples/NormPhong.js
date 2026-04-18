@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// NormPhong.js    2026/04/12
+// NormPhong.js    2026/04/18
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // ---------------------------------------------
@@ -59,6 +59,8 @@ export default class NormPhong extends Shader {
     const device = this.device;
     const shaderCode = `
 struct Uniforms {
+  // Phong と同じ Uniforms 構成を使う
+  // - normal map 対応でも既存の proj / modelView / normalMat / light / fog の並びは維持する
   proj : mat4x4f,
   modelView : mat4x4f,
   normalMat : mat4x4f,
@@ -73,15 +75,19 @@ struct Uniforms {
 @group(0) @binding(0) var<uniform> uniforms : Uniforms;
 @group(0) @binding(1) var uTexture : texture_2d<f32>;
 @group(0) @binding(2) var uSampler : sampler;
+// Phong との差分:
+// - binding(3) に normal map 用 texture を追加する
 @group(0) @binding(3) var uNormalTexture : texture_2d<f32>;
 
 struct VSIn {
+  // 頂点入力は Phong と同一
   @location(0) position : vec3f,
   @location(1) normal : vec3f,
   @location(2) texCoord : vec2f,
 };
 
 struct VSOut {
+  // 頂点出力も Phong と同一
   @builtin(position) position : vec4f,
   @location(0) vPosition : vec3f,
   @location(1) vNormal : vec3f,
@@ -97,6 +103,8 @@ struct FSIn {
 
 @vertex
 fn vsMain(input : VSIn) -> VSOut {
+  // 頂点シェーダ本体は Phong と同じ
+  // - normal map の差分はフラグメント側で法線を作り直すところに集約する
   var output : VSOut;
   let worldPos = uniforms.modelView * vec4f(input.position, 1.0);
   output.position = uniforms.proj * worldPos;
@@ -108,6 +116,9 @@ fn vsMain(input : VSIn) -> VSOut {
 
 @fragment
 fn fsMain(input : FSIn) -> @location(0) vec4f {
+  // Phong との差分 1:
+  // - params1 の割り当てを normal map 用に拡張する
+  //   x=useTexture, y=useNormalMap, z=normalStrength, w=backfaceDebug
   let ambient = uniforms.params0.x;
   let specular = uniforms.params0.y;
   let power = uniforms.params0.z;
@@ -118,38 +129,51 @@ fn fsMain(input : FSIn) -> @location(0) vec4f {
   let normalStrength = uniforms.params1.z;
   let backfaceDebug = uniforms.params1.w;
 
+  // Phong との差分 2:
+  // - まず補間された頂点法線を基準法線として正規化する
   var nnormal = normalize(input.vNormal);
   if (normalFlag > 0.5) {
+    // Phong との差分 3:
+    // - normal map を読み、TBN 行列で tangent space から eye space へ戻す
     // WGSL制約回避:
     // dpdx/dpdy 由来の非一様制御フロー内では textureSample が使えないため、
     // 明示LODの textureSampleLevel(..., 0.0) で法線マップを読む
     let ntex = textureSampleLevel(uNormalTexture, uSampler, input.vTexCoord, 0.0).xyz * 2.0 - vec3f(1.0, 1.0, 1.0);
+
+    // screen-space 微分から position と UV の変化量を取り出し、
+    // tangent / bitangent を再構成する
     let dp1 = dpdx(input.vPosition);
     let dp2 = dpdy(input.vPosition);
     let duv1 = dpdx(input.vTexCoord);
     let duv2 = dpdy(input.vTexCoord);
-    // UVヤコビアンの行列式UVが退化していると 0 付近になる
+
+    // UV ヤコビアンの行列式
+    // - UV が退化していると 0 付近になり、接線空間を安全に作れない
     let det = duv1.x * duv2.y - duv1.y * duv2.x;
     if (abs(det) > 1.0e-8) {
       let invDet = 1.0 / det;
-      // 接線Tを再構成
+
+      // 接線 T を再構成する
       var tangent = (dp1 * duv2.y - dp2 * duv1.y) * invDet;
       let tlen0 = length(tangent);
       if (tlen0 > 1.0e-8) {
         tangent = tangent / tlen0;
-        // Gram-SchmidtでNに直交化し、TBNを安定化する
+
+        // Gram-Schmidt で法線 N に直交化し、TBN を安定化する
         tangent = tangent - nnormal * dot(nnormal, tangent);
         let tlen1 = length(tangent);
         if (tlen1 > 1.0e-8) {
           tangent = tangent / tlen1;
-          // Bは外積で構成（右手系）
+
+          // B は外積で構成する
           var bitangent = cross(nnormal, tangent);
           let blen = length(bitangent);
           if (blen > 1.0e-8) {
             bitangent = bitangent / blen;
             let tbn = mat3x3f(tangent, bitangent, nnormal);
             let mapped = normalize(tbn * ntex);
-            // 強度は [0,2] に制限し、元法線との線形補間で調整する
+
+            // normalStrength で元法線と normal map 法線の混ぜ比率を調整する
             let w = clamp(normalStrength, 0.0, 2.0);
             nnormal = normalize(mix(nnormal, mapped, w));
           }
@@ -158,6 +182,7 @@ fn fsMain(input : FSIn) -> @location(0) vec4f {
     }
   }
 
+  // 以降の lighting / fog / texture 合成は Phong と同じ流れを使う
   var litVec : vec3f;
   if (uniforms.lightPos.w != 0.0) {
     litVec = normalize(uniforms.lightPos.xyz - input.vPosition);

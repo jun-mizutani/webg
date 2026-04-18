@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// Phong.js       2026/04/12
+// Phong.js       2026/04/18
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // ---------------------------------------------
@@ -61,14 +61,33 @@ export default class Phong extends Shader {
     const shaderCode = `
 //------------------ WGSL ------------------------
 struct Uniforms {
+  // 射影行列
+  // - eye space まで変換された頂点を clip space へ送る
   proj : mat4x4f,
+  // model-view 行列
+  // - model space の position を eye space へ変換する
   modelView : mat4x4f,
+  // 法線変換行列
+  // - non-uniform scale があっても法線方向を正しく保つため、
+  //   model-view とは別に normal 用の行列を受け取る
   normalMat : mat4x4f,
+  // 光源位置または平行光方向
+  // - w != 0.0 なら点光源、w == 0.0 なら方向ベクトルとして扱う
   lightPos : vec4f,
+  // ベース色
+  // - texture を使わない場合はこの色だけで描画し、
+  //   texture を使う場合は sampled color と乗算する
   color : vec4f,
+  // 材質パラメータ 0
+  // x=ambient, y=specular, z=power, w=emissive
   params0 : vec4f,
+  // 材質パラメータ 1
+  // x=useTexture, y=backfaceDebug
   params1 : vec4f,
+  // フォグ色
   fogColor : vec4f,
+  // フォグ設定
+  // x=fogNear, y=fogFar, z=fogDensity, w=fogMode
   fogParams : vec4f,
 };
 
@@ -77,15 +96,22 @@ struct Uniforms {
 @group(0) @binding(2) var uSampler : sampler;
 
 struct VSIn {
+  // model space の頂点位置
   @location(0) position : vec3f,
+  // model space の頂点法線
   @location(1) normal : vec3f,
+  // メッシュ側で用意した UV
   @location(2) texCoord : vec2f,
 };
 
 struct VSOut {
+  // rasterizer が使う clip space の位置
   @builtin(position) position : vec4f,
+  // フラグメント側で lighting を計算するための eye space 位置
   @location(0) vPosition : vec3f,
+  // フラグメント側で lighting を計算するための eye space 法線
   @location(1) vNormal : vec3f,
+  // textureSample() に渡す UV
   @location(2) vTexCoord : vec2f,
 };
 
@@ -99,35 +125,65 @@ struct FSIn {
 @vertex
 fn vsMain(input : VSIn) -> VSOut {
   var output : VSOut;
+
+  // 1. model space の position を model-view 行列で eye space へ送る
+  //    ここで得た worldPos は、この shader では「camera から見た座標」として
+  //    以降の lighting と fog の基準になる
   let worldPos = uniforms.modelView * vec4f(input.position, 1.0);
+
+  // 2. eye space の position をさらに projection 行列で clip space へ変換する
+  //    この値だけが最終的な画面上の頂点位置として rasterizer へ渡る
   output.position = uniforms.proj * worldPos;
+
+  // 3. フラグメント側で点光源方向や fog 距離を計算できるように、
+  //    eye space 位置をそのまま補間用 varyings として渡す
   output.vPosition = worldPos.xyz;
+
+  // 4. 法線も normal 行列で eye space へ変換してから渡す
+  //    法線は位置と違って平行移動の影響を受けないため w=0.0 で掛ける
   output.vNormal = (uniforms.normalMat * vec4f(input.normal, 0.0)).xyz;
+
+  // 5. UV はこの段階では加工せず、そのままフラグメント側へ渡す
   output.vTexCoord = input.texCoord;
   return output;
 }
 
 @fragment
 fn fsMain(input : FSIn) -> @location(0) vec4f {
-  // 両面描画では back face の法線をそのまま使うと lighting が反転して暗く見える
-  // frontFacing に応じて法線向きをそろえ、片面/両面のどちらでも自然な反射にする
+  // 1. frontFacing を見て、裏面では法線方向を反転する
+  //    両面描画時にそのままの法線を使うと、裏面側だけ lighting が反転して
+  //    不自然に暗くなるため、ここで向きをそろえる
   let facing = select(-1.0, 1.0, input.frontFacing);
   let nnormal = normalize(input.vNormal) * facing;
   let backfaceDebug = uniforms.params1.y;
   var litVec : vec3f;
+
+  // 2. 光源ベクトルを作る
+  //    w != 0.0 のときは点光源として「光源位置 - フラグメント位置」を使い、
+  //    w == 0.0 のときは平行光方向をそのまま正規化して使う
   if (uniforms.lightPos.w != 0.0) {
     litVec = normalize(uniforms.lightPos.xyz - input.vPosition);
   } else {
     litVec = normalize(uniforms.lightPos.xyz);
   }
+
+  // 3. 視線方向と反射ベクトルを求める
+  //    eye space では camera は原点にいる前提なので、
+  //    フラグメント位置の反対向きが視線方向になる
   let eyeVec = normalize(-input.vPosition);
   let refVec = normalize(reflect(-litVec, nnormal));
+
+  // 4. uniform へ packed してある材質値を取り出す
   let ambient = uniforms.params0.x;
   let specular = uniforms.params0.y;
   let power = uniforms.params0.z;
   let emissive = uniforms.params0.w;
   var diff : f32;
   var ispec : f32;
+
+  // 5. 発光材質でなければ通常の拡散反射 + 鏡面反射を計算する
+  //    emissive != 0.0 のときは照明を受けない発光物として扱い、
+  //    拡散項だけを強制的に 1.0 - ambient 相当へ寄せる
   if (emissive == 0.0) {
     diff = max(dot(nnormal, litVec), 0.0) * (1.0 - ambient);
     ispec = specular * pow(max(dot(refVec, eyeVec), 0.0), power);
@@ -135,6 +191,10 @@ fn fsMain(input : FSIn) -> @location(0) vec4f {
     diff = 1.0 - ambient;
     ispec = 0.0;
   }
+
+  // 6. texture を使う場合は sampled color をベース色へ掛け合わせる
+  //    alpha には「ベース色だけで塗るか」「texture 色を採用するか」の
+  //    混ぜ比率としての意味も持たせている
   let texFlag = uniforms.params1.x;
   var color = uniforms.color;
   if (texFlag > 0.5) {
@@ -142,7 +202,13 @@ fn fsMain(input : FSIn) -> @location(0) vec4f {
     color = uniforms.color * tex;
     color = mix(diff * uniforms.color, color, uniforms.color.w);
   }
+
+  // 7. ambient + diffuse + specular を合成して lighting 後の色を作る
   let lit = vec4f(color.rgb * (ambient + diff) + vec3f(1.0) * ispec, 1.0);
+
+  // 8. フォグ係数を求める
+  //    linear fog のときは near/far 区間で線形補間し、
+  //    exp fog のときは density を使った指数減衰にする
   let fogDistance = length(input.vPosition);
   let fogNear = uniforms.fogParams.x;
   let fogFar = uniforms.fogParams.y;
@@ -157,9 +223,14 @@ fn fsMain(input : FSIn) -> @location(0) vec4f {
   } else if (fogMode >= 1.5) {
     fogFactor = clamp(exp(-fogDensity * fogDistance), 0.0, 1.0);
   }
+
+  // 9. 裏面デバッグが有効なら、裏面だけを固定色で返す
+  //    lighting 計算よりも「裏面が出ているか」の確認を優先する用途
   if (backfaceDebug > 0.5 && !input.frontFacing) {
     return vec4f(1.0, 0.0, 1.0, 1.0);
   }
+
+  // 10. 最後に fog 色と lighting 後の色を fogFactor で補間して出力する
   return vec4f(mix(uniforms.fogColor.rgb, lit.rgb, fogFactor), lit.a);
 }
 //------------------ WGSL ------------------------`;

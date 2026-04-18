@@ -1,0 +1,160 @@
+<!doctype html>
+<!-- webg/book/examples/09_03.html 2026/04/18 -->
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>09_03 NormPhong の normal map トーラス</title>
+  <link rel="stylesheet" href="./example.css" />
+</head>
+<body>
+  <div class="page">
+    <h1>book/examples</h1>
+    <h2>09_03 NormPhong の normal map トーラス</h2>
+    <div class="section-card">
+      <p>`book/09_シェーダーの実装.md` の `NormPhong.js` を、texture と normal map を同時に使う torus で確認する実行例です</p>
+      <p class="note">ベース texture は `num256.png`、normal map はその同じ画像から生成しています。`N` で normal map の ON/OFF を切り替えると、`Phong` との差分が見比べやすくなります</p>
+    </div>
+
+    <div class="canvas-block">
+      <canvas id="canvas" width="960" height="720"></canvas>
+    </div>
+
+    <pre id="code"></pre>
+
+    <script type="module" id="example-source">
+import WebgApp from "../../webg/WebgApp.js";
+import EyeRig from "../../webg/EyeRig.js";
+import Primitive from "../../webg/Primitive.js";
+import Shape from "../../webg/Shape.js";
+import NormPhong from "./NormPhong.js";
+import { buildImageNormalMap, loadTextureFlipX } from "../../unittest/_shared/SkinningTestUtils.js";
+
+const LIGHT = [48.0, 72.0, 118.0, 1.0];
+
+const app = new WebgApp({
+  document,
+  shaderClass: NormPhong,
+  messageFontTexture: "../../webg/font512.png",
+  clearColor: [0.07, 0.09, 0.13, 1.0],
+  lightPosition: LIGHT,
+  layoutMode: "embedded",
+  fixedCanvasSize: {
+    width: 720,
+    height: 540,
+    useDevicePixelRatio: false
+  },
+  camera: {
+    target: [0.0, 0.0, 0.0],
+    distance: 30.0,
+    yaw: 24.0,
+    pitch: -12.0
+  }
+});
+await app.init();
+app.shader.setLightPosition(LIGHT);
+
+const orbit = new EyeRig(app.cameraRig, app.cameraRod, app.eye, {
+  document,
+  element: app.screen.canvas,
+  input: app.input,
+  type: "orbit",
+  orbit: {
+    target: [0.0, 0.0, 0.0],
+    distance: 30.0,
+    yaw: 24.0,
+    pitch: -12.0,
+    minDistance: 14.0,
+    maxDistance: 52.0
+  }
+});
+orbit.attachPointer();
+
+const { texture, rgba, width, height } = await loadTextureFlipX(app.getGL(), "../../webg/num256.png");
+const normalTexture = await buildImageNormalMap(app.getGL(), rgba, width, height);
+
+const torusShape = new Shape(app.getGL());
+torusShape.applyPrimitiveAsset(Primitive.donut(8.2, 2.6, 36, 24, torusShape.getPrimitiveOptions()));
+torusShape.endShape();
+torusShape.setShader(app.shader);
+const applyMaterial = (useNormalMap) => {
+  torusShape.setMaterial("norm-phong", {
+    use_texture: 1,
+    texture,
+    use_normal_map: useNormalMap ? 1 : 0,
+    normal_texture: normalTexture,
+    normal_strength: 1.0,
+    color: [1.0, 1.0, 1.0, 1.0],
+    ambient: 0.24,
+    specular: 0.92,
+    power: 44.0,
+    emissive: 0.0,
+    fog_color: [0.07, 0.09, 0.13, 1.0],
+    fog_near: 26.0,
+    fog_far: 70.0,
+    fog_density: 0.03,
+    fog_mode: 1.0
+  });
+};
+const torusNode = app.space.addNode(null, "normTorus");
+torusNode.rotateX(28.0);
+torusNode.rotateY(18.0);
+torusNode.addShape(torusShape);
+
+const state = {
+  paused: false,
+  useNormalMap: true
+};
+applyMaterial(state.useNormalMap);
+
+app.attachInput({
+  onKeyDown: (key, ev) => {
+    if (ev.repeat) return;
+    if (key === "space") {
+      state.paused = !state.paused;
+    } else if (key === "n") {
+      state.useNormalMap = !state.useNormalMap;
+      applyMaterial(state.useNormalMap);
+    } else if (key === "r") {
+      orbit.setAngles(24.0, -12.0);
+      orbit.setDistance(30.0);
+    }
+  }
+});
+
+app.createHelpPanel({
+  id: "example0903Help",
+  lines: [
+    "Drag: orbit camera  Wheel: zoom",
+    "N: toggle normal map  Space: pause rotation  R: reset camera",
+    "NormPhong.js with texture + generated normal map"
+  ]
+});
+
+app.start({
+  onUpdate: ({ deltaSec }) => {
+    orbit.update(deltaSec);
+    if (!state.paused) {
+      torusNode.rotateY(18.0 * deltaSec);
+      torusNode.rotateX(8.0 * deltaSec);
+    }
+
+    app.setStatusLines([
+      "shader: NormPhong.js",
+      `normal map=${state.useNormalMap ? "on" : "off"} source=../../webg/num256.png`,
+      "same image used for base texture and generated normal map"
+    ], {
+      anchor: "top-left",
+      x: 0,
+      y: 0
+    });
+  }
+});
+    </script>
+    <script>
+      document.getElementById("code").textContent =
+        document.getElementById("example-source").textContent.trim();
+    </script>
+  </div>
+</body>
+</html>

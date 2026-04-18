@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// BoneNormPhong.js 2026/04/12
+// BoneNormPhong.js 2026/04/18
 //   WebGPU Version
 // ---------------------------------------------
 
@@ -10,7 +10,7 @@ import { DEFAULT_MAX_SKIN_BONES, SKIN_MATRIX_FLOATS_PER_BONE, SKIN_MATRIX_VECTOR
 
 export default class BoneNormPhong extends Shader {
 
-  // `BonePhong` 相当のスキニングシェーダに法線マップ拡張を追加して初期化する
+  // `BonePhong` のスキニング処理へ `NormPhong` の法線マップ処理を統合した shader を初期化する
   constructor(gpu, options = {}) {
     super(gpu);
 
@@ -77,25 +77,30 @@ export default class BoneNormPhong extends Shader {
         normalMatrix : mat4x4<f32>,
         lightPos   : vec4<f32>,
         color      : vec4<f32>,
-        params     : vec4<f32>,
-        flags      : vec4<f32>,
-        normalMapParams : vec4<f32>,
+        params     : vec4<f32>,  // x=ambient, y=specular, z=power, w=emissive
+        flags      : vec4<f32>,  // x=hasBone, y=useTexture, z=weightDebug, w=useNormalMap
+        normalMapParams : vec4<f32>, // x=normalStrength
         fogColor   : vec4<f32>,
         fogParams  : vec4<f32>,
-        debugFlags : vec4<f32>,
-        debugColor : vec4<f32>,
+        debugFlags : vec4<f32>,  // x=backfaceDebug
+        debugColor : vec4<f32>,  // rgb=backfaceColor
+        // BonePhong と同じく、1本の bone を vec4 x 3 で持つ圧縮 palette を並べる
         bones      : array<vec4<f32>, ${this.BONE_VECTOR_COUNT}>,
       };
 
       @group(0) @binding(0) var<uniform> u : Uniforms;
       @group(1) @binding(0) var mySampler: sampler;
       @group(1) @binding(1) var myTexture: texture_2d<f32>;
+      // NormPhong との差分:
+      // - group(1) binding(2) に normal map 用 texture を追加する
       @group(1) @binding(2) var myNormalTexture: texture_2d<f32>;
 
       struct VertexInput {
         @location(0) position : vec3<f32>,
         @location(1) normal   : vec3<f32>,
         @location(2) texCoord : vec2<f32>,
+        // BonePhong との差分:
+        // - location(3)(4) に bone index / weight を追加して skinning 入力を受ける
         @location(3) index    : vec4<f32>,
         @location(4) weight   : vec4<f32>,
       };
@@ -121,6 +126,8 @@ export default class BoneNormPhong extends Shader {
         var output : VertexOutput;
         var mat : mat4x4<f32>;
 
+        // BonePhong と同じ分岐:
+        // - hasBone=0 のときは単位行列を使い、静的 mesh と同じ経路で描く
         if (u.flags.x == 0.0) {
           mat = mat4x4<f32>(
             vec4<f32>(1.0, 0.0, 0.0, 0.0),
@@ -129,6 +136,8 @@ export default class BoneNormPhong extends Shader {
             vec4<f32>(0.0, 0.0, 0.0, 1.0)
           );
         } else {
+          // BonePhong と同じ差分:
+          // - 各頂点が参照する最大4本の bone index から、palette 上の開始位置を引く
           let i0 = i32(input.index.x) * 3;
           let i1 = i32(input.index.y) * 3;
           let i2 = i32(input.index.z) * 3;
@@ -138,6 +147,7 @@ export default class BoneNormPhong extends Shader {
           var v1 : vec4<f32>;
           var v2 : vec4<f32>;
 
+          // 各 bone の 3 行ぶんを weight 付きで合成し、頂点専用の skin 行列をその場で組み立てる
           v0  = u.bones[i0]     * input.weight.x + u.bones[i1]     * input.weight.y;
           v0 += u.bones[i2]     * input.weight.z + u.bones[i3]     * input.weight.w;
 
@@ -153,9 +163,12 @@ export default class BoneNormPhong extends Shader {
           mat[3] = vec4<f32>(v0.w, v1.w, v2.w, 1.0);
         }
 
+        // フラグメント側の weight_debug で色表示できるよう、先頭3成分だけを varying として渡す
         output.vTexCoord = input.texCoord;
         output.vWeight = input.weight.xyz;
 
+        // position / normal は BonePhong と同じく、skin 済み行列を通してから
+        // view / normal 行列へ送る
         let pos4 = u.viewMatrix * mat * vec4<f32>(input.position, 1.0);
         output.vPosition = pos4.xyz;
 
@@ -168,6 +181,8 @@ export default class BoneNormPhong extends Shader {
 
       @fragment
       fn fs_main(input : FragmentInput) -> @location(0) vec4<f32> {
+        // BonePhong と同じ差分:
+        // - weight_debug が有効な間は lighting より先に weight 可視化色を返す
         if (u.flags.z != 0.0) {
           let c = clamp(input.vWeight, vec3<f32>(0.0), vec3<f32>(1.0));
           return vec4<f32>(c, 1.0);
@@ -184,6 +199,8 @@ export default class BoneNormPhong extends Shader {
         let uSpecPower = u.params.z;
         let uEmit = u.params.w;
 
+        // NormPhong と同じ差分:
+        // - skin 済み頂点法線を基準法線として normal map を重ねる
         var nnormal = normalize(input.vNormal);
         if (u.flags.w != 0.0) {
           // 法線マップのサンプリングは非一様制御フロー制約を避けるため
@@ -223,6 +240,7 @@ export default class BoneNormPhong extends Shader {
           }
         }
 
+        // 以降の lighting / fog / texture 合成は NormPhong と同じ流れ
         if (u.lightPos.w != 0.0) {
           lit_vec = normalize(u.lightPos.xyz - input.vPosition);
         } else {
