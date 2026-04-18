@@ -4,16 +4,16 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>09_04 BoneNormPhong の円柱 weight 表示</title>
+  <title>09_04 BonePhong の円柱 weight 表示</title>
   <link rel="stylesheet" href="./example.css" />
 </head>
 <body>
   <div class="page">
     <h1>book/examples</h1>
-    <h2>09_04 BoneNormPhong の円柱 weight 表示</h2>
+    <h2>09_04 BonePhong の円柱 weight 表示</h2>
     <div class="section-card">
-      <p>`book/09_シェーダーの実装.md` の `BoneNormPhong.js` を、2-bone 円柱 mesh の weight 表示で確認する実行例です</p>
-      <p class="note">`28_02.html` の円柱 skinning 表示を土台にしつつ、shader を `BoneNormPhong` へ差し替えています。`V` で weight debug、`N` で normal map、`B` で bone 表示を切り替えられます</p>
+      <p>`book/09_シェーダーの実装.md` の `BonePhong.js` を、2-bone 円柱 mesh の weight 表示で確認する実行例です</p>
+      <p class="note">`28_02.html` の円柱 skinning 表示を土台にしつつ、shader を `BonePhong` へ差し替えています。`V` で weight debug、`B` で bone 表示を切り替えられます</p>
     </div>
 
     <div class="canvas-block">
@@ -29,8 +29,7 @@ import SmoothShader from "../../webg/SmoothShader.js";
 import Primitive from "../../webg/Primitive.js";
 import Shape from "../../webg/Shape.js";
 import Skeleton from "../../webg/Skeleton.js";
-import BoneNormPhong from "./BoneNormPhong.js";
-import { buildImageNormalMap, loadTextureFlipX } from "../../unittest/_shared/SkinningTestUtils.js";
+import BonePhong from "./BonePhong.js";
 
 const CYLINDER_HEIGHT = 8.0;
 const CYLINDER_RADIUS = 0.45;
@@ -39,8 +38,8 @@ const CYLINDER_SEGMENTS = 24;
 const LIGHT = [12.0, 20.0, 28.0, 1.0];
 const HELP_LINES = [
   "Drag: orbit camera  Wheel: zoom",
-  "Space: pause  V: weight debug  N: normal map  B: show bones  R: reset camera",
-  "BoneNormPhong.js on the same 2-bone cylinder used for weight verification"
+  "Space: pause  V: weight debug  B: show bones  R: reset camera",
+  "BonePhong.js on the same 2-bone cylinder used for weight verification"
 ];
 
 const createTwoBoneCylinder = (gpu, options = {}) => {
@@ -114,7 +113,7 @@ const createDebugBoneShape = (gpu, shader, size = 0.45) => {
 
 const app = new WebgApp({
   document,
-  shaderClass: BoneNormPhong,
+  shaderClass: BonePhong,
   messageFontTexture: "../../webg/font512.png",
   clearColor: [0.07, 0.09, 0.13, 1.0],
   lightPosition: LIGHT,
@@ -156,9 +155,6 @@ await helperShader.init();
 helperShader.setLightPosition(LIGHT);
 helperShader.setProjectionMatrix(app.projectionMatrix);
 
-const { texture, rgba, width, height } = await loadTextureFlipX(app.getGL(), "../../webg/num256.png");
-const normalTexture = await buildImageNormalMap(app.getGL(), rgba, width, height);
-
 const { shape, skeleton, rootBone, childBone } = createTwoBoneCylinder(app.getGL());
 shape.setShader(app.shader);
 skeleton.setBoneShape(createDebugBoneShape(app.getGL(), helperShader, 0.45));
@@ -172,19 +168,14 @@ app.space.scanSkeletons();
 const state = {
   paused: false,
   weightDebug: true,
-  showBones: true,
-  useNormalMap: false
+  showBones: true
 };
 
 const applyViewState = () => {
   shape.hide(false);
-  shape.setMaterial("bone-norm-phong", {
+  shape.setMaterial("bone-phong", {
     has_bone: 1,
-    use_texture: 1,
-    texture,
-    use_normal_map: state.useNormalMap ? 1 : 0,
-    normal_texture: normalTexture,
-    normal_strength: 1.0,
+    use_texture: 0,
     color: [0.92, 0.94, 1.0, 1.0],
     ambient: 0.34,
     specular: 0.86,
@@ -204,9 +195,6 @@ app.attachInput({
       state.paused = !state.paused;
     } else if (key === "v") {
       state.weightDebug = !state.weightDebug;
-      applyViewState();
-    } else if (key === "n") {
-      state.useNormalMap = !state.useNormalMap;
       applyViewState();
     } else if (key === "b") {
       state.showBones = !state.showBones;
@@ -236,9 +224,9 @@ app.start({
     childBone.setAttitude(0.0, 0.0, Math.sin(elapsedSec * 1.7) * 58.0);
 
     app.setStatusLines([
-      `weightDebug=${state.weightDebug ? "on" : "off"} normalMap=${state.useNormalMap ? "on" : "off"} bones=${state.showBones ? "on" : "off"}`,
+      `weightDebug=${state.weightDebug ? "on" : "off"} bones=${state.showBones ? "on" : "off"}`,
       `rootYaw=${(Math.sin(elapsedSec * 1.1) * 10.0).toFixed(1)} childBank=${(Math.sin(elapsedSec * 1.7) * 58.0).toFixed(1)}`,
-      "same cylinder flow as 28_02, shader switched to BoneNormPhong.js"
+      "same cylinder flow as 28_02, shader switched to BonePhong.js"
     ], {
       anchor: "top-left",
       x: 0,

@@ -224,6 +224,7 @@ app.start({
 - `clearColor`：背景色を設定します。
 - `shaderClass`：通常は `SmoothShader` が使用されます。静的メッシュとスキニングメッシュを同一の入口で扱いたい場合に最適です。面単位の陰影（フラットシェーディング）を適用したい場合も、`SmoothShader` を使用したまま `Shape` ごとに設定を切り替えるのが一般的です。学習用サンプルなどで、標準設定を `Phong` や `NormPhong` に変更したい場合のみ、ここを明示的に指定します。
 - `useMessage`：canvas HUD が不要な場合は `false` に設定可能です。
+- `renderMode`：描画ループの実行方針を指定します。既定値は `ondemand` で、この場合はページが表示されていて `document.hasFocus()` が `true` の間だけフレーム更新が進みます。タブが非表示になったときや、表示中でも別ウィンドウへフォーカスが移ったときは、`pause` と同じように更新が止まります。これは、操作も画面変化もない間に無駄な `requestAnimationFrame` を回し続けず、省電力で運用しやすくすることが目的です。常にフレーム更新を続けたいアプリだけ `continuous` を明示してください。
 
 初期視点は `camera` オプションで指定します。基本的には `target`（注視点）と `distance`（距離）を把握すれば十分です。ここで注意すべき点は、`WebgApp` の標準カメラは、デフォルトでは `follow`（追従）や `orbit`（周回）の状態ではないということです。`init()` では標準的なリグを構築し、指定された `target`、`distance`、`yaw`、`pitch`、`bank` に基づいて「固定された初期視点」を配置します。追従させたい場合は `followNode()` や `lockOn()` を、周回視点にしたい場合は後述する `EyeRig` を導入してポインター操作を接続する必要があります。最初の画面を確実に提示したい段階では、この静的な初期視点のまま運用することで、カメラ制御に起因する予期せぬ挙動を防ぐことができます。
 
@@ -261,6 +262,8 @@ const app = new WebgApp({
 `await app.init()` の完了後は、`app.screen`、`app.shader`、`app.space`、`app.cameraRig`、`app.cameraRod`、`app.eye`、`app.input`、`app.message` といった主要コンポーネントにアクセス可能です。特によく利用するのは `app.getGL()`、`app.space`、`app.eye` です。
 
 更新処理は `start()` メソッドにハンドラー関数を渡して実装します。これにより、`WebgApp` が管理するメインループの中で処理が実行されます。コンテキスト（`ctx`）には `app`、`space`、`eye`、`input`、`scenePhase`、`gameHud` などが含まれており、更新処理に必要な情報をまとめて参照できます。代表的なハンドラーには `onUpdate`、`onBeforeDraw`、`onAfterDraw3d`、`onAfterHud` の 4 つがありますが、基本的には `onUpdate` だけで十分なケースがほとんどです。
+
+ここで注意したいのが、`WebgApp` のメインループは `renderMode` によって動作が変わる点です。既定の `ondemand` では、ページが表示されており、かつ `document.hasFocus()` が `true` の間だけフレーム更新が進みます。つまり、別タブへ移ったり、同じタブが見えていても別アプリへフォーカスが移ったときは、アニメーション、`onUpdate`、particle、camera follow などの時間進行が止まります。この既定値は、教材ページや設定画面のように「非 active 中は pause でよい」アプリで、無駄な更新を避けて電力消費を抑えるためのものです。一方、バックグラウンドでも継続して進めたい計測用途や特殊な監視表示では、`renderMode: "continuous"` を明示的に指定してください。
 
 ```js
 const shape = new Shape(app.getGL());

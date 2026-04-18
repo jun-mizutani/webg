@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// WebgApp.js     2026/04/12
+// WebgApp.js     2026/04/18
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // ---------------------------------------------
@@ -108,6 +108,9 @@ export default class WebgApp {
     };
     this.fixedCanvasSize = this.normalizeFixedCanvasSize(options.fixedCanvasSize);
     this.layoutMode = this.normalizeLayoutMode(options.layoutMode);
+    this.renderMode = this.normalizeRenderMode(options.renderMode);
+    this.windowHasFocus = true;
+    this.documentHasFocus = true;
     this.canvasHost = null;
     this.guideEntries = [];
     this.statusEntries = [];
@@ -200,7 +203,30 @@ export default class WebgApp {
     this.elapsedSec = 0.0;
     this.runtimeElapsedSec = 0.0;
     this._onViewportLayout = () => this.applyViewportLayout();
+    // ondemand mode では page 可視状態と focus 状態を見て loop を pause / resume する
+    // window focus/blur は内部 state として保持し、document.hasFocus() だけに依存しない
+    this._onPageActivityChange = () => this.handlePageActivityChange();
+    this._onWindowFocus = () => {
+      this.windowHasFocus = true;
+      this.handlePageActivityChange();
+    };
+    this._onWindowBlur = () => {
+      this.windowHasFocus = false;
+      this.handlePageActivityChange();
+    };
+    this._onDocumentFocusIn = () => {
+      this.documentHasFocus = true;
+      this.handlePageActivityChange();
+    };
+    this._onDocumentFocusOut = () => {
+      const hasFocus = typeof this.doc?.hasFocus === "function"
+        ? this.doc.hasFocus()
+        : false;
+      this.documentHasFocus = hasFocus;
+      this.handlePageActivityChange();
+    };
     this._frame = (timeMs) => this.frame(timeMs);
+    this._frameScheduled = false;
     this.handlers = {
       onUpdate: null,
       onBeforeDraw: null,
@@ -274,6 +300,19 @@ export default class WebgApp {
       return "embedded";
     }
     throw new Error("WebgApp layoutMode must be 'viewport' or 'embedded'");
+  }
+
+  // 描画ループの実行方針を正規化する
+  // continuous は従来どおり常時動作し、ondemand は page が active な間だけ動かす
+  normalizeRenderMode(value) {
+    const mode = String(value ?? "ondemand").trim().toLowerCase();
+    if (mode === "" || mode === "ondemand") {
+      return "ondemand";
+    }
+    if (mode === "continuous") {
+      return "continuous";
+    }
+    throw new Error("WebgApp renderMode must be 'ondemand' or 'continuous'");
   }
 
   // canvas を文書フロー内へ埋め込む構成かどうかを返す
@@ -1394,6 +1433,15 @@ export default class WebgApp {
     this.applyViewportLayout();
     window.addEventListener("resize", this._onViewportLayout);
     window.addEventListener("orientationchange", this._onViewportLayout);
+    this.windowHasFocus = typeof this.doc?.hasFocus === "function"
+      ? this.doc.hasFocus()
+      : true;
+    this.documentHasFocus = this.windowHasFocus;
+    this.doc?.addEventListener?.("visibilitychange", this._onPageActivityChange);
+    this.doc?.addEventListener?.("focusin", this._onDocumentFocusIn, true);
+    this.doc?.addEventListener?.("focusout", this._onDocumentFocusOut, true);
+    window.addEventListener("focus", this._onWindowFocus);
+    window.addEventListener("blur", this._onWindowBlur);
 
     this.input = new InputController(this.doc);
     // keyboard は document 全体で受けるが、pointer の既定抑止は canvas 内だけに絞る
@@ -3230,19 +3278,74 @@ export default class WebgApp {
     this.running = true;
     this.lastFrameTime = 0.0;
     this.runtimeElapsedSec = 0.0;
-    requestAnimationFrame(this._frame);
+    this.requestRender();
   }
 
   // 現在の loop を次 frame から止める
   // sample 側は cleanup や modal 停止でこの入口だけを呼べばよい
   stop() {
     this.running = false;
+    this._frameScheduled = false;
+  }
+
+  // 現在の page 状態で frame loop を pause すべきかを返す
+  // ondemand は hidden または非 focus の間を pause と同じ扱いにする
+  shouldAutoPauseFrameLoop() {
+    if (this.renderMode === "continuous") {
+      return false;
+    }
+    if (this.doc?.hidden === true) {
+      return true;
+    }
+    if (this.windowHasFocus === false) {
+      return true;
+    }
+    if (this.documentHasFocus === false) {
+      return true;
+    }
+    if (typeof this.doc?.hasFocus === "function" && this.doc.hasFocus() === false) {
+      return true;
+    }
+    return false;
+  }
+
+  // page の visible / focus 状態が変わったときに frame loop を再開する
+  // ondemand では inactive 中に描画を止めるため、復帰時はここから 1 回目を起こす
+  handlePageActivityChange() {
+    if (!this.running || this.renderMode === "continuous") {
+      return false;
+    }
+    if (this.shouldAutoPauseFrameLoop()) {
+      this.lastFrameTime = 0.0;
+      return false;
+    }
+    this.lastFrameTime = 0.0;
+    return this.requestRender();
+  }
+
+  // requestAnimationFrame の予約を 1 本に保つ
+  // ondemand で sleep 中はここから起こすため、sample 側からも共通入口として使える
+  requestRender() {
+    if (!this.running || this._frameScheduled) {
+      return false;
+    }
+    if (this.shouldAutoPauseFrameLoop()) {
+      return false;
+    }
+    this._frameScheduled = true;
+    requestAnimationFrame(this._frame);
+    return true;
   }
 
   // 1 frame 分の update / draw / HUD / present を進める
   // WebgApp の実行順序をここへ集約し、sample 側は onUpdate などの差し込みだけに集中させる
   frame(timeMs) {
+    this._frameScheduled = false;
     if (!this.running) return;
+    if (this.shouldAutoPauseFrameLoop()) {
+      this.lastFrameTime = 0.0;
+      return;
+    }
 
     const previous = this.lastFrameTime || timeMs;
     this.elapsedSec = Math.max(0.0, (timeMs - previous) * 0.001);
@@ -3295,7 +3398,7 @@ export default class WebgApp {
     }
 
     if (this.running) {
-      requestAnimationFrame(this._frame);
+      this.requestRender();
     }
   }
 }
