@@ -15,7 +15,7 @@ import Text from "../../webg/Text.js";
 const FONT_FILE = "../../webg/font512.png";
 const SAVE_KEY = "samples.cube4.highScore";
 const BLOCK_SHAPE_MODES = ["shared_bevel", "lite_bevel"];
-let currentBlockShapeMode = "lite_bevel";
+let currentBlockShapeMode = "shared_bevel";
 
 const BOARD = {
   width: 6,
@@ -102,6 +102,8 @@ let app = null;
 let orbit = null;
 let audio = null;
 let gameHudText = null;
+let cube4TouchRoot = null;
+let cube4TouchVisible = false;
 const blockShapeSources = new Map();
 
 const cloneCells = (cells) => cells.map((cell) => [...cell]);
@@ -1392,10 +1394,11 @@ const drawHudLeftPanel = (runtime, text) => {
   const leftX = GAME_HUD_LEFT.x;
   let lineY = GAME_HUD_LEFT.y;
   const distance = getActivePieceDistanceFromBottom(runtime);
+  const upperCenterX = 30;
 
   text.shader.setColor(1.0, 0.97, 0.82);
-  text.drawText("CUBE4 STATUS", leftX, lineY++);
-  lineY += 1;
+  text.drawText("CUBE4 STATUS", leftX, lineY);
+  text.drawText(`Fall sec ${fallIntervalSec(runtime).toFixed(2)}`, upperCenterX, lineY++);
 
   text.shader.setColor(1.0, 0.97, 0.82);
   text.drawText(formatHudMetricLine("Score", runtime.score), leftX, lineY++);
@@ -1404,19 +1407,13 @@ const drawHudLeftPanel = (runtime, text) => {
   text.drawText(formatHudMetricLine("DropDist", distance === null ? "--" : distance), leftX, lineY++);
   text.drawText(formatHudMetricLine("HighScore", runtime.highScore), leftX, lineY++);
   text.drawText(formatHudMetricLine("State", getHudStateLabel(runtime)), leftX, lineY++);
-  lineY += 14;
-
-  text.shader.setColor(1.0, 0.97, 0.82);
-  text.drawText(`Clear line  ${LAYER_CLEAR_COUNT}/${LAYER_CELL_COUNT}+`, leftX, lineY++);
-  text.drawText(`Fall sec    ${fallIntervalSec(runtime).toFixed(2)}`, leftX, lineY++);
-  lineY += 1;
+  lineY += 11;
 
   text.shader.setColor(1.0, 0.97, 0.82);
   text.drawText("Move  Arrows", leftX, lineY++);
   text.drawText("Rotate A/S/D", leftX, lineY++);
   text.drawText("Drop  X / Space", leftX, lineY++);
-  text.drawText(`Shape B : ${currentBlockShapeMode}`, leftX, lineY++);
-  text.drawText("Pause P  Restart R", leftX, lineY++);
+  text.drawText("Restart R", leftX, lineY++);
 };
 
 // 右側へ各レイヤーの埋まり数を高さぶん並べて描く
@@ -1449,70 +1446,199 @@ const drawGameHud = (runtime) => {
   gameHudText.drawScreen();
 };
 
+// coarse pointer 端末かどうかを sample 側でも判定し、
+// touch UI を常時表示する端末と desktop で切り替え表示する端末を分ける
+const isCoarsePointerDevice = () => {
+  if (typeof window === "undefined" || typeof window.matchMedia !== "function") {
+    return false;
+  }
+  return window.matchMedia("(pointer: coarse)").matches;
+};
+
+// PC では T キーで touch UI の表示を切り替えられるようにし、
+// coarse pointer 端末では常時表示のまま使えるようにする
+const updateTouchControlsVisibility = () => {
+  if (!cube4TouchRoot) return;
+  cube4TouchRoot.style.display = cube4TouchVisible ? "" : "none";
+};
+
+// desktop だけで touch ボタン表示を切り替える
+// 実機 touch 端末では UI を隠す必要が薄いため、常時表示のまま扱う
+const toggleTouchControlsVisibility = () => {
+  if (!cube4TouchRoot || isCoarsePointerDevice()) {
+    return cube4TouchVisible;
+  }
+  cube4TouchVisible = !cube4TouchVisible;
+  updateTouchControlsVisibility();
+  app.pushToast(cube4TouchVisible ? "Touch controls on" : "Touch controls off", {
+    durationMs: 900
+  });
+  return cube4TouchVisible;
+};
+
+// keyboard と touch の両方から同じゲーム操作を呼べるように、
+// cube4 の 1 ステップ入力をここへ集約する
+// touch 側はすべて one-shot action にするため、repeat の有無だけ外から渡せれば十分
+const handleGameKey = (runtime, key, options = {}) => {
+  const repeat = options.repeat === true;
+  if (key === "t" && !repeat) {
+    toggleTouchControlsVisibility();
+    return;
+  }
+  if (runtime.gameOver && key !== "r") return;
+  if (key === "p" && !repeat) {
+    runtime.paused = !runtime.paused;
+    playSe(runtime.paused ? "ui_ok" : "ui_move");
+    app.pushToast(runtime.paused ? "Paused" : "Resumed", { durationMs: 900 });
+    return;
+  }
+  if (key === "r" && !repeat) {
+    restartGame(runtime);
+    return;
+  }
+  if (key === "k" && !repeat) {
+    const file = app.takeScreenshot({ prefix: "cube4" });
+    playSe("coin");
+    app.pushToast(`screenshot: ${file}`, { durationMs: 1400 });
+    return;
+  }
+  if (key === "b" && !repeat) {
+    const nextMode = cycleBlockShapeMode(runtime);
+    playSe("ui_ok");
+    app.pushToast(`block shape: ${nextMode}`, { durationMs: 1000 });
+    return;
+  }
+  if (runtime.paused) return;
+
+  if (key === "arrowleft") {
+    beginGame(runtime);
+    if (tryMove(runtime, ...resolveCameraRelativeMove("left"))) playSe("ui_move");
+  } else if (key === "arrowright") {
+    beginGame(runtime);
+    if (tryMove(runtime, ...resolveCameraRelativeMove("right"))) playSe("ui_move");
+  } else if (key === "arrowup") {
+    beginGame(runtime);
+    if (tryMove(runtime, ...resolveCameraRelativeMove("up"))) playSe("ui_move");
+  } else if (key === "arrowdown") {
+    beginGame(runtime);
+    if (tryMove(runtime, ...resolveCameraRelativeMove("down"))) playSe("ui_move");
+  } else if (key === "a" && !repeat) {
+    beginGame(runtime);
+    if (tryRotate(runtime, "x")) playSe("piyoon");
+  } else if (key === "s" && !repeat) {
+    beginGame(runtime);
+    if (tryRotate(runtime, "y")) playSe("piyoon");
+  } else if (key === "d" && !repeat) {
+    beginGame(runtime);
+    if (tryRotate(runtime, "z")) playSe("piyoon");
+  } else if (key === "space" && !repeat) {
+    beginGame(runtime);
+    hardDrop(runtime);
+  } else if (key === "x") {
+    beginGame(runtime);
+    if (tryMove(runtime, 0, -1, 0)) {
+      runtime.score += 1;
+      updateHighScore(runtime);
+      playSe("ui_move");
+    } else {
+      lockPiece(runtime);
+    }
+  }
+};
+
+// coarse pointer 端末向けに cube4 の主要操作を仮想ボタンとして並べる
+// このゲームは連続移動より 1 回ごとの離散入力が分かりやすいため、
+// 方向移動も回転もすべて action ボタンで統一する
+const installTouchControls = (runtime) => {
+  const touchRoot = app.input.installTouchControls({
+    touchDeviceOnly: false,
+    className: "webg-touch-root cube4-touch-root",
+    groups: [
+      {
+        id: "rotate",
+        buttons: [
+          { key: "a", label: "RX", kind: "action", ariaLabel: "rotate block around x" },
+          { key: "s", label: "RY", kind: "action", ariaLabel: "rotate block around y" },
+          { key: "d", label: "RZ", kind: "action", ariaLabel: "rotate block around z" },
+          { key: "space", label: "⬇", kind: "action", ariaLabel: "hard drop block" }
+        ]
+      },
+      {
+        id: "system",
+        buttons: [
+          { key: "r", label: "R", kind: "action", ariaLabel: "restart game" }
+        ]
+      },
+      {
+        id: "move",
+        buttons: [
+          { key: "arrowup", label: "↑", kind: "action", ariaLabel: "move block forward" },
+          { key: "arrowdown", label: "↓", kind: "action", ariaLabel: "move block back" },
+          { key: "arrowleft", label: "←", kind: "action", ariaLabel: "move block left" },
+          { key: "arrowright", label: "→", kind: "action", ariaLabel: "move block right" }
+        ]
+      }
+    ],
+    onAction: ({ key }) => handleGameKey(runtime, String(key).toLowerCase(), { repeat: false })
+  });
+  if (!touchRoot) return null;
+
+  // 盤面の横幅を残しながら、画面下に 3 列の compact な操作群として並べる
+  // 同じ Touch.js でも sample ごとに密度が違うため、cube4 向けに個別寸法を与える
+  touchRoot.style.display = "block";
+  touchRoot.style.minHeight = "148px";
+  touchRoot.style.paddingLeft = "10px";
+  touchRoot.style.paddingRight = "10px";
+  touchRoot.style.paddingBottom = "16px";
+  touchRoot.style.setProperty("--webg-touch-btn-font-size", "18px");
+  const groups = touchRoot.querySelectorAll(".webg-touch-group");
+  for (let i = 0; i < groups.length; i++) {
+    const group = groups[i];
+    if (group.dataset.group === "rotate") {
+      group.style.position = "absolute";
+      group.style.left = "10px";
+      group.style.bottom = "16px";
+      group.style.display = "grid";
+      group.style.gridTemplateColumns = "repeat(2, 56px)";
+      group.style.gridTemplateRows = "repeat(2, 56px)";
+      group.style.width = "120px";
+    } else if (group.dataset.group === "system") {
+      group.style.position = "absolute";
+      group.style.left = "50%";
+      group.style.bottom = "16px";
+      group.style.transform = "translateX(-50%)";
+    } else if (group.dataset.group === "move") {
+      group.style.position = "absolute";
+      group.style.right = "10px";
+      group.style.bottom = "16px";
+      group.style.display = "grid";
+      group.style.gridTemplateColumns = "repeat(2, 56px)";
+      group.style.gridTemplateRows = "repeat(2, 56px)";
+      group.style.width = "120px";
+    }
+  }
+  const btns = touchRoot.querySelectorAll(".webg-touch-btn");
+  for (let i = 0; i < btns.length; i++) {
+    const btn = btns[i];
+    btn.style.minWidth = "56px";
+    btn.style.height = "56px";
+    btn.style.background = "rgba(34, 40, 24, 0.72)";
+    btn.style.color = "#fff6c8";
+    btn.style.borderColor = "rgba(255, 243, 181, 0.72)";
+  }
+  cube4TouchRoot = touchRoot;
+  cube4TouchVisible = isCoarsePointerDevice();
+  updateTouchControlsVisibility();
+  return touchRoot;
+};
+
 const attachInput = (runtime) => {
   app.attachInput({
     onKeyDown: (key, ev) => {
-      if (runtime.gameOver && key !== "r") return;
-      if (key === "p" && !ev.repeat) {
-        runtime.paused = !runtime.paused;
-        playSe(runtime.paused ? "ui_ok" : "ui_move");
-        app.pushToast(runtime.paused ? "Paused" : "Resumed", { durationMs: 900 });
-        return;
-      }
-      if (key === "r" && !ev.repeat) {
-        restartGame(runtime);
-        return;
-      }
-      if (key === "k" && !ev.repeat) {
-        const file = app.takeScreenshot({ prefix: "cube4" });
-        playSe("coin");
-        app.pushToast(`screenshot: ${file}`, { durationMs: 1400 });
-        return;
-      }
-      if (key === "b" && !ev.repeat) {
-        const nextMode = cycleBlockShapeMode(runtime);
-        playSe("ui_ok");
-        app.pushToast(`block shape: ${nextMode}`, { durationMs: 1000 });
-        return;
-      }
-      if (runtime.paused) return;
-
-      if (key === "arrowleft") {
-        beginGame(runtime);
-        if (tryMove(runtime, ...resolveCameraRelativeMove("left"))) playSe("ui_move");
-      } else if (key === "arrowright") {
-        beginGame(runtime);
-        if (tryMove(runtime, ...resolveCameraRelativeMove("right"))) playSe("ui_move");
-      } else if (key === "arrowup") {
-        beginGame(runtime);
-        if (tryMove(runtime, ...resolveCameraRelativeMove("up"))) playSe("ui_move");
-      } else if (key === "arrowdown") {
-        beginGame(runtime);
-        if (tryMove(runtime, ...resolveCameraRelativeMove("down"))) playSe("ui_move");
-      } else if (key === "a" && !ev.repeat) {
-        beginGame(runtime);
-        if (tryRotate(runtime, "x")) playSe("piyoon");
-      } else if (key === "s" && !ev.repeat) {
-        beginGame(runtime);
-        if (tryRotate(runtime, "y")) playSe("piyoon");
-      } else if (key === "d" && !ev.repeat) {
-        beginGame(runtime);
-        if (tryRotate(runtime, "z")) playSe("piyoon");
-      } else if (key === "space" && !ev.repeat) {
-        beginGame(runtime);
-        hardDrop(runtime);
-      } else if (key === "x") {
-        beginGame(runtime);
-        if (tryMove(runtime, 0, -1, 0)) {
-          runtime.score += 1;
-          updateHighScore(runtime);
-          playSe("ui_move");
-        } else {
-          lockPiece(runtime);
-        }
-      }
+      handleGameKey(runtime, key, { repeat: ev.repeat });
     }
   });
+  installTouchControls(runtime);
 };
 
 const start = async () => {
@@ -1552,7 +1678,6 @@ const start = async () => {
   spawnPiece(runtime);
   renderBoard(runtime);
   updateHud(runtime);
-  app.pushToast("3D cube4 ready", { durationMs: 1200 });
 
   app.start({
     onUpdate: ({ deltaSec }) => {
