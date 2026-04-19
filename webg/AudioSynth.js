@@ -1,5 +1,5 @@
 // ---------------------------------------------
-//  AudioSynth.js    2026/04/09
+//  AudioSynth.js    2026/04/19
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // ---------------------------------------------
@@ -8,7 +8,7 @@ export default class AudioSynth {
 
   constructor() {
     // WebAudio のノードは遅延初期化する
-    // ユーザー操作前に AudioContext を作ると再生制限に引っかかりやすいため
+    // ユーザー操作前に AudioContext を作ると再生制限されるため
     this.ctx = null;
     this.master = null;
     this.seBus = null;
@@ -38,16 +38,16 @@ export default class AudioSynth {
     this.modulateProbability = 0.60;
 
     // リズムパート（低音）の音抜き設定
-    // 強拍は維持し、弱拍のみ確率で休符化する
+    // 強拍は維持し、弱拍のみ確率で休符化して変化をつける
     this.rhythmDropWeakProb = 0.30;
     this.rhythmDropTailProb = 0.55;
 
-    // メロディ/SEの具体プリセットはサブクラス側に寄せる
+    // メロディ/SEのプリセットはサブクラス側に実装する
     this.melodies = {};
     this.melodyName = null;
     this.melody = null;
 
-    // エンベロープはコアで管理する
+    // エンベローププリセットはコアで管理する
     this.seEnvelopePresets = {
       soft: { attack: 0.005, decay: 0.05, sustain: 0.55, release: 0.08 },
       pluck: { attack: 0.001, decay: 0.025, sustain: 0.25, release: 0.03 },
@@ -142,7 +142,7 @@ export default class AudioSynth {
     this.bgmRevReturn = ctx.createGain();
     this.bgmRevSend.gain.value = 0.28;
     this.bgmRevReturn.gain.value = 0.48;
-    // BGM は hall 系 IR を既定にし、SE より少し広めで長い tail を聞き取りやすくする
+    // BGM は hall 系 IR を既定にし、効果音より少し広めで長い tail を聞き取りやすくする
     this.updateConvolverImpulse(this.bgmConvolver, this.bgmReverbImpulseConfig);
 
     this.bgmBus.connect(this.bgmDry);
@@ -215,8 +215,8 @@ export default class AudioSynth {
     return ["room", "hall", "plate"];
   }
 
-  // impulse response 設定は kind / duration / decay の 3 値で持ち、
-  // 不正値が来ても現在設定を壊しにくいように clamp 済み object へ正規化する
+  // インパルスレスポンス設定は kind / duration / decay の 3 値で持ち、
+  // 不正値が来ても現在設定を壊しにくいようにクランプ済み object へ正規化する
   normalizeImpulseConfig(config = {}, fallback = {}) {
     const kind = String(config.kind);
     if (!this.getImpulseKindList().includes(kind)) {
@@ -231,8 +231,8 @@ export default class AudioSynth {
     };
   }
 
-  // 既存 ConvolverNode の buffer だけを差し替え、
-  // send / return の routing を変えずに IR character だけ更新する
+  // 既存の ConvolverNode の buffer だけを差し替え、
+  // send / return の routing を変えずに IRの性質だけ更新する
   updateConvolverImpulse(convolver, config) {
     if (!this.ctx || !convolver) return;
     convolver.buffer = this.createImpulseResponse(
@@ -243,7 +243,7 @@ export default class AudioSynth {
     );
   }
 
-  // SE 側 reverb IR の character / duration / decay を更新する
+  // 効果音側リバーブ IR の character / duration / decay を更新する
   setSeReverbImpulse(config = {}) {
     this.ensureContext();
     this.seReverbImpulseConfig = this.normalizeImpulseConfig(config, this.seReverbImpulseConfig);
@@ -251,7 +251,7 @@ export default class AudioSynth {
     return this.getSeReverbImpulseConfig();
   }
 
-  // BGM 側 reverb IR の character / duration / decay を更新する
+  // BGM 側リバーブ IR の character / duration / decay を更新する
   setBgmReverbImpulse(config = {}) {
     this.ensureContext();
     this.bgmReverbImpulseConfig = this.normalizeImpulseConfig(config, this.bgmReverbImpulseConfig);
@@ -273,8 +273,8 @@ export default class AudioSynth {
   //   dur: 秒
   playTone(freq, dur = 0.12, options = {}) {
     this.ensureContext();
-    // playTone() はゲームSE組み立て用の内部 helper でもあるため、
-    // 未指定 option は WebAudio の自然な既定値と標準 envelope へ寄せる
+    // playTone() はゲーム効果音組み立て用の内部 helper でもあるため、
+    // 未指定のオプションは WebAudio の自然な既定値と標準 envelope に設定
     const now = this.ctx.currentTime;
     const type = options.type ?? "sine";
     const gain = options.gain ?? 0.18;
@@ -353,7 +353,7 @@ export default class AudioSynth {
   }
 
   // 外側から任意メロディを追加
-  // 必須の完全バリデーションは行わず、足りない項目は再生時にデフォルト補完する
+  // 必須の完全バリデーションは行わず、不足項目は再生時にデフォルトで補完
   registerMelody(name, config) {
     if (!name || typeof name !== "string") {
       throw new Error("Melody name must be a non-empty string.");
@@ -585,7 +585,7 @@ export default class AudioSynth {
   }
 
   // impulse response の性格差を小さい設定表で切り替える
-  // room は短く近い反射、hall は広く長い tail、plate は金属板らしい明るさを意識する
+  // room は短く近い反射、hall は広く長い tail、plate は金属板らしい感じ
   getImpulseProfile(kind = "room") {
     const profiles = {
       room: {
@@ -623,7 +623,7 @@ export default class AudioSynth {
   }
 
   // 時間が進むほど smoothing を強めたノイズ列を作る
-  // これにより tail 後半の高域が少しずつ減り、単純な white noise より自然に聞こえやすくする
+  // tail 後半の高域が少しずつ減り、単純な white noise より自然に聞こえやすくする
   writeImpulseTail(data, decay, profile) {
     const length = data.length;
     let filtered = 0.0;
