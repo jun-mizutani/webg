@@ -1,6 +1,6 @@
 // -------------------------------------------------
 // cube4
-//   main.js       2026/04/16
+//   main.js       2026/04/19
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // -------------------------------------------------
@@ -10,9 +10,12 @@ import EyeRig from "../../webg/EyeRig.js";
 import Primitive from "../../webg/Primitive.js";
 import Shape from "../../webg/Shape.js";
 import GameAudioSynth from "../../webg/GameAudioSynth.js";
+import Text from "../../webg/Text.js";
 
 const FONT_FILE = "../../webg/font512.png";
 const SAVE_KEY = "samples.cube4.highScore";
+const BLOCK_SHAPE_MODES = ["shared_bevel", "lite_bevel"];
+let currentBlockShapeMode = "lite_bevel";
 
 const BOARD = {
   width: 6,
@@ -33,6 +36,19 @@ const HUD_GUIDE_OPTIONS = {
   x: 1,
   y: 0,
   color: [0.88, 0.95, 1.0]
+};
+const GAME_HUD_GRID = {
+  cols: 80,
+  rows: 32,
+  scale: 1.0
+};
+const GAME_HUD_LEFT = {
+  x: 1,
+  y: 1
+};
+const GAME_HUD_RIGHT = {
+  x: 64,
+  y: 1
 };
 
 const PIECES = [
@@ -85,6 +101,7 @@ const LAYER_CLEAR_COUNT = Math.ceil(LAYER_CELL_COUNT * LAYER_CLEAR_RATIO);
 let app = null;
 let orbit = null;
 let audio = null;
+let gameHudText = null;
 const blockShapeSources = new Map();
 
 const cloneCells = (cells) => cells.map((cell) => [...cell]);
@@ -141,20 +158,135 @@ const createCubeShape = (gpu, color, size = BOARD.cell * 0.90, material = {}) =>
   return shape;
 };
 
-const createBeveledBoxShape = (gpu, width, height, depth, bevel, color, material = {}) => {
-  const shape = new Shape(gpu);
+const validateBeveledBoxParams = (width, height, depth, bevel) => {
+  const values = { width, height, depth, bevel };
+  for (const [name, value] of Object.entries(values)) {
+    if (!Number.isFinite(value)) {
+      throw new Error(`cube4 beveled box requires finite ${name}`);
+    }
+  }
+  if (width <= 0.0 || height <= 0.0 || depth <= 0.0) {
+    throw new Error("cube4 beveled box requires positive width, height, depth");
+  }
+  if (bevel <= 0.0) {
+    throw new Error("cube4 beveled box requires positive bevel");
+  }
+};
+
+// ベベル付き箱を組み立てる前に、各段階で使う半サイズと内側寸法をまとめて計算する
+// ここでは「成立する形状だけを返す」ことを目的にし、値の自動補正は行わない
+// 返り値は外周、段差、中央パネルの座標計算で共通利用する基準寸法群
+const computeBeveledBoxDims = (width, height, depth, bevel) => {
+  // まず入力が有限値かつ正の寸法かを検証し、明らかな設定ミスを先に落とす
+  validateBeveledBoxParams(width, height, depth, bevel);
+
+  // 箱全体は中心基準で組み立てるため、各軸の半サイズを最初に求める
+  // 以後の座標は ±hx, ±hy, ±hz を外枠として展開する
   const hx = width * 0.5;
   const hy = height * 0.5;
   const hz = depth * 0.5;
-  const b = Math.max(0.01, Math.min(bevel * 0.3, Math.min(hx, hy, hz) * 0.45));
+
+  // ベベル量は入力 bevel をそのまま面取り量にせず、既存デザインに合わせて 0.3 倍で使う
+  // ただし大きすぎるベベルは中央面や側帯を消してしまうため、箱半サイズに対する上限を設ける
+  const maxBevel = Math.min(hx, hy, hz) * 0.45;
+  const b = bevel * 0.3;
+  if (b > maxBevel) {
+    throw new Error(`cube4 beveled box bevel is too large: ${bevel}`);
+  }
+
+  // ix / iy / iz は、面取り後に残る外周矩形の半サイズ
+  // 中央パネルや側帯は、この矩形を基準にして追加していく
   const ix = hx - b;
   const iy = hy - b;
   const iz = hz - b;
-  const panelLift = Math.max(0.01, Math.min(b * 0.3, Math.min(ix, iy, iz) * 0.18));
-  const jx = Math.max(0.01, ix - b * 2.0);
-  const jy = Math.max(0.01, iy - b * 2.0);
-  const jz = Math.max(0.01, iz - b * 2.0);
 
+  // panelLift は中央パネルを外周面からどれだけ持ち上げるかを表す
+  // 持ち上げ量が大きすぎると、外周ベベルより先に中央パネルが突出して破綻するため検証する
+  const panelLift = b * 0.3;
+  const maxPanelLift = Math.min(ix, iy, iz) * 0.18;
+  if (panelLift > maxPanelLift) {
+    throw new Error(`cube4 beveled box panel lift becomes too large: ${panelLift}`);
+  }
+
+  // jx / jy / jz は、持ち上げた中央パネルそのものの半サイズ
+  // 外周矩形よりさらに内側へ 2*b だけ入れて、段差面を張る余地を確保する
+  // ここが 0 以下になると中央パネルが消えるため、その状態は明示的にエラーとする
+  const jx = ix - b * 2.0;
+  const jy = iy - b * 2.0;
+  const jz = iz - b * 2.0;
+  if (jx <= 0.0 || jy <= 0.0 || jz <= 0.0) {
+    throw new Error("cube4 beveled box inner panel size must stay positive");
+  }
+
+  // 返す寸法は、各面の中央パネル、帯面、角面を同じ基準で組み立てるための一式
+  return {
+    hx, hy, hz,
+    b,
+    ix, iy, iz,
+    panelLift,
+    jx, jy, jz
+  };
+};
+
+// 中央面を少し縮小し、その周囲を細い帯面で囲むだけの簡易ベベル寸法を計算する
+// 厚い面取り geometry を作らず、shared vertex と smooth shading で角の反射だけを出したい用途向け
+// 返り値の ix / iy / iz は、各面の中央 quad が始まる内側矩形の半サイズ
+const computeLiteBevelBoxDims = (width, height, depth, bevel) => {
+  validateBeveledBoxParams(width, height, depth, bevel);
+
+  // 外形は通常の cuboid と同じで、まず各軸の半サイズを求める
+  const hx = width * 0.5;
+  const hy = height * 0.5;
+  const hz = depth * 0.5;
+
+  // lite bevel は「面の周囲に残す帯の幅」として使う
+  // 帯が広すぎると中央面が消えるため、半サイズの 45% を上限とする
+  const inset = bevel * 0.3;
+  const maxInset = Math.min(hx, hy, hz) * 0.45;
+  if (inset > maxInset) {
+    throw new Error(`cube4 lite bevel inset is too large: ${bevel}`);
+  }
+
+  // 中央面は外形より inset だけ縮小した矩形として定義する
+  const ix = hx - inset;
+  const iy = hy - inset;
+  const iz = hz - inset;
+  if (ix <= 0.0 || iy <= 0.0 || iz <= 0.0) {
+    throw new Error("cube4 lite bevel inner face size must stay positive");
+  }
+
+  return {
+    hx, hy, hz,
+    inset,
+    ix, iy, iz
+  };
+};
+
+// 厚めの段差と中央パネルを持つ共有頂点版
+// 同じ位置の頂点 index を面の境界で共有し、法線や shading の見え方がどう変わるかを確認できる
+// 角まで細かく面分割した重めの比較用形状として残してある
+const createSharedBeveledBoxShape = (gpu, width, height, depth, bevel, color, material = {}) => {
+  const shape = new Shape(gpu);
+
+  // まず直方体の半サイズを求め、その内側にベベルと中央パネルを収める基準寸法を作る
+  // ここでは自動補正せず、成立しない設定は例外として表面化させる
+  const { hx, hy, hz, ix, iy, iz, panelLift, jx, jy, jz } = computeBeveledBoxDims(width, height, depth, bevel);
+
+  // 同じ位置の頂点を 1 度だけ登録し、以後は同じ index を再利用する
+  // これにより面をまたいで本当に shared vertex を使う形状を試せる
+  const vertexMap = new Map();
+  const addSharedVertex = (x, y, z) => {
+    const key = `${x.toFixed(6)},${y.toFixed(6)},${z.toFixed(6)}`;
+    const existing = vertexMap.get(key);
+    if (existing !== undefined) return existing;
+    const index = shape.addVertex(x, y, z) - 1;
+    vertexMap.set(key, index);
+    return index;
+  };
+
+  // 任意の polygon を 1 面として追加する helper
+  // 面の向きは入力順に依存させず、面中心と外向き法線の内積で自動補正する
+  // 共有頂点版でも面定義の手順は非共有版と同じにし、比較対象をそろえる
   const addFace = (pts) => {
     const n = pts.length;
     const cx = pts.reduce((sum, p) => sum + p[0], 0) / n;
@@ -175,14 +307,17 @@ const createBeveledBoxShape = (gpu, width, height, depth, bevel, color, material
     const indices = [];
     for (let i = 0; i < ordered.length; i++) {
       const p = ordered[i];
-      indices.push(shape.addVertex(p[0], p[1], p[2]) - 1);
+      indices.push(addSharedVertex(p[0], p[1], p[2]));
     }
     shape.addPlane(indices);
   };
 
+  // 1 面ぶんの「外周 + 段差 + 中央パネル」をまとめて追加する helper
+  // outerPts はベベル内側の外周、innerPts は少し持ち上げた中央パネル
+  // 中央面と段差面を分けて追加することで、箱全体に機械パネルのような陰影を作る
   const addRaisedPanel = (outerPts, innerPts) => {
-    // 外周面に対して中央を少し持ち上げ、段差付きの面を作る
-    // これにより既存の外周ベベルを残したまま、中央面にふくらみを追加する
+    // 既存版と同じ段構成を保ったまま、頂点 index だけを共有化する
+    // 共有頂点化の有無による法線処理の違いを比較しやすくするため、この面構成自体は変えない
     addFace(innerPts);
     for (let i = 0; i < outerPts.length; i++) {
       const next = (i + 1) % outerPts.length;
@@ -190,6 +325,8 @@ const createBeveledBoxShape = (gpu, width, height, depth, bevel, color, material
     }
   };
 
+  // 6 面それぞれの中央パネルを追加する
+  // ここで箱の各面に共通する「少し膨らんだ中央面」を作る
   addRaisedPanel(
     [[-ix, -iy, hz], [ix, -iy, hz], [ix, iy, hz], [-ix, iy, hz]],
     [[-jx, -jy, hz + panelLift], [jx, -jy, hz + panelLift], [jx, jy, hz + panelLift], [-jx, jy, hz + panelLift]]
@@ -215,21 +352,29 @@ const createBeveledBoxShape = (gpu, width, height, depth, bevel, color, material
     [[-jx, -hy - panelLift, -jz], [jx, -hy - panelLift, -jz], [jx, -hy - panelLift, jz], [-jx, -hy - panelLift, jz]]
   );
 
+  // 各面の外周をつなぐ 4 辺のベルト面を追加する
+  // ここは「中央パネル」でも「角」でもない中間帯で、箱の厚みを見せる役割を持つ
   addFace([[-ix, iy, hz], [ix, iy, hz], [ix, hy, iz], [-ix, hy, iz]]);
   addFace([[-ix, -hy, iz], [ix, -hy, iz], [ix, -iy, hz], [-ix, -iy, hz]]);
   addFace([[-ix, hy, -iz], [ix, hy, -iz], [ix, iy, -hz], [-ix, iy, -hz]]);
   addFace([[-ix, -iy, -hz], [ix, -iy, -hz], [ix, -hy, -iz], [-ix, -hy, -iz]]);
 
+  // 左右方向の側帯を追加する
+  // 前後面と左右面のつながりを作り、単なる押し出し箱ではない輪郭を作る
   addFace([[ix, -iy, hz], [ix, iy, hz], [hx, iy, iz], [hx, -iy, iz]]);
   addFace([[-hx, -iy, iz], [-hx, iy, iz], [-ix, iy, hz], [-ix, -iy, hz]]);
   addFace([[-ix, -iy, -hz], [-ix, iy, -hz], [-hx, iy, -iz], [-hx, -iy, -iz]]);
   addFace([[hx, -iy, -iz], [hx, iy, -iz], [ix, iy, -hz], [ix, -iy, -hz]]);
 
+  // 上下面へつながる帯面を追加する
+  // ここで天面・底面と側面が滑らかにつながる基礎形状を作る
   addFace([[ix, hy, -iz], [ix, hy, iz], [hx, iy, iz], [hx, iy, -iz]]);
   addFace([[-hx, iy, -iz], [-hx, iy, iz], [-ix, hy, iz], [-ix, hy, -iz]]);
   addFace([[-ix, -hy, -iz], [-ix, -hy, iz], [-hx, -iy, iz], [-hx, -iy, -iz]]);
   addFace([[hx, -iy, -iz], [hx, -iy, iz], [ix, -hy, iz], [ix, -hy, -iz]]);
 
+  // 最後に 8 つの角を三角面で閉じる
+  // ベベル箱として破綻なく閉じた多面体にするため、角は三角形で確定させる
   addFace([[ix, iy, hz], [hx, iy, iz], [ix, hy, iz]]);
   addFace([[-ix, iy, hz], [-ix, hy, iz], [-hx, iy, iz]]);
   addFace([[ix, -iy, hz], [ix, -hy, iz], [hx, -iy, iz]]);
@@ -240,6 +385,8 @@ const createBeveledBoxShape = (gpu, width, height, depth, bevel, color, material
   addFace([[ix, -iy, -hz], [hx, -iy, -iz], [ix, -hy, -iz]]);
   addFace([[-ix, -iy, -hz], [-ix, -hy, -iz], [-hx, -iy, -iz]]);
 
+  // ここで shared vertex を含む全頂点・全ポリゴンを GPU バッファへ確定する
+  // endShape() 前は shape 内部にまだ構築途中の geometry がある状態
   shape.endShape();
   setShapeColor(shape, color, {
     ...material,
@@ -248,22 +395,13 @@ const createBeveledBoxShape = (gpu, width, height, depth, bevel, color, material
   return shape;
 };
 
-const createSharedBeveledBoxShape = (gpu, width, height, depth, bevel, color, material = {}) => {
+// 各面の中央 quad を縮小し、周囲を 4 本の細い帯面で囲むだけの簡易ベベル版
+// 幾何学的には平面分割に近いが、外周の shared vertex を他面と共有することで
+// smooth shading 時に角だけが反射し、軽いベベルが入ったように見せる
+const createSharedLiteBevelBoxShape = (gpu, width, height, depth, bevel, color, material = {}) => {
   const shape = new Shape(gpu);
-  const hx = width * 0.5;
-  const hy = height * 0.5;
-  const hz = depth * 0.5;
-  const b = Math.max(0.01, Math.min(bevel * 0.3, Math.min(hx, hy, hz) * 0.45));
-  const ix = hx - b;
-  const iy = hy - b;
-  const iz = hz - b;
-  const panelLift = Math.max(0.01, Math.min(b * 0.3, Math.min(ix, iy, iz) * 0.18));
-  const jx = Math.max(0.01, ix - b * 2.0);
-  const jy = Math.max(0.01, iy - b * 2.0);
-  const jz = Math.max(0.01, iz - b * 2.0);
+  const { hx, hy, hz, ix, iy, iz } = computeLiteBevelBoxDims(width, height, depth, bevel);
 
-  // 同じ位置の頂点を 1 度だけ登録し、以後は同じ index を再利用する
-  // これにより面をまたいで本当に shared vertex を使う形状を試せる
   const vertexMap = new Map();
   const addSharedVertex = (x, y, z) => {
     const key = `${x.toFixed(6)},${y.toFixed(6)},${z.toFixed(6)}`;
@@ -299,65 +437,40 @@ const createSharedBeveledBoxShape = (gpu, width, height, depth, bevel, color, ma
     shape.addPlane(indices);
   };
 
-  const addRaisedPanel = (outerPts, innerPts) => {
-    // 既存版と同じ段構成を保ったまま、頂点 index だけを共有化する
-    // 共有頂点化の有無による法線処理の違いを比較しやすくするため、この面構成自体は変えない
-    addFace(innerPts);
-    for (let i = 0; i < outerPts.length; i++) {
-      const next = (i + 1) % outerPts.length;
-      addFace([outerPts[i], outerPts[next], innerPts[next], innerPts[i]]);
+  // 1 面を「中央 1 面 + 周囲 4 面」へ分割する
+  // 中央面はその面の法線を保ち、周囲帯は隣接面と頂点を共有して反射を受け持つ
+  const addInsetFace = (outer, inner) => {
+    addFace(inner);
+    for (let i = 0; i < outer.length; i++) {
+      const next = (i + 1) % outer.length;
+      addFace([outer[i], outer[next], inner[next], inner[i]]);
     }
   };
 
-  addRaisedPanel(
-    [[-ix, -iy, hz], [ix, -iy, hz], [ix, iy, hz], [-ix, iy, hz]],
-    [[-jx, -jy, hz + panelLift], [jx, -jy, hz + panelLift], [jx, jy, hz + panelLift], [-jx, jy, hz + panelLift]]
+  addInsetFace(
+    [[-hx, -hy, hz], [hx, -hy, hz], [hx, hy, hz], [-hx, hy, hz]],
+    [[-ix, -iy, hz], [ix, -iy, hz], [ix, iy, hz], [-ix, iy, hz]]
   );
-  addRaisedPanel(
-    [[-ix, -iy, -hz], [-ix, iy, -hz], [ix, iy, -hz], [ix, -iy, -hz]],
-    [[-jx, -jy, -hz - panelLift], [-jx, jy, -hz - panelLift], [jx, jy, -hz - panelLift], [jx, -jy, -hz - panelLift]]
+  addInsetFace(
+    [[-hx, -hy, -hz], [-hx, hy, -hz], [hx, hy, -hz], [hx, -hy, -hz]],
+    [[-ix, -iy, -hz], [-ix, iy, -hz], [ix, iy, -hz], [ix, -iy, -hz]]
   );
-  addRaisedPanel(
-    [[hx, -iy, -iz], [hx, iy, -iz], [hx, iy, iz], [hx, -iy, iz]],
-    [[hx + panelLift, -jy, -jz], [hx + panelLift, jy, -jz], [hx + panelLift, jy, jz], [hx + panelLift, -jy, jz]]
+  addInsetFace(
+    [[hx, -hy, -hz], [hx, hy, -hz], [hx, hy, hz], [hx, -hy, hz]],
+    [[hx, -iy, -iz], [hx, iy, -iz], [hx, iy, iz], [hx, -iy, iz]]
   );
-  addRaisedPanel(
-    [[-hx, -iy, -iz], [-hx, -iy, iz], [-hx, iy, iz], [-hx, iy, -iz]],
-    [[-hx - panelLift, -jy, -jz], [-hx - panelLift, -jy, jz], [-hx - panelLift, jy, jz], [-hx - panelLift, jy, -jz]]
+  addInsetFace(
+    [[-hx, -hy, -hz], [-hx, -hy, hz], [-hx, hy, hz], [-hx, hy, -hz]],
+    [[-hx, -iy, -iz], [-hx, -iy, iz], [-hx, iy, iz], [-hx, iy, -iz]]
   );
-  addRaisedPanel(
-    [[-ix, hy, -iz], [-ix, hy, iz], [ix, hy, iz], [ix, hy, -iz]],
-    [[-jx, hy + panelLift, -jz], [-jx, hy + panelLift, jz], [jx, hy + panelLift, jz], [jx, hy + panelLift, -jz]]
+  addInsetFace(
+    [[-hx, hy, -hz], [-hx, hy, hz], [hx, hy, hz], [hx, hy, -hz]],
+    [[-ix, hy, -iz], [-ix, hy, iz], [ix, hy, iz], [ix, hy, -iz]]
   );
-  addRaisedPanel(
-    [[-ix, -hy, -iz], [ix, -hy, -iz], [ix, -hy, iz], [-ix, -hy, iz]],
-    [[-jx, -hy - panelLift, -jz], [jx, -hy - panelLift, -jz], [jx, -hy - panelLift, jz], [-jx, -hy - panelLift, jz]]
+  addInsetFace(
+    [[-hx, -hy, -hz], [hx, -hy, -hz], [hx, -hy, hz], [-hx, -hy, hz]],
+    [[-ix, -hy, -iz], [ix, -hy, -iz], [ix, -hy, iz], [-ix, -hy, iz]]
   );
-
-  addFace([[-ix, iy, hz], [ix, iy, hz], [ix, hy, iz], [-ix, hy, iz]]);
-  addFace([[-ix, -hy, iz], [ix, -hy, iz], [ix, -iy, hz], [-ix, -iy, hz]]);
-  addFace([[-ix, hy, -iz], [ix, hy, -iz], [ix, iy, -hz], [-ix, iy, -hz]]);
-  addFace([[-ix, -iy, -hz], [ix, -iy, -hz], [ix, -hy, -iz], [-ix, -hy, -iz]]);
-
-  addFace([[ix, -iy, hz], [ix, iy, hz], [hx, iy, iz], [hx, -iy, iz]]);
-  addFace([[-hx, -iy, iz], [-hx, iy, iz], [-ix, iy, hz], [-ix, -iy, hz]]);
-  addFace([[-ix, -iy, -hz], [-ix, iy, -hz], [-hx, iy, -iz], [-hx, -iy, -iz]]);
-  addFace([[hx, -iy, -iz], [hx, iy, -iz], [ix, iy, -hz], [ix, -iy, -hz]]);
-
-  addFace([[ix, hy, -iz], [ix, hy, iz], [hx, iy, iz], [hx, iy, -iz]]);
-  addFace([[-hx, iy, -iz], [-hx, iy, iz], [-ix, hy, iz], [-ix, hy, -iz]]);
-  addFace([[-ix, -hy, -iz], [-ix, -hy, iz], [-hx, -iy, iz], [-hx, -iy, -iz]]);
-  addFace([[hx, -iy, -iz], [hx, -iy, iz], [ix, -hy, iz], [ix, -hy, -iz]]);
-
-  addFace([[ix, iy, hz], [hx, iy, iz], [ix, hy, iz]]);
-  addFace([[-ix, iy, hz], [-ix, hy, iz], [-hx, iy, iz]]);
-  addFace([[ix, -iy, hz], [ix, -hy, iz], [hx, -iy, iz]]);
-  addFace([[-ix, -iy, hz], [-hx, -iy, iz], [-ix, -hy, iz]]);
-
-  addFace([[ix, iy, -hz], [ix, hy, -iz], [hx, iy, -iz]]);
-  addFace([[-ix, iy, -hz], [-hx, iy, -iz], [-ix, hy, -iz]]);
-  addFace([[ix, -iy, -hz], [hx, -iy, -iz], [ix, -hy, -iz]]);
-  addFace([[-ix, -iy, -hz], [-ix, -hy, -iz], [-hx, -iy, -iz]]);
 
   shape.endShape();
   setShapeColor(shape, color, {
@@ -370,13 +483,16 @@ const createSharedBeveledBoxShape = (gpu, width, height, depth, bevel, color, ma
 const getSharedBlockShapeSource = (gpu, options = {}) => {
   const size = options.size ?? BOARD.cell * 0.90;
   const bevel = options.bevel ?? BOARD.cell * 0.12;
-  const shapeKey = `${size.toFixed(4)}:${bevel.toFixed(4)}`;
+  const shapeKey = `${currentBlockShapeMode}:${size.toFixed(4)}:${bevel.toFixed(4)}`;
   const cached = blockShapeSources.get(shapeKey);
   if (cached) return cached;
 
   // block slot は色と材質だけを頻繁に切り替える一方、形状そのものはサイズごとに共通である
   // そのため geometry は source shape を 1 回だけ作り、各 slot では instance を使って再利用する
-  const sourceShape = createSharedBeveledBoxShape(
+  const shapeFactory = currentBlockShapeMode === "shared_bevel"
+    ? createSharedBeveledBoxShape
+    : createSharedLiteBevelBoxShape;
+  const sourceShape = shapeFactory(
     gpu,
     size,
     size,
@@ -411,8 +527,8 @@ const createWireframeLayerWallShape = (gpu, width, height, depth, color, materia
 
 const createSlot = (space, name, gpu, options = {}, parentNode = null) => {
   const node = space.addNode(parentNode, name);
-  // 現行の非共有頂点版は createBeveledBoxShape() として残してある
-  // block 表示側では shared vertex 版 source を 1 回だけ作り、各 slot へ instance を配る
+  // block 表示側では source shape を 1 回だけ作り、各 slot へ instance を配る
+  // shape mode 切り替え時は、この source を別方式へ差し替えて比較する
   const sourceShape = getSharedBlockShapeSource(gpu, options);
   const shape = sourceShape.createInstance();
   setShapeColor(shape, options.color ?? [0.9, 0.9, 0.9, 1.0], {
@@ -424,10 +540,17 @@ const createSlot = (space, name, gpu, options = {}, parentNode = null) => {
   return {
     node,
     shape,
+    gpu,
+    sourceOptions: {
+      size: options.size,
+      bevel: options.bevel
+    },
     visible: false,
     colorKey: "",
     materialKey: "",
-    scale: 1.0
+    scale: 1.0,
+    color: null,
+    material: null
   };
 };
 
@@ -453,12 +576,55 @@ const applySlot = (slot, visible, position, color, material = {}, scale = 1.0) =
     setShapeColor(slot.shape, color, material);
     slot.colorKey = nextColorKey;
     slot.materialKey = nextMaterialKey;
+    slot.color = [...color];
+    slot.material = { ...material };
   }
 
   if (!slot.visible) {
     slot.node.hide(false);
     slot.visible = true;
   }
+};
+
+const rebuildSlotShape = (slot) => {
+  if (!slot?.node || !slot?.gpu) return;
+  const sourceShape = getSharedBlockShapeSource(slot.gpu, slot.sourceOptions ?? {});
+  const nextShape = sourceShape.createInstance();
+  if (slot.color) {
+    setShapeColor(nextShape, slot.color, slot.material ?? {});
+  }
+  nextShape.hide(!slot.visible);
+  slot.node.setShape(nextShape);
+  slot.shape = nextShape;
+};
+
+const forEachBlockSlot = (runtime, callback) => {
+  for (let y = 0; y < runtime.lockedSlots.length; y++) {
+    for (let z = 0; z < runtime.lockedSlots[y].length; z++) {
+      for (let x = 0; x < runtime.lockedSlots[y][z].length; x++) {
+        callback(runtime.lockedSlots[y][z][x]);
+      }
+    }
+  }
+  for (let i = 0; i < runtime.activeSlots.length; i++) callback(runtime.activeSlots[i]);
+  for (let i = 0; i < runtime.ghostSlots.length; i++) callback(runtime.ghostSlots[i]);
+  for (let i = 0; i < runtime.previewSlots.length; i++) callback(runtime.previewSlots[i]);
+  if (Array.isArray(runtime.demoGallery)) {
+    for (let i = 0; i < runtime.demoGallery.length; i++) {
+      const item = runtime.demoGallery[i];
+      if (!item?.slots) continue;
+      for (let j = 0; j < item.slots.length; j++) callback(item.slots[j]);
+    }
+  }
+};
+
+const cycleBlockShapeMode = (runtime) => {
+  const currentIndex = BLOCK_SHAPE_MODES.indexOf(currentBlockShapeMode);
+  const nextIndex = (currentIndex + 1) % BLOCK_SHAPE_MODES.length;
+  currentBlockShapeMode = BLOCK_SHAPE_MODES[nextIndex];
+  forEachBlockSlot(runtime, rebuildSlotShape);
+  runtime.dirtyVisuals = true;
+  return currentBlockShapeMode;
 };
 
 const emptyLayer = () =>
@@ -1076,23 +1242,9 @@ const renderBoard = (runtime) => {
 };
 
 const updateHud = (runtime) => {
-  if (!runtime.started || runtime.gameOver) {
-    app.setStatusLines([
-      runtime.gameOver
-        ? `game over  score ${runtime.score}  level ${runtime.level}  layer ${runtime.lines}`
-        : `score ${runtime.score}  level ${runtime.level}  layer ${runtime.lines}  press move/rotate/drop to start`
-    ], HUD_STATUS_OPTIONS);
-    app.setGuideLines([
-      "A / S / D: rotate around X / Y / Z",
-      "X: 1 step down   Space: hard drop",
-      "P: pause   R: restart   K: screenshot"
-    ], HUD_GUIDE_OPTIONS);
-    return;
-  }
-
-  app.setStatusLines([
-    `score ${runtime.score}  level ${runtime.level}  layer ${runtime.lines}`
-  ], HUD_STATUS_OPTIONS);
+  // cube4 では Text.js ベースの固定 HUD を常時重ねるため、
+  // WebgApp 標準の guide/status は空にして表示領域を競合させない
+  app.setStatusLines([], HUD_STATUS_OPTIONS);
   app.setGuideLines([], HUD_GUIDE_OPTIONS);
 };
 
@@ -1104,32 +1256,17 @@ const createDecor = (space, gpu) => {
   const wallWidth = boardWidth + BOARD.cell * 0.10;
   const wallDepth = boardDepth + BOARD.cell * 0.10;
 
-  const floorNode = space.addNode(null, "floor");
-  floorNode.setPosition(center[0], BASE_Y - BOARD.cell * 0.9, center[2]);
-  floorNode.addShape(createCuboidShape(
-    gpu,
-    boardWidth,
-    0.8,
-    boardDepth,
-    [0.20, 0.26, 0.34, 1.0],
-    {
-      ambient: 0.42,
-      specular: 0.10,
-      power: 6.0
-    }
-  ));
-
   const pedestalNode = space.addNode(null, "pedestal");
-  pedestalNode.setPosition(center[0], BASE_Y - BOARD.cell * 1.35, center[2]);
+  pedestalNode.setPosition(center[0], BASE_Y - BOARD.cell * 0.75, center[2]);
   pedestalNode.addShape(createCuboidShape(
     gpu,
     boardWidth,
-    0.18,
+    0.4,
     boardDepth,
-    [0.16, 0.20, 0.27, 1.0],
+    [0.2, 0.2, 0.2, 1.0],
     {
-      ambient: 0.20,
-      specular: 0.08,
+      ambient: 0.5,
+      specular: 0.5,
       power: 6.0
     }
   ));
@@ -1198,6 +1335,120 @@ const setupOrbit = () => {
 
 const fallIntervalSec = (runtime) => Math.max(0.42, 1.95 - (runtime.level - 1) * 0.12);
 
+// cube4 専用の固定 HUD Text を初期化する
+// WebgApp の guide/status は可変 block 配置だが、この sample では
+// 左右に固定したゲーム情報を出したいため、別 Text を 1 枚重ねる
+const createGameHudText = async (gpu) => {
+  const text = new Text(gpu, {
+    cols: GAME_HUD_GRID.cols,
+    rows: GAME_HUD_GRID.rows
+  });
+  await text.init(FONT_FILE);
+  text.setScale(GAME_HUD_GRID.scale);
+  return text;
+};
+
+// 1 行の値表示を固定幅へ揃え、HUD 左列を読みやすくする
+// label を縦に並べたときに値開始位置が揃うよう、手前を右詰めで整形する
+const formatHudMetricLine = (label, value) => `${label.padEnd(9, " ")} ${String(value)}`;
+
+// 現在の盤面に対する各レイヤーの埋まり数を下から順に返す
+// HUD 右列ではこの値を高さごとに並べ、どの層が消去閾値へ近いかを見やすくする
+const collectLayerFillCounts = (runtime) => {
+  const counts = [];
+  for (let y = 0; y < BOARD.height; y++) {
+    counts.push(countLayerBlocks(runtime.board[y]));
+  }
+  return counts;
+};
+
+// 落下中ブロックの最下セルが、盤面下端から何セル上にあるかを返す
+// 0 なら最下セルが最下段にあり、値が大きいほどまだ高い位置にいる
+const getActivePieceDistanceFromBottom = (runtime) => {
+  if (!runtime.active) return null;
+  const cells = getCellsInWorld(runtime.active);
+  if (cells.length <= 0) return null;
+  let minY = cells[0][1];
+  for (let i = 1; i < cells.length; i++) {
+    if (cells[i][1] < minY) {
+      minY = cells[i][1];
+    }
+  }
+  return minY;
+};
+
+// ゲーム進行状態を HUD 左列向けの短い文字列へまとめる
+// 開始前、進行中、一時停止、ゲームオーバーを毎フレーム同じ位置へ表示する
+const getHudStateLabel = (runtime) => {
+  if (runtime.gameOver) return "GAME OVER";
+  if (runtime.paused) return "PAUSED";
+  if (!runtime.started) return "READY";
+  return "PLAY";
+};
+
+// 左側の進行情報を Text へ書き込む
+// score / level / layer / 距離 / high score / 操作補助を固定位置で積み上げる
+const drawHudLeftPanel = (runtime, text) => {
+  const leftX = GAME_HUD_LEFT.x;
+  let lineY = GAME_HUD_LEFT.y;
+  const distance = getActivePieceDistanceFromBottom(runtime);
+
+  text.shader.setColor(1.0, 0.97, 0.82);
+  text.drawText("CUBE4 STATUS", leftX, lineY++);
+  lineY += 1;
+
+  text.shader.setColor(1.0, 0.97, 0.82);
+  text.drawText(formatHudMetricLine("Score", runtime.score), leftX, lineY++);
+  text.drawText(formatHudMetricLine("Level", runtime.level), leftX, lineY++);
+  text.drawText(formatHudMetricLine("Layer", runtime.lines), leftX, lineY++);
+  text.drawText(formatHudMetricLine("DropDist", distance === null ? "--" : distance), leftX, lineY++);
+  text.drawText(formatHudMetricLine("HighScore", runtime.highScore), leftX, lineY++);
+  text.drawText(formatHudMetricLine("State", getHudStateLabel(runtime)), leftX, lineY++);
+  lineY += 14;
+
+  text.shader.setColor(1.0, 0.97, 0.82);
+  text.drawText(`Clear line  ${LAYER_CLEAR_COUNT}/${LAYER_CELL_COUNT}+`, leftX, lineY++);
+  text.drawText(`Fall sec    ${fallIntervalSec(runtime).toFixed(2)}`, leftX, lineY++);
+  lineY += 1;
+
+  text.shader.setColor(1.0, 0.97, 0.82);
+  text.drawText("Move  Arrows", leftX, lineY++);
+  text.drawText("Rotate A/S/D", leftX, lineY++);
+  text.drawText("Drop  X / Space", leftX, lineY++);
+  text.drawText(`Shape B : ${currentBlockShapeMode}`, leftX, lineY++);
+  text.drawText("Pause P  Restart R", leftX, lineY++);
+};
+
+// 右側へ各レイヤーの埋まり数を高さぶん並べて描く
+// 上の行ほど高い層になるよう逆順にし、閾値到達層には mark を付ける
+const drawHudRightPanel = (runtime, text) => {
+  const rightX = GAME_HUD_RIGHT.x;
+  let lineY = GAME_HUD_RIGHT.y;
+  const fillCounts = collectLayerFillCounts(runtime);
+
+  text.shader.setColor(1.0, 0.97, 0.82);
+  text.drawText("LAYER FILL", rightX, lineY++);
+  text.drawText(`need ${LAYER_CLEAR_COUNT}/${LAYER_CELL_COUNT}+`, rightX, lineY++);
+  lineY += 1;
+
+  for (let y = BOARD.height - 1; y >= 0; y--) {
+    const fillCount = fillCounts[y];
+    const mark = fillCount >= LAYER_CLEAR_COUNT ? "*" : " ";
+    text.shader.setColor(1.0, 0.97, 0.82);
+    text.drawText(`${mark} ${String(fillCount).padStart(2, " ")}/${LAYER_CELL_COUNT}`, rightX, lineY++);
+  }
+};
+
+// 標準 HUD とは別に、固定配置のゲーム HUD を Text で描く
+// 毎フレーム画面バッファを消去し、左パネルと右パネルを同じ pass 上へ重ねる
+const drawGameHud = (runtime) => {
+  if (!gameHudText) return;
+  gameHudText.clearScreen();
+  drawHudLeftPanel(runtime, gameHudText);
+  drawHudRightPanel(runtime, gameHudText);
+  gameHudText.drawScreen();
+};
+
 const attachInput = (runtime) => {
   app.attachInput({
     onKeyDown: (key, ev) => {
@@ -1216,6 +1467,12 @@ const attachInput = (runtime) => {
         const file = app.takeScreenshot({ prefix: "cube4" });
         playSe("coin");
         app.pushToast(`screenshot: ${file}`, { durationMs: 1400 });
+        return;
+      }
+      if (key === "b" && !ev.repeat) {
+        const nextMode = cycleBlockShapeMode(runtime);
+        playSe("ui_ok");
+        app.pushToast(`block shape: ${nextMode}`, { durationMs: 1000 });
         return;
       }
       if (runtime.paused) return;
@@ -1261,7 +1518,7 @@ const attachInput = (runtime) => {
 const start = async () => {
   app = new WebgApp({
     document,
-    clearColor: [0.05, 0.07, 0.11, 1.0],
+    clearColor: [0.3, 0.3, 0.4, 1.0],
     lightPosition: [90.0, 160.0, 120.0, 1.0],
     viewAngle: 52.0,
     projectionFar: 1400.0,
@@ -1277,6 +1534,7 @@ const start = async () => {
     }
   });
   await app.init();
+  gameHudText = await createGameHudText(app.getGL());
   audio = new GameAudioSynth();
   audio.setMasterVolume(0.22);
   audio.setSeVolume(0.78);
@@ -1321,6 +1579,9 @@ const start = async () => {
         renderBoard(runtime);
       }
       updateHud(runtime);
+    },
+    onAfterHud: () => {
+      drawGameHud(runtime);
     }
   });
 };

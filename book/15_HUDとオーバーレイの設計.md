@@ -158,7 +158,7 @@ app.setStatusLines([
 
 `Message` も `Text` と同様にフォントアトラスに依存しているため、あくまで短い ASCII HUD 用として利用してください。日本語の説明や複数段落にわたる本文を表示したい場合は、後述する `UIPanel` または `FixedFormatPanel` を使用してください。
 
-## 読むためのパネル: `DebugDock` と `FixedFormatPanel`
+## `DebugDock` と `FixedFormatPanel`
 
 ### `DebugDock.js` の使い方
 
@@ -168,8 +168,10 @@ app.setStatusLines([
 
 ```js
 app.setDebugDockRows([
-  { label: "Threshold", decKey: "1", incKey: "2", value: bloom.threshold.toFixed(2) },
-  { label: "Strength", decKey: "3", incKey: "4", value: bloom.bloomStrength.toFixed(2) },
+  { label: "Threshold", decKey: "1", incKey: "2", 
+    value: bloom.threshold.toFixed(2) },
+  { label: "Strength", decKey: "3", incKey: "4", 
+    value: bloom.bloomStrength.toFixed(2) },
   { label: "Tone Map", cycleKey: "G", value: toneMapLabel }
 ]);
 

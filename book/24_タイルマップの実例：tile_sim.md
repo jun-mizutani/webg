@@ -125,7 +125,8 @@ app.start({
     if (!moveTween || moveTween.isFinished()) {
       if (app.wasActionPressed("move_up")) {
         const move = resolveCameraRelativeGridMove(app.camera.yaw, "arrowup");
-        const next = tileMap.getTile(playerCell.col + move.dx, playerCell.row + move.dy);
+        const next = tileMap.getTile(playerCell.col 
+                   + move.dx, playerCell.row + move.dy);
         startMoveTo(next);
       }
     }
@@ -409,7 +410,8 @@ app.start({
       : null;
 
     if (move && (!moveTween || moveTween.isFinished())) {
-      const nextCell = tileMap.getTile(playerCell.col + move.dx, playerCell.row + move.dy);
+      const nextCell = tileMap.getTile(playerCell.col 
+                       + move.dx, playerCell.row + move.dy);
       startMoveTo(nextCell);
     }
 

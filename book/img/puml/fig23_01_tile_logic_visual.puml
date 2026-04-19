@@ -1,6 +1,7 @@
 @startuml
 title 論理位置と見た目位置の分離
 
+'top to bottom direction
 left to right direction
 skinparam backgroundColor white
 skinparam shadowing true
@@ -20,16 +21,16 @@ skinparam nodesep 20
 rectangle "cell (x, y)" as Cell
 rectangle "canMove /\nfindPath" as Logic
 rectangle "world target\nposition" as WorldTarget
-rectangle "Node.animatePosition()" as AnimatePosition
+rectangle "animatePosition()" as AnimatePosition
 rectangle "displayArea\nscroll" as DisplayArea
 
-Cell -down-> Logic
 Cell --> WorldTarget
+Cell --> Logic
 Logic ..> DisplayArea : 同じ cell から計算
 WorldTarget -down-> AnimatePosition
 AnimatePosition -down-> DisplayArea
 
-note top of Cell
+note top of Logic
 論理層
 end note
 
