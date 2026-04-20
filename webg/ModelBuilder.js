@@ -1,5 +1,5 @@
 // ---------------------------------------------
-//  ModelBuilder.js  2026/04/02
+//  ModelBuilder.js  2026/04/20
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // ---------------------------------------------
@@ -10,6 +10,32 @@ import Matrix from "./Matrix.js";
 import Quat from "./Quat.js";
 import Animation from "./Animation.js";
 import ModelValidator from "./ModelValidator.js";
+
+function destroyShapeList(shapes, options = {}) {
+  let destroyedCount = 0;
+  if (!Array.isArray(shapes)) {
+    return destroyedCount;
+  }
+  for (let i = 0; i < shapes.length; i++) {
+    if (shapes[i]?.destroy?.(options)) {
+      destroyedCount++;
+    }
+  }
+  return destroyedCount;
+}
+
+function destroyShapeResourceList(shapeResources) {
+  let destroyedCount = 0;
+  if (!Array.isArray(shapeResources)) {
+    return destroyedCount;
+  }
+  for (let i = 0; i < shapeResources.length; i++) {
+    if (shapeResources[i]?.destroy?.({ force: true })) {
+      destroyedCount++;
+    }
+  }
+  return destroyedCount;
+}
 
 export default class ModelBuilder {
 
@@ -398,95 +424,142 @@ export default class ModelBuilder {
 
     const shapeResources = [...resourceCache.values()];
     let activeInstantiation = null;
+    const liveInstantiations = new Set();
+    let runtime = null;
 
-    const createInstantiationFacade = (createdNodeMap, shapes, animationMap, bindingEntries) => ({
-      nodeMap: createdNodeMap,
+    const createInstantiationFacade = (
+      space,
+      createdNodeMap,
       shapes,
-      shapeInstances: shapes,
       animationMap,
-      getAnimation(id) {
-        return animationMap.get(String(id ?? "")) ?? null;
-      },
-      getAnimationNames() {
-        return [...animationMap.keys()];
-      },
-      bindAnimationBindings() {
-        let boundCount = 0;
-        for (let i = 0; i < bindingEntries.length; i++) {
-          const entry = bindingEntries[i];
-          if (!entry?.shape || entry.animationBindings.length === 0) {
-            continue;
+      bindingEntries,
+      rootNodes
+    ) => {
+      const instantiation = {
+        nodeMap: createdNodeMap,
+        shapes,
+        shapeInstances: shapes,
+        animationMap,
+        space,
+        rootNodes,
+        isDestroyed: false,
+        getAnimation(id) {
+          return animationMap.get(String(id ?? "")) ?? null;
+        },
+        getAnimationNames() {
+          return [...animationMap.keys()];
+        },
+        bindAnimationBindings() {
+          let boundCount = 0;
+          for (let i = 0; i < bindingEntries.length; i++) {
+            const entry = bindingEntries[i];
+            if (!entry?.shape || entry.animationBindings.length === 0) {
+              continue;
+            }
+            const animation = entry.animationMap.get(entry.animationBindings[0]);
+            if (!animation) {
+              continue;
+            }
+            entry.shape.setAnimation(animation);
+            boundCount++;
           }
-          const animation = entry.animationMap.get(entry.animationBindings[0]);
-          if (!animation) {
-            continue;
+          return boundCount;
+        },
+        startAnimation(id) {
+          const animation = animationMap.get(String(id ?? ""));
+          if (!animation) return null;
+          animation.start();
+          return animation;
+        },
+        restartAnimation(id) {
+          return this.startAnimation(id);
+        },
+        playAnimation(id) {
+          const animation = animationMap.get(String(id ?? ""));
+          if (!animation) return -1;
+          return animation.play();
+        },
+        startAllAnimations() {
+          const list = [...animationMap.values()];
+          for (let i = 0; i < list.length; i++) {
+            list[i].start();
           }
-          entry.shape.setAnimation(animation);
-          boundCount++;
+          return list.length;
+        },
+        restartAllAnimations() {
+          return this.startAllAnimations();
+        },
+        playAllAnimations() {
+          const list = [...animationMap.values()];
+          for (let i = 0; i < list.length; i++) {
+            list[i].play();
+          }
+          return list.length;
+        },
+        pauseAnimation(id) {
+          const animation = animationMap.get(String(id ?? ""));
+          if (!animation) return null;
+          animation.schedule.pause = true;
+          return animation;
+        },
+        resumeAnimation(id) {
+          const animation = animationMap.get(String(id ?? ""));
+          if (!animation) return null;
+          animation.schedule.pause = false;
+          return animation;
+        },
+        pauseAllAnimations() {
+          const list = [...animationMap.values()];
+          for (let i = 0; i < list.length; i++) {
+            list[i].schedule.pause = true;
+          }
+          return list.length;
+        },
+        resumeAllAnimations() {
+          const list = [...animationMap.values()];
+          for (let i = 0; i < list.length; i++) {
+            list[i].schedule.pause = false;
+          }
+          return list.length;
+        },
+        setAnimationsPaused(paused) {
+          return paused ? this.pauseAllAnimations() : this.resumeAllAnimations();
+        },
+        destroy(options = {}) {
+          if (this.isDestroyed) {
+            return 0;
+          }
+          this.setAnimationsPaused(true);
+          const destroyShapes = options.destroyShapes === true;
+          if (this.space && Array.isArray(this.rootNodes)) {
+            for (let i = 0; i < this.rootNodes.length; i++) {
+              this.space.removeNodeTree(this.rootNodes[i], {
+                destroyShapes: false
+              });
+            }
+          }
+          const destroyedShapeCount = destroyShapeList(this.shapes, {
+            destroyResource: destroyShapes
+          });
+          this.rootNodes = [];
+          this.nodeMap.clear();
+          this.animationMap.clear();
+          this.shapes.length = 0;
+          this.shapeInstances = this.shapes;
+          this.isDestroyed = true;
+          liveInstantiations.delete(this);
+          if (activeInstantiation === this) {
+            activeInstantiation = null;
+            if (runtime) {
+              runtime.shapes = builtShapes;
+            }
+          }
+          return destroyedShapeCount;
         }
-        return boundCount;
-      },
-      startAnimation(id) {
-        const animation = animationMap.get(String(id ?? ""));
-        if (!animation) return null;
-        animation.start();
-        return animation;
-      },
-      restartAnimation(id) {
-        return this.startAnimation(id);
-      },
-      playAnimation(id) {
-        const animation = animationMap.get(String(id ?? ""));
-        if (!animation) return -1;
-        return animation.play();
-      },
-      startAllAnimations() {
-        const list = [...animationMap.values()];
-        for (let i = 0; i < list.length; i++) {
-          list[i].start();
-        }
-        return list.length;
-      },
-      restartAllAnimations() {
-        return this.startAllAnimations();
-      },
-      playAllAnimations() {
-        const list = [...animationMap.values()];
-        for (let i = 0; i < list.length; i++) {
-          list[i].play();
-        }
-        return list.length;
-      },
-      pauseAnimation(id) {
-        const animation = animationMap.get(String(id ?? ""));
-        if (!animation) return null;
-        animation.schedule.pause = true;
-        return animation;
-      },
-      resumeAnimation(id) {
-        const animation = animationMap.get(String(id ?? ""));
-        if (!animation) return null;
-        animation.schedule.pause = false;
-        return animation;
-      },
-      pauseAllAnimations() {
-        const list = [...animationMap.values()];
-        for (let i = 0; i < list.length; i++) {
-          list[i].schedule.pause = true;
-        }
-        return list.length;
-      },
-      resumeAllAnimations() {
-        const list = [...animationMap.values()];
-        for (let i = 0; i < list.length; i++) {
-          list[i].schedule.pause = false;
-        }
-        return list.length;
-      },
-      setAnimationsPaused(paused) {
-        return paused ? this.pauseAllAnimations() : this.resumeAllAnimations();
-      }
-    });
+      };
+      liveInstantiations.add(instantiation);
+      return instantiation;
+    };
 
     const instantiateRuntime = (space, options = {}) => {
       const { bindAnimations = true, setActive = true } = options;
@@ -539,11 +612,17 @@ export default class ModelBuilder {
         makeNode(builtNodes[i]);
       }
 
+      const rootNodes = builtNodes
+        .filter((nodeInfo) => nodeInfo.parent === null)
+        .map((nodeInfo) => createdNodeMap.get(nodeInfo.id))
+        .filter((node) => !!node);
       const instantiated = createInstantiationFacade(
+        space,
         createdNodeMap,
         instantiatedShapes,
         instantiatedAnimationMap,
-        bindingEntries
+        bindingEntries,
+        rootNodes
       );
       instantiated.boundAnimations = bindAnimations
         ? instantiated.bindAnimationBindings()
@@ -556,19 +635,26 @@ export default class ModelBuilder {
       return instantiated;
     };
 
-    const runtime = {
+    runtime = {
       materialDefs,
       meshDefs,
       skeletonDefs,
       animationMap: new Map(),
       nodes: builtNodes,
       nodeMap,
+      templateShapes: builtShapes,
       shapes: builtShapes,
       shapeResources,
+      instantiations: liveInstantiations,
+      isDestroyed: false,
       // runtime node 定義を Space / Node ツリーへ復元する
       createNodeTree(space) {
         // loader sample ごとに重複していた node 再構築処理を
         // build() 結果側へ集約し、asset 種別差を sample から隠す
+        console.assert(!this.isDestroyed, "runtime.createNodeTree() requires a live runtime");
+        if (this.isDestroyed) {
+          return null;
+        }
         return instantiateRuntime(space, {
           bindAnimations: false,
           setActive: true
@@ -582,6 +668,10 @@ export default class ModelBuilder {
       instantiate(space, options = {}) {
         // loader sample 側では「配置して使える状態へする」ことが多いため、
         // createNodeTree と bindAnimationBindings を 1 手で呼べる入口を用意する
+        console.assert(!this.isDestroyed, "runtime.instantiate() requires a live runtime");
+        if (this.isDestroyed) {
+          return null;
+        }
         return instantiateRuntime(space, {
           bindAnimations: options.bindAnimations !== false,
           setActive: true
@@ -638,6 +728,29 @@ export default class ModelBuilder {
       // 全 animation の pause 状態を一括設定する
       setAnimationsPaused(paused) {
         return paused ? this.pauseAllAnimations() : this.resumeAllAnimations();
+      },
+      // runtime が保持している template shape / instantiation / GPUBuffer をまとめて破棄する
+      destroy() {
+        if (this.isDestroyed) {
+          return 0;
+        }
+        const instantiations = [...liveInstantiations];
+        let destroyedCount = 0;
+        for (let i = 0; i < instantiations.length; i++) {
+          destroyedCount += instantiations[i].destroy({
+            destroyShapes: false
+          });
+        }
+        destroyedCount += destroyShapeList(this.templateShapes, {
+          destroyResource: false
+        });
+        destroyShapeResourceList(shapeResources);
+        this.templateShapes.length = 0;
+        this.shapes = [];
+        this.animationMap.clear();
+        activeInstantiation = null;
+        this.isDestroyed = true;
+        return destroyedCount;
       }
     };
     return runtime;
@@ -723,95 +836,142 @@ export default class ModelBuilder {
 
     const shapeResources = [...resourceCache.values()];
     let activeInstantiation = null;
+    const liveInstantiations = new Set();
+    let runtime = null;
 
-    const createInstantiationFacade = (createdNodeMap, shapes, animationMap, bindingEntries) => ({
-      nodeMap: createdNodeMap,
+    const createInstantiationFacade = (
+      space,
+      createdNodeMap,
       shapes,
-      shapeInstances: shapes,
       animationMap,
-      getAnimation(id) {
-        return animationMap.get(String(id ?? "")) ?? null;
-      },
-      getAnimationNames() {
-        return [...animationMap.keys()];
-      },
-      bindAnimationBindings() {
-        let boundCount = 0;
-        for (let i = 0; i < bindingEntries.length; i++) {
-          const entry = bindingEntries[i];
-          if (!entry?.shape || entry.animationBindings.length === 0) {
-            continue;
+      bindingEntries,
+      rootNodes
+    ) => {
+      const instantiation = {
+        nodeMap: createdNodeMap,
+        shapes,
+        shapeInstances: shapes,
+        animationMap,
+        space,
+        rootNodes,
+        isDestroyed: false,
+        getAnimation(id) {
+          return animationMap.get(String(id ?? "")) ?? null;
+        },
+        getAnimationNames() {
+          return [...animationMap.keys()];
+        },
+        bindAnimationBindings() {
+          let boundCount = 0;
+          for (let i = 0; i < bindingEntries.length; i++) {
+            const entry = bindingEntries[i];
+            if (!entry?.shape || entry.animationBindings.length === 0) {
+              continue;
+            }
+            const animation = entry.animationMap.get(entry.animationBindings[0]);
+            if (!animation) {
+              continue;
+            }
+            entry.shape.setAnimation(animation);
+            boundCount++;
           }
-          const animation = entry.animationMap.get(entry.animationBindings[0]);
-          if (!animation) {
-            continue;
+          return boundCount;
+        },
+        startAnimation(id) {
+          const animation = animationMap.get(String(id ?? ""));
+          if (!animation) return null;
+          animation.start();
+          return animation;
+        },
+        restartAnimation(id) {
+          return this.startAnimation(id);
+        },
+        playAnimation(id) {
+          const animation = animationMap.get(String(id ?? ""));
+          if (!animation) return -1;
+          return animation.play();
+        },
+        startAllAnimations() {
+          const list = [...animationMap.values()];
+          for (let i = 0; i < list.length; i++) {
+            list[i].start();
           }
-          entry.shape.setAnimation(animation);
-          boundCount++;
+          return list.length;
+        },
+        restartAllAnimations() {
+          return this.startAllAnimations();
+        },
+        playAllAnimations() {
+          const list = [...animationMap.values()];
+          for (let i = 0; i < list.length; i++) {
+            list[i].play();
+          }
+          return list.length;
+        },
+        pauseAnimation(id) {
+          const animation = animationMap.get(String(id ?? ""));
+          if (!animation) return null;
+          animation.schedule.pause = true;
+          return animation;
+        },
+        resumeAnimation(id) {
+          const animation = animationMap.get(String(id ?? ""));
+          if (!animation) return null;
+          animation.schedule.pause = false;
+          return animation;
+        },
+        pauseAllAnimations() {
+          const list = [...animationMap.values()];
+          for (let i = 0; i < list.length; i++) {
+            list[i].schedule.pause = true;
+          }
+          return list.length;
+        },
+        resumeAllAnimations() {
+          const list = [...animationMap.values()];
+          for (let i = 0; i < list.length; i++) {
+            list[i].schedule.pause = false;
+          }
+          return list.length;
+        },
+        setAnimationsPaused(paused) {
+          return paused ? this.pauseAllAnimations() : this.resumeAllAnimations();
+        },
+        destroy(options = {}) {
+          if (this.isDestroyed) {
+            return 0;
+          }
+          this.setAnimationsPaused(true);
+          const destroyShapes = options.destroyShapes === true;
+          if (this.space && Array.isArray(this.rootNodes)) {
+            for (let i = 0; i < this.rootNodes.length; i++) {
+              this.space.removeNodeTree(this.rootNodes[i], {
+                destroyShapes: false
+              });
+            }
+          }
+          const destroyedShapeCount = destroyShapeList(this.shapes, {
+            destroyResource: destroyShapes
+          });
+          this.rootNodes = [];
+          this.nodeMap.clear();
+          this.animationMap.clear();
+          this.shapes.length = 0;
+          this.shapeInstances = this.shapes;
+          this.isDestroyed = true;
+          liveInstantiations.delete(this);
+          if (activeInstantiation === this) {
+            activeInstantiation = null;
+            if (runtime) {
+              runtime.shapes = builtShapes;
+            }
+          }
+          return destroyedShapeCount;
         }
-        return boundCount;
-      },
-      startAnimation(id) {
-        const animation = animationMap.get(String(id ?? ""));
-        if (!animation) return null;
-        animation.start();
-        return animation;
-      },
-      restartAnimation(id) {
-        return this.startAnimation(id);
-      },
-      playAnimation(id) {
-        const animation = animationMap.get(String(id ?? ""));
-        if (!animation) return -1;
-        return animation.play();
-      },
-      startAllAnimations() {
-        const list = [...animationMap.values()];
-        for (let i = 0; i < list.length; i++) {
-          list[i].start();
-        }
-        return list.length;
-      },
-      restartAllAnimations() {
-        return this.startAllAnimations();
-      },
-      playAllAnimations() {
-        const list = [...animationMap.values()];
-        for (let i = 0; i < list.length; i++) {
-          list[i].play();
-        }
-        return list.length;
-      },
-      pauseAnimation(id) {
-        const animation = animationMap.get(String(id ?? ""));
-        if (!animation) return null;
-        animation.schedule.pause = true;
-        return animation;
-      },
-      resumeAnimation(id) {
-        const animation = animationMap.get(String(id ?? ""));
-        if (!animation) return null;
-        animation.schedule.pause = false;
-        return animation;
-      },
-      pauseAllAnimations() {
-        const list = [...animationMap.values()];
-        for (let i = 0; i < list.length; i++) {
-          list[i].schedule.pause = true;
-        }
-        return list.length;
-      },
-      resumeAllAnimations() {
-        const list = [...animationMap.values()];
-        for (let i = 0; i < list.length; i++) {
-          list[i].schedule.pause = false;
-        }
-        return list.length;
-      },
-      setAnimationsPaused(paused) {
-        return paused ? this.pauseAllAnimations() : this.resumeAllAnimations();
-      }
-    });
+      };
+      liveInstantiations.add(instantiation);
+      return instantiation;
+    };
 
     const instantiateRuntime = (space, instantiateOptions = {}) => {
       const { bindAnimations = true, setActive = true } = instantiateOptions;
@@ -864,11 +1024,17 @@ export default class ModelBuilder {
         makeNode(builtNodes[i]);
       }
 
+      const rootNodes = builtNodes
+        .filter((nodeInfo) => nodeInfo.parent === null)
+        .map((nodeInfo) => createdNodeMap.get(nodeInfo.id))
+        .filter((node) => !!node);
       const instantiated = createInstantiationFacade(
+        space,
         createdNodeMap,
         instantiatedShapes,
         instantiatedAnimationMap,
-        bindingEntries
+        bindingEntries,
+        rootNodes
       );
       instantiated.boundAnimations = bindAnimations
         ? instantiated.bindAnimationBindings()
@@ -885,16 +1051,23 @@ export default class ModelBuilder {
       onStage,
       `build-complete nodes=${builtNodes.length} shapes=${builtShapes.length} resources=${shapeResources.length}`
     );
-    const runtime = {
+    runtime = {
       materialDefs,
       meshDefs,
       skeletonDefs,
       animationMap: new Map(),
       nodes: builtNodes,
       nodeMap,
+      templateShapes: builtShapes,
       shapes: builtShapes,
       shapeResources,
+      instantiations: liveInstantiations,
+      isDestroyed: false,
       createNodeTree(space) {
+        console.assert(!this.isDestroyed, "runtime.createNodeTree() requires a live runtime");
+        if (this.isDestroyed) {
+          return null;
+        }
         return instantiateRuntime(space, {
           bindAnimations: false,
           setActive: true
@@ -904,6 +1077,10 @@ export default class ModelBuilder {
         return activeInstantiation?.bindAnimationBindings?.() ?? 0;
       },
       instantiate(space, instantiateOptions = {}) {
+        console.assert(!this.isDestroyed, "runtime.instantiate() requires a live runtime");
+        if (this.isDestroyed) {
+          return null;
+        }
         return instantiateRuntime(space, {
           bindAnimations: instantiateOptions.bindAnimations !== false,
           setActive: true
@@ -947,6 +1124,28 @@ export default class ModelBuilder {
       },
       setAnimationsPaused(paused) {
         return paused ? this.pauseAllAnimations() : this.resumeAllAnimations();
+      },
+      destroy() {
+        if (this.isDestroyed) {
+          return 0;
+        }
+        const instantiations = [...liveInstantiations];
+        let destroyedCount = 0;
+        for (let i = 0; i < instantiations.length; i++) {
+          destroyedCount += instantiations[i].destroy({
+            destroyShapes: false
+          });
+        }
+        destroyedCount += destroyShapeList(this.templateShapes, {
+          destroyResource: false
+        });
+        destroyShapeResourceList(shapeResources);
+        this.templateShapes.length = 0;
+        this.shapes = [];
+        this.animationMap.clear();
+        activeInstantiation = null;
+        this.isDestroyed = true;
+        return destroyedCount;
       }
     };
     return runtime;

@@ -1,98 +1,864 @@
 <!DOCTYPE html>
-<html lang="ja">
+<html lang='ja'>
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>webg unittest</title>
-  <style>
-    body {
-      font-family: sans-serif;
-      line-height: 1.6;
-      margin: 24px;
-      color: #16202a;
-      background: #fbfcfe;
-    }
-    .guide {
-      background: #eef6ff;
-      border: 1px solid #bfd4ea;
-      padding: 16px;
-      margin: 20px 0;
-    }
-    .group {
-      margin: 28px 0;
-    }
-    code {
-      background: #f1f5f9;
-      padding: 1px 4px;
-      border-radius: 4px;
-    }
-  </style>
+<meta charset='UTF-8' />
+<title>webg unittest 一覧</title>
+<style>
+body { font-family: sans-serif; line-height: 1.5; margin: 24px; }
+pre { background: #f6f8fa; border: 1px solid #d0d7de; padding: 12px; overflow-x: auto; white-space: pre-wrap; }
+.sample { margin: 28px 0; }
+.guide { background: #f8fbff; border: 1px solid #b8d5ee; padding: 16px; margin: 20px 0; }
+.category { margin: 24px 0; }
+.category h3 { margin-bottom: 8px; }
+.note { color: #475467; }
+</style>
 </head>
 <body>
-  <h1>webg unittest</h1>
-  <p><code>unittest</code> は、公開 sample 一覧とは分けて管理する内部確認用の置き場です。</p>
-  <div class="guide">
-    <h2>この一覧の目的</h2>
-    <p>ここでは、単体確認、回帰確認、最小表示確認に向いた app をまとめます。</p>
-    <p>外部へ見せる sample は <a href="../samples/index.html">samples/index.html</a> に残し、ここではテスト対象 1 件だけを確認しやすい構成を優先します。</p>
-    <p>文字表示と情報表示の整理は <a href="../book/14_UI表示の設計.md">14_UI表示の設計.md</a> にまとめています。`message` は短い ASCII HUD、`dialogue` は UTF-8 の会話を scene の上へ重ねる DOM overlay、`theme` は `DebugDock` / `FixedFormatPanel` / `UIPanel` の比較として読むと役割が見えやすくなります。</p>
-    <p>`message`、`touch`、`tilemap` は、raw `Message` や最小 HUD を残して挙動を切り分ける内部 test です。新しい sample の標準経路としては `breakout`、`bloom` / `dof`、`scene`、`dialogue` を先に参照するほうが判断しやすくなります。</p>
-    <p>今後は debug mode 固定、UI 最小化、共通 helper 化をさらに進める予定です。現在は `background`、`message`、`cube_axes`、`touch`、`raycast` が `_shared/UnitTestApp.js` を使う移行例で、`theme` は `WebgApp` の UI theme 切替確認用 app です。`axis` は `samples/axis` に移し、座標系と FOV を学ぶ教育用 sample として扱います。`phong_debug` は `Phong`、`NormPhong`、`BonePhong`、`BoneNormPhong` の debug を見比べる test で、折れ板と筒状メッシュで表裏や normal map、weight debug を確認できます。`game_api` は game 向けに追加した action map、scene state、collision body、HUD helper をまとめて見る test です。`input_controller` は `InputController` の physical key / action map / pulse action を自動確認したあと、touch ボタンも含めて手で確認する test です。`tween` は `Tween`、`Node.animateRotation()`、`Shape.animateParameter()`、`Space.updateNodeAnimations()`、`Space.updateShapeAnimations()`、`WebgApp.createTween()`、`shakeCamera()`、`flashMessage()` の動きをまとめて確認する test です。`particle_emitter` は `ParticleEmitter` の preset / emit / update / draw / clear を自動確認したあと、WebgApp の実画面で burst と preset 切替も確認する test です。`camera_follow` は `WebgApp` の followNode / lockOn / clearCameraTarget を自動確認したあと、canvas 上で target が動き続け、`yaw-follow` では target heading と camera yaw の関係も確認できる test です。`dialogue` は `UIPanel` 上の DOM overlay を使う会話 / tutorial の標準 test で、`Dialogue.start()` / `next()` / `choose()` の考え方を確認します。`tilemap` は core 側へ組み込んだ TileMap の確認用 unittest で、displayArea の scroll と camera pivot の追従も含めて、同じ高さ付き盤面の見え方と移動ルールを build した runtime から確認します。こちらも touch で orbit / pan / zoom を確認できます。旧 `tilemap_poc` と `tile_shape_poc` は <a href="../../discontinued/index.html">../../discontinued/index.html</a> に保管しました。`unittest/*/*.txt` には、それぞれの test が何を確認しているかを文章で残しています。</p>
-  </div>
-  <section class="group">
-    <h2>詳細テキスト</h2>
-    <ul>
-      <li><a href="./background/background.txt">background.txt</a>: 背景画像の全画面描画、色乗算、アスペクト補正を確認する説明</li>
-      <li><a href="./cube_axes/cube_axes.txt">cube_axes.txt</a>: `addVertex` / `addPlane` のみで作る立方体と軸回転を確認する説明</li>
-      <li><a href="./detouch_min/detouch_min.txt">detouch_min.txt</a>: `attach` / `detach` で world 位置を保つ確認をまとめた説明</li>
-      <li><a href="./game_api/game_api.txt">game_api.txt</a>: ゲーム向け action map、scene state、collision body、HUD helper の確認説明</li>
-      <li><a href="./input_controller/input_controller.txt">input_controller.txt</a>: `InputController` の action map、pulse action、touch/manual 確認の説明</li>
-      <li><a href="./tween/tween.txt">tween.txt</a>: `Tween`、`Node.animateRotation()`、`Shape.animateParameter()`、`shakeCamera()`、`flashMessage()` の確認説明</li>
-      <li><a href="./particle_emitter/particle_emitter.txt">particle_emitter.txt</a>: `ParticleEmitter` の auto test と visual sample の確認説明</li>
-      <li><a href="./camera_follow/camera_follow.txt">camera_follow.txt</a>: `WebgApp` の camera follow と実画面 visual sample の確認説明</li>
-      <li><a href="./dialogue/dialogue.txt">dialogue.txt</a>: `UIPanel` 上の DOM overlay で会話と tutorial の順番表示を確認する説明</li>
-      <li><a href="./embedded/embedded.txt">embedded.txt</a>: `WebgApp` の embedded layout で canvas と overlay が本文スクロールに追従するかを確認する説明</li>
-      <li><a href="./tilemap/tilemap.txt">tilemap.txt</a>: core に組み込んだ TileMap の runtime 化と表示域 scroll / 移動確認説明</li>
-      <li><a href="./smooth_shader/smooth_shader.txt">smooth_shader.txt</a>: `SmoothShader` 1 本で 5 経路をまとめて確認する説明</li>
-      <li><a href="./phong_debug/phong_debug.txt">phong_debug.txt</a>: `Phong` 系シェーダの裏面表示、normal map、weight / UV の確認説明</li>
-    </ul>
-  </section>
-  <section class="group">
-    <h2>visual test</h2>
-    <ul>
-      <li><a href="./background/index.html">background</a>: <code>Background</code> の描画範囲、色乗算、アスペクト補正の確認</li>
-      <li><a href="./message/index.html">message</a>: <code>Text</code> と <code>Message</code> の HUD 文字描画比較</li>
-      <li><a href="./textdemo/index.html">textdemo</a>: <code>Text</code> 単体の文字バッファ描画とフォント atlas 参照の確認</li>
-      <li><a href="./cube_axes/index.html">cube_axes</a>: <code>addVertex</code> / <code>addPlane</code> だけで組んだ手組み mesh の基本確認</li>
-      <li><a href="./detouch_min/index.html">detouch_min</a>: <code>attach</code> / <code>detach</code> の world 位置保持だけを確認する最小 test</li>
-      <li><a href="./smooth_shader/index.html">smooth_shader</a>: <code>SmoothShader</code> 1 本で static / skinned / normal map / flat shading の 5 経路を確認する test</li>
-      <li><a href="./skinning_basic/index.html">skinning_basic</a>: <code>SmoothShader</code> の最小 skinning 経路を確認する test</li>
-      <li><a href="./skinning_normal_map/index.html">skinning_normal_map</a>: <code>SmoothShader</code> の normal map 付き skinning 経路を確認する test</li>
-      <li><a href="./phong_debug/index.html">phong_debug</a>: <code>Phong</code>、<code>NormPhong</code>、<code>BonePhong</code>、<code>BoneNormPhong</code> の debug をまとめて確認する test</li>
-      <li><a href="./vignette/index.html">vignette</a>: <code>VignettePass</code> の offscreen -> fullscreen 合成経路を確認する最小 test</li>
-      <li><a href="./primitive_texture_uv/index.html">primitive_texture_uv</a>: primitive ごとの texture mapping と UV 崩れを最小構成で確認する test</li>
-      <li><a href="./primitive_wireframe/index.html">primitive_wireframe</a>: primitive 群の solid / wireframe 切替を最小構成で確認する test</li>
-      <li><a href="./primitive_normal_map/index.html">primitive_normal_map</a>: <code>SmoothShader</code> で primitive と normal source の違いを 3x3 で見比べる最小 test</li>
-      <li><a href="./primitive_modelasset/index.html">primitive_modelasset</a>: Primitive から ModelAsset / validator / builder 経路を最小確認する test</li>
-      <li><a href="./game_api/index.html">game_api</a>: action map、GameStateManager、collision helper、HUD helper をまとめて確認する test</li>
-      <li><a href="./input_controller/index.html">input_controller</a>: `InputController` の key normalize、action pulse、touch/manual 確認を行う test</li>
-      <li><a href="./tween/index.html">tween</a>: `Tween`、`Node.animateRotation()`、`Shape.animateParameter()`、`shakeCamera()`、`flashMessage()` を確認する test</li>
-      <li><a href="./particle_emitter/index.html">particle_emitter</a>: `ParticleEmitter` の auto test 後に実画面で burst と preset 切替を確認する test</li>
-      <li><a href="./camera_follow/index.html">camera_follow</a>: `WebgApp` の followNode / lockOn / clearCameraTarget を自動確認し、canvas 上で角のある target 追従と yaw-follow の向き継承を確認する test</li>
-      <li><a href="./dialogue/index.html">dialogue</a>: `UIPanel` 上の DOM overlay で会話と tutorial の順番表示と branch 差し込みを確認する test</li>
-      <li><a href="./embedded/index.html">embedded</a>: `WebgApp` の `layoutMode: "embedded"` と `fixedCanvasSize` を組み合わせ、本文中に置いた canvas と HelpPanel / dialogue / fixed panel / touch が scroll 中も同じ host を基準に動くかを確認する test</li>
-      <li><a href="./tilemap/index.html">tilemap</a>: core に組み込んだ TileMap の runtime 化、orbit camera、displayArea scroll と camera pivot 追従、camera 向きに合わせた矢印キー移動、click / tap 選択、touch の orbit / pan / zoom を確認する test</li>
-      <li><a href="./theme/index.html">theme</a>: `WebgUiTheme` の preset 切替で debug dock / `FixedFormatPanel` / `UIPanel` の見え方を確認する test</li>
-      <li><a href="./touch/index.html">touch</a>: `Touch.js` の hold / action 入力と PC 常時表示の touch ボタンを確認する test</li>
-      <li><a href="./raycast/index.html">raycast</a>: マウス座標からの ray 生成と `space.raycast` のヒット判定を確認する test</li>
-    </ul>
-  </section>
-  <section class="group">
-    <h2>discontinued に移した POC</h2>
-    <ul>
-      <li><a href="../../discontinued/unittest/tilemap_poc/index.html">tilemap_poc</a>: TileMap 開発初期のクリック・球移動・scroll 確認用 POC</li>
-      <li><a href="../../discontinued/unittest/tile_shape_poc/index.html">tile_shape_poc</a>: `shapeKind` と `Node.setShape()` の探索用 POC</li>
-    </ul>
-  </section>
+<h1>webg unittest</h1>
+<p><code>unittest</code> は、公開 sample 一覧とは分けて管理する内部確認用の置き場です</p>
+<p>各 test の URL と <code>unittest/*/*.txt</code> の説明を、<code>samples/index.html</code> と同じ形式で整理した一覧です</p>
+<p>ここでは単体確認、回帰確認、最小表示確認に向いた app を優先し、説明文もその場で読めるようにしています</p>
+<div class='guide'>
+<h2>unittest の見方</h2>
+<p>公開向けの sample 一覧は <a href='../samples/index.html'>../samples/index.html</a> を参照してください</p>
+<p>book 内の実行用 HTML 一覧は <a href='../book/examples/index.html'>../book/examples/index.html</a> を参照してください</p>
+<p>ここでは、sample よりも確認対象を狭く絞り、1 件の機能差分や回帰点を追いやすい app を並べています</p>
+<p><code>message</code>、<code>touch</code>、<code>tilemap</code> のように raw に近い表示を残した test も含みますが、標準的な利用経路は <code>samples</code> や <code>book</code> 側で確認するほうが判断しやすい場面もあります</p>
+</div>
+<h2>個別目次</h2>
+<ul>
+<li><a href='#background'>background</a></li>
+<li><a href='#camera_follow'>camera_follow</a></li>
+<li><a href='#cube_axes'>cube_axes</a></li>
+<li><a href='#destroy_lifecycle'>destroy_lifecycle</a></li>
+<li><a href='#detouch_min'>detouch_min</a></li>
+<li><a href='#dialogue'>dialogue</a></li>
+<li><a href='#embedded'>embedded</a></li>
+<li><a href='#game_api'>game_api</a></li>
+<li><a href='#input_controller'>input_controller</a></li>
+<li><a href='#message'>message</a></li>
+<li><a href='#particle_emitter'>particle_emitter</a></li>
+<li><a href='#phong_debug'>phong_debug</a></li>
+<li><a href='#primitive_modelasset'>primitive_modelasset</a></li>
+<li><a href='#primitive_normal_map'>primitive_normal_map</a></li>
+<li><a href='#primitive_texture_uv'>primitive_texture_uv</a></li>
+<li><a href='#primitive_wireframe'>primitive_wireframe</a></li>
+<li><a href='#raycast'>raycast</a></li>
+<li><a href='#skinning_basic'>skinning_basic</a></li>
+<li><a href='#skinning_normal_map'>skinning_normal_map</a></li>
+<li><a href='#smooth_shader'>smooth_shader</a></li>
+<li><a href='#textdemo'>textdemo</a></li>
+<li><a href='#theme'>theme</a></li>
+<li><a href='#tilemap'>tilemap</a></li>
+<li><a href='#touch'>touch</a></li>
+<li><a href='#tween'>tween</a></li>
+<li><a href='#vignette'>vignette</a></li>
+</ul>
+<section class='sample'>
+<h2 id='background'>background</h2>
+<p>URL: <a href='./background/index.html'>./background/index.html</a></p>
+<pre>
+サンプル: background
+
+概要
+- 背景画像を画面全体へ描画し、色乗算とアスペクト補正の見え方を確認する単体テストです。
+- 3D オブジェクトの背面に置く空、壁紙、UI 背景の基礎として使います。
+
+このサンプルで使うwebg機能
+- `Background`: 背景描画専用シェーダ
+- `Texture`: 画像ロードと GPU 転送
+- `Screen`: クリア色と描画フレーム管理
+
+確認ポイント
+- 背景画像の縦横比が viewport 変更時に破綻しないことを確認します。
+- 色乗算で明るさや色味が変わっても、背景として読めることを確認します。
+- 画面全体を使うため、UI 背景や空表現の土台として流用できることを確認します。
+
+操作説明
+- キー入力: なし
+- マウス操作: なし
+</pre>
+</section>
+<section class='sample'>
+<h2 id='camera_follow'>camera_follow</h2>
+<p>URL: <a href='./camera_follow/index.html'>./camera_follow/index.html</a></p>
+<pre>
+camera_follow unittest
+
+この test は、`WebgApp` の camera follow helper を確認するためのものです。
+まず headless の自動テストで helper の値の流れを確認し、そのあと実際の canvas 上で target と camera の関係を確認します。
+
+この test で見たいのは、camera が動くことだけではありません。
+`followNode()` が target node を登録して追従を開始すること、`lockOn()` が camera を target へ即時に合わせること、`clearCameraTarget()` が追従を解除することを確認します。
+visual phase では target を角のあるループで動かし、`follow` では camera が少し遅れて角を曲がり、`lock` ではその場でぴたりと合う違いを見ます。
+
+`yaw-follow` は、この test の中でいちばん意味を取り違えやすい部分です。
+ここでは `followNode(targetRoot, { inheritTargetYaw: true, targetYawOffset: 180.0 })` を使い、camera の位置は target に追従しつつ、camera yaw も target heading に合わせて変わるかを見ます。
+つまり、`follow` が「位置だけを追う」見え方なのに対して、`yaw-follow` は「位置に加えて向きも一緒に変わる」見え方です。
+この違いが見えるように、visual phase では target heading と camera yaw を manual panel に表示しています。
+
+操作の流れ:
+- 画面を開くと自動で確認が走る
+- そのあと canvas へ 3D scene が出て、target が動き続ける
+- `follow` で camera が target の位置を追う
+- `lock` で camera が target に即時に合う
+- target が角を曲がるときに follow の遅れが見える
+- `yaw-follow` で target heading と camera yaw の変化を見比べる
+- `clear` で追従を解除する
+- `reset` で初期状態へ戻す
+- `Space` で target motion を止めたり再開したりする
+
+確認ポイント:
+- `followNode()` が camera follow を有効化するか
+- `updateCameraTarget()` が target position を camera に反映するか
+- `lockOn()` が即時反映になるか
+- `clearCameraTarget()` が追従を解除するか
+- `yaw-follow` で target heading と camera yaw が一緒に変わるか
+
+この test は、動きを複雑にしすぎず、camera helper の違いだけを読み取りやすくすることを優先している。
+target の motion はあえてゆっくりにしてあり、`yaw-follow` のときだけ heading と yaw の関係が画面上で追いやすいようにしている。
+</pre>
+</section>
+<section class='sample'>
+<h2 id='cube_axes'>cube_axes</h2>
+<p>URL: <a href='./cube_axes/index.html'>./cube_axes/index.html</a></p>
+<pre>
+サンプル: cube_axes
+
+概要
+- `addVertex` と `addPlane` だけを使って 6 面の立方体を組み、面の向きと回転の見え方を確認する単体テストです。
+- 面ごとに色を分けているので、どの面が正面に来ているかを追いやすくしています。
+
+このサンプルで使うwebg機能
+- `SmoothShader`: 立方体面の陰影計算
+- `Shape`: 頂点と面の手組み
+- `Space`: 立方体ノードと camera ノードの管理
+- `Matrix`: projection matrix の生成
+
+確認ポイント
+- 6 面がそれぞれ正しく張られていることを確認します。
+- Y / Z / X 軸回転を切り替えたときに、各面の見え方が破綻しないことを確認します。
+- 面ごとの色分けで、どの面がどの向きを向いているかを読みやすくします。
+- primitive を使わずに `Shape` だけで立方体を組んでも、基本の描画経路が成立することを確認します。
+
+操作説明
+- 自動回転: Y / Z / X 軸を 2 秒ごとに切り替え
+- キー入力: なし
+- マウス操作: なし
+</pre>
+</section>
+<section class='sample'>
+<h2 id='destroy_lifecycle'>destroy_lifecycle</h2>
+<p>URL: <a href='./destroy_lifecycle/index.html'>./destroy_lifecycle/index.html</a></p>
+<pre>
+サンプル: destroy_lifecycle
+
+概要
+- `Shape.destroy()`、`ShapeResource.destroy()`、`instantiated.destroy()`、`runtime.destroy()` の効果を、自動チェックと実画面の両方で確認する unittest です
+- 左レーンは `Shape` / `ShapeResource`、右レーンは `runtime` / `instantiation` の寿命管理に分け、どの層を destroy したかを見分けやすくしています
+
+このサンプルで使うwebg機能
+- `Shape`: `createInstance()` と `destroy()` による instance 側の寿命管理
+- `ShapeResource`: shared GPUBuffer の保持と `destroy()` による明示破棄
+- `Space`: `instantiate()` 後の node を描画し、destroy 後に scene から外れたかを確認する場
+- `Primitive`: 最小の立方体と床を作るための asset source
+- `ModelAsset.build()` / runtime: `instantiated.destroy()` と `runtime.destroy()` の確認
+- `SmoothShader`: 形状差と消え方を読みやすくする最小陰影
+- `UnitTestApp`: Screen 初期化、status 表示、ループ起動の共通 helper
+
+確認ポイント
+- 起動直後の auto test で、`shape.destroy()` が owner node から shape instance を外し、最後の参照に対しては shared resource を破棄できることを確認します
+- `instantiated.destroy()` が scene 上の実体だけを外し、runtime の shared resource は残すことを確認します
+- `runtime.destroy()` が残っている instantiation と shared resource をまとめて終了させることを確認します
+- 実画面では、左レーンで instance だけを消す場合と resource まで終える場合、右レーンで scene 実体だけを消す場合と runtime ごと終える場合の差を見比べられます
+- 左レーンで shared resource まで終える見えを確認したい場合は、先に `1` で clone を消してから `2` を押すと分かりやすくなります
+
+操作説明
+- `1`: 左レーンの clone shape を destroy する
+- `2`: 左レーンの source shape を終了する。これが最後の参照なら shared resource も終了する
+- `3`: 左レーンを初期状態で作り直す
+- `7`: 右レーンの instantiation だけを destroy する
+- `8`: 右レーンの instantiation を runtime から作り直す
+- `9`: 右レーンの runtime を destroy する
+- `0`: 右レーンを新しい runtime で作り直す
+</pre>
+</section>
+<section class='sample'>
+<h2 id='detouch_min'>detouch_min</h2>
+<p>URL: <a href='./detouch_min/index.html'>./detouch_min/index.html</a></p>
+<pre>
+サンプル: detouch_min
+
+概要
+- `attach` と `detach` で親ノードを付け替えたとき、world 位置が保たれるかを確認する最小テストです。
+- 左右 2 つの同形アームと先端の球を置き、親変更前後の見え方と座標差を同時に追います。
+
+このサンプルで使うwebg機能
+- `Space`: Node 階層と親子付け替え
+- `Shape`: 棒と球の最小メッシュ
+- `Primitive`: 棒と球の基礎形状
+- `SmoothShader`: 単純な陰影
+- `Matrix`: 固定視点の投影行列
+
+確認ポイント
+- `attach` 前後で球の world 位置が極端に飛ばないことを確認します。
+- `detach` してから別の親へ付け替えても、見た目の位置が破綻しないことを確認します。
+- `space.raycast` のような複雑な処理を入れず、親変更そのものに集中できることを確認します。
+- 画面表示と数値表示の両方で、親変更の結果を同時に読み取れることを確認します。
+
+操作説明
+- `Space`: 左右の先端間で attach / detach を切り替える
+- `D`: 右先端へ付け替え / 右先端から外す
+- `R`: 初期状態へ戻す
+</pre>
+</section>
+<section class='sample'>
+<h2 id='dialogue'>dialogue</h2>
+<p>URL: <a href='./dialogue/index.html'>./dialogue/index.html</a></p>
+<pre>
+サンプル: dialogue
+
+最終更新: 2026-03-26 JST
+
+この unittest は、会話や tutorial の文面をどう標準化するかを確認するための DOM overlay test です。実際の標準化先は UTF-8 をそのまま出せる canvas 外の DOM 側に寄せます。ここでは、`DialogueOverlay` と `WebgApp.startDialogue()` / `nextDialogue()` / `chooseDialogue()` の進行モデルが、どの段階で次へ進み、どの段階で選択肢を選び、どの段階で branch が差し込まれるかを追えるようにしています。
+
+`DialogueOverlay` の役割は、会話の 1 行 1 行を毎回手で HUD 化する負担を減らし、tutorial の進行を queue と choice で扱いやすくすることです。`MessageQueue` はその下で text / lines を順番に保つ小さな管理層として動きます。ゲームでは、導入文、操作説明、分岐のある案内、再表示可能なヘルプ文を、毎回別々に組むより、この helper を通したほうが流れを読みやすくなります。
+
+この unittest では、`Enter` / `Space` で次へ進み、`1` / `2` で選択肢を選び、`R` で最初からやり直せるようにしています。`DialogueOverlay` が現在の speaker、本文、選択肢、最後に選んだ branch をそのまま DOM overlay へ流し込むため、操作を繰り返したときにどの文が表示されるかをすぐ確認できます。
+
+この helper は、`creature_care` のような会話付き sample や、最初の操作説明を出したい tutorial room に向いています。会話が短いゲームでも、`DialogueOverlay` を使うと「最初の案内」「操作の説明」「分岐の選択」「再開」の流れを統一しやすくなります。主経路は DOM overlay に寄せています。
+
+## この unittest の役割
+
+`dialogue` は、会話と tutorial の進行モデルを、`UIPanel` 上の DOM 表示でどう扱うかを確認するための最小確認です。`WebgApp.startDialogue(entries, options)` で流れを始め、`nextDialogue()` で次の文へ進み、`chooseDialogue(index)` で branch を差し込みます。`MessageQueue.enqueue(entries)` は、後から追加した案内文を順番に積みたいときに使います。
+
+`WebgApp` 側から見ると、`startDialogue()`、`nextDialogue()`、`chooseDialogue()`、`enqueueDialogue()` の形で使えるため、sample 側は「どの文を表示するか」より「今どの段階か」だけを見ればよくなります。ここでは DOM overlay が標準経路です。
+
+## 確認ポイント
+
+`Enter` / `Space` を押すと、会話が 1 ステップずつ進むことを確認します。選択肢のある場面では、`1` / `2` を押したときに選んだ branch の文が挿入され、以後の表示が選択に応じて変わることを確認します。`R` を押すと最初の案内に戻り、何度でも同じ tutorial を繰り返せることを確認します。
+
+画面上では、speaker、本文、選択肢、footer prompt が DOM overlay へ展開され、`DialogueOverlay` の state が status でも追えるようにしています。会話の流れとしてまとめるとどう見えるかを、この unittest で確かめるのが狙いです。
+
+## この unittest で使う webg 機能
+
+この unittest では、`WebgApp`、`UIPanel`、`DialogueOverlay`、`MessageQueue` を使います。`WebgApp` は screen / input / HUD をまとめて起こし、`DialogueOverlay` は会話の進行を queue にまとめ、`UIPanel` はその結果を scene の上へ重ねる DOM overlay として描画します。`MessageQueue` は、tutorial 文の並び順を保ちつつ、branch の差し込みを簡単にします。
+
+## 操作説明
+
+`Enter` / `Space` で次へ進みます。`1` / `2` で選択肢を選びます。`R` で最初からやり直します。会話の順番と分岐を手で確認したいときは、この 3 種類の操作だけ覚えれば十分です。
+
+## つまずきやすい点
+
+`DialogueOverlay` は DOM overlay を使う helper なので、`WebgApp` から使う場合は、`app.init()` のあとに `startDialogue()` を呼ぶ流れにすると安全です。
+
+`choose(index)` は、現在の文に選択肢があるときだけ意味を持ちます。選択肢が無い場面で `1` / `2` を押しても、文は変わりません。`next()` も、choice がある場面では選択をしないまま飛び越えにくいようにしてあります。
+
+## 関連文書
+
+- [14_UI表示の設計.md](../../book/14_UI表示の設計.md)
+- [15_HUDとオーバーレイ.md](../../book/15_HUDとオーバーレイ.md)
+- [UIPanel.js](../../webg/UIPanel.js)
+- [WebgApp.js](../../webg/WebgApp.js)
+- [DialogueOverlay.js](../../webg/DialogueOverlay.js)
+`DialogueOverlay` は、会話や tutorial の流れを `UIPanel` 上で扱うための helper です。
+</pre>
+</section>
+<section class='sample'>
+<h2 id='embedded'>embedded</h2>
+<p>URL: <a href='./embedded/index.html'>./embedded/index.html</a></p>
+<pre>
+サンプル: embedded
+
+最終更新: 2026-04-09 JST
+
+この unittest は、`WebgApp` の `layoutMode: "embedded"` と `fixedCanvasSize` を組み合わせたときに、固定サイズ canvas を HTML 文書の途中へ置き、その上に重なる DOM overlay も同じ host 要素を基準に動くかを確認するための test です。通常の fullscreen sample では、canvas と overlay は viewport 全体を前提にしていても気付きにくいのですが、教材ページのように本文の前後へ説明文やコード例を置く構成では、scroll 中に overlay が canvas から外れて見えないことが重要になります。
+
+ここでは、canvas のまわりへ長い本文を意図的に置き、ページ自体は普通にスクロールできるようにしています。そのうえで `HelpPanel`、`DialogueOverlay`、`FixedFormatPanel`、`Touch` を同時に出し、右側の status で host / canvas / overlay の矩形差分を毎フレーム表示します。これにより、単に「見た目で何となく追従している」だけでなく、「left / top / right / bottom の差分がどの程度か」も数値で追えます。
+
+この unittest の役割は、`embedded` を使った教材ページ、解説記事、社内ドキュメント用ページを作る前に、`WebgApp` 側の埋め込み配置が崩れていないかを一通りまとめて確認することです。`fixedCanvasSize` だけでなく、`app.takeScreenshot()`、`app.createHelpPanel()`、`app.startDialogue()`、`app.showFixedFormatPanel()`、`InputController.installTouchControls()` の組み合わせが同じ host 要素で揃うかを見ます。
+
+## この unittest で確認すること
+
+最初に確認したいのは、ページ全体をスクロールしたときに canvas が文書フローの一部として動き、その上の HelpPanel、dialogue、fixed panel、touch controls も一緒に移動することです。status の `canvas-host`、`help`、`dialogue`、`fixed`、`touch` が PASS のまま変わらないことを見ます。
+
+次に確認したいのは、HelpPanel を閉じたときの見え方です。`H` で show / hide を切り替えたとき、`Show Help` ボタンだけが小さく残り、panel 枠が host 全幅へ帯状に広がらないことを見ます。これは embedded 向けに追加した幅調整が効いているかの確認です。
+
+さらに、`Enter` / `Space` で dialogue を進め、`D` で dialogue、`F` で fixed panel を切り替え、`S` で screenshot を予約し、`R` で camera を初期状態へ戻しても embedded の配置が崩れないことを確認します。`1`、`2`、`3` では先頭、canvas、末尾へ scroll できるため、長いページの途中にある canvas を往復しやすくしています。
+
+## この unittest で使う webg 機能
+
+この unittest では、`WebgApp`、`EyeRig`、`UIPanel`、`DialogueOverlay`、`FixedFormatPanel`、`InputController`、`Touch`、`Shape`、`Primitive` を使います。`WebgApp` は embedded host と overlay の共通配置を担当し、`EyeRig` は orbit camera、`UIPanel` と `DialogueOverlay` は HelpPanel / 会話表示、`FixedFormatPanel` は長文 panel、`InputController` と `Touch` は keyboard / touch の共通入力を担当します。3D 表示自体は立方体 1 個だけに絞り、配置確認を主役にしています。
+
+## 操作説明
+
+マウスドラッグで orbit camera を動かせます。`ArrowLeft` / `ArrowRight` と touch の左右ボタンは cube の回転位相を変えます。`Enter` / `Space` で dialogue を次へ進めます。`H` で HelpPanel の表示切替、`D` で dialogue の表示切替、`F` で fixed panel の表示切替、`S` で screenshot、`R` で camera reset を行います。`1`、`2`、`3` はページ先頭、canvas 位置、末尾へ scroll する補助です。
+
+## つまずきやすい点
+
+この unittest が動いていても、実際の教材ページ側で `html, body { overflow: hidden; }` を付けたままだとページはスクロールしません。`layoutMode: "embedded"` は canvas と overlay を本文フローへ戻すための option であり、文書自体の scroll は HTML / CSS 側で許可する必要があります。
+
+また、`Touch` はここでは desktop でも確認できるよう `touchDeviceOnly: false` で常時表示しています。実アプリで mobile だけに出したい場合は既定値へ戻してください。
+
+## 関連文書
+
+- [05_WebgAppによるアプリ構成.md](../../book/05_WebgAppによるアプリ構成.md)
+- [15_HUDとオーバーレイ.md](../../book/15_HUDとオーバーレイ.md)
+- [WebgApp.js](../../webg/WebgApp.js)
+- [UIPanel.js](../../webg/UIPanel.js)
+- [DialogueOverlay.js](../../webg/DialogueOverlay.js)
+- [Touch.js](../../webg/Touch.js)
+</pre>
+</section>
+<section class='sample'>
+<h2 id='game_api'>game_api</h2>
+<p>URL: <a href='./game_api/index.html'>./game_api/index.html</a></p>
+<pre>
+game_api unittest
+
+この test は、ゲーム向けに追加した API を 1 本の小さな流れとして確認するための sample です。
+WebgApp で画面と HUD をまとめて初期化し、InputController で action 名を扱い、app 側の GameStateManager で title / play / pause / result を切り替え、Space と Shape の collision helper で player と target の重なりを拾います。
+
+画面上では、左側の player cube を左右入力で動かし、右側の target cube を拾うと score が増え、toast が出て、combo も更新されます。
+timeLeft が 0 になるか score が一定値に達すると result に入り、R で title に戻せます。
+
+この test で見たいのは、単に cube が動くことではありません。
+入力の edge と hold が分かれているか、scene phase が自然に切り替わるか、collision body の enter を使って 1 回だけ加点できるか、そして score / timer / toast が Message 系 HUD へ崩れずに重なるかを確認します。
+
+操作:
+Enter / Start で pause/result から play へ戻る
+P / Pause で pause 切り替え
+R で play を再初期化
+ArrowLeft / ArrowRight / A / D で player を移動
+
+確認ポイント:
+- `InputController.registerActionMap()` で keyboard と touch を同じ action に束ねられるか
+- app 側 `GameStateManager` が title / play / pause / result を分けて扱えるか
+- `Shape.setCollisionShape()` の sphere 定義が `Space.addCollisionBody()` に渡るか
+- `WebgApp.setScore()` / `setTimer()` / `setCombo()` / `pushToast()` が HUD として自然に出るか
+- `WebgApp.setControlRows()` が canvas HUD と debug dock の両方に流せる形になっているか
+</pre>
+</section>
+<section class='sample'>
+<h2 id='input_controller'>input_controller</h2>
+<p>URL: <a href='./input_controller/index.html'>./input_controller/index.html</a></p>
+<pre>
+input_controller unittest
+
+この test は、InputController の設計をゲーム向けの土台として確認するためのものです。
+
+ここで見たいのは、単にキーが押せるかどうかではありません。
+physical key の継続状態が `keyState` で保たれるか、`registerActionMap()` で複数のキーを 1 つの action に束ねられるか、そして `pulseAction()` が touch ボタンや menu 系の one-shot 操作としてその frame にだけ見えるかを確認します。
+
+`getAction()` は継続入力を見る入口で、`wasActionPressed()` と `wasActionReleased()` は edge を見る入口です。
+この test では、まず自動チェックで Enter / Space のような鍵盤入力が action に反映されることと、`pulseAction()` で与えた action が同じ frame では `getAction()` からも見えて次の frame では消えることを確かめます。
+
+その後の manual フェーズでは、画面に表示した touch ボタンを実際に押し、keyboard の ArrowLeft / A / ArrowRight / D / Space / Enter / R と同じ action 名で動くかを確認します。`left` / `right` は hold、`fire` / `reset` は action として扱い、keyboard と touch の両方で同じ見え方になるかを見る test です。
+
+操作:
+- 画面を開くと自動で確認が走る
+- 自動確認のあと、下に出る touch ボタンと keyboard を実際に操作する
+- `ArrowLeft / A` と `touch ←`、`ArrowRight / D` と `touch →` をそれぞれ押して同じ移動になるかを見る
+- `Space / Enter` と `Fire`、`R` と `Reset` が one-shot action になるかを見る
+
+確認ポイント:
+- `normalizeKey()` が `Space` / `Esc` / 大文字小文字差をそろえるか
+- `registerActionMap()` が 1 action に複数キーを束ねられるか
+- `pulseAction()` が 1 frame だけ効くか
+- `captureFrameState()` と `applyFrameState()` で action 状態を再現できるか
+- keyboard と touch が同じ action 名で同じ動きになるか
+</pre>
+</section>
+<section class='sample'>
+<h2 id='message'>message</h2>
+<p>URL: <a href='./message/index.html'>./message/index.html</a></p>
+<pre>
+サンプル: message
+
+概要
+- `Text` と `Message` の HUD 文字描画を最小構成で比較する unittest です。
+- 固定座標に出す文字、行単位で積み上げるメッセージ、更新頻度の違う情報を同じ画面で見比べます。
+
+このサンプルで使うwebg機能
+- `Text`: 固定グリッドの文字描画
+- `Message`: 行単位の HUD 表示
+- `Space` / `Shape` / `Primitive`: 背景となる最小 3D scene
+
+確認ポイント
+- `Text` の固定位置表示と `Message` の行管理が、それぞれ崩れずに表示されることを確認します。
+- 3D scene の上に重ねても読みやすさが保たれることを確認します。
+- HUD の役割を `Text` と `Message` でどう使い分けるかを見比べられることを確認します。
+
+操作説明
+- キー入力: なし
+- マウス操作: なし
+</pre>
+</section>
+<section class='sample'>
+<h2 id='particle_emitter'>particle_emitter</h2>
+<p>URL: <a href='./particle_emitter/index.html'>./particle_emitter/index.html</a></p>
+<pre>
+particle_emitter unittest
+
+この test は、`ParticleEmitter` の最小経路をまとめて確認するためのものです。
+まず自動テストで preset / emit / update / draw / clear の流れを確認し、そのあと実画面で burst の見え方と preset 切替を確認します。
+
+ここで見たいのは、粒子が出ることだけではありません。
+`ParticleEmitter` が position / velocity / life / color を持つ粒子を内部で進められるか、preset で発生条件を差し替えても draw 経路が壊れないか、そして WebgApp の画面上で burst を連続して出しても状態が崩れないかを確認します。
+
+操作:
+- 画面を開くと自動チェックが走る
+- そのあと canvas 上で burst を手で出す
+- `1` / `2` で preset を切り替える
+- `Space` で burst
+- `C` で粒子を全消去
+
+確認ポイント:
+- `emit()` で粒子が追加されるか
+- `update()` で life が進むか
+- `draw()` が空配列でも壊れないか
+- `clear()` で内部状態が初期化されるか
+- preset を変えても burst の見え方だけが変わり、基礎経路が崩れないか
+</pre>
+</section>
+<section class='sample'>
+<h2 id='phong_debug'>phong_debug</h2>
+<p>URL: <a href='./phong_debug/index.html'>./phong_debug/index.html</a></p>
+<pre>
+サンプル: phong_debug
+
+目的 / 理由
+`Phong`、`NormPhong`、`BonePhong`、`BoneNormPhong` の 4 系統について、裏面確認、normal map の有無、weight debug の有無を同じ画面で切り替えて確認できるようにする
+現在の `SmoothShader` 統合前後で、旧系統 shader の挙動差を追跡するための比較基準を残す
+
+変更内容
+4 列 x 2 行で static / skinned を並べ、上段を通常描画、下段を debug path として比較する構成にした
+裏面色、normal map、weight debug を個別に切り替え、shader constructor option と parameter の流れを見やすくした
+
+確認ポイント
+- static / skinned の両方で表裏が意図どおり切り替わること
+- normal map の陰影追加が `NormPhong` と `BoneNormPhong` で確認できること
+- weight debug が skinning 系のみで有効になること
+- 裏面色が constructor option から shader へ正しく渡ること
+
+操作説明
+- キー入力: なし
+- マウス操作: なし
+</pre>
+</section>
+<section class='sample'>
+<h2 id='primitive_modelasset'>primitive_modelasset</h2>
+<p>URL: <a href='./primitive_modelasset/index.html'>./primitive_modelasset/index.html</a></p>
+<pre>
+サンプル: primitive_modelasset
+
+概要
+- `Primitive` が返す `ModelAsset` を `ModelValidator` と `ModelBuilder` へ通し、runtime の `Space / Node / Shape` として復元できるかを最小構成で確認する unittest です。
+- UV、wireframe、normal map は固定せず、`Primitive -> ModelAsset -> ModelValidator -> ModelBuilder -> instantiate(space)` の経路が壊れていないかを確認対象に絞ります。
+
+このサンプルで使うwebg機能
+- `Primitive.sphere` / `Primitive.cone` / `Primitive.truncated_cone` / `Primitive.double_cone`
+- `Primitive.prism` / `Primitive.donut` / `Primitive.cube` / `Primitive.cuboid` / `Primitive.mapCube`
+- `ModelValidator`: `ModelAsset` 構造の妥当性確認
+- `ModelBuilder`: `ModelAsset` から runtime `Shape` / `Node` を組み立てる helper
+- `Space`: build 後の node tree を復元して描画する
+- `UnitTestApp`: Screen 初期化、resize、status 表示の共通 helper
+
+確認ポイント
+- 9 種類の primitive asset が validator を通過し、`builder.build()` 後に 3x3 で描画されることを確認します。
+- `instantiate(space)` で復元した runtime node へ追加移動を与えても、描画が崩れないことを確認します。
+- validator warnings が想定外に増えていないことを status から確認します。
+
+操作説明
+- `Space`: 回転の一時停止 / 再開
+</pre>
+</section>
+<section class='sample'>
+<h2 id='primitive_normal_map'>primitive_normal_map</h2>
+<p>URL: <a href='./primitive_normal_map/index.html'>./primitive_normal_map/index.html</a></p>
+<pre>
+サンプル: primitive_normal_map
+
+概要
+- `Primitive` が返す代表形状へ同じベース texture を貼り、normal map なし / 画像由来 normal / 手続き normal の見えを 3x3 で比較する unittest です。
+- 行で primitive の違い、列で normal source の違いを見比べ、`SmoothShader` の normal map 変化だけを最小構成で確認します。
+
+このサンプルで使うwebg機能
+- `Primitive.sphere` / `Primitive.prism` / `Primitive.mapCube`
+- `SmoothShader`: normal map の有無と強度を反映する shader
+- `Texture.buildNormalMapFromHeightMap`
+- `Texture.buildNormalMapFromProceduralHeight`
+- `Shape.setTextureMappingMode` / `setTextureMappingAxis` / `setTextureScale`
+- `UnitTestApp`: Screen 初期化、resize、status 表示の共通 helper
+
+確認ポイント
+- 同じ primitive で、normal map なしと image / procedural normal の陰影差が見えることを確認します。
+- `sphere` と `prism` の回転体 UV 系、`mapCube` の専用 UV 系で、normal map 適用後も極端な破綻が出ないことを確認します。
+- `num256.png` 由来の image normal と、noise ベース strength=2.0 の procedural normal で陰影の出方が明確に違うことを確認します。
+
+操作説明
+- `Space`: 回転の一時停止 / 再開
+</pre>
+</section>
+<section class='sample'>
+<h2 id='primitive_texture_uv'>primitive_texture_uv</h2>
+<p>URL: <a href='./primitive_texture_uv/index.html'>./primitive_texture_uv/index.html</a></p>
+<pre>
+サンプル: primitive_texture_uv
+
+概要
+- `Primitive` が返す基本形状へテクスチャを貼り、UV 崩れがないかを最小構成で確認する unittest です。
+- 回転体に共通の UV 計算を使う形状群と、平面マッピング系、`mapCube` の専用 UV を 3x3 配置で同時に見比べます。
+
+このサンプルで使うwebg機能
+- `Primitive.sphere` / `Primitive.cone` / `Primitive.truncated_cone` / `Primitive.double_cone`
+- `Primitive.prism` / `Primitive.donut` / `Primitive.cube` / `Primitive.cuboid` / `Primitive.mapCube`
+- `Shape.setTextureMappingMode` / `setTextureMappingAxis` / `setTextureScale`
+- `Texture`: `num256.png` の読み込み
+- `UnitTestApp`: Screen 初期化、resize、status 表示の共通 helper
+
+確認ポイント
+- 球、円錐、切頭円錐、両円錐、角柱、ドーナツで、回転体 UV の seam や数字の流れが極端に破綻しないことを確認します。
+- `cube` / `cuboid` の平面マッピングで、面ごとのスケール差が意図どおり見えることを確認します。
+- `mapCube` が通常 `cube` と異なる UV 展開を持ち、面ごとの数字の流れが破綻しないことを確認します。
+
+操作説明
+- `Space`: 回転の一時停止 / 再開
+</pre>
+</section>
+<section class='sample'>
+<h2 id='primitive_wireframe'>primitive_wireframe</h2>
+<p>URL: <a href='./primitive_wireframe/index.html'>./primitive_wireframe/index.html</a></p>
+<pre>
+サンプル: primitive_wireframe
+
+概要
+- `Primitive` が返す代表的な基本形状を 3x3 で並べ、solid 表示と wireframe 表示の切替が破綻しないかを確認する unittest です。
+- texture や normal map は使わず、`Shape.setWireframe()` の切替結果だけを最小構成で観察します。
+
+このサンプルで使うwebg機能
+- `Primitive.sphere` / `Primitive.cone` / `Primitive.truncated_cone` / `Primitive.double_cone`
+- `Primitive.prism` / `Primitive.donut` / `Primitive.cube` / `Primitive.cuboid` / `Primitive.arrow`
+- `Shape.setWireframe`
+- `SmoothShader`: solid / wireframe 切替時の共通 shader と基本ライティング
+- `UnitTestApp`: Screen 初期化、resize、status 表示の共通 helper
+
+確認ポイント
+- 球、回転体、多角柱、トーラス、直方体、矢印で、solid と wireframe の切替後も描画が消えたり崩れたりしないことを確認します。
+- 回転中でも wireframe 線が極端に欠けず、形状の輪郭を追えることを確認します。
+- `1` から `9` で個別 primitive の wireframe を反転したとき、一部だけ線表示にして比較しても他の shape に影響しないことを確認します。
+
+操作説明
+- `Space`: 回転の一時停止 / 再開
+- `1` - `9`: 対応する primitive の wireframe を個別切替
+- `W`: 全 primitive の wireframe 一括切替
+</pre>
+</section>
+<section class='sample'>
+<h2 id='raycast'>raycast</h2>
+<p>URL: <a href='./raycast/index.html'>./raycast/index.html</a></p>
+<pre>
+unittest: raycast
+
+概要
+- マウス位置からワールド空間レイを生成し、`space.raycast` でオブジェクト選択を行う内部テストです。
+- クリック選択、ピッキング、インタラクション開始点として利用できます。
+- 視点をもう少し近づけ、少し強めに見下ろす向きにして、対象もやや大きくすることでクリックしやすさとヒットの見えやすさを上げています。
+- 球と円柱状の対象をさらに上げ、球は上下の振れ幅を広げることで円柱に隠れにくくしています。
+
+このサンプルで使うwebg機能
+- `Space.raycast(origin, dir, options)`
+- 画面座標→NDC→ワールドレイ変換
+- `Shape.updateMaterial`: 選択状態の色変更
+
+確認ポイント
+- クリック位置に対応したオブジェクトだけが選択されるかを確認し、レイ生成と判定結果の整合性を検証します。
+- 選択時の色変更で「ヒットした対象」が明確に可視化されるかを確認し、UI入力フローの基礎として利用します。
+- 物体サイズと camera 距離の調整で、画面上の対象が見失いにくいことを確認します。
+- 球の上下移動を少し大きくしても、raycast のヒット位置が追いやすいことを確認します。
+
+操作説明
+- クリック: マウス位置からレイを飛ばしてオブジェクト選択
+</pre>
+</section>
+<section class='sample'>
+<h2 id='skinning_basic'>skinning_basic</h2>
+<p>URL: <a href='./skinning_basic/index.html'>./skinning_basic/index.html</a></p>
+<pre>
+サンプル: skinning_basic
+
+概要
+- `SmoothShader` の skinning 経路だけを最小構成で確認する unittest です。
+- 少数ボーンで曲がる円柱側面メッシュと debugBone 表示だけに絞り、教材向けの操作や比較 UI は持たせません。
+
+このサンプルで使うwebg機能
+- `SmoothShader`: `setMaterial("smooth-shader", ...)` を入口にした smooth skinning 描画
+- `Skeleton` / `Shape.addVertexWeight`: 2 ボーンの最小ウェイト設定
+- `Space.drawBones`: ボーン表示
+- `UnitTestApp`: Screen 初期化、status / error 表示の共通化
+
+確認ポイント
+- メッシュ変形が継続し、ボーン表示と曲がる位置が一致することを確認します
+- `num256.png` を貼った状態でも UV が極端に崩れず、skinning shader の基本表示が成立することを確認します
+- shader や matrix palette を触った変更後に、最小の SmoothShader skinning 経路が壊れていないかを素早く確認します
+
+操作説明
+- キー入力: なし
+- マウス操作: なし
+</pre>
+</section>
+<section class='sample'>
+<h2 id='skinning_normal_map'>skinning_normal_map</h2>
+<p>URL: <a href='./skinning_normal_map/index.html'>./skinning_normal_map/index.html</a></p>
+<pre>
+サンプル: skinning_normal_map
+
+概要
+- `SmoothShader` の skinning + normal map 経路だけを最小構成で確認する unittest です。
+- 同じ `num256.png` から生成した法線マップを使い、ボーン変形中でも陰影が破綻しないかを狭く確認します。
+
+このサンプルで使うwebg機能
+- `SmoothShader`: `setMaterial("smooth-shader", ...)` を入口にした skinning + normal map 描画
+- `Texture.buildNormalMapFromHeightMap`: 同一画像から normal map を生成
+- `Skeleton` / `Shape.addVertexWeight`: 2 ボーンの最小ウェイト設定
+- `Space.drawBones`: ボーン表示
+- `UnitTestApp`: Screen 初期化、status / error 表示の共通化
+
+確認ポイント
+- メッシュ変形中でも normal map 由来の陰影が破綻せず追従することを確認します
+- `SmoothShader` の shader 変更後に、最小の normal map 付き skinning 経路が壊れていないかを素早く確認します
+- seam や不自然なハイライトが極端に出ず、normal map OFF の smooth skinning 経路との差が陰影として読み取れることを確認します
+
+操作説明
+- キー入力: なし
+- マウス操作: なし
+</pre>
+</section>
+<section class='sample'>
+<h2 id='smooth_shader'>smooth_shader</h2>
+<p>URL: <a href='./smooth_shader/index.html'>./smooth_shader/index.html</a></p>
+<pre>
+サンプル: smooth_shader
+
+概要
+- `SmoothShader` 1 本で、static / skinned / normal map / flat shading の 5 経路を同じ画面へ並べて確認する unittest です
+- 既存の smooth 系 5 経路をまとめるための新しい surface shader が、共通パラメータ入口で成立するかを最小構成で見ます
+
+このサンプルで使うwebg機能
+- `SmoothShader`: static / skinned / texture / normal map / flat shading を 1 本で扱う統合 smooth shader
+- `Skeleton` / `Shape.addVertexWeight`: 2 ボーン prism の最小 skinning 設定
+- `Space.drawBones`: skinned 2 体の debugBone 表示
+- `UnitTestApp`: Screen 初期化、status / error 表示の共通化
+
+確認ポイント
+- 左上の共有頂点 sphere が `has_bone = 0` でも通常描画され、滑らかな陰影になることを確認します
+- 上中央の共有頂点 sphere で `flat_shading = 1` を有効にしたとき、同じ geometry / texture のまま面単位の陰影へ切り替わることを確認します
+- 右上の static mesh で normal map を ON にしたとき、陰影だけが増え、geometry 自体は変わらないことを確認します
+- 左下の skinned mesh で bone 変形が継続し、bone 表示と曲がる位置が一致することを確認します
+- 右下の skinned mesh で、bone 変形と normal map の両方が同時に効くことを確認します
+- shader 実装を触った変更後に、smooth 系統合 shader の 5 経路が同時に壊れていないかを素早く確認します
+
+操作説明
+- キー入力: `Space` で pause / resume
+- マウス操作: なし
+</pre>
+</section>
+<section class='sample'>
+<h2 id='textdemo'>textdemo</h2>
+<p>URL: <a href='./textdemo/index.html'>./textdemo/index.html</a></p>
+<pre>
+サンプル: textdemo
+
+概要
+- `Text` クラスで文字バッファ描画を行うサンプルです。
+- 固定グリッド文字表示、書式付き出力、フォント描画の基本を確認できます。
+
+このサンプルで使うwebg機能
+- `Text.init` / `writeAt` / `writefAt` / `drawScreen`
+- 3D描画と2Dテキストの重ね合わせ
+
+確認ポイント
+- 固定座標への文字描画が崩れず表示されるかを確認し、デバッグ情報の定位置表示に使えることを確認します。
+- `writeAt` と `writefAt` の使い分けで、定型文と数値付き文の更新が容易にできることを確認します。
+
+操作説明
+- キー入力: なし
+- マウス操作: なし
+</pre>
+</section>
+<section class='sample'>
+<h2 id='theme'>theme</h2>
+<p>URL: <a href='./theme/index.html'>./theme/index.html</a></p>
+<pre>
+サンプル: theme
+
+概要
+- `WebgApp.setUiTheme()` で `debugDock`、`fixedFormatPanel`、`uiPanel` をまとめて差し替えられるかを確認する unittest です
+- dark / light / sunset / forest の 4 preset を runtime 中に切り替え、配色だけでなく panel の透明度や文字の読みやすさも見比べます
+
+このサンプルで使うwebg機能
+- `WebgApp`: Screen、Input、Message、debug dock、`FixedFormatPanel` をまとめて初期化
+- `WebgUiTheme`: 既定 theme preset と追加 preset の切替元
+- `UIPanel`: scene の上に重ねる DOM UI の共通 CSS と theme 適用を JS 側でまとめる部品
+- `Primitive` / `Shape`: 背景越しに見える最小 3D object を構成
+- `Diagnostics`: probe / debug 操作で現在 theme 情報を記録
+
+確認ポイント
+- `[1]` から `[4]` の切替で、`debugDock`、`FixedFormatPanel`、`UIPanel` が同じ preset にそろって更新されるかを確認します
+- 半透明 overlay 越しに cube が十分見え、文字色と border が dark / light の両方で読めるかを確認します
+- preview panel の表示中に theme を切り替えても panel が崩れず、新しい `fixedFormatPanel` 色へ更新されるかを確認します
+
+操作説明
+- キー入力: `[1]-[4]` theme 切替、`[n]` 次の theme、`[p]` preview panel 表示切替、`[space]` 回転停止、`[r]` camera reset
+- マウス操作: drag で orbit、ホイールで zoom
+
+関連文書
+- [14_UI表示の設計.md](../../book/14_UI表示の設計.md)
+- [15_HUDとオーバーレイ.md](../../book/15_HUDとオーバーレイ.md)
+</pre>
+</section>
+<section class='sample'>
+<h2 id='tilemap'>tilemap</h2>
+<p>URL: <a href='./tilemap/index.html'>./tilemap/index.html</a></p>
+<pre>
+unittest: tilemap
+
+概要
+- `SceneLoader` と `TileMap` を使って、高さ付き tile 盤面を scene 定義から組み立てる test です。tile 面の描画は `SmoothShader` を使い、procedural noise 由来の texture と normal map を terrain ごとに流し込みます。高さ 0 の cell は green の grass block として見え、noise は少し細かめにしてあります。ball は移動中に少し大きめに hop するので、隣の cell へ滑るだけでなく軽く跳ねる見え方も確認できます。
+- `tilemap_poc` で確認した高さ付き盤面の考え方を core 側へ移し、`SceneLoader` が `tileMap` を runtime に変換できるかを確かめます。
+- 盤面の表示は ball に追従して scroll し、camera pivot も displayArea の中心へ寄せるので、表示域が定義域内を動く様子を POC に近い見え方で追いやすくしています。矢印キーは camera の向きに合わせて grid の移動方向を変えるため、この sample では ArrowUp が cell 座標の count down として扱われますが、右キーで画面上の右へ動かす確認はできます。
+- `hitFace` と `hitHeight`、高さ差 1 以内の移動可否、奥側 `y=1` の高さ差 2 以上のブロックをまとめて確認します。
+- 選択した cell の `edgeCutMask` も HUD に出し、4方向の cut が 1 つの mask にまとまる様子をその場で追えるようにします。
+
+このサンプルで使うwebg機能
+- `SceneAsset`: scene object から `SceneLoader` へ渡す入口
+- `SceneLoader`: `tileMap` 定義の実体化
+- `TileMap`: cell / pickCell / canMove / displayArea / path helper と camera-relative movement helper
+- `Space`: tile 盤面と marker の Node 階層
+- `Primitive.sphere`: marker の表示
+- `SmoothShader`: tile 面の陰影と texture / normal map
+- `Message`: 画面上の操作ガイド
+- `Matrix`: クリック位置からの ray 生成
+
+確認ポイント
+- scene 定義の `tileMap` が `SceneLoader` 経由で runtime になることを確認します。
+- `TileMap.pickCell()` で上面と壁面の `hitFace` が分かれることを確認します。
+- `TileMap.canMove()` で高さ差 1 以内の移動だけが通ることを確認します。
+- 奥側 `y=1` の ridge で高さ差 2 以上の移動が blocked になることを確認します。
+- ball を動かすと `TileMap.followCell()` により displayArea が scroll することを確認します。
+- ball が移動中に少し大きめに hop し、cell 間の移動に軽い弾みが見えることを確認します。
+- ball の上に置いた細長い marker が `Node.animateRotation()` で 250ms かけて Y 軸回りに回るので、回転補間の確認もできます。
+- tile 面の texture と normal map が `terrainMaterials` 経由で見え、green の grass block と slope / peak の色差も追えることを確認します。
+- 矢印キーで camera 向きに合わせて ball の移動方向が変わり、ArrowUp が cell 座標の count down になることを確認します。
+- マウスでは drag で camera を orbit 回転し、touch では 1本指 drag で同じ回転ができることを確認します。
+- touch では 2本指 drag で camera を ground 上で移動でき、pinch / wheel で zoom できることを確認します。
+- `findPath()` が start / goal の間の path を返し、必要なら blocked も表せることを確認します。
+
+操作説明
+- 1本指 drag / drag: camera を orbit 回転
+- 2本指 drag: camera を ground 上で移動
+- pinch / wheel: zoom
+- tap / クリック: tile の上面または壁面を選択
+- 矢印キー: ball を上下左右の隣接 cell へ移動
+- `1` / `2` / `3`: camera preset を切り替える
+- `c`: 選択を解除する
+- `r`: camera を初期位置へ戻す
+
+保存済み POC
+- `tilemap_poc` は、TileMap の視点と移動ルールを詰める前段の POC として、現在は `../../../discontinued/index.html` に保管しています。
+- この `tilemap` は、core 側に組み込まれた TileMap の確認用 unittest として使い、表示域が ball に追従して scroll する見え方と camera 向きに合わせた矢印キー移動を確認します。ball は `Node.animatePosition()` と `Space.update()` を使って 250ms で隣の cell へ滑らかに移動し、displayArea の中心は 350ms で少し遅れて追従するので、瞬間移動ではなく移動中の見え方も確認します。
+- この `tilemap` では、camera 相対の移動と TileMap の論理 `row` / `col` を同一視せず、視点を回したときの操作感と盤面上の座標更新を別々に確認します。`ArrowUp` は cell 座標で count down として読んでいます。
+</pre>
+</section>
+<section class='sample'>
+<h2 id='touch'>touch</h2>
+<p>URL: <a href='./touch/index.html'>./touch/index.html</a></p>
+<pre>
+unittest: touch
+
+概要
+- `webg/Touch.js` の汎用タッチボタンUIを使い、押下中入力（hold）と単発入力（action）を確認する内部テストです。
+- キーボード入力とタッチ入力を同じ状態管理に流し、操作実装を1系統にまとめる方法を確認します。
+
+このサンプルで使うwebg機能
+- `Touch`: 仮想ボタンUI生成、hold/actionイベント通知
+- `Message`: 入力状態と操作ガイド表示
+- `Space` / `Node` / `Shape` / `SmoothShader`: 3D立方体の移動・回転表示
+
+確認ポイント
+- `← / → / A / D` のholdボタンが押下中のみ有効で、離した瞬間に停止することを確認します
+- `R` のactionボタンがワンショットで姿勢リセットされることを確認します
+- キーボード操作とタッチ操作が同じ挙動になることを確認し、入力実装の共通化ができていることを検証します
+- URLオプション `?touchButtons=&lt;数&gt;` でボタン総数を増やし、`Touch.js` の密度モード（normal/dense/compact）とサイズ変化を確認します
+
+操作説明
+- キーボード: `ArrowLeft` / `ArrowRight` / `A` / `D` / `R`
+- タッチUI: `←` / `→` / `A` / `D` / `R`
+- デバッグ用URL例: `index.html?touchButtons=5` / `index.html?touchButtons=8` / `index.html?touchButtons=12`
+</pre>
+</section>
+<section class='sample'>
+<h2 id='tween'>tween</h2>
+<p>URL: <a href='./tween/index.html'>./tween/index.html</a></p>
+<pre>
+tween unittest
+
+この test は、ゲームでよく使う「少しだけ変化する」処理を確認するための sample です。
+数値や配列を時間で補間する `Tween`、`Shape.animateParameter()` による material parameter の変化、`Node.animateRotation()` による local rotation の補間、`Space.updateShapeAnimations()` / `Space.updateNodeAnimations()` による毎 frame の反映、そして `WebgApp.createTween()` / `shakeCamera()` / `flashMessage()` がゲーム向けの演出として崩れずに動くかを見ます。
+
+この test が確認したいのは、単に値が 0 から 1 に動くことではありません。
+`outCubic` のような easing が途中値をどう変えるか、`Shape` 側の parameter animation が `Space` 経由で進むか、`Node.animateRotation()` が local rotation を 500ms で滑らかに変えられるか、`WebgApp` が tween と camera shake をまとめて管理しても sample 側の state を壊さないかを確認します。
+
+操作:
+- 画面を開くと自動で確認が走る
+- 途中値、終端値、camera shake、toast の結果を status で読む
+
+確認ポイント:
+- `Tween` が object / array の両方を補間できるか
+- `Shape.animateParameter()` が material parameter を更新できるか
+- `Node.animateRotation()` が local rotation を補間できるか
+- `Space.updateShapeAnimations()` が Shape の補間を毎 frame 進められるか
+- `Space.updateNodeAnimations()` が Node の rotation 補間を毎 frame 進められるか
+- `WebgApp.createTween()` が sample から使いやすい入口になっているか
+- `WebgApp.shakeCamera()` と `flashMessage()` が HUD や camera の基本的な演出として使えるか
+</pre>
+</section>
+<section class='sample'>
+<h2 id='vignette'>vignette</h2>
+<p>URL: <a href='./vignette/index.html'>./vignette/index.html</a></p>
+<pre>
+サンプル: vignette
+
+概要
+- `VignettePass` の最小 visual test です。
+- 3D scene を一度 offscreen `RenderTarget` へ描き、その結果を `VignettePass` で canvas へ戻す経路だけを確認します。
+- 明るめの背板と四隅付近の object を置き、周辺減衰が raw scene と見比べやすい構成にしています。
+
+このサンプルで使うwebg機能
+- `RenderTarget`: 3D scene の offscreen 描画先
+- `FullscreenPass`: raw scene をそのまま canvas へ戻す比較用 pass
+- `VignettePass`: 周辺減衰を掛ける最小 postprocess
+- `Space` / `Shape` / `Primitive` / `SmoothShader`
+- `UnitTestApp`: Screen 初期化、resize、status 表示の共通 helper
+
+確認ポイント
+- `view=vignette` で、画面周辺だけが `radius` / `softness` / `strength` に応じて暗くなることを確認します。
+- `view=scene` に切り替えたとき、source scene 自体は変わらず、postprocess の有無だけが変わることを確認します。
+- `tint` を切り替えたとき、黒だけでなく暖色 / 寒色寄りの vignette も同じ経路で掛かることを確認します。
+- `center` を少しずらしたとき、減衰の中心が追従し、offscreen scene の内容には影響しないことを確認します。
+
+操作説明
+- `Space`: 回転の一時停止 / 再開
+- `V`: `scene` / `vignette` 表示切り替え
+- `B`: vignette の ON / OFF
+- `Q` / `A`: strength を増減
+- `W` / `S`: radius を増減
+- `E` / `D`: softness を増減
+- `J` / `L`: centerX を左右へ移動
+- `I` / `K`: centerY を上下へ移動
+- `C`: tint 切り替え
+- `R`: parameter を初期値へ戻す
+</pre>
+</section>
 </body>
 </html>

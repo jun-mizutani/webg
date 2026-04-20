@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>webg sample embedded_glb_viewer</title>
+  <link rel="icon" href="data:," />
+  <style>
+    :root {
+      color-scheme: light;
+      --page-bg: #edf2f6;
+      --paper: #ffffff;
+      --line: #cad5e2;
+      --ink: #17212b;
+      --sub: #556475;
+      --accent: #0f6fb2;
+      --accent-soft: #dfeefc;
+      --panel-bg: rgba(14, 22, 34, 0.92);
+      --panel-line: rgba(145, 189, 236, 0.24);
+      --panel-text: #eff6ff;
+    }
+
+    html,
+    body {
+      margin: 0;
+      min-height: 100%;
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.72), rgba(232, 239, 246, 0.92)),
+        var(--page-bg);
+      color: var(--ink);
+      font: 15px/1.8 "Hiragino Sans", "Yu Gothic", sans-serif;
+    }
+
+    body {
+      min-height: 100vh;
+    }
+
+    .page {
+      max-width: 1220px;
+      margin: 0 auto;
+      padding: 28px 20px 80px;
+      box-sizing: border-box;
+    }
+
+    .hero,
+    .paper,
+    .viewer-shell {
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      box-shadow: 0 18px 42px rgba(22, 36, 52, 0.08);
+    }
+
+    .hero,
+    .paper {
+      padding: 24px 28px;
+      margin-bottom: 24px;
+    }
+
+    .hero h1,
+    .hero h2,
+    .paper h2 {
+      margin: 0 0 12px;
+      line-height: 1.35;
+    }
+
+    .hero p,
+    .paper p {
+      margin: 10px 0 0;
+      color: var(--sub);
+    }
+
+    .viewer-shell {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 320px;
+      gap: 22px;
+      padding: 20px;
+      align-items: start;
+    }
+
+    .viewer-copy h2 {
+      margin: 0 0 10px;
+      line-height: 1.35;
+    }
+
+    .viewer-copy p {
+      margin: 10px 0 0;
+      color: var(--sub);
+    }
+
+    .control-bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin: 18px 0 10px;
+      align-items: center;
+    }
+
+    .file-pick {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 14px;
+      border-radius: 999px;
+      border: 1px solid rgba(15, 111, 178, 0.22);
+      background: var(--accent-soft);
+      color: var(--accent);
+      font: 600 13px/1 "Hiragino Sans", "Yu Gothic", sans-serif;
+      cursor: pointer;
+    }
+
+    .file-pick input {
+      display: none;
+    }
+
+    .control-bar button {
+      appearance: none;
+      border: 1px solid rgba(15, 111, 178, 0.18);
+      background: #f5f9fd;
+      color: var(--ink);
+      border-radius: 999px;
+      padding: 10px 14px;
+      font: 600 13px/1 "Hiragino Sans", "Yu Gothic", sans-serif;
+      cursor: pointer;
+    }
+
+    .control-bar button:hover,
+    .file-pick:hover {
+      background: #d4e9fb;
+    }
+
+    .control-note {
+      margin-top: 6px;
+      font-size: 13px;
+      color: var(--sub);
+    }
+
+    .pan-bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin: 14px 0 0;
+      align-items: center;
+    }
+
+    .pan-bar button {
+      appearance: none;
+      border: 1px solid rgba(23, 33, 43, 0.14);
+      background: #fbfdff;
+      color: var(--ink);
+      border-radius: 12px;
+      padding: 10px 12px;
+      font: 600 13px/1 "Hiragino Sans", "Yu Gothic", sans-serif;
+      cursor: pointer;
+      min-width: 72px;
+    }
+
+    .pan-bar button:hover {
+      background: #eef6fd;
+    }
+
+    .canvas-wrap {
+      margin-top: 18px;
+      overflow-x: auto;
+    }
+
+    #canvas {
+      display: block;
+      margin: 0;
+      background: #1a261a;
+      box-shadow: 0 18px 40px rgba(11, 22, 38, 0.18);
+    }
+
+    .status-panel {
+      position: sticky;
+      top: 18px;
+      background: var(--panel-bg);
+      color: var(--panel-text);
+      border: 1px solid var(--panel-line);
+      border-radius: 16px;
+      padding: 16px;
+      box-sizing: border-box;
+    }
+
+    .status-panel h3 {
+      margin: 0 0 8px;
+      font: 700 15px/1.35 "Hiragino Sans", "Yu Gothic", sans-serif;
+    }
+
+    .status-panel p {
+      margin: 0 0 10px;
+      color: rgba(219, 231, 247, 0.82);
+      font-size: 13px;
+      line-height: 1.6;
+    }
+
+    #status {
+      margin: 0;
+      white-space: pre-wrap;
+      font: 12px/1.55 ui-monospace, "SFMono-Regular", "Cascadia Mono", monospace;
+    }
+
+    .code-block {
+      margin-top: 18px;
+      padding: 14px 16px;
+      border-radius: 14px;
+      background: #17222c;
+      color: #eef5ff;
+      font: 12px/1.65 ui-monospace, "SFMono-Regular", "Cascadia Mono", monospace;
+      overflow-x: auto;
+    }
+
+    @media (max-width: 980px) {
+      .viewer-shell {
+        grid-template-columns: 1fr;
+      }
+
+      .status-panel {
+        position: static;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <section class="hero">
+      <h1>webg sample: embedded_glb_viewer</h1>
+      <h2>`WebgApp` と `EyeRig` を使い、HTML の file input から `.glb` を読み込む埋め込みビューア</h2>
+      <p>
+        この sample は、`layoutMode: "embedded"` の canvas を文書中へ置いたまま、
+        `input[type=file]` で選んだ `.glb` をその場で表示するための最小ビューアです。
+        orbit camera は pointer drag / pinch に加えて、画面下の touch buttons でも操作できます。
+      </p>
+      <p>
+        `Load bundled sample` を押すと同梱の `hand.glb` で即確認でき、`Choose GLB` からは手元の `.glb` を直接読み込めます。
+      </p>
+    </section>
+
+    <section class="paper">
+      <h2>確認したいポイント</h2>
+      <p>
+        1. canvas が本文に埋め込まれたままでも、fixed panel と touch buttons が同じ host を基準に重なること
+      </p>
+      <p>
+        2. `.glb` を file input から選ぶと、`WebgApp.loadModel()` の経路で読み込まれ、orbit camera でそのまま見回せること
+      </p>
+      <p>
+        3. touch buttons の `← → ↑ ↓ + -` と `R / || / W / S` が `EyeRig` と viewer action に自然につながること
+      </p>
+    </section>
+
+    <section class="viewer-shell">
+      <div class="viewer-copy">
+        <h2 id="viewerHeadline">Upload a GLB file</h2>
+        <p>
+          `WebgApp` が Screen / shader / camera rig / input / overlay をまとめて初期化し、
+          `EyeRig(type="orbit")` が drag / wheel / pinch / keyboard / touch buttons の camera 操作を一つにまとめます。
+        </p>
+        <div class="control-bar">
+          <label class="file-pick">
+            <span>Choose GLB</span>
+            <input id="glbFile" type="file" accept=".glb,model/gltf-binary" />
+          </label>
+          <button type="button" id="loadBundledSample">Load bundled sample</button>
+          <button type="button" id="resetView">Reset view</button>
+          <button type="button" id="clearModel">Clear</button>
+          <button type="button" id="toggleWireframe">W</button>
+          <button type="button" id="saveShot">S</button>
+        </div>
+        <div class="control-note">
+          対応形式は単体 `.glb` です。モデルはバウンディングボックス中心がワールド原点へ来るように配置し、平行移動 1 step は最大サイズの 5% です。
+        </div>
+        <div class="pan-bar">
+          <button type="button" id="panLeft">Pan ←</button>
+          <button type="button" id="panRight">Pan →</button>
+          <button type="button" id="panUp">Pan ↑</button>
+          <button type="button" id="panDown">Pan ↓</button>
+        </div>
+        <div class="canvas-wrap">
+          <canvas id="canvas" width="960" height="720"></canvas>
+        </div>
+        <pre class="code-block">const app = new WebgApp({
+  document,
+  layoutMode: "embedded",
+  fixedCanvasSize: { width: 820, height: 560, useDevicePixelRatio: false }
+});
+
+const orbit = new EyeRig(app.cameraRig, app.cameraRod, app.eye, {
+  document,
+  element: app.screen.canvas,
+  input: app.input,
+  type: "orbit"
+});</pre>
+      </div>
+
+      <aside class="status-panel">
+        <h3>viewer status</h3>
+        <p>
+          現在の file、load stage、triangle 数、camera 姿勢、error の有無をここで追えます。
+        </p>
+        <pre id="status">initializing...</pre>
+      </aside>
+    </section>
+  </main>
+
+  <script type="module" src="./main.js"></script>
+</body>
+</html>

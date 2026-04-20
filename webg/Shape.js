@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// Shape.js        2026/04/16
+// Shape.js        2026/04/20
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // ---------------------------------------------
@@ -83,7 +83,9 @@ export default class Shape {
         ? gpu.getResource()
         : new ShapeResource(gpu);
     bindSharedResourceFields(this);
+    this.resource?.retainReference?.();
     this.isShapeInstance = true;
+    this.isDestroyed = false;
     this.isHidden = false;
     this.shaderParam = {};
     this.materialId = null;
@@ -157,7 +159,12 @@ export default class Shape {
     if (!resource) {
       return;
     }
+    if (this.resource === resource) {
+      return;
+    }
+    this.resource?.releaseReference?.();
     this.resource = resource;
+    this.resource?.retainReference?.();
   }
 
   // 材質パラメータを複製する
@@ -678,19 +685,56 @@ export default class Shape {
 
   // GPUバッファ参照を解放する
   releaseObjects() {
-    this.positionArray = [];
-    this.normalArray = [];
-    this.indicesArray = [];
-    this.polygonLoops = [];
-    this.texCoordsArray = [];
-    this.altVertices = [];
-    this.vObj = [];
-    this.vObj0 = [];
-    this.vObj1 = [];
-    this.iObj = [];
-    this.wireObj = [];
-    this.bindex = [];
-    this.weight = [];
+    this.resource?.releaseCpuObjects?.();
+  }
+
+  // ownerNode からこの instance を外す
+  // Node 側に shape 配列が残ると draw/update が古い instance を参照し続けるため、
+  // destroy 時は Node 側の一覧も合わせて掃除する
+  detachFromOwnerNode() {
+    const ownerNode = this.ownerNode;
+    if (!ownerNode || !Array.isArray(ownerNode.shapeInstances)) {
+      this.ownerNode = null;
+      return false;
+    }
+    for (let i = ownerNode.shapeInstances.length - 1; i >= 0; i--) {
+      if (ownerNode.shapeInstances[i] === this) {
+        ownerNode.shapeInstances.splice(i, 1);
+      }
+    }
+    ownerNode.shapes = ownerNode.shapeInstances;
+    this.ownerNode = null;
+    return true;
+  }
+
+  // Shape instance の寿命を終わらせる
+  // destroyResource=false なら shared resource は残し、instance 側の参照だけを外す
+  destroy(options = {}) {
+    const destroyResource = options.destroyResource === true;
+    const forceResourceDestroy = options.forceResourceDestroy === true;
+    if (this.isDestroyed) {
+      return true;
+    }
+    this.clearAnimatedParameters();
+    this.detachFromOwnerNode();
+    this.isHidden = true;
+    this.collisionShape = null;
+    this.skeleton = null;
+    this.anim = null;
+    this.texture = null;
+    this.shader = null;
+    this.materialId = null;
+    this.materialParams = {};
+    this.shaderParam = {};
+    const resource = this.resource;
+    this.resource?.releaseReference?.();
+    if (destroyResource && resource) {
+      resource.destroy({
+        force: forceResourceDestroy
+      });
+    }
+    this.isDestroyed = true;
+    return true;
   }
 
   // スケルトンを関連付ける

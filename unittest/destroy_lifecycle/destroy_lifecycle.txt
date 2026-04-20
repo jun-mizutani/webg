@@ -1,0 +1,30 @@
+サンプル: destroy_lifecycle
+
+概要
+- `Shape.destroy()`、`ShapeResource.destroy()`、`instantiated.destroy()`、`runtime.destroy()` の効果を、自動チェックと実画面の両方で確認する unittest です
+- 左レーンは `Shape` / `ShapeResource`、右レーンは `runtime` / `instantiation` の寿命管理に分け、どの層を destroy したかを見分けやすくしています
+
+このサンプルで使うwebg機能
+- `Shape`: `createInstance()` と `destroy()` による instance 側の寿命管理
+- `ShapeResource`: shared GPUBuffer の保持と `destroy()` による明示破棄
+- `Space`: `instantiate()` 後の node を描画し、destroy 後に scene から外れたかを確認する場
+- `Primitive`: 最小の立方体と床を作るための asset source
+- `ModelAsset.build()` / runtime: `instantiated.destroy()` と `runtime.destroy()` の確認
+- `SmoothShader`: 形状差と消え方を読みやすくする最小陰影
+- `UnitTestApp`: Screen 初期化、status 表示、ループ起動の共通 helper
+
+確認ポイント
+- 起動直後の auto test で、`shape.destroy()` が owner node から shape instance を外し、最後の参照に対しては shared resource を破棄できることを確認します
+- `instantiated.destroy()` が scene 上の実体だけを外し、runtime の shared resource は残すことを確認します
+- `runtime.destroy()` が残っている instantiation と shared resource をまとめて終了させることを確認します
+- 実画面では、左レーンで instance だけを消す場合と resource まで終える場合、右レーンで scene 実体だけを消す場合と runtime ごと終える場合の差を見比べられます
+- 左レーンで shared resource まで終える見えを確認したい場合は、先に `1` で clone を消してから `2` を押すと分かりやすくなります
+
+操作説明
+- `1`: 左レーンの clone shape を destroy する
+- `2`: 左レーンの source shape を終了する。これが最後の参照なら shared resource も終了する
+- `3`: 左レーンを初期状態で作り直す
+- `7`: 右レーンの instantiation だけを destroy する
+- `8`: 右レーンの instantiation を runtime から作り直す
+- `9`: 右レーンの runtime を destroy する
+- `0`: 右レーンを新しい runtime で作り直す

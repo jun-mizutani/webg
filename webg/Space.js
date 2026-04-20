@@ -1,5 +1,5 @@
 // ---------------------------------------------
-//  Space.js      2026/03/07
+//  Space.js      2026/04/20
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // ---------------------------------------------
@@ -53,6 +53,76 @@ export default class Space {
         }
       }
     }
+  }
+
+  // 管理配列から特定 Node を取り除く
+  // detach() だけでは Space.nodes に残るため、
+  // 明示破棄では scene graph の登録自体も外す必要がある
+  removeNodeReference(node) {
+    if (!node) {
+      return 0;
+    }
+    let removedCount = 0;
+    for (let i = this.nodes.length - 1; i >= 0; i--) {
+      if (this.nodes[i] === node) {
+        this.nodes.splice(i, 1);
+        removedCount++;
+      }
+    }
+    return removedCount;
+  }
+
+  // Node 1 個だけを scene graph から外す
+  // 子を残したまま除去すると階層が壊れやすいため、
+  // recursive=false は葉 Node の用途を想定する
+  removeNode(node, options = {}) {
+    if (!node) {
+      return 0;
+    }
+    if (options.recursive === true) {
+      return this.removeNodeTree(node, options);
+    }
+    if (Array.isArray(node.children) && node.children.length > 0) {
+      console.assert(false, "Space.removeNode() requires recursive=true for nodes with children");
+      return 0;
+    }
+    if (options.destroyShapes === true && Array.isArray(node.shapeInstances)) {
+      const shapes = [...node.shapeInstances];
+      for (let i = 0; i < shapes.length; i++) {
+        shapes[i]?.destroy?.();
+      }
+    }
+    if (node.parent && Array.isArray(node.parent.children)) {
+      for (let i = node.parent.children.length - 1; i >= 0; i--) {
+        if (node.parent.children[i] === node) {
+          node.parent.children.splice(i, 1);
+        }
+      }
+    }
+    node.parent = null;
+    node.children = [];
+    node.shapeInstances = [];
+    node.shapes = node.shapeInstances;
+    return this.removeNodeReference(node);
+  }
+
+  // Node subtree 全体を scene graph から外す
+  // destroyShapes=true なら subtree 配下の Shape instance も destroy し、
+  // ShapeResource の参照数が 0 になれば後続の resource.destroy() へつなげられる
+  removeNodeTree(node, options = {}) {
+    if (!node) {
+      return 0;
+    }
+    const children = Array.isArray(node.children) ? [...node.children] : [];
+    let removedCount = 0;
+    for (let i = 0; i < children.length; i++) {
+      removedCount += this.removeNodeTree(children[i], options);
+    }
+    removedCount += this.removeNode(node, {
+      recursive: false,
+      destroyShapes: options.destroyShapes === true
+    });
+    return removedCount;
   }
 
   // シーンから描画対象スケルトンを再収集する

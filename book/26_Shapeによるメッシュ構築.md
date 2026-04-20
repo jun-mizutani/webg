@@ -1,5 +1,7 @@
 # Shapeによるメッシュ構築
 
+最終更新：2026-04-20 JST
+
 `Shape` は、単に 3D の形状を格納するコンテナではありません。CPU 側で頂点や面を編集する「構築段階」と、GPU 側で描画可能なメッシュとして確定させる「描画段階」の境界を司るクラスです。本章では、高水準なプリミティブの利用から、低水準な頂点登録までを通して、`Shape` がどのようにメッシュ構築の中心として機能しているかを見ていきます。
 
 まず押さえておきたいのは、`webg` において `Shape` を利用する経路には 2 つのアプローチがあることです。1 つは `Primitive.cube()` のように、あらかじめ定義された形状を流し込んで素早く構築する「高水準（高レイヤー）」の経路。もう 1 つは、頂点と面を一つずつ登録して組み立てる「低水準（低レイヤー）」の経路です。
@@ -153,6 +155,40 @@ GPU が効率的に読み込めるよう、`endShape()` はバラバラに保持
 インデックスバッファの生成においては、メモリ効率と互換性を考慮し、インデックス値に応じて `uint16` と `uint32` を自動的に切り替えます。全てのインデックスが 65535 以下であれば `uint16` を使用し、それを超える場合や 4 バイトアライメントが必要な場合は `uint32` を選択します。
 
 さらに、`endShape()` は内部で `_buildWireIndexBuffer()` を呼び出し、三角形のインデックスから重複するエッジを除去して、ワイヤーフレーム表示専用のインデックスバッファを別途構築します。これにより、`setWireframe(true)` を呼び出すだけで、同一のメッシュを用いて面描画と線描画を切り替えることが可能になります。
+
+## `endShape()` の後に残るものと `destroy()`
+
+`endShape()` を呼んだ時点で、`Shape` は単なる編集中の配列ではなく、描画に必要な GPU バッファを持つ runtime resource へ移行します。ここで重要になるのは、「表示される shape」と「その背後にある shared resource」を分けて考えることです。`webg` の `Shape` は、見た目の差分や表示状態を持つインスタンス層として振る舞いながら、ジオメトリや GPUBuffer は `ShapeResource` として共有できる構造になっています。
+
+この構造を理解すると、破棄の考え方も整理しやすくなります。ある `Shape` インスタンスが不要になったとしても、同じ shared resource を参照している別の `Shape` がまだ存在しているなら、resource 自体は残っているべきです。逆に、どこからも参照されなくなった shared resource は、その時点で明示的に寿命を終えられる方が安全です。
+
+```js
+const sourceShape = new Shape(app.getGL());
+sourceShape.applyPrimitiveAsset(
+  Primitive.cube(2.0, sourceShape.getPrimitiveOptions())
+);
+sourceShape.endShape();
+
+const shape = sourceShape.createInstance();
+const node = app.space.addNode(null, "box");
+node.addShape(shape);
+
+// 使い終わったら instance を終了する
+shape.destroy();
+
+// 元の shared resource も今後使わないなら source 側も終了する
+sourceShape.destroy();
+```
+
+`shape.destroy()` は、この shape instance がもう不要であることを `webg` に伝える API です。これにより、node に載っていた instance が取り外され、shape 側の material、animation、texture 参照も整理されます。shared resource を参照している instance が他に残っていなければ、対応する GPUBuffer も破棄対象になります。つまり `destroy()` は「表示を消す」ための API ではなく、「この shape の寿命を終える」ための API です。
+
+ここで注意したいのは、scene から見えなくすることと resource を破棄することは同じではない、という点です。たとえば `hide(true)` は表示を止めるだけであり、shape と GPUBuffer は残っています。また、node の親子関係を変えるだけでも、メッシュ resource 自体は残ったままです。メモリや GPU resource まで含めて後始末したいときは、`destroy()` を使って寿命を明示する必要があります。
+
+一方で、今後も再利用する予定の shape まで不用意に `destroy()` する必要はありません。ステージ中ずっと使い回す地形、何度も出現する同一形状の弾や障害物、複数 node で共有するベースメッシュなどは、shared resource として保持した方が自然です。つまり `destroy()` は毎回の儀式ではなく、「この shape はもう不要である」と判断できたときに使う終了操作と捉えてください。
+
+また、JavaScript の参照が切れれば最終的に GC の対象になる可能性はありますが、いつ GPU 側 resource が解放されるかは保証されません。長時間動作するアプリや、shape を大量に生成・破棄するツールでは、その不確定さがそのままメモリ使用量の増加として現れやすくなります。そのため `webg` では、不要になった `Shape` は `destroy()` で明示的に終了させる運用を推奨します。
+
+`endShape()` が生成完了を意味するのに対し、`destroy()` は寿命の終了を意味します。この 2 つを対として理解しておくと、低レイヤーで shape を構築する場合でも、描画の開始と後始末の両方を見通しよく設計できるようになります。
 
 ## 学習のステップ
 

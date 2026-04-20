@@ -1,0 +1,898 @@
+// -------------------------------------------------
+// embedded_glb_viewer sample
+//   main.js       2026/04/20
+//   Copyright (c) 2026 Jun Mizutani,
+//   released under the MIT open source license.
+// -------------------------------------------------
+
+import WebgApp from "../../webg/WebgApp.js";
+import EyeRig from "../../webg/EyeRig.js";
+import SmoothShader from "../../webg/SmoothShader.js";
+import Shape from "../../webg/Shape.js";
+import Primitive from "../../webg/Primitive.js";
+import Diagnostics from "../../webg/Diagnostics.js";
+
+const BUNDLED_SAMPLE = new URL("../gltf_loader/hand.glb", import.meta.url).href;
+const DEFAULT_ORBIT = {
+  yaw: 28.0,
+  pitch: -14.0,
+  distance: 18.0,
+  target: [0.0, 0.0, 0.0]
+};
+const PLACEHOLDER_SIZE = {
+  minx: -2.4,
+  maxx: 2.4,
+  miny: -1.4,
+  maxy: 3.0,
+  minz: -2.4,
+  maxz: 2.4,
+  centerx: 0.0,
+  centery: 0.8,
+  centerz: 0.0,
+  sizex: 4.8,
+  sizey: 4.4,
+  sizez: 4.8,
+  max: 4.8
+};
+const ORBIT_BUTTON_STEP = {
+  yaw: 7.5,
+  pitch: 6.0,
+  zoomMultiplier: 1.15
+};
+const TOUCH_GROUPS = [
+  {
+    id: "orbit-h",
+    buttons: [
+      { key: "orbit-left", label: "\u2190", kind: "action", ariaLabel: "orbit left" },
+      { key: "orbit-right", label: "\u2192", kind: "action", ariaLabel: "orbit right" }
+    ]
+  },
+  {
+    id: "orbit-v",
+    buttons: [
+      { key: "orbit-up", label: "\u2191", kind: "action", ariaLabel: "orbit up" },
+      { key: "orbit-down", label: "\u2193", kind: "action", ariaLabel: "orbit down" }
+    ]
+  },
+  {
+    id: "zoom",
+    buttons: [
+      { key: "orbit-zoom-in", label: "+", kind: "action", ariaLabel: "zoom in" },
+      { key: "orbit-zoom-out", label: "-", kind: "action", ariaLabel: "zoom out" }
+    ]
+  },
+  {
+    id: "actions",
+    buttons: [
+      { key: "reset-view", label: "R", kind: "action", ariaLabel: "reset camera" },
+      { key: "toggle-pause", label: "||", kind: "action", ariaLabel: "toggle animation pause" },
+      { key: "toggle-wireframe", label: "W", kind: "action", ariaLabel: "toggle wireframe" },
+      { key: "capture-shot", label: "S", kind: "action", ariaLabel: "save screenshot" }
+    ]
+  },
+  {
+    id: "pan",
+    buttons: [
+      { key: "pan-left", label: "P\u2190", kind: "action", ariaLabel: "pan left" },
+      { key: "pan-right", label: "P\u2192", kind: "action", ariaLabel: "pan right" },
+      { key: "pan-up", label: "P\u2191", kind: "action", ariaLabel: "pan up" },
+      { key: "pan-down", label: "P\u2193", kind: "action", ariaLabel: "pan down" }
+    ]
+  }
+];
+
+const ui = {
+  fileInput: null,
+  loadSampleButton: null,
+  resetButton: null,
+  clearButton: null,
+  screenshotButton: null,
+  wireframeButton: null,
+  panLeftButton: null,
+  panRightButton: null,
+  panUpButton: null,
+  panDownButton: null,
+  headline: null,
+  status: null
+};
+
+let app = null;
+let orbit = null;
+let placeholderRoot = null;
+let placeholderSpinNode = null;
+
+const state = {
+  activeModelRoot: null,
+  runtime: null,
+  instantiated: null,
+  fileLabel: "(none)",
+  sourceLabel: "placeholder",
+  loadStage: "ready",
+  loading: false,
+  lastError: "",
+  loadStartedAtMs: 0,
+  loadElapsedMs: 0,
+  triangleCount: 0,
+  nodeCount: 0,
+  clipCount: 0,
+  paused: false,
+  hasActiveModel: false,
+  screenshotName: "",
+  modelSize: { ...PLACEHOLDER_SIZE },
+  wireframe: false
+};
+
+document.addEventListener("DOMContentLoaded", () => {
+  start().catch((err) => {
+    console.error("embedded_glb_viewer failed:", err);
+  });
+});
+
+function cacheUi() {
+  ui.fileInput = document.getElementById("glbFile");
+  ui.loadSampleButton = document.getElementById("loadBundledSample");
+  ui.resetButton = document.getElementById("resetView");
+  ui.clearButton = document.getElementById("clearModel");
+  ui.screenshotButton = document.getElementById("saveShot");
+  ui.wireframeButton = document.getElementById("toggleWireframe");
+  ui.panLeftButton = document.getElementById("panLeft");
+  ui.panRightButton = document.getElementById("panRight");
+  ui.panUpButton = document.getElementById("panUp");
+  ui.panDownButton = document.getElementById("panDown");
+  ui.headline = document.getElementById("viewerHeadline");
+  ui.status = document.getElementById("status");
+}
+
+function createMaterialShape(gpu, primitiveAsset, params) {
+  const shape = new Shape(gpu);
+  shape.applyPrimitiveAsset(primitiveAsset);
+  shape.endShape();
+  shape.setMaterial("smooth-shader", params);
+  return shape;
+}
+
+function createPlaceholderScene() {
+  placeholderRoot = app.space.addNode(null, "uploadPlaceholderRoot");
+  placeholderRoot.setPosition(0.0, -PLACEHOLDER_SIZE.centery, 0.0);
+  const pedestalNode = app.space.addNode(placeholderRoot, "uploadPedestal");
+  const pedestalShape = createMaterialShape(
+    app.getGL(),
+    Primitive.cube(3.2),
+    {
+      has_bone: 0,
+      use_texture: 0,
+      color: [0.28, 0.42, 0.56, 1.0],
+      ambient: 0.35,
+      specular: 0.45,
+      power: 24.0
+    }
+  );
+  pedestalNode.addShape(pedestalShape);
+  pedestalNode.setPosition(0.0, -1.0, 0.0);
+
+  placeholderSpinNode = app.space.addNode(placeholderRoot, "uploadPlaceholderSpin");
+  const cubeNode = app.space.addNode(placeholderSpinNode, "uploadCube");
+  const cubeShape = createMaterialShape(
+    app.getGL(),
+    Primitive.cube(1.8),
+    {
+      has_bone: 0,
+      use_texture: 0,
+      color: [0.88, 0.70, 0.34, 1.0],
+      ambient: 0.28,
+      specular: 0.86,
+      power: 54.0
+    }
+  );
+  cubeNode.addShape(cubeShape);
+  cubeNode.setPosition(0.0, 0.8, 0.0);
+
+  const sphereNode = app.space.addNode(placeholderSpinNode, "uploadSphere");
+  const sphereShape = createMaterialShape(
+    app.getGL(),
+    Primitive.sphere(0.85, 16, 24),
+    {
+      has_bone: 0,
+      use_texture: 0,
+      color: [0.30, 0.78, 0.98, 1.0],
+      ambient: 0.24,
+      specular: 0.92,
+      power: 62.0,
+      emissive: 0.06
+    }
+  );
+  sphereNode.addShape(sphereShape);
+  sphereNode.setPosition(0.0, 2.2, 0.0);
+}
+
+function setNodeTreeHidden(node, hidden) {
+  if (!node) return;
+  if (typeof node.hide === "function") {
+    node.hide(hidden);
+  }
+  const children = Array.isArray(node.children) ? node.children : [];
+  for (let i = 0; i < children.length; i++) {
+    setNodeTreeHidden(children[i], hidden);
+  }
+}
+
+function setPlaceholderVisible(visible) {
+  if (!placeholderRoot) return;
+  setNodeTreeHidden(placeholderRoot, !visible);
+}
+
+function collectPlaceholderShapes() {
+  const shapes = [];
+  const walk = (node) => {
+    if (!node) return;
+    if (Array.isArray(node.shapes)) {
+      for (let i = 0; i < node.shapes.length; i++) {
+        if (node.shapes[i]) shapes.push(node.shapes[i]);
+      }
+    }
+    const children = Array.isArray(node.children) ? node.children : [];
+    for (let i = 0; i < children.length; i++) {
+      walk(children[i]);
+    }
+  };
+  walk(placeholderRoot);
+  return shapes;
+}
+
+function getViewerShapes() {
+  if (state.hasActiveModel && Array.isArray(state.instantiated?.shapes)) {
+    return state.instantiated.shapes;
+  }
+  return collectPlaceholderShapes();
+}
+
+function applyWireframeState() {
+  const shapes = getViewerShapes();
+  for (let i = 0; i < shapes.length; i++) {
+    shapes[i]?.setWireframe?.(state.wireframe);
+  }
+}
+
+function resetOrbit(size = state.modelSize, options = {}) {
+  const maxSize = Math.max(2.4, Number(size?.max) || PLACEHOLDER_SIZE.max);
+  const target = Array.isArray(options.target) && options.target.length >= 3
+    ? options.target
+    : DEFAULT_ORBIT.target;
+  orbit.orbit.minDistance = Math.max(2.5, maxSize * 0.35);
+  orbit.orbit.maxDistance = Math.max(18.0, maxSize * 9.0);
+  orbit.orbit.wheelZoomStep = Math.max(0.35, maxSize * 0.06);
+  orbit.setTarget(target[0], target[1], target[2]);
+  orbit.setAngles(DEFAULT_ORBIT.yaw, DEFAULT_ORBIT.pitch);
+  orbit.setDistance(Math.max(7.0, maxSize * 2.2));
+  syncOrbitStateToAppCamera();
+}
+
+function syncOrbitStateToAppCamera() {
+  if (!app?.camera || !orbit?.orbit) {
+    return;
+  }
+  app.camera.target[0] = orbit.orbit.target[0];
+  app.camera.target[1] = orbit.orbit.target[1];
+  app.camera.target[2] = orbit.orbit.target[2];
+  app.camera.distance = orbit.orbit.distance;
+  app.camera.yaw = orbit.orbit.yaw;
+  app.camera.pitch = orbit.orbit.pitch;
+}
+
+function getPanUnit(size = state.modelSize) {
+  const maxSize = Math.max(1.0e-6, Number(size?.max) || PLACEHOLDER_SIZE.max);
+  return maxSize * 0.05;
+}
+
+function normalizeVec3(vec) {
+  const x = Number(vec?.[0] ?? 0.0);
+  const y = Number(vec?.[1] ?? 0.0);
+  const z = Number(vec?.[2] ?? 0.0);
+  const length = Math.hypot(x, y, z) || 1.0;
+  return [x / length, y / length, z / length];
+}
+
+function getOrbitScreenBasis() {
+  const eyeMatrix = app.eye.getWorldMatrix();
+  return {
+    right: normalizeVec3(eyeMatrix.mul3x3Vector([1.0, 0.0, 0.0])),
+    up: normalizeVec3(eyeMatrix.mul3x3Vector([0.0, 1.0, 0.0]))
+  };
+}
+
+function panOrbitByScreenStep(stepX = 0, stepY = 0) {
+  if (!orbit) {
+    return;
+  }
+  const unit = getPanUnit();
+  const { right, up } = getOrbitScreenBasis();
+  const delta = [
+    right[0] * stepX * unit + up[0] * stepY * unit,
+    right[1] * stepX * unit + up[1] * stepY * unit,
+    right[2] * stepX * unit + up[2] * stepY * unit
+  ];
+  orbit.setTarget(
+    orbit.orbit.target[0] + delta[0],
+    orbit.orbit.target[1] + delta[1],
+    orbit.orbit.target[2] + delta[2]
+  );
+  syncOrbitStateToAppCamera();
+}
+
+function stepOrbitByButtons({ yaw = 0.0, pitch = 0.0, zoom = 1.0 } = {}) {
+  if (!orbit?.orbit) {
+    return;
+  }
+  const nextPitch = orbit.clamp(
+    orbit.orbit.pitch + pitch,
+    orbit.orbit.pitchMin,
+    orbit.orbit.pitchMax
+  );
+  const nextDistance = orbit.clamp(
+    orbit.orbit.distance * zoom,
+    orbit.orbit.minDistance,
+    orbit.orbit.maxDistance
+  );
+  orbit.setAngles(orbit.orbit.yaw + yaw, nextPitch);
+  orbit.setDistance(nextDistance);
+  syncOrbitStateToAppCamera();
+}
+
+function updateLoadPanel() {
+  const lines = [
+    "embedded_glb_viewer",
+    `stage=${state.loadStage}`,
+    `file=${state.fileLabel}`,
+    `elapsedMs=${Math.round(state.loadElapsedMs)}`
+  ];
+  if (state.loading) {
+    app.showFixedFormatPanel(lines.join("\n"), {
+      id: "embeddedViewerLoad",
+      left: 14,
+      top: 14,
+      maxHeight: "none",
+      color: "#fff2d7",
+      background: "rgba(22, 32, 26, 0.92)"
+    });
+  } else {
+    app.clearFixedFormatPanel("embeddedViewerLoad");
+  }
+}
+
+function setLoadStage(stage) {
+  state.loadStage = String(stage ?? "");
+  state.loadElapsedMs = Math.max(0, performance.now() - state.loadStartedAtMs);
+  app.setDiagnosticsStage(stage);
+  app.mergeDiagnosticsStats({
+    loadStage: state.loadStage,
+    loadElapsedMs: Math.round(state.loadElapsedMs),
+    file: state.fileLabel
+  });
+  updateLoadPanel();
+}
+
+function makeScreenshotName() {
+  const base = state.fileLabel && state.fileLabel !== "(none)"
+    ? state.fileLabel.replace(/\.[^.]+$/, "")
+    : "embedded_glb_viewer";
+  return base
+    .replace(/[^a-z0-9_-]+/gi, "_")
+    .replace(/^_+|_+$/g, "")
+    || "embedded_glb_viewer";
+}
+
+function takeViewerScreenshot() {
+  const file = app.takeScreenshot({
+    prefix: `${makeScreenshotName()}_view`
+  });
+  state.screenshotName = file;
+  app.pushToast(`saved ${file}`, {
+    durationMs: 1400
+  });
+}
+
+function clearErrorState() {
+  state.lastError = "";
+  app.clearFixedFormatPanel("embeddedViewerError");
+}
+
+function showErrorState(err) {
+  const report = Diagnostics.createErrorReport(err, {
+    system: "embedded-glb-viewer",
+    source: "samples/embedded_glb_viewer/main.js",
+    stage: state.loadStage
+  });
+  state.lastError = err?.message ?? String(err);
+  app.setDiagnosticsReport(report);
+  app.showErrorPanel(err, {
+    id: "embeddedViewerError",
+    title: "glb load failed",
+    background: "rgba(42, 18, 22, 0.94)"
+  });
+}
+
+function setCurrentModel(rootNode, runtime, instantiated, size) {
+  disposeCurrentModel();
+  state.activeModelRoot = rootNode;
+  state.runtime = runtime;
+  state.instantiated = instantiated;
+  state.modelSize = { ...size };
+  state.hasActiveModel = true;
+  state.paused = false;
+  setPlaceholderVisible(false);
+}
+
+function disposeCurrentModel() {
+  if (state.instantiated) {
+    state.instantiated.setAnimationsPaused?.(true);
+    state.instantiated.destroy?.();
+  }
+  if (state.activeModelRoot && app?.space?.removeNodeTree) {
+    app.space.removeNodeTree(state.activeModelRoot, {
+      destroyShapes: true
+    });
+  }
+  if (state.runtime) {
+    state.runtime.destroy?.();
+  }
+  state.activeModelRoot = null;
+  state.runtime = null;
+  state.instantiated = null;
+  state.hasActiveModel = false;
+  state.paused = false;
+}
+
+function clearCurrentModel(options = {}) {
+  disposeCurrentModel();
+  state.fileLabel = "(none)";
+  state.sourceLabel = "placeholder";
+  state.triangleCount = 0;
+  state.nodeCount = 0;
+  state.clipCount = 0;
+  state.modelSize = { ...PLACEHOLDER_SIZE };
+  clearErrorState();
+  setPlaceholderVisible(true);
+  applyWireframeState();
+  resetOrbit(PLACEHOLDER_SIZE);
+  if (options.toast === true) {
+    app.pushToast("model cleared", {
+      durationMs: 1100
+    });
+  }
+}
+
+function attachInstantiatedRoots(runtime, instantiated, mountNode) {
+  const roots = runtime.nodes.filter((nodeInfo) => nodeInfo.parent === null);
+  for (let i = 0; i < roots.length; i++) {
+    const createdNode = instantiated.nodeMap.get(roots[i].id);
+    if (createdNode) {
+      createdNode.attach(mountNode);
+    }
+  }
+}
+
+function computeTriangleCount(shapes) {
+  let total = 0;
+  for (let i = 0; i < shapes.length; i++) {
+    total += Number(shapes[i]?.getTriangleCount?.() ?? 0);
+  }
+  return total;
+}
+
+function computeViewerSize(shapes) {
+  const size = app.getShapeSize(shapes);
+  if (!Number.isFinite(size.max) || size.max <= 0.0) {
+    return { ...PLACEHOLDER_SIZE };
+  }
+  return size;
+}
+
+function placeModelRoot(rootNode, size) {
+  rootNode.setPosition(
+    -Number(size.centerx ?? 0.0),
+    -Number(size.centery ?? 0.0),
+    -Number(size.centerz ?? 0.0)
+  );
+}
+
+function toggleAnimationPause() {
+  if (!state.runtime || state.clipCount <= 0) {
+    app.pushToast("no animation clip", {
+      durationMs: 900
+    });
+    return;
+  }
+  state.paused = !state.paused;
+  state.runtime.setAnimationsPaused?.(state.paused);
+  app.pushToast(state.paused ? "animation paused" : "animation resumed", {
+    durationMs: 900
+  });
+}
+
+function toggleWireframe() {
+  state.wireframe = !state.wireframe;
+  applyWireframeState();
+  app.pushToast(state.wireframe ? "wireframe on" : "wireframe off", {
+    durationMs: 900
+  });
+}
+
+function handlePressedActions() {
+  if (app.input.wasActionPressed("orbit-left")) {
+    stepOrbitByButtons({
+      yaw: -ORBIT_BUTTON_STEP.yaw
+    });
+  }
+  if (app.input.wasActionPressed("orbit-right")) {
+    stepOrbitByButtons({
+      yaw: ORBIT_BUTTON_STEP.yaw
+    });
+  }
+  if (app.input.wasActionPressed("orbit-up")) {
+    stepOrbitByButtons({
+      pitch: ORBIT_BUTTON_STEP.pitch
+    });
+  }
+  if (app.input.wasActionPressed("orbit-down")) {
+    stepOrbitByButtons({
+      pitch: -ORBIT_BUTTON_STEP.pitch
+    });
+  }
+  if (app.input.wasActionPressed("orbit-zoom-in")) {
+    stepOrbitByButtons({
+      zoom: 1.0 / ORBIT_BUTTON_STEP.zoomMultiplier
+    });
+  }
+  if (app.input.wasActionPressed("orbit-zoom-out")) {
+    stepOrbitByButtons({
+      zoom: ORBIT_BUTTON_STEP.zoomMultiplier
+    });
+  }
+  if (app.input.wasActionPressed("reset-view")) {
+    resetOrbit(state.modelSize);
+    app.pushToast("camera reset", {
+      durationMs: 900
+    });
+  }
+  if (app.input.wasActionPressed("toggle-pause")) {
+    toggleAnimationPause();
+  }
+  if (app.input.wasActionPressed("capture-shot")) {
+    takeViewerScreenshot();
+  }
+  if (app.input.wasActionPressed("toggle-wireframe")) {
+    toggleWireframe();
+  }
+  if (app.input.wasActionPressed("pan-left")) {
+    panOrbitByScreenStep(-1.0, 0.0);
+  }
+  if (app.input.wasActionPressed("pan-right")) {
+    panOrbitByScreenStep(1.0, 0.0);
+  }
+  if (app.input.wasActionPressed("pan-up")) {
+    panOrbitByScreenStep(0.0, 1.0);
+  }
+  if (app.input.wasActionPressed("pan-down")) {
+    panOrbitByScreenStep(0.0, -1.0);
+  }
+}
+
+async function loadModelFromSource(source, {
+  fileLabel,
+  sourceLabel
+} = {}) {
+  const previousLabels = {
+    fileLabel: state.fileLabel,
+    sourceLabel: state.sourceLabel
+  };
+  clearErrorState();
+  state.loading = true;
+  state.fileLabel = fileLabel ?? "(unknown)";
+  state.sourceLabel = sourceLabel ?? state.fileLabel;
+  state.loadStartedAtMs = performance.now();
+  setLoadStage("fetch");
+  let mountNode = null;
+  let modelResult = null;
+  let instantiated = null;
+
+  try {
+    modelResult = await app.loadModel(source, {
+      format: "gltf",
+      instantiate: false,
+      startAnimations: false,
+      onStage: (stage) => {
+        setLoadStage(stage);
+      }
+    });
+
+    mountNode = app.space.addNode(null, `viewerModelRoot_${Date.now()}`);
+    instantiated = modelResult.instantiate(app.space, {
+      bindAnimations: true
+    });
+    attachInstantiatedRoots(modelResult.runtime, instantiated, mountNode);
+
+    const size = computeViewerSize(instantiated.shapes);
+    placeModelRoot(mountNode, size);
+    setCurrentModel(mountNode, modelResult.runtime, instantiated, size);
+
+    state.triangleCount = computeTriangleCount(instantiated.shapes);
+    state.nodeCount = modelResult.runtime.nodes.length;
+    state.clipCount = modelResult.getClipNames().length;
+    applyWireframeState();
+    resetOrbit(size);
+
+    modelResult.runtime.startAllAnimations?.();
+    setLoadStage("ready");
+    app.pushToast(`loaded ${state.fileLabel}`, {
+      durationMs: 1400
+    });
+  } catch (err) {
+    instantiated?.destroy?.();
+    if (mountNode && app?.space?.removeNodeTree) {
+      app.space.removeNodeTree(mountNode, {
+        destroyShapes: true
+      });
+    }
+    modelResult?.runtime?.destroy?.();
+    if (state.hasActiveModel) {
+      state.fileLabel = previousLabels.fileLabel;
+      state.sourceLabel = previousLabels.sourceLabel;
+    }
+    setLoadStage("error");
+    showErrorState(err);
+  } finally {
+    state.loading = false;
+    updateLoadPanel();
+    if (ui.fileInput) {
+      ui.fileInput.value = "";
+    }
+  }
+}
+
+async function loadBundledSample() {
+  await loadModelFromSource(BUNDLED_SAMPLE, {
+    fileLabel: "hand.glb",
+    sourceLabel: "bundled sample"
+  });
+}
+
+async function handleFileSelection(file) {
+  if (!file) {
+    return;
+  }
+  const name = String(file.name ?? "");
+  if (!name.toLowerCase().endsWith(".glb")) {
+    showErrorState(new Error(`Only .glb files are supported: ${name || "(unknown file)"}`));
+    return;
+  }
+  const objectUrl = URL.createObjectURL(file);
+  try {
+    await loadModelFromSource(objectUrl, {
+      fileLabel: name,
+      sourceLabel: "local upload"
+    });
+  } finally {
+    URL.revokeObjectURL(objectUrl);
+  }
+}
+
+function installDomHandlers() {
+  ui.fileInput?.addEventListener("change", (event) => {
+    const file = event.target.files?.[0] ?? null;
+    handleFileSelection(file).catch((err) => {
+      showErrorState(err);
+    });
+  });
+  ui.loadSampleButton?.addEventListener("click", () => {
+    loadBundledSample().catch((err) => {
+      showErrorState(err);
+    });
+  });
+  ui.resetButton?.addEventListener("click", () => {
+    resetOrbit(state.modelSize);
+    app.pushToast("camera reset", {
+      durationMs: 900
+    });
+  });
+  ui.clearButton?.addEventListener("click", () => {
+    clearCurrentModel({
+      toast: true
+    });
+  });
+  ui.screenshotButton?.addEventListener("click", () => {
+    takeViewerScreenshot();
+  });
+  ui.wireframeButton?.addEventListener("click", () => {
+    toggleWireframe();
+  });
+  ui.panLeftButton?.addEventListener("click", () => {
+    panOrbitByScreenStep(-1.0, 0.0);
+  });
+  ui.panRightButton?.addEventListener("click", () => {
+    panOrbitByScreenStep(1.0, 0.0);
+  });
+  ui.panUpButton?.addEventListener("click", () => {
+    panOrbitByScreenStep(0.0, 1.0);
+  });
+  ui.panDownButton?.addEventListener("click", () => {
+    panOrbitByScreenStep(0.0, -1.0);
+  });
+}
+
+function updateHudRows() {
+  app.setHudRows([
+    { line: "embedded glb viewer" },
+    {
+      label: "File",
+      value: state.fileLabel,
+      note: state.sourceLabel
+    },
+    {
+      label: "Stage",
+      value: state.loading ? state.loadStage : "idle",
+      note: `${Math.round(state.loadElapsedMs)} ms`
+    },
+    {
+      label: "Model",
+      value: state.hasActiveModel ? "loaded" : "placeholder",
+      note: `tris=${state.triangleCount} clips=${state.clipCount}`
+    },
+    {
+      label: "Orbit",
+      value: `yaw=${orbit.orbit.yaw.toFixed(1)} pitch=${orbit.orbit.pitch.toFixed(1)}`,
+      note: `dist=${orbit.orbit.distance.toFixed(1)}`
+    },
+    {
+      label: "Target",
+      value: `${orbit.orbit.target[0].toFixed(2)}, ${orbit.orbit.target[1].toFixed(2)}, ${orbit.orbit.target[2].toFixed(2)}`,
+      note: `panStep=${getPanUnit().toFixed(3)}`
+    },
+    {
+      label: "Anim",
+      value: state.clipCount > 0 ? (state.paused ? "paused" : "playing") : "none",
+      note: "Space / touch ||"
+    },
+    {
+      label: "Wire",
+      value: state.wireframe ? "on" : "off",
+      note: "W / button / touch"
+    },
+    {
+      label: "Shot",
+      value: state.screenshotName || "-",
+      note: "S / touch Shot"
+    },
+    {
+      line: state.lastError
+        ? `error: ${state.lastError}`
+        : "pick a .glb file or load the bundled sample"
+    }
+  ], {
+    anchor: "top-left",
+    x: 0,
+    y: 0,
+    color: [0.92, 0.96, 1.0],
+    minScale: 0.82
+  });
+}
+
+function updateStatusPanel() {
+  if (!ui.status) {
+    return;
+  }
+  ui.headline.textContent = state.hasActiveModel
+    ? `Viewing ${state.fileLabel}`
+    : "Upload a GLB file";
+  ui.status.textContent = [
+    "samples/embedded_glb_viewer",
+    `file: ${state.fileLabel}`,
+    `source: ${state.sourceLabel}`,
+    `stage: ${state.loading ? state.loadStage : "idle"}`,
+    `elapsedMs: ${Math.round(state.loadElapsedMs)}`,
+    `loaded: ${state.hasActiveModel ? "yes" : "no"}`,
+    `triangles: ${state.triangleCount}`,
+    `nodeCount: ${state.nodeCount}`,
+    `clipCount: ${state.clipCount}`,
+    `paused: ${state.paused ? "yes" : "no"}`,
+    `wireframe: ${state.wireframe ? "yes" : "no"}`,
+    `targetX: ${orbit.orbit.target[0].toFixed(3)}`,
+    `targetY: ${orbit.orbit.target[1].toFixed(3)}`,
+    `targetZ: ${orbit.orbit.target[2].toFixed(3)}`,
+    `panUnit: ${getPanUnit().toFixed(3)}`,
+    `orbitYaw: ${orbit.orbit.yaw.toFixed(2)}`,
+    `orbitPitch: ${orbit.orbit.pitch.toFixed(2)}`,
+    `orbitDistance: ${orbit.orbit.distance.toFixed(2)}`,
+    state.lastError ? `error: ${state.lastError}` : "error: (none)"
+  ].join("\n");
+}
+
+async function start() {
+  cacheUi();
+
+  app = new WebgApp({
+    document,
+    shaderClass: SmoothShader,
+    layoutMode: "embedded",
+    fixedCanvasSize: {
+      width: 820,
+      height: 560,
+      useDevicePixelRatio: false
+    },
+    clearColor: [0.10, 0.15, 0.10, 1.0],
+    messageFontTexture: "../../webg/font512.png",
+    viewAngle: 50.0,
+    light: {
+      mode: "world-node",
+      nodeName: "viewerLight",
+      position: [130.0, 180.0, 150.0],
+      attitude: [0.0, 0.0, 0.0],
+      type: 1.0
+    },
+    debugTools: {
+      mode: "release",
+      system: "embedded-glb-viewer",
+      source: "samples/embedded_glb_viewer/main.js",
+      probeDefaultAfterFrames: 1
+    },
+    camera: {
+      target: [...DEFAULT_ORBIT.target],
+      distance: DEFAULT_ORBIT.distance,
+      yaw: DEFAULT_ORBIT.yaw,
+      pitch: DEFAULT_ORBIT.pitch
+    }
+  });
+  await app.init();
+
+  orbit = new EyeRig(app.cameraRig, app.cameraRod, app.eye, {
+    document,
+    element: app.screen.canvas,
+    input: app.input,
+    type: "orbit",
+    orbit: {
+      target: [...DEFAULT_ORBIT.target],
+      distance: DEFAULT_ORBIT.distance,
+      yaw: DEFAULT_ORBIT.yaw,
+      pitch: DEFAULT_ORBIT.pitch,
+      minDistance: 4.0,
+      maxDistance: 56.0,
+      wheelZoomStep: 1.2
+    }
+  });
+  orbit.attachPointer();
+  app.input.registerActionMap({
+    "reset-view": ["r"],
+    "toggle-pause": ["space"],
+    "capture-shot": ["s"],
+    "toggle-wireframe": ["w"]
+  });
+  app.input.installTouchControls({
+    touchDeviceOnly: false,
+    groups: TOUCH_GROUPS
+  });
+
+  createPlaceholderScene();
+  applyWireframeState();
+  resetOrbit(PLACEHOLDER_SIZE);
+  installDomHandlers();
+  updateHudRows();
+  updateStatusPanel();
+
+  app.start({
+    onUpdate(ctx) {
+      orbit.update(ctx.elapsedSec);
+      syncOrbitStateToAppCamera();
+      handlePressedActions();
+      state.loadElapsedMs = state.loading
+        ? Math.max(0, performance.now() - state.loadStartedAtMs)
+        : state.loadElapsedMs;
+
+      if (!state.hasActiveModel && placeholderSpinNode) {
+        placeholderSpinNode.rotateY(22.0 * ctx.elapsedSec);
+        placeholderSpinNode.rotateX(8.0 * ctx.elapsedSec);
+      }
+
+      updateHudRows();
+      updateStatusPanel();
+    }
+  });
+}
