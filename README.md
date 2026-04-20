@@ -1,250 +1,105 @@
 # webg
 
-[English](README.en.md) | [日本語](README.ja.md)
+[English](README.en.md) | [日本語](README.md)
 
-`webg` は、JavaScript から WebGPU を使って 3D アプリケーションを構築するためのライブラリです。  
-外部ライブラリに依存せず、**描画、シーン、モデル、アニメーション、UI、入力、診断、TileMap、ポストプロセス**までを、ひとつの体系として扱えるように設計しています。
+`webg` は、JavaScript と WebGPU を用いて 3D アプリケーションを構築するためのライブラリです。  
+外部ライブラリに依存せず、**描画、シーン、モデル、アニメーション、UI、入力、診断、TileMap、ポストプロセス**までを一つの体系として実装しています。
 
-このリポジトリには、ライブラリ本体だけでなく、**サンプル集**、**unittest**、そして詳細な**書籍原稿**も含まれています。  
-単に API を使うための道具としてだけでなく、**構造を追いながら学べること**を重視しています。
+単なる API の提供にとどまらず、低レイヤーの数理実装から高レイヤーのアプリケーション構成までを地続きに設計しており、内部構造を追いながら開発・学習できることを重視しています。
 
-## 特徴
+## 技術的特徴
 
-- **外部ライブラリ非依存**
-  - 描画、シーン、アセット、アニメーション、UI、入力、TileMap までを `webg` 自身で完結
-- **高水準 API と低水準 API の両立**
-  - `WebgApp` を使って素早くアプリを立ち上げることも
-  - `Screen`、`Shape`、`Shader`、`Matrix` などを直接扱うことも可能
-- **サンプルと実装を往復しやすい**
-  - `samples/` は単なるデモではなく教材
-  - `unittest/` は局所的な確認と切り分けに利用可能
-- **書籍付き**
-  - `webg/book/` に詳細な解説原稿を同梱
-  - 最初の表示から、モデル、シーン、アニメーション、TileMap、ローレベル API までを段階的に解説
+### 1. 自己完結型のアーキテクチャ
+描画エンジンから UI、サウンド、TileMap に至るまで、必要な機能を `webg` 内部で完結させています。外部フレームワークの仕様に依存せず、一貫した設計思想に基づいた実装が可能です。
 
-## できること
+### 2. 階層的な API 設計
+用途に応じて、異なる抽象度の API を使い分けることができます。
+- **高水準 API (`WebgApp`)**: アプリケーションのライフサイクル管理と標準的な構成を迅速に構築。
+- **中水準 API (`ModelAsset`, `SceneAsset`)**: データ（設計図）と実体（ランタイム）を分離したリソース管理。
+- **低水準 API (`Shape`, `Shader`, `Matrix`, `Quat`)**: WebGPU のプリミティブを直接操作し、独自の描画ロジックを実装。
 
-`webg` では、たとえば次のような 3D アプリを構築できます。
+### 3. 実装とドキュメントの整合性
+本リポジトリでは、ライブラリ本体に加え、以下のリソースを同梱しています。
+- **`book/`**: 3D数学の基礎からスキニングの原理までを体系的に解説した技術ドキュメント。
+- **`samples/`**: 各機能の利用例を示す実装サンプル。
+- **`unittest/`**: 局所的な機能検証およびデバッグのための最小環境。
 
-- WebGPU を使ったブラウザ上の 3D 表示
-- カメラ制御（orbit / follow / first-person）
-- glTF (glb) / Collada の読み込み
-- スキニングアニメーション
-- HUD、メッセージ、パネル、dialogue overlay
-- キーボード入力、タッチ入力、仮想ボタン
-- 効果音や BGM の再生
-- bloom、DOF などのポストプロセス
-- タイルマップによる盤面表現とキャラクターアニメーション
-- 診断情報やデバッグ表示を含む開発支援
+これにより、「ドキュメントで仕様を確認し $\rightarrow$ サンプルで実装例を追い $\rightarrow$ 本体コードで詳細を確認する」という検証フローが可能です。
 
-## このリポジトリの構成
+## 実装可能な機能
+
+- **WebGPU 描画**: カスタム WGSL シェーダーの実装、Bind Group の最適化
+- **アセットパイプライン**: glTF (glb) / Collada のインポート、`ModelAsset` によるリソース共有
+- **アニメーション制御**: `clip` $\rightarrow$ `pattern` $\rightarrow$ `action` $\rightarrow$ `state` の 4 層構造による状態遷移管理
+- **ユーザーインターフェース**: Canvas HUD、DOM オーバーレイ、診断パネルの統合
+- **インタラクション**: タッチ入力、仮想ボタン、Raycast によるオブジェクトピッキング
+- **空間管理**: TileMap による論理盤面表現とキャラクターの移動制御
+- **ポストプロセス**: Bloom、DOF などのレンダーパス実装
+- **オーディオ**: Web Audio API を用いたバス設計と合成音によるサウンド実装
+
+## リポジトリ構成
 
 ```text
 webg/
-  book/         書籍原稿
-  samples/      サンプルアプリケーション
-  unittest/     機能確認用アプリ
+  book/         技術解説ドキュメント
+  samples/      機能別サンプルアプリケーション
+  unittest/     機能検証用ユニットテスト
   webg/         ライブラリ本体
-````
+```
 
-### 主なディレクトリ
+## セットアップと実行環境
 
-* `webg/`
-
-  * ライブラリ本体です
-  * `Screen`、`Shape`、`WebgApp`、`ModelAsset`、`SceneLoader` などの実装があります
-
-* `samples/`
-
-  * 機能確認と教材を兼ねたサンプル群です
-  * 各サンプルに `main.js` と `*.txt` があり、`*.txt` が概要を説明します
-
-* `unittest/`
-
-  * より小さな単位で切り分けや確認を行うためのアプリ群です
-
-* `book/`
-
-  * `webg` の詳細な解説原稿です
-  * 最初の表示、アプリ構成、モデル、シーン、アニメーション、UI、TileMap、ローレベル API までを解説しています
-
-## 最初の使い方
-
-### 1. リポジトリを配置する
-
-`webg` は npm パッケージとして使う前提ではなく、まずはリポジトリをそのまま配置して使う形を基本にしています。
+### 1. ファイルの配置
+`webg` はパッケージとしてインストールするのではなく、リポジトリをそのまま配置して利用することを基本としています。相対パスによるモジュール読み込みを維持するため、リポジトリのルートディレクトリを保持したまま運用してください。
 
 ```bash
 git clone https://github.com/jun-mizutani/webg.git
 cd webg
 ```
 
-### 2. ローカルサーバーを立てる
+### 2. ローカルサーバーの起動
+ES Modules の `import`、`fetch()` によるアセット読み込み、および WebGPU の初期化（`navigator.gpu`）を行うため、**必ずローカルサーバー経由でアクセスしてください。**（`file://` プロトコルでは同一オリジンポリシー (SOP) によりリソース読み込みが制限されます）
 
-サンプルや unittest は、`file://` ではなくローカルサーバー経由で開くことを推奨します。
-
+**起動コマンド例:**
 ```bash
+# Python 3 を利用する場合
 python3 -m http.server 8000
+
+# Node.js (npx) を利用する場合
+npx http-server . -p 8000
 ```
 
-ブラウザで次を開いてください。
+サーバー起動後、ブラウザで以下にアクセスしてください。
+`http://localhost:8000/samples/index.html`
 
-```text
-http://127.0.0.1:8000/samples/index.html
-```
+### 3. 推奨される確認手順
+環境構築後、以下の順序で段階的に動作を確認することで、問題発生時の切り分け（サーバー設定か、WebGPU 対応状況か、アセットパスか）が容易になります。
 
-または
+1. `samples/index.html` : サーバーの正常動作を確認
+2. `samples/low_level` : 最小構成での WebGPU 描画を確認
+3. `samples/high_level` : `WebgApp` による標準構成を確認
+4. `samples/scene` : 外部アセットの読み込みとシーン構成を確認
+5. 以降、目的に応じた詳細サンプルへ進む
 
-```text
-http://localhost:8000/samples/index.html
-```
+## 推奨される参照順序
 
-## まず見るべきサンプル
+`webg` の設計思想を理解するための推奨ルートです。
 
-最初の入口としては、次のサンプルが分かりやすくなります。
+1. **基礎と土台**: 第2章(環境) $\rightarrow$ 第3章(数学) $\rightarrow$ 第4章(最小描画) $\rightarrow$ 第5章(`WebgApp`)
+2. **機能実装**: 
+   - カメラ $\rightarrow$ 第6章 / シェーダー $\rightarrow$ 第7〜9章 / モデル $\rightarrow$ 第10章
+   - シーン構成 $\rightarrow$ 第11章 / アニメーション $\rightarrow$ 第12〜13章
+   - UI・入力・サウンド $\rightarrow$ 第14〜18章
+3. **内部構造**: 
+   - TileMap $\rightarrow$ 第22章以降 / ローレベル API・スキニング原理 $\rightarrow$ 第25〜28章
 
-* `samples/low_level`
+## AI 支援による開発について
 
-  * 最小描画の骨格を確認するためのサンプル
-* `samples/high_level`
-
-  * `WebgApp` による標準的なアプリ構成の最小例
-* `samples/scene`
-
-  * Scene JSON によるシーン初期化の入口
-* `samples/gltf_loader`
-
-  * glTF / GLB 読み込みの確認
-* `samples/animation_state`
-
-  * `AnimationState` の条件評価型の例
-* `samples/janken`
-
-  * `AnimationState` の入力駆動型の例
-* `samples/tile_sim`
-
-  * TileMap と glb actor を組み合わせた実践例
-
----
-
-## 最初に読むべき章
-
-このリポジトリには `book/` 以下に書籍原稿を同梱しています。
-最初に読む流れとしては、次の順を勧めます。
-
-1. **第2章** インストールと実行環境
-2. **第3章** 3Dグラフィックスの基礎
-3. **第4章** WebGPUとwebgの最小描画
-4. **第5章** WebgAppによるアプリ構成
-
-その後、目的に応じて次へ進むと理解しやすくなります。
-
-* カメラ操作 → 第6章
-* シェーダーとマテリアル → 第7章〜第9章
-* モデル読み込み → 第10章
-* Scene JSON → 第11章
-* アニメーション → 第12章〜第13章
-* UI → 第14章以降
-* TileMap → 第22章以降
-* ローレベル API → 第25章以降
-
-## 最小コード例
-
-`WebgApp` を使った最小の高水準構成は、次のような雰囲気です。
-
-```js
-import WebgApp from "./webg/WebgApp.js";
-import Shape from "./webg/Shape.js";
-import Primitive from "./webg/Primitive.js";
-
-const app = new WebgApp({
-  document,
-  messageFontTexture: "./webg/font512.png",
-  camera: {
-    target: [0, 0, 0],
-    distance: 8,
-    yaw: 0,
-    pitch: 0
-  }
-});
-
-await app.init();
-
-const shape = new Shape(app.getGL());
-shape.applyPrimitiveAsset(Primitive.cube(2.0, shape.getPrimitiveOptions()));
-shape.endShape();
-shape.setMaterial("smooth-shader", {
-  has_bone: 0,
-  use_texture: 0,
-  color: [0.22, 0.64, 0.96, 1.0]
-});
-
-const box = app.space.addNode(null, "box");
-box.addShape(shape);
-
-app.start({
-  onUpdate() {
-    box.rotateY(0.8);
-    box.rotateX(0.4);
-  }
-});
-```
-
----
-
-## `webg` の考え方
-
-`webg` では、似て見えても役割の異なるものを分けて扱います。
-
-* `ModelAsset`
-
-  * 1 モデル分の共通表現
-* Scene JSON / `SceneAsset`
-
-  * シーン全体の初期状態
-* `build()`
-
-  * 共有リソースを含むランタイム化
-* `instantiate()`
-
-  * ランタイムから新しいシーンインスタンスを生成
-* `clip -> pattern -> action -> state`
-
-  * アニメーションを層で分けて理解するための考え方
-
-このように、`webg` は単に「動けばよい」ライブラリではなく、**構造を追いやすくすること**を重視しています。
-
-`webg` は **外部巨大エンジンの代替** というより、**WebGPU ベースの 3D アプリを、自分で構造を追いながら構築したい人のためのライブラリ** と考えるのが適しています。
-
-
-## AI と一緒に使う場合
-
-`webg` は、外部ライブラリに強く依存せず、サンプル、unittest、書籍、コア実装を同じリポジトリの中に持っています。
-そのため、生成 AI による支援とも相性が良くなっています。
-
-AI と一緒に進める場合は、次の順で考えると分かりやすくなります。
-
-1. まず目的に近い章を確認する
-2. 対応する `samples/` を見る
-3. 必要なら `unittest/` で局所的に確認する
-4. 最後に `webg/` 本体実装へ降りる
+`webg` は用語の一貫性と層の分離を徹底しているため、LLM（大規模言語モデル）による実装支援に適しています。AI を利用して開発を行う際は、`book/` の該当章や `samples/` の実装例をコンテキストとして与えることで、設計思想に沿った精度の高い提案を得やすくなります。
 
 ## ライセンス
-
-```text
 MIT License
-```
 
 ## 著者
-
-```text
 Author: Jun Mizutani
 Website: https://www.mztn.org/
-```
-## 補足
-
-本書と `webg` は、単なる API 集やサンプル集ではなく、
-**3D アプリを構成する各層を追いながら、必要に応じて内部まで確認できること**を重視して作っています。
-
-最初からすべてを理解する必要はありません。
-まずは最小のサンプルを動かし、必要に応じて本書の該当章と対応するサンプルへ戻る、という進め方を勧めます。

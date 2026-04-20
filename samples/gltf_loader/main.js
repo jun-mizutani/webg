@@ -1,6 +1,6 @@
 // -------------------------------------------------
 // gltf_loader sample
-//   main.js       2026/04/12
+//   main.js       2026/04/20
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // -------------------------------------------------
@@ -17,12 +17,23 @@ const GLTF_FILE = "./hand.glb";
 const DOWNLOAD_FILE = "gltf_modelasset.json";
 const DEBUG_MODE = "debug";
 const INTERPOLATION_NOTICE_ID = "gltf-interpolation-notice";
+const DEFAULT_ORBIT = {
+  yaw: 20.0,
+  pitch: -10.0,
+  distance: 10.0,
+  target: [0.0, 0.0, 0.0]
+};
+const ORBIT_BUTTON_STEP = {
+  yaw: 7.5,
+  pitch: 6.0,
+  zoomMultiplier: 1.15
+};
 const GUIDE_LINES = [
-  "Drag or Arrow: orbit",
+  "Drag: orbit  Shift+Drag: pan",
+  "Arrow: orbit  Shift+Arrow: pan",
   "[ / ] or wheel: zoom",
-  "[q]/[e]: camera up/down",
-  "[space]: pause all  [1]: replay  [2]/[3]: pause/resume",
-  "[d]: model JSON  [r]: reset camera"
+  "[space]: pause  [1]: replay  [2]/[3]: pause/resume",
+  "[w]: wireframe  [s]: screenshot  [d]: model JSON  [r]: reset"
 ];
 
 let app = null;
@@ -39,6 +50,14 @@ let loadStartedAtMs = 0;
 let orbitLift = 0.0;
 let orbitLiftStep = 0.5;
 let interpolationSummary = null;
+let viewerSize = {
+  centerx: 0.0,
+  centery: 0.0,
+  centerz: 0.0,
+  max: 10.0
+};
+let screenshotName = "";
+let wireframe = false;
 
 function isBoneAnalysisStage(stage) {
   return stage.startsWith("rigify-bones ") || stage.startsWith("skin-bones ");
@@ -110,6 +129,111 @@ function makeProbeReport(frameCount) {
     animationInterpolationConversion: interpolationSummary?.conversionLabel ?? "none"
   });
   return report;
+}
+
+function syncOrbitStateToAppCamera() {
+  if (!app?.camera || !orbit?.orbit) {
+    return;
+  }
+  app.camera.target[0] = orbit.orbit.target[0];
+  app.camera.target[1] = orbit.orbit.target[1];
+  app.camera.target[2] = orbit.orbit.target[2];
+  app.camera.distance = orbit.orbit.distance;
+  app.camera.yaw = orbit.orbit.yaw;
+  app.camera.pitch = orbit.orbit.pitch;
+}
+
+function getPanUnit(size = viewerSize) {
+  const maxSize = Math.max(1.0e-6, Number(size?.max) || 10.0);
+  return maxSize * 0.05;
+}
+
+function normalizeVec3(vec) {
+  const x = Number(vec?.[0] ?? 0.0);
+  const y = Number(vec?.[1] ?? 0.0);
+  const z = Number(vec?.[2] ?? 0.0);
+  const length = Math.hypot(x, y, z) || 1.0;
+  return [x / length, y / length, z / length];
+}
+
+function getOrbitScreenBasis() {
+  const eyeMatrix = app.eye.getWorldMatrix();
+  return {
+    right: normalizeVec3(eyeMatrix.mul3x3Vector([1.0, 0.0, 0.0])),
+    up: normalizeVec3(eyeMatrix.mul3x3Vector([0.0, 1.0, 0.0]))
+  };
+}
+
+function panOrbitByScreenStep(stepX = 0.0, stepY = 0.0) {
+  if (!orbit?.orbit) {
+    return;
+  }
+  const unit = getPanUnit();
+  const { right, up } = getOrbitScreenBasis();
+  const delta = [
+    right[0] * stepX * unit + up[0] * stepY * unit,
+    right[1] * stepX * unit + up[1] * stepY * unit,
+    right[2] * stepX * unit + up[2] * stepY * unit
+  ];
+  orbit.setTarget(
+    orbit.orbit.target[0] + delta[0],
+    orbit.orbit.target[1] + delta[1],
+    orbit.orbit.target[2] + delta[2]
+  );
+  syncOrbitStateToAppCamera();
+}
+
+function stepOrbitByButtons({ yaw = 0.0, pitch = 0.0, zoom = 1.0 } = {}) {
+  if (!orbit?.orbit) {
+    return;
+  }
+  const nextPitch = orbit.clamp(
+    orbit.orbit.pitch + pitch,
+    orbit.orbit.pitchMin,
+    orbit.orbit.pitchMax
+  );
+  const nextDistance = orbit.clamp(
+    orbit.orbit.distance * zoom,
+    orbit.orbit.minDistance,
+    orbit.orbit.maxDistance
+  );
+  orbit.setAngles(orbit.orbit.yaw + yaw, nextPitch);
+  orbit.setDistance(nextDistance);
+  syncOrbitStateToAppCamera();
+}
+
+function makeScreenshotName() {
+  const base = GLTF_FILE.replace(/^.*\//, "").replace(/\.[^.]+$/, "") || "gltf_loader";
+  return `${base}_view`;
+}
+
+function takeViewerScreenshot() {
+  const file = app.takeScreenshot({
+    prefix: makeScreenshotName()
+  });
+  screenshotName = file;
+  app.pushToast(`saved ${file}`, {
+    durationMs: 1400
+  });
+}
+
+function getViewerShapes() {
+  return runtime?.shapes ?? [];
+}
+
+function applyWireframeState() {
+  const shapes = getViewerShapes();
+  for (let i = 0; i < shapes.length; i++) {
+    shapes[i]?.setWireframe?.(wireframe);
+  }
+}
+
+function toggleWireframe() {
+  wireframe = !wireframe;
+  applyWireframeState();
+  app.pushToast(wireframe ? "wireframe on" : "wireframe off", {
+    durationMs: 900
+  });
 }
 
 function getPrimaryClipId() {
@@ -318,6 +442,7 @@ function getWorldShapeSize(built) {
 function configureOrbitFromBuilt(built) {
   // 親ノード込み world bbox から、glTF 確認向けの距離を決める
   const size = getWorldShapeSize(built);
+  viewerSize = { ...size };
   orbitLift = Math.max(0.4, size.max * 0.08);
   orbitLiftStep = Math.max(0.2, size.max * 0.04);
   const target = [size.centerx, size.centery + orbitLift, size.centerz];
@@ -329,15 +454,19 @@ function configureOrbitFromBuilt(built) {
   orbit.setTarget(...target);
   orbit.setAngles(20.0, -10.0);
   orbit.setDistance(distance);
+  syncOrbitStateToAppCamera();
 }
 
 function moveCameraLift(step) {
+  // 読み込んだモデルの bbox 中心から少しだけ target を上下させ、
+  // 手や腕のように重心が下寄りなモデルでも見せたい部分へ寄せやすくする
   orbitLift += step;
   orbit.setTarget(
     orbit.orbit.target[0],
     orbit.orbit.target[1] + step,
     orbit.orbit.target[2]
   );
+  syncOrbitStateToAppCamera();
 }
 
 function countTriangles(shapeList) {
@@ -365,19 +494,75 @@ function buildPrimaryClipLines() {
   ];
 }
 
+function updateHudRows() {
+  const selectedState = getPrimaryClipState();
+  app.setHudRows([
+    { line: "gltf loader" },
+    {
+      label: "File",
+      value: GLTF_FILE.replace(/^.*\//, ""),
+      note: `tris=${totalTriangles} clips=${clipNames.length}`
+    },
+    {
+      label: "Model",
+      value: `nodes=${runtime?.nodes?.length ?? 0} shapes=${runtime?.shapes?.length ?? 0}`,
+      note: `anim=${runtime?.getAnimationNames?.().length ?? 0}`
+    },
+    {
+      label: "Orbit",
+      value: `yaw=${orbit.orbit.yaw.toFixed(1)} pitch=${orbit.orbit.pitch.toFixed(1)}`,
+      note: `dist=${orbit.orbit.distance.toFixed(1)}`
+    },
+    {
+      label: "Target",
+      value: `${orbit.orbit.target[0].toFixed(2)}, ${orbit.orbit.target[1].toFixed(2)}, ${orbit.orbit.target[2].toFixed(2)}`,
+      note: `panStep=${getPanUnit().toFixed(3)}`
+    },
+    {
+      label: "Anim",
+      value: selectedState.label,
+      note: paused ? "global pause=on" : "global pause=off"
+    },
+    {
+      label: "Clip0",
+      value: clipInfo?.id ?? "-",
+      note: clipBound ? "bound=yes" : "bound=no"
+    },
+    {
+      label: "Interp",
+      value: interpolationSummary?.runtimeLabel ?? "LINEAR",
+      note: interpolationSummary?.conversionLabel ?? "none"
+    },
+    {
+      label: "Wire",
+      value: wireframe ? "on" : "off",
+      note: `shot=${screenshotName || "-"}`
+    },
+    {
+      line: "Drag/Arrow orbit  Shift+Drag/Arrow pan  [/] zoom  Space pause  W wire  S shot  D json  R reset"
+    }
+  ], {
+    anchor: "top-left",
+    x: 0,
+    y: 0,
+    color: [0.92, 0.96, 1.0],
+    minScale: 0.82
+  });
+}
+
 async function start() {
   app = new WebgApp({
     document,
     shaderClass: SmoothShader,
-    clearColor: [0.15, 0.18, 0.22, 1.0],
+    clearColor: [0.10, 0.15, 0.10, 1.0],
     lightPosition: [0.0, 100.0, 1000.0, 1.0],
     viewAngle: 53.0,
     messageFontTexture: "../../webg/font512.png",
     camera: {
-      target: [0.0, 0.0, 0.0],
-      distance: 10.0,
-      yaw: 20.0,
-      pitch: -10.0
+      target: [...DEFAULT_ORBIT.target],
+      distance: DEFAULT_ORBIT.distance,
+      yaw: DEFAULT_ORBIT.yaw,
+      pitch: DEFAULT_ORBIT.pitch
     },
     debugTools: {
       mode: DEBUG_MODE,
@@ -395,6 +580,10 @@ async function start() {
     }
   });
   await app.init();
+  app.createHelpPanel({
+    id: "gltfLoaderHelp",
+    lines: [...GUIDE_LINES, ...app.getDebugKeyGuideLines()]
+  });
 
   orbit = new EyeRig(app.cameraRig, app.cameraRod, app.eye, {
     document,
@@ -402,10 +591,10 @@ async function start() {
     input: app.input,
     type: "orbit",
     orbit: {
-      target: [0.0, 0.0, 0.0],
-      distance: 10.0,
-      yaw: 20.0,
-      pitch: -10.0
+      target: [...DEFAULT_ORBIT.target],
+      distance: DEFAULT_ORBIT.distance,
+      yaw: DEFAULT_ORBIT.yaw,
+      pitch: DEFAULT_ORBIT.pitch
     }
   });
   orbit.attachPointer();
@@ -458,6 +647,7 @@ async function start() {
 
   totalTriangles = countTriangles(runtime.shapes);
   configureOrbitFromBuilt(runtime);
+  applyWireframeState();
   refreshDiagnosticsStats();
   app.configureDiagnosticsCapture({
     labelPrefix: "gltf_loader",
@@ -468,7 +658,7 @@ async function start() {
   app.attachInput({
     onKeyDown: async (key, ev) => {
       if (ev.repeat) return;
-      if (key === " ") {
+      if (key === "space") {
         paused = !paused;
         runtime.setAnimationsPaused(paused);
       } else if (key === "1") {
@@ -479,10 +669,10 @@ async function start() {
         resumePrimaryClip();
       } else if (key === "d") {
         model.downloadJSON(DOWNLOAD_FILE);
-      } else if (key === "q") {
-        moveCameraLift(orbitLiftStep);
-      } else if (key === "e") {
-        moveCameraLift(-orbitLiftStep);
+      } else if (key === "w") {
+        toggleWireframe();
+      } else if (key === "s") {
+        takeViewerScreenshot();
       } else if (key === "r") {
         configureOrbitFromBuilt(runtime);
       }
@@ -492,32 +682,16 @@ async function start() {
   app.start({
     onUpdate: ({ deltaSec }) => {
       orbit.update(deltaSec);
+      syncOrbitStateToAppCamera();
 
       if (!paused) {
         runtime.playAllAnimations();
       }
 
-      const selectedState = getPrimaryClipState();
       refreshDiagnosticsStats();
       app.updateDebugProbe();
-
-      const statusLines = [
-        `file=${GLTF_FILE}`,
-        `shapes=${runtime.shapes.length} triangles=${totalTriangles}`,
-        `animations=${runtime.getAnimationNames().length} clips=${clipNames.length}`,
-        `clipNames=${formatClipNameList(clipNames)}`,
-        `animationInterpolation=${interpolationSummary?.runtimeLabel ?? "LINEAR"} converted=${interpolationSummary?.conversionLabel ?? "none"}`,
-        ...buildPrimaryClipLines(),
-        `selectedState=${selectedState.label} pause=${selectedState.paused ? "ON" : "OFF"} stopped=${selectedState.stopped ? "ON" : "OFF"}`,
-        `clip0Bound=${clipBound ? "ON" : "OFF"} runtimeAnimations=${runtime.getAnimationNames().length}`,
-        app.getDiagnosticsStatusLine(),
-        `paused=${paused ? "ON" : "OFF"} download=${DOWNLOAD_FILE}`
-      ];
-      if (app.isDebugUiEnabled()) {
-        statusLines.splice(8, 0, app.getProbeStatusLine());
-      }
-      const controlLines = [...GUIDE_LINES, ...app.getDebugKeyGuideLines(), ...statusLines.filter(Boolean)];
-      app.setControlRows(app.isDebugUiEnabled() ? app.makeTextControlRows(controlLines) : []);
+      updateHudRows();
+      app.setControlRows([]);
     }
   });
 }

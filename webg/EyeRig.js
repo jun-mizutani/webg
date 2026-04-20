@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// EyeRig.js      2026/04/12
+// EyeRig.js      2026/04/20
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // ---------------------------------------------
@@ -370,22 +370,39 @@ export default class EyeRig {
     if (!this.input) return;
     const state = this.orbit;
     const dt = Number.isFinite(deltaSec) ? deltaSec : 0.0;
+    const shiftPan = this.input.has("shift");
     let changed = false;
-    if (this.input.has(state.keyMap.left)) {
-      state.yaw -= state.keyRotateSpeed * dt;
-      changed = true;
-    }
-    if (this.input.has(state.keyMap.right)) {
-      state.yaw += state.keyRotateSpeed * dt;
-      changed = true;
-    }
-    if (this.input.has(state.keyMap.up)) {
-      state.pitch = this.clamp(state.pitch + state.keyRotateSpeed * dt, state.pitchMin, state.pitchMax);
-      changed = true;
-    }
-    if (this.input.has(state.keyMap.down)) {
-      state.pitch = this.clamp(state.pitch - state.keyRotateSpeed * dt, state.pitchMin, state.pitchMax);
-      changed = true;
+    if (shiftPan) {
+      let panX = 0.0;
+      let panY = 0.0;
+      if (this.input.has(state.keyMap.left)) panX -= 1.0;
+      if (this.input.has(state.keyMap.right)) panX += 1.0;
+      if (this.input.has(state.keyMap.up)) panY += 1.0;
+      if (this.input.has(state.keyMap.down)) panY -= 1.0;
+      if (panX !== 0.0 || panY !== 0.0) {
+        this.panViewByScreenDelta(
+          panX * state.keyRotateSpeed * dt,
+          panY * state.keyRotateSpeed * dt
+        );
+        changed = true;
+      }
+    } else {
+      if (this.input.has(state.keyMap.left)) {
+        state.yaw -= state.keyRotateSpeed * dt;
+        changed = true;
+      }
+      if (this.input.has(state.keyMap.right)) {
+        state.yaw += state.keyRotateSpeed * dt;
+        changed = true;
+      }
+      if (this.input.has(state.keyMap.up)) {
+        state.pitch = this.clamp(state.pitch + state.keyRotateSpeed * dt, state.pitchMin, state.pitchMax);
+        changed = true;
+      }
+      if (this.input.has(state.keyMap.down)) {
+        state.pitch = this.clamp(state.pitch - state.keyRotateSpeed * dt, state.pitchMin, state.pitchMax);
+        changed = true;
+      }
     }
     if (this.input.has(state.keyMap.zoomIn)) {
       state.distance = this.clamp(
@@ -450,23 +467,40 @@ export default class EyeRig {
   updateFollow(deltaSec) {
     const state = this.follow;
     const dt = Number.isFinite(deltaSec) ? deltaSec : 0.0;
+    const shiftPan = this.input?.has("shift") === true;
     let changed = false;
     if (this.input) {
-      if (this.input.has(state.keyMap.left)) {
-        state.yaw -= state.keyRotateSpeed * dt;
-        changed = true;
-      }
-      if (this.input.has(state.keyMap.right)) {
-        state.yaw += state.keyRotateSpeed * dt;
-        changed = true;
-      }
-      if (this.input.has(state.keyMap.up)) {
-        state.pitch = this.clamp(state.pitch + state.keyRotateSpeed * dt, state.pitchMin, state.pitchMax);
-        changed = true;
-      }
-      if (this.input.has(state.keyMap.down)) {
-        state.pitch = this.clamp(state.pitch - state.keyRotateSpeed * dt, state.pitchMin, state.pitchMax);
-        changed = true;
+      if (shiftPan) {
+        let panX = 0.0;
+        let panY = 0.0;
+        if (this.input.has(state.keyMap.left)) panX -= 1.0;
+        if (this.input.has(state.keyMap.right)) panX += 1.0;
+        if (this.input.has(state.keyMap.up)) panY += 1.0;
+        if (this.input.has(state.keyMap.down)) panY -= 1.0;
+        if (panX !== 0.0 || panY !== 0.0) {
+          this.panViewByScreenDelta(
+            panX * state.keyRotateSpeed * dt,
+            panY * state.keyRotateSpeed * dt
+          );
+          changed = true;
+        }
+      } else {
+        if (this.input.has(state.keyMap.left)) {
+          state.yaw -= state.keyRotateSpeed * dt;
+          changed = true;
+        }
+        if (this.input.has(state.keyMap.right)) {
+          state.yaw += state.keyRotateSpeed * dt;
+          changed = true;
+        }
+        if (this.input.has(state.keyMap.up)) {
+          state.pitch = this.clamp(state.pitch + state.keyRotateSpeed * dt, state.pitchMin, state.pitchMax);
+          changed = true;
+        }
+        if (this.input.has(state.keyMap.down)) {
+          state.pitch = this.clamp(state.pitch - state.keyRotateSpeed * dt, state.pitchMin, state.pitchMax);
+          changed = true;
+        }
       }
       if (this.input.has(state.keyMap.zoomIn)) {
         state.distance = this.clamp(state.distance - state.keyZoomSpeed * dt, state.minDistance, state.maxDistance);
@@ -785,6 +819,16 @@ export default class EyeRig {
     const dragRotateSpeed = this.getDragRotateSpeed();
     this.lastClientX = ev.clientX;
     this.lastClientY = ev.clientY;
+
+    // orbit / follow では Shift を押しながら drag したときに
+    // 視線の screen 平面に沿った pan として扱う
+    // これにより、rotation と pan を同じ pointer 経路の中で切り替えられる
+    if (!this.isTouchPointerEvent(ev) && ev.shiftKey === true && this.type !== "first-person") {
+      this.panViewByScreenDelta(dx, dy);
+      this.apply();
+      ev.preventDefault();
+      return;
+    }
 
     if (this.type === "first-person") {
       this.firstPerson.bodyYaw += dx * dragRotateSpeed;

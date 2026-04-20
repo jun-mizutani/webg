@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// Gltf.js        2026/03/10
+// Gltf.js        2026/04/20
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // ---------------------------------------------
@@ -31,10 +31,20 @@ export default class Gltf {
     const onStage = options.onStage ?? null;
     this.baseUrl = url.substring(0, url.lastIndexOf("/") + 1);
     try {
-      if (url.toLowerCase().endsWith(".glb")) {
-        await this.loadGlb(url, onStage);
+      this.emitStage(onStage, "fetch-asset");
+      const response = await fetch(url);
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status} ${response.statusText}`);
+      }
+      const arrayBuffer = await response.arrayBuffer();
+      // 拡張子ではなく先頭4byteの magic number を見て、
+      // blob: URL でも glb / gltf を同じ経路で判定できるようにする
+      if (this.isGlbBinary(arrayBuffer)) {
+        this.emitStage(onStage, "fetch-glb-binary");
+        await this.loadGlbFromArrayBuffer(arrayBuffer, onStage);
       } else {
-        await this.loadGltf(url, onStage);
+        this.emitStage(onStage, "fetch-gltf-json");
+        await this.loadGltfFromArrayBuffer(arrayBuffer, onStage);
       }
     } catch (err) {
       throw new Error(`Failed to load glTF asset: ${url} (${err?.message ?? err})`);
@@ -48,14 +58,8 @@ export default class Gltf {
     if (!response.ok) {
       throw new Error(`HTTP ${response.status} ${response.statusText}`);
     }
-    try {
-      this.emitStage(onStage, "parse-gltf-json");
-      this.gltf = await response.json();
-    } catch (err) {
-      throw new Error(`Invalid glTF JSON (${err?.message ?? err})`);
-    }
-    this.emitStage(onStage, "load-gltf-buffers");
-    await this.loadBuffersFromGltf(false, onStage);
+    const arrayBuffer = await response.arrayBuffer();
+    await this.loadGltfFromArrayBuffer(arrayBuffer, onStage);
   }
 
   async loadGlb(url, onStage = null) {
@@ -65,6 +69,34 @@ export default class Gltf {
       throw new Error(`HTTP ${response.status} ${response.statusText}`);
     }
     const arrayBuffer = await response.arrayBuffer();
+    await this.loadGlbFromArrayBuffer(arrayBuffer, onStage);
+  }
+
+  isGlbBinary(arrayBuffer) {
+    if (!(arrayBuffer instanceof ArrayBuffer) || arrayBuffer.byteLength < 4) {
+      return false;
+    }
+    return new DataView(arrayBuffer).getUint32(0, true) === 0x46546c67;
+  }
+
+  parseJsonText(text, label = "glTF JSON") {
+    try {
+      const sanitized = String(text ?? "").replace(/^\uFEFF/, "");
+      return JSON.parse(sanitized);
+    } catch (err) {
+      throw new Error(`Invalid ${label} (${err?.message ?? err})`);
+    }
+  }
+
+  async loadGltfFromArrayBuffer(arrayBuffer, onStage = null) {
+    this.emitStage(onStage, "parse-gltf-json");
+    const text = new TextDecoder().decode(arrayBuffer);
+    this.gltf = this.parseJsonText(text, "glTF JSON");
+    this.emitStage(onStage, "load-gltf-buffers");
+    await this.loadBuffersFromGltf(false, onStage);
+  }
+
+  async loadGlbFromArrayBuffer(arrayBuffer, onStage = null) {
     this.emitStage(onStage, "decode-glb");
     await this.yieldFrame();
     const dataView = new DataView(arrayBuffer);
@@ -82,11 +114,7 @@ export default class Gltf {
       offset += 8;
       const chunkData = arrayBuffer.slice(offset, offset + chunkLength);
       if (chunkType === 0x4e4f534a) {
-        try {
-          json = JSON.parse(new TextDecoder().decode(chunkData));
-        } catch (err) {
-          throw new Error(`Invalid GLB JSON chunk (${err?.message ?? err})`);
-        }
+        json = this.parseJsonText(new TextDecoder().decode(chunkData), "GLB JSON chunk");
       } else if (chunkType === 0x004e4942) {
         bin = chunkData;
       }

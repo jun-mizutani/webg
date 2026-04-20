@@ -9,7 +9,7 @@
 - loader の model origin policy は、スキニングモデルでは skeleton root、非スキニングモデルでは mesh node を原点とします。
 
 このサンプルで使うwebg機能
-- `WebgApp`: 標準初期化、描画ループ、操作ガイド表示
+- `WebgApp`: 標準初期化、描画ループ、HelpPanel と HUD 表示
 - `WebgApp.loadModel`: glTF facade の高レベル入口
 - `ModelLoader`: glTF / GLB を `ModelAsset` へ正規化し build / instantiate をまとめる
 - `ModelAsset`: 検証済みデータの保持と JSON ダウンロード
@@ -44,27 +44,30 @@
 - raw glTF の animation sampler に `CUBICSPLINE` が入っている場合は、中間値を抜いて `LINEAR` に変換され、固定パネルと `animationInterpolation=LINEAR converted=CUBICSPLINE->LINEAR:...` が表示されることを確認します
 - 大きい glTF / GLB を読み込むときでも、起動中は固定パネルに `stage=...` が表示され、少なくともどの段階まで進んだかを確認できることを確認します
 - Rigify 系モデルでは `required=...` に加えて `helperWeighted=...`、`helperAncestor=...`、`helperPruned=...` を見ることで、helper 骨が実際に weight で使われているのか、親子関係維持のために残っているだけなのか、あるいは importer が焼き込んで削除できたのかを判断できることを確認します
-- HUD に clip 名一覧と先頭 clip の track 数 / key 数 / duration が表示され、facade からも animation 定義が引けることを確認します
-- HUD に clip0 / selectedState / clip0Bound が表示され、先頭 clip の再生状態と runtime 接続状態が確認できることを確認します
+- 固定 HUD に file / model / orbit / target / anim / clip0 / interpolation / wireframe 状態が表示され、viewer として必要な状態を画面上で追えることを確認します
 - `1` キーで先頭 clip を `restartAnimation(clipId)` により名前指定で再始動できることを確認します
 - `2` / `3` キーで先頭 clip を `pauseAnimation(clipId)` / `resumeAnimation(clipId)` により個別停止・再開できることを確認します
 - glTF node の親 transform を含む world bbox に応じてカメラ距離が自動設定され、初期表示でモデル全体が見えるかを確認します
 - `D` キーで出力した JSON を `json_loader` に渡して再表示できることを確認します
-- 初期表示でモデルが少し下寄りに見え、`Q` / `E` で視点の上下位置を微調整できることを確認します
+- `Shift + Arrow` と `Shift + Drag` で camera target を平行移動でき、細部を中央へ寄せて確認できることを確認します
+- `W` で wireframe、`S` で screenshot、`R` で初期 framing へ戻ることを確認します
+- HelpPanel に操作説明がまとまり、固定 HUD と役割を分けて読めることを確認します
 
 AI / 利用者向けの読み取りポイント
 - 「表示は合っているが scale がどこで反映されたか分からない」ときは、まず `meshes[].meta.staticBake` と `nodes[].matrix` を見ます。
 - 「animation はあるが再生されない」ときは、`animations[].targetSkeleton` と `nodes[].animationBindings` の対応を見ます。
-- 「clip 名は見えるが node に bind されない」ときは、runtime HUD の `clip0Bound` と JSON の binding を見比べます。
+- 「clip が再生されない」ときは、runtime HUD の `Anim` / `Clip0` 表示と JSON の binding を見比べます。
 - 「親 node を持つ skinned mesh の向きが怪しい」ときは、`skeletons[].meta.staticBake` が入っているか、対象 asset が scale animation / non-uniform scale を含んでいないかを確認します。
 
 操作説明
 - ドラッグ / 矢印キー: オービットカメラ回転
+- `Shift` + ドラッグ / 矢印キー: カメラ target の平行移動
 - ホイール / `[` / `]`: ズーム
-- `Q` / `E`: カメラの注視点を上 / 下へ移動
 - `Space`: アニメーション一時停止
 - `1`: 先頭 clip を再生し直す
 - `2`: 先頭 clip を一時停止
 - `3`: 先頭 clip を再開
+- `W`: wireframe 切り替え
+- `S`: screenshot 保存
 - `D`: `ModelAsset` JSON をダウンロード
 - `R`: カメラをバウンディングボックス基準の初期位置へ戻す
