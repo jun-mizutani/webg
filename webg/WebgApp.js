@@ -227,6 +227,7 @@ export default class WebgApp {
     };
     this._frame = (timeMs) => this.frame(timeMs);
     this._frameScheduled = false;
+    this._autoPaused = false;
     this.handlers = {
       onUpdate: null,
       onBeforeDraw: null,
@@ -1476,11 +1477,25 @@ export default class WebgApp {
     const wrappedHandlers = {
       ...handlers,
       onKeyDown: (key, ev) => {
+        // ondemand では keydown 自体が次 frame を起こすきっかけになる
+        this.requestRender();
         if (this.handleDebugKeyInput(key, ev)) {
           return;
         }
         if (handlers.onKeyDown) {
           handlers.onKeyDown(key, ev);
+        }
+      },
+      onKeyUp: (key, ev) => {
+        this.requestRender();
+        if (handlers.onKeyUp) {
+          handlers.onKeyUp(key, ev);
+        }
+      },
+      onPointerDown: (ev) => {
+        this.requestRender();
+        if (handlers.onPointerDown) {
+          handlers.onPointerDown(ev);
         }
       }
     };
@@ -3300,11 +3315,10 @@ export default class WebgApp {
     if (this.windowHasFocus === false) {
       return true;
     }
-    if (this.documentHasFocus === false) {
-      return true;
-    }
-    if (typeof this.doc?.hasFocus === "function" && this.doc.hasFocus() === false) {
-      return true;
+    // focusin / focusout の補助 state は要素間の移動で一時的に揺れることがあるため、
+    // 最終判定は document.hasFocus() を優先する
+    if (typeof this.doc?.hasFocus === "function") {
+      return this.doc.hasFocus() === false;
     }
     return false;
   }
@@ -3315,11 +3329,18 @@ export default class WebgApp {
     if (!this.running || this.renderMode === "continuous") {
       return false;
     }
-    if (this.shouldAutoPauseFrameLoop()) {
+    const shouldPause = this.shouldAutoPauseFrameLoop();
+    if (shouldPause) {
       this.lastFrameTime = 0.0;
+      this._autoPaused = true;
       return false;
     }
-    this.lastFrameTime = 0.0;
+    // 非 active から復帰した直後だけ時刻差分を切り直し、
+    // active 中の focus 移動では deltaSec を壊さない
+    if (this._autoPaused) {
+      this.lastFrameTime = 0.0;
+    }
+    this._autoPaused = false;
     return this.requestRender();
   }
 
@@ -3344,8 +3365,10 @@ export default class WebgApp {
     if (!this.running) return;
     if (this.shouldAutoPauseFrameLoop()) {
       this.lastFrameTime = 0.0;
+      this._autoPaused = true;
       return;
     }
+    this._autoPaused = false;
 
     const previous = this.lastFrameTime || timeMs;
     this.elapsedSec = Math.max(0.0, (timeMs - previous) * 0.001);

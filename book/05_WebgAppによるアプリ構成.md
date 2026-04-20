@@ -259,6 +259,45 @@ const app = new WebgApp({
 });
 ```
 
+## embedded レイアウトをどう理解するか
+
+`layoutMode: "embedded"` は、単に「canvas を小さくする設定」ではありません。これは、`WebgApp` 全体を「ビューポート全体を占有するアプリ」から、「通常の HTML 文書の流れの中に 3D 実行領域を埋め込むアプリ」へ切り替えるための構成です。教材ページ、マニュアル、検証ページ、アセットビューアのように、説明文と実行例を 1 つのページ内へ共存させたい場合に重要になります。
+
+通常の構成では、canvas はビューポート全体に近い扱いになり、HUD やヘルプパネル、タッチコントロールなども「画面全体」を基準に配置されます。これに対して `embedded` では、canvas を収めているホスト要素が基準になります。つまり、canvas の上に重ねる `FixedFormatPanel`、`createHelpPanel()` が作るパネル、`startDialogue()` のオーバーレイ、タッチコントロールといった要素は、ビューポート固定ではなく、その実行例の近傍へまとまって配置されます。ページ全体をスクロールしたときも、これらの UI は canvas と一緒に移動します。
+
+この違いは、見た目の都合だけではありません。ビューポート固定の UI は、ゲームやフルスクリーンに近いツールでは自然ですが、本文を読みながら試す教材ページでは、パネルだけが画面の端に残り続けるとかえって読みにくくなります。`embedded` はその問題を避けるためにあり、「3D 実行例をページの一部として扱う」という設計意図を `WebgApp` 全体へ伝える役割を持っています。
+
+また、`embedded` は `fixedCanvasSize` と組み合わせて使うことが多くなります。固定サイズを明示することで、比較用スクリーンショットや書籍本文のレイアウトを安定させやすくなり、「このページでは常に同じ大きさの実行例を見せる」という構成を保てます。`layoutMode: "embedded"` だけでも文書フロー内への配置自体は可能ですが、教材用途では `fixedCanvasSize` も併用する方が意図が明確です。
+
+```js
+const app = new WebgApp({
+  document,
+  messageFontTexture: "./webg/font512.png",
+  layoutMode: "embedded",
+  fixedCanvasSize: {
+    width: 960,
+    height: 540,
+    useDevicePixelRatio: false
+  }
+});
+
+await app.init();
+
+app.createHelpPanel({
+  lines: [
+    "Drag: orbit",
+    "Shift+Drag: pan",
+    "Wheel: zoom"
+  ]
+});
+```
+
+この例で重要なのは、`createHelpPanel()` のパネルも `embedded` 構成に追従する点です。ヘルプパネルだけが画面の隅に固定されるのではなく、その canvas を説明する補助情報として、実行例の近傍へ現れます。`FixedFormatPanel` や `Touch` も同じ考え方で配置されるため、読者は「この実行例に付属する UI」であることを直感的に理解しやすくなります。
+
+ここで `renderMode` との関係も押さえておく必要があります。`WebgApp` の既定値は `ondemand` で、これは「変化が必要なときだけ frame を進める」方針です。教材ページや設定画面のように、放置中は動かなくてよい実行例ではこの方針が有効です。一方で、`EyeRig` の orbit camera のように、ドラッグ中やキー押下中は連続的に更新が必要な機能もあります。現在の `webg` では、このような継続入力に対しても `ondemand` のまま frame を適切に起こせるよう、入力イベントと `EyeRig` 側の requestRender 経路が用意されています。そのため、「埋め込みビューアだから必ず `continuous` にする」という理解は適切ではありません。まずは `ondemand` を基本とし、常時動き続ける表示が本当に必要な場合だけ `continuous` を選ぶのが自然です。
+
+embedded レイアウトを採用するときは、次のように考えると判断しやすくなります。ページ全体をアプリケーションとして占有したいなら通常構成、説明文や補助 UI を含む実行例としてページに埋め込みたいなら `embedded`、比較や教材都合で表示サイズを一定にしたいなら `fixedCanvasSize` を併用する、という整理です。`WebgApp` はこの選択に合わせて、canvas だけでなく周辺 UI の配置基準まで切り替えてくれます。
+
 `await app.init()` の完了後は、`app.screen`、`app.shader`、`app.space`、`app.cameraRig`、`app.cameraRod`、`app.eye`、`app.input`、`app.message` といった主要コンポーネントにアクセス可能です。特によく利用するのは `app.getGL()`、`app.space`、`app.eye` です。
 
 更新処理は `start()` メソッドにハンドラー関数を渡して実装します。これにより、`WebgApp` が管理するメインループの中で処理が実行されます。コンテキスト（`ctx`）には `app`、`space`、`eye`、`input`、`scenePhase`、`gameHud` などが含まれており、更新処理に必要な情報をまとめて参照できます。代表的なハンドラーには `onUpdate`、`onBeforeDraw`、`onAfterDraw3d`、`onAfterHud` の 4 つがありますが、基本的には `onUpdate` だけで十分なケースがほとんどです。

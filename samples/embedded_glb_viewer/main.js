@@ -69,15 +69,6 @@ const TOUCH_GROUPS = [
       { key: "toggle-wireframe", label: "W", kind: "action", ariaLabel: "toggle wireframe" },
       { key: "capture-shot", label: "S", kind: "action", ariaLabel: "save screenshot" }
     ]
-  },
-  {
-    id: "pan",
-    buttons: [
-      { key: "pan-left", label: "P\u2190", kind: "action", ariaLabel: "pan left" },
-      { key: "pan-right", label: "P\u2192", kind: "action", ariaLabel: "pan right" },
-      { key: "pan-up", label: "P\u2191", kind: "action", ariaLabel: "pan up" },
-      { key: "pan-down", label: "P\u2193", kind: "action", ariaLabel: "pan down" }
-    ]
   }
 ];
 
@@ -88,10 +79,6 @@ const ui = {
   clearButton: null,
   screenshotButton: null,
   wireframeButton: null,
-  panLeftButton: null,
-  panRightButton: null,
-  panUpButton: null,
-  panDownButton: null,
   headline: null,
   status: null
 };
@@ -100,6 +87,7 @@ let app = null;
 let orbit = null;
 let placeholderRoot = null;
 let placeholderSpinNode = null;
+let detachArrowKeyBridge = null;
 
 const state = {
   activeModelRoot: null,
@@ -119,7 +107,13 @@ const state = {
   hasActiveModel: false,
   screenshotName: "",
   modelSize: { ...PLACEHOLDER_SIZE },
-  wireframe: false
+  wireframe: false,
+  orbitChangedThisFrame: false,
+  eyeChangedThisFrame: false,
+  previousOrbitYaw: DEFAULT_ORBIT.yaw,
+  previousOrbitPitch: DEFAULT_ORBIT.pitch,
+  previousTarget: [...DEFAULT_ORBIT.target],
+  previousEyeAttitude: [DEFAULT_ORBIT.yaw, DEFAULT_ORBIT.pitch, 0.0]
 };
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -135,12 +129,92 @@ function cacheUi() {
   ui.clearButton = document.getElementById("clearModel");
   ui.screenshotButton = document.getElementById("saveShot");
   ui.wireframeButton = document.getElementById("toggleWireframe");
-  ui.panLeftButton = document.getElementById("panLeft");
-  ui.panRightButton = document.getElementById("panRight");
-  ui.panUpButton = document.getElementById("panUp");
-  ui.panDownButton = document.getElementById("panDown");
   ui.headline = document.getElementById("viewerHeadline");
   ui.status = document.getElementById("status");
+}
+
+function focusViewerCanvas() {
+  const canvas = app?.screen?.canvas ?? null;
+  if (!canvas) {
+    return;
+  }
+  // embedded viewer は file input や DOM button が多く、
+  // それらへ focus が移ると Arrow / Shift の継続入力が不安定に見えやすい
+  // canvas 自体を focus 可能にして、viewer 操作のたびに戻せるようにする
+  if (canvas.tabIndex < 0 || !Number.isFinite(canvas.tabIndex)) {
+    canvas.tabIndex = 0;
+  }
+  if (typeof canvas.focus === "function") {
+    canvas.focus({
+      preventScroll: true
+    });
+  }
+}
+
+function normalizeViewerArrowKey(ev) {
+  const normalizedKey = app?.input?.normalizeKey(ev?.key ?? "") ?? "";
+  const normalizedCode = String(ev?.code ?? "").toLowerCase();
+  if (normalizedKey === "shift" || normalizedCode === "shiftleft" || normalizedCode === "shiftright") {
+    return "shift";
+  }
+  if (normalizedKey === "arrowleft" || normalizedKey === "left" || normalizedCode === "arrowleft") {
+    return "arrowleft";
+  }
+  if (normalizedKey === "arrowright" || normalizedKey === "right" || normalizedCode === "arrowright") {
+    return "arrowright";
+  }
+  if (normalizedKey === "arrowup" || normalizedKey === "up" || normalizedCode === "arrowup") {
+    return "arrowup";
+  }
+  if (normalizedKey === "arrowdown" || normalizedKey === "down" || normalizedCode === "arrowdown") {
+    return "arrowdown";
+  }
+  return normalizedKey;
+}
+
+function installArrowKeyBridge() {
+  if (typeof window === "undefined" || !app?.input) {
+    return () => {};
+  }
+  const bridgedKeys = new Set([
+    "arrowleft",
+    "arrowright",
+    "arrowup",
+    "arrowdown",
+    "shift"
+  ]);
+  const onKeyDown = (ev) => {
+    const key = normalizeViewerArrowKey(ev);
+    if (!bridgedKeys.has(key)) {
+      return;
+    }
+    // embedded viewer は本文や DOM button を含むため、
+    // Arrow 系だけ browser 側の focus 移動や page scroll の扱いへ流れやすい
+    // capture 段階で InputController へ直接反映して、EyeRig 標準 keyboard 操作を確実に通す
+    ev.preventDefault();
+    app.input.press(key);
+  };
+  const onKeyUp = (ev) => {
+    const key = normalizeViewerArrowKey(ev);
+    if (!bridgedKeys.has(key)) {
+      return;
+    }
+    ev.preventDefault();
+    app.input.release(key);
+  };
+  const onBlur = () => {
+    for (const key of bridgedKeys) {
+      app.input.release(key);
+    }
+  };
+  window.addEventListener("keydown", onKeyDown, true);
+  window.addEventListener("keyup", onKeyUp, true);
+  window.addEventListener("blur", onBlur);
+  return () => {
+    window.removeEventListener("keydown", onKeyDown, true);
+    window.removeEventListener("keyup", onKeyUp, true);
+    window.removeEventListener("blur", onBlur);
+  };
 }
 
 function createMaterialShape(gpu, primitiveAsset, params) {
@@ -279,46 +353,6 @@ function syncOrbitStateToAppCamera() {
   app.camera.pitch = orbit.orbit.pitch;
 }
 
-function getPanUnit(size = state.modelSize) {
-  const maxSize = Math.max(1.0e-6, Number(size?.max) || PLACEHOLDER_SIZE.max);
-  return maxSize * 0.05;
-}
-
-function normalizeVec3(vec) {
-  const x = Number(vec?.[0] ?? 0.0);
-  const y = Number(vec?.[1] ?? 0.0);
-  const z = Number(vec?.[2] ?? 0.0);
-  const length = Math.hypot(x, y, z) || 1.0;
-  return [x / length, y / length, z / length];
-}
-
-function getOrbitScreenBasis() {
-  const eyeMatrix = app.eye.getWorldMatrix();
-  return {
-    right: normalizeVec3(eyeMatrix.mul3x3Vector([1.0, 0.0, 0.0])),
-    up: normalizeVec3(eyeMatrix.mul3x3Vector([0.0, 1.0, 0.0]))
-  };
-}
-
-function panOrbitByScreenStep(stepX = 0, stepY = 0) {
-  if (!orbit) {
-    return;
-  }
-  const unit = getPanUnit();
-  const { right, up } = getOrbitScreenBasis();
-  const delta = [
-    right[0] * stepX * unit + up[0] * stepY * unit,
-    right[1] * stepX * unit + up[1] * stepY * unit,
-    right[2] * stepX * unit + up[2] * stepY * unit
-  ];
-  orbit.setTarget(
-    orbit.orbit.target[0] + delta[0],
-    orbit.orbit.target[1] + delta[1],
-    orbit.orbit.target[2] + delta[2]
-  );
-  syncOrbitStateToAppCamera();
-}
-
 function stepOrbitByButtons({ yaw = 0.0, pitch = 0.0, zoom = 1.0 } = {}) {
   if (!orbit?.orbit) {
     return;
@@ -386,6 +420,7 @@ function takeViewerScreenshot() {
     prefix: `${makeScreenshotName()}_view`
   });
   state.screenshotName = file;
+  focusViewerCanvas();
   app.pushToast(`saved ${file}`, {
     durationMs: 1400
   });
@@ -504,6 +539,7 @@ function toggleAnimationPause() {
   }
   state.paused = !state.paused;
   state.runtime.setAnimationsPaused?.(state.paused);
+  focusViewerCanvas();
   app.pushToast(state.paused ? "animation paused" : "animation resumed", {
     durationMs: 900
   });
@@ -512,6 +548,7 @@ function toggleAnimationPause() {
 function toggleWireframe() {
   state.wireframe = !state.wireframe;
   applyWireframeState();
+  focusViewerCanvas();
   app.pushToast(state.wireframe ? "wireframe on" : "wireframe off", {
     durationMs: 900
   });
@@ -562,18 +599,6 @@ function handlePressedActions() {
   }
   if (app.input.wasActionPressed("toggle-wireframe")) {
     toggleWireframe();
-  }
-  if (app.input.wasActionPressed("pan-left")) {
-    panOrbitByScreenStep(-1.0, 0.0);
-  }
-  if (app.input.wasActionPressed("pan-right")) {
-    panOrbitByScreenStep(1.0, 0.0);
-  }
-  if (app.input.wasActionPressed("pan-up")) {
-    panOrbitByScreenStep(0.0, 1.0);
-  }
-  if (app.input.wasActionPressed("pan-down")) {
-    panOrbitByScreenStep(0.0, -1.0);
   }
 }
 
@@ -679,17 +704,20 @@ async function handleFileSelection(file) {
 function installDomHandlers() {
   ui.fileInput?.addEventListener("change", (event) => {
     const file = event.target.files?.[0] ?? null;
+    focusViewerCanvas();
     handleFileSelection(file).catch((err) => {
       showErrorState(err);
     });
   });
   ui.loadSampleButton?.addEventListener("click", () => {
+    focusViewerCanvas();
     loadBundledSample().catch((err) => {
       showErrorState(err);
     });
   });
   ui.resetButton?.addEventListener("click", () => {
     resetOrbit(state.modelSize);
+    focusViewerCanvas();
     app.pushToast("camera reset", {
       durationMs: 900
     });
@@ -698,24 +726,13 @@ function installDomHandlers() {
     clearCurrentModel({
       toast: true
     });
+    focusViewerCanvas();
   });
   ui.screenshotButton?.addEventListener("click", () => {
     takeViewerScreenshot();
   });
   ui.wireframeButton?.addEventListener("click", () => {
     toggleWireframe();
-  });
-  ui.panLeftButton?.addEventListener("click", () => {
-    panOrbitByScreenStep(-1.0, 0.0);
-  });
-  ui.panRightButton?.addEventListener("click", () => {
-    panOrbitByScreenStep(1.0, 0.0);
-  });
-  ui.panUpButton?.addEventListener("click", () => {
-    panOrbitByScreenStep(0.0, 1.0);
-  });
-  ui.panDownButton?.addEventListener("click", () => {
-    panOrbitByScreenStep(0.0, -1.0);
   });
 }
 
@@ -745,7 +762,7 @@ function updateHudRows() {
     {
       label: "Target",
       value: `${orbit.orbit.target[0].toFixed(2)}, ${orbit.orbit.target[1].toFixed(2)}, ${orbit.orbit.target[2].toFixed(2)}`,
-      note: `panStep=${getPanUnit().toFixed(3)}`
+      note: "Shift+Drag / Shift+Arrow / 2finger"
     },
     {
       label: "Anim",
@@ -776,10 +793,64 @@ function updateHudRows() {
   });
 }
 
+function updateViewerDiagnosticsStats() {
+  const rodAttitude = typeof app.cameraRod?.getWorldAttitude === "function"
+    ? app.cameraRod.getWorldAttitude()
+    : [NaN, NaN, NaN];
+  const eyePosition = typeof app.eye?.getPosition === "function"
+    ? app.eye.getPosition()
+    : [NaN, NaN, NaN];
+  const eyeAttitude = typeof app.eye?.getWorldAttitude === "function"
+    ? app.eye.getWorldAttitude()
+    : [NaN, NaN, NaN];
+  app.mergeDiagnosticsStats({
+    viewerFile: state.fileLabel,
+    viewerSource: state.sourceLabel,
+    viewerStage: state.loading ? state.loadStage : "idle",
+    viewerLoaded: state.hasActiveModel ? "yes" : "no",
+    viewerTriangles: state.triangleCount,
+    viewerNodeCount: state.nodeCount,
+    viewerClipCount: state.clipCount,
+    viewerPaused: state.paused ? "yes" : "no",
+    viewerWireframe: state.wireframe ? "yes" : "no",
+    viewerKeyState: `L=${app.input.has("arrowleft") ? 1 : 0} R=${app.input.has("arrowright") ? 1 : 0} U=${app.input.has("arrowup") ? 1 : 0} D=${app.input.has("arrowdown") ? 1 : 0} Sh=${app.input.has("shift") ? 1 : 0}`,
+    viewerArrowActive: app.input.has("arrowleft") || app.input.has("arrowright") || app.input.has("arrowup") || app.input.has("arrowdown")
+      ? "yes"
+      : "no",
+    viewerShiftPanActive: app.input.has("shift")
+      && (app.input.has("arrowleft") || app.input.has("arrowright") || app.input.has("arrowup") || app.input.has("arrowdown"))
+      ? "yes"
+      : "no",
+    viewerOrbitInputSame: orbit.input === app.input ? "yes" : "no",
+    viewerOrbitKeyMap: `${orbit.orbit.keyMap.left}/${orbit.orbit.keyMap.right}/${orbit.orbit.keyMap.up}/${orbit.orbit.keyMap.down}`,
+    viewerEyeRigDeltaSec: Number(orbit.debugState?.lastOrbitDeltaSec ?? 0.0).toFixed(6),
+    viewerEyeRigShiftPan: orbit.debugState?.lastOrbitShiftPan ? "yes" : "no",
+    viewerEyeRigKeyActive: orbit.debugState?.lastOrbitKeyActive ? "yes" : "no",
+    viewerEyeRigChanged: orbit.debugState?.lastOrbitChanged ? "yes" : "no",
+    viewerEyeRigInputs: `L=${orbit.debugState?.lastOrbitInputLeft ? 1 : 0} R=${orbit.debugState?.lastOrbitInputRight ? 1 : 0} U=${orbit.debugState?.lastOrbitInputUp ? 1 : 0} D=${orbit.debugState?.lastOrbitInputDown ? 1 : 0} Zi=${orbit.debugState?.lastOrbitInputZoomIn ? 1 : 0} Zo=${orbit.debugState?.lastOrbitInputZoomOut ? 1 : 0}`,
+    viewerTarget: `${orbit.orbit.target[0].toFixed(3)}, ${orbit.orbit.target[1].toFixed(3)}, ${orbit.orbit.target[2].toFixed(3)}`,
+    viewerOrbitYaw: orbit.orbit.yaw.toFixed(2),
+    viewerOrbitPitch: orbit.orbit.pitch.toFixed(2),
+    viewerOrbitDistance: orbit.orbit.distance.toFixed(2),
+    viewerOrbitChangedThisFrame: state.orbitChangedThisFrame ? "yes" : "no",
+    viewerEyeChangedThisFrame: state.eyeChangedThisFrame ? "yes" : "no",
+    viewerRodYawPitch: `${Number(rodAttitude[0]).toFixed(2)}, ${Number(rodAttitude[1]).toFixed(2)}`,
+    viewerEyeYawPitch: `${Number(eyeAttitude[0]).toFixed(2)}, ${Number(eyeAttitude[1]).toFixed(2)}`,
+    viewerEyeZ: Number(eyePosition[2]).toFixed(3),
+    viewerError: state.lastError || "(none)"
+  });
+}
+
 function updateStatusPanel() {
   if (!ui.status) {
     return;
   }
+  const rodAttitude = typeof app.cameraRod?.getAttitude === "function"
+    ? app.cameraRod.getAttitude()
+    : [NaN, NaN, NaN];
+  const eyePosition = typeof app.eye?.getPosition === "function"
+    ? app.eye.getPosition()
+    : [NaN, NaN, NaN];
   ui.headline.textContent = state.hasActiveModel
     ? `Viewing ${state.fileLabel}`
     : "Upload a GLB file";
@@ -795,19 +866,30 @@ function updateStatusPanel() {
     `clipCount: ${state.clipCount}`,
     `paused: ${state.paused ? "yes" : "no"}`,
     `wireframe: ${state.wireframe ? "yes" : "no"}`,
+    `keyState: L=${app.input.has("arrowleft") ? 1 : 0} R=${app.input.has("arrowright") ? 1 : 0} U=${app.input.has("arrowup") ? 1 : 0} D=${app.input.has("arrowdown") ? 1 : 0} Sh=${app.input.has("shift") ? 1 : 0}`,
+    `arrowActive: ${(app.input.has("arrowleft") || app.input.has("arrowright") || app.input.has("arrowup") || app.input.has("arrowdown")) ? "yes" : "no"} shiftPan: ${(app.input.has("shift") && (app.input.has("arrowleft") || app.input.has("arrowright") || app.input.has("arrowup") || app.input.has("arrowdown"))) ? "yes" : "no"}`,
+    `orbitInputSame: ${orbit.input === app.input ? "yes" : "no"}`,
+    `orbitKeyMap: ${orbit.orbit.keyMap.left}/${orbit.orbit.keyMap.right}/${orbit.orbit.keyMap.up}/${orbit.orbit.keyMap.down}`,
+    `eyeRig dt/key/chg: ${Number(orbit.debugState?.lastOrbitDeltaSec ?? 0.0).toFixed(6)} / ${orbit.debugState?.lastOrbitKeyActive ? "yes" : "no"} / ${orbit.debugState?.lastOrbitChanged ? "yes" : "no"}`,
+    `eyeRig inputs: L=${orbit.debugState?.lastOrbitInputLeft ? 1 : 0} R=${orbit.debugState?.lastOrbitInputRight ? 1 : 0} U=${orbit.debugState?.lastOrbitInputUp ? 1 : 0} D=${orbit.debugState?.lastOrbitInputDown ? 1 : 0} shift=${orbit.debugState?.lastOrbitShiftPan ? 1 : 0}`,
     `targetX: ${orbit.orbit.target[0].toFixed(3)}`,
     `targetY: ${orbit.orbit.target[1].toFixed(3)}`,
     `targetZ: ${orbit.orbit.target[2].toFixed(3)}`,
-    `panUnit: ${getPanUnit().toFixed(3)}`,
     `orbitYaw: ${orbit.orbit.yaw.toFixed(2)}`,
     `orbitPitch: ${orbit.orbit.pitch.toFixed(2)}`,
     `orbitDistance: ${orbit.orbit.distance.toFixed(2)}`,
+    `orbitChanged/eyeChanged: ${state.orbitChangedThisFrame ? "yes" : "no"} / ${state.eyeChangedThisFrame ? "yes" : "no"}`,
+    `rodYawPitch: ${Number(rodAttitude[0]).toFixed(2)}, ${Number(rodAttitude[1]).toFixed(2)}`,
+    `eyeYawPitch: ${Number((typeof app.eye?.getWorldAttitude === "function" ? app.eye.getWorldAttitude() : [NaN, NaN, NaN])[0]).toFixed(2)}, ${Number((typeof app.eye?.getWorldAttitude === "function" ? app.eye.getWorldAttitude() : [NaN, NaN, NaN])[1]).toFixed(2)}`,
+    `eyeZ: ${Number(eyePosition[2]).toFixed(3)}`,
     state.lastError ? `error: ${state.lastError}` : "error: (none)"
   ].join("\n");
 }
 
 async function start() {
   cacheUi();
+  detachArrowKeyBridge?.();
+  detachArrowKeyBridge = null;
 
   app = new WebgApp({
     document,
@@ -847,6 +929,7 @@ async function start() {
     document,
     element: app.screen.canvas,
     input: app.input,
+    requestRender: () => app.requestRender(),
     type: "orbit",
     orbit: {
       target: [...DEFAULT_ORBIT.target],
@@ -865,22 +948,53 @@ async function start() {
     "capture-shot": ["s"],
     "toggle-wireframe": ["w"]
   });
+  // WebgApp の自動 attach だけでも keyboard は受けるが、embedded viewer では
+  // sample 側で attachInput() を明示して経路を固定し、Arrow / Shift を含む継続押下を
+  // EyeRig.update() が安定して読める前提を保つ
+  app.attachInput();
   app.input.installTouchControls({
     touchDeviceOnly: false,
     groups: TOUCH_GROUPS
+  });
+  detachArrowKeyBridge = installArrowKeyBridge();
+  app.screen.canvas?.addEventListener("pointerdown", () => {
+    focusViewerCanvas();
   });
 
   createPlaceholderScene();
   applyWireframeState();
   resetOrbit(PLACEHOLDER_SIZE);
   installDomHandlers();
+  focusViewerCanvas();
   updateHudRows();
+  updateViewerDiagnosticsStats();
   updateStatusPanel();
 
   app.start({
     onUpdate(ctx) {
+      const previousOrbitYaw = orbit.orbit.yaw;
+      const previousOrbitPitch = orbit.orbit.pitch;
+      const previousTargetX = orbit.orbit.target[0];
+      const previousTargetY = orbit.orbit.target[1];
+      const previousTargetZ = orbit.orbit.target[2];
+      const previousEyeAttitude = typeof app.eye?.getWorldAttitude === "function"
+        ? app.eye.getWorldAttitude()
+        : [NaN, NaN, NaN];
       orbit.update(ctx.elapsedSec);
       syncOrbitStateToAppCamera();
+      state.orbitChangedThisFrame =
+        orbit.orbit.yaw !== previousOrbitYaw
+        || orbit.orbit.pitch !== previousOrbitPitch
+        || orbit.orbit.target[0] !== previousTargetX
+        || orbit.orbit.target[1] !== previousTargetY
+        || orbit.orbit.target[2] !== previousTargetZ;
+      const nextEyeAttitude = typeof app.eye?.getWorldAttitude === "function"
+        ? app.eye.getWorldAttitude()
+        : [NaN, NaN, NaN];
+      state.eyeChangedThisFrame =
+        nextEyeAttitude[0] !== previousEyeAttitude[0]
+        || nextEyeAttitude[1] !== previousEyeAttitude[1]
+        || nextEyeAttitude[2] !== previousEyeAttitude[2];
       handlePressedActions();
       state.loadElapsedMs = state.loading
         ? Math.max(0, performance.now() - state.loadStartedAtMs)
@@ -892,6 +1006,7 @@ async function start() {
       }
 
       updateHudRows();
+      updateViewerDiagnosticsStats();
       updateStatusPanel();
     }
   });

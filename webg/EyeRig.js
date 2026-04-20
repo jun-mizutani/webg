@@ -18,6 +18,7 @@ export default class EyeRig {
     this.doc = options.document ?? (typeof document !== "undefined" ? document : null);
     this.element = options.element ?? (this.doc ? this.doc.getElementById("canvas") : null);
     this.input = options.input ?? null;
+    this.requestRender = typeof options.requestRender === "function" ? options.requestRender : null;
     this.enabled = options.enabled !== false;
     this.type = options.type ?? "orbit";
     this.dragButton = Number.isFinite(options.dragButton) ? options.dragButton : 0;
@@ -121,6 +122,18 @@ export default class EyeRig {
       centerY: 0.0,
       distance: 0.0
     };
+    this.debugState = {
+      lastOrbitDeltaSec: 0.0,
+      lastOrbitShiftPan: false,
+      lastOrbitKeyActive: false,
+      lastOrbitChanged: false,
+      lastOrbitInputLeft: false,
+      lastOrbitInputRight: false,
+      lastOrbitInputUp: false,
+      lastOrbitInputDown: false,
+      lastOrbitInputZoomIn: false,
+      lastOrbitInputZoomOut: false
+    };
     this.previousTouchAction = null;
     this._boundPointerDown = (ev) => this.onPointerDown(ev);
     this._boundPointerMove = (ev) => this.onPointerMove(ev);
@@ -184,6 +197,18 @@ export default class EyeRig {
 
   setInput(inputController) {
     this.input = inputController;
+    return this;
+  }
+
+  setRequestRender(requestRender) {
+    this.requestRender = typeof requestRender === "function" ? requestRender : null;
+    return this;
+  }
+
+  scheduleRender() {
+    if (this.requestRender) {
+      this.requestRender();
+    }
     return this;
   }
 
@@ -370,15 +395,27 @@ export default class EyeRig {
     if (!this.input) return;
     const state = this.orbit;
     const dt = Number.isFinite(deltaSec) ? deltaSec : 0.0;
+    const inputLeft = this.input.has(state.keyMap.left);
+    const inputRight = this.input.has(state.keyMap.right);
+    const inputUp = this.input.has(state.keyMap.up);
+    const inputDown = this.input.has(state.keyMap.down);
+    const inputZoomIn = this.input.has(state.keyMap.zoomIn);
+    const inputZoomOut = this.input.has(state.keyMap.zoomOut);
     const shiftPan = this.input.has("shift");
+    const keyActive = inputLeft
+      || inputRight
+      || inputUp
+      || inputDown
+      || inputZoomIn
+      || inputZoomOut;
     let changed = false;
     if (shiftPan) {
       let panX = 0.0;
       let panY = 0.0;
-      if (this.input.has(state.keyMap.left)) panX -= 1.0;
-      if (this.input.has(state.keyMap.right)) panX += 1.0;
-      if (this.input.has(state.keyMap.up)) panY += 1.0;
-      if (this.input.has(state.keyMap.down)) panY -= 1.0;
+      if (inputLeft) panX -= 1.0;
+      if (inputRight) panX += 1.0;
+      if (inputUp) panY += 1.0;
+      if (inputDown) panY -= 1.0;
       if (panX !== 0.0 || panY !== 0.0) {
         this.panViewByScreenDelta(
           panX * state.keyRotateSpeed * dt,
@@ -387,24 +424,24 @@ export default class EyeRig {
         changed = true;
       }
     } else {
-      if (this.input.has(state.keyMap.left)) {
+      if (inputLeft) {
         state.yaw -= state.keyRotateSpeed * dt;
         changed = true;
       }
-      if (this.input.has(state.keyMap.right)) {
+      if (inputRight) {
         state.yaw += state.keyRotateSpeed * dt;
         changed = true;
       }
-      if (this.input.has(state.keyMap.up)) {
+      if (inputUp) {
         state.pitch = this.clamp(state.pitch + state.keyRotateSpeed * dt, state.pitchMin, state.pitchMax);
         changed = true;
       }
-      if (this.input.has(state.keyMap.down)) {
+      if (inputDown) {
         state.pitch = this.clamp(state.pitch - state.keyRotateSpeed * dt, state.pitchMin, state.pitchMax);
         changed = true;
       }
     }
-    if (this.input.has(state.keyMap.zoomIn)) {
+    if (inputZoomIn) {
       state.distance = this.clamp(
         state.distance - state.keyZoomSpeed * this.getZoomSensitivityScale() * dt,
         state.minDistance,
@@ -412,7 +449,7 @@ export default class EyeRig {
       );
       changed = true;
     }
-    if (this.input.has(state.keyMap.zoomOut)) {
+    if (inputZoomOut) {
       state.distance = this.clamp(
         state.distance + state.keyZoomSpeed * this.getZoomSensitivityScale() * dt,
         state.minDistance,
@@ -420,7 +457,20 @@ export default class EyeRig {
       );
       changed = true;
     }
+    this.debugState.lastOrbitDeltaSec = dt;
+    this.debugState.lastOrbitShiftPan = shiftPan;
+    this.debugState.lastOrbitKeyActive = keyActive;
+    this.debugState.lastOrbitChanged = changed;
+    this.debugState.lastOrbitInputLeft = inputLeft;
+    this.debugState.lastOrbitInputRight = inputRight;
+    this.debugState.lastOrbitInputUp = inputUp;
+    this.debugState.lastOrbitInputDown = inputDown;
+    this.debugState.lastOrbitInputZoomIn = inputZoomIn;
+    this.debugState.lastOrbitInputZoomOut = inputZoomOut;
     if (changed) this.apply();
+    if (keyActive || this.dragging || this.touchGesture.active) {
+      this.scheduleRender();
+    }
   }
 
   updateFirstPerson(deltaSec) {
@@ -468,6 +518,14 @@ export default class EyeRig {
     const state = this.follow;
     const dt = Number.isFinite(deltaSec) ? deltaSec : 0.0;
     const shiftPan = this.input?.has("shift") === true;
+    const keyActive = this.input
+      ? this.input.has(state.keyMap.left)
+        || this.input.has(state.keyMap.right)
+        || this.input.has(state.keyMap.up)
+        || this.input.has(state.keyMap.down)
+        || this.input.has(state.keyMap.zoomIn)
+        || this.input.has(state.keyMap.zoomOut)
+      : false;
     let changed = false;
     if (this.input) {
       if (shiftPan) {
@@ -513,6 +571,9 @@ export default class EyeRig {
     }
     this.syncTarget(false, dt);
     if (changed || state.targetNode) this.apply();
+    if (keyActive || this.dragging || this.touchGesture.active) {
+      this.scheduleRender();
+    }
   }
 
   attachPointer(element = this.element) {
@@ -750,6 +811,7 @@ export default class EyeRig {
 
   onPointerDown(ev) {
     if (!this.enabled) return;
+    this.scheduleRender();
     if (this.isTouchPointerEvent(ev)) {
       this.rememberPointer(ev);
       if (this.element?.setPointerCapture) {
@@ -787,6 +849,7 @@ export default class EyeRig {
 
   onPointerMove(ev) {
     if (!this.enabled) return;
+    this.scheduleRender();
     if (this.isTouchPointerEvent(ev)) {
       if (!this.pointerRecords.has(ev.pointerId)) return;
       this.rememberPointer(ev);
@@ -857,6 +920,7 @@ export default class EyeRig {
   }
 
   onPointerUp(ev) {
+    this.scheduleRender();
     if (this.isTouchPointerEvent(ev)) {
       this.forgetPointer(ev.pointerId);
       if (this.element?.releasePointerCapture) {
@@ -899,6 +963,7 @@ export default class EyeRig {
 
   onWheel(ev) {
     if (!this.enabled) return;
+    this.scheduleRender();
     if (this.type === "first-person") return;
     const zoomDir = ev.deltaY > 0 ? 1.0 : -1.0;
     if (this.type === "follow") {

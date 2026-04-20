@@ -5,9 +5,9 @@
 - `input[type=file]` で選んだ単体 `.glb` を `WebgApp.loadModel()` から読み込み、`EyeRig(type="orbit")` の drag / pinch / keyboard 操作と、viewer 側の touch orbit / zoom button で見回せるようにしています
 - 読み込んだモデルは、バウンディングボックス中心がワールド原点へ来るように配置し、camera の target も原点から始めます
 - `Load bundled sample` を押すと同梱の `samples/gltf_loader/hand.glb` をそのまま表示できるため、手元のモデルが無い状態でも embedded viewer の挙動をすぐ確認できます
-- touch controls は `InputController.installTouchControls()` で追加し、`← / → / ↑ / ↓ / + / -` を orbit / zoom の step action として、`R / || / W / S` と `P← / P→ / P↑ / P↓` を viewer action として接続しています
+- touch controls は `InputController.installTouchControls()` で追加し、`← / → / ↑ / ↓ / + / -` を orbit / zoom の step action として、`R / || / W / S` を viewer action として接続しています
 - `W` キー、DOM の `W` button、touch の `W` で、表示中 shape 全体を wireframe 表示へ一括切り替えできます
-- 平行移動 1 step は `bbox.max * 0.05` とし、DOM の `Pan` button と touch button から screen 方向の移動として target をずらせるようにしています
+- PAN は `EyeRig` の標準操作にそろえ、`Shift + Drag`、`Shift + Arrow`、2 本指 drag で target を screen 方向へ移動できます
 - 読み込み中は `showFixedFormatPanel()` で stage と経過時間を canvas 上へ出し、右側 status には file 名、triangle 数、clip 数、camera 状態、error をまとめて表示します
 
 このサンプルで使うwebg機能
@@ -23,7 +23,7 @@
 - `Load bundled sample` で `hand.glb` が表示され、animation を持つモデルでは `Space` または touch の `||` で pause / resume できることを確認します
 - 読み込み直後にモデルの中心がワールド原点へ来て、HUD の target が `0, 0, 0` から始まることを確認します
 - drag、pinch、`Arrow`、`[ ]`、touch の `← / → / ↑ / ↓ / + / -` が同じ orbit camera を操作し、touch button は 1 tap ごとに確実に反応することを確認します
-- `Pan ← / → / ↑ / ↓` と touch の `P← / P→ / P↑ / P↓` で、view が最大サイズの 5% ずつ平行移動することを確認します
+- `Shift + Drag`、`Shift + Arrow`、2 本指 drag で、view の target が screen 方向へ自然に平行移動することを確認します
 - `W` を切り替えると、表示中モデル全体が solid / wireframe で切り替わることを確認します
 - `R` または `Reset view` で camera がフレーミング初期値へ戻ることを確認します
 - `S` または touch の `S` で現在の canvas が保存されることを確認します
@@ -35,7 +35,7 @@
 - 2 本指 drag: camera 平行移動
 - pinch / wheel / `[ ]` / touch `+ -`: zoom
 - `Arrow` / touch `← → ↑ ↓`: orbit camera
-- `Pan ← / → / ↑ / ↓` / touch `P← / P→ / P↑ / P↓`: 平行移動 1 step
+- `Shift + Drag` / `Shift + Arrow`: camera 平行移動
 - `W` / DOM `W` / touch `W`: wireframe 切り替え
 - `R` / touch `R`: camera reset
 - `Space` / touch `||`: animation pause / resume

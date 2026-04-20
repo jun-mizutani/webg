@@ -135,30 +135,6 @@
       color: var(--sub);
     }
 
-    .pan-bar {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 10px;
-      margin: 14px 0 0;
-      align-items: center;
-    }
-
-    .pan-bar button {
-      appearance: none;
-      border: 1px solid rgba(23, 33, 43, 0.14);
-      background: #fbfdff;
-      color: var(--ink);
-      border-radius: 12px;
-      padding: 10px 12px;
-      font: 600 13px/1 "Hiragino Sans", "Yu Gothic", sans-serif;
-      cursor: pointer;
-      min-width: 72px;
-    }
-
-    .pan-bar button:hover {
-      background: #eef6fd;
-    }
-
     .canvas-wrap {
       margin-top: 18px;
       overflow-x: auto;
@@ -229,7 +205,7 @@
       <p>
         この sample は、`layoutMode: "embedded"` の canvas を文書中へ置いたまま、
         `input[type=file]` で選んだ `.glb` をその場で表示するための最小ビューアです。
-        orbit camera は pointer drag / pinch に加えて、画面下の touch buttons でも操作できます。
+        orbit camera は pointer drag / pinch に加えて、`Shift + Drag` や `Shift + Arrow` による PAN にも対応しています。
       </p>
       <p>
         `Load bundled sample` を押すと同梱の `hand.glb` で即確認でき、`Choose GLB` からは手元の `.glb` を直接読み込めます。
@@ -245,7 +221,7 @@
         2. `.glb` を file input から選ぶと、`WebgApp.loadModel()` の経路で読み込まれ、orbit camera でそのまま見回せること
       </p>
       <p>
-        3. touch buttons の `← → ↑ ↓ + -` と `R / || / W / S` が `EyeRig` と viewer action に自然につながること
+        3. touch buttons の `← → ↑ ↓ + -` と `R / || / W / S`、さらに `Shift + Drag` / `Shift + Arrow` / 2 本指 drag の PAN が、`EyeRig` と viewer action に自然につながること
       </p>
     </section>
 
@@ -268,13 +244,7 @@
           <button type="button" id="saveShot">S</button>
         </div>
         <div class="control-note">
-          対応形式は単体 `.glb` です。モデルはバウンディングボックス中心がワールド原点へ来るように配置し、平行移動 1 step は最大サイズの 5% です。
-        </div>
-        <div class="pan-bar">
-          <button type="button" id="panLeft">Pan ←</button>
-          <button type="button" id="panRight">Pan →</button>
-          <button type="button" id="panUp">Pan ↑</button>
-          <button type="button" id="panDown">Pan ↓</button>
+          対応形式は単体 `.glb` です。モデルはバウンディングボックス中心がワールド原点へ来るように配置し、PAN は `Shift + Drag`、`Shift + Arrow`、2 本指 drag で行えます。
         </div>
         <div class="canvas-wrap">
           <canvas id="canvas" width="960" height="720"></canvas>
