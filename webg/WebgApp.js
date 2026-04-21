@@ -3349,6 +3349,8 @@ export default class WebgApp {
 
   // 現在 frame の代表 state を callback 用 object へまとめる
   // sample 側は app 内部 field を個別参照せず、この context だけで update を進められる
+  // ここで返す 1 frame の時間差分は `deltaSec` であり、`elapsedSec` という field は含めない
+  // `this.elapsedSec` は WebgApp 内部の直近 frame 差分保持用で、callback 側は必ず `ctx.deltaSec` を読む
   getFrameContext(timeMs) {
     return {
       app: this,
