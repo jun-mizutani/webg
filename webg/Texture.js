@@ -108,15 +108,13 @@ export default class Texture {
     this.filename = textureFile;
     try {
       const response = await fetch(textureFile);
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status} ${response.statusText}`);
+      }
       const blob = await response.blob();
       // Preserve original RGB even when PNG has alpha; avoids black fringes
       // when shaders use tex.rgb on mostly-opaque meshes.
-      let bitmap;
-      try {
-        bitmap = await createImageBitmap(blob, { premultiplyAlpha: "none" });
-      } catch (_) {
-        bitmap = await createImageBitmap(blob);
-      }
+      const bitmap = await createImageBitmap(blob, { premultiplyAlpha: "none" });
       this.ensureTexture(bitmap.width, bitmap.height);
       this.queue.copyExternalImageToTexture(
         { source: bitmap },
@@ -129,8 +127,7 @@ export default class Texture {
       this.ncol = 4;
       return true;
     } catch (err) {
-      alert(`error while loading image '${textureFile}'.`);
-      return false;
+      throw new Error(`Texture.readImageFromFile failed for '${textureFile}': ${err?.message ?? err}`);
     }
   }
 
@@ -270,7 +267,10 @@ export default class Texture {
         let ny = -dy;
         let nz = 1.0;
         // 正規化して単位法線へする
-        const len = Math.sqrt(nx * nx + ny * ny + nz * nz) || 1.0;
+        const len = Math.sqrt(nx * nx + ny * ny + nz * nz);
+        if (!Number.isFinite(len) || len <= 1.0e-8) {
+          throw new Error(`Texture normal map generation produced an invalid normal length at (${x}, ${y})`);
+        }
         nx /= len;
         ny /= len;
         nz /= len;
@@ -295,8 +295,7 @@ export default class Texture {
 
   async readNormalMapFromHeightFile(heightMapFile, options = {}) {
     // 画像をハイトマップとして読み込み、その場で法線マップ化する
-    const ok = await this.readImageFromFile(heightMapFile);
-    if (!ok) return false;
+    await this.readImageFromFile(heightMapFile);
     return this.buildNormalMapFromHeightMap(options);
   }
 

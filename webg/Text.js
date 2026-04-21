@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// Text.js        2026/03/30
+// Text.js        2026/04/21
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // ---------------------------------------------
@@ -9,18 +9,6 @@ import Font from "./Font.js";
 import Texture from "./Texture.js";
 
 export default class Text {
-  static readOptionalInteger(value, name, fallback) {
-    return util.readOptionalInteger(value, `Text ${name}`, fallback, { min: 1 });
-  }
-
-  static readPositiveScale(value, name = "scale") {
-    return util.readFiniteNumber(value, `Text ${name}`, { minExclusive: 0 });
-  }
-
-  static readGridCoordinate(value, name, limit) {
-    return util.readIntegerInRange(value, `Text ${name}`, 0, limit - 1);
-  }
-
   // 可変 grid の画面バッファとフォント定義を初期化する
   constructor(gpu, options = {}) {
     // 既定では 80x25 だが、grid サイズを差し替えられるようにしておく
@@ -31,8 +19,8 @@ export default class Text {
     this.vertexBuffer = null;
     this.charOffset = 32; // for default font
     this.minCharCode = 0;
-    this.cols = Text.readOptionalInteger(options.cols, "cols", 80);
-    this.rows = Text.readOptionalInteger(options.rows, "rows", 25);
+    this.cols = util.readOptionalInteger(options.cols, "Text cols", 80, { min: 1 });
+    this.rows = util.readOptionalInteger(options.rows, "Text rows", 25, { min: 1 });
     this.letters = [
       [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
       [0,0,0,8,8,0,0,8,8,8,8,8,8,8,8,0],
@@ -137,8 +125,8 @@ export default class Text {
   // 80x25 を既定値にしつつ、sample や debug UI では必要に応じて
   // より細かい列数/行数へ切り替えられるようにする
   setGridSize(cols, rows) {
-    const nextCols = Text.readOptionalInteger(cols, "cols", this.cols);
-    const nextRows = Text.readOptionalInteger(rows, "rows", this.rows);
+    const nextCols = util.readOptionalInteger(cols, "Text cols", this.cols, { min: 1 });
+    const nextRows = util.readOptionalInteger(rows, "Text rows", this.rows, { min: 1 });
     if (nextCols === this.cols && nextRows === this.rows) {
       return { cols: this.cols, rows: this.rows };
     }
@@ -174,7 +162,7 @@ export default class Text {
   // 現在 scale で表示に使える列数 / 行数を返す
   // scale を 2.0 にすると各文字が 2 倍になり、見える列数/行数は半分になる
   getVisibleGridSize(scale = this.shader?.getScale?.() ?? 1.0) {
-    const safeScale = Text.readPositiveScale(scale);
+    const safeScale = util.readFiniteNumber(scale, "Text scale", { minExclusive: 0 });
     return {
       cols: Math.max(1, Math.floor(this.cols / safeScale)),
       rows: Math.max(1, Math.floor(this.rows / safeScale))
@@ -185,7 +173,7 @@ export default class Text {
   // Message.js は absolute な cols/rows ではなく、ここで返す visibleCols/visibleRows を
   // 参照して right/bottom anchor や center を決める
   getLayoutInfo(scale = this.shader?.getScale?.() ?? 1.0) {
-    const safeScale = Text.readPositiveScale(scale);
+    const safeScale = util.readFiniteNumber(scale, "Text scale", { minExclusive: 0 });
     const visible = this.getVisibleGridSize(safeScale);
     return {
       cols: this.cols,
@@ -200,8 +188,8 @@ export default class Text {
 
   // カーソル位置を移動する
   goTo(x, y) {
-    this.cursorX = Text.readGridCoordinate(x, "x", this.cols);
-    this.cursorY = Text.readGridCoordinate(y, "y", this.rows);
+    this.cursorX = util.readIntegerInRange(x, "Text x", 0, this.cols - 1);
+    this.cursorY = util.readIntegerInRange(y, "Text y", 0, this.rows - 1);
   }
 
   // 現在カーソルを保存する
@@ -302,7 +290,7 @@ export default class Text {
   // フォントスケールを設定する
   // 文字を大きくすると、見える列数/行数は getVisibleGridSize() の値に従って減る
   setScale(scale) {
-    const safeScale = Text.readPositiveScale(scale);
+    const safeScale = util.readFiniteNumber(scale, "Text scale", { minExclusive: 0 });
     if (this.shader !== null) {
       this.shader.setScale(safeScale);
     }
@@ -345,12 +333,17 @@ export default class Text {
     await this.shader.init();
     this.shader.setCellStep(2.0 / this.cols, 2.0 / this.rows);
     this.tex = new Texture(this.gpu);
-    let ok = false;
     if (texture_file !== undefined) {
-      ok = await this.tex.readImageFromFile(texture_file);
+      await this.tex.readImageFromFile(texture_file);
       this.charOffset = 0;
-    }
-    if (!ok) {
+      // 外部フォントは 16x8 配置(0x00..0x7F)として扱う
+      const w = this.tex.width;
+      const h = this.tex.height;
+      // External font atlas is treated as 16 columns x 8 rows (0x00..0x7F).
+      this.shader.setTexStep(1.0 / 16.0, 1.0 / 8.0);
+      this.shader.setTexelSize(1.0 / w, 1.0 / h);
+      this.shader.setFlipV(true);
+    } else {
       // 内蔵フォント(96文字)をCPU生成してテクスチャ化する
       this.initFont();
       await this.tex.initPromise;
@@ -359,14 +352,6 @@ export default class Text {
       this.shader.setTexStep(1.0 / 16.0, 1.0 / 8.0);
       this.shader.setTexelSize(1.0 / 128.0, 1.0 / 128.0);
       this.shader.setFlipV(false);
-    } else {
-      // 外部フォントは 16x8 配置(0x00..0x7F)として扱う
-      const w = this.tex.width;
-      const h = this.tex.height;
-      // External font atlas is treated as 16 columns x 8 rows (0x00..0x7F).
-      this.shader.setTexStep(1.0 / 16.0, 1.0 / 8.0);
-      this.shader.setTexelSize(1.0 / w, 1.0 / h);
-      this.shader.setFlipV(true);
     }
     this.makeShape();
     this.clearScreen();

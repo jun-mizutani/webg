@@ -8,10 +8,6 @@ import FullscreenPass from "./FullscreenPass.js";
 import util from "./util.js";
 
 export default class VignettePass extends FullscreenPass {
-  readFinite(value, name, { min = null, minExclusive = null, max = null } = {}) {
-    return util.readFiniteNumber(value, `VignettePass ${name}`, { min, minExclusive, max });
-  }
-
   // 最終 color texture の周辺だけを減衰させる最小 postprocess
   // renderer 本体へ追加の scene pass を要求せず、
   // 既存の offscreen target や canvas 出力へそのまま重ねられる形に保つ
@@ -147,25 +143,25 @@ fn fsMain(input : VSOut) -> @location(0) vec4f {
   setColorScale(r, g, b, a = 1.0) {
     const offset = Number.isFinite(this.OFF_COLOR_SCALE) ? this.OFF_COLOR_SCALE : 0;
     this.uniformData.set([
-      this.readFinite(r, "colorScale.r"),
-      this.readFinite(g, "colorScale.g"),
-      this.readFinite(b, "colorScale.b"),
-      this.readFinite(a, "colorScale.a")
+      util.readFiniteNumber(r, "VignettePass colorScale.r"),
+      util.readFiniteNumber(g, "VignettePass colorScale.g"),
+      util.readFiniteNumber(b, "VignettePass colorScale.b"),
+      util.readFiniteNumber(a, "VignettePass colorScale.a")
     ], offset);
     this.updateUniforms();
   }
 
   setUvScale(u, v) {
     const offset = Number.isFinite(this.OFF_UV_SCALE_OFFSET) ? this.OFF_UV_SCALE_OFFSET : 4;
-    this.uniformData[offset + 0] = this.readFinite(u, "uvScale.u");
-    this.uniformData[offset + 1] = this.readFinite(v, "uvScale.v");
+    this.uniformData[offset + 0] = util.readFiniteNumber(u, "VignettePass uvScale.u");
+    this.uniformData[offset + 1] = util.readFiniteNumber(v, "VignettePass uvScale.v");
     this.updateUniforms();
   }
 
   setUvOffset(u, v) {
     const offset = Number.isFinite(this.OFF_UV_SCALE_OFFSET) ? this.OFF_UV_SCALE_OFFSET : 4;
-    this.uniformData[offset + 2] = this.readFinite(u, "uvOffset.u");
-    this.uniformData[offset + 3] = this.readFinite(v, "uvOffset.v");
+    this.uniformData[offset + 2] = util.readFiniteNumber(u, "VignettePass uvOffset.u");
+    this.uniformData[offset + 3] = util.readFiniteNumber(v, "VignettePass uvOffset.v");
     this.updateUniforms();
   }
 
@@ -183,7 +179,7 @@ fn fsMain(input : VSOut) -> @location(0) vec4f {
   // vignette が完全に掛かり切る外周半径
   // 0.5 付近だと中心寄りから暗くなり、1.0 に近いほど周辺だけに寄る
   setRadius(value) {
-    const radius = this.readFinite(value, "radius", { minExclusive: 0 });
+    const radius = util.readFiniteNumber(value, "VignettePass radius", { minExclusive: 0 });
     const softness = this.uniformData[this.OFF_VIGNETTE + 3];
     if (Number.isFinite(softness) && softness > 0 && softness > radius) {
       throw new Error("VignettePass radius must be >= current softness");
@@ -196,14 +192,22 @@ fn fsMain(input : VSOut) -> @location(0) vec4f {
   // 値が小さいほど境界が硬く、大きいほど広い範囲でなだらかに暗くなる
   setSoftness(value) {
     const radius = this.uniformData[this.OFF_VIGNETTE + 2];
-    this.uniformData[this.OFF_VIGNETTE + 3] = this.readFinite(value, "softness", { minExclusive: 0, max: radius });
+    this.uniformData[this.OFF_VIGNETTE + 3] = util.readFiniteNumber(
+      value,
+      "VignettePass softness",
+      { minExclusive: 0, max: radius }
+    );
     this.updateUniforms();
   }
 
   // vignette の効きの強さ
   // 0 で無効、1 で tint 色まで完全に寄せる
   setStrength(value) {
-    this.uniformData[this.OFF_FLAGS + 0] = this.readFinite(value, "strength", { min: 0, max: 1 });
+    this.uniformData[this.OFF_FLAGS + 0] = util.readFiniteNumber(
+      value,
+      "VignettePass strength",
+      { min: 0, max: 1 }
+    );
     this.updateUniforms();
   }
 
@@ -220,10 +224,10 @@ fn fsMain(input : VSOut) -> @location(0) vec4f {
   // sepia 風などを試したい場合は黒以外へも変えられる
   setTint(r, g, b, a = 1.0) {
     this.uniformData.set([
-      this.readFinite(r, "tint.r"),
-      this.readFinite(g, "tint.g"),
-      this.readFinite(b, "tint.b"),
-      this.readFinite(a, "tint.a")
+      util.readFiniteNumber(r, "VignettePass tint.r"),
+      util.readFiniteNumber(g, "VignettePass tint.g"),
+      util.readFiniteNumber(b, "VignettePass tint.b"),
+      util.readFiniteNumber(a, "VignettePass tint.a")
     ], this.OFF_TINT);
     this.updateUniforms();
   }

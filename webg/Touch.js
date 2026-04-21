@@ -4,6 +4,8 @@
 //   released under the MIT open source license.
 // ---------------------------------------------
 
+import util from "./util.js";
+
 // 汎用タッチ入力UI:
 // - coarse pointer 端末向けの仮想ボタンを生成する
 // - hold/action の2種を統一的に扱う
@@ -69,13 +71,6 @@ export default class Touch {
       ...button,
       key: button.key
     };
-  }
-
-  readFiniteMetric(value, name) {
-    if (!Number.isFinite(value)) {
-      throw new Error(`Touch ${name} must be finite`);
-    }
-    return value;
   }
 
   isCoarsePointer() {
@@ -321,9 +316,9 @@ export default class Touch {
     const viewportWidth = Math.floor(rawViewportWidth);
     const groups = this.root.querySelectorAll(".webg-touch-group");
     const rootStyle = window.getComputedStyle(this.root);
-    const padLeft = this.readFiniteMetric(Number.parseFloat(rootStyle.paddingLeft), "root padding-left");
-    const padRight = this.readFiniteMetric(Number.parseFloat(rootStyle.paddingRight), "root padding-right");
-    const groupGap = this.readFiniteMetric(Number.parseFloat(rootStyle.columnGap), "root column-gap");
+    const padLeft = util.readFiniteNumber(Number.parseFloat(rootStyle.paddingLeft), "Touch root padding-left");
+    const padRight = util.readFiniteNumber(Number.parseFloat(rootStyle.paddingRight), "Touch root padding-right");
+    const groupGap = util.readFiniteNumber(Number.parseFloat(rootStyle.columnGap), "Touch root column-gap");
     let estimatedWidth = padLeft + padRight;
     const groupItems = [];
 
@@ -333,12 +328,12 @@ export default class Touch {
       let groupWidth = 0;
       for (let bi = 0; bi < btns.length; bi++) {
         const style = window.getComputedStyle(btns[bi]);
-        groupWidth += this.readFiniteMetric(Number.parseFloat(style.width), `button width[${gi}:${bi}]`);
+        groupWidth += util.readFiniteNumber(Number.parseFloat(style.width), `Touch button width[${gi}:${bi}]`);
       }
       const groupStyle = window.getComputedStyle(groups[gi]);
-      const btnGap = this.readFiniteMetric(
+      const btnGap = util.readFiniteNumber(
         Number.parseFloat(groupStyle.columnGap || groupStyle.gap),
-        `group gap[${gi}]`
+        `Touch group gap[${gi}]`
       );
       groupWidth += btnGap * Math.max(0, btns.length - 1);
       groupItems.push({ element: groups[gi], width: groupWidth, buttonCount: btns.length });

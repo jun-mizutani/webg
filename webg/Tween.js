@@ -147,7 +147,10 @@ export default class Tween {
   static resolveEasing(name = "linear") {
     const easingName = String(name ?? "linear").toLowerCase();
     const easingMap = Tween.getEasingMap();
-    return easingMap[easingName] ?? easingMap.linear;
+    if (!Object.prototype.hasOwnProperty.call(easingMap, easingName)) {
+      throw new Error(`Tween easing "${name}" is not supported`);
+    }
+    return easingMap[easingName];
   }
 
 // 開始値 snapshot を作る

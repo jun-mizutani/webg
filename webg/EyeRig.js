@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// EyeRig.js      2026/04/20
+// EyeRig.js      2026/04/21
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // ---------------------------------------------
@@ -21,13 +21,13 @@ export default class EyeRig {
     this.element = options.element ?? (this.doc ? this.doc.getElementById("canvas") : null);
     this.input = options.input ?? null;
     this.enabled = options.enabled !== false;
-    this.type = this.readEnumOption(
+    this.type = util.readEnumOption(
       [{ value: options.type, label: "options.type" }],
       "type",
       "orbit",
       ["orbit", "first-person", "follow"]
     );
-    this.dragButton = this.readFiniteOption(
+    this.dragButton = util.readFiniteOption(
       [{ value: options.dragButton, label: "options.dragButton" }],
       "dragButton",
       0,
@@ -35,7 +35,7 @@ export default class EyeRig {
     );
 
     this.orbit = {
-      target: this.readVec3Option(
+      target: util.readVec3Option(
         [
           { value: options.orbit?.target, label: "options.orbit.target" },
           { value: options.target, label: "options.target" }
@@ -43,7 +43,7 @@ export default class EyeRig {
         "orbit.target",
         [0.0, 0.0, 0.0]
       ),
-      yaw: this.readFiniteOption(
+      yaw: util.readFiniteOption(
         [
           { value: options.orbit?.yaw, label: "options.orbit.yaw" },
           { value: options.yaw, label: "options.yaw" }
@@ -51,7 +51,7 @@ export default class EyeRig {
         "orbit.yaw",
         0.0
       ),
-      pitch: this.readFiniteOption(
+      pitch: util.readFiniteOption(
         [
           { value: options.orbit?.pitch, label: "options.orbit.pitch" },
           { value: options.pitch, label: "options.pitch" }
@@ -59,7 +59,7 @@ export default class EyeRig {
         "orbit.pitch",
         0.0
       ),
-      bank: this.readFiniteOption(
+      bank: util.readFiniteOption(
         [
           { value: options.orbit?.bank, label: "options.orbit.bank" },
           { value: options.bank, label: "options.bank" }
@@ -67,22 +67,22 @@ export default class EyeRig {
         "orbit.bank",
         0.0
       ),
-      lookYaw: this.readFiniteOption(
+      lookYaw: util.readFiniteOption(
         [{ value: options.orbit?.lookYaw, label: "options.orbit.lookYaw" }],
         "orbit.lookYaw",
         0.0
       ),
-      lookPitch: this.readFiniteOption(
+      lookPitch: util.readFiniteOption(
         [{ value: options.orbit?.lookPitch, label: "options.orbit.lookPitch" }],
         "orbit.lookPitch",
         0.0
       ),
-      lookBank: this.readFiniteOption(
+      lookBank: util.readFiniteOption(
         [{ value: options.orbit?.lookBank, label: "options.orbit.lookBank" }],
         "orbit.lookBank",
         0.0
       ),
-      distance: this.readFiniteOption(
+      distance: util.readFiniteOption(
         [
           { value: options.orbit?.distance, label: "options.orbit.distance" },
           { value: options.distance, label: "options.distance" }
@@ -91,91 +91,91 @@ export default class EyeRig {
         28.0,
         { minExclusive: 0.0 }
       ),
-      minDistance: this.readFiniteOption(
+      minDistance: util.readFiniteOption(
         [{ value: options.orbit?.minDistance, label: "options.orbit.minDistance" }],
         "orbit.minDistance",
         4.0,
         { minExclusive: 0.0 }
       ),
-      maxDistance: this.readFiniteOption(
+      maxDistance: util.readFiniteOption(
         [{ value: options.orbit?.maxDistance, label: "options.orbit.maxDistance" }],
         "orbit.maxDistance",
         180.0,
         { minExclusive: 0.0 }
       ),
-      keyRotateSpeed: this.readFiniteOption(
+      keyRotateSpeed: util.readFiniteOption(
         [{ value: options.orbit?.keyRotateSpeed, label: "options.orbit.keyRotateSpeed" }],
         "orbit.keyRotateSpeed",
         72.0,
         { min: 0.0 }
       ),
-      keyZoomSpeed: this.readFiniteOption(
+      keyZoomSpeed: util.readFiniteOption(
         [{ value: options.orbit?.keyZoomSpeed, label: "options.orbit.keyZoomSpeed" }],
         "orbit.keyZoomSpeed",
         18.0,
         { min: 0.0 }
       ),
-      dragRotateSpeed: this.readFiniteOption(
+      dragRotateSpeed: util.readFiniteOption(
         [{ value: options.orbit?.dragRotateSpeed, label: "options.orbit.dragRotateSpeed" }],
         "orbit.dragRotateSpeed",
         0.28,
         { min: 0.0 }
       ),
-      dragPanSpeed: this.readFiniteOption(
+      dragPanSpeed: util.readFiniteOption(
         [{ value: options.orbit?.dragPanSpeed, label: "options.orbit.dragPanSpeed" }],
         "orbit.dragPanSpeed",
         2.0,
         { min: 0.0 }
       ),
-      pinchZoomSpeed: this.readFiniteOption(
+      pinchZoomSpeed: util.readFiniteOption(
         [{ value: options.orbit?.pinchZoomSpeed, label: "options.orbit.pinchZoomSpeed" }],
         "orbit.pinchZoomSpeed",
         2.2,
         { min: 0.0 }
       ),
-      wheelZoomStep: this.readFiniteOption(
+      wheelZoomStep: util.readFiniteOption(
         [{ value: options.orbit?.wheelZoomStep, label: "options.orbit.wheelZoomStep" }],
         "orbit.wheelZoomStep",
         1.8,
         { min: 0.0 }
       ),
-      pitchMin: this.readFiniteOption(
+      pitchMin: util.readFiniteOption(
         [{ value: options.orbit?.pitchMin, label: "options.orbit.pitchMin" }],
         "orbit.pitchMin",
         -85.0
       ),
-      pitchMax: this.readFiniteOption(
+      pitchMax: util.readFiniteOption(
         [{ value: options.orbit?.pitchMax, label: "options.orbit.pitchMax" }],
         "orbit.pitchMax",
         85.0
       ),
       keyMap: {
-        left: this.readKeyOption(
+        left: util.readKeyOption(
           [{ value: options.orbit?.keyMap?.left, label: "options.orbit.keyMap.left" }],
           "orbit.keyMap.left",
           "arrowleft"
         ),
-        right: this.readKeyOption(
+        right: util.readKeyOption(
           [{ value: options.orbit?.keyMap?.right, label: "options.orbit.keyMap.right" }],
           "orbit.keyMap.right",
           "arrowright"
         ),
-        up: this.readKeyOption(
+        up: util.readKeyOption(
           [{ value: options.orbit?.keyMap?.up, label: "options.orbit.keyMap.up" }],
           "orbit.keyMap.up",
           "arrowup"
         ),
-        down: this.readKeyOption(
+        down: util.readKeyOption(
           [{ value: options.orbit?.keyMap?.down, label: "options.orbit.keyMap.down" }],
           "orbit.keyMap.down",
           "arrowdown"
         ),
-        zoomIn: this.readKeyOption(
+        zoomIn: util.readKeyOption(
           [{ value: options.orbit?.keyMap?.zoomIn, label: "options.orbit.keyMap.zoomIn" }],
           "orbit.keyMap.zoomIn",
           "["
         ),
-        zoomOut: this.readKeyOption(
+        zoomOut: util.readKeyOption(
           [{ value: options.orbit?.keyMap?.zoomOut, label: "options.orbit.keyMap.zoomOut" }],
           "orbit.keyMap.zoomOut",
           "]"
@@ -184,7 +184,7 @@ export default class EyeRig {
     };
 
     this.firstPerson = {
-      position: this.readVec3Option(
+      position: util.readVec3Option(
         [
           { value: options.firstPerson?.position, label: "options.firstPerson.position" },
           { value: options.position, label: "options.position" }
@@ -192,7 +192,7 @@ export default class EyeRig {
         "firstPerson.position",
         [0.0, 0.0, 0.0]
       ),
-      bodyYaw: this.readFiniteOption(
+      bodyYaw: util.readFiniteOption(
         [
           { value: options.firstPerson?.bodyYaw, label: "options.firstPerson.bodyYaw" },
           { value: options.firstPerson?.yaw, label: "options.firstPerson.yaw" },
@@ -201,22 +201,22 @@ export default class EyeRig {
         "firstPerson.bodyYaw",
         0.0
       ),
-      bodyPitch: this.readFiniteOption(
+      bodyPitch: util.readFiniteOption(
         [{ value: options.firstPerson?.bodyPitch, label: "options.firstPerson.bodyPitch" }],
         "firstPerson.bodyPitch",
         0.0
       ),
-      bodyBank: this.readFiniteOption(
+      bodyBank: util.readFiniteOption(
         [{ value: options.firstPerson?.bodyBank, label: "options.firstPerson.bodyBank" }],
         "firstPerson.bodyBank",
         0.0
       ),
-      lookYaw: this.readFiniteOption(
+      lookYaw: util.readFiniteOption(
         [{ value: options.firstPerson?.lookYaw, label: "options.firstPerson.lookYaw" }],
         "firstPerson.lookYaw",
         0.0
       ),
-      lookPitch: this.readFiniteOption(
+      lookPitch: util.readFiniteOption(
         [
           { value: options.firstPerson?.lookPitch, label: "options.firstPerson.lookPitch" },
           { value: options.pitch, label: "options.pitch" }
@@ -224,7 +224,7 @@ export default class EyeRig {
         "firstPerson.lookPitch",
         0.0
       ),
-      lookBank: this.readFiniteOption(
+      lookBank: util.readFiniteOption(
         [
           { value: options.firstPerson?.lookBank, label: "options.firstPerson.lookBank" },
           { value: options.bank, label: "options.bank" }
@@ -232,71 +232,71 @@ export default class EyeRig {
         "firstPerson.lookBank",
         0.0
       ),
-      eyeHeight: this.readFiniteOption(
+      eyeHeight: util.readFiniteOption(
         [{ value: options.firstPerson?.eyeHeight, label: "options.firstPerson.eyeHeight" }],
         "firstPerson.eyeHeight",
         1.6
       ),
-      moveSpeed: this.readFiniteOption(
+      moveSpeed: util.readFiniteOption(
         [{ value: options.firstPerson?.moveSpeed, label: "options.firstPerson.moveSpeed" }],
         "firstPerson.moveSpeed",
         10.0,
         { min: 0.0 }
       ),
-      runMultiplier: this.readFiniteOption(
+      runMultiplier: util.readFiniteOption(
         [{ value: options.firstPerson?.runMultiplier, label: "options.firstPerson.runMultiplier" }],
         "firstPerson.runMultiplier",
         2.0,
         { min: 0.0 }
       ),
-      dragRotateSpeed: this.readFiniteOption(
+      dragRotateSpeed: util.readFiniteOption(
         [{ value: options.firstPerson?.dragRotateSpeed, label: "options.firstPerson.dragRotateSpeed" }],
         "firstPerson.dragRotateSpeed",
         0.20,
         { min: 0.0 }
       ),
-      lookPitchMin: this.readFiniteOption(
+      lookPitchMin: util.readFiniteOption(
         [{ value: options.firstPerson?.lookPitchMin, label: "options.firstPerson.lookPitchMin" }],
         "firstPerson.lookPitchMin",
         -85.0
       ),
-      lookPitchMax: this.readFiniteOption(
+      lookPitchMax: util.readFiniteOption(
         [{ value: options.firstPerson?.lookPitchMax, label: "options.firstPerson.lookPitchMax" }],
         "firstPerson.lookPitchMax",
         85.0
       ),
       keyMap: {
-        forward: this.readKeyOption(
+        forward: util.readKeyOption(
           [{ value: options.firstPerson?.keyMap?.forward, label: "options.firstPerson.keyMap.forward" }],
           "firstPerson.keyMap.forward",
           "w"
         ),
-        back: this.readKeyOption(
+        back: util.readKeyOption(
           [{ value: options.firstPerson?.keyMap?.back, label: "options.firstPerson.keyMap.back" }],
           "firstPerson.keyMap.back",
           "s"
         ),
-        left: this.readKeyOption(
+        left: util.readKeyOption(
           [{ value: options.firstPerson?.keyMap?.left, label: "options.firstPerson.keyMap.left" }],
           "firstPerson.keyMap.left",
           "a"
         ),
-        right: this.readKeyOption(
+        right: util.readKeyOption(
           [{ value: options.firstPerson?.keyMap?.right, label: "options.firstPerson.keyMap.right" }],
           "firstPerson.keyMap.right",
           "d"
         ),
-        up: this.readKeyOption(
+        up: util.readKeyOption(
           [{ value: options.firstPerson?.keyMap?.up, label: "options.firstPerson.keyMap.up" }],
           "firstPerson.keyMap.up",
           "e"
         ),
-        down: this.readKeyOption(
+        down: util.readKeyOption(
           [{ value: options.firstPerson?.keyMap?.down, label: "options.firstPerson.keyMap.down" }],
           "firstPerson.keyMap.down",
           "q"
         ),
-        run: this.readKeyOption(
+        run: util.readKeyOption(
           [{ value: options.firstPerson?.keyMap?.run, label: "options.firstPerson.keyMap.run" }],
           "firstPerson.keyMap.run",
           "shift"
@@ -306,13 +306,13 @@ export default class EyeRig {
 
     this.follow = {
       targetNode: options.follow?.targetNode ?? options.targetNode ?? null,
-      targetOffset: this.readVec3Option(
+      targetOffset: util.readVec3Option(
         [{ value: options.follow?.targetOffset, label: "options.follow.targetOffset" }],
         "follow.targetOffset",
         [0.0, 0.0, 0.0]
       ),
       currentTarget: [0.0, 0.0, 0.0],
-      yaw: this.readFiniteOption(
+      yaw: util.readFiniteOption(
         [
           { value: options.follow?.yaw, label: "options.follow.yaw" },
           { value: options.yaw, label: "options.yaw" }
@@ -320,7 +320,7 @@ export default class EyeRig {
         "follow.yaw",
         0.0
       ),
-      pitch: this.readFiniteOption(
+      pitch: util.readFiniteOption(
         [
           { value: options.follow?.pitch, label: "options.follow.pitch" },
           { value: options.pitch, label: "options.pitch" }
@@ -328,7 +328,7 @@ export default class EyeRig {
         "follow.pitch",
         -12.0
       ),
-      bank: this.readFiniteOption(
+      bank: util.readFiniteOption(
         [
           { value: options.follow?.bank, label: "options.follow.bank" },
           { value: options.bank, label: "options.bank" }
@@ -336,22 +336,22 @@ export default class EyeRig {
         "follow.bank",
         0.0
       ),
-      lookYaw: this.readFiniteOption(
+      lookYaw: util.readFiniteOption(
         [{ value: options.follow?.lookYaw, label: "options.follow.lookYaw" }],
         "follow.lookYaw",
         0.0
       ),
-      lookPitch: this.readFiniteOption(
+      lookPitch: util.readFiniteOption(
         [{ value: options.follow?.lookPitch, label: "options.follow.lookPitch" }],
         "follow.lookPitch",
         0.0
       ),
-      lookBank: this.readFiniteOption(
+      lookBank: util.readFiniteOption(
         [{ value: options.follow?.lookBank, label: "options.follow.lookBank" }],
         "follow.lookBank",
         0.0
       ),
-      distance: this.readFiniteOption(
+      distance: util.readFiniteOption(
         [
           { value: options.follow?.distance, label: "options.follow.distance" },
           { value: options.distance, label: "options.distance" }
@@ -360,101 +360,101 @@ export default class EyeRig {
         18.0,
         { minExclusive: 0.0 }
       ),
-      minDistance: this.readFiniteOption(
+      minDistance: util.readFiniteOption(
         [{ value: options.follow?.minDistance, label: "options.follow.minDistance" }],
         "follow.minDistance",
         3.0,
         { minExclusive: 0.0 }
       ),
-      maxDistance: this.readFiniteOption(
+      maxDistance: util.readFiniteOption(
         [{ value: options.follow?.maxDistance, label: "options.follow.maxDistance" }],
         "follow.maxDistance",
         120.0,
         { minExclusive: 0.0 }
       ),
-      keyRotateSpeed: this.readFiniteOption(
+      keyRotateSpeed: util.readFiniteOption(
         [{ value: options.follow?.keyRotateSpeed, label: "options.follow.keyRotateSpeed" }],
         "follow.keyRotateSpeed",
         72.0,
         { min: 0.0 }
       ),
-      keyZoomSpeed: this.readFiniteOption(
+      keyZoomSpeed: util.readFiniteOption(
         [{ value: options.follow?.keyZoomSpeed, label: "options.follow.keyZoomSpeed" }],
         "follow.keyZoomSpeed",
         16.0,
         { min: 0.0 }
       ),
-      dragRotateSpeed: this.readFiniteOption(
+      dragRotateSpeed: util.readFiniteOption(
         [{ value: options.follow?.dragRotateSpeed, label: "options.follow.dragRotateSpeed" }],
         "follow.dragRotateSpeed",
         0.28,
         { min: 0.0 }
       ),
-      dragPanSpeed: this.readFiniteOption(
+      dragPanSpeed: util.readFiniteOption(
         [{ value: options.follow?.dragPanSpeed, label: "options.follow.dragPanSpeed" }],
         "follow.dragPanSpeed",
         1.8,
         { min: 0.0 }
       ),
-      pinchZoomSpeed: this.readFiniteOption(
+      pinchZoomSpeed: util.readFiniteOption(
         [{ value: options.follow?.pinchZoomSpeed, label: "options.follow.pinchZoomSpeed" }],
         "follow.pinchZoomSpeed",
         2.0,
         { min: 0.0 }
       ),
-      followLerp: this.readFiniteOption(
+      followLerp: util.readFiniteOption(
         [{ value: options.follow?.followLerp, label: "options.follow.followLerp" }],
         "follow.followLerp",
         1.0,
         { min: 0.0 }
       ),
-      inheritTargetYaw: this.readBooleanOption(
+      inheritTargetYaw: util.readBooleanOption(
         [{ value: options.follow?.inheritTargetYaw, label: "options.follow.inheritTargetYaw" }],
         "follow.inheritTargetYaw",
         false
       ),
-      targetYawOffset: this.readFiniteOption(
+      targetYawOffset: util.readFiniteOption(
         [{ value: options.follow?.targetYawOffset, label: "options.follow.targetYawOffset" }],
         "follow.targetYawOffset",
         0.0
       ),
-      pitchMin: this.readFiniteOption(
+      pitchMin: util.readFiniteOption(
         [{ value: options.follow?.pitchMin, label: "options.follow.pitchMin" }],
         "follow.pitchMin",
         -80.0
       ),
-      pitchMax: this.readFiniteOption(
+      pitchMax: util.readFiniteOption(
         [{ value: options.follow?.pitchMax, label: "options.follow.pitchMax" }],
         "follow.pitchMax",
         60.0
       ),
       keyMap: {
-        left: this.readKeyOption(
+        left: util.readKeyOption(
           [{ value: options.follow?.keyMap?.left, label: "options.follow.keyMap.left" }],
           "follow.keyMap.left",
           "arrowleft"
         ),
-        right: this.readKeyOption(
+        right: util.readKeyOption(
           [{ value: options.follow?.keyMap?.right, label: "options.follow.keyMap.right" }],
           "follow.keyMap.right",
           "arrowright"
         ),
-        up: this.readKeyOption(
+        up: util.readKeyOption(
           [{ value: options.follow?.keyMap?.up, label: "options.follow.keyMap.up" }],
           "follow.keyMap.up",
           "arrowup"
         ),
-        down: this.readKeyOption(
+        down: util.readKeyOption(
           [{ value: options.follow?.keyMap?.down, label: "options.follow.keyMap.down" }],
           "follow.keyMap.down",
           "arrowdown"
         ),
-        zoomIn: this.readKeyOption(
+        zoomIn: util.readKeyOption(
           [{ value: options.follow?.keyMap?.zoomIn, label: "options.follow.keyMap.zoomIn" }],
           "follow.keyMap.zoomIn",
           "["
         ),
-        zoomOut: this.readKeyOption(
+        zoomOut: util.readKeyOption(
           [{ value: options.follow?.keyMap?.zoomOut, label: "options.follow.keyMap.zoomOut" }],
           "follow.keyMap.zoomOut",
           "]"
@@ -497,37 +497,6 @@ export default class EyeRig {
     this._boundBlur = () => this.cancelDrag();
     this.syncTarget(true);
     this.apply(true);
-  }
-
-  findDefinedOption(candidates = []) {
-    return util.resolveOptionCandidate(candidates);
-  }
-
-  readFiniteOption(candidates, name, defaultValue, constraints = {}) {
-    return util.readFiniteOption(candidates, `EyeRig ${name}`, defaultValue, constraints);
-  }
-
-  readVec3Option(candidates, name, defaultValue) {
-    return util.readVec3Option(candidates, `EyeRig ${name}`, defaultValue);
-  }
-
-  readKeyOption(candidates, name, defaultValue) {
-    return util.readKeyOption(candidates, `EyeRig ${name}`, defaultValue);
-  }
-
-  readEnumOption(candidates, name, defaultValue, allowed = []) {
-    return util.readEnumOption(candidates, `EyeRig ${name}`, defaultValue, allowed);
-  }
-
-  readBooleanOption(candidates, name, defaultValue) {
-    return util.readBooleanOption(candidates, `EyeRig ${name}`, defaultValue);
-  }
-
-  requireFiniteNumber(value, name) {
-    if (!Number.isFinite(value)) {
-      throw new Error(`EyeRig ${name} must be finite`);
-    }
-    return Number(value);
   }
 
   static fromNodes(baseNode, eyeNode, options = {}) {
@@ -593,17 +562,17 @@ export default class EyeRig {
   }
 
   setTarget(x, y, z) {
-    this.orbit.target[0] = this.requireFiniteNumber(x, "target.x");
-    this.orbit.target[1] = this.requireFiniteNumber(y, "target.y");
-    this.orbit.target[2] = this.requireFiniteNumber(z, "target.z");
+    this.orbit.target[0] = util.readFiniteNumber(x, "target.x");
+    this.orbit.target[1] = util.readFiniteNumber(y, "target.y");
+    this.orbit.target[2] = util.readFiniteNumber(z, "target.z");
     if (this.type === "orbit") this.apply();
     return this;
   }
 
   setPosition(x, y, z) {
-    this.firstPerson.position[0] = this.requireFiniteNumber(x, "position.x");
-    this.firstPerson.position[1] = this.requireFiniteNumber(y, "position.y");
-    this.firstPerson.position[2] = this.requireFiniteNumber(z, "position.z");
+    this.firstPerson.position[0] = util.readFiniteNumber(x, "position.x");
+    this.firstPerson.position[1] = util.readFiniteNumber(y, "position.y");
+    this.firstPerson.position[2] = util.readFiniteNumber(z, "position.z");
     if (this.type === "first-person") this.apply();
     return this;
   }
@@ -616,16 +585,16 @@ export default class EyeRig {
   }
 
   setTargetOffset(x, y, z) {
-    this.follow.targetOffset[0] = this.requireFiniteNumber(x, "targetOffset.x");
-    this.follow.targetOffset[1] = this.requireFiniteNumber(y, "targetOffset.y");
-    this.follow.targetOffset[2] = this.requireFiniteNumber(z, "targetOffset.z");
+    this.follow.targetOffset[0] = util.readFiniteNumber(x, "targetOffset.x");
+    this.follow.targetOffset[1] = util.readFiniteNumber(y, "targetOffset.y");
+    this.follow.targetOffset[2] = util.readFiniteNumber(z, "targetOffset.z");
     this.syncTarget(true);
     if (this.type === "follow") this.apply();
     return this;
   }
 
   setDistance(distance) {
-    const numeric = this.requireFiniteNumber(distance, "distance");
+    const numeric = util.readFiniteNumber(distance, "distance");
     if (this.type === "follow") {
       if (numeric < this.follow.minDistance || numeric > this.follow.maxDistance) {
         throw new Error(`EyeRig distance must be within ${this.follow.minDistance} - ${this.follow.maxDistance}`);
@@ -643,9 +612,9 @@ export default class EyeRig {
 
   // `setAngles` は eye ではなく base/rod 側の向きを操作する
   setAngles(head, pitch, bank = 0.0) {
-    const nextHead = this.requireFiniteNumber(head, "angles.head");
-    const nextPitch = this.requireFiniteNumber(pitch, "angles.pitch");
-    const nextBank = this.requireFiniteNumber(bank, "angles.bank");
+    const nextHead = util.readFiniteNumber(head, "angles.head");
+    const nextPitch = util.readFiniteNumber(pitch, "angles.pitch");
+    const nextBank = util.readFiniteNumber(bank, "angles.bank");
     if (this.type === "orbit") {
       if (nextPitch < this.orbit.pitchMin || nextPitch > this.orbit.pitchMax) {
         throw new Error(`EyeRig orbit pitch must be within ${this.orbit.pitchMin} - ${this.orbit.pitchMax}`);
@@ -671,9 +640,9 @@ export default class EyeRig {
 
   // 進行方向とは独立した camera の向きは eye 側へ与える
   setLookAngles(head, pitch, bank = 0.0) {
-    const nextHead = this.requireFiniteNumber(head, "lookAngles.head");
-    const nextPitch = this.requireFiniteNumber(pitch, "lookAngles.pitch");
-    const nextBank = this.requireFiniteNumber(bank, "lookAngles.bank");
+    const nextHead = util.readFiniteNumber(head, "lookAngles.head");
+    const nextPitch = util.readFiniteNumber(pitch, "lookAngles.pitch");
+    const nextBank = util.readFiniteNumber(bank, "lookAngles.bank");
     if (this.type === "orbit") {
       this.orbit.lookYaw = nextHead;
       this.orbit.lookPitch = nextPitch;
@@ -695,13 +664,13 @@ export default class EyeRig {
   }
 
   setEyeHeight(height) {
-    this.firstPerson.eyeHeight = this.requireFiniteNumber(height, "eyeHeight");
+    this.firstPerson.eyeHeight = util.readFiniteNumber(height, "eyeHeight");
     if (this.type === "first-person") this.apply();
     return this;
   }
 
   setRodLength(length) {
-    const numeric = this.requireFiniteNumber(length, "rodLength");
+    const numeric = util.readFiniteNumber(length, "rodLength");
     if (this.type === "follow") {
       if (numeric < this.follow.minDistance || numeric > this.follow.maxDistance) {
         throw new Error(`EyeRig rodLength must be within ${this.follow.minDistance} - ${this.follow.maxDistance}`);
@@ -777,7 +746,7 @@ export default class EyeRig {
   }
 
   update(deltaSec) {
-    this.requireFiniteNumber(deltaSec, "deltaSec");
+    util.readFiniteNumber(deltaSec, "deltaSec");
     if (!this.enabled) return this;
     if (this.type === "orbit") {
       this.updateOrbit(deltaSec);

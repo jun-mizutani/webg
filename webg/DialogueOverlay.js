@@ -8,13 +8,6 @@ import UIPanel from "./UIPanel.js";
 import util from "./util.js";
 
 const hasOwn = util.hasOwn;
-const readPlainObject = util.readPlainObject;
-const readOptionalString = (value, path, fallback) => util.readOptionalString(value, path, fallback);
-const readOptionalBoolean = (value, path, fallback) => util.readOptionalBoolean(value, path, fallback);
-const readOptionalFunction = (value, path, fallback) => util.readOptionalFunction(value, path, fallback);
-const readOptionalInteger = (value, path, fallback, minimum = 0) => util.readOptionalInteger(value, path, fallback, { min: minimum });
-const readOptionalPositioningMode = (value, path, fallback) => util.readOptionalPositioningMode(value, path, fallback);
-const readOptionalElement = util.readOptionalElement;
 
 const toTextLines = (value) => {
   if (Array.isArray(value)) {
@@ -204,11 +197,11 @@ export class MessageQueue {
 export default class Dialogue {
   // DOM overlay を使って、会話 / tutorial を UTF-8 文字列で表示する
   constructor(options = {}) {
-    const safeOptions = readPlainObject(options, "Dialogue options");
+    const safeOptions = util.readPlainObject(options, "Dialogue options");
     this.doc = options.document ?? (typeof document !== "undefined" ? document : null);
-    this.theme = { ...UIPanel.normalizeTheme(safeOptions.theme, "Dialogue theme") };
+    this.theme = { ...util.readPlainObject(safeOptions.theme, "Dialogue theme", {}) };
     this.layoutOptions = {
-      id: readOptionalString(safeOptions.id, "Dialogue id", "webg-dialogue-overlay"),
+      id: util.readOptionalString(safeOptions.id, "Dialogue id", "webg-dialogue-overlay"),
       leftWidth: "minmax(320px, 540px)",
       rightWidth: "minmax(260px, 360px)",
       gap: 12,
@@ -217,56 +210,56 @@ export default class Dialogue {
       spreadColumns: false,
       collapseWidth: 980,
       compactWidth: 760,
-      positioningMode: readOptionalPositioningMode(
+      positioningMode: util.readOptionalPositioningMode(
         safeOptions.positioningMode,
         "Dialogue positioningMode",
         "fixed"
       ),
-      containerElement: readOptionalElement(safeOptions.containerElement, "Dialogue containerElement", null),
-      viewportElement: readOptionalElement(safeOptions.viewportElement, "Dialogue viewportElement", null),
+      containerElement: util.readOptionalElement(safeOptions.containerElement, "Dialogue containerElement", null),
+      viewportElement: util.readOptionalElement(safeOptions.viewportElement, "Dialogue viewportElement", null),
       top: undefined,
       left: undefined,
       right: undefined
     };
     this.applyLayoutOptions(safeOptions);
-    this.title = readOptionalString(safeOptions.title, "Dialogue title", "Dialogue");
-    this.footerText = readOptionalString(
+    this.title = util.readOptionalString(safeOptions.title, "Dialogue title", "Dialogue");
+    this.footerText = util.readOptionalString(
       safeOptions.footer,
       "Dialogue footer",
       "Enter: next  1 / 2: choose  R: restart"
     );
-    this.stateTitle = readOptionalString(safeOptions.stateTitle, "Dialogue stateTitle", "STATE");
-    this.choicePromptText = readOptionalString(
+    this.stateTitle = util.readOptionalString(safeOptions.stateTitle, "Dialogue stateTitle", "STATE");
+    this.choicePromptText = util.readOptionalString(
       safeOptions.choicePromptText,
       "Dialogue choicePromptText",
       "1 / 2 で分岐を選択"
     );
-    this.advancePromptText = readOptionalString(
+    this.advancePromptText = util.readOptionalString(
       safeOptions.advancePromptText,
       "Dialogue advancePromptText",
       "Enter / Space で次へ進む"
     );
-    this.visibleHintText = readOptionalString(
+    this.visibleHintText = util.readOptionalString(
       safeOptions.visibleHintText,
       "Dialogue visibleHintText",
       "左は本文、右は会話状態と選択状況"
     );
-    this.hiddenHintText = readOptionalString(
+    this.hiddenHintText = util.readOptionalString(
       safeOptions.hiddenHintText,
       "Dialogue hiddenHintText",
       "DialogueOverlay は閉じています"
     );
-    this.showNextButton = readOptionalBoolean(safeOptions.showNextButton, "Dialogue showNextButton", true);
-    this.showRestartButton = readOptionalBoolean(safeOptions.showRestartButton, "Dialogue showRestartButton", true);
-    this.showHideButton = readOptionalBoolean(safeOptions.showHideButton, "Dialogue showHideButton", true);
-    this.appendHistory = readOptionalBoolean(safeOptions.appendHistory, "Dialogue appendHistory", false);
-    this.flipMainPanelBySide = readOptionalBoolean(
+    this.showNextButton = util.readOptionalBoolean(safeOptions.showNextButton, "Dialogue showNextButton", true);
+    this.showRestartButton = util.readOptionalBoolean(safeOptions.showRestartButton, "Dialogue showRestartButton", true);
+    this.showHideButton = util.readOptionalBoolean(safeOptions.showHideButton, "Dialogue showHideButton", true);
+    this.appendHistory = util.readOptionalBoolean(safeOptions.appendHistory, "Dialogue appendHistory", false);
+    this.flipMainPanelBySide = util.readOptionalBoolean(
       safeOptions.flipMainPanelBySide,
       "Dialogue flipMainPanelBySide",
       true
     );
-    this.stateLinesProvider = readOptionalFunction(safeOptions.getStateLines, "Dialogue getStateLines", null);
-    this.dockOffsetProvider = readOptionalFunction(safeOptions.getDockOffset, "Dialogue getDockOffset", null);
+    this.stateLinesProvider = util.readOptionalFunction(safeOptions.getStateLines, "Dialogue getStateLines", null);
+    this.dockOffsetProvider = util.readOptionalFunction(safeOptions.getDockOffset, "Dialogue getDockOffset", null);
     this.queue = new MessageQueue();
     this.sourceEntries = [];
     this.historyEntries = [];
@@ -279,7 +272,7 @@ export default class Dialogue {
   }
 
   setTheme(theme = {}) {
-    this.theme = { ...UIPanel.normalizeTheme(theme, "Dialogue theme") };
+    this.theme = { ...util.readPlainObject(theme, "Dialogue theme", {}) };
     if (this.uiPanels) {
       this.uiPanels.setTheme(this.theme);
     }
@@ -287,107 +280,107 @@ export default class Dialogue {
   }
 
   setDockOffsetProvider(fn) {
-    this.dockOffsetProvider = readOptionalFunction(fn, "Dialogue dockOffsetProvider", null);
+    this.dockOffsetProvider = util.readOptionalFunction(fn, "Dialogue dockOffsetProvider", null);
     return this;
   }
 
   // overlay の幅、余白、折り返し幅、固定位置を必要に応じて更新する
   // sample ごとに「中央へ張り出しにくい配置」へ寄せたい場合もここから調整する
   applyLayoutOptions(options = {}, syncDom = false) {
-    const safeOptions = readPlainObject(options, "Dialogue layout options");
+    const safeOptions = util.readPlainObject(options, "Dialogue layout options");
     if (hasOwn(safeOptions, "id")) {
-      const id = readOptionalString(safeOptions.id, "Dialogue id", undefined);
+      const id = util.readOptionalString(safeOptions.id, "Dialogue id", undefined);
       if (!id) {
         throw new Error("Dialogue id must be a non-empty string");
       }
       this.layoutOptions.id = id;
     }
     if (hasOwn(safeOptions, "leftWidth")) {
-      const leftWidth = readOptionalString(safeOptions.leftWidth, "Dialogue leftWidth", undefined);
+      const leftWidth = util.readOptionalString(safeOptions.leftWidth, "Dialogue leftWidth", undefined);
       if (!leftWidth) {
         throw new Error("Dialogue leftWidth must be a non-empty string");
       }
       this.layoutOptions.leftWidth = leftWidth;
     }
     if (hasOwn(safeOptions, "rightWidth")) {
-      const rightWidth = readOptionalString(safeOptions.rightWidth, "Dialogue rightWidth", undefined);
+      const rightWidth = util.readOptionalString(safeOptions.rightWidth, "Dialogue rightWidth", undefined);
       if (!rightWidth) {
         throw new Error("Dialogue rightWidth must be a non-empty string");
       }
       this.layoutOptions.rightWidth = rightWidth;
     }
     if (hasOwn(safeOptions, "gap")) {
-      const gap = readOptionalInteger(safeOptions.gap, "Dialogue gap", undefined, 8);
+      const gap = util.readOptionalInteger(safeOptions.gap, "Dialogue gap", undefined, { min: 8 });
       this.layoutOptions.gap = gap;
     }
     if (hasOwn(safeOptions, "columnMaxHeight")) {
-      const columnMaxHeight = readOptionalInteger(
+      const columnMaxHeight = util.readOptionalInteger(
         safeOptions.columnMaxHeight,
         "Dialogue columnMaxHeight",
         undefined,
-        120
+        { min: 120 }
       );
       this.layoutOptions.columnMaxHeight = columnMaxHeight;
     }
     if (hasOwn(safeOptions, "scrollColumns")) {
-      this.layoutOptions.scrollColumns = readOptionalBoolean(
+      this.layoutOptions.scrollColumns = util.readOptionalBoolean(
         safeOptions.scrollColumns,
         "Dialogue scrollColumns",
         this.layoutOptions.scrollColumns
       );
     }
     if (hasOwn(safeOptions, "spreadColumns")) {
-      this.layoutOptions.spreadColumns = readOptionalBoolean(
+      this.layoutOptions.spreadColumns = util.readOptionalBoolean(
         safeOptions.spreadColumns,
         "Dialogue spreadColumns",
         this.layoutOptions.spreadColumns
       );
     }
     if (hasOwn(safeOptions, "collapseWidth")) {
-      this.layoutOptions.collapseWidth = readOptionalInteger(
+      this.layoutOptions.collapseWidth = util.readOptionalInteger(
         safeOptions.collapseWidth,
         "Dialogue collapseWidth",
         undefined,
-        0
+        { min: 0 }
       );
     }
     if (hasOwn(safeOptions, "compactWidth")) {
-      this.layoutOptions.compactWidth = readOptionalInteger(
+      this.layoutOptions.compactWidth = util.readOptionalInteger(
         safeOptions.compactWidth,
         "Dialogue compactWidth",
         undefined,
-        0
+        { min: 0 }
       );
     }
     if (hasOwn(safeOptions, "positioningMode")) {
-      this.layoutOptions.positioningMode = readOptionalPositioningMode(
+      this.layoutOptions.positioningMode = util.readOptionalPositioningMode(
         safeOptions.positioningMode,
         "Dialogue positioningMode",
         this.layoutOptions.positioningMode
       );
     }
     if (hasOwn(safeOptions, "containerElement")) {
-      this.layoutOptions.containerElement = readOptionalElement(
+      this.layoutOptions.containerElement = util.readOptionalElement(
         safeOptions.containerElement,
         "Dialogue containerElement",
         null
       );
     }
     if (hasOwn(safeOptions, "viewportElement")) {
-      this.layoutOptions.viewportElement = readOptionalElement(
+      this.layoutOptions.viewportElement = util.readOptionalElement(
         safeOptions.viewportElement,
         "Dialogue viewportElement",
         null
       );
     }
     if (hasOwn(safeOptions, "top")) {
-      this.layoutOptions.top = readOptionalInteger(safeOptions.top, "Dialogue top", undefined, 0);
+      this.layoutOptions.top = util.readOptionalInteger(safeOptions.top, "Dialogue top", undefined, { min: 0 });
     }
     if (hasOwn(safeOptions, "left")) {
-      this.layoutOptions.left = readOptionalInteger(safeOptions.left, "Dialogue left", undefined, 0);
+      this.layoutOptions.left = util.readOptionalInteger(safeOptions.left, "Dialogue left", undefined, { min: 0 });
     }
     if (hasOwn(safeOptions, "right")) {
-      this.layoutOptions.right = readOptionalInteger(safeOptions.right, "Dialogue right", undefined, 0);
+      this.layoutOptions.right = util.readOptionalInteger(safeOptions.right, "Dialogue right", undefined, { min: 0 });
     }
     if (syncDom && this.layout?.root) {
       const root = this.layout.root;
@@ -422,89 +415,89 @@ export default class Dialogue {
   }
 
   setLayout(options = {}) {
-    const safeOptions = readPlainObject(options, "Dialogue setLayout options");
+    const safeOptions = util.readPlainObject(options, "Dialogue setLayout options");
     this.applyLayoutOptions(safeOptions, true);
     if (hasOwn(safeOptions, "title")) {
-      this.title = readOptionalString(safeOptions.title, "Dialogue title", this.title);
+      this.title = util.readOptionalString(safeOptions.title, "Dialogue title", this.title);
     }
     if (hasOwn(safeOptions, "footer")) {
-      this.footerText = readOptionalString(safeOptions.footer, "Dialogue footer", this.footerText);
+      this.footerText = util.readOptionalString(safeOptions.footer, "Dialogue footer", this.footerText);
     }
     if (hasOwn(safeOptions, "stateTitle")) {
-      this.stateTitle = readOptionalString(safeOptions.stateTitle, "Dialogue stateTitle", this.stateTitle);
+      this.stateTitle = util.readOptionalString(safeOptions.stateTitle, "Dialogue stateTitle", this.stateTitle);
     }
     if (hasOwn(safeOptions, "choicePromptText")) {
-      this.choicePromptText = readOptionalString(
+      this.choicePromptText = util.readOptionalString(
         safeOptions.choicePromptText,
         "Dialogue choicePromptText",
         this.choicePromptText
       );
     }
     if (hasOwn(safeOptions, "advancePromptText")) {
-      this.advancePromptText = readOptionalString(
+      this.advancePromptText = util.readOptionalString(
         safeOptions.advancePromptText,
         "Dialogue advancePromptText",
         this.advancePromptText
       );
     }
     if (hasOwn(safeOptions, "visibleHintText")) {
-      this.visibleHintText = readOptionalString(
+      this.visibleHintText = util.readOptionalString(
         safeOptions.visibleHintText,
         "Dialogue visibleHintText",
         this.visibleHintText
       );
     }
     if (hasOwn(safeOptions, "hiddenHintText")) {
-      this.hiddenHintText = readOptionalString(
+      this.hiddenHintText = util.readOptionalString(
         safeOptions.hiddenHintText,
         "Dialogue hiddenHintText",
         this.hiddenHintText
       );
     }
     if (hasOwn(safeOptions, "showNextButton")) {
-      this.showNextButton = readOptionalBoolean(
+      this.showNextButton = util.readOptionalBoolean(
         safeOptions.showNextButton,
         "Dialogue showNextButton",
         this.showNextButton
       );
     }
     if (hasOwn(safeOptions, "showRestartButton")) {
-      this.showRestartButton = readOptionalBoolean(
+      this.showRestartButton = util.readOptionalBoolean(
         safeOptions.showRestartButton,
         "Dialogue showRestartButton",
         this.showRestartButton
       );
     }
     if (hasOwn(safeOptions, "showHideButton")) {
-      this.showHideButton = readOptionalBoolean(
+      this.showHideButton = util.readOptionalBoolean(
         safeOptions.showHideButton,
         "Dialogue showHideButton",
         this.showHideButton
       );
     }
     if (hasOwn(safeOptions, "appendHistory")) {
-      this.appendHistory = readOptionalBoolean(
+      this.appendHistory = util.readOptionalBoolean(
         safeOptions.appendHistory,
         "Dialogue appendHistory",
         this.appendHistory
       );
     }
     if (hasOwn(safeOptions, "flipMainPanelBySide")) {
-      this.flipMainPanelBySide = readOptionalBoolean(
+      this.flipMainPanelBySide = util.readOptionalBoolean(
         safeOptions.flipMainPanelBySide,
         "Dialogue flipMainPanelBySide",
         this.flipMainPanelBySide
       );
     }
     if (hasOwn(safeOptions, "getStateLines")) {
-      this.stateLinesProvider = readOptionalFunction(
+      this.stateLinesProvider = util.readOptionalFunction(
         safeOptions.getStateLines,
         "Dialogue getStateLines",
         this.stateLinesProvider
       );
     }
     if (hasOwn(safeOptions, "getDockOffset")) {
-      this.dockOffsetProvider = readOptionalFunction(
+      this.dockOffsetProvider = util.readOptionalFunction(
         safeOptions.getDockOffset,
         "Dialogue getDockOffset",
         this.dockOffsetProvider
@@ -644,7 +637,7 @@ export default class Dialogue {
       return;
     }
     const rawDockOffset = this.dockOffsetProvider ? this.dockOffsetProvider() : 0;
-    const dockOffset = readOptionalInteger(rawDockOffset, "Dialogue dockOffset", 0, 0);
+    const dockOffset = util.readOptionalInteger(rawDockOffset, "Dialogue dockOffset", 0, { min: 0 });
     this.uiPanels.setDockOffset(this.layout, dockOffset);
     this.uiPanels.syncResponsiveLayout(this.layout);
   }

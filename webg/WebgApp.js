@@ -38,9 +38,9 @@ export default class WebgApp {
     this.shader = options.shader ?? null;
     this.shaderClass = options.shaderClass ?? SmoothShader;
     this.clearColor = [...(options.clearColor ?? [0.1, 0.15, 0.1, 1.0])];
-    this.viewAngle = this.readOptionalFiniteOption(options.viewAngle, "viewAngle", 55.0);
-    this.projectionNear = this.readOptionalFiniteOption(options.projectionNear, "projectionNear", 0.1);
-    this.projectionFar = this.readOptionalFiniteOption(options.projectionFar, "projectionFar", 1000.0);
+    this.viewAngle = util.readOptionalFiniteNumber(options.viewAngle, "WebgApp viewAngle", 55.0);
+    this.projectionNear = util.readOptionalFiniteNumber(options.projectionNear, "WebgApp projectionNear", 0.1);
+    this.projectionFar = util.readOptionalFiniteNumber(options.projectionFar, "WebgApp projectionFar", 1000.0);
     this.lightPosition = [...(options.lightPosition ?? [120.0, 180.0, 140.0, 1.0])];
     // 既定では従来どおり eye space 固定 light を使うが、
     // world node を光源として使いたい場合は light.mode = "world-node" を指定できる
@@ -49,19 +49,19 @@ export default class WebgApp {
       nodeName: options.light?.nodeName ?? "light",
       position: [...(options.light?.position ?? this.lightPosition)],
       attitude: [...(options.light?.attitude ?? [0.0, 0.0, 0.0])],
-      type: this.readOptionalFiniteOption(options.light?.type, "light.type", 1.0)
+      type: util.readOptionalFiniteNumber(options.light?.type, "WebgApp light.type", 1.0)
     };
     this.fog = {
       color: [...(options.fog?.color ?? this.clearColor)],
-      near: this.readOptionalFiniteOption(options.fog?.near, "fog.near", 20.0),
-      far: this.readOptionalFiniteOption(options.fog?.far, "fog.far", 80.0),
-      density: this.readOptionalFiniteOption(options.fog?.density, "fog.density", 0.03),
-      mode: this.readOptionalFiniteOption(options.fog?.mode, "fog.mode", 0.0)
+      near: util.readOptionalFiniteNumber(options.fog?.near, "WebgApp fog.near", 20.0),
+      far: util.readOptionalFiniteNumber(options.fog?.far, "WebgApp fog.far", 80.0),
+      density: util.readOptionalFiniteNumber(options.fog?.density, "WebgApp fog.density", 0.03),
+      mode: util.readOptionalFiniteNumber(options.fog?.mode, "WebgApp fog.mode", 0.0)
     };
     this.setDefaultShapeShader = options.setDefaultShapeShader !== false;
     this.useMessage = options.useMessage !== false;
     this.messageFontTexture = options.messageFontTexture;
-    this.messageScale = this.readOptionalFiniteOption(options.messageScale, "messageScale", 1.0);
+    this.messageScale = util.readOptionalFiniteNumber(options.messageScale, "WebgApp messageScale", 1.0);
     this.attachInputOnInit = options.attachInputOnInit !== false;
     this.autoDrawScene = options.autoDrawScene !== false;
     this.autoDrawBones = options.autoDrawBones === true;
@@ -72,7 +72,7 @@ export default class WebgApp {
       combo: null,
       timer: null,
       toasts: [],
-      toastLimit: this.readOptionalIntegerOption(options.gameHud?.toastLimit, "gameHud.toastLimit", 4, 1)
+      toastLimit: util.readOptionalInteger(options.gameHud?.toastLimit, "WebgApp gameHud.toastLimit", 4, { min: 1 })
     };
     // 保存済み progress は WebgApp が名前空間を決めて扱い、
     // sample 側は save/load の中身だけに集中できるようにする
@@ -88,10 +88,10 @@ export default class WebgApp {
       rodName: options.camera?.rodName ?? "eyeRod",
       eyeName: options.camera?.eyeName ?? "eye",
       target: [...(options.camera?.target ?? [0.0, 0.0, 0.0])],
-      distance: this.readOptionalFiniteOption(options.camera?.distance, "camera.distance", 28.0),
-      yaw: this.readOptionalFiniteOption(options.camera?.yaw, "camera.yaw", 0.0),
-      pitch: this.readOptionalFiniteOption(options.camera?.pitch, "camera.pitch", 0.0),
-      bank: this.readOptionalFiniteOption(options.camera?.bank, "camera.bank", 0.0)
+      distance: util.readOptionalFiniteNumber(options.camera?.distance, "WebgApp camera.distance", 28.0),
+      yaw: util.readOptionalFiniteNumber(options.camera?.yaw, "WebgApp camera.yaw", 0.0),
+      pitch: util.readOptionalFiniteNumber(options.camera?.pitch, "WebgApp camera.pitch", 0.0),
+      bank: util.readOptionalFiniteNumber(options.camera?.bank, "WebgApp camera.bank", 0.0)
     };
     this.cameraFollow = {
       active: false,
@@ -99,9 +99,9 @@ export default class WebgApp {
       targetNode: null,
       targetOffset: [...(options.camera?.targetOffset ?? [0.0, 0.0, 0.0])],
       currentTarget: [...this.camera.target],
-      smooth: this.readOptionalFiniteOption(options.camera?.smooth, "camera.smooth", 0.15),
+      smooth: util.readOptionalFiniteNumber(options.camera?.smooth, "WebgApp camera.smooth", 0.15),
       inheritTargetYaw: options.camera?.inheritTargetYaw === true,
-      targetYawOffset: this.readOptionalFiniteOption(options.camera?.targetYawOffset, "camera.targetYawOffset", 0.0)
+      targetYawOffset: util.readOptionalFiniteNumber(options.camera?.targetYawOffset, "WebgApp camera.targetYawOffset", 0.0)
     };
     this.fixedCanvasSize = this.normalizeFixedCanvasSize(options.fixedCanvasSize);
     this.layoutMode = this.normalizeLayoutMode(options.layoutMode);
@@ -129,9 +129,9 @@ export default class WebgApp {
       minScale: 0.82
     };
     this.hudLayoutOffsets = {
-      guideOffsetY: this.readOptionalFiniteOption(options.hudLayoutOffsets?.guideOffsetY, "hudLayoutOffsets.guideOffsetY", 0),
-      statusOffsetY: this.readOptionalFiniteOption(options.hudLayoutOffsets?.statusOffsetY, "hudLayoutOffsets.statusOffsetY", 0),
-      rowsOffsetY: this.readOptionalFiniteOption(options.hudLayoutOffsets?.rowsOffsetY, "hudLayoutOffsets.rowsOffsetY", 0)
+      guideOffsetY: util.readOptionalFiniteNumber(options.hudLayoutOffsets?.guideOffsetY, "WebgApp hudLayoutOffsets.guideOffsetY", 0),
+      statusOffsetY: util.readOptionalFiniteNumber(options.hudLayoutOffsets?.statusOffsetY, "WebgApp hudLayoutOffsets.statusOffsetY", 0),
+      rowsOffsetY: util.readOptionalFiniteNumber(options.hudLayoutOffsets?.rowsOffsetY, "WebgApp hudLayoutOffsets.rowsOffsetY", 0)
     };
     this.screen = null;
     this.space = null;
@@ -252,14 +252,6 @@ export default class WebgApp {
     });
     this.modelRuntime = null;
     this.sceneRuntime = null;
-  }
-
-  readOptionalFiniteOption(value, name, fallback) {
-    return util.readOptionalFiniteNumber(value, `WebgApp ${name}`, fallback);
-  }
-
-  readOptionalIntegerOption(value, name, fallback, minValue = null) {
-    return util.readOptionalInteger(value, `WebgApp ${name}`, fallback, { min: minValue });
   }
 
   selectLayoutDimension(candidates, name) {
@@ -951,9 +943,9 @@ export default class WebgApp {
     this.cameraFollow.mode = "follow";
     this.cameraFollow.targetNode = node ?? null;
     this.cameraFollow.targetOffset = [...(options.offset ?? options.targetOffset ?? this.cameraFollow.targetOffset ?? [0.0, 0.0, 0.0])];
-    this.cameraFollow.smooth = this.readOptionalFiniteOption(options.smooth, "followNode.smooth", 0.15);
+    this.cameraFollow.smooth = util.readOptionalFiniteNumber(options.smooth, "WebgApp followNode.smooth", 0.15);
     this.cameraFollow.inheritTargetYaw = options.inheritTargetYaw === true;
-    this.cameraFollow.targetYawOffset = this.readOptionalFiniteOption(options.targetYawOffset, "followNode.targetYawOffset", 0.0);
+    this.cameraFollow.targetYawOffset = util.readOptionalFiniteNumber(options.targetYawOffset, "WebgApp followNode.targetYawOffset", 0.0);
     if (this.cameraFollow.active) {
       this.updateCameraTarget(0.0, true);
     }
@@ -966,9 +958,9 @@ export default class WebgApp {
     this.cameraFollow.mode = "lock";
     this.cameraFollow.targetNode = target ?? null;
     this.cameraFollow.targetOffset = [...(options.offset ?? options.targetOffset ?? [0.0, 0.0, 0.0])];
-    this.cameraFollow.smooth = this.readOptionalFiniteOption(options.smooth, "lockOn.smooth", 1.0);
+    this.cameraFollow.smooth = util.readOptionalFiniteNumber(options.smooth, "WebgApp lockOn.smooth", 1.0);
     this.cameraFollow.inheritTargetYaw = options.inheritTargetYaw === true;
-    this.cameraFollow.targetYawOffset = this.readOptionalFiniteOption(options.targetYawOffset, "lockOn.targetYawOffset", 0.0);
+    this.cameraFollow.targetYawOffset = util.readOptionalFiniteNumber(options.targetYawOffset, "WebgApp lockOn.targetYawOffset", 0.0);
     if (this.cameraFollow.active) {
       this.updateCameraTarget(0.0, true);
     }
@@ -1060,12 +1052,12 @@ export default class WebgApp {
       id: options.id ?? `helpOverlay${this.helpPanels.length + 1}`,
       leftWidth: options.leftWidth ?? "minmax(0, 340px)",
       rightWidth: options.rightWidth ?? "minmax(0, 0px)",
-      gap: this.readOptionalFiniteOption(options.gap, "helpPanel.gap", 0),
-      collapseWidth: this.readOptionalIntegerOption(options.collapseWidth, "helpPanel.collapseWidth", 760, 1),
-      compactWidth: this.readOptionalIntegerOption(options.compactWidth, "helpPanel.compactWidth", 560, 1),
-      top: options.top === undefined ? undefined : this.readOptionalIntegerOption(options.top, "helpPanel.top", undefined),
-      left: options.left === undefined ? undefined : this.readOptionalIntegerOption(options.left, "helpPanel.left", undefined),
-      right: options.right === undefined ? undefined : this.readOptionalIntegerOption(options.right, "helpPanel.right", undefined)
+      gap: util.readOptionalFiniteNumber(options.gap, "WebgApp helpPanel.gap", 0),
+      collapseWidth: util.readOptionalInteger(options.collapseWidth, "WebgApp helpPanel.collapseWidth", 760, { min: 1 }),
+      compactWidth: util.readOptionalInteger(options.compactWidth, "WebgApp helpPanel.compactWidth", 560, { min: 1 }),
+      top: options.top === undefined ? undefined : util.readOptionalInteger(options.top, "WebgApp helpPanel.top", undefined),
+      left: options.left === undefined ? undefined : util.readOptionalInteger(options.left, "WebgApp helpPanel.left", undefined),
+      right: options.right === undefined ? undefined : util.readOptionalInteger(options.right, "WebgApp helpPanel.right", undefined)
     });
     const column = options.column === "right" ? layout.right : layout.left;
     const panel = uiPanels.createPanel(column);

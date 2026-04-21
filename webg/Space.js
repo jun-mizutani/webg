@@ -1,5 +1,5 @@
 // ---------------------------------------------
-//  Space.js      2026/04/20
+//  Space.js      2026/04/21
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // ---------------------------------------------
@@ -807,9 +807,9 @@ export default class Space {
     }
     if (shape.type === "sphere") {
       if (Number.isFinite(shape.radius)) {
-        shape.radius = Math.max(0.0, Number(shape.radius));
+        shape.radius = util.readFiniteNumber(shape.radius, "Space collision sphere radius", { min: 0.0 });
       } else if (Number.isFinite(options.radius)) {
-        shape.radius = Math.max(0.0, Number(options.radius));
+        shape.radius = util.readFiniteNumber(options.radius, "Space collision options.radius", { min: 0.0 });
       } else if (shapeRef?.getBoundingBox) {
         const box = shapeRef.getBoundingBox();
         shape.radius = Math.max(
@@ -829,9 +829,9 @@ export default class Space {
       return shape;
     }
     if (Array.isArray(shape.size) && shape.size.length >= 3) {
-      const sx = Math.max(0.0, Number(shape.size[0]) || 0.0);
-      const sy = Math.max(0.0, Number(shape.size[1]) || 0.0);
-      const sz = Math.max(0.0, Number(shape.size[2]) || 0.0);
+      const sx = util.readFiniteNumber(shape.size[0], "Space collision size[0]", { min: 0.0 });
+      const sy = util.readFiniteNumber(shape.size[1], "Space collision size[1]", { min: 0.0 });
+      const sz = util.readFiniteNumber(shape.size[2], "Space collision size[2]", { min: 0.0 });
       shape.box = {
         minx: -sx * 0.5,
         maxx: sx * 0.5,
@@ -923,7 +923,7 @@ export default class Space {
       return {
         kind: "sphere",
         center,
-        radius: Math.max(0.0, Number(shape.radius ?? 0.5)) * scale,
+        radius: util.readFiniteNumber(shape.radius, "Space collision world sphere radius", { min: 0.0 }) * scale,
         body
       };
     }

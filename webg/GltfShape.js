@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// GltfShape.js   2026/03/13
+// GltfShape.js   2026/04/21
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // ---------------------------------------------
@@ -477,11 +477,11 @@ export default class GltfShape {
     return this.toModelAsset(options);
   }
 
-  normalizeBoneName(name, fallback = "joint") {
+  normalizeBoneName(name, path = "glTF bone name") {
     if (typeof name === "string" && name.length > 0) {
       return name;
     }
-    return fallback;
+    throw new Error(`${path} must be a non-empty string`);
   }
 
   isRigifyDeformBone(name) {
@@ -562,7 +562,10 @@ export default class GltfShape {
           while (currentNodeIndex !== null && currentNodeIndex !== undefined) {
             const localJointIndex = nodeToLocalJoint.get(currentNodeIndex);
             if (localJointIndex === undefined) break;
-            const jointName = this.normalizeBoneName(nodes[currentNodeIndex]?.name, `joint_${currentNodeIndex}`);
+            const jointName = this.normalizeBoneName(
+              nodes[currentNodeIndex]?.name,
+              `glTF node[${currentNodeIndex}].name`
+            );
             const isHelper = this.isRigifyHelperBone(jointName);
             if (!isHelper || weightedJointSet.has(localJointIndex)) {
               keptLocalIndexSet.add(localJointIndex);
@@ -604,12 +607,18 @@ export default class GltfShape {
 
         const weightedJointNames = weightedJointLocalIndices.map((localIndex) => {
           const nodeRef = skinJointNodes[localIndex];
-          return this.normalizeBoneName(nodes[nodeRef]?.name, `joint_${nodeRef}`);
+          return this.normalizeBoneName(
+            nodes[nodeRef]?.name,
+            `glTF skin joint node[${nodeRef}].name`
+          );
         });
         const rigifyLike = weightedJointNames.some((name) => this.isRigifyDeformBone(name) || this.isRigifyHelperBone(name));
         const keptJointNames = keptLocalIndices.map((localIndex) => {
           const nodeRef = skinJointNodes[localIndex];
-          return this.normalizeBoneName(nodes[nodeRef]?.name, `joint_${nodeRef}`);
+          return this.normalizeBoneName(
+            nodes[nodeRef]?.name,
+            `glTF skin joint node[${nodeRef}].name`
+          );
         });
         const weightedHelperNames = weightedJointNames.filter((name) => this.isRigifyHelperBone(name));
         const ancestorOnlyHelperNames = keptJointNames.filter((name) => {

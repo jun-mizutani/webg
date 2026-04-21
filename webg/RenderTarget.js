@@ -4,17 +4,9 @@
 //   released under the MIT open source license.
 // ---------------------------------------------
 
-export default class RenderTarget {
+import util from "./util.js";
 
-  static normalizeSize(value, name, fallback) {
-    if (value === undefined) {
-      return fallback;
-    }
-    if (!Number.isFinite(value) || !Number.isInteger(value) || value < 1) {
-      throw new Error(`RenderTarget ${name} must be an integer >= 1`);
-    }
-    return value;
-  }
+export default class RenderTarget {
 
   // offscreen color/depth texture をまとめて管理する
   constructor(gpu, options = {}) {
@@ -22,8 +14,8 @@ export default class RenderTarget {
     this.device = null;
     this.queue = null;
     this.label = options.label ?? "RenderTarget";
-    this.width = RenderTarget.normalizeSize(options.width, "width", 1);
-    this.height = RenderTarget.normalizeSize(options.height, "height", 1);
+    this.width = util.readOptionalInteger(options.width, "RenderTarget width", 1, { min: 1 });
+    this.height = util.readOptionalInteger(options.height, "RenderTarget height", 1, { min: 1 });
     this.format = options.format ?? "rgba8unorm";
     this.hasDepth = options.hasDepth !== false;
     // 被写界深度のような後段 pass から深度 texture を読みたい場合は、
@@ -88,8 +80,8 @@ export default class RenderTarget {
 
   // 指定サイズに合わせて color/depth texture を作る
   resize(width, height) {
-    this.width = RenderTarget.normalizeSize(width, "width", this.width);
-    this.height = RenderTarget.normalizeSize(height, "height", this.height);
+    this.width = util.readOptionalInteger(width, "RenderTarget width", this.width, { min: 1 });
+    this.height = util.readOptionalInteger(height, "RenderTarget height", this.height, { min: 1 });
     if (!this.device) {
       return;
     }

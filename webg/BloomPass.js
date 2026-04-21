@@ -6,26 +6,7 @@
 
 import RenderTarget from "./RenderTarget.js";
 import SeparableBlurPass from "./SeparableBlurPass.js";
-
-const readBloomDimension = (value, name, fallback) => {
-  if (value === undefined) {
-    return fallback;
-  }
-  if (!Number.isFinite(value) || !Number.isInteger(value) || value < 1) {
-    throw new Error(`BloomPass ${name} must be an integer >= 1`);
-  }
-  return value;
-};
-
-const readBloomNumber = (value, name, fallback) => {
-  if (value === undefined) {
-    return fallback;
-  }
-  if (!Number.isFinite(value)) {
-    throw new Error(`BloomPass ${name} must be finite`);
-  }
-  return value;
-};
+import util from "./util.js";
 
 export default class BloomPass {
 
@@ -35,23 +16,23 @@ export default class BloomPass {
     this.device = null;
     this.queue = null;
     this.enabled = options.enabled !== false;
-    this.width = readBloomDimension(options.width, "width", 1);
-    this.height = readBloomDimension(options.height, "height", 1);
+    this.width = util.readOptionalInteger(options.width, "BloomPass width", 1, { min: 1 });
+    this.height = util.readOptionalInteger(options.height, "BloomPass height", 1, { min: 1 });
     // 3D scene 本体は既存の Phong / BonePhong 系 pipeline をそのまま流用するため、
     // 既定の offscreen color format も canvas と同じ gpu.format にそろえる
     // ここを別 format にすると、scene 側 pipeline の color target format と一致せず
     // RenderPassEncoder.SetPipeline 時点で validation error になる
     this.sceneFormat = options.sceneFormat ?? gpu?.format ?? "bgra8unorm";
     this.canvasFormat = options.canvasFormat ?? gpu?.format ?? "bgra8unorm";
-    this.threshold = readBloomNumber(options.threshold, "threshold", 0.68);
-    this.extractIntensity = readBloomNumber(options.extractIntensity, "extractIntensity", 1.0);
-    this.softKnee = readBloomNumber(options.softKnee, "softKnee", 0.35);
-    this.bloomStrength = readBloomNumber(options.bloomStrength, "bloomStrength", 1.15);
-    this.exposure = readBloomNumber(options.exposure, "exposure", 1.0);
-    this.toneMapMode = readBloomNumber(options.toneMapMode, "toneMapMode", 0.0);
-    this.blurRadius = readBloomNumber(options.blurRadius, "blurRadius", 1.0);
-    this.blurScale = readBloomNumber(options.blurScale, "blurScale", 1.0);
-    this.blurIterations = readBloomDimension(options.blurIterations, "blurIterations", 2);
+    this.threshold = util.readOptionalFiniteNumber(options.threshold, "BloomPass threshold", 0.68);
+    this.extractIntensity = util.readOptionalFiniteNumber(options.extractIntensity, "BloomPass extractIntensity", 1.0);
+    this.softKnee = util.readOptionalFiniteNumber(options.softKnee, "BloomPass softKnee", 0.35);
+    this.bloomStrength = util.readOptionalFiniteNumber(options.bloomStrength, "BloomPass bloomStrength", 1.15);
+    this.exposure = util.readOptionalFiniteNumber(options.exposure, "BloomPass exposure", 1.0);
+    this.toneMapMode = util.readOptionalFiniteNumber(options.toneMapMode, "BloomPass toneMapMode", 0.0);
+    this.blurRadius = util.readOptionalFiniteNumber(options.blurRadius, "BloomPass blurRadius", 1.0);
+    this.blurScale = util.readOptionalFiniteNumber(options.blurScale, "BloomPass blurScale", 1.0);
+    this.blurIterations = util.readOptionalInteger(options.blurIterations, "BloomPass blurIterations", 2, { min: 1 });
     this.sceneTarget = null;
     this.extractTarget = null;
     this.extractHeatTarget = null;

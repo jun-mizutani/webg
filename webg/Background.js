@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// Background.js   2026/03/07
+// Background.js   2026/04/21
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // ---------------------------------------------
@@ -203,8 +203,7 @@ fn fsMain(input : VSOut) -> @location(0) vec4f {
     // 画像ファイルをTextureとして読み込み、背景テクスチャに設定する
     const tex = new Texture(this.gpu);
     await tex.initPromise;
-    const ok = await tex.readImageFromFile(file);
-    if (!ok) return false;
+    await tex.readImageFromFile(file);
     this.setBackground(tex);
     return true;
   }

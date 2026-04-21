@@ -52,34 +52,18 @@ export default class Message extends Text {
     ];
   }
 
-  readOptionalInteger(value, name, fallback, { min = null } = {}) {
-    return util.readOptionalInteger(value, `Message ${name}`, fallback, { min });
-  }
-
-  readOptionalBoolean(value, name, fallback) {
-    return util.readOptionalBoolean(value, `Message ${name}`, fallback);
-  }
-
-  readOptionalAnchor(value, fallback) {
-    return util.readOptionalAnchor(value, fallback, "Message anchor");
-  }
-
-  readOptionalAlign(value, fallback) {
-    return util.readOptionalAlign(value, fallback, "Message align");
-  }
-
   // anchor 指定から block 左上座標を解決する
   // Text.setScale(scale) 済みなら visibleCols / visibleRows を基準に計算し、
   // 80x25固定ではなく「現在見えている文字グリッド」に追従させる
   resolvePosition(options = {}) {
     const layout = this.getLayoutInfo();
-    const anchor = this.readOptionalAnchor(options.anchor, "top-left");
-    const width = this.readOptionalInteger(options.width, "width", 0, { min: 0 });
-    const height = this.readOptionalInteger(options.height, "height", 1, { min: 0 });
-    const x = this.readOptionalInteger(options.x, "x", 0);
-    const y = this.readOptionalInteger(options.y, "y", 0);
-    const offsetX = this.readOptionalInteger(options.offsetX, "offsetX", 0);
-    const offsetY = this.readOptionalInteger(options.offsetY, "offsetY", 0);
+    const anchor = util.readOptionalAnchor(options.anchor, "top-left", "Message anchor");
+    const width = util.readOptionalInteger(options.width, "Message width", 0, { min: 0 });
+    const height = util.readOptionalInteger(options.height, "Message height", 1, { min: 0 });
+    const x = util.readOptionalInteger(options.x, "Message x", 0);
+    const y = util.readOptionalInteger(options.y, "Message y", 0);
+    const offsetX = util.readOptionalInteger(options.offsetX, "Message offsetX", 0);
+    const offsetY = util.readOptionalInteger(options.offsetY, "Message offsetY", 0);
     let resolvedX = x;
     let resolvedY = y;
 
@@ -110,9 +94,9 @@ export default class Message extends Text {
   formatLines(lines, options = {}) {
     const width = options.width === undefined
       ? undefined
-      : this.readOptionalInteger(options.width, "width", undefined, { min: 1 });
-    const wrap = this.readOptionalBoolean(options.wrap, "wrap", false) === true;
-    const clip = this.readOptionalBoolean(options.clip, "clip", true) !== false;
+      : util.readOptionalInteger(options.width, "Message width", undefined, { min: 1 });
+    const wrap = util.readOptionalBoolean(options.wrap, "Message wrap", false) === true;
+    const clip = util.readOptionalBoolean(options.clip, "Message clip", true) !== false;
     const source = (lines ?? []).map((line) => String(line ?? ""));
     const out = [];
 
@@ -138,9 +122,9 @@ export default class Message extends Text {
 
   // line 群を block 幅へ合わせて left/center/right 揃えする
   alignLines(lines, options = {}) {
-    const align = this.readOptionalAlign(options.align, "left");
+    const align = util.readOptionalAlign(options.align, "left", "Message align");
     const width = options.width !== undefined
-      ? this.readOptionalInteger(options.width, "width", undefined, { min: 1 })
+      ? util.readOptionalInteger(options.width, "Message width", undefined, { min: 1 })
       : Math.max(0, ...lines.map((line) => line.length));
     return lines.map((line) => {
       if (align === "right") {
@@ -164,16 +148,16 @@ export default class Message extends Text {
       id: safeId,
       text: String(text ?? ""),
       color: this.normalizeColor(options.color),
-      visible: this.readOptionalBoolean(options.visible, "visible", true) !== false,
-      x: this.readOptionalInteger(options.x, "x", 0),
-      y: this.readOptionalInteger(options.y, "y", 0),
-      anchor: this.readOptionalAnchor(options.anchor, "top-left"),
-      offsetX: this.readOptionalInteger(options.offsetX, "offsetX", 0),
-      offsetY: this.readOptionalInteger(options.offsetY, "offsetY", 0),
-      clip: this.readOptionalBoolean(options.clip, "clip", true) !== false,
+      visible: util.readOptionalBoolean(options.visible, "Message visible", true) !== false,
+      x: util.readOptionalInteger(options.x, "Message x", 0),
+      y: util.readOptionalInteger(options.y, "Message y", 0),
+      anchor: util.readOptionalAnchor(options.anchor, "top-left", "Message anchor"),
+      offsetX: util.readOptionalInteger(options.offsetX, "Message offsetX", 0),
+      offsetY: util.readOptionalInteger(options.offsetY, "Message offsetY", 0),
+      clip: util.readOptionalBoolean(options.clip, "Message clip", true) !== false,
       expiresAtMs: options.expiresAtMs === undefined
         ? null
-        : this.readOptionalInteger(options.expiresAtMs, "expiresAtMs", null)
+        : util.readOptionalInteger(options.expiresAtMs, "Message expiresAtMs", null)
     });
     return safeId;
   }
@@ -186,33 +170,33 @@ export default class Message extends Text {
       id: safeId,
       lines: (lines ?? []).map((line) => String(line ?? "")),
       color: this.normalizeColor(options.color),
-      visible: this.readOptionalBoolean(options.visible, "visible", true) !== false,
-      x: this.readOptionalInteger(options.x, "x", 0),
-      y: this.readOptionalInteger(options.y, "y", 0),
-      anchor: this.readOptionalAnchor(options.anchor, "top-left"),
-      offsetX: this.readOptionalInteger(options.offsetX, "offsetX", 0),
-      offsetY: this.readOptionalInteger(options.offsetY, "offsetY", 0),
-      gap: this.readOptionalInteger(options.gap, "gap", 1, { min: 1 }),
-      align: this.readOptionalAlign(options.align, "left"),
+      visible: util.readOptionalBoolean(options.visible, "Message visible", true) !== false,
+      x: util.readOptionalInteger(options.x, "Message x", 0),
+      y: util.readOptionalInteger(options.y, "Message y", 0),
+      anchor: util.readOptionalAnchor(options.anchor, "top-left", "Message anchor"),
+      offsetX: util.readOptionalInteger(options.offsetX, "Message offsetX", 0),
+      offsetY: util.readOptionalInteger(options.offsetY, "Message offsetY", 0),
+      gap: util.readOptionalInteger(options.gap, "Message gap", 1, { min: 1 }),
+      align: util.readOptionalAlign(options.align, "left", "Message align"),
       width: options.width === undefined
         ? undefined
-        : this.readOptionalInteger(options.width, "width", undefined, { min: 1 }),
-      wrap: this.readOptionalBoolean(options.wrap, "wrap", false) === true,
-      clip: this.readOptionalBoolean(options.clip, "clip", true) !== false,
+        : util.readOptionalInteger(options.width, "Message width", undefined, { min: 1 }),
+      wrap: util.readOptionalBoolean(options.wrap, "Message wrap", false) === true,
+      clip: util.readOptionalBoolean(options.clip, "Message clip", true) !== false,
       expiresAtMs: options.expiresAtMs === undefined
         ? null
-        : this.readOptionalInteger(options.expiresAtMs, "expiresAtMs", null)
+        : util.readOptionalInteger(options.expiresAtMs, "Message expiresAtMs", null)
     });
     return safeId;
   }
 
   // 一時表示向けの toast を追加する
   setToast(id, text, options = {}) {
-    const durationMs = this.readOptionalInteger(options.durationMs, "durationMs", 1500, { min: 0 });
+    const durationMs = util.readOptionalInteger(options.durationMs, "Message durationMs", 1500, { min: 0 });
     return this.setLine(id, text, {
       ...options,
-      anchor: this.readOptionalAnchor(options.anchor, "bottom-center"),
-      y: this.readOptionalInteger(options.y, "y", -2),
+      anchor: util.readOptionalAnchor(options.anchor, "bottom-center", "Message anchor"),
+      y: util.readOptionalInteger(options.y, "Message y", -2),
       expiresAtMs: Date.now() + durationMs
     });
   }

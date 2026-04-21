@@ -1,10 +1,22 @@
 // ---------------------------------------------
-// Screen.js       2026/03/30
+// Screen.js       2026/04/21
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // ---------------------------------------------
 
 import RenderTarget from "./RenderTarget.js";
+
+const readPositiveCanvasDimension = (canvas, primaryKey, secondaryKey, label) => {
+  const primary = Number(canvas?.[primaryKey]);
+  if (Number.isFinite(primary) && primary > 0) {
+    return Math.floor(primary);
+  }
+  const secondary = Number(canvas?.[secondaryKey]);
+  if (Number.isFinite(secondary) && secondary > 0) {
+    return Math.floor(secondary);
+  }
+  throw new Error(`Screen ${label} must be a positive finite number`);
+};
 
 class WebGPUContext {
   // `#canvas` を取得し、WebGPUコンテキスト準備を開始する
@@ -51,8 +63,8 @@ class WebGPUContext {
   // キャンバスサイズと深度テクスチャを更新する
   resize() {
     // 画面サイズ変更時は深度テクスチャを作り直し、深度バッファサイズを合わせる
-    const width = this.canvas.width || this.canvas.clientWidth || 1;
-    const height = this.canvas.height || this.canvas.clientHeight || 1;
+    const width = readPositiveCanvasDimension(this.canvas, "width", "clientWidth", "canvas width");
+    const height = readPositiveCanvasDimension(this.canvas, "height", "clientHeight", "canvas height");
 
     if (this.depthTexture) {
       this.depthTexture.destroy();
@@ -140,12 +152,15 @@ export default class Screen {
     // アプリ層が直接使う高レベル画面API
     // clear()/present() と frameカウンタ管理を担当する
     const canvas = document.getElementById("canvas");
+    if (!canvas) {
+      throw new Error("Screen requires a canvas element with id 'canvas'");
+    }
     this.canvas = canvas;
-    this.width = canvas.width || canvas.clientWidth || 1;
-    this.height = canvas.height || canvas.clientHeight || 1;
+    this.width = readPositiveCanvasDimension(canvas, "width", "clientWidth", "canvas width");
+    this.height = readPositiveCanvasDimension(canvas, "height", "clientHeight", "canvas height");
     // CSS表示サイズ（ピクセル）
-    this.displayWidth = canvas.clientWidth || this.width;
-    this.displayHeight = canvas.clientHeight || this.height;
+    this.displayWidth = readPositiveCanvasDimension(canvas, "clientWidth", "width", "display width");
+    this.displayHeight = readPositiveCanvasDimension(canvas, "clientHeight", "height", "display height");
     // リサイズ要求（論理解像度）を保持し、viewport変化時に再適用する
     this.requestedWidth = this.displayWidth;
     this.requestedHeight = this.displayHeight;
@@ -213,7 +228,13 @@ export default class Screen {
     }
 
     const dprBase = (typeof window !== "undefined" && this.useDevicePixelRatio)
-      ? (window.devicePixelRatio || 1.0)
+      ? (() => {
+        const numericDpr = Number(window.devicePixelRatio);
+        if (!Number.isFinite(numericDpr) || numericDpr <= 0) {
+          throw new Error(`Screen devicePixelRatio must be a positive finite number: ${window.devicePixelRatio}`);
+        }
+        return numericDpr;
+      })()
       : 1.0;
     const dpr = dprBase;
     const pixelW = Math.round(displayW * dpr);

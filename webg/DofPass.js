@@ -1,5 +1,5 @@
 // ---------------------------------------------
-//  DofPass.js      2026/03/30
+//  DofPass.js      2026/04/21
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // ---------------------------------------------
@@ -9,14 +9,6 @@ import SeparableBlurPass from "./SeparableBlurPass.js";
 import util from "./util.js";
 
 export default class DofPass {
-  static readOptionalInteger(value, name, fallback, min = 1) {
-    return util.readOptionalInteger(value, `DofPass ${name}`, fallback, { min });
-  }
-
-  static readOptionalFinite(value, name, fallback, { min = null, minExclusive = null, max = null } = {}) {
-    return util.readOptionalFiniteNumber(value, `DofPass ${name}`, fallback, { min, minExclusive, max });
-  }
-
   // scene color + sampled depth から、focus 面だけ sharp に残して
   // それ以外を blur 側へ寄せる最小の被写界深度 pass
   // 利用側は beginScene() で sceneTarget へ 3D scene を描いたあと、
@@ -26,23 +18,23 @@ export default class DofPass {
     this.device = null;
     this.queue = null;
     this.enabled = options.enabled !== false;
-    this.width = DofPass.readOptionalInteger(options.width, "width", 1);
-    this.height = DofPass.readOptionalInteger(options.height, "height", 1);
+    this.width = util.readOptionalInteger(options.width, "DofPass width", 1, { min: 1 });
+    this.height = util.readOptionalInteger(options.height, "DofPass height", 1, { min: 1 });
     this.sceneFormat = options.sceneFormat ?? gpu?.format ?? "bgra8unorm";
     this.canvasFormat = options.canvasFormat ?? gpu?.format ?? "bgra8unorm";
-    this.focusDistance = DofPass.readOptionalFinite(options.focusDistance, "focusDistance", 34.0, { min: 0 });
-    this.focusRange = DofPass.readOptionalFinite(options.focusRange, "focusRange", 6.0, { minExclusive: 0 });
-    this.maxBlurMix = DofPass.readOptionalFinite(options.maxBlurMix, "maxBlurMix", 1.0, { min: 0, max: 1 });
-    this.sharpnessWidth = DofPass.readOptionalFinite(options.sharpnessWidth, "sharpnessWidth", 0.2, { minExclusive: 0 });
-    this.sharpnessPower = DofPass.readOptionalFinite(options.sharpnessPower, "sharpnessPower", 8.0, { minExclusive: 0 });
-    this.projectionNear = DofPass.readOptionalFinite(options.projectionNear, "projectionNear", 0.1, { minExclusive: 0 });
-    this.projectionFar = DofPass.readOptionalFinite(options.projectionFar, "projectionFar", 1000.0, { minExclusive: 0 });
+    this.focusDistance = util.readOptionalFiniteNumber(options.focusDistance, "DofPass focusDistance", 34.0, { min: 0 });
+    this.focusRange = util.readOptionalFiniteNumber(options.focusRange, "DofPass focusRange", 6.0, { minExclusive: 0 });
+    this.maxBlurMix = util.readOptionalFiniteNumber(options.maxBlurMix, "DofPass maxBlurMix", 1.0, { min: 0, max: 1 });
+    this.sharpnessWidth = util.readOptionalFiniteNumber(options.sharpnessWidth, "DofPass sharpnessWidth", 0.2, { minExclusive: 0 });
+    this.sharpnessPower = util.readOptionalFiniteNumber(options.sharpnessPower, "DofPass sharpnessPower", 8.0, { minExclusive: 0 });
+    this.projectionNear = util.readOptionalFiniteNumber(options.projectionNear, "DofPass projectionNear", 0.1, { minExclusive: 0 });
+    this.projectionFar = util.readOptionalFiniteNumber(options.projectionFar, "DofPass projectionFar", 1000.0, { minExclusive: 0 });
     if (this.projectionFar <= this.projectionNear) {
       throw new Error("DofPass projectionFar must be greater than projectionNear");
     }
-    this.blurRadius = DofPass.readOptionalFinite(options.blurRadius, "blurRadius", 2.4, { min: 0 });
-    this.blurIterations = DofPass.readOptionalInteger(options.blurIterations, "blurIterations", 2);
-    this.blurScale = DofPass.readOptionalFinite(options.blurScale, "blurScale", 0.5, { minExclusive: 0 });
+    this.blurRadius = util.readOptionalFiniteNumber(options.blurRadius, "DofPass blurRadius", 2.4, { min: 0 });
+    this.blurIterations = util.readOptionalInteger(options.blurIterations, "DofPass blurIterations", 2, { min: 1 });
+    this.blurScale = util.readOptionalFiniteNumber(options.blurScale, "DofPass blurScale", 0.5, { minExclusive: 0 });
     this.sceneTarget = null;
     this.depthDebugTarget = null;
     this.focusDebugTarget = null;
@@ -613,33 +605,33 @@ fn fsMain(input : VSOut) -> @location(0) vec4f {
   }
 
   setFocusDistance(value) {
-    this.focusDistance = DofPass.readOptionalFinite(value, "focusDistance", this.focusDistance, { min: 0 });
+    this.focusDistance = util.readOptionalFiniteNumber(value, "DofPass focusDistance", this.focusDistance, { min: 0 });
     this.updateUniforms();
   }
 
   setFocusRange(value) {
-    this.focusRange = DofPass.readOptionalFinite(value, "focusRange", this.focusRange, { minExclusive: 0 });
+    this.focusRange = util.readOptionalFiniteNumber(value, "DofPass focusRange", this.focusRange, { minExclusive: 0 });
     this.updateUniforms();
   }
 
   setMaxBlurMix(value) {
-    this.maxBlurMix = DofPass.readOptionalFinite(value, "maxBlurMix", this.maxBlurMix, { min: 0, max: 1 });
+    this.maxBlurMix = util.readOptionalFiniteNumber(value, "DofPass maxBlurMix", this.maxBlurMix, { min: 0, max: 1 });
     this.updateUniforms();
   }
 
   setSharpnessWidth(value) {
-    this.sharpnessWidth = DofPass.readOptionalFinite(value, "sharpnessWidth", this.sharpnessWidth, { minExclusive: 0 });
+    this.sharpnessWidth = util.readOptionalFiniteNumber(value, "DofPass sharpnessWidth", this.sharpnessWidth, { minExclusive: 0 });
     this.updateUniforms();
   }
 
   setSharpnessPower(value) {
-    this.sharpnessPower = DofPass.readOptionalFinite(value, "sharpnessPower", this.sharpnessPower, { minExclusive: 0 });
+    this.sharpnessPower = util.readOptionalFiniteNumber(value, "DofPass sharpnessPower", this.sharpnessPower, { minExclusive: 0 });
     this.updateUniforms();
   }
 
   setProjectionRange(near, far) {
-    this.projectionNear = DofPass.readOptionalFinite(near, "projectionNear", this.projectionNear, { minExclusive: 0 });
-    this.projectionFar = DofPass.readOptionalFinite(far, "projectionFar", this.projectionFar, { minExclusive: 0 });
+    this.projectionNear = util.readOptionalFiniteNumber(near, "DofPass projectionNear", this.projectionNear, { minExclusive: 0 });
+    this.projectionFar = util.readOptionalFiniteNumber(far, "DofPass projectionFar", this.projectionFar, { minExclusive: 0 });
     if (this.projectionFar <= this.projectionNear) {
       throw new Error("DofPass projectionFar must be greater than projectionNear");
     }
@@ -647,23 +639,23 @@ fn fsMain(input : VSOut) -> @location(0) vec4f {
   }
 
   setBlurRadius(value) {
-    this.blurRadius = DofPass.readOptionalFinite(value, "blurRadius", this.blurRadius, { min: 0 });
+    this.blurRadius = util.readOptionalFiniteNumber(value, "DofPass blurRadius", this.blurRadius, { min: 0 });
     this.blurPass?.setBlurRadius(this.blurRadius);
   }
 
   setBlurIterations(value) {
-    this.blurIterations = DofPass.readOptionalInteger(value, "blurIterations", this.blurIterations);
+    this.blurIterations = util.readOptionalInteger(value, "DofPass blurIterations", this.blurIterations, { min: 1 });
     this.blurPass?.setIterations(this.blurIterations);
   }
 
   setBlurScale(value) {
-    this.blurScale = DofPass.readOptionalFinite(value, "blurScale", this.blurScale, { minExclusive: 0 });
+    this.blurScale = util.readOptionalFiniteNumber(value, "DofPass blurScale", this.blurScale, { minExclusive: 0 });
     this.blurPass?.setTargetScale(this.blurScale);
   }
 
   resize(width, height) {
-    this.width = DofPass.readOptionalInteger(width, "width", this.width);
-    this.height = DofPass.readOptionalInteger(height, "height", this.height);
+    this.width = util.readOptionalInteger(width, "DofPass width", this.width, { min: 1 });
+    this.height = util.readOptionalInteger(height, "DofPass height", this.height, { min: 1 });
     this.sceneTarget?.resize(this.width, this.height);
     this.depthDebugTarget?.resize(this.width, this.height);
     this.focusDebugTarget?.resize(this.width, this.height);

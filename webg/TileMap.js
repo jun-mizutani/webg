@@ -503,32 +503,29 @@ export default class TileMap {
       centerX: 0.0,
       centerZ: 0.0
     };
-    this.cellSize = this.readOptionalFinite(this.definition.cellSize, "cellSize", 4.0, { minExclusive: 0.0 });
-    this.cellGap = this.readOptionalFinite(this.definition.cellGap, "cellGap", 0.18, { min: 0.0 });
-    this.floorY = this.readOptionalFinite(this.definition.floorY, "floorY", -0.30);
-    this.baseTopY = this.readOptionalFinite(this.definition.baseTopY, "baseTopY", 0.72);
-    this.heightStepY = this.readOptionalFinite(this.definition.heightStepY, "heightStepY", 1.12, { minExclusive: 0.0 });
+    this.cellSize = util.readOptionalFiniteNumber(this.definition.cellSize, "TileMap cellSize", 4.0, { minExclusive: 0.0 });
+    this.cellGap = util.readOptionalFiniteNumber(this.definition.cellGap, "TileMap cellGap", 0.18, { min: 0.0 });
+    this.floorY = util.readOptionalFiniteNumber(this.definition.floorY, "TileMap floorY", -0.30);
+    this.baseTopY = util.readOptionalFiniteNumber(this.definition.baseTopY, "TileMap baseTopY", 0.72);
+    this.heightStepY = util.readOptionalFiniteNumber(this.definition.heightStepY, "TileMap heightStepY", 1.12, { minExclusive: 0.0 });
     const defaultVisibleHeightSteps = (this.baseTopY - this.floorY) / this.heightStepY;
     this.visibleHeightSteps = this.definition.visibleHeightSteps !== undefined
-      ? this.readOptionalFinite(this.definition.visibleHeightSteps, "visibleHeightSteps", defaultVisibleHeightSteps, { minExclusive: 0.0 })
+      ? util.readOptionalFiniteNumber(
+        this.definition.visibleHeightSteps,
+        "TileMap visibleHeightSteps",
+        defaultVisibleHeightSteps,
+        { minExclusive: 0.0 }
+      )
       : defaultVisibleHeightSteps;
     this.surfaceShading = resolveSurfaceShadingMode(this.definition.surfaceShading);
     if (this.cellGap >= this.cellSize) {
       throw new Error("TileMap cellGap must be smaller than cellSize");
     }
     this.tileSize = this.cellSize - this.cellGap;
-    this.defaultDisplayFollowCol = this.readOptionalInteger(this.definition.displayFollowCol, "displayFollowCol", 1, { min: 0 });
-    this.defaultDisplayFollowRow = this.readOptionalInteger(this.definition.displayFollowRow, "displayFollowRow", 1, { min: 0 });
-    this.displayAreaPadding = this.readOptionalInteger(this.definition.displayAreaPadding, "displayAreaPadding", 2, { min: 0 });
+    this.defaultDisplayFollowCol = util.readOptionalInteger(this.definition.displayFollowCol, "TileMap displayFollowCol", 1, { min: 0 });
+    this.defaultDisplayFollowRow = util.readOptionalInteger(this.definition.displayFollowRow, "TileMap displayFollowRow", 1, { min: 0 });
+    this.displayAreaPadding = util.readOptionalInteger(this.definition.displayAreaPadding, "TileMap displayAreaPadding", 2, { min: 0 });
     this.visibleCells = [];
-  }
-
-  readOptionalFinite(value, name, fallback, { min = null, minExclusive = null } = {}) {
-    return util.readOptionalFiniteNumber(value, `TileMap ${name}`, fallback, { min, minExclusive });
-  }
-
-  readOptionalInteger(value, name, fallback, { min = null } = {}) {
-    return util.readOptionalInteger(value, `TileMap ${name}`, fallback, { min });
   }
 
   // Scene JSON 側で使う tileMap 定義を受け取り、
@@ -1069,10 +1066,10 @@ export default class TileMap {
     }
     const currentWidth = this.displayArea?.width ?? this.width;
     const currentHeight = this.displayArea?.height ?? this.height;
-    const width = this.readOptionalInteger(options.width, "followCell.width", currentWidth, { min: 1 });
-    const height = this.readOptionalInteger(options.height, "followCell.height", currentHeight, { min: 1 });
-    const followCol = this.readOptionalInteger(options.followCol, "followCell.followCol", this.defaultDisplayFollowCol, { min: 0 });
-    const followRow = this.readOptionalInteger(options.followRow, "followCell.followRow", this.defaultDisplayFollowRow, { min: 0 });
+    const width = util.readOptionalInteger(options.width, "TileMap followCell.width", currentWidth, { min: 1 });
+    const height = util.readOptionalInteger(options.height, "TileMap followCell.height", currentHeight, { min: 1 });
+    const followCol = util.readOptionalInteger(options.followCol, "TileMap followCell.followCol", this.defaultDisplayFollowCol, { min: 0 });
+    const followRow = util.readOptionalInteger(options.followRow, "TileMap followCell.followRow", this.defaultDisplayFollowRow, { min: 0 });
     const minCol = cell.col - followCol;
     const minRow = cell.row - followRow;
     // normalizeDisplayArea() の strict 仕様に合わせ、
