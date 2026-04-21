@@ -177,12 +177,24 @@ export default class Screen {
 
   // キャンバスサイズと深度テクスチャを更新する
   resize(w, h) {
-    const reqW = Number.isFinite(w) ? Math.floor(w) : this.requestedWidth;
-    const reqH = Number.isFinite(h) ? Math.floor(h) : this.requestedHeight;
+    if (!Number.isFinite(w) || Number(w) <= 0) {
+      throw new Error("Screen.resize width must be a positive finite number");
+    }
+    if (!Number.isFinite(h) || Number(h) <= 0) {
+      throw new Error("Screen.resize height must be a positive finite number");
+    }
+    const reqW = Math.floor(Number(w));
+    const reqH = Math.floor(Number(h));
     this._applyResize(reqW, reqH, true);
   }
 
   _applyResize(reqW, reqH, updateGpu) {
+    if (!Number.isFinite(reqW) || Number(reqW) <= 0) {
+      throw new Error("Screen resize request width must be a positive finite number");
+    }
+    if (!Number.isFinite(reqH) || Number(reqH) <= 0) {
+      throw new Error("Screen resize request height must be a positive finite number");
+    }
     this.requestedWidth = reqW;
     this.requestedHeight = reqH;
 

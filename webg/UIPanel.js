@@ -5,6 +5,7 @@
 // ---------------------------------------------
 
 import { DEFAULT_UI_THEME } from "./WebgUiTheme.js";
+import util from "./util.js";
 
 // UIPanel:
 // - canvas 外の DOM を使って scene の上に重ねる UI の共通 CSS を JS から注入する
@@ -13,6 +14,10 @@ import { DEFAULT_UI_THEME } from "./WebgUiTheme.js";
 export default class UIPanel {
 
   static STYLE_ID = "webg-overlay-panel-style";
+  static normalizeTheme(theme, name = "theme") {
+    return util.readPlainObject(theme, `UIPanel ${name}`, {});
+  }
+
   static normalizeOptionalNumber(value, name, fallback) {
     if (value === undefined) {
       return fallback;
@@ -43,11 +48,15 @@ export default class UIPanel {
     return value;
   }
 
+  static normalizeOptionalPositioningMode(value, name, fallback) {
+    return util.readOptionalPositioningMode(value, `UIPanel ${name}`, fallback);
+  }
+
   constructor(options = {}) {
     this.doc = options.document ?? document;
     this.theme = {
       ...DEFAULT_UI_THEME.uiPanel,
-      ...(options.theme ?? {})
+      ...UIPanel.normalizeTheme(options.theme, "theme")
     };
     this.layouts = [];
     this._onResize = () => this.syncAllResponsiveLayouts();
@@ -283,7 +292,7 @@ export default class UIPanel {
   setTheme(theme = {}) {
     this.theme = {
       ...DEFAULT_UI_THEME.uiPanel,
-      ...(theme ?? {})
+      ...UIPanel.normalizeTheme(theme, "theme")
     };
     for (let i = 0; i < this.layouts.length; i++) {
       this.applyThemeToLayout(this.layouts[i]);
@@ -294,9 +303,24 @@ export default class UIPanel {
     const root = this.doc.createElement("div");
     root.className = "webg-overlay-root";
     root.style.setProperty("--webg-overlay-dock-offset", "0px");
-    if (options.id) root.id = options.id;
-    if (options.leftWidth) root.style.setProperty("--webg-overlay-left-width", options.leftWidth);
-    if (options.rightWidth) root.style.setProperty("--webg-overlay-right-width", options.rightWidth);
+    if (options.id !== undefined) {
+      if (typeof options.id !== "string" || options.id.length === 0) {
+        throw new Error("UIPanel id must be a non-empty string");
+      }
+      root.id = options.id;
+    }
+    if (options.leftWidth !== undefined) {
+      if (typeof options.leftWidth !== "string" || options.leftWidth.length === 0) {
+        throw new Error("UIPanel leftWidth must be a non-empty string");
+      }
+      root.style.setProperty("--webg-overlay-left-width", options.leftWidth);
+    }
+    if (options.rightWidth !== undefined) {
+      if (typeof options.rightWidth !== "string" || options.rightWidth.length === 0) {
+        throw new Error("UIPanel rightWidth must be a non-empty string");
+      }
+      root.style.setProperty("--webg-overlay-right-width", options.rightWidth);
+    }
     const gap = UIPanel.normalizeOptionalNumber(options.gap, "gap", undefined);
     if (gap !== undefined) root.style.setProperty("--webg-overlay-gap", `${gap}px`);
     if (options.columnMaxHeight !== undefined) {
@@ -328,7 +352,11 @@ export default class UIPanel {
     root.classList.toggle("has-scroll-columns", options.scrollColumns === true);
     root.classList.toggle("is-spread-columns", options.spreadColumns === true);
     const containerElement = options.containerElement ?? this.doc.body;
-    const positioningMode = options.positioningMode === "absolute" ? "absolute" : "fixed";
+    const positioningMode = UIPanel.normalizeOptionalPositioningMode(
+      options.positioningMode,
+      "positioningMode",
+      "fixed"
+    );
     const viewportElement = options.viewportElement ?? null;
     root.style.position = positioningMode;
     if (positioningMode === "absolute" && containerElement?.style) {

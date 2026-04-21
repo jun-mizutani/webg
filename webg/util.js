@@ -285,4 +285,255 @@ util.readUrl = async function (filename) {
   return await response.text();
 };
 
+// object の own property 判定を共通化する
+util.hasOwn = function (value, key) {
+  return Object.prototype.hasOwnProperty.call(value, key);
+};
+
+// candidates 配列の先頭から undefined 以外を探し、値とラベルを返す
+util.resolveOptionCandidate = function (candidates = []) {
+  for (let i = 0; i < candidates.length; i++) {
+    const candidate = candidates[i] ?? {};
+    if (candidate.value !== undefined) {
+      return candidate;
+    }
+  }
+  return null;
+};
+
+// 有限数を読み、必要なら整数・範囲も検証する
+util.readFiniteNumber = function (value, name, {
+  integer = false,
+  min = null,
+  minExclusive = null,
+  max = null,
+  maxExclusive = null
+} = {}) {
+  if (!Number.isFinite(value)) {
+    throw new Error(`${name} must be finite`);
+  }
+  const numeric = Number(value);
+  if (integer && !Number.isInteger(numeric)) {
+    throw new Error(`${name} must be an integer`);
+  }
+  if (min !== null && numeric < min) {
+    throw new Error(`${name} must be >= ${min}`);
+  }
+  if (minExclusive !== null && numeric <= minExclusive) {
+    throw new Error(`${name} must be > ${minExclusive}`);
+  }
+  if (max !== null && numeric > max) {
+    throw new Error(`${name} must be <= ${max}`);
+  }
+  if (maxExclusive !== null && numeric >= maxExclusive) {
+    throw new Error(`${name} must be < ${maxExclusive}`);
+  }
+  return numeric;
+};
+
+// 未指定時だけ fallback を返し、明示的な invalid 値は error にする
+util.readOptionalFiniteNumber = function (value, name, fallback, constraints = {}) {
+  if (value === undefined) {
+    return fallback;
+  }
+  return util.readFiniteNumber(value, name, constraints);
+};
+
+util.readOptionalInteger = function (value, name, fallback, { min = null, max = null } = {}) {
+  return util.readOptionalFiniteNumber(value, name, fallback, {
+    integer: true,
+    min,
+    max
+  });
+};
+
+util.readIntegerInRange = function (value, name, min, max) {
+  return util.readFiniteNumber(value, name, {
+    integer: true,
+    min,
+    max
+  });
+};
+
+util.readOptionalBoolean = function (value, name, fallback) {
+  if (value === undefined) {
+    return fallback;
+  }
+  if (typeof value !== "boolean") {
+    throw new Error(`${name} must be boolean`);
+  }
+  return value;
+};
+
+util.readOptionalString = function (value, name, fallback, { trim = false, allowEmpty = true } = {}) {
+  if (value === undefined) {
+    return fallback;
+  }
+  if (typeof value !== "string") {
+    throw new Error(`${name} must be a string`);
+  }
+  const text = trim ? value.trim() : value;
+  if (!allowEmpty && text.length === 0) {
+    throw new Error(`${name} must not be empty`);
+  }
+  return text;
+};
+
+util.readOptionalFunction = function (value, name, fallback = null, { allowNull = true } = {}) {
+  if (value === undefined) {
+    return fallback;
+  }
+  if (value === null) {
+    if (!allowNull) {
+      throw new Error(`${name} must be a function`);
+    }
+    return null;
+  }
+  if (typeof value !== "function") {
+    throw new Error(`${name} must be a function${allowNull ? " or null" : ""}`);
+  }
+  return value;
+};
+
+util.readPlainObject = function (value, name, fallback = {}) {
+  if (value === undefined) {
+    return fallback;
+  }
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    throw new Error(`${name} must be an object`);
+  }
+  return value;
+};
+
+util.readOptionalEnum = function (value, name, fallback, allowed = [], { trim = true, lowerCase = false } = {}) {
+  if (value === undefined) {
+    return fallback;
+  }
+  if (typeof value !== "string") {
+    throw new Error(`${name} must be a string`);
+  }
+  let text = trim ? value.trim() : value;
+  if (lowerCase) {
+    text = text.toLowerCase();
+  }
+  if (!allowed.includes(text)) {
+    throw new Error(`${name} must be one of: ${allowed.join(", ")}`);
+  }
+  return text;
+};
+
+util.readOptionalAnchor = function (value, fallback, name = "anchor") {
+  return util.readOptionalEnum(value, name, fallback, [
+    "top-left",
+    "top-right",
+    "top-center",
+    "bottom-left",
+    "bottom-right",
+    "bottom-center",
+    "center"
+  ]);
+};
+
+util.readOptionalAlign = function (value, fallback, name = "align") {
+  return util.readOptionalEnum(value, name, fallback, ["left", "center", "right"]);
+};
+
+util.readOptionalPositioningMode = function (value, name, fallback) {
+  return util.readOptionalEnum(value, name, fallback, ["absolute", "fixed"]);
+};
+
+util.readOptionalElement = function (value, name, fallback) {
+  if (value === undefined) {
+    return fallback;
+  }
+  if (value !== null && (typeof value !== "object" && typeof value !== "function")) {
+    throw new Error(`${name} must be an object or null`);
+  }
+  return value;
+};
+
+util.readVec3 = function (value, name, fallback = undefined) {
+  if (value === undefined || value === null) {
+    if (fallback !== undefined) {
+      return [...fallback];
+    }
+    throw new Error(`${name} must be a vec3 array`);
+  }
+  if (!Array.isArray(value) || value.length < 3) {
+    throw new Error(`${name} must be a vec3 array`);
+  }
+  return [
+    util.readFiniteNumber(value[0], `${name}[0]`),
+    util.readFiniteNumber(value[1], `${name}[1]`),
+    util.readFiniteNumber(value[2], `${name}[2]`)
+  ];
+};
+
+util.readColor = function (value, name, fallback = undefined, length = 4) {
+  if (value === undefined || value === null) {
+    if (fallback !== undefined) {
+      return [...fallback];
+    }
+    throw new Error(`${name} must be a color array`);
+  }
+  if (!Array.isArray(value) || value.length < length) {
+    throw new Error(`${name} must be a color array`);
+  }
+  const out = [];
+  for (let i = 0; i < length; i++) {
+    out.push(util.readFiniteNumber(value[i], `${name}[${i}]`));
+  }
+  return out;
+};
+
+util.readFiniteOption = function (candidates, name, defaultValue, constraints = {}) {
+  const resolved = util.resolveOptionCandidate(candidates);
+  if (!resolved) {
+    return defaultValue;
+  }
+  return util.readFiniteNumber(resolved.value, `${name} (${resolved.label ?? "value"})`, constraints);
+};
+
+util.readVec3Option = function (candidates, name, defaultValue) {
+  const resolved = util.resolveOptionCandidate(candidates);
+  if (!resolved) {
+    return [...defaultValue];
+  }
+  return util.readVec3(resolved.value, `${name} (${resolved.label ?? "value"})`);
+};
+
+util.readKeyOption = function (candidates, name, defaultValue) {
+  const resolved = util.resolveOptionCandidate(candidates);
+  if (!resolved) {
+    return defaultValue;
+  }
+  return util.readOptionalString(
+    resolved.value,
+    `${name} (${resolved.label ?? "value"})`,
+    defaultValue,
+    { trim: true, allowEmpty: false }
+  ).toLowerCase();
+};
+
+util.readEnumOption = function (candidates, name, defaultValue, allowed = []) {
+  const resolved = util.resolveOptionCandidate(candidates);
+  if (!resolved) {
+    return defaultValue;
+  }
+  return util.readOptionalEnum(
+    resolved.value,
+    `${name} (${resolved.label ?? "value"})`,
+    defaultValue,
+    allowed
+  );
+};
+
+util.readBooleanOption = function (candidates, name, defaultValue) {
+  const resolved = util.resolveOptionCandidate(candidates);
+  if (!resolved) {
+    return defaultValue;
+  }
+  return util.readOptionalBoolean(resolved.value, `${name} (${resolved.label ?? "value"})`, defaultValue);
+};
+
 export default util;

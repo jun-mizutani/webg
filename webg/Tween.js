@@ -10,6 +10,8 @@
 // - どの値を、どの時間で、どの ease で動かしているかを 1 つの class に閉じ込める
 // - sample や unittest を読む人が、演出の責務を追いやすいようにする
 
+import util from "./util.js";
+
 // 入れ子配列やオブジェクトを、そのまま別用途に流用できる形で複製する
 // 補間の途中で元データが書き換わっても、Tween 側の基準値が壊れないようにする
 const cloneValue = (value) => {
@@ -77,6 +79,28 @@ const writeValue = (target, key, value) => {
 };
 
 export default class Tween {
+  static getEasingMap() {
+    return {
+      linear: (t) => t,
+      inquad: (t) => t * t,
+      outquad: (t) => 1 - (1 - t) * (1 - t),
+      inoutquad: (t) => (t < 0.5)
+        ? (2 * t * t)
+        : (1 - Math.pow(-2 * t + 2, 2) * 0.5),
+      incubic: (t) => t * t * t,
+      outcubic: (t) => 1 - Math.pow(1 - t, 3),
+      inoutcubic: (t) => (t < 0.5)
+        ? (4 * t * t * t)
+        : (1 - Math.pow(-2 * t + 2, 3) * 0.5),
+      outexpo: (t) => (t >= 1.0 ? 1.0 : 1 - Math.pow(2, -10 * t)),
+      outsine: (t) => Math.sin((t * Math.PI) * 0.5)
+    };
+  }
+
+  static isKnownEasing(name) {
+    return Object.prototype.hasOwnProperty.call(Tween.getEasingMap(), String(name).toLowerCase());
+  }
+
   // Tween は「どの target を、何へ、どの速さで動かすか」を 1 本持つ
   // target は object でも array でもよく、WebgApp からは演出部品として使う
   constructor(target = {}, to = {}, options = {}) {
@@ -86,16 +110,19 @@ export default class Tween {
     // from が指定されればその値を起点にし、なければ target の現状値を起点にする
     this.fromSource = options.from !== undefined ? cloneValue(options.from) : null;
     // durationMs は 0 以下なら即時適用として扱う
-    this.durationMs = Number.isFinite(options.durationMs) ? Math.max(0, Number(options.durationMs)) : 0;
+    this.durationMs = util.readOptionalFiniteNumber(options.durationMs, "Tween durationMs", 0, { min: 0 });
     this.elapsedMs = 0;
     this.paused = options.paused === true;
     this.finished = false;
     // easing は名前で受け、必要ならあとから resolveEasing() で拡張しやすくする
     this.easingName = String(options.easing ?? "linear").toLowerCase();
+    if (options.easing !== undefined && !Tween.isKnownEasing(this.easingName)) {
+      throw new Error(`Tween easing "${options.easing}" is not supported`);
+    }
     this.easing = Tween.resolveEasing(this.easingName);
     // onUpdate / onComplete は sample 側の演出連携用に用意する
-    this.onUpdate = typeof options.onUpdate === "function" ? options.onUpdate : null;
-    this.onComplete = typeof options.onComplete === "function" ? options.onComplete : null;
+    this.onUpdate = util.readOptionalFunction(options.onUpdate, "Tween onUpdate");
+    this.onComplete = util.readOptionalFunction(options.onComplete, "Tween onComplete");
     // 開始時点の値を snapshot して、途中で target が変わっても補間の基準が揺れないようにする
     this.start = this.captureStartValues();
 
@@ -119,21 +146,7 @@ export default class Tween {
   // ここを 1 か所にまとめておくと、sample 側は "outCubic" のような文字列だけを渡せる
   static resolveEasing(name = "linear") {
     const easingName = String(name ?? "linear").toLowerCase();
-    const easingMap = {
-      linear: (t) => t,
-      inquad: (t) => t * t,
-      outquad: (t) => 1 - (1 - t) * (1 - t),
-      inoutquad: (t) => (t < 0.5)
-        ? (2 * t * t)
-        : (1 - Math.pow(-2 * t + 2, 2) * 0.5),
-      incubic: (t) => t * t * t,
-      outcubic: (t) => 1 - Math.pow(1 - t, 3),
-      inoutcubic: (t) => (t < 0.5)
-        ? (4 * t * t * t)
-        : (1 - Math.pow(-2 * t + 2, 3) * 0.5),
-      outexpo: (t) => (t >= 1.0 ? 1.0 : 1 - Math.pow(2, -10 * t)),
-      outsine: (t) => Math.sin((t * Math.PI) * 0.5)
-    };
+    const easingMap = Tween.getEasingMap();
     return easingMap[easingName] ?? easingMap.linear;
   }
 
@@ -197,8 +210,7 @@ export default class Tween {
       return false;
     }
 
-    const safeDelta = Number.isFinite(deltaMs) ? Math.max(0, Number(deltaMs)) : 0;
-    this.elapsedMs += safeDelta;
+    this.elapsedMs += util.readOptionalFiniteNumber(deltaMs, "Tween deltaMs", 0, { min: 0 });
     const progress = this.durationMs <= 0 ? 1.0 : Math.min(1.0, this.elapsedMs / this.durationMs);
     this.apply(progress);
     if (this.onUpdate) {

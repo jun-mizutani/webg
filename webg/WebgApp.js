@@ -23,6 +23,7 @@ import SceneValidator from "./SceneValidator.js";
 import SceneLoader from "./SceneLoader.js";
 import DebugDock from "./DebugDock.js";
 import FixedFormatPanel from "./FixedFormatPanel.js";
+import util from "./util.js";
 import { mergeUiTheme } from "./WebgUiTheme.js";
 
 // WebgApp:
@@ -254,26 +255,11 @@ export default class WebgApp {
   }
 
   readOptionalFiniteOption(value, name, fallback) {
-    if (value === undefined) {
-      return fallback;
-    }
-    if (!Number.isFinite(value)) {
-      throw new Error(`WebgApp ${name} must be finite`);
-    }
-    return Number(value);
+    return util.readOptionalFiniteNumber(value, `WebgApp ${name}`, fallback);
   }
 
   readOptionalIntegerOption(value, name, fallback, minValue = null) {
-    if (value === undefined) {
-      return fallback;
-    }
-    if (!Number.isFinite(value) || !Number.isInteger(value)) {
-      throw new Error(`WebgApp ${name} must be an integer`);
-    }
-    if (minValue !== null && Number(value) < minValue) {
-      throw new Error(`WebgApp ${name} must be >= ${minValue}`);
-    }
-    return Number(value);
+    return util.readOptionalInteger(value, `WebgApp ${name}`, fallback, { min: minValue });
   }
 
   selectLayoutDimension(candidates, name) {
@@ -810,32 +796,53 @@ export default class WebgApp {
   // camera を数フレームだけ揺らす
   // strength は number または vec3 を受け、duration が切れたら自動で止まる
   shakeCamera(options = {}) {
-    const durationMs = Number.isFinite(options.durationMs) ? Math.max(0, Number(options.durationMs)) : 120;
+    const durationMs = util.readOptionalFiniteNumber(options.durationMs, "WebgApp.shakeCamera durationMs", 120, { min: 0 });
     if (durationMs <= 0) {
       this.cameraShake = null;
       return null;
     }
     const strength = Array.isArray(options.strength)
-      ? [...options.strength]
+      ? (() => {
+        if (options.strength.length === 0 || options.strength.length > 3) {
+          throw new Error("WebgApp.shakeCamera strength array must have 1 to 3 elements");
+        }
+        const values = [...options.strength];
+        for (let i = 0; i < values.length; i++) {
+          values[i] = util.readOptionalFiniteNumber(values[i], `WebgApp.shakeCamera strength[${i}]`, undefined);
+        }
+        return values;
+      })()
       : [
-        Number.isFinite(options.strength) ? Number(options.strength) : 0.25,
-        Number.isFinite(options.strengthY) ? Number(options.strengthY) : (Number.isFinite(options.strength) ? Number(options.strength) : 0.25),
-        Number.isFinite(options.strengthZ) ? Number(options.strengthZ) : (Number.isFinite(options.strength) ? Number(options.strength) : 0.25)
+        util.readOptionalFiniteNumber(options.strength, "WebgApp.shakeCamera strength", 0.25),
+        util.readOptionalFiniteNumber(
+          options.strengthY,
+          "WebgApp.shakeCamera strengthY",
+          options.strength === undefined ? 0.25 : util.readOptionalFiniteNumber(options.strength, "WebgApp.shakeCamera strength", 0.25)
+        ),
+        util.readOptionalFiniteNumber(
+          options.strengthZ,
+          "WebgApp.shakeCamera strengthZ",
+          options.strength === undefined ? 0.25 : util.readOptionalFiniteNumber(options.strength, "WebgApp.shakeCamera strength", 0.25)
+        )
       ];
     while (strength.length < 3) {
       strength.push(strength.length === 0 ? 0.25 : strength[strength.length - 1]);
     }
+    const envelope = String(options.envelope ?? "outQuad").toLowerCase();
+    if (options.envelope !== undefined && !Tween.isKnownEasing(envelope)) {
+      throw new Error(`WebgApp.shakeCamera envelope "${options.envelope}" is not supported`);
+    }
     this.cameraShake = {
-      startedAtMs: Number.isFinite(options.nowMs) ? Number(options.nowMs) : Date.now(),
+      startedAtMs: util.readOptionalFiniteNumber(options.nowMs, "WebgApp.shakeCamera nowMs", Date.now()),
       durationMs,
-      frequency: Number.isFinite(options.frequency) ? Number(options.frequency) : 18.0,
+      frequency: util.readOptionalFiniteNumber(options.frequency, "WebgApp.shakeCamera frequency", 18.0, { min: 0 }),
       strength: [
-        Number.isFinite(strength[0]) ? Number(strength[0]) : 0.25,
-        Number.isFinite(strength[1]) ? Number(strength[1]) : 0.25,
-        Number.isFinite(strength[2]) ? Number(strength[2]) : 0.25
+        util.readOptionalFiniteNumber(strength[0], "WebgApp.shakeCamera strength[0]", 0.25),
+        util.readOptionalFiniteNumber(strength[1], "WebgApp.shakeCamera strength[1]", 0.25),
+        util.readOptionalFiniteNumber(strength[2], "WebgApp.shakeCamera strength[2]", 0.25)
       ],
-      seed: Number.isFinite(options.seed) ? Number(options.seed) : 1.0,
-      envelope: String(options.envelope ?? "outQuad").toLowerCase()
+      seed: util.readOptionalFiniteNumber(options.seed, "WebgApp.shakeCamera seed", 1.0),
+      envelope
     };
     return { ...this.cameraShake, strength: [...this.cameraShake.strength] };
   }
@@ -3127,7 +3134,9 @@ export default class WebgApp {
       return {
         lines: normalLines,
         scale: baseScale,
-        options: { ...this.hudRowsOptions, width: normalMaxWidth || null }
+        options: normalMaxWidth > 0
+          ? { ...this.hudRowsOptions, width: normalMaxWidth }
+          : { ...this.hudRowsOptions }
       };
     }
 
@@ -3135,7 +3144,9 @@ export default class WebgApp {
       return {
         lines: compactLines,
         scale: baseScale,
-        options: { ...this.hudRowsOptions, width: compactMaxWidth || null }
+        options: compactMaxWidth > 0
+          ? { ...this.hudRowsOptions, width: compactMaxWidth }
+          : { ...this.hudRowsOptions }
       };
     }
 
@@ -3276,8 +3287,8 @@ export default class WebgApp {
       gap: this.readHudOptionalInt(options.gap, "buildHudTextBlockEntry", "options.gap", 1),
       align: options.align ?? "left",
       width: options.width === undefined
-        ? null
-        : this.readHudOptionalInt(options.width, "buildHudTextBlockEntry", "options.width", null),
+        ? undefined
+        : this.readHudOptionalInt(options.width, "buildHudTextBlockEntry", "options.width", undefined),
       wrap: options.wrap === true,
       clip: options.clip !== false
     };

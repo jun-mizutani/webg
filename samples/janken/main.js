@@ -624,11 +624,11 @@ async function start() {
   updateResultMessage();
 
   app.start({
-    onUpdate: () => {
+    onUpdate: (ctx) => {
       // 毎 frame は 2 つの AnimationState を進め、
       // その結果を diagnostics と HUD へ反映するだけに保つ
-      playerHand.machine.update();
-      cpuHand.machine.update();
+      playerHand.machine.update({ nowMs: ctx.timeMs }, ctx.deltaSec * 1000.0);
+      cpuHand.machine.update({ nowMs: ctx.timeMs }, ctx.deltaSec * 1000.0);
 
       const envReport = updateDiagnosticsStats();
       if (app.isDebugUiEnabled()) {

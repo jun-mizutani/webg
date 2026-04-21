@@ -78,8 +78,7 @@ export default class Node extends CoordinateSystem {
   getRigidMatrix(matrix) {
     const scale = matrix.getUniformScale();
     if (scale === null) {
-      console.assert(false, "Node only supports uniform scale in matrix decomposition");
-      return matrix.clone();
+      throw new Error("Node.getRigidMatrix only supports uniform scale");
     }
     return matrix.removeUniformScale(scale);
   }
@@ -87,8 +86,10 @@ export default class Node extends CoordinateSystem {
   // 行列から position / quat / uniform scale をまとめて分解する
   decomposeMatrixTransform(matrix) {
     const scale = matrix.getUniformScale();
-    console.assert(scale !== null, "Node only supports uniform scale in matrix decomposition");
-    const uniformScale = scale ?? 1.0;
+    if (scale === null) {
+      throw new Error("Node.decomposeMatrixTransform only supports uniform scale");
+    }
+    const uniformScale = scale;
     const rigid = matrix.removeUniformScale(uniformScale);
     const quat = new Quat();
     quat.matrixToQuat(rigid);
@@ -218,16 +219,35 @@ export default class Node extends CoordinateSystem {
       return null;
     }
 
+    const readAngle = (value, label) => {
+      if (value === undefined) {
+        return undefined;
+      }
+      if (!Number.isFinite(value)) {
+        throw new Error(`Node.animateRotation ${label} must be finite`);
+      }
+      return Number(value);
+    };
+
     const toQuat = new Quat();
     let targetQuat = null;
 
     if (Array.isArray(to) && to.length >= 3) {
+      if (!Number.isFinite(to[0]) || !Number.isFinite(to[1]) || !Number.isFinite(to[2])) {
+        throw new Error("Node.animateRotation target Euler array must contain finite numbers");
+      }
       toQuat.eulerToQuat(to[0], to[1], to[2]);
       targetQuat = toQuat;
     } else if (to instanceof Quat) {
       targetQuat = to.clone();
     } else if (typeof to === "object") {
-      if (Array.isArray(to.quat) && to.quat.length >= 4) {
+      if (to.quat !== undefined) {
+        if (!Array.isArray(to.quat) || to.quat.length < 4) {
+          throw new Error("Node.animateRotation target quat must be an array of length >= 4");
+        }
+        if (!Number.isFinite(to.quat[0]) || !Number.isFinite(to.quat[1]) || !Number.isFinite(to.quat[2]) || !Number.isFinite(to.quat[3])) {
+          throw new Error("Node.animateRotation target quat must contain finite numbers");
+        }
         const quat = new Quat();
         quat.q[0] = Number(to.quat[0]);
         quat.q[1] = Number(to.quat[1]);
@@ -236,14 +256,24 @@ export default class Node extends CoordinateSystem {
         quat.normalize();
         targetQuat = quat;
       } else {
-        const head = Number.isFinite(to.head) ? Number(to.head)
-          : Number.isFinite(to.yaw) ? Number(to.yaw)
-            : 0.0;
-        const pitch = Number.isFinite(to.pitch) ? Number(to.pitch) : 0.0;
-        const bank = Number.isFinite(to.bank) ? Number(to.bank)
-          : Number.isFinite(to.roll) ? Number(to.roll)
-            : 0.0;
-        toQuat.eulerToQuat(head, pitch, bank);
+        const head = readAngle(to.head, "head");
+        const yaw = readAngle(to.yaw, "yaw");
+        const pitch = readAngle(to.pitch, "pitch");
+        const bank = readAngle(to.bank, "bank");
+        const roll = readAngle(to.roll, "roll");
+        if (
+          head === undefined
+          && yaw === undefined
+          && pitch === undefined
+          && bank === undefined
+          && roll === undefined
+        ) {
+          throw new Error("Node.animateRotation target object must define quat or Euler angles");
+        }
+        const resolvedHead = head ?? yaw ?? 0.0;
+        const resolvedPitch = pitch ?? 0.0;
+        const resolvedBank = bank ?? roll ?? 0.0;
+        toQuat.eulerToQuat(resolvedHead, resolvedPitch, resolvedBank);
         targetQuat = toQuat;
       }
     }
@@ -261,7 +291,10 @@ export default class Node extends CoordinateSystem {
     }
 
     const tweenState = { ratio: 0.0 };
-    const durationMs = Number.isFinite(options.durationMs) ? Math.max(0, Number(options.durationMs)) : 0;
+    if (options.durationMs !== undefined && (!Number.isFinite(options.durationMs) || Number(options.durationMs) < 0)) {
+      throw new Error("Node.animateRotation durationMs must be a finite number >= 0");
+    }
+    const durationMs = options.durationMs === undefined ? 0 : Number(options.durationMs);
     const tween = new Tween(tweenState, { ratio: 1.0 }, {
       durationMs,
       easing: options.easing ?? "linear",

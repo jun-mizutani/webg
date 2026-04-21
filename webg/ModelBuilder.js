@@ -898,18 +898,15 @@ export default class ModelBuilder {
             if (!entry?.shape || entry.animationBindings.length === 0) {
               continue;
             }
-            const animation = entry.animationMap.get(entry.animationBindings[0]);
-            if (!animation) {
-              continue;
-            }
+            const animationId = entry.animationBindings[0];
+            const animation = requireRuntimeAnimation(entry.animationMap, animationId, "bindAnimationBindings");
             entry.shape.setAnimation(animation);
             boundCount++;
           }
           return boundCount;
         },
         startAnimation(id) {
-          const animation = animationMap.get(String(id ?? ""));
-          if (!animation) return null;
+          const animation = requireRuntimeAnimation(animationMap, id, "startAnimation");
           animation.start();
           return animation;
         },
@@ -917,8 +914,7 @@ export default class ModelBuilder {
           return this.startAnimation(id);
         },
         playAnimation(id) {
-          const animation = animationMap.get(String(id ?? ""));
-          if (!animation) return -1;
+          const animation = requireRuntimeAnimation(animationMap, id, "playAnimation");
           return animation.play();
         },
         startAllAnimations() {
@@ -939,14 +935,12 @@ export default class ModelBuilder {
           return list.length;
         },
         pauseAnimation(id) {
-          const animation = animationMap.get(String(id ?? ""));
-          if (!animation) return null;
+          const animation = requireRuntimeAnimation(animationMap, id, "pauseAnimation");
           animation.schedule.pause = true;
           return animation;
         },
         resumeAnimation(id) {
-          const animation = animationMap.get(String(id ?? ""));
-          if (!animation) return null;
+          const animation = requireRuntimeAnimation(animationMap, id, "resumeAnimation");
           animation.schedule.pause = false;
           return animation;
         },
@@ -1075,6 +1069,10 @@ export default class ModelBuilder {
         runtime.shapes = instantiated.shapes;
       }
       return instantiated;
+    };
+
+    const requireActiveInstantiation = (methodName) => {
+      return requireRuntimeInstantiation(activeInstantiation, methodName);
     };
 
     this.emitStage(

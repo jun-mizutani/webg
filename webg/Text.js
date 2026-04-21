@@ -9,6 +9,18 @@ import Font from "./Font.js";
 import Texture from "./Texture.js";
 
 export default class Text {
+  static readOptionalInteger(value, name, fallback) {
+    return util.readOptionalInteger(value, `Text ${name}`, fallback, { min: 1 });
+  }
+
+  static readPositiveScale(value, name = "scale") {
+    return util.readFiniteNumber(value, `Text ${name}`, { minExclusive: 0 });
+  }
+
+  static readGridCoordinate(value, name, limit) {
+    return util.readIntegerInRange(value, `Text ${name}`, 0, limit - 1);
+  }
+
   // 可変 grid の画面バッファとフォント定義を初期化する
   constructor(gpu, options = {}) {
     // 既定では 80x25 だが、grid サイズを差し替えられるようにしておく
@@ -19,8 +31,8 @@ export default class Text {
     this.vertexBuffer = null;
     this.charOffset = 32; // for default font
     this.minCharCode = 0;
-    this.cols = Number.isFinite(options.cols) ? Math.max(1, Math.floor(options.cols)) : 80;
-    this.rows = Number.isFinite(options.rows) ? Math.max(1, Math.floor(options.rows)) : 25;
+    this.cols = Text.readOptionalInteger(options.cols, "cols", 80);
+    this.rows = Text.readOptionalInteger(options.rows, "rows", 25);
     this.letters = [
       [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
       [0,0,0,8,8,0,0,8,8,8,8,8,8,8,8,0],
@@ -125,8 +137,8 @@ export default class Text {
   // 80x25 を既定値にしつつ、sample や debug UI では必要に応じて
   // より細かい列数/行数へ切り替えられるようにする
   setGridSize(cols, rows) {
-    const nextCols = Number.isFinite(cols) ? Math.max(1, Math.floor(cols)) : this.cols;
-    const nextRows = Number.isFinite(rows) ? Math.max(1, Math.floor(rows)) : this.rows;
+    const nextCols = Text.readOptionalInteger(cols, "cols", this.cols);
+    const nextRows = Text.readOptionalInteger(rows, "rows", this.rows);
     if (nextCols === this.cols && nextRows === this.rows) {
       return { cols: this.cols, rows: this.rows };
     }
@@ -162,7 +174,7 @@ export default class Text {
   // 現在 scale で表示に使える列数 / 行数を返す
   // scale を 2.0 にすると各文字が 2 倍になり、見える列数/行数は半分になる
   getVisibleGridSize(scale = this.shader?.getScale?.() ?? 1.0) {
-    const safeScale = Number(scale);
+    const safeScale = Text.readPositiveScale(scale);
     return {
       cols: Math.max(1, Math.floor(this.cols / safeScale)),
       rows: Math.max(1, Math.floor(this.rows / safeScale))
@@ -173,13 +185,14 @@ export default class Text {
   // Message.js は absolute な cols/rows ではなく、ここで返す visibleCols/visibleRows を
   // 参照して right/bottom anchor や center を決める
   getLayoutInfo(scale = this.shader?.getScale?.() ?? 1.0) {
-    const visible = this.getVisibleGridSize(scale);
+    const safeScale = Text.readPositiveScale(scale);
+    const visible = this.getVisibleGridSize(safeScale);
     return {
       cols: this.cols,
       rows: this.rows,
       visibleCols: visible.cols,
       visibleRows: visible.rows,
-      scale: Number(scale),
+      scale: safeScale,
       cellWidth: 2.0 / this.cols,
       cellHeight: 2.0 / this.rows
     };
@@ -187,12 +200,8 @@ export default class Text {
 
   // カーソル位置を移動する
   goTo(x, y) {
-    if ((x >= 0) && (x < this.cols)) {
-      this.cursorX = x;
-    }
-    if ((y >= 0) && (y < this.rows)) {
-      this.cursorY = y;
-    }
+    this.cursorX = Text.readGridCoordinate(x, "x", this.cols);
+    this.cursorY = Text.readGridCoordinate(y, "y", this.rows);
   }
 
   // 現在カーソルを保存する
@@ -293,8 +302,9 @@ export default class Text {
   // フォントスケールを設定する
   // 文字を大きくすると、見える列数/行数は getVisibleGridSize() の値に従って減る
   setScale(scale) {
+    const safeScale = Text.readPositiveScale(scale);
     if (this.shader !== null) {
-      this.shader.setScale(scale);
+      this.shader.setScale(safeScale);
     }
   }
 

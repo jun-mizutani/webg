@@ -6,6 +6,7 @@
 
 import Billboard from "./Billboard.js";
 import Texture from "./Texture.js";
+import util from "./util.js";
 
 // ParticleEmitter:
 // - 短命な particle をまとめて spawn / update / draw するための小さな管理 class
@@ -16,35 +17,23 @@ const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
 
 const randomRange = (random, min, max) => min + (max - min) * random();
 
-const cloneVec3 = (value, fallback = [0.0, 0.0, 0.0]) => {
-  const src = Array.isArray(value) ? value : fallback;
-  return [
-    Number.isFinite(src[0]) ? Number(src[0]) : fallback[0],
-    Number.isFinite(src[1]) ? Number(src[1]) : fallback[1],
-    Number.isFinite(src[2]) ? Number(src[2]) : fallback[2]
-  ];
+const cloneVec3 = (value, fallback = null, label = "vec3") => {
+  return util.readVec3(value, `ParticleEmitter ${label}`, fallback === null ? undefined : fallback);
 };
 
-const cloneColor = (value, fallback = [1.0, 1.0, 1.0, 1.0]) => {
-  const src = Array.isArray(value) ? value : fallback;
-  return [
-    Number.isFinite(src[0]) ? Number(src[0]) : fallback[0],
-    Number.isFinite(src[1]) ? Number(src[1]) : fallback[1],
-    Number.isFinite(src[2]) ? Number(src[2]) : fallback[2],
-    Number.isFinite(src[3]) ? Number(src[3]) : fallback[3]
-  ];
+const cloneColor = (value, fallback = null, label = "color") => {
+  return util.readColor(value, `ParticleEmitter ${label}`, fallback === null ? undefined : fallback, 4);
 };
 
-const cloneObject = (value) => {
-  if (!value || typeof value !== "object") {
-    return {};
-  }
-  return { ...value };
+const cloneObject = (value, label = "object") => {
+  return { ...util.readPlainObject(value, `ParticleEmitter ${label}`, {}) };
 };
 
 const createSeededRandom = (seed = 1) => {
-  let state = (Number.isFinite(seed) ? Math.floor(seed) : 1) >>> 0;
-  if (state === 0) state = 1;
+  let state = util.readFiniteNumber(seed, "ParticleEmitter seed", { integer: true }) >>> 0;
+  if (state === 0) {
+    throw new Error("ParticleEmitter seed must not resolve to 0");
+  }
   return () => {
     state = (state * 1664525 + 1013904223) >>> 0;
     return state / 0x100000000;
@@ -179,10 +168,10 @@ export default class ParticleEmitter {
   // 生成自体は WebgApp の helper から呼ばれ、sample 側は emit() を中心に使う
   constructor(options = {}) {
     this.name = String(options.name ?? "particleEmitter");
-    this.maxParticles = Math.floor(options.maxParticles ?? 256);
+    this.maxParticles = util.readOptionalInteger(options.maxParticles, "ParticleEmitter maxParticles", 256, { min: 1 });
     this.useShadow = options.useShadow === true;
-    this.groundY = Number.isFinite(options.groundY) ? Number(options.groundY) : 0.0;
-    this.seed = Number.isFinite(options.seed) ? Number(options.seed) : 1;
+    this.groundY = util.readOptionalFiniteNumber(options.groundY, "ParticleEmitter groundY", 0.0);
+    this.seed = util.readOptionalInteger(options.seed, "ParticleEmitter seed", 1);
     this.random = typeof options.random === "function" ? options.random : createSeededRandom(this.seed);
     this.presetName = "spark";
     this.presetOptions = {};
@@ -217,7 +206,7 @@ export default class ParticleEmitter {
     return {
       name: this.presetName,
       texture: { ...base.texture, ...(this.presetOptions.texture ?? {}) },
-      defaults: { ...base.defaults, ...cloneObject(this.presetOptions.defaults) }
+      defaults: { ...base.defaults, ...cloneObject(this.presetOptions.defaults, "presetOptions.defaults") }
     };
   }
 
@@ -228,11 +217,11 @@ export default class ParticleEmitter {
     this.presetOptions = {
       texture: {
         ...base.texture,
-        ...(options.texture ?? {})
+        ...cloneObject(options.texture, "preset texture")
       },
       defaults: {
         ...base.defaults,
-        ...cloneObject(options.defaults)
+        ...cloneObject(options.defaults, "preset defaults")
       }
     };
     if (this.textureReady) {
@@ -316,10 +305,14 @@ export default class ParticleEmitter {
 
   // 1 frame 分だけ spawn 位置や速度のばらつきを付けたいときに使う
   _spreadVec3(base, spread) {
-    const b = cloneVec3(base);
+    const b = cloneVec3(base, null, "spread base");
     const s = Array.isArray(spread)
-      ? cloneVec3(spread)
-      : [Number.isFinite(spread) ? Number(spread) : 0.0, Number.isFinite(spread) ? Number(spread) : 0.0, Number.isFinite(spread) ? Number(spread) : 0.0];
+      ? cloneVec3(spread, null, "spread vec3")
+      : [
+        util.readFiniteNumber(spread, "ParticleEmitter spread scalar"),
+        util.readFiniteNumber(spread, "ParticleEmitter spread scalar"),
+        util.readFiniteNumber(spread, "ParticleEmitter spread scalar")
+      ];
     return [
       b[0] + randomRange(this.random, -s[0], s[0]),
       b[1] + randomRange(this.random, -s[1], s[1]),
@@ -329,10 +322,15 @@ export default class ParticleEmitter {
 
   // color のばらつきを作る
   _spreadColor(base, spread) {
-    const b = cloneColor(base);
+    const b = cloneColor(base, null, "spread color base");
     const s = Array.isArray(spread)
-      ? cloneColor(spread, [0.0, 0.0, 0.0, 0.0])
-      : [Number.isFinite(spread) ? Number(spread) : 0.0, Number.isFinite(spread) ? Number(spread) : 0.0, Number.isFinite(spread) ? Number(spread) : 0.0, Number.isFinite(spread) ? Number(spread) : 0.0];
+      ? cloneColor(spread, null, "spread color")
+      : [
+        util.readFiniteNumber(spread, "ParticleEmitter color spread scalar"),
+        util.readFiniteNumber(spread, "ParticleEmitter color spread scalar"),
+        util.readFiniteNumber(spread, "ParticleEmitter color spread scalar"),
+        util.readFiniteNumber(spread, "ParticleEmitter color spread scalar")
+      ];
     return [
       clamp(b[0] + randomRange(this.random, -s[0], s[0]), 0.0, 1.0),
       clamp(b[1] + randomRange(this.random, -s[1], s[1]), 0.0, 1.0),
@@ -371,27 +369,28 @@ export default class ParticleEmitter {
       throw new Error("ParticleEmitter emit options require explicit vector/color arrays");
     }
     return {
-      position: cloneVec3(options.position),
-      positionSpread: options.positionSpread,
-      velocity: cloneVec3(options.velocity),
-      velocitySpread: options.velocitySpread,
-      gravity: cloneVec3(options.gravity),
-      drag: Number(options.drag),
-      life: Number(options.life),
-      lifeSpread: Number(options.lifeSpread),
-      size: Number(options.size),
-      sizeSpread: Number(options.sizeSpread),
-      color: cloneColor(options.color),
-      colorSpread: options.colorSpread,
-      shadowAlpha: Number(options.shadowAlpha),
-      shadowScale: Number(options.shadowScale),
-      shadowY: Number(options.shadowY)
+      position: cloneVec3(options.position, null, "emit.position"),
+      positionSpread: cloneVec3(options.positionSpread, null, "emit.positionSpread"),
+      velocity: cloneVec3(options.velocity, null, "emit.velocity"),
+      velocitySpread: cloneVec3(options.velocitySpread, null, "emit.velocitySpread"),
+      gravity: cloneVec3(options.gravity, null, "emit.gravity"),
+      drag: util.readFiniteNumber(options.drag, "ParticleEmitter emit.drag"),
+      life: util.readFiniteNumber(options.life, "ParticleEmitter emit.life"),
+      lifeSpread: util.readFiniteNumber(options.lifeSpread, "ParticleEmitter emit.lifeSpread"),
+      size: util.readFiniteNumber(options.size, "ParticleEmitter emit.size"),
+      sizeSpread: util.readFiniteNumber(options.sizeSpread, "ParticleEmitter emit.sizeSpread"),
+      color: cloneColor(options.color, null, "emit.color"),
+      colorSpread: cloneColor(options.colorSpread, null, "emit.colorSpread"),
+      shadowAlpha: util.readFiniteNumber(options.shadowAlpha, "ParticleEmitter emit.shadowAlpha"),
+      shadowScale: util.readFiniteNumber(options.shadowScale, "ParticleEmitter emit.shadowScale"),
+      shadowY: util.readFiniteNumber(options.shadowY, "ParticleEmitter emit.shadowY")
     };
   }
 
   // particle を最大 count 個まで spawn する
   emit(count = 1, options = {}) {
-    const spawnCount = Math.floor(count);
+    util.readFiniteNumber(count, "ParticleEmitter emit count", { integer: true });
+    const spawnCount = Number(count);
     if (spawnCount <= 0) return 0;
 
     const spawn = this._resolveSpawnOptions(options);
@@ -432,7 +431,7 @@ export default class ParticleEmitter {
   // 1 frame 分だけ particle を進める
   // deltaMs を受け取り、内部では秒へ換算して velocity / gravity / drag を更新する
   update(deltaMs = 0) {
-    const dt = Number.isFinite(deltaMs) ? Math.max(0.0, Number(deltaMs)) * 0.001 : 0.0;
+    const dt = util.readFiniteNumber(deltaMs, "ParticleEmitter deltaMs", { min: 0 }) * 0.001;
     if (dt <= 0.0) {
       return this.getAliveCount();
     }

@@ -5,8 +5,12 @@
 // ---------------------------------------------
 
 import FullscreenPass from "./FullscreenPass.js";
+import util from "./util.js";
 
 export default class VignettePass extends FullscreenPass {
+  readFinite(value, name, { min = null, minExclusive = null, max = null } = {}) {
+    return util.readFiniteNumber(value, `VignettePass ${name}`, { min, minExclusive, max });
+  }
 
   // 最終 color texture の周辺だけを減衰させる最小 postprocess
   // renderer 本体へ追加の scene pass を要求せず、
@@ -142,21 +146,26 @@ fn fsMain(input : VSOut) -> @location(0) vec4f {
 
   setColorScale(r, g, b, a = 1.0) {
     const offset = Number.isFinite(this.OFF_COLOR_SCALE) ? this.OFF_COLOR_SCALE : 0;
-    this.uniformData.set([r, g, b, a], offset);
+    this.uniformData.set([
+      this.readFinite(r, "colorScale.r"),
+      this.readFinite(g, "colorScale.g"),
+      this.readFinite(b, "colorScale.b"),
+      this.readFinite(a, "colorScale.a")
+    ], offset);
     this.updateUniforms();
   }
 
   setUvScale(u, v) {
     const offset = Number.isFinite(this.OFF_UV_SCALE_OFFSET) ? this.OFF_UV_SCALE_OFFSET : 4;
-    this.uniformData[offset + 0] = u;
-    this.uniformData[offset + 1] = v;
+    this.uniformData[offset + 0] = this.readFinite(u, "uvScale.u");
+    this.uniformData[offset + 1] = this.readFinite(v, "uvScale.v");
     this.updateUniforms();
   }
 
   setUvOffset(u, v) {
     const offset = Number.isFinite(this.OFF_UV_SCALE_OFFSET) ? this.OFF_UV_SCALE_OFFSET : 4;
-    this.uniformData[offset + 2] = u;
-    this.uniformData[offset + 3] = v;
+    this.uniformData[offset + 2] = this.readFinite(u, "uvOffset.u");
+    this.uniformData[offset + 3] = this.readFinite(v, "uvOffset.v");
     this.updateUniforms();
   }
 
@@ -174,25 +183,34 @@ fn fsMain(input : VSOut) -> @location(0) vec4f {
   // vignette が完全に掛かり切る外周半径
   // 0.5 付近だと中心寄りから暗くなり、1.0 に近いほど周辺だけに寄る
   setRadius(value) {
-    this.uniformData[this.OFF_VIGNETTE + 2] = Number(value);
+    const radius = this.readFinite(value, "radius", { minExclusive: 0 });
+    const softness = this.uniformData[this.OFF_VIGNETTE + 3];
+    if (Number.isFinite(softness) && softness > 0 && softness > radius) {
+      throw new Error("VignettePass radius must be >= current softness");
+    }
+    this.uniformData[this.OFF_VIGNETTE + 2] = radius;
     this.updateUniforms();
   }
 
   // 内側の保持領域から外周まで、どれだけ滑らかに落とすかを決める
   // 値が小さいほど境界が硬く、大きいほど広い範囲でなだらかに暗くなる
   setSoftness(value) {
-    this.uniformData[this.OFF_VIGNETTE + 3] = Number(value);
+    const radius = this.uniformData[this.OFF_VIGNETTE + 2];
+    this.uniformData[this.OFF_VIGNETTE + 3] = this.readFinite(value, "softness", { minExclusive: 0, max: radius });
     this.updateUniforms();
   }
 
   // vignette の効きの強さ
   // 0 で無効、1 で tint 色まで完全に寄せる
   setStrength(value) {
-    this.uniformData[this.OFF_FLAGS + 0] = Number(value);
+    this.uniformData[this.OFF_FLAGS + 0] = this.readFinite(value, "strength", { min: 0, max: 1 });
     this.updateUniforms();
   }
 
   setEnabled(flag) {
+    if (typeof flag !== "boolean") {
+      throw new Error("VignettePass enabled must be boolean");
+    }
     this.uniformData[this.OFF_FLAGS + 1] = flag ? 1.0 : 0.0;
     this.updateUniforms();
   }
@@ -201,7 +219,12 @@ fn fsMain(input : VSOut) -> @location(0) vec4f {
   // 既定は黒なので、一般的な暗い vignette になる
   // sepia 風などを試したい場合は黒以外へも変えられる
   setTint(r, g, b, a = 1.0) {
-    this.uniformData.set([r, g, b, a], this.OFF_TINT);
+    this.uniformData.set([
+      this.readFinite(r, "tint.r"),
+      this.readFinite(g, "tint.g"),
+      this.readFinite(b, "tint.b"),
+      this.readFinite(a, "tint.a")
+    ], this.OFF_TINT);
     this.updateUniforms();
   }
 

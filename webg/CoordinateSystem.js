@@ -23,6 +23,7 @@ export default class CoordinateSystem {
     this.position = [0, 0, 0];
     this.quat = new Quat();
     this.scale = 1.0;
+    this.matrixOverride = null;
     this.dirty = true;
     this.accumulatedRatio = 0;
     this.startRotation = new Quat();
@@ -95,6 +96,7 @@ export default class CoordinateSystem {
   // 姿勢を設定する（head=Y, pitch=X, bank=Z）
   // 一般的な3D用語では yaw=Y, pitch=X, roll=Z に相当する
   setAttitude(head, pitch, bank) {
+    this.matrixOverride = null;
     this.quat.eulerToQuat(head, pitch, bank);
     this.dirty = true;
   }
@@ -131,6 +133,7 @@ export default class CoordinateSystem {
 
   // ローカル位置を設定する
   setPosition(x, y, z) {
+    this.matrixOverride = null;
     this.position[0] = x;
     this.position[1] = y;
     this.position[2] = z;
@@ -139,18 +142,21 @@ export default class CoordinateSystem {
 
   // X位置のみ設定する
   setPositionX(x) {
+    this.matrixOverride = null;
     this.position[0] = x;
     this.dirty = true;
   }
 
   // Y位置のみ設定する
   setPositionY(y) {
+    this.matrixOverride = null;
     this.position[1] = y;
     this.dirty = true;
   }
 
   // Z位置のみ設定する
   setPositionZ(z) {
+    this.matrixOverride = null;
     this.position[2] = z;
     this.dirty = true;
   }
@@ -171,6 +177,7 @@ export default class CoordinateSystem {
     if (!Number.isFinite(numericScale) || Math.abs(numericScale) <= 1.0e-8) {
       return;
     }
+    this.matrixOverride = null;
     this.scale = numericScale;
     this.dirty = true;
   }
@@ -178,6 +185,7 @@ export default class CoordinateSystem {
   // ローカルX回転を加算する
   rotateX(degree) {
     let qq = new Quat();
+    this.matrixOverride = null;
     qq.setRotateX(degree);
     this.quat.mulQuat(qq);
     this.dirty = true;
@@ -186,6 +194,7 @@ export default class CoordinateSystem {
   // ローカルY回転を加算する
   rotateY(degree) {
     let qq = new Quat();
+    this.matrixOverride = null;
     qq.setRotateY(degree);
     this.quat.mulQuat(qq);
     this.dirty = true;
@@ -194,6 +203,7 @@ export default class CoordinateSystem {
   // ローカルZ回転を加算する
   rotateZ(degree) {
     let qq = new Quat();
+    this.matrixOverride = null;
     qq.setRotateZ(degree);
     this.quat.mulQuat(qq);
     this.dirty = true;
@@ -203,6 +213,7 @@ export default class CoordinateSystem {
   // 引数順は webg 伝統の head(Y) / pitch(X) / bank(Z)
   rotate(head, pitch, bank) {
     let qq = new Quat();
+    this.matrixOverride = null;
     qq.eulerToQuat(head, pitch, bank);
     this.quat.mulQuat(qq);
     this.dirty = true;
@@ -232,6 +243,7 @@ export default class CoordinateSystem {
   move(x, y, z) {
     const rotationMatrix = new Matrix();
     const delta = [Number(x), Number(y), Number(z)];
+    this.matrixOverride = null;
     rotationMatrix.setByQuat(this.quat);
     const moved = rotationMatrix.mul3x3Vector(delta);
     this.position[0] += moved[0];
@@ -253,8 +265,7 @@ export default class CoordinateSystem {
   getRigidMatrix(matrix) {
     const scale = matrix.getUniformScale();
     if (scale === null) {
-      console.assert(false, "CoordinateSystem only supports uniform scale in matrix decomposition");
-      return matrix.clone();
+      throw new Error("CoordinateSystem.getRigidMatrix only supports uniform scale");
     }
     return matrix.removeUniformScale(scale);
   }
@@ -278,6 +289,11 @@ export default class CoordinateSystem {
 
   // ローカル行列を再構築する
   setMatrix() {
+    if (this.matrixOverride) {
+      this.matrix.copyFrom(this.matrixOverride);
+      this.dirty = false;
+      return;
+    }
     if (this.dirty) {
       this.composeMatrixFromState(this.matrix, this.quat, this.position, this.scale);
       this.dirty = false;
@@ -301,7 +317,11 @@ export default class CoordinateSystem {
 
   // サブツリー全体のワールド行列を更新する
   setWorldMatrixAll(wmat) {
-    this.composeMatrixFromState(this.matrix, this.quat, this.position, this.scale);
+    if (this.matrixOverride) {
+      this.matrix.copyFrom(this.matrixOverride);
+    } else {
+      this.composeMatrixFromState(this.matrix, this.quat, this.position, this.scale);
+    }
     this.worldMatrix.copyFrom(this.matrix);
     if ((this.parent !== null) && (wmat !== null)) {
       this.worldMatrix.lmul(wmat);      // [Cn] = [Q0] x ... x [Qn];
@@ -320,8 +340,21 @@ export default class CoordinateSystem {
 
   // 行列から姿勢/位置を設定する
   setByMatrix(matrix) {
-    const transform = this.decomposeMatrixTransform(matrix);
     this.matrix.copyFrom(matrix);
+    const scale = matrix.getUniformScale();
+    if (scale === null) {
+      // SceneLoader の placement node のように、
+      // 非一様 scale を含む静的行列は分解せず local matrix として保持する
+      // setter が呼ばれた時点で override は解除され、通常の TRS 経路へ戻る
+      this.matrixOverride = matrix.clone();
+      this.position = matrix.getPosition();
+      this.quat = new Quat();
+      this.scale = 1.0;
+      this.dirty = false;
+      return;
+    }
+    const transform = this.decomposeMatrixTransform(matrix);
+    this.matrixOverride = null;
     this.quat.copyFrom(transform.quat);
     this.position = transform.position;
     this.scale = transform.scale;
@@ -330,6 +363,7 @@ export default class CoordinateSystem {
 
   // クォータニオン姿勢を設定する
   setQuat(quat) {
+    this.matrixOverride = null;
     this.quat = quat;
   }
 
@@ -463,6 +497,7 @@ export default class CoordinateSystem {
   putRotTransByMatrix(matrix) {
     this.accumulatedRatio = 0;
     const transform = this.decomposeMatrixTransform(matrix);
+    this.matrixOverride = null;
     this.startRotation.copyFrom(this.quat);
     this.endRotation.copyFrom(transform.quat);
     this.startPosition = [...this.position];

@@ -5,6 +5,7 @@
 // ---------------------------------------------
 
 import { DEFAULT_UI_THEME } from "./WebgUiTheme.js";
+import util from "./util.js";
 
 export default class FixedFormatPanel {
 
@@ -12,7 +13,7 @@ export default class FixedFormatPanel {
     this.doc = options.document ?? document;
     this.theme = {
       ...DEFAULT_UI_THEME.fixedFormatPanel,
-      ...(options.theme ?? {})
+      ...util.readPlainObject(options.theme, "FixedFormatPanel theme", {})
     };
     this.getDockOffset = typeof options.getDockOffset === "function"
       ? options.getDockOffset
@@ -31,21 +32,32 @@ export default class FixedFormatPanel {
   setTheme(theme = {}) {
     this.theme = {
       ...DEFAULT_UI_THEME.fixedFormatPanel,
-      ...(theme ?? {})
+      ...util.readPlainObject(theme, "FixedFormatPanel theme", {})
     };
   }
 
+  readOptionalFinite(value, name, fallback) {
+    return util.readOptionalFiniteNumber(value, `FixedFormatPanel ${name}`, fallback);
+  }
+
+  readOptionalInteger(value, name, fallback, { min = null } = {}) {
+    return util.readOptionalInteger(value, `FixedFormatPanel ${name}`, fallback, { min });
+  }
+
   applyPanelStyle(panel, options = {}, dockOffset = 12) {
-    const positioningMode = options.positioningMode === "absolute"
-      ? "absolute"
-      : (options.positioningMode ?? this.getPositioningMode());
+    const positioningMode = options.positioningMode === undefined
+      ? this.getPositioningMode()
+      : options.positioningMode;
+    if (positioningMode !== "absolute" && positioningMode !== "fixed") {
+      throw new Error(`FixedFormatPanel positioningMode must be "absolute" or "fixed": ${positioningMode}`);
+    }
     panel.style.position = positioningMode;
     const anchorElement = options.viewportElement ?? null;
     const containerElement = options.containerElement ?? this.getContainerElement();
     const rect = anchorElement?.getBoundingClientRect?.() ?? null;
-    const leftInset = Number.isFinite(options.left) ? Number(options.left) : 12;
-    const topInset = Number.isFinite(options.top) ? Number(options.top) : 12;
-    const rightInset = Number.isFinite(options.right) ? Number(options.right) : dockOffset;
+    const leftInset = this.readOptionalFinite(options.left, "left", 12);
+    const topInset = this.readOptionalFinite(options.top, "top", 12);
+    const rightInset = this.readOptionalFinite(options.right, "right", dockOffset);
     if (rect && positioningMode === "absolute" && containerElement?.getBoundingClientRect) {
       const containerRect = containerElement.getBoundingClientRect();
       const containerWidth = containerElement.clientWidth || Math.round(containerRect.width);
@@ -63,12 +75,12 @@ export default class FixedFormatPanel {
       panel.style.right = `${rightInset}px`;
     }
     panel.style.margin = "0";
-    panel.style.padding = `${Number.isFinite(options.padding) ? options.padding : 12}px`;
+    panel.style.padding = `${this.readOptionalFinite(options.padding, "padding", 12)}px`;
     panel.style.whiteSpace = options.whiteSpace ?? "pre-wrap";
     panel.style.color = options.color ?? this.theme.errorText;
     panel.style.background = options.background ?? this.theme.errorBackground;
     panel.style.font = options.font ?? "14px/1.5 monospace";
-    panel.style.zIndex = String(Number.isFinite(options.zIndex) ? options.zIndex : 1000);
+    panel.style.zIndex = String(this.readOptionalInteger(options.zIndex, "zIndex", 1000, { min: 0 }));
     panel.style.borderRadius = options.borderRadius ?? "0";
     panel.style.border = options.border ?? "0";
     panel.style.maxHeight = options.maxHeight ?? "40vh";
@@ -77,9 +89,7 @@ export default class FixedFormatPanel {
 
   showText(text, options = {}) {
     const panelId = options.id ?? "default";
-    const dockOffset = Number.isFinite(options.right)
-      ? Number(options.right)
-      : this.getDockOffset();
+    const dockOffset = this.readOptionalFinite(options.right, "right", this.getDockOffset());
     const containerElement = options.containerElement ?? this.getContainerElement();
     let panel = this.panels.get(panelId);
     if (!panel) {

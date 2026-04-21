@@ -657,9 +657,15 @@ export default class SmoothShader extends Shader {
     if (typeof value === "boolean") {
       numeric = value ? 1.0 : 0.0;
     } else {
-      numeric = Number.isFinite(Number(value)) ? Number(value) : 0.0;
+      if (!Number.isFinite(value)) {
+        throw new Error("SmoothShader emissive must be boolean or a finite number");
+      }
+      numeric = Number(value);
+      if (numeric < 0.0 || numeric > 1.0) {
+        throw new Error("SmoothShader emissive must be within 0.0 - 1.0");
+      }
     }
-    this.uniformData[this.OFF_PARAMS + 3] = Math.max(0.0, Math.min(1.0, numeric));
+    this.uniformData[this.OFF_PARAMS + 3] = numeric;
     this.updateUniforms();
   }
 

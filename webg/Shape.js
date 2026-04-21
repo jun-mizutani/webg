@@ -453,54 +453,24 @@ export default class Shape {
         }
         let _default = -1;
         for (let k2 = 0; k2 < n; k2++) {
+          if (!Number.isInteger(boneNumber[k2]) || boneNumber[k2] < 0) {
+            throw new Error(`Shape.endShape invalid bone index at vertex ${i}: ${boneNumber[k2]}`);
+          }
+          if (!Number.isFinite(weight[k2])) {
+            throw new Error(`Shape.endShape invalid bone weight at vertex ${i}: ${weight[k2]}`);
+          }
+          if (boneNumber[k2] >= maxBoneIndex) {
+            throw new Error(`Shape.endShape bone index out of palette range at vertex ${i}: ${boneNumber[k2]} >= ${maxBoneIndex}`);
+          }
           if ((_default < 0) && (boneNumber[k2] < maxBoneIndex)) {
             _default = boneNumber[k2];
           }
-          if (boneNumber[k2] < maxBoneIndex) {
-            this.vObj1[j1 + k2] = boneNumber[k2];
-            this.vObj1[j1 + 4 + k2] = weight[k2];
-          } else {
-            this.vObj1[j1 + k2] = _default;
-            this.vObj1[j1 + 4 + k2] = weight[k2];
-          }
+          this.vObj1[j1 + k2] = boneNumber[k2];
+          this.vObj1[j1 + 4 + k2] = weight[k2];
         }
 
         if (_default < 0) {
-          // 有効ボーンが見つからない場合のフォールバック処理
-          let bone;
-          let bone_num = boneNumber[0];
-          if (bone_num === undefined) {
-            util.printf("vertex[%d] has no weight. (Shape.endShape)\n", i);
-            bone_num = 0;
-          } else {
-            // BonePhong 系の既定 path は palette 上限未満の joint index を前提にしているため、
-            // 上限以上しか割り当てられていない頂点は親方向へたどって
-            // palette 上限未満の joint を探す
-            // ここで条件を誤ると root 到達後も 0 のまま回り続けるため、
-            // 「palette 上限以上の間だけ」親をたどるようにする
-            let guard = 0;
-            while (bone_num >= maxBoneIndex) {
-              bone = this.skeleton.getBoneFromJointNo(bone_num);
-              if (!bone || bone.parent === null) {
-                bone_num = 0;
-                break;
-              }
-              bone_num = this.skeleton.getJointFromBone(bone.parent);
-              if (bone_num === null || bone_num === undefined) {
-                bone_num = 0;
-                break;
-              }
-              guard++;
-              if (guard > 1024) {
-                util.printf("vertex[%d] bone fallback guard hit. (Shape.endShape)\n", i);
-                bone_num = 0;
-                break;
-              }
-            }
-          }
-          n = 1;
-          this.vObj1[j1] = bone_num;
-          this.vObj1[j1 + 4] = 1.0;
+          throw new Error(`Shape.endShape vertex ${i} has no valid bone assignment`);
         }
         if (n < 4) {
           for (let k2 = n; k2 < 4; k2++) {

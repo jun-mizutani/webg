@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// Message.js     2026/03/22
+// Message.js     2026/04/21
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // ---------------------------------------------
@@ -29,6 +29,9 @@ export default class Message extends Text {
 
   // 以後登録メッセージの既定色を設定する
   setColor(r, g, b) {
+    if (!Number.isFinite(r) || !Number.isFinite(g) || !Number.isFinite(b)) {
+      throw new Error("Message.setColor requires finite r/g/b");
+    }
     this.color = [r, g, b];
     return this.color;
   }
@@ -36,11 +39,33 @@ export default class Message extends Text {
   // 既定色か明示色を 3 要素 RGB 配列へ正規化する
   normalizeColor(color = this.color) {
     const src = Array.isArray(color) ? color : this.color;
+    if (!Array.isArray(src) || src.length < 3) {
+      throw new Error("Message color must be an RGB array");
+    }
+    if (!Number.isFinite(src[0]) || !Number.isFinite(src[1]) || !Number.isFinite(src[2])) {
+      throw new Error("Message color must contain finite RGB values");
+    }
     return [
-      Number.isFinite(src[0]) ? src[0] : 1.0,
-      Number.isFinite(src[1]) ? src[1] : 1.0,
-      Number.isFinite(src[2]) ? src[2] : 1.0
+      Number(src[0]),
+      Number(src[1]),
+      Number(src[2])
     ];
+  }
+
+  readOptionalInteger(value, name, fallback, { min = null } = {}) {
+    return util.readOptionalInteger(value, `Message ${name}`, fallback, { min });
+  }
+
+  readOptionalBoolean(value, name, fallback) {
+    return util.readOptionalBoolean(value, `Message ${name}`, fallback);
+  }
+
+  readOptionalAnchor(value, fallback) {
+    return util.readOptionalAnchor(value, fallback, "Message anchor");
+  }
+
+  readOptionalAlign(value, fallback) {
+    return util.readOptionalAlign(value, fallback, "Message align");
   }
 
   // anchor 指定から block 左上座標を解決する
@@ -48,13 +73,13 @@ export default class Message extends Text {
   // 80x25固定ではなく「現在見えている文字グリッド」に追従させる
   resolvePosition(options = {}) {
     const layout = this.getLayoutInfo();
-    const anchor = String(options.anchor ?? "top-left");
-    const width = Math.max(0, Math.floor(options.width ?? 0));
-    const height = Math.max(0, Math.floor(options.height ?? 1));
-    const x = Math.floor(options.x ?? 0);
-    const y = Math.floor(options.y ?? 0);
-    const offsetX = Math.floor(options.offsetX ?? 0);
-    const offsetY = Math.floor(options.offsetY ?? 0);
+    const anchor = this.readOptionalAnchor(options.anchor, "top-left");
+    const width = this.readOptionalInteger(options.width, "width", 0, { min: 0 });
+    const height = this.readOptionalInteger(options.height, "height", 1, { min: 0 });
+    const x = this.readOptionalInteger(options.x, "x", 0);
+    const y = this.readOptionalInteger(options.y, "y", 0);
+    const offsetX = this.readOptionalInteger(options.offsetX, "offsetX", 0);
+    const offsetY = this.readOptionalInteger(options.offsetY, "offsetY", 0);
     let resolvedX = x;
     let resolvedY = y;
 
@@ -83,9 +108,11 @@ export default class Message extends Text {
 
   // 固定幅 block 用に text を必要なら wrap / clip する
   formatLines(lines, options = {}) {
-    const width = Number.isFinite(options.width) ? Math.max(1, Math.floor(options.width)) : null;
-    const wrap = options.wrap === true;
-    const clip = options.clip !== false;
+    const width = options.width === undefined
+      ? undefined
+      : this.readOptionalInteger(options.width, "width", undefined, { min: 1 });
+    const wrap = this.readOptionalBoolean(options.wrap, "wrap", false) === true;
+    const clip = this.readOptionalBoolean(options.clip, "clip", true) !== false;
     const source = (lines ?? []).map((line) => String(line ?? ""));
     const out = [];
 
@@ -111,9 +138,9 @@ export default class Message extends Text {
 
   // line 群を block 幅へ合わせて left/center/right 揃えする
   alignLines(lines, options = {}) {
-    const align = String(options.align ?? "left");
-    const width = Number.isFinite(options.width)
-      ? Math.max(1, Math.floor(options.width))
+    const align = this.readOptionalAlign(options.align, "left");
+    const width = options.width !== undefined
+      ? this.readOptionalInteger(options.width, "width", undefined, { min: 1 })
       : Math.max(0, ...lines.map((line) => line.length));
     return lines.map((line) => {
       if (align === "right") {
@@ -137,14 +164,16 @@ export default class Message extends Text {
       id: safeId,
       text: String(text ?? ""),
       color: this.normalizeColor(options.color),
-      visible: options.visible !== false,
-      x: Number.isFinite(options.x) ? Math.floor(options.x) : 0,
-      y: Number.isFinite(options.y) ? Math.floor(options.y) : 0,
-      anchor: options.anchor ?? "top-left",
-      offsetX: Number.isFinite(options.offsetX) ? Math.floor(options.offsetX) : 0,
-      offsetY: Number.isFinite(options.offsetY) ? Math.floor(options.offsetY) : 0,
-      clip: options.clip !== false,
-      expiresAtMs: Number.isFinite(options.expiresAtMs) ? Math.floor(options.expiresAtMs) : null
+      visible: this.readOptionalBoolean(options.visible, "visible", true) !== false,
+      x: this.readOptionalInteger(options.x, "x", 0),
+      y: this.readOptionalInteger(options.y, "y", 0),
+      anchor: this.readOptionalAnchor(options.anchor, "top-left"),
+      offsetX: this.readOptionalInteger(options.offsetX, "offsetX", 0),
+      offsetY: this.readOptionalInteger(options.offsetY, "offsetY", 0),
+      clip: this.readOptionalBoolean(options.clip, "clip", true) !== false,
+      expiresAtMs: options.expiresAtMs === undefined
+        ? null
+        : this.readOptionalInteger(options.expiresAtMs, "expiresAtMs", null)
     });
     return safeId;
   }
@@ -157,31 +186,33 @@ export default class Message extends Text {
       id: safeId,
       lines: (lines ?? []).map((line) => String(line ?? "")),
       color: this.normalizeColor(options.color),
-      visible: options.visible !== false,
-      x: Number.isFinite(options.x) ? Math.floor(options.x) : 0,
-      y: Number.isFinite(options.y) ? Math.floor(options.y) : 0,
-      anchor: options.anchor ?? "top-left",
-      offsetX: Number.isFinite(options.offsetX) ? Math.floor(options.offsetX) : 0,
-      offsetY: Number.isFinite(options.offsetY) ? Math.floor(options.offsetY) : 0,
-      gap: Number.isFinite(options.gap) ? Math.max(1, Math.floor(options.gap)) : 1,
-      align: options.align ?? "left",
-      width: Number.isFinite(options.width) ? Math.max(1, Math.floor(options.width)) : null,
-      wrap: options.wrap === true,
-      clip: options.clip !== false,
-      expiresAtMs: Number.isFinite(options.expiresAtMs) ? Math.floor(options.expiresAtMs) : null
+      visible: this.readOptionalBoolean(options.visible, "visible", true) !== false,
+      x: this.readOptionalInteger(options.x, "x", 0),
+      y: this.readOptionalInteger(options.y, "y", 0),
+      anchor: this.readOptionalAnchor(options.anchor, "top-left"),
+      offsetX: this.readOptionalInteger(options.offsetX, "offsetX", 0),
+      offsetY: this.readOptionalInteger(options.offsetY, "offsetY", 0),
+      gap: this.readOptionalInteger(options.gap, "gap", 1, { min: 1 }),
+      align: this.readOptionalAlign(options.align, "left"),
+      width: options.width === undefined
+        ? undefined
+        : this.readOptionalInteger(options.width, "width", undefined, { min: 1 }),
+      wrap: this.readOptionalBoolean(options.wrap, "wrap", false) === true,
+      clip: this.readOptionalBoolean(options.clip, "clip", true) !== false,
+      expiresAtMs: options.expiresAtMs === undefined
+        ? null
+        : this.readOptionalInteger(options.expiresAtMs, "expiresAtMs", null)
     });
     return safeId;
   }
 
   // 一時表示向けの toast を追加する
   setToast(id, text, options = {}) {
-    const durationMs = Number.isFinite(options.durationMs)
-      ? Math.max(0, Math.floor(options.durationMs))
-      : 1500;
+    const durationMs = this.readOptionalInteger(options.durationMs, "durationMs", 1500, { min: 0 });
     return this.setLine(id, text, {
       ...options,
-      anchor: options.anchor ?? "bottom-center",
-      y: Number.isFinite(options.y) ? Math.floor(options.y) : -2,
+      anchor: this.readOptionalAnchor(options.anchor, "bottom-center"),
+      y: this.readOptionalInteger(options.y, "y", -2),
       expiresAtMs: Date.now() + durationMs
     });
   }

@@ -5,6 +5,16 @@
 // ---------------------------------------------
 
 import UIPanel from "./UIPanel.js";
+import util from "./util.js";
+
+const hasOwn = util.hasOwn;
+const readPlainObject = util.readPlainObject;
+const readOptionalString = (value, path, fallback) => util.readOptionalString(value, path, fallback);
+const readOptionalBoolean = (value, path, fallback) => util.readOptionalBoolean(value, path, fallback);
+const readOptionalFunction = (value, path, fallback) => util.readOptionalFunction(value, path, fallback);
+const readOptionalInteger = (value, path, fallback, minimum = 0) => util.readOptionalInteger(value, path, fallback, { min: minimum });
+const readOptionalPositioningMode = (value, path, fallback) => util.readOptionalPositioningMode(value, path, fallback);
+const readOptionalElement = util.readOptionalElement;
 
 const toTextLines = (value) => {
   if (Array.isArray(value)) {
@@ -148,8 +158,13 @@ export class MessageQueue {
     if (normalized.length === 0) {
       return this.items.length;
     }
-    const safeIndex = Math.max(-1, Math.min(this.items.length - 1, Math.floor(afterIndex)));
-    const insertAt = Math.min(this.items.length, safeIndex + 1);
+    if (!Number.isFinite(afterIndex) || !Number.isInteger(afterIndex)) {
+      throw new Error("MessageQueue insert index must be an integer");
+    }
+    if (afterIndex < -1 || afterIndex >= this.items.length) {
+      throw new Error(`MessageQueue insert index must be in range -1..${this.items.length - 1}`);
+    }
+    const insertAt = afterIndex + 1;
     this.items.splice(insertAt, 0, ...normalized);
     if (this.index >= insertAt) {
       this.index += normalized.length;
@@ -189,10 +204,11 @@ export class MessageQueue {
 export default class Dialogue {
   // DOM overlay を使って、会話 / tutorial を UTF-8 文字列で表示する
   constructor(options = {}) {
+    const safeOptions = readPlainObject(options, "Dialogue options");
     this.doc = options.document ?? (typeof document !== "undefined" ? document : null);
-    this.theme = { ...(options.theme ?? {}) };
+    this.theme = { ...UIPanel.normalizeTheme(safeOptions.theme, "Dialogue theme") };
     this.layoutOptions = {
-      id: options.id ?? "webg-dialogue-overlay",
+      id: readOptionalString(safeOptions.id, "Dialogue id", "webg-dialogue-overlay"),
       leftWidth: "minmax(320px, 540px)",
       rightWidth: "minmax(260px, 360px)",
       gap: 12,
@@ -201,28 +217,56 @@ export default class Dialogue {
       spreadColumns: false,
       collapseWidth: 980,
       compactWidth: 760,
-      positioningMode: options.positioningMode === "absolute" ? "absolute" : "fixed",
-      containerElement: options.containerElement ?? null,
-      viewportElement: options.viewportElement ?? null,
+      positioningMode: readOptionalPositioningMode(
+        safeOptions.positioningMode,
+        "Dialogue positioningMode",
+        "fixed"
+      ),
+      containerElement: readOptionalElement(safeOptions.containerElement, "Dialogue containerElement", null),
+      viewportElement: readOptionalElement(safeOptions.viewportElement, "Dialogue viewportElement", null),
       top: undefined,
       left: undefined,
       right: undefined
     };
-    this.applyLayoutOptions(options);
-    this.title = String(options.title ?? "Dialogue");
-    this.footerText = String(options.footer ?? "Enter: next  1 / 2: choose  R: restart");
-    this.stateTitle = String(options.stateTitle ?? "STATE");
-    this.choicePromptText = String(options.choicePromptText ?? "1 / 2 で分岐を選択");
-    this.advancePromptText = String(options.advancePromptText ?? "Enter / Space で次へ進む");
-    this.visibleHintText = String(options.visibleHintText ?? "左は本文、右は会話状態と選択状況");
-    this.hiddenHintText = String(options.hiddenHintText ?? "DialogueOverlay は閉じています");
-    this.showNextButton = options.showNextButton !== false;
-    this.showRestartButton = options.showRestartButton !== false;
-    this.showHideButton = options.showHideButton !== false;
-    this.appendHistory = options.appendHistory === true;
-    this.flipMainPanelBySide = options.flipMainPanelBySide !== false;
-    this.stateLinesProvider = typeof options.getStateLines === "function" ? options.getStateLines : null;
-    this.dockOffsetProvider = typeof options.getDockOffset === "function" ? options.getDockOffset : null;
+    this.applyLayoutOptions(safeOptions);
+    this.title = readOptionalString(safeOptions.title, "Dialogue title", "Dialogue");
+    this.footerText = readOptionalString(
+      safeOptions.footer,
+      "Dialogue footer",
+      "Enter: next  1 / 2: choose  R: restart"
+    );
+    this.stateTitle = readOptionalString(safeOptions.stateTitle, "Dialogue stateTitle", "STATE");
+    this.choicePromptText = readOptionalString(
+      safeOptions.choicePromptText,
+      "Dialogue choicePromptText",
+      "1 / 2 で分岐を選択"
+    );
+    this.advancePromptText = readOptionalString(
+      safeOptions.advancePromptText,
+      "Dialogue advancePromptText",
+      "Enter / Space で次へ進む"
+    );
+    this.visibleHintText = readOptionalString(
+      safeOptions.visibleHintText,
+      "Dialogue visibleHintText",
+      "左は本文、右は会話状態と選択状況"
+    );
+    this.hiddenHintText = readOptionalString(
+      safeOptions.hiddenHintText,
+      "Dialogue hiddenHintText",
+      "DialogueOverlay は閉じています"
+    );
+    this.showNextButton = readOptionalBoolean(safeOptions.showNextButton, "Dialogue showNextButton", true);
+    this.showRestartButton = readOptionalBoolean(safeOptions.showRestartButton, "Dialogue showRestartButton", true);
+    this.showHideButton = readOptionalBoolean(safeOptions.showHideButton, "Dialogue showHideButton", true);
+    this.appendHistory = readOptionalBoolean(safeOptions.appendHistory, "Dialogue appendHistory", false);
+    this.flipMainPanelBySide = readOptionalBoolean(
+      safeOptions.flipMainPanelBySide,
+      "Dialogue flipMainPanelBySide",
+      true
+    );
+    this.stateLinesProvider = readOptionalFunction(safeOptions.getStateLines, "Dialogue getStateLines", null);
+    this.dockOffsetProvider = readOptionalFunction(safeOptions.getDockOffset, "Dialogue getDockOffset", null);
     this.queue = new MessageQueue();
     this.sourceEntries = [];
     this.historyEntries = [];
@@ -235,7 +279,7 @@ export default class Dialogue {
   }
 
   setTheme(theme = {}) {
-    this.theme = { ...(theme ?? {}) };
+    this.theme = { ...UIPanel.normalizeTheme(theme, "Dialogue theme") };
     if (this.uiPanels) {
       this.uiPanels.setTheme(this.theme);
     }
@@ -243,57 +287,107 @@ export default class Dialogue {
   }
 
   setDockOffsetProvider(fn) {
-    this.dockOffsetProvider = typeof fn === "function" ? fn : null;
+    this.dockOffsetProvider = readOptionalFunction(fn, "Dialogue dockOffsetProvider", null);
     return this;
   }
 
   // overlay の幅、余白、折り返し幅、固定位置を必要に応じて更新する
   // sample ごとに「中央へ張り出しにくい配置」へ寄せたい場合もここから調整する
   applyLayoutOptions(options = {}, syncDom = false) {
-    if (typeof options.id === "string" && options.id.length > 0) {
-      this.layoutOptions.id = options.id;
+    const safeOptions = readPlainObject(options, "Dialogue layout options");
+    if (hasOwn(safeOptions, "id")) {
+      const id = readOptionalString(safeOptions.id, "Dialogue id", undefined);
+      if (!id) {
+        throw new Error("Dialogue id must be a non-empty string");
+      }
+      this.layoutOptions.id = id;
     }
-    if (typeof options.leftWidth === "string" && options.leftWidth.length > 0) {
-      this.layoutOptions.leftWidth = options.leftWidth;
+    if (hasOwn(safeOptions, "leftWidth")) {
+      const leftWidth = readOptionalString(safeOptions.leftWidth, "Dialogue leftWidth", undefined);
+      if (!leftWidth) {
+        throw new Error("Dialogue leftWidth must be a non-empty string");
+      }
+      this.layoutOptions.leftWidth = leftWidth;
     }
-    if (typeof options.rightWidth === "string" && options.rightWidth.length > 0) {
-      this.layoutOptions.rightWidth = options.rightWidth;
+    if (hasOwn(safeOptions, "rightWidth")) {
+      const rightWidth = readOptionalString(safeOptions.rightWidth, "Dialogue rightWidth", undefined);
+      if (!rightWidth) {
+        throw new Error("Dialogue rightWidth must be a non-empty string");
+      }
+      this.layoutOptions.rightWidth = rightWidth;
     }
-    if (Number.isFinite(options.gap)) {
-      this.layoutOptions.gap = Math.max(8, Math.floor(options.gap));
+    if (hasOwn(safeOptions, "gap")) {
+      const gap = readOptionalInteger(safeOptions.gap, "Dialogue gap", undefined, 8);
+      this.layoutOptions.gap = gap;
     }
-    if (Number.isFinite(options.columnMaxHeight)) {
-      this.layoutOptions.columnMaxHeight = Math.floor(options.columnMaxHeight);
+    if (hasOwn(safeOptions, "columnMaxHeight")) {
+      const columnMaxHeight = readOptionalInteger(
+        safeOptions.columnMaxHeight,
+        "Dialogue columnMaxHeight",
+        undefined,
+        120
+      );
+      this.layoutOptions.columnMaxHeight = columnMaxHeight;
     }
-    if (typeof options.scrollColumns === "boolean") {
-      this.layoutOptions.scrollColumns = options.scrollColumns;
+    if (hasOwn(safeOptions, "scrollColumns")) {
+      this.layoutOptions.scrollColumns = readOptionalBoolean(
+        safeOptions.scrollColumns,
+        "Dialogue scrollColumns",
+        this.layoutOptions.scrollColumns
+      );
     }
-    if (typeof options.spreadColumns === "boolean") {
-      this.layoutOptions.spreadColumns = options.spreadColumns;
+    if (hasOwn(safeOptions, "spreadColumns")) {
+      this.layoutOptions.spreadColumns = readOptionalBoolean(
+        safeOptions.spreadColumns,
+        "Dialogue spreadColumns",
+        this.layoutOptions.spreadColumns
+      );
     }
-    if (Number.isFinite(options.collapseWidth)) {
-      this.layoutOptions.collapseWidth = Math.floor(options.collapseWidth);
+    if (hasOwn(safeOptions, "collapseWidth")) {
+      this.layoutOptions.collapseWidth = readOptionalInteger(
+        safeOptions.collapseWidth,
+        "Dialogue collapseWidth",
+        undefined,
+        0
+      );
     }
-    if (Number.isFinite(options.compactWidth)) {
-      this.layoutOptions.compactWidth = Math.floor(options.compactWidth);
+    if (hasOwn(safeOptions, "compactWidth")) {
+      this.layoutOptions.compactWidth = readOptionalInteger(
+        safeOptions.compactWidth,
+        "Dialogue compactWidth",
+        undefined,
+        0
+      );
     }
-    if (options.positioningMode === "absolute" || options.positioningMode === "fixed") {
-      this.layoutOptions.positioningMode = options.positioningMode;
+    if (hasOwn(safeOptions, "positioningMode")) {
+      this.layoutOptions.positioningMode = readOptionalPositioningMode(
+        safeOptions.positioningMode,
+        "Dialogue positioningMode",
+        this.layoutOptions.positioningMode
+      );
     }
-    if (options.containerElement) {
-      this.layoutOptions.containerElement = options.containerElement;
+    if (hasOwn(safeOptions, "containerElement")) {
+      this.layoutOptions.containerElement = readOptionalElement(
+        safeOptions.containerElement,
+        "Dialogue containerElement",
+        null
+      );
     }
-    if (options.viewportElement) {
-      this.layoutOptions.viewportElement = options.viewportElement;
+    if (hasOwn(safeOptions, "viewportElement")) {
+      this.layoutOptions.viewportElement = readOptionalElement(
+        safeOptions.viewportElement,
+        "Dialogue viewportElement",
+        null
+      );
     }
-    if (Number.isFinite(options.top)) {
-      this.layoutOptions.top = Math.floor(options.top);
+    if (hasOwn(safeOptions, "top")) {
+      this.layoutOptions.top = readOptionalInteger(safeOptions.top, "Dialogue top", undefined, 0);
     }
-    if (Number.isFinite(options.left)) {
-      this.layoutOptions.left = Math.floor(options.left);
+    if (hasOwn(safeOptions, "left")) {
+      this.layoutOptions.left = readOptionalInteger(safeOptions.left, "Dialogue left", undefined, 0);
     }
-    if (Number.isFinite(options.right)) {
-      this.layoutOptions.right = Math.floor(options.right);
+    if (hasOwn(safeOptions, "right")) {
+      this.layoutOptions.right = readOptionalInteger(safeOptions.right, "Dialogue right", undefined, 0);
     }
     if (syncDom && this.layout?.root) {
       const root = this.layout.root;
@@ -301,7 +395,7 @@ export default class Dialogue {
       root.style.setProperty("--webg-overlay-right-width", this.layoutOptions.rightWidth);
       root.style.setProperty("--webg-overlay-gap", `${this.layoutOptions.gap}px`);
       if (Number.isFinite(this.layoutOptions.columnMaxHeight)) {
-        root.style.setProperty("--webg-overlay-column-max-height", `${Math.max(120, this.layoutOptions.columnMaxHeight)}px`);
+        root.style.setProperty("--webg-overlay-column-max-height", `${this.layoutOptions.columnMaxHeight}px`);
       }
       if (Number.isFinite(this.layoutOptions.top)) {
         root.style.top = `${this.layoutOptions.top}px`;
@@ -328,51 +422,96 @@ export default class Dialogue {
   }
 
   setLayout(options = {}) {
-    this.applyLayoutOptions(options, true);
-    if (typeof options.title === "string") {
-      this.title = options.title;
+    const safeOptions = readPlainObject(options, "Dialogue setLayout options");
+    this.applyLayoutOptions(safeOptions, true);
+    if (hasOwn(safeOptions, "title")) {
+      this.title = readOptionalString(safeOptions.title, "Dialogue title", this.title);
     }
-    if (typeof options.footer === "string") {
-      this.footerText = options.footer;
+    if (hasOwn(safeOptions, "footer")) {
+      this.footerText = readOptionalString(safeOptions.footer, "Dialogue footer", this.footerText);
     }
-    if (typeof options.stateTitle === "string") {
-      this.stateTitle = options.stateTitle;
+    if (hasOwn(safeOptions, "stateTitle")) {
+      this.stateTitle = readOptionalString(safeOptions.stateTitle, "Dialogue stateTitle", this.stateTitle);
     }
-    if (typeof options.choicePromptText === "string") {
-      this.choicePromptText = options.choicePromptText;
+    if (hasOwn(safeOptions, "choicePromptText")) {
+      this.choicePromptText = readOptionalString(
+        safeOptions.choicePromptText,
+        "Dialogue choicePromptText",
+        this.choicePromptText
+      );
     }
-    if (typeof options.advancePromptText === "string") {
-      this.advancePromptText = options.advancePromptText;
+    if (hasOwn(safeOptions, "advancePromptText")) {
+      this.advancePromptText = readOptionalString(
+        safeOptions.advancePromptText,
+        "Dialogue advancePromptText",
+        this.advancePromptText
+      );
     }
-    if (typeof options.visibleHintText === "string") {
-      this.visibleHintText = options.visibleHintText;
+    if (hasOwn(safeOptions, "visibleHintText")) {
+      this.visibleHintText = readOptionalString(
+        safeOptions.visibleHintText,
+        "Dialogue visibleHintText",
+        this.visibleHintText
+      );
     }
-    if (typeof options.hiddenHintText === "string") {
-      this.hiddenHintText = options.hiddenHintText;
+    if (hasOwn(safeOptions, "hiddenHintText")) {
+      this.hiddenHintText = readOptionalString(
+        safeOptions.hiddenHintText,
+        "Dialogue hiddenHintText",
+        this.hiddenHintText
+      );
     }
-    if (typeof options.showNextButton === "boolean") {
-      this.showNextButton = options.showNextButton;
+    if (hasOwn(safeOptions, "showNextButton")) {
+      this.showNextButton = readOptionalBoolean(
+        safeOptions.showNextButton,
+        "Dialogue showNextButton",
+        this.showNextButton
+      );
     }
-    if (typeof options.showRestartButton === "boolean") {
-      this.showRestartButton = options.showRestartButton;
+    if (hasOwn(safeOptions, "showRestartButton")) {
+      this.showRestartButton = readOptionalBoolean(
+        safeOptions.showRestartButton,
+        "Dialogue showRestartButton",
+        this.showRestartButton
+      );
     }
-    if (typeof options.showHideButton === "boolean") {
-      this.showHideButton = options.showHideButton;
+    if (hasOwn(safeOptions, "showHideButton")) {
+      this.showHideButton = readOptionalBoolean(
+        safeOptions.showHideButton,
+        "Dialogue showHideButton",
+        this.showHideButton
+      );
     }
-    if (typeof options.appendHistory === "boolean") {
-      this.appendHistory = options.appendHistory;
+    if (hasOwn(safeOptions, "appendHistory")) {
+      this.appendHistory = readOptionalBoolean(
+        safeOptions.appendHistory,
+        "Dialogue appendHistory",
+        this.appendHistory
+      );
     }
-    if (typeof options.flipMainPanelBySide === "boolean") {
-      this.flipMainPanelBySide = options.flipMainPanelBySide;
+    if (hasOwn(safeOptions, "flipMainPanelBySide")) {
+      this.flipMainPanelBySide = readOptionalBoolean(
+        safeOptions.flipMainPanelBySide,
+        "Dialogue flipMainPanelBySide",
+        this.flipMainPanelBySide
+      );
     }
-    if (typeof options.getStateLines === "function") {
-      this.stateLinesProvider = options.getStateLines;
+    if (hasOwn(safeOptions, "getStateLines")) {
+      this.stateLinesProvider = readOptionalFunction(
+        safeOptions.getStateLines,
+        "Dialogue getStateLines",
+        this.stateLinesProvider
+      );
     }
-    if (typeof options.getDockOffset === "function") {
-      this.dockOffsetProvider = options.getDockOffset;
+    if (hasOwn(safeOptions, "getDockOffset")) {
+      this.dockOffsetProvider = readOptionalFunction(
+        safeOptions.getDockOffset,
+        "Dialogue getDockOffset",
+        this.dockOffsetProvider
+      );
     }
-    if (typeof options.theme === "object" && options.theme) {
-      this.setTheme(options.theme);
+    if (hasOwn(safeOptions, "theme")) {
+      this.setTheme(safeOptions.theme);
     }
     return this;
   }
@@ -504,9 +643,8 @@ export default class Dialogue {
     if (!this.uiPanels || !this.layout) {
       return;
     }
-    const dockOffset = Number.isFinite(this.dockOffsetProvider?.())
-      ? Math.max(0, Math.floor(this.dockOffsetProvider()))
-      : 0;
+    const rawDockOffset = this.dockOffsetProvider ? this.dockOffsetProvider() : 0;
+    const dockOffset = readOptionalInteger(rawDockOffset, "Dialogue dockOffset", 0, 0);
     this.uiPanels.setDockOffset(this.layout, dockOffset);
     this.uiPanels.syncResponsiveLayout(this.layout);
   }
@@ -602,10 +740,13 @@ export default class Dialogue {
     if (!current || !Array.isArray(current.choices) || current.choices.length === 0) {
       return current;
     }
-    const choiceIndex = Math.max(0, Math.floor(index));
+    if (!Number.isFinite(index) || !Number.isInteger(index) || index < 0) {
+      throw new Error("Dialogue choice index must be an integer >= 0");
+    }
+    const choiceIndex = index;
     const choice = current.choices[choiceIndex];
     if (!choice) {
-      return current;
+      throw new Error(`Dialogue choice index must be in range 0..${current.choices.length - 1}`);
     }
     current.selectedChoiceIndex = choiceIndex;
     this.lastChoiceLabel = choice.label;

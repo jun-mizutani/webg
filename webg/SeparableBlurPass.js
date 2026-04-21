@@ -5,6 +5,7 @@
 // ---------------------------------------------
 
 import RenderTarget from "./RenderTarget.js";
+import util from "./util.js";
 
 export default class SeparableBlurPass {
 
@@ -15,13 +16,13 @@ export default class SeparableBlurPass {
     this.gpu = gpu;
     this.device = null;
     this.queue = null;
-    this.width = Math.floor(Number(options.width ?? 1));
-    this.height = Math.floor(Number(options.height ?? 1));
+    this.width = util.readOptionalInteger(options.width, "SeparableBlurPass width", 1, { min: 1 });
+    this.height = util.readOptionalInteger(options.height, "SeparableBlurPass height", 1, { min: 1 });
     this.targetFormat = options.targetFormat ?? gpu?.format ?? "bgra8unorm";
     this.labelPrefix = options.labelPrefix ?? "SeparableBlurPass";
-    this.blurRadius = Number.isFinite(options.blurRadius) ? options.blurRadius : 1.0;
-    this.targetScale = Number(options.targetScale ?? 1.0);
-    this.iterations = Math.floor(Number(options.iterations ?? 2));
+    this.blurRadius = util.readOptionalFiniteNumber(options.blurRadius, "SeparableBlurPass blurRadius", 1.0, { min: 0 });
+    this.targetScale = util.readOptionalFiniteNumber(options.targetScale, "SeparableBlurPass targetScale", 1.0, { minExclusive: 0 });
+    this.iterations = util.readOptionalInteger(options.iterations, "SeparableBlurPass iterations", 2, { min: 1 });
     this.targetA = null;
     this.targetB = null;
     this.vertexBuffer = null;
@@ -246,18 +247,18 @@ fn fsMain(input : VSOut) -> @location(0) vec4f {
   }
 
   setBlurRadius(value) {
-    this.blurRadius = Number(value);
+    this.blurRadius = util.readOptionalFiniteNumber(value, "SeparableBlurPass blurRadius", this.blurRadius, { min: 0 });
     if (this.queue) {
       this.updateUniforms();
     }
   }
 
   setIterations(value) {
-    this.iterations = Math.floor(Number(value));
+    this.iterations = util.readOptionalInteger(value, "SeparableBlurPass iterations", this.iterations, { min: 1 });
   }
 
   setTargetScale(value) {
-    const nextScale = Number(value);
+    const nextScale = util.readOptionalFiniteNumber(value, "SeparableBlurPass targetScale", this.targetScale, { minExclusive: 0 });
     if (Math.abs(nextScale - this.targetScale) < 0.0001) {
       return;
     }
@@ -270,8 +271,8 @@ fn fsMain(input : VSOut) -> @location(0) vec4f {
   }
 
   resize(width, height) {
-    this.width = width === undefined ? this.width : Math.floor(Number(width));
-    this.height = height === undefined ? this.height : Math.floor(Number(height));
+    this.width = util.readOptionalInteger(width, "SeparableBlurPass width", this.width, { min: 1 });
+    this.height = util.readOptionalInteger(height, "SeparableBlurPass height", this.height, { min: 1 });
     this.targetA?.resize(this.getScaledWidth(), this.getScaledHeight());
     this.targetB?.resize(this.getScaledWidth(), this.getScaledHeight());
     if (this.queue) {
@@ -329,10 +330,11 @@ fn fsMain(input : VSOut) -> @location(0) vec4f {
   // source texture を受け取り、横 blur / 縦 blur を iterations 回繰り返して
   // 最終的な出力先 RenderTarget を返す
   render(screen, source, options = {}) {
-    const iterations = Number.isInteger(options.iterations)
-      ? Math.max(1, options.iterations)
+    const iterations = util.hasOwn(options, "iterations")
+      ? util.readOptionalInteger(options.iterations, "SeparableBlurPass iterations", this.iterations, { min: 1 })
       : this.iterations;
-    if (Number.isFinite(options.blurRadius)) {
+    if (util.hasOwn(options, "blurRadius")) {
+      util.readOptionalFiniteNumber(options.blurRadius, "SeparableBlurPass blurRadius", this.blurRadius, { min: 0 });
       this.setBlurRadius(options.blurRadius);
     } else {
       this.updateUniforms();
