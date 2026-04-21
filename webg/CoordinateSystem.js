@@ -1,5 +1,5 @@
 // ---------------------------------------------
-//  CoordinateSystem.js  2026/04/02
+//  CoordinateSystem.js  2026/04/21
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // ---------------------------------------------
@@ -262,15 +262,16 @@ export default class CoordinateSystem {
   // 行列から position / quat / uniform scale をまとめて分解する
   decomposeMatrixTransform(matrix) {
     const scale = matrix.getUniformScale();
-    console.assert(scale !== null, "CoordinateSystem only supports uniform scale in matrix decomposition");
-    const uniformScale = scale ?? 1.0;
-    const rigid = matrix.removeUniformScale(uniformScale);
+    if (scale === null) {
+      throw new Error("CoordinateSystem.decomposeMatrixTransform only supports uniform scale");
+    }
+    const rigid = matrix.removeUniformScale(scale);
     const quat = new Quat();
     quat.matrixToQuat(rigid);
     return {
       position: matrix.getPosition(),
       quat,
-      scale: uniformScale,
+      scale,
       rigid
     };
   }

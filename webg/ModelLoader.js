@@ -1,5 +1,5 @@
 // ---------------------------------------------
-//  ModelLoader.js   2026/03/10
+//  ModelLoader.js   2026/04/21
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // ---------------------------------------------
@@ -30,10 +30,17 @@ export default class ModelLoader {
 
   // 拡張子か明示指定から読み込み形式を決める
   detectFormat(source, options = {}) {
-    if (options.format) {
-      return String(options.format).toLowerCase();
+    if (options.format !== undefined) {
+      const explicitFormat = String(options.format).trim().toLowerCase();
+      if (explicitFormat === "gltf" || explicitFormat === "collada" || explicitFormat === "json") {
+        return explicitFormat;
+      }
+      throw new Error(`Unsupported model format option: ${options.format}`);
     }
-    const normalized = String(source ?? "").trim().toLowerCase();
+    if (typeof source !== "string" || source.trim().length === 0) {
+      throw new Error(`ModelLoader.detectFormat requires a non-empty source string: ${source}`);
+    }
+    const normalized = source.trim().toLowerCase();
     if (normalized.endsWith(".gltf") || normalized.endsWith(".glb")) {
       return "gltf";
     }

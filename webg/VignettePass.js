@@ -1,5 +1,5 @@
 // ---------------------------------------------
-//  VignettePass.js  2026/03/30
+//  VignettePass.js  2026/04/21
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // ---------------------------------------------
@@ -163,8 +163,11 @@ fn fsMain(input : VSOut) -> @location(0) vec4f {
   // vignette 中心を UV 基準で指定する
   // 0.5, 0.5 が画面中心に対応する
   setCenter(x, y) {
-    this.uniformData[this.OFF_VIGNETTE + 0] = Number.isFinite(x) ? x : 0.5;
-    this.uniformData[this.OFF_VIGNETTE + 1] = Number.isFinite(y) ? y : 0.5;
+    if (!Number.isFinite(x) || !Number.isFinite(y)) {
+      throw new Error("VignettePass.setCenter requires finite x/y");
+    }
+    this.uniformData[this.OFF_VIGNETTE + 0] = x;
+    this.uniformData[this.OFF_VIGNETTE + 1] = y;
     this.updateUniforms();
   }
 

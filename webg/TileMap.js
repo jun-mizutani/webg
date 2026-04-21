@@ -1,5 +1,5 @@
 // ---------------------------------------------
-//  TileMap.js    2026/03/30
+//  TileMap.js    2026/04/21
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // ---------------------------------------------
@@ -31,8 +31,14 @@ const TILE_DEBUG_LOG_TOP_UVS = false;
 // - smooth は cap 部分だけ shared vertex で組み、top face と斜面のつながりを滑らかに見せる
 // - foundation はどちらでも従来どおり独立 shape のまま残し、盤面の厚みと判読性を保つ
 const resolveSurfaceShadingMode = (value) => {
-  const mode = String(value ?? "flat").trim().toLowerCase();
-  return mode === "smooth" ? "smooth" : "flat";
+  if (value === undefined || value === null) {
+    return "flat";
+  }
+  const mode = String(value).trim().toLowerCase();
+  if (mode === "flat" || mode === "smooth") {
+    return mode;
+  }
+  throw new Error(`TileMap surfaceShading must be "flat" or "smooth": ${value}`);
 };
 
 // camera の向きを見て、画面上の arrow key を 2D grid の移動へ変換する
@@ -41,6 +47,9 @@ const resolveSurfaceShadingMode = (value) => {
 // - ArrowUp / ArrowDown は input 名で、cell 座標では ArrowUp が count down 側になる
 // - 戻り値は { dx, dy } で、grid の col / row の更新にそのまま使える
 export const resolveCameraRelativeGridMove = (yawDeg, key) => {
+  if (!Number.isFinite(yawDeg)) {
+    throw new Error(`resolveCameraRelativeGridMove requires finite yawDeg: ${yawDeg}`);
+  }
   const keyName = String(key ?? "").toLowerCase();
   const desired = {
     arrowleft: [-1.0, 0.0],
@@ -95,7 +104,10 @@ export const resolveEdgeCutMask = (centerHeight, eastHeight, westHeight, northHe
 // - 0 は flat
 // - 1 bit ごとに E / W / N / S を並べる
 export const describeEdgeCutMask = (mask) => {
-  const value = Number(mask ?? 0) & 15;
+  if (!Number.isFinite(mask)) {
+    throw new Error(`describeEdgeCutMask requires finite mask: ${mask}`);
+  }
+  const value = Number(mask) & 15;
   if (value === 0) {
     return "flat";
   }

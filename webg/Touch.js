@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// Touch.js       2026/04/12
+// Touch.js       2026/04/21
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // ---------------------------------------------
@@ -36,6 +36,46 @@ export default class Touch {
     };
     window.addEventListener("resize", this._boundApplyLayoutMode);
     window.addEventListener("orientationchange", this._boundApplyLayoutMode);
+  }
+
+  normalizeGroup(group, index) {
+    if (!group || typeof group !== "object" || Array.isArray(group)) {
+      throw new Error(`Touch group[${index}] must be an object`);
+    }
+    const buttons = Array.isArray(group.buttons) ? group.buttons : [];
+    if (!Array.isArray(group.buttons)) {
+      throw new Error(`Touch group[${index}].buttons must be an array`);
+    }
+    return {
+      ...group,
+      buttons: buttons.map((button, buttonIndex) => this.normalizeButton(button, index, buttonIndex))
+    };
+  }
+
+  normalizeButton(button, groupIndex, buttonIndex) {
+    if (!button || typeof button !== "object" || Array.isArray(button)) {
+      throw new Error(`Touch group[${groupIndex}] button[${buttonIndex}] must be an object`);
+    }
+    if (typeof button.key !== "string" || button.key.length === 0) {
+      throw new Error(`Touch group[${groupIndex}] button[${buttonIndex}] requires a non-empty string key`);
+    }
+    if (button.width !== undefined && (!Number.isFinite(button.width) || button.width <= 0)) {
+      throw new Error(`Touch group[${groupIndex}] button[${buttonIndex}].width must be a finite number > 0`);
+    }
+    if (button.height !== undefined && (!Number.isFinite(button.height) || button.height <= 0)) {
+      throw new Error(`Touch group[${groupIndex}] button[${buttonIndex}].height must be a finite number > 0`);
+    }
+    return {
+      ...button,
+      key: button.key
+    };
+  }
+
+  readFiniteMetric(value, name) {
+    if (!Number.isFinite(value)) {
+      throw new Error(`Touch ${name} must be finite`);
+    }
+    return value;
   }
 
   isCoarsePointer() {
@@ -137,7 +177,8 @@ export default class Touch {
     const root = this.doc.createElement("div");
     root.className = className;
     this.root = root;
-    this.groups = groups;
+    const normalizedGroups = groups.map((group, index) => this.normalizeGroup(group, index));
+    this.groups = normalizedGroups;
     this.autoSpread = autoSpread;
     this.options.positioningMode = positioningMode === "absolute" ? "absolute" : "fixed";
     this.options.containerElement = containerElement ?? this.doc.body;
@@ -163,17 +204,16 @@ export default class Touch {
       root.style.top = "auto";
     }
 
-    for (let gi = 0; gi < groups.length; gi++) {
-      const g = groups[gi] ?? {};
+    for (let gi = 0; gi < normalizedGroups.length; gi++) {
+      const g = normalizedGroups[gi];
       const wrap = this.doc.createElement("div");
       wrap.className = `webg-touch-group ${g.className ?? ""}`.trim();
       wrap.dataset.group = g.id ?? `group_${gi}`;
 
-      const buttons = Array.isArray(g.buttons) ? g.buttons : [];
+      const buttons = g.buttons;
       for (let bi = 0; bi < buttons.length; bi++) {
-        const b = buttons[bi] ?? {};
-        const key = String(b.key ?? "");
-        if (!key) continue;
+        const b = buttons[bi];
+        const key = b.key;
         const kind = b.kind === "action" ? "action" : "hold";
         const el = this.doc.createElement("button");
         el.type = "button";
@@ -233,10 +273,11 @@ export default class Touch {
   // sample 側では hold ボタンと分けずに、ワンショット操作群だけを
   // ひとまとめに見せたいときに使う
   createActionButtons(groups = [], options = {}) {
-    const normalizedGroups = (groups ?? []).map((group) => {
-      const buttons = Array.isArray(group?.buttons) ? group.buttons : [];
+    const normalizedGroups = groups.map((group, index) => {
+      const normalizedGroup = this.normalizeGroup(group, index);
+      const buttons = normalizedGroup.buttons;
       return {
-        ...group,
+        ...normalizedGroup,
         buttons: buttons.map((button) => ({
           ...button,
           kind: "action"
@@ -271,17 +312,18 @@ export default class Touch {
 
   applyLayoutMode() {
     if (!this.root) return;
-    const viewportWidth = Math.floor(
-      this.options.viewportElement?.clientWidth
-      || this.root.parentElement?.clientWidth
-      || window.innerWidth
-      || 0
-    );
+    const rawViewportWidth = this.options.viewportElement?.clientWidth
+      ?? this.root.parentElement?.clientWidth
+      ?? window.innerWidth;
+    if (!Number.isFinite(rawViewportWidth) || rawViewportWidth <= 0) {
+      throw new Error(`Touch applyLayoutMode requires viewport width > 0: ${rawViewportWidth}`);
+    }
+    const viewportWidth = Math.floor(rawViewportWidth);
     const groups = this.root.querySelectorAll(".webg-touch-group");
     const rootStyle = window.getComputedStyle(this.root);
-    const padLeft = Number.parseFloat(rootStyle.paddingLeft);
-    const padRight = Number.parseFloat(rootStyle.paddingRight);
-    const groupGap = Number.parseFloat(rootStyle.columnGap);
+    const padLeft = this.readFiniteMetric(Number.parseFloat(rootStyle.paddingLeft), "root padding-left");
+    const padRight = this.readFiniteMetric(Number.parseFloat(rootStyle.paddingRight), "root padding-right");
+    const groupGap = this.readFiniteMetric(Number.parseFloat(rootStyle.columnGap), "root column-gap");
     let estimatedWidth = padLeft + padRight;
     const groupItems = [];
 
@@ -291,10 +333,13 @@ export default class Touch {
       let groupWidth = 0;
       for (let bi = 0; bi < btns.length; bi++) {
         const style = window.getComputedStyle(btns[bi]);
-        groupWidth += Number.parseFloat(style.width);
+        groupWidth += this.readFiniteMetric(Number.parseFloat(style.width), `button width[${gi}:${bi}]`);
       }
       const groupStyle = window.getComputedStyle(groups[gi]);
-      const btnGap = Number.parseFloat(groupStyle.columnGap || groupStyle.gap);
+      const btnGap = this.readFiniteMetric(
+        Number.parseFloat(groupStyle.columnGap || groupStyle.gap),
+        `group gap[${gi}]`
+      );
       groupWidth += btnGap * Math.max(0, btns.length - 1);
       groupItems.push({ element: groups[gi], width: groupWidth, buttonCount: btns.length });
       estimatedWidth += groupWidth;

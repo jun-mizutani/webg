@@ -1,5 +1,5 @@
 // ---------------------------------------------
-//  SceneLoader.js   2026/03/30
+//  SceneLoader.js   2026/04/21
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // ---------------------------------------------
@@ -36,9 +36,21 @@ export default class SceneLoader {
   // rotation は [x, y, z, w] quaternion で受け取り、
   // webg 内部の Quat 順序 [w, x, y, z] へ並べ替えてから行列化する
   matrixFromTransform(transform = {}) {
-    const translation = transform.translation ?? [0, 0, 0];
-    const rotation = transform.rotation ?? [0, 0, 0, 1];
-    const scale = transform.scale ?? [1, 1, 1];
+    if (!transform || typeof transform !== "object" || Array.isArray(transform)) {
+      throw new Error("scene node transform must be an object");
+    }
+    const translation = transform.translation;
+    const rotation = transform.rotation;
+    const scale = transform.scale;
+    if (!Array.isArray(translation) || translation.length < 3 || translation.some((value) => !Number.isFinite(value))) {
+      throw new Error("scene node transform.translation must be a finite vec3");
+    }
+    if (!Array.isArray(rotation) || rotation.length < 4 || rotation.some((value) => !Number.isFinite(value))) {
+      throw new Error("scene node transform.rotation must be a finite quat [x, y, z, w]");
+    }
+    if (!Array.isArray(scale) || scale.length < 3 || scale.some((value) => !Number.isFinite(value))) {
+      throw new Error("scene node transform.scale must be a finite vec3");
+    }
     const quat = new Quat();
     const mat = new Matrix();
     quat.q = [rotation[3], rotation[0], rotation[1], rotation[2]];

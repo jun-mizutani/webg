@@ -1,5 +1,5 @@
 // ---------------------------------------------
-//  ModelAsset.js    2026/03/29
+//  ModelAsset.js    2026/04/21
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // ---------------------------------------------
@@ -69,10 +69,16 @@ export default class ModelAsset {
   // - geometry positions や transform translation を同じ規則で拡大する
   // - ModelAsset は JSON 互換配列を前提にしているが、typed array でも index 書き込み可能なら扱える
   scaleTriplets(values, scale) {
-    if (!values || typeof values.length !== "number") {
+    if (values === undefined || values === null) {
       return;
     }
+    if (typeof values.length !== "number" || values.length % 3 !== 0) {
+      throw new Error("ModelAsset triplet data must be an array-like value whose length is a multiple of 3");
+    }
     for (let i = 0; i + 2 < values.length; i += 3) {
+      if (!Number.isFinite(values[i]) || !Number.isFinite(values[i + 1]) || !Number.isFinite(values[i + 2])) {
+        throw new Error(`ModelAsset triplet data must contain only finite numbers at index ${i}`);
+      }
       values[i] *= scale;
       values[i + 1] *= scale;
       values[i + 2] *= scale;
@@ -83,8 +89,14 @@ export default class ModelAsset {
   // - 回転成分はそのまま保ち、translation だけを uniform scale に合わせて伸ばす
   // - inverseBindMatrix も bind pose との整合を保つため同じ規則で扱う
   scaleMatrixTranslation(matrix, scale) {
-    if (!matrix || typeof matrix.length !== "number" || matrix.length < 16) {
+    if (matrix === undefined || matrix === null) {
       return;
+    }
+    if (typeof matrix.length !== "number" || matrix.length < 16) {
+      throw new Error("ModelAsset matrix translation target must be an array-like 4x4 matrix");
+    }
+    if (!Number.isFinite(matrix[12]) || !Number.isFinite(matrix[13]) || !Number.isFinite(matrix[14])) {
+      throw new Error("ModelAsset matrix translation components must be finite");
     }
     matrix[12] *= scale;
     matrix[13] *= scale;
@@ -124,6 +136,11 @@ export default class ModelAsset {
       return null;
     }
     const times = Array.isArray(clip.times) ? clip.times : [];
+    for (let i = 0; i < times.length; i++) {
+      if (!Number.isFinite(times[i])) {
+        throw new Error(`ModelAsset clip "${clip.id}" has a non-finite time at index ${i}`);
+      }
+    }
     const firstTime = times.length > 0 ? Number(times[0]) : 0;
     const lastTime = times.length > 0 ? Number(times[times.length - 1]) : firstTime;
     const durationMs = Math.max(0, (lastTime - firstTime) * 1000);

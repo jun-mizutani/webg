@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// Tween.js       2026/03/23
+// Tween.js       2026/04/21
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // ---------------------------------------------
@@ -22,18 +22,6 @@ const cloneValue = (value) => {
   return value;
 };
 
-// 数値以外の値に対して、0 から始めたい場面の既定値を作る
-// 配列は要素ごとに zeroLike を再帰し、色や vec3 の初期値を作りやすくする
-const zeroLike = (value) => {
-  if (Array.isArray(value)) {
-    return value.map((item) => zeroLike(item));
-  }
-  if (typeof value === "number") {
-    return 0;
-  }
-  return value;
-};
-
 // もっとも単純な線形補間を数値 1 個に対して行う
 // これを基礎にして、配列や object 全体の補間へ広げる
 const lerpNumber = (from, to, t) => from + (to - from) * t;
@@ -42,17 +30,21 @@ const lerpNumber = (from, to, t) => from + (to - from) * t;
 // object の場合は key ごとに呼ばれ、最終的には target 全体へ writeValue される
 const lerpValue = (from, to, t) => {
   if (Array.isArray(to)) {
-    const fromArray = Array.isArray(from) ? from : [];
-    return to.map((item, index) => lerpValue(fromArray[index], item, t));
+    if (!Array.isArray(from) || from.length !== to.length) {
+      throw new Error("Tween requires matching array start/end values");
+    }
+    return to.map((item, index) => lerpValue(from[index], item, t));
   }
   if (typeof to === "number" && typeof from === "number") {
     return lerpNumber(from, to, t);
   }
   if (typeof to === "number") {
-    const start = typeof from === "number" ? from : 0;
-    return lerpNumber(start, to, t);
+    throw new Error("Tween requires numeric start value for numeric interpolation");
   }
-  return t >= 1.0 ? cloneValue(to) : cloneValue(from ?? to);
+  if (from === undefined) {
+    throw new Error("Tween requires explicit start value for non-numeric interpolation");
+  }
+  return t >= 1.0 ? cloneValue(to) : cloneValue(from);
 };
 
 // 既存 target へ補間結果を書き戻す
@@ -145,14 +137,18 @@ export default class Tween {
     return easingMap[easingName] ?? easingMap.linear;
   }
 
-  // 開始値 snapshot を作る
-  // target が array の場合は index ごと、object の場合は property ごとに基準値を取る
+// 開始値 snapshot を作る
+// target が array の場合は index ごと、object の場合は property ごとに基準値を取り、
+// 値が欠けているときは補間を続けず例外として扱う
   captureStartValues() {
     if (Array.isArray(this.target) && Array.isArray(this.to)) {
       const fromArray = Array.isArray(this.fromSource) ? this.fromSource : null;
       return this.to.map((item, index) => {
         const candidate = fromArray?.[index] ?? this.target[index];
-        return candidate !== undefined ? cloneValue(candidate) : zeroLike(item);
+        if (candidate === undefined) {
+          throw new Error(`Tween missing start value at index ${index}`);
+        }
+        return cloneValue(candidate);
       });
     }
 
@@ -164,7 +160,10 @@ export default class Tween {
     for (let i = 0; i < keys.length; i++) {
       const key = keys[i];
       const candidate = fromObject?.[key] ?? this.target?.[key];
-      start[key] = candidate !== undefined ? cloneValue(candidate) : zeroLike(this.to[key]);
+      if (candidate === undefined) {
+        throw new Error(`Tween missing start value for key "${key}"`);
+      }
+      start[key] = cloneValue(candidate);
     }
     return start;
   }

@@ -1,5 +1,5 @@
 // ---------------------------------------------
-//  ModelBuilder.js  2026/04/20
+//  ModelBuilder.js  2026/04/21
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // ---------------------------------------------
@@ -37,6 +37,22 @@ function destroyShapeResourceList(shapeResources) {
   return destroyedCount;
 }
 
+function requireRuntimeInstantiation(instantiation, methodName) {
+  if (!instantiation || instantiation.isDestroyed) {
+    throw new Error(`Model runtime.${methodName}() requires an active instantiation`);
+  }
+  return instantiation;
+}
+
+function requireRuntimeAnimation(animationMap, id, methodName) {
+  const animationId = String(id ?? "").trim();
+  const animation = animationMap.get(animationId);
+  if (!animation) {
+    throw new Error(`Model runtime.${methodName}() cannot find animation "${id}"`);
+  }
+  return animation;
+}
+
 export default class ModelBuilder {
 
   // ModelAsset から runtime オブジェクトを組み立てる
@@ -69,9 +85,21 @@ export default class ModelBuilder {
 
   // TRS 定義を Matrix に変換する
   matrixFromTransform(transform = {}) {
-    const translation = transform.translation ?? [0, 0, 0];
-    const rotation = transform.rotation ?? [0, 0, 0, 1];
-    const scale = transform.scale ?? [1, 1, 1];
+    if (!transform || typeof transform !== "object" || Array.isArray(transform)) {
+      throw new Error("model node transform must be an object");
+    }
+    const translation = transform.translation;
+    const rotation = transform.rotation;
+    const scale = transform.scale;
+    if (!Array.isArray(translation) || translation.length < 3 || translation.some((value) => !Number.isFinite(value))) {
+      throw new Error("model node transform.translation must be a finite vec3");
+    }
+    if (!Array.isArray(rotation) || rotation.length < 4 || rotation.some((value) => !Number.isFinite(value))) {
+      throw new Error("model node transform.rotation must be a finite quat [x, y, z, w]");
+    }
+    if (!Array.isArray(scale) || scale.length < 3 || scale.some((value) => !Number.isFinite(value))) {
+      throw new Error("model node transform.scale must be a finite vec3");
+    }
     const quat = new Quat();
     const mat = new Matrix();
 
@@ -402,11 +430,13 @@ export default class ModelBuilder {
         skeletonDef,
         animations: new Map(),
         animationBindings: (nodeDef.animationBindings ?? []).slice(),
-        transform: {
-          translation: [...(nodeDef.transform?.translation ?? [0, 0, 0])],
-          rotation: [...(nodeDef.transform?.rotation ?? [0, 0, 0, 1])],
-          scale: [...(nodeDef.transform?.scale ?? [1, 1, 1])]
-        },
+        transform: nodeDef.transform
+          ? {
+            translation: [...nodeDef.transform.translation],
+            rotation: [...nodeDef.transform.rotation],
+            scale: [...nodeDef.transform.scale]
+          }
+          : null,
         localMatrix
       };
 
@@ -456,18 +486,15 @@ export default class ModelBuilder {
             if (!entry?.shape || entry.animationBindings.length === 0) {
               continue;
             }
-            const animation = entry.animationMap.get(entry.animationBindings[0]);
-            if (!animation) {
-              continue;
-            }
+            const animationId = entry.animationBindings[0];
+            const animation = requireRuntimeAnimation(entry.animationMap, animationId, "bindAnimationBindings");
             entry.shape.setAnimation(animation);
             boundCount++;
           }
           return boundCount;
         },
         startAnimation(id) {
-          const animation = animationMap.get(String(id ?? ""));
-          if (!animation) return null;
+          const animation = requireRuntimeAnimation(animationMap, id, "startAnimation");
           animation.start();
           return animation;
         },
@@ -475,8 +502,7 @@ export default class ModelBuilder {
           return this.startAnimation(id);
         },
         playAnimation(id) {
-          const animation = animationMap.get(String(id ?? ""));
-          if (!animation) return -1;
+          const animation = requireRuntimeAnimation(animationMap, id, "playAnimation");
           return animation.play();
         },
         startAllAnimations() {
@@ -497,14 +523,12 @@ export default class ModelBuilder {
           return list.length;
         },
         pauseAnimation(id) {
-          const animation = animationMap.get(String(id ?? ""));
-          if (!animation) return null;
+          const animation = requireRuntimeAnimation(animationMap, id, "pauseAnimation");
           animation.schedule.pause = true;
           return animation;
         },
         resumeAnimation(id) {
-          const animation = animationMap.get(String(id ?? ""));
-          if (!animation) return null;
+          const animation = requireRuntimeAnimation(animationMap, id, "resumeAnimation");
           animation.schedule.pause = false;
           return animation;
         },
@@ -635,6 +659,10 @@ export default class ModelBuilder {
       return instantiated;
     };
 
+    const requireActiveInstantiation = (methodName) => {
+      return requireRuntimeInstantiation(activeInstantiation, methodName);
+    };
+
     runtime = {
       materialDefs,
       meshDefs,
@@ -653,7 +681,7 @@ export default class ModelBuilder {
         // build() 結果側へ集約し、asset 種別差を sample から隠す
         console.assert(!this.isDestroyed, "runtime.createNodeTree() requires a live runtime");
         if (this.isDestroyed) {
-          return null;
+          throw new Error("Model runtime.createNodeTree() requires a live runtime");
         }
         return instantiateRuntime(space, {
           bindAnimations: false,
@@ -662,7 +690,7 @@ export default class ModelBuilder {
       },
       // node 側の animation binding 情報を shape へ関連付ける
       bindAnimationBindings() {
-        return activeInstantiation?.bindAnimationBindings?.() ?? 0;
+        return requireActiveInstantiation("bindAnimationBindings").bindAnimationBindings();
       },
       // Space への配置と animation binding をまとめて行う
       instantiate(space, options = {}) {
@@ -670,7 +698,7 @@ export default class ModelBuilder {
         // createNodeTree と bindAnimationBindings を 1 手で呼べる入口を用意する
         console.assert(!this.isDestroyed, "runtime.instantiate() requires a live runtime");
         if (this.isDestroyed) {
-          return null;
+          throw new Error("Model runtime.instantiate() requires a live runtime");
         }
         return instantiateRuntime(space, {
           bindAnimations: options.bindAnimations !== false,
@@ -679,7 +707,7 @@ export default class ModelBuilder {
       },
       // clip id から runtime Animation を引く高レベル helper
       getAnimation(id) {
-        return activeInstantiation?.getAnimation?.(id) ?? null;
+        return requireActiveInstantiation("getAnimation").getAnimation(id);
       },
       // build 結果に含まれる clip id 一覧を返す
       getAnimationNames() {
@@ -687,7 +715,7 @@ export default class ModelBuilder {
       },
       // 指定 clip の runtime Animation を開始する
       startAnimation(id) {
-        return activeInstantiation?.startAnimation?.(id) ?? null;
+        return requireActiveInstantiation("startAnimation").startAnimation(id);
       },
       // 指定 clip の runtime Animation を先頭から再始動する
       restartAnimation(id) {
@@ -695,11 +723,11 @@ export default class ModelBuilder {
       },
       // 指定 clip の runtime Animation を 1 ステップ進める
       playAnimation(id) {
-        return activeInstantiation?.playAnimation?.(id) ?? -1;
+        return requireActiveInstantiation("playAnimation").playAnimation(id);
       },
       // すべての runtime Animation を開始する
       startAllAnimations() {
-        return activeInstantiation?.startAllAnimations?.() ?? 0;
+        return requireActiveInstantiation("startAllAnimations").startAllAnimations();
       },
       // すべての runtime Animation を先頭から再始動する
       restartAllAnimations() {
@@ -707,23 +735,23 @@ export default class ModelBuilder {
       },
       // すべての runtime Animation を 1 ステップ進める
       playAllAnimations() {
-        return activeInstantiation?.playAllAnimations?.() ?? 0;
+        return requireActiveInstantiation("playAllAnimations").playAllAnimations();
       },
       // 指定 clip の runtime Animation を一時停止する
       pauseAnimation(id) {
-        return activeInstantiation?.pauseAnimation?.(id) ?? null;
+        return requireActiveInstantiation("pauseAnimation").pauseAnimation(id);
       },
       // 指定 clip の runtime Animation を再開する
       resumeAnimation(id) {
-        return activeInstantiation?.resumeAnimation?.(id) ?? null;
+        return requireActiveInstantiation("resumeAnimation").resumeAnimation(id);
       },
       // すべての runtime Animation を一時停止する
       pauseAllAnimations() {
-        return activeInstantiation?.pauseAllAnimations?.() ?? 0;
+        return requireActiveInstantiation("pauseAllAnimations").pauseAllAnimations();
       },
       // すべての runtime Animation を再開する
       resumeAllAnimations() {
-        return activeInstantiation?.resumeAllAnimations?.() ?? 0;
+        return requireActiveInstantiation("resumeAllAnimations").resumeAllAnimations();
       },
       // 全 animation の pause 状態を一括設定する
       setAnimationsPaused(paused) {
@@ -812,11 +840,13 @@ export default class ModelBuilder {
         skeletonDef,
         animations: new Map(),
         animationBindings: (nodeDef.animationBindings ?? []).slice(),
-        transform: {
-          translation: [...(nodeDef.transform?.translation ?? [0, 0, 0])],
-          rotation: [...(nodeDef.transform?.rotation ?? [0, 0, 0, 1])],
-          scale: [...(nodeDef.transform?.scale ?? [1, 1, 1])]
-        },
+        transform: nodeDef.transform
+          ? {
+            translation: [...nodeDef.transform.translation],
+            rotation: [...nodeDef.transform.rotation],
+            scale: [...nodeDef.transform.scale]
+          }
+          : null,
         localMatrix
       };
 
@@ -1066,7 +1096,7 @@ export default class ModelBuilder {
       createNodeTree(space) {
         console.assert(!this.isDestroyed, "runtime.createNodeTree() requires a live runtime");
         if (this.isDestroyed) {
-          return null;
+          throw new Error("Model runtime.createNodeTree() requires a live runtime");
         }
         return instantiateRuntime(space, {
           bindAnimations: false,
@@ -1074,12 +1104,12 @@ export default class ModelBuilder {
         }).nodeMap;
       },
       bindAnimationBindings() {
-        return activeInstantiation?.bindAnimationBindings?.() ?? 0;
+        return requireActiveInstantiation("bindAnimationBindings").bindAnimationBindings();
       },
       instantiate(space, instantiateOptions = {}) {
         console.assert(!this.isDestroyed, "runtime.instantiate() requires a live runtime");
         if (this.isDestroyed) {
-          return null;
+          throw new Error("Model runtime.instantiate() requires a live runtime");
         }
         return instantiateRuntime(space, {
           bindAnimations: instantiateOptions.bindAnimations !== false,
@@ -1087,40 +1117,40 @@ export default class ModelBuilder {
         });
       },
       getAnimation(id) {
-        return activeInstantiation?.getAnimation?.(id) ?? null;
+        return requireActiveInstantiation("getAnimation").getAnimation(id);
       },
       getAnimationNames() {
         return activeInstantiation?.getAnimationNames?.() ?? [...clipNames];
       },
       startAnimation(id) {
-        return activeInstantiation?.startAnimation?.(id) ?? null;
+        return requireActiveInstantiation("startAnimation").startAnimation(id);
       },
       restartAnimation(id) {
         return this.startAnimation(id);
       },
       playAnimation(id) {
-        return activeInstantiation?.playAnimation?.(id) ?? -1;
+        return requireActiveInstantiation("playAnimation").playAnimation(id);
       },
       startAllAnimations() {
-        return activeInstantiation?.startAllAnimations?.() ?? 0;
+        return requireActiveInstantiation("startAllAnimations").startAllAnimations();
       },
       restartAllAnimations() {
         return this.startAllAnimations();
       },
       playAllAnimations() {
-        return activeInstantiation?.playAllAnimations?.() ?? 0;
+        return requireActiveInstantiation("playAllAnimations").playAllAnimations();
       },
       pauseAnimation(id) {
-        return activeInstantiation?.pauseAnimation?.(id) ?? null;
+        return requireActiveInstantiation("pauseAnimation").pauseAnimation(id);
       },
       resumeAnimation(id) {
-        return activeInstantiation?.resumeAnimation?.(id) ?? null;
+        return requireActiveInstantiation("resumeAnimation").resumeAnimation(id);
       },
       pauseAllAnimations() {
-        return activeInstantiation?.pauseAllAnimations?.() ?? 0;
+        return requireActiveInstantiation("pauseAllAnimations").pauseAllAnimations();
       },
       resumeAllAnimations() {
-        return activeInstantiation?.resumeAllAnimations?.() ?? 0;
+        return requireActiveInstantiation("resumeAllAnimations").resumeAllAnimations();
       },
       setAnimationsPaused(paused) {
         return paused ? this.pauseAllAnimations() : this.resumeAllAnimations();

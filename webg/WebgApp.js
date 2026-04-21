@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// WebgApp.js     2026/04/18
+// WebgApp.js     2026/04/21
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // ---------------------------------------------
@@ -37,9 +37,9 @@ export default class WebgApp {
     this.shader = options.shader ?? null;
     this.shaderClass = options.shaderClass ?? SmoothShader;
     this.clearColor = [...(options.clearColor ?? [0.1, 0.15, 0.1, 1.0])];
-    this.viewAngle = Number.isFinite(options.viewAngle) ? options.viewAngle : 55.0;
-    this.projectionNear = Number.isFinite(options.projectionNear) ? options.projectionNear : 0.1;
-    this.projectionFar = Number.isFinite(options.projectionFar) ? options.projectionFar : 1000.0;
+    this.viewAngle = this.readOptionalFiniteOption(options.viewAngle, "viewAngle", 55.0);
+    this.projectionNear = this.readOptionalFiniteOption(options.projectionNear, "projectionNear", 0.1);
+    this.projectionFar = this.readOptionalFiniteOption(options.projectionFar, "projectionFar", 1000.0);
     this.lightPosition = [...(options.lightPosition ?? [120.0, 180.0, 140.0, 1.0])];
     // 既定では従来どおり eye space 固定 light を使うが、
     // world node を光源として使いたい場合は light.mode = "world-node" を指定できる
@@ -48,21 +48,19 @@ export default class WebgApp {
       nodeName: options.light?.nodeName ?? "light",
       position: [...(options.light?.position ?? this.lightPosition)],
       attitude: [...(options.light?.attitude ?? [0.0, 0.0, 0.0])],
-      type: Number.isFinite(options.light?.type)
-        ? options.light.type
-        : 1.0
+      type: this.readOptionalFiniteOption(options.light?.type, "light.type", 1.0)
     };
     this.fog = {
       color: [...(options.fog?.color ?? this.clearColor)],
-      near: Number.isFinite(options.fog?.near) ? options.fog.near : 20.0,
-      far: Number.isFinite(options.fog?.far) ? options.fog.far : 80.0,
-      density: Number.isFinite(options.fog?.density) ? options.fog.density : 0.03,
-      mode: Number.isFinite(options.fog?.mode) ? options.fog.mode : 0.0
+      near: this.readOptionalFiniteOption(options.fog?.near, "fog.near", 20.0),
+      far: this.readOptionalFiniteOption(options.fog?.far, "fog.far", 80.0),
+      density: this.readOptionalFiniteOption(options.fog?.density, "fog.density", 0.03),
+      mode: this.readOptionalFiniteOption(options.fog?.mode, "fog.mode", 0.0)
     };
     this.setDefaultShapeShader = options.setDefaultShapeShader !== false;
     this.useMessage = options.useMessage !== false;
     this.messageFontTexture = options.messageFontTexture;
-    this.messageScale = Number.isFinite(options.messageScale) ? options.messageScale : 1.0;
+    this.messageScale = this.readOptionalFiniteOption(options.messageScale, "messageScale", 1.0);
     this.attachInputOnInit = options.attachInputOnInit !== false;
     this.autoDrawScene = options.autoDrawScene !== false;
     this.autoDrawBones = options.autoDrawBones === true;
@@ -73,9 +71,7 @@ export default class WebgApp {
       combo: null,
       timer: null,
       toasts: [],
-      toastLimit: Number.isInteger(options.gameHud?.toastLimit)
-        ? Math.max(1, options.gameHud.toastLimit)
-        : 4
+      toastLimit: this.readOptionalIntegerOption(options.gameHud?.toastLimit, "gameHud.toastLimit", 4, 1)
     };
     // 保存済み progress は WebgApp が名前空間を決めて扱い、
     // sample 側は save/load の中身だけに集中できるようにする
@@ -91,10 +87,10 @@ export default class WebgApp {
       rodName: options.camera?.rodName ?? "eyeRod",
       eyeName: options.camera?.eyeName ?? "eye",
       target: [...(options.camera?.target ?? [0.0, 0.0, 0.0])],
-      distance: Number.isFinite(options.camera?.distance) ? options.camera.distance : 28.0,
-      yaw: Number.isFinite(options.camera?.yaw) ? options.camera.yaw : 0.0,
-      pitch: Number.isFinite(options.camera?.pitch) ? options.camera.pitch : 0.0,
-      bank: Number.isFinite(options.camera?.bank) ? options.camera.bank : 0.0
+      distance: this.readOptionalFiniteOption(options.camera?.distance, "camera.distance", 28.0),
+      yaw: this.readOptionalFiniteOption(options.camera?.yaw, "camera.yaw", 0.0),
+      pitch: this.readOptionalFiniteOption(options.camera?.pitch, "camera.pitch", 0.0),
+      bank: this.readOptionalFiniteOption(options.camera?.bank, "camera.bank", 0.0)
     };
     this.cameraFollow = {
       active: false,
@@ -102,9 +98,9 @@ export default class WebgApp {
       targetNode: null,
       targetOffset: [...(options.camera?.targetOffset ?? [0.0, 0.0, 0.0])],
       currentTarget: [...this.camera.target],
-      smooth: Number.isFinite(options.camera?.smooth) ? Number(options.camera.smooth) : 0.15,
+      smooth: this.readOptionalFiniteOption(options.camera?.smooth, "camera.smooth", 0.15),
       inheritTargetYaw: options.camera?.inheritTargetYaw === true,
-      targetYawOffset: Number.isFinite(options.camera?.targetYawOffset) ? Number(options.camera.targetYawOffset) : 0.0
+      targetYawOffset: this.readOptionalFiniteOption(options.camera?.targetYawOffset, "camera.targetYawOffset", 0.0)
     };
     this.fixedCanvasSize = this.normalizeFixedCanvasSize(options.fixedCanvasSize);
     this.layoutMode = this.normalizeLayoutMode(options.layoutMode);
@@ -132,15 +128,9 @@ export default class WebgApp {
       minScale: 0.82
     };
     this.hudLayoutOffsets = {
-      guideOffsetY: Number.isFinite(options.hudLayoutOffsets?.guideOffsetY)
-        ? options.hudLayoutOffsets.guideOffsetY
-        : 0,
-      statusOffsetY: Number.isFinite(options.hudLayoutOffsets?.statusOffsetY)
-        ? options.hudLayoutOffsets.statusOffsetY
-        : 0,
-      rowsOffsetY: Number.isFinite(options.hudLayoutOffsets?.rowsOffsetY)
-        ? options.hudLayoutOffsets.rowsOffsetY
-        : 0
+      guideOffsetY: this.readOptionalFiniteOption(options.hudLayoutOffsets?.guideOffsetY, "hudLayoutOffsets.guideOffsetY", 0),
+      statusOffsetY: this.readOptionalFiniteOption(options.hudLayoutOffsets?.statusOffsetY, "hudLayoutOffsets.statusOffsetY", 0),
+      rowsOffsetY: this.readOptionalFiniteOption(options.hudLayoutOffsets?.rowsOffsetY, "hudLayoutOffsets.rowsOffsetY", 0)
     };
     this.screen = null;
     this.space = null;
@@ -227,7 +217,6 @@ export default class WebgApp {
     };
     this._frame = (timeMs) => this.frame(timeMs);
     this._frameScheduled = false;
-    this._autoPaused = false;
     this.handlers = {
       onUpdate: null,
       onBeforeDraw: null,
@@ -262,6 +251,43 @@ export default class WebgApp {
     });
     this.modelRuntime = null;
     this.sceneRuntime = null;
+  }
+
+  readOptionalFiniteOption(value, name, fallback) {
+    if (value === undefined) {
+      return fallback;
+    }
+    if (!Number.isFinite(value)) {
+      throw new Error(`WebgApp ${name} must be finite`);
+    }
+    return Number(value);
+  }
+
+  readOptionalIntegerOption(value, name, fallback, minValue = null) {
+    if (value === undefined) {
+      return fallback;
+    }
+    if (!Number.isFinite(value) || !Number.isInteger(value)) {
+      throw new Error(`WebgApp ${name} must be an integer`);
+    }
+    if (minValue !== null && Number(value) < minValue) {
+      throw new Error(`WebgApp ${name} must be >= ${minValue}`);
+    }
+    return Number(value);
+  }
+
+  selectLayoutDimension(candidates, name) {
+    for (let i = 0; i < candidates.length; i++) {
+      const candidate = candidates[i];
+      if (candidate.value === undefined || candidate.value === null) {
+        continue;
+      }
+      if (!Number.isFinite(candidate.value) || Number(candidate.value) <= 0) {
+        throw new Error(`WebgApp ${name} candidate "${candidate.label}" must be a positive finite number`);
+      }
+      return Math.floor(Number(candidate.value));
+    }
+    throw new Error(`WebgApp ${name} could not resolve a positive layout dimension`);
   }
 
   // fixedCanvasSize option を検証し、固定 canvas の寸法と DPR 方針を確定する
@@ -918,9 +944,9 @@ export default class WebgApp {
     this.cameraFollow.mode = "follow";
     this.cameraFollow.targetNode = node ?? null;
     this.cameraFollow.targetOffset = [...(options.offset ?? options.targetOffset ?? this.cameraFollow.targetOffset ?? [0.0, 0.0, 0.0])];
-    this.cameraFollow.smooth = Number.isFinite(options.smooth) ? Number(options.smooth) : 0.15;
+    this.cameraFollow.smooth = this.readOptionalFiniteOption(options.smooth, "followNode.smooth", 0.15);
     this.cameraFollow.inheritTargetYaw = options.inheritTargetYaw === true;
-    this.cameraFollow.targetYawOffset = Number.isFinite(options.targetYawOffset) ? Number(options.targetYawOffset) : 0.0;
+    this.cameraFollow.targetYawOffset = this.readOptionalFiniteOption(options.targetYawOffset, "followNode.targetYawOffset", 0.0);
     if (this.cameraFollow.active) {
       this.updateCameraTarget(0.0, true);
     }
@@ -933,9 +959,9 @@ export default class WebgApp {
     this.cameraFollow.mode = "lock";
     this.cameraFollow.targetNode = target ?? null;
     this.cameraFollow.targetOffset = [...(options.offset ?? options.targetOffset ?? [0.0, 0.0, 0.0])];
-    this.cameraFollow.smooth = Number.isFinite(options.smooth) ? Number(options.smooth) : 1.0;
+    this.cameraFollow.smooth = this.readOptionalFiniteOption(options.smooth, "lockOn.smooth", 1.0);
     this.cameraFollow.inheritTargetYaw = options.inheritTargetYaw === true;
-    this.cameraFollow.targetYawOffset = Number.isFinite(options.targetYawOffset) ? Number(options.targetYawOffset) : 0.0;
+    this.cameraFollow.targetYawOffset = this.readOptionalFiniteOption(options.targetYawOffset, "lockOn.targetYawOffset", 0.0);
     if (this.cameraFollow.active) {
       this.updateCameraTarget(0.0, true);
     }
@@ -1027,12 +1053,12 @@ export default class WebgApp {
       id: options.id ?? `helpOverlay${this.helpPanels.length + 1}`,
       leftWidth: options.leftWidth ?? "minmax(0, 340px)",
       rightWidth: options.rightWidth ?? "minmax(0, 0px)",
-      gap: Number.isFinite(options.gap) ? options.gap : 0,
-      collapseWidth: Number.isFinite(options.collapseWidth) ? Math.floor(options.collapseWidth) : 760,
-      compactWidth: Number.isFinite(options.compactWidth) ? Math.floor(options.compactWidth) : 560,
-      top: Number.isFinite(options.top) ? Math.floor(options.top) : undefined,
-      left: Number.isFinite(options.left) ? Math.floor(options.left) : undefined,
-      right: Number.isFinite(options.right) ? Math.floor(options.right) : undefined
+      gap: this.readOptionalFiniteOption(options.gap, "helpPanel.gap", 0),
+      collapseWidth: this.readOptionalIntegerOption(options.collapseWidth, "helpPanel.collapseWidth", 760, 1),
+      compactWidth: this.readOptionalIntegerOption(options.compactWidth, "helpPanel.compactWidth", 560, 1),
+      top: options.top === undefined ? undefined : this.readOptionalIntegerOption(options.top, "helpPanel.top", undefined),
+      left: options.left === undefined ? undefined : this.readOptionalIntegerOption(options.left, "helpPanel.left", undefined),
+      right: options.right === undefined ? undefined : this.readOptionalIntegerOption(options.right, "helpPanel.right", undefined)
     });
     const column = options.column === "right" ? layout.right : layout.left;
     const panel = uiPanels.createPanel(column);
@@ -1048,11 +1074,19 @@ export default class WebgApp {
       code: options.code !== false
     });
     if (this.isEmbeddedLayout()) {
+      const maxWidth = this.resolveHelpPanelEmbeddedMaxWidth(options);
+      const wrap = column === layout.right ? layout.rightWrap : layout.leftWrap;
       // 教材ページへ埋め込む canvas では、help panel を畳んだときに
       // 枠だけが host 全幅へ広がると説明文の上に不自然な空白が残る
-      // そのため embedded 時は panel 自体を内容幅へ寄せ、最大幅だけを制限する
-      panel.style.width = "max-content";
-      panel.style.maxWidth = `min(calc(100% - 24px), ${this.resolveHelpPanelEmbeddedMaxWidth(options)})`;
+      // そのため embedded 時は panel だけでなく親 column も内容幅へ寄せ、
+      // layout 全体が canvas 幅いっぱいへ伸びる挙動を避ける
+      wrap.style.width = "fit-content";
+      wrap.style.maxWidth = `min(calc(100% - 24px), ${maxWidth})`;
+      column.style.width = "fit-content";
+      column.style.maxWidth = "100%";
+      column.style.alignItems = column === layout.right ? "flex-end" : "flex-start";
+      panel.style.width = "fit-content";
+      panel.style.maxWidth = `min(calc(100% - 24px), ${maxWidth})`;
       textBlock.style.maxWidth = "100%";
       textBlock.style.boxSizing = "border-box";
     }
@@ -1106,13 +1140,20 @@ export default class WebgApp {
     return this.helpPanelUi;
   }
 
+  readHelpPanelLines(lines, methodName) {
+    if (!Array.isArray(lines)) {
+      throw new Error(`WebgApp.${methodName} requires lines to be an array`);
+    }
+    return lines.map((line) => String(line));
+  }
+
   // help panel の本文は 1 行 1 操作を基本にし、
   // sample 側は行配列を渡すだけで panel text を更新できるようにする
   setHelpPanelLines(helpPanel, lines = []) {
     if (!helpPanel?.textBlock) {
       return [];
     }
-    helpPanel.lines = (lines ?? []).map((line) => String(line));
+    helpPanel.lines = this.readHelpPanelLines(lines, "setHelpPanelLines");
     helpPanel.textBlock.textContent = helpPanel.lines.join("\n");
     return [...helpPanel.lines];
   }
@@ -1316,24 +1357,18 @@ export default class WebgApp {
       ? this.debugDock.reserveWidth + this.debugDock.gap
       : 0;
     const hasFixedCanvasSize = !!this.fixedCanvasSize;
-    const embeddedWidth = Math.max(
-      1,
-      Math.floor(
-        this.screen?.displayWidth
-        || this.screen?.requestedWidth
-        || this.screen?.canvas?.clientWidth
-        || window.innerWidth
-      )
-    );
-    const embeddedHeight = Math.max(
-      1,
-      Math.floor(
-        this.screen?.displayHeight
-        || this.screen?.requestedHeight
-        || this.screen?.canvas?.clientHeight
-        || 720
-      )
-    );
+    const embeddedWidth = this.selectLayoutDimension([
+      { value: this.screen?.displayWidth, label: "screen.displayWidth" },
+      { value: this.screen?.requestedWidth, label: "screen.requestedWidth" },
+      { value: this.screen?.canvas?.clientWidth, label: "screen.canvas.clientWidth" },
+      { value: window.innerWidth, label: "window.innerWidth" }
+    ], "embedded width");
+    const embeddedHeight = this.selectLayoutDimension([
+      { value: this.screen?.displayHeight, label: "screen.displayHeight" },
+      { value: this.screen?.requestedHeight, label: "screen.requestedHeight" },
+      { value: this.screen?.canvas?.clientHeight, label: "screen.canvas.clientHeight" },
+      { value: 720, label: "defaultEmbeddedHeight" }
+    ], "embedded height");
     const width = hasFixedCanvasSize
       ? this.fixedCanvasSize.width
       : (this.isEmbeddedLayout()
@@ -1477,25 +1512,11 @@ export default class WebgApp {
     const wrappedHandlers = {
       ...handlers,
       onKeyDown: (key, ev) => {
-        // ondemand では keydown 自体が次 frame を起こすきっかけになる
-        this.requestRender();
         if (this.handleDebugKeyInput(key, ev)) {
           return;
         }
         if (handlers.onKeyDown) {
           handlers.onKeyDown(key, ev);
-        }
-      },
-      onKeyUp: (key, ev) => {
-        this.requestRender();
-        if (handlers.onKeyUp) {
-          handlers.onKeyUp(key, ev);
-        }
-      },
-      onPointerDown: (ev) => {
-        this.requestRender();
-        if (handlers.onPointerDown) {
-          handlers.onPointerDown(ev);
         }
       }
     };
@@ -1649,9 +1670,10 @@ export default class WebgApp {
 
   // ガイド文は主に固定の操作説明を置くためのブロックとして使う
   setGuideLines(lines, options = {}) {
-    const x = Number.isFinite(options.x) ? options.x : 0;
-    const y = Number.isFinite(options.y) ? options.y : 0;
-    const color = [...(options.color ?? [0.90, 0.95, 1.0])];
+    const x = this.readHudNumber(options.x === undefined ? 0 : options.x, "setGuideLines", "options.x");
+    const y = this.readHudNumber(options.y === undefined ? 0 : options.y, "setGuideLines", "options.y");
+    const color = this.readHudColor(options.color, "setGuideLines", [0.90, 0.95, 1.0]);
+    const normalizedLines = this.readHudLines(lines, "setGuideLines");
     this.guideOptions = {
       x,
       y,
@@ -1665,10 +1687,10 @@ export default class WebgApp {
       wrap: options.wrap,
       clip: options.clip
     };
-    this.guideEntries = (lines ?? []).map((line, index) => ({
+    this.guideEntries = normalizedLines.map((line, index) => ({
       x,
       y: y + index,
-      text: String(line),
+      text: line,
       color
     }));
     this.updateDebugDock();
@@ -1676,9 +1698,10 @@ export default class WebgApp {
 
   // ステータス文は guide とは別ブロックで毎フレーム更新しやすくする
   setStatusLines(lines, options = {}) {
-    const x = Number.isFinite(options.x) ? options.x : 0;
-    const y = Number.isFinite(options.y) ? options.y : 6;
-    const color = [...(options.color ?? [1.0, 0.88, 0.72])];
+    const x = this.readHudNumber(options.x === undefined ? 0 : options.x, "setStatusLines", "options.x");
+    const y = this.readHudNumber(options.y === undefined ? 6 : options.y, "setStatusLines", "options.y");
+    const color = this.readHudColor(options.color, "setStatusLines", [1.0, 0.88, 0.72]);
+    const normalizedLines = this.readHudLines(lines, "setStatusLines");
     this.statusOptions = {
       x,
       y,
@@ -1692,10 +1715,10 @@ export default class WebgApp {
       wrap: options.wrap,
       clip: options.clip
     };
-    this.statusEntries = (lines ?? []).map((line, index) => ({
+    this.statusEntries = normalizedLines.map((line, index) => ({
       x,
       y: y + index,
-      text: String(line),
+      text: line,
       color
     }));
     this.updateDebugDock();
@@ -1711,9 +1734,10 @@ export default class WebgApp {
   // canvas HUD を「1 行 1 parameter」形式で組みたい場合の構造化 row を設定する
   // sample 側では dock 用 row と同じ配列を渡し、表示媒体に応じた整形だけを WebgApp 側へ任せられる
   setHudRows(rows = [], options = {}) {
-    this.hudRows = Array.isArray(rows)
-      ? rows.map((row) => ({ ...(row ?? {}) }))
-      : [];
+    if (!Array.isArray(rows)) {
+      throw new Error("WebgApp.setHudRows requires rows to be an array");
+    }
+    this.hudRows = rows.map((row, index) => this.readHudRow(row, index, "setHudRows"));
     this.hudRowsOptions = {
       ...this.hudRowsOptions,
       ...options
@@ -1746,6 +1770,47 @@ export default class WebgApp {
     this.gameHud.combo = null;
     this.gameHud.timer = null;
     this.gameHud.toasts = [];
+  }
+
+  readHudNumber(value, methodName, name) {
+    if (!Number.isFinite(value)) {
+      throw new Error(`WebgApp.${methodName} requires finite ${name}`);
+    }
+    return Number(value);
+  }
+
+  readHudOptionalInt(value, methodName, name, fallback) {
+    if (value === undefined) {
+      return fallback;
+    }
+    if (!Number.isFinite(value) || !Number.isInteger(value)) {
+      throw new Error(`WebgApp.${methodName} requires integer ${name}`);
+    }
+    return Number(value);
+  }
+
+  readHudLines(lines, methodName) {
+    if (!Array.isArray(lines)) {
+      throw new Error(`WebgApp.${methodName} requires an array of lines`);
+    }
+    return lines.map((line) => String(line));
+  }
+
+  readHudColor(color, methodName, fallback) {
+    if (color === undefined) {
+      return [...fallback];
+    }
+    if (!Array.isArray(color) || color.some((value) => !Number.isFinite(value))) {
+      throw new Error(`WebgApp.${methodName} requires options.color to be an array of finite numbers`);
+    }
+    return [...color];
+  }
+
+  readHudRow(row, index, methodName) {
+    if (!row || typeof row !== "object" || Array.isArray(row)) {
+      throw new Error(`WebgApp.${methodName} requires row[${index}] to be an object`);
+    }
+    return { ...row };
   }
 
   // 現在の入力 state を 1 frame 分の記録として残す
@@ -1802,14 +1867,14 @@ export default class WebgApp {
   // score 表示の値とレイアウトを更新する
   // game HUD の中では最も基本になるため、label と位置も一緒に持たせる
   setScore(value, options = {}) {
-    const score = Number.isFinite(value) ? Number(value) : Number(value ?? 0) || 0;
+    const score = this.readHudNumber(value, "setScore", "value");
     this.gameHud.score = {
       value: score,
       label: String(options.label ?? "SCORE"),
       color: [...(options.color ?? [1.0, 0.95, 0.72])],
       anchor: options.anchor ?? "top-left",
-      x: Number.isFinite(options.x) ? Math.floor(options.x) : 0,
-      y: Number.isFinite(options.y) ? Math.floor(options.y) : 0
+      x: this.readHudOptionalInt(options.x, "setScore", "options.x", 0),
+      y: this.readHudOptionalInt(options.y, "setScore", "options.y", 0)
     };
     return score;
   }
@@ -1818,21 +1883,21 @@ export default class WebgApp {
   // sample 側は内部値を別管理せず、この helper で加算処理まで済ませられる
   addScore(delta = 0, options = {}) {
     const base = this.gameHud.score?.value ?? 0;
-    const inc = Number.isFinite(delta) ? Number(delta) : 0;
+    const inc = this.readHudNumber(delta, "addScore", "delta");
     return this.setScore(base + inc, options);
   }
 
   // combo 表示の値とレイアウトを更新する
   // score と同じ形式へ寄せて、描画側が共通処理で扱えるようにする
   setCombo(value, options = {}) {
-    const combo = Number.isFinite(value) ? Number(value) : Number(value ?? 0) || 0;
+    const combo = this.readHudNumber(value, "setCombo", "value");
     this.gameHud.combo = {
       value: combo,
       label: String(options.label ?? "COMBO"),
       color: [...(options.color ?? [0.78, 1.0, 0.78])],
       anchor: options.anchor ?? "top-left",
-      x: Number.isFinite(options.x) ? Math.floor(options.x) : 0,
-      y: Number.isFinite(options.y) ? Math.floor(options.y) : 1
+      x: this.readHudOptionalInt(options.x, "setCombo", "options.x", 0),
+      y: this.readHudOptionalInt(options.y, "setCombo", "options.y", 1)
     };
     return combo;
   }
@@ -1840,14 +1905,14 @@ export default class WebgApp {
   // timer 表示の値とレイアウトを更新する
   // 右上固定を既定にして、score / combo と競合しにくい位置から始める
   setTimer(value, options = {}) {
-    const timer = Number.isFinite(value) ? Number(value) : Number(value ?? 0) || 0;
+    const timer = this.readHudNumber(value, "setTimer", "value");
     this.gameHud.timer = {
       value: timer,
       label: String(options.label ?? "TIME"),
       color: [...(options.color ?? [0.92, 0.97, 1.0])],
       anchor: options.anchor ?? "top-right",
-      x: Number.isFinite(options.x) ? Math.floor(options.x) : -1,
-      y: Number.isFinite(options.y) ? Math.floor(options.y) : 0
+      x: this.readHudOptionalInt(options.x, "setTimer", "options.x", -1),
+      y: this.readHudOptionalInt(options.y, "setTimer", "options.y", 0)
     };
     return timer;
   }
@@ -1855,16 +1920,18 @@ export default class WebgApp {
   // 一時通知を game HUD queue へ積む
   // expiresAt を持たせて draw 側で自然に消える toast として扱う
   pushToast(text, options = {}) {
-    const durationMs = Number.isFinite(options.durationMs)
-      ? Math.max(0, Math.floor(options.durationMs))
-      : 1500;
+    const durationMs = options.durationMs === undefined
+      ? 1500
+      : Number.isFinite(options.durationMs) && Number(options.durationMs) >= 0
+        ? Math.floor(Number(options.durationMs))
+        : (() => { throw new Error("WebgApp.pushToast requires options.durationMs >= 0"); })();
     const toast = {
       id: String(options.id ?? `toast_${this.gameHud.toasts.length + 1}`),
-      text: String(text ?? ""),
+      text: String(text),
       color: [...(options.color ?? [1.0, 0.92, 0.55])],
       anchor: options.anchor ?? "bottom-center",
-      x: Number.isFinite(options.x) ? Math.floor(options.x) : 0,
-      y: Number.isFinite(options.y) ? Math.floor(options.y) : -2,
+      x: this.readHudOptionalInt(options.x, "pushToast", "options.x", 0),
+      y: this.readHudOptionalInt(options.y, "pushToast", "options.y", -2),
       durationMs,
       expiresAtMs: Date.now() + durationMs
     };
@@ -1885,7 +1952,7 @@ export default class WebgApp {
   // 小数は 1 桁だけ残し、整数はそのまま出して視認性を保つ
   formatGameHudNumber(value) {
     if (!Number.isFinite(value)) {
-      return String(value ?? "");
+      throw new Error(`WebgApp.formatGameHudNumber requires finite value: ${value}`);
     }
     return Number.isInteger(value) ? `${value}` : value.toFixed(1);
   }
@@ -1946,8 +2013,11 @@ export default class WebgApp {
   // 既存 sample の guide/status 文字列を、新しい controls row へ最小変換する
   // line 文字列は dock/HUD の両方でそのまま 1 行として表示し、旧い補助経路を挟まずに新しい表示系へ載せる
   makeTextControlRows(lines = []) {
-    return (lines ?? [])
-      .map((line) => String(line ?? ""))
+    if (!Array.isArray(lines)) {
+      throw new Error("WebgApp.makeTextControlRows requires an array");
+    }
+    return lines
+      .map((line) => String(line))
       .filter((line) => line !== "")
       .map((line) => ({ line }));
   }
@@ -1955,14 +2025,14 @@ export default class WebgApp {
   // WebgApp 管理の HUD block を app 固有 HUD と重ならない位置へずらす
   // guide/status/hudRows を別々に動かせるようにし、sample 側が毎回 y を書き換えなくて済むようにする
   setHudLayoutOffsets(options = {}) {
-    if (Number.isFinite(options.guideOffsetY)) {
-      this.hudLayoutOffsets.guideOffsetY = options.guideOffsetY;
+    if (options.guideOffsetY !== undefined) {
+      this.hudLayoutOffsets.guideOffsetY = this.readHudNumber(options.guideOffsetY, "setHudLayoutOffsets", "options.guideOffsetY");
     }
-    if (Number.isFinite(options.statusOffsetY)) {
-      this.hudLayoutOffsets.statusOffsetY = options.statusOffsetY;
+    if (options.statusOffsetY !== undefined) {
+      this.hudLayoutOffsets.statusOffsetY = this.readHudNumber(options.statusOffsetY, "setHudLayoutOffsets", "options.statusOffsetY");
     }
-    if (Number.isFinite(options.rowsOffsetY)) {
-      this.hudLayoutOffsets.rowsOffsetY = options.rowsOffsetY;
+    if (options.rowsOffsetY !== undefined) {
+      this.hudLayoutOffsets.rowsOffsetY = this.readHudNumber(options.rowsOffsetY, "setHudLayoutOffsets", "options.rowsOffsetY");
     }
   }
 
@@ -2159,12 +2229,18 @@ export default class WebgApp {
   // 現在 report を cache つきで取得する
   getCurrentDiagnosticsReport(options = {}) {
     const cache = this.currentDiagnosticsCache;
-    const nowMs = Number.isFinite(options.nowMs) ? Number(options.nowMs) : Date.now();
+    const nowMs = options.nowMs === undefined
+      ? Date.now()
+      : Number.isFinite(options.nowMs)
+        ? Number(options.nowMs)
+        : (() => { throw new Error("WebgApp.getCurrentDiagnosticsReport requires finite options.nowMs"); })();
     const forceRefresh = options.forceRefresh === true;
     const cacheable = options.cacheable !== false && options.detailLevel !== "json";
-    const intervalMs = Number.isFinite(options.intervalMs)
-      ? Math.max(0, Number(options.intervalMs))
-      : cache.intervalMs;
+    const intervalMs = options.intervalMs === undefined
+      ? cache.intervalMs
+      : Number.isFinite(options.intervalMs) && Number(options.intervalMs) >= 0
+        ? Number(options.intervalMs)
+        : (() => { throw new Error("WebgApp.getCurrentDiagnosticsReport requires options.intervalMs >= 0"); })();
     if (
       cacheable
       && !forceRefresh
@@ -2618,7 +2694,7 @@ export default class WebgApp {
       return `${prefix}.${extension}`;
     }
 
-    const date = options.date ?? new Date();
+    const date = options.date === undefined ? new Date() : options.date;
     return `${prefix}_${this.formatScreenshotTimestamp(date)}.${extension}`;
   }
 
@@ -2652,9 +2728,12 @@ export default class WebgApp {
   // progress 保存に使う storage key を namespace 付きで組み立てる
   // game 名や sample 名を key に含めるだけで、保存先の衝突を避けやすくする
   getProgressStorageKey(key) {
-    const normalizedKey = String(key ?? "").trim();
+    if (key === undefined || key === null) {
+      throw new Error("WebgApp progress key must not be empty");
+    }
+    const normalizedKey = String(key).trim();
     if (!normalizedKey) {
-      return "";
+      throw new Error("WebgApp progress key must not be empty");
     }
     return `${this.progressStoragePrefix}.${normalizedKey}`;
   }
@@ -2665,22 +2744,22 @@ export default class WebgApp {
   saveProgress(key, data, options = {}) {
     const storage = this.getProgressStorage();
     const storageKey = this.getProgressStorageKey(key);
-    if (!storage || !storageKey) {
+    if (!storage) {
       return null;
     }
     const report = Diagnostics.createProgressReport(data, {
       ...options,
       system: options.system ?? this.debugTools.system ?? "app",
       source: options.source ?? this.debugTools.source ?? "",
-      key: String(key ?? "").trim(),
+      key: String(key).trim(),
       storageKey,
-      version: options.version ?? 1
+      version: options.version === undefined ? 1 : options.version
     });
     try {
       storage.setItem(storageKey, JSON.stringify(report));
       return report;
-    } catch (_) {
-      return null;
+    } catch (error) {
+      throw new Error(`WebgApp.saveProgress failed for "${storageKey}": ${error?.message ?? error}`);
     }
   }
 
@@ -2690,7 +2769,7 @@ export default class WebgApp {
   loadProgress(key, defaultValue = null) {
     const storage = this.getProgressStorage();
     const storageKey = this.getProgressStorageKey(key);
-    if (!storage || !storageKey) {
+    if (!storage) {
       return defaultValue;
     }
     try {
@@ -2714,8 +2793,8 @@ export default class WebgApp {
         }
       }
       return parsed;
-    } catch (_) {
-      return defaultValue;
+    } catch (error) {
+      throw new Error(`WebgApp.loadProgress failed for "${storageKey}": ${error?.message ?? error}`);
     }
   }
 
@@ -2724,14 +2803,14 @@ export default class WebgApp {
   clearProgress(key) {
     const storage = this.getProgressStorage();
     const storageKey = this.getProgressStorageKey(key);
-    if (!storage || !storageKey) {
+    if (!storage) {
       return false;
     }
     try {
       storage.removeItem(storageKey);
       return true;
-    } catch (_) {
-      return false;
+    } catch (error) {
+      throw new Error(`WebgApp.clearProgress failed for "${storageKey}": ${error?.message ?? error}`);
     }
   }
 
@@ -2920,6 +2999,9 @@ export default class WebgApp {
   // dock / HUD 共通の row 定義から、媒体ごとの文字列表現に使う部品を作る
   // dock は `label  value  [key]:action` 形式、HUD は `label: value [key] action` 形式へ展開する
   makeControlRowData(row = {}) {
+    if (!row || typeof row !== "object" || Array.isArray(row)) {
+      throw new Error("WebgApp.makeControlRowData requires row to be an object");
+    }
     if (row.line !== undefined && row.line !== null) {
       const text = String(row.line);
       return {
@@ -2952,7 +3034,7 @@ export default class WebgApp {
 
     if (Array.isArray(row.keys)) {
       for (let i = 0; i < row.keys.length; i++) {
-        const item = row.keys[i] ?? {};
+        const item = this.readHudRow(row.keys[i], i, "makeControlRowData");
         pushKey(item.key, item.action ?? "");
       }
     } else {
@@ -3173,19 +3255,29 @@ export default class WebgApp {
     if (!Array.isArray(lineEntries) || lineEntries.length <= 0) {
       return null;
     }
-    const color = [...(options.color ?? lineEntries[0]?.color ?? [1.0, 1.0, 1.0])];
+    const fallbackColor = Array.isArray(lineEntries[0]?.color)
+      ? lineEntries[0].color
+      : [1.0, 1.0, 1.0];
+    const color = this.readHudColor(options.color, "buildHudTextBlockEntry", fallbackColor);
     return {
       id,
-      lines: lineEntries.map((entry) => String(entry?.text ?? "")),
+      lines: lineEntries.map((entry, index) => {
+        if (!entry || typeof entry !== "object" || Array.isArray(entry)) {
+          throw new Error(`WebgApp.buildHudTextBlockEntry requires lineEntries[${index}] to be an object`);
+        }
+        return String(entry.text);
+      }),
       color,
-      x: Number.isFinite(options.x) ? Math.floor(options.x) : 0,
-      y: (Number.isFinite(options.y) ? Math.floor(options.y) : 0) + yOffset,
+      x: this.readHudOptionalInt(options.x, "buildHudTextBlockEntry", "options.x", 0),
+      y: this.readHudOptionalInt(options.y, "buildHudTextBlockEntry", "options.y", 0) + yOffset,
       anchor: options.anchor ?? "top-left",
-      offsetX: Number.isFinite(options.offsetX) ? Math.floor(options.offsetX) : 0,
-      offsetY: Number.isFinite(options.offsetY) ? Math.floor(options.offsetY) : 0,
-      gap: Number.isFinite(options.gap) ? Math.floor(options.gap) : 1,
+      offsetX: this.readHudOptionalInt(options.offsetX, "buildHudTextBlockEntry", "options.offsetX", 0),
+      offsetY: this.readHudOptionalInt(options.offsetY, "buildHudTextBlockEntry", "options.offsetY", 0),
+      gap: this.readHudOptionalInt(options.gap, "buildHudTextBlockEntry", "options.gap", 1),
       align: options.align ?? "left",
-      width: Number.isFinite(options.width) ? Math.floor(options.width) : null,
+      width: options.width === undefined
+        ? null
+        : this.readHudOptionalInt(options.width, "buildHudTextBlockEntry", "options.width", null),
       wrap: options.wrap === true,
       clip: options.clip !== false
     };
@@ -3315,10 +3407,11 @@ export default class WebgApp {
     if (this.windowHasFocus === false) {
       return true;
     }
-    // focusin / focusout の補助 state は要素間の移動で一時的に揺れることがあるため、
-    // 最終判定は document.hasFocus() を優先する
-    if (typeof this.doc?.hasFocus === "function") {
-      return this.doc.hasFocus() === false;
+    if (this.documentHasFocus === false) {
+      return true;
+    }
+    if (typeof this.doc?.hasFocus === "function" && this.doc.hasFocus() === false) {
+      return true;
     }
     return false;
   }
@@ -3329,18 +3422,11 @@ export default class WebgApp {
     if (!this.running || this.renderMode === "continuous") {
       return false;
     }
-    const shouldPause = this.shouldAutoPauseFrameLoop();
-    if (shouldPause) {
+    if (this.shouldAutoPauseFrameLoop()) {
       this.lastFrameTime = 0.0;
-      this._autoPaused = true;
       return false;
     }
-    // 非 active から復帰した直後だけ時刻差分を切り直し、
-    // active 中の focus 移動では deltaSec を壊さない
-    if (this._autoPaused) {
-      this.lastFrameTime = 0.0;
-    }
-    this._autoPaused = false;
+    this.lastFrameTime = 0.0;
     return this.requestRender();
   }
 
@@ -3365,13 +3451,15 @@ export default class WebgApp {
     if (!this.running) return;
     if (this.shouldAutoPauseFrameLoop()) {
       this.lastFrameTime = 0.0;
-      this._autoPaused = true;
       return;
     }
-    this._autoPaused = false;
 
     const previous = this.lastFrameTime || timeMs;
-    this.elapsedSec = Math.max(0.0, (timeMs - previous) * 0.001);
+    const deltaMs = timeMs - previous;
+    if (!Number.isFinite(deltaMs) || deltaMs < 0.0) {
+      throw new Error(`WebgApp.frame requires non-negative time delta: previous=${previous} current=${timeMs}`);
+    }
+    this.elapsedSec = deltaMs * 0.001;
     this.runtimeElapsedSec += this.elapsedSec;
     this.lastFrameTime = timeMs;
     const ctx = this.getFrameContext(timeMs);
@@ -3384,7 +3472,6 @@ export default class WebgApp {
       }
     }
 
-    const deltaMs = this.elapsedSec * 1000.0;
     this.updateTweens(deltaMs);
     if (this.space?.update) {
       this.space.update(deltaMs);

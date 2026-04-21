@@ -8,14 +8,48 @@ import DebugConfig from "./DebugConfig.js";
 
 export default class Diagnostics {
 
+  static requireReport(report, methodName) {
+    if (!report || typeof report !== "object" || Array.isArray(report)) {
+      throw new Error(`Diagnostics.${methodName} requires a diagnostics report object`);
+    }
+    return report;
+  }
+
+  static requirePlainObject(value, methodName, name) {
+    if (value === undefined) {
+      return {};
+    }
+    if (!value || typeof value !== "object" || Array.isArray(value)) {
+      throw new Error(`Diagnostics.${methodName} requires ${name} to be an object`);
+    }
+    return value;
+  }
+
+  static requireArray(value, methodName, name) {
+    if (!Array.isArray(value)) {
+      throw new Error(`Diagnostics.${methodName} requires ${name} to be an array`);
+    }
+    return value;
+  }
+
+  static requireInputFrame(frame, methodName, index = null) {
+    if (!frame || typeof frame !== "object" || Array.isArray(frame)) {
+      const suffix = index === null ? "" : `[${index}]`;
+      throw new Error(`Diagnostics.${methodName} requires input frame${suffix} to be an object`);
+    }
+    return frame;
+  }
+
   // summary text は人と AI が最初に読む既定出口として使う
   // 低レベルな key=value dump は toText() に残しつつ、
   // まず何を見ればよいかが伝わる section 形式を別に持つ
   static toSummaryText(report, options = {}) {
-    const safeReport = report ?? this.createSuccessReport();
+    const safeReport = this.requireReport(report, "toSummaryText");
     const lines = [];
-    const statKeys = this.getSummaryStatKeys(safeReport.stats ?? {});
-    const contextKeys = Object.keys(safeReport.context ?? {}).sort();
+    const stats = this.requirePlainObject(safeReport.stats, "toSummaryText", "report.stats");
+    const context = this.requirePlainObject(safeReport.context, "toSummaryText", "report.context");
+    const statKeys = this.getSummaryStatKeys(stats);
+    const contextKeys = Object.keys(context).sort();
     const maxDetails = Number.isInteger(options.maxDetails)
       ? Math.max(0, options.maxDetails)
       : 8;
@@ -79,7 +113,7 @@ export default class Diagnostics {
       } else {
         for (let i = 0; i < contextKeys.length; i++) {
           const key = contextKeys[i];
-          lines.push(`${key}=${safeReport.context[key]}`);
+          lines.push(`${key}=${context[key]}`);
         }
       }
     }
@@ -90,7 +124,8 @@ export default class Diagnostics {
   // summary で最初に見たい統計値を先に並べ、
   // dock / copy / panel のどこで読んでも重要な値を追いやすくする
   static getSummaryStatKeys(stats = {}) {
-    const keys = Object.keys(stats ?? {});
+    const normalizedStats = this.requirePlainObject(stats, "getSummaryStatKeys", "stats");
+    const keys = Object.keys(normalizedStats);
     const preferred = [
       "eyeX",
       "eyeY",
@@ -133,7 +168,7 @@ export default class Diagnostics {
     const ordered = [];
     for (let i = 0; i < preferred.length; i++) {
       const key = preferred[i];
-      if (Object.prototype.hasOwnProperty.call(stats, key)) {
+      if (Object.prototype.hasOwnProperty.call(normalizedStats, key)) {
         ordered.push(key);
       }
     }
@@ -151,6 +186,9 @@ export default class Diagnostics {
 
   // 共通 report object を生成する
   static createReport(init = {}) {
+    if (!init || typeof init !== "object" || Array.isArray(init)) {
+      throw new Error("Diagnostics.createReport requires an init object");
+    }
     const system = this.resolveSystem(init);
     return {
       system,
@@ -173,7 +211,10 @@ export default class Diagnostics {
 
   // 例外や文字列から失敗 report を生成する
   static createErrorReport(error, init = {}) {
-    const err = error instanceof Error ? error : new Error(String(error ?? "unknown error"));
+    if (error === undefined || error === null) {
+      throw new Error("Diagnostics.createErrorReport requires an error value");
+    }
+    const err = error instanceof Error ? error : new Error(String(error));
     const report = this.createReport({
       ...init,
       ok: false,
@@ -205,7 +246,11 @@ export default class Diagnostics {
     };
     const stats = {
       ...(init.stats ?? {}),
-      schemaVersion: Number.isFinite(init.version) ? Number(init.version) : 1,
+      schemaVersion: init.version === undefined
+        ? 1
+        : Number.isFinite(init.version)
+          ? Number(init.version)
+          : (() => { throw new Error("Diagnostics.createProgressReport requires finite init.version"); })(),
       dataType: payloadType
     };
 
@@ -225,16 +270,20 @@ export default class Diagnostics {
   // 入力 replay 用 report を生成する
   // 長い入力列そのものは context に残しつつ、details には最初に見るべき要点だけを置く
   static createReplayReport(inputLog, init = {}) {
-    const log = Array.isArray(inputLog) ? inputLog : [];
+    const log = this.requireArray(inputLog, "createReplayReport", "inputLog");
     const uniqueKeys = new Set();
     const uniqueActions = new Set();
     for (let i = 0; i < log.length; i++) {
-      const frame = log[i] ?? {};
-      const keys = Array.isArray(frame.keys) ? frame.keys : [];
+      const frame = this.requireInputFrame(log[i], "createReplayReport", i);
+      const keys = frame.keys === undefined
+        ? []
+        : this.requireArray(frame.keys, "createReplayReport", `inputLog[${i}].keys`);
       for (let j = 0; j < keys.length; j++) {
-        uniqueKeys.add(String(keys[j] ?? ""));
+        uniqueKeys.add(String(keys[j]));
       }
-      const actions = frame.actions && typeof frame.actions === "object" ? frame.actions : {};
+      const actions = frame.actions === undefined
+        ? {}
+        : this.requirePlainObject(frame.actions, "createReplayReport", `inputLog[${i}].actions`);
       for (const actionName of Object.keys(actions)) {
         uniqueActions.add(String(actionName));
       }
@@ -269,7 +318,7 @@ export default class Diagnostics {
   // 入力 timeline を 1 frame ずつ追える report を生成する
   // debug 時に「どの frame で何が押されていたか」を text と JSON の両方で確認しやすくする
   static createInputTimelineReport(inputLog, init = {}) {
-    const log = Array.isArray(inputLog) ? inputLog : [];
+    const log = this.requireArray(inputLog, "createInputTimelineReport", "inputLog");
     const details = Array.isArray(init.details) ? [...init.details] : [];
     for (let i = 0; i < log.length; i++) {
       details.push(this.summarizeInputFrame(log[i], i));
@@ -292,18 +341,27 @@ export default class Diagnostics {
 
   // InputController で記録した frame を、読みやすい 1 行へ要約する
   static summarizeInputFrame(frame, index = 0) {
-    const keys = Array.isArray(frame?.keys) ? frame.keys : [];
-    const actions = frame?.actions && typeof frame.actions === "object" ? frame.actions : {};
+    const safeFrame = this.requireInputFrame(frame, "summarizeInputFrame", index);
+    const keys = safeFrame.keys === undefined
+      ? []
+      : this.requireArray(safeFrame.keys, "summarizeInputFrame", `frame[${index}].keys`);
+    const actions = safeFrame.actions === undefined
+      ? {}
+      : this.requirePlainObject(safeFrame.actions, "summarizeInputFrame", `frame[${index}].actions`);
     const active = [];
     const pressed = [];
     const released = [];
     for (const actionName of Object.keys(actions)) {
-      const info = actions[actionName] ?? {};
+      const info = this.requirePlainObject(actions[actionName], "summarizeInputFrame", `frame[${index}].actions.${actionName}`);
       if (info.active === true) active.push(actionName);
       if (info.pressed === true) pressed.push(actionName);
       if (info.released === true) released.push(actionName);
     }
-    const frameNo = Number.isFinite(frame?.frame) ? Number(frame.frame) : "n/a";
+    const frameNo = safeFrame.frame === undefined
+      ? "n/a"
+      : Number.isFinite(safeFrame.frame)
+        ? Number(safeFrame.frame)
+        : (() => { throw new Error(`Diagnostics.summarizeInputFrame requires frame[${index}].frame to be finite when present`); })();
     const keyText = keys.length > 0 ? keys.map((key) => String(key)).join(",") : "-";
     const activeText = active.length > 0 ? active.join(",") : "-";
     const pressedText = pressed.length > 0 ? pressed.join(",") : "-";
@@ -337,34 +395,36 @@ export default class Diagnostics {
 
   // report を key=value 形式の text へ変換する
   static toText(report, options = {}) {
+    const safeReport = this.requireReport(report, "toText");
     const lines = [];
-    const source = report.source ?? "";
-    lines.push(`system=${report.system ?? "unknown"}`);
+    const source = safeReport.source ?? "";
+    lines.push(`system=${safeReport.system ?? "unknown"}`);
     lines.push(`source=${source}`);
-    lines.push(`stage=${report.stage ?? "runtime"}`);
-    lines.push(`ok=${report.ok === true ? "true" : "false"}`);
-    if (report.error) {
-      lines.push(`error=${report.error}`);
+    lines.push(`stage=${safeReport.stage ?? "runtime"}`);
+    lines.push(`ok=${safeReport.ok === true ? "true" : "false"}`);
+    if (safeReport.error) {
+      lines.push(`error=${safeReport.error}`);
     }
-    for (let i = 0; i < (report.details?.length ?? 0); i++) {
-      lines.push(`detail=${report.details[i]}`);
+    for (let i = 0; i < (safeReport.details?.length ?? 0); i++) {
+      lines.push(`detail=${safeReport.details[i]}`);
     }
-    for (let i = 0; i < (report.warnings?.length ?? 0); i++) {
-      lines.push(`warning=${report.warnings[i]}`);
+    for (let i = 0; i < (safeReport.warnings?.length ?? 0); i++) {
+      lines.push(`warning=${safeReport.warnings[i]}`);
     }
-    const statKeys = Object.keys(report.stats ?? {}).sort();
+    const statKeys = Object.keys(this.requirePlainObject(safeReport.stats, "toText", "report.stats")).sort();
     for (let i = 0; i < statKeys.length; i++) {
       const key = statKeys[i];
-      lines.push(`stat.${key}=${report.stats[key]}`);
+      lines.push(`stat.${key}=${safeReport.stats[key]}`);
     }
     if (options.includeContext === true) {
-      const contextKeys = Object.keys(report.context ?? {}).sort();
+      const context = this.requirePlainObject(safeReport.context, "toText", "report.context");
+      const contextKeys = Object.keys(context).sort();
       for (let i = 0; i < contextKeys.length; i++) {
         const key = contextKeys[i];
-        lines.push(`context.${key}=${report.context[key]}`);
+        lines.push(`context.${key}=${context[key]}`);
       }
     }
-    lines.push(`timestamp=${report.timestamp ?? ""}`);
+    lines.push(`timestamp=${safeReport.timestamp ?? ""}`);
     return lines.join("\n");
   }
 

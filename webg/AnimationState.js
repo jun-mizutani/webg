@@ -1,5 +1,5 @@
 // ---------------------------------------------
-//  AnimationState.js        2026/03/13
+//  AnimationState.js        2026/04/21
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // ---------------------------------------------
@@ -216,7 +216,10 @@ export default class AnimationState {
       stateChangedThisFrame = true;
     }
 
-    const nowMs = Number.isFinite(mergedContext.nowMs) ? mergedContext.nowMs : Date.now();
+    if (!Number.isFinite(mergedContext.nowMs)) {
+      throw new Error("AnimationState.update requires finite context.nowMs");
+    }
+    const nowMs = Number(mergedContext.nowMs);
     const transition = this.resolveTransition(mergedContext, nowMs);
     if (transition) {
       transition.enteredAtMs = nowMs;

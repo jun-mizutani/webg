@@ -1,5 +1,5 @@
 // ---------------------------------------------
-//  Action.js        2026/03/09
+//  Action.js        2026/04/21
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // ---------------------------------------------
@@ -283,7 +283,7 @@ export default class Action {
   startPattern(patternId, options = {}) {
     const pattern = this.getPattern(patternId);
     if (!pattern) {
-      return -1;
+      throw new Error(`unknown pattern "${patternId}"`);
     }
     this.currentAction = null;
     this.currentActionId = null;
@@ -307,10 +307,7 @@ export default class Action {
   start(actionId, options = {}) {
     const action = this.getAction(actionId);
     if (!action) {
-      if (this.verbose) {
-        util.printf("action \"%s\" not found\n", actionId);
-      }
-      return -1;
+      throw new Error(`unknown action "${actionId}"`);
     }
     this.currentAction = action;
     this.currentActionId = action.id;
@@ -321,7 +318,7 @@ export default class Action {
     this.currentPattern = this.getPattern(patternId);
     this.currentPatternId = this.currentPattern?.id ?? null;
     if (!this.currentPattern) {
-      return -1;
+      throw new Error(`action "${action.id}" references unknown pattern "${patternId}"`);
     }
     const entryDurationMs = options.entryDurationMs ?? this.currentPattern.entryDurationMs;
     return this.transitionToKey(
@@ -370,7 +367,7 @@ export default class Action {
       this.currentPatternId = this.currentPattern?.id ?? null;
       if (!this.currentPattern) {
         this.playing = false;
-        return -1;
+        throw new Error(`action "${this.currentAction.id}" references unknown pattern "${patternId}"`);
       }
       return this.transitionToKey(
         this.currentPattern.entryDurationMs,
@@ -418,7 +415,7 @@ export default class Action {
   startTimeFromTo(pat) {
     const pattern = typeof pat === "number" ? this.patterns[pat] : this.getPattern(pat);
     if (!pattern) {
-      return -1;
+      throw new Error(`unknown pattern "${pat}"`);
     }
     if (this.verbose) {
       util.printf("\npattern.%2d %10s %4d msec  %2d -> %2d\n",

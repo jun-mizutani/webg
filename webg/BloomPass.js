@@ -1,11 +1,31 @@
 // ---------------------------------------------
-//  BloomPass.js    2026/03/30
+//  BloomPass.js    2026/04/21
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // ---------------------------------------------
 
 import RenderTarget from "./RenderTarget.js";
 import SeparableBlurPass from "./SeparableBlurPass.js";
+
+const readBloomDimension = (value, name, fallback) => {
+  if (value === undefined) {
+    return fallback;
+  }
+  if (!Number.isFinite(value) || !Number.isInteger(value) || value < 1) {
+    throw new Error(`BloomPass ${name} must be an integer >= 1`);
+  }
+  return value;
+};
+
+const readBloomNumber = (value, name, fallback) => {
+  if (value === undefined) {
+    return fallback;
+  }
+  if (!Number.isFinite(value)) {
+    throw new Error(`BloomPass ${name} must be finite`);
+  }
+  return value;
+};
 
 export default class BloomPass {
 
@@ -15,25 +35,23 @@ export default class BloomPass {
     this.device = null;
     this.queue = null;
     this.enabled = options.enabled !== false;
-    this.width = Math.max(1, Math.floor(options.width ?? 1));
-    this.height = Math.max(1, Math.floor(options.height ?? 1));
+    this.width = readBloomDimension(options.width, "width", 1);
+    this.height = readBloomDimension(options.height, "height", 1);
     // 3D scene 本体は既存の Phong / BonePhong 系 pipeline をそのまま流用するため、
     // 既定の offscreen color format も canvas と同じ gpu.format にそろえる
     // ここを別 format にすると、scene 側 pipeline の color target format と一致せず
     // RenderPassEncoder.SetPipeline 時点で validation error になる
     this.sceneFormat = options.sceneFormat ?? gpu?.format ?? "bgra8unorm";
     this.canvasFormat = options.canvasFormat ?? gpu?.format ?? "bgra8unorm";
-    this.threshold = Number.isFinite(options.threshold) ? options.threshold : 0.68;
-    this.extractIntensity = Number.isFinite(options.extractIntensity) ? options.extractIntensity : 1.0;
-    this.softKnee = Number.isFinite(options.softKnee) ? options.softKnee : 0.35;
-    this.bloomStrength = Number.isFinite(options.bloomStrength) ? options.bloomStrength : 1.15;
-    this.exposure = Number.isFinite(options.exposure) ? options.exposure : 1.0;
-    this.toneMapMode = Number.isFinite(options.toneMapMode) ? options.toneMapMode : 0.0;
-    this.blurRadius = Number.isFinite(options.blurRadius) ? options.blurRadius : 1.0;
-    this.blurScale = Number.isFinite(options.blurScale) ? options.blurScale : 1.0;
-    this.blurIterations = Number.isInteger(options.blurIterations)
-      ? Math.max(1, options.blurIterations)
-      : 2;
+    this.threshold = readBloomNumber(options.threshold, "threshold", 0.68);
+    this.extractIntensity = readBloomNumber(options.extractIntensity, "extractIntensity", 1.0);
+    this.softKnee = readBloomNumber(options.softKnee, "softKnee", 0.35);
+    this.bloomStrength = readBloomNumber(options.bloomStrength, "bloomStrength", 1.15);
+    this.exposure = readBloomNumber(options.exposure, "exposure", 1.0);
+    this.toneMapMode = readBloomNumber(options.toneMapMode, "toneMapMode", 0.0);
+    this.blurRadius = readBloomNumber(options.blurRadius, "blurRadius", 1.0);
+    this.blurScale = readBloomNumber(options.blurScale, "blurScale", 1.0);
+    this.blurIterations = readBloomDimension(options.blurIterations, "blurIterations", 2);
     this.sceneTarget = null;
     this.extractTarget = null;
     this.extractHeatTarget = null;

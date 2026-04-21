@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// UIPanel.js 2026/04/09
+// UIPanel.js 2026/04/21
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // ---------------------------------------------
@@ -13,6 +13,35 @@ import { DEFAULT_UI_THEME } from "./WebgUiTheme.js";
 export default class UIPanel {
 
   static STYLE_ID = "webg-overlay-panel-style";
+  static normalizeOptionalNumber(value, name, fallback) {
+    if (value === undefined) {
+      return fallback;
+    }
+    if (!Number.isFinite(value)) {
+      throw new Error(`UIPanel ${name} must be finite`);
+    }
+    return value;
+  }
+
+  static normalizeOptionalSize(value, name, fallback) {
+    if (value === undefined) {
+      return fallback;
+    }
+    if (!Number.isFinite(value) || value < 0) {
+      throw new Error(`UIPanel ${name} must be a finite number >= 0`);
+    }
+    return Math.floor(value);
+  }
+
+  static normalizeOptionalInteger(value, name, fallback) {
+    if (value === undefined) {
+      return fallback;
+    }
+    if (!Number.isFinite(value) || !Number.isInteger(value) || value < 1) {
+      throw new Error(`UIPanel ${name} must be an integer >= 1`);
+    }
+    return value;
+  }
 
   constructor(options = {}) {
     this.doc = options.document ?? document;
@@ -264,16 +293,25 @@ export default class UIPanel {
   createLayout(options = {}) {
     const root = this.doc.createElement("div");
     root.className = "webg-overlay-root";
+    root.style.setProperty("--webg-overlay-dock-offset", "0px");
     if (options.id) root.id = options.id;
     if (options.leftWidth) root.style.setProperty("--webg-overlay-left-width", options.leftWidth);
     if (options.rightWidth) root.style.setProperty("--webg-overlay-right-width", options.rightWidth);
-    if (Number.isFinite(options.gap)) root.style.setProperty("--webg-overlay-gap", `${options.gap}px`);
-    if (Number.isFinite(options.columnMaxHeight)) {
-      root.style.setProperty("--webg-overlay-column-max-height", `${Math.max(120, Math.floor(options.columnMaxHeight))}px`);
+    const gap = UIPanel.normalizeOptionalNumber(options.gap, "gap", undefined);
+    if (gap !== undefined) root.style.setProperty("--webg-overlay-gap", `${gap}px`);
+    if (options.columnMaxHeight !== undefined) {
+      UIPanel.normalizeOptionalNumber(options.columnMaxHeight, "columnMaxHeight", undefined);
+      if (options.columnMaxHeight < 120) {
+        throw new Error("UIPanel columnMaxHeight must be >= 120");
+      }
+      root.style.setProperty("--webg-overlay-column-max-height", `${Math.floor(options.columnMaxHeight)}px`);
     }
-    if (Number.isFinite(options.top)) root.style.top = `${options.top}px`;
-    if (Number.isFinite(options.left)) root.style.left = `${options.left}px`;
-    if (Number.isFinite(options.right)) root.style.right = `${options.right}px`;
+    const top = UIPanel.normalizeOptionalNumber(options.top, "top", undefined);
+    const leftPos = UIPanel.normalizeOptionalNumber(options.left, "left", undefined);
+    const rightPos = UIPanel.normalizeOptionalNumber(options.right, "right", undefined);
+    if (top !== undefined) root.style.top = `${top}px`;
+    if (leftPos !== undefined) root.style.left = `${leftPos}px`;
+    if (rightPos !== undefined) root.style.right = `${rightPos}px`;
 
     const leftWrap = this.doc.createElement("div");
     leftWrap.className = "webg-overlay-column-wrap";
@@ -309,16 +347,16 @@ export default class UIPanel {
       containerElement,
       positioningMode,
       viewportElement,
-      collapseWidth: Number.isFinite(options.collapseWidth) ? Math.floor(options.collapseWidth) : 980,
-      compactWidth: Number.isFinite(options.compactWidth) ? Math.floor(options.compactWidth) : 720,
+      collapseWidth: UIPanel.normalizeOptionalSize(options.collapseWidth, "collapseWidth", 980),
+      compactWidth: UIPanel.normalizeOptionalSize(options.compactWidth, "compactWidth", 720),
       scrollColumns: options.scrollColumns === true,
       spreadColumns: options.spreadColumns === true,
       statusBlocks: []
     };
     this.layouts.push(layout);
     this.applyThemeToLayout(layout);
-    this.syncResponsiveLayout(layout);
     containerElement.appendChild(root);
+    this.syncResponsiveLayout(layout);
     return layout;
   }
 
@@ -376,7 +414,10 @@ export default class UIPanel {
   createButtonGrid(parent, options = {}) {
     const node = this.doc.createElement("div");
     node.className = "webg-overlay-button-grid";
-    node.style.setProperty("--webg-overlay-button-columns", String(Math.max(1, options.columns ?? 2)));
+    node.style.setProperty(
+      "--webg-overlay-button-columns",
+      String(UIPanel.normalizeOptionalInteger(options.columns, "buttonGrid columns", 2))
+    );
     parent.appendChild(node);
     return node;
   }
@@ -423,7 +464,7 @@ export default class UIPanel {
     node.className = "webg-overlay-status";
     if (options.id) node.id = options.id;
     node.textContent = options.text ?? "";
-    node.style.setProperty("--webg-overlay-dock-offset", `${Number.isFinite(options.dockOffset) ? options.dockOffset : 0}px`);
+    node.style.setProperty("--webg-overlay-dock-offset", `${UIPanel.normalizeOptionalNumber(options.dockOffset, "dockOffset", 0)}px`);
     node.style.position = layout.positioningMode === "absolute" ? "absolute" : "fixed";
     (layout.containerElement ?? this.doc.body).appendChild(node);
     layout.statusBlocks.push(node);
@@ -433,7 +474,10 @@ export default class UIPanel {
   }
 
   setDockOffset(layout, dockOffset = 0) {
-    const px = `${Math.max(0, Math.floor(dockOffset))}px`;
+    if (!Number.isFinite(dockOffset) || dockOffset < 0) {
+      throw new Error("UIPanel dockOffset must be a finite number >= 0");
+    }
+    const px = `${Math.floor(dockOffset)}px`;
     layout.root.style.setProperty("--webg-overlay-dock-offset", px);
     for (let i = 0; i < layout.statusBlocks.length; i++) {
       layout.statusBlocks[i].style.setProperty("--webg-overlay-dock-offset", px);
@@ -463,14 +507,26 @@ export default class UIPanel {
     if (typeof window === "undefined") return;
     // debug dock 表示中は viewport 全幅ではなく、dock を除いた表示領域で段組みを判断する
     // これにより右側の STATE panel が dock 領域へはみ出しにくくなる
+    const inlineDockOffset = layout.root?.style?.getPropertyValue("--webg-overlay-dock-offset") ?? "";
     const rootStyle = window.getComputedStyle(layout.root);
-    const dockOffset = Number.parseFloat(rootStyle.getPropertyValue("--webg-overlay-dock-offset")) || 0;
+    const dockOffsetText = inlineDockOffset || rootStyle.getPropertyValue("--webg-overlay-dock-offset");
+    const rawDockOffset = Number.parseFloat(dockOffsetText);
+    if (!Number.isFinite(rawDockOffset)) {
+      throw new Error("UIPanel dock offset CSS variable must be finite");
+    }
+    const dockOffset = rawDockOffset;
     const baseWidth = layout.viewportElement?.clientWidth
-      || layout.containerElement?.clientWidth
-      || window.innerWidth;
+      ?? layout.containerElement?.clientWidth
+      ?? window.innerWidth;
     const baseHeight = layout.viewportElement?.clientHeight
-      || layout.containerElement?.clientHeight
-      || window.innerHeight;
+      ?? layout.containerElement?.clientHeight
+      ?? window.innerHeight;
+    if (!Number.isFinite(baseWidth) || baseWidth < 0) {
+      throw new Error(`UIPanel responsive layout requires finite baseWidth: ${baseWidth}`);
+    }
+    if (!Number.isFinite(baseHeight) || baseHeight < 0) {
+      throw new Error(`UIPanel responsive layout requires finite baseHeight: ${baseHeight}`);
+    }
     const availableWidth = Math.max(0, baseWidth - dockOffset);
     layout.root.classList.toggle("is-stacked", availableWidth <= layout.collapseWidth);
     const compact = availableWidth <= layout.compactWidth;

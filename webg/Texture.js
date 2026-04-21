@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// Texture.js      2026/03/30
+// Texture.js      2026/04/21
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // ---------------------------------------------
@@ -142,16 +142,20 @@ export default class Texture {
 
   // `luma/r/g/b/a` 指定を内部チャンネル番号へ解決する
   _resolveHeightChannel(channel) {
-    if (typeof channel === "number") {
-      if (channel >= 0 && channel <= 3) return channel;
+    if (channel === undefined || channel === null) {
       return -1;
     }
-    const key = String(channel ?? "luma").toLowerCase();
+    if (typeof channel === "number") {
+      if (channel >= 0 && channel <= 3) return channel;
+      throw new Error(`Texture height channel index must be 0..3: ${channel}`);
+    }
+    const key = String(channel).toLowerCase();
+    if (key === "luma") return -1;
     if (key === "r" || key === "red") return 0;
     if (key === "g" || key === "green") return 1;
     if (key === "b" || key === "blue") return 2;
     if (key === "a" || key === "alpha") return 3;
-    return -1; // luma
+    throw new Error(`Texture height channel must be luma/r/g/b/a: ${channel}`);
   }
 
   // 1画素から高さ値を取り出す
