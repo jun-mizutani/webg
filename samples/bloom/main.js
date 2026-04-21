@@ -1,6 +1,6 @@
 // -------------------------------------------------
 // bloom sample
-//   main.js       2026/04/12
+//   main.js       2026/04/21
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // -------------------------------------------------
@@ -189,8 +189,9 @@ function createCenterSphere(app) {
 
 function createEmissionProbe(app, name, options) {
   // bloom の抽出が specular 由来の細い highlight だけに偏っていないかを見るため、
-  // 自前で強い emissive を持つ小球を複数色で追加する
+  // emissive を高めにした小球を複数色で追加する
   // 背景寄りの位置へ浮かせることで、球本体だけでなく背後にも glow が広がるかを確認しやすくする
+  // SmoothShader emissive は 0.0-1.0 を使う前提なので、ここでもその範囲内で強めの値を使う
   const shape = new Shape(app.getGL());
   shape.applyPrimitiveAsset(Primitive.sphere(options.size ?? 0.85, 24, 18, shape.getPrimitiveOptions()));
   shape.endShape();
@@ -304,13 +305,13 @@ async function start() {
   const centerSphere = createCenterSphere(app);
   const emissionProbes = [
     createEmissionProbe(app, "emissionWarm", {
-      x: 0.0, y: 4.8, z: -13.5, size: 0.85, color: [1.0, 0.96, 0.82, 1.0], emissive: 2.5
+      x: 0.0, y: 4.8, z: -13.5, size: 0.85, color: [1.0, 0.96, 0.82, 1.0], emissive: 0.92
     }),
     createEmissionProbe(app, "emissionBlue", {
-      x: -5.4, y: 3.9, z: -11.0, size: 0.78, color: [0.32, 0.70, 1.0, 1.0], emissive: 2.9
+      x: -5.4, y: 3.9, z: -11.0, size: 0.78, color: [0.32, 0.70, 1.0, 1.0], emissive: 1.0
     }),
     createEmissionProbe(app, "emissionPink", {
-      x: 5.0, y: 5.2, z: -10.5, size: 0.82, color: [1.0, 0.38, 0.74, 1.0], emissive: 2.8
+      x: 5.0, y: 5.2, z: -10.5, size: 0.82, color: [1.0, 0.38, 0.74, 1.0], emissive: 0.96
     })
   ];
   const orbitRoot = app.space.addNode(null, "orbRoot");
