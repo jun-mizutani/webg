@@ -1,6 +1,6 @@
 // -------------------------------------------------
 // embedded_glb_viewer sample
-//   main.js       2026/04/20
+//   main.js       2026/04/21
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // -------------------------------------------------
@@ -110,6 +110,7 @@ const state = {
   wireframe: false,
   orbitChangedThisFrame: false,
   eyeChangedThisFrame: false,
+  lastCtxDeltaSec: Number.NaN,
   previousOrbitYaw: DEFAULT_ORBIT.yaw,
   previousOrbitPitch: DEFAULT_ORBIT.pitch,
   previousTarget: [...DEFAULT_ORBIT.target],
@@ -225,12 +226,33 @@ function createMaterialShape(gpu, primitiveAsset, params) {
   return shape;
 }
 
+function addPlaceholderPrimitive(parentNode, nodeName, primitiveAsset, materialParams, position) {
+  const node = app.space.addNode(parentNode, nodeName);
+  const shape = createMaterialShape(
+    app.getGL(),
+    primitiveAsset,
+    materialParams
+  );
+  node.addShape(shape);
+  node.setPosition(position[0], position[1], position[2]);
+  return node;
+}
+
+function formatDebugNumber(value, digits = 6) {
+  if (Number.isFinite(value)) {
+    return Number(value).toFixed(digits);
+  }
+  return String(value);
+}
+
 function createPlaceholderScene() {
   placeholderRoot = app.space.addNode(null, "uploadPlaceholderRoot");
   placeholderRoot.setPosition(0.0, -PLACEHOLDER_SIZE.centery, 0.0);
-  const pedestalNode = app.space.addNode(placeholderRoot, "uploadPedestal");
-  const pedestalShape = createMaterialShape(
-    app.getGL(),
+  // 読み込み前でも viewer の陰影と orbit 操作が分かるように、
+  // pedestal の上へ立方体と球を置いた簡単な見本 scene を常設する
+  addPlaceholderPrimitive(
+    placeholderRoot,
+    "uploadPedestal",
     Primitive.cube(3.2),
     {
       has_bone: 0,
@@ -239,15 +261,14 @@ function createPlaceholderScene() {
       ambient: 0.35,
       specular: 0.45,
       power: 24.0
-    }
+    },
+    [0.0, -1.0, 0.0]
   );
-  pedestalNode.addShape(pedestalShape);
-  pedestalNode.setPosition(0.0, -1.0, 0.0);
 
   placeholderSpinNode = app.space.addNode(placeholderRoot, "uploadPlaceholderSpin");
-  const cubeNode = app.space.addNode(placeholderSpinNode, "uploadCube");
-  const cubeShape = createMaterialShape(
-    app.getGL(),
+  addPlaceholderPrimitive(
+    placeholderSpinNode,
+    "uploadCube",
     Primitive.cube(1.8),
     {
       has_bone: 0,
@@ -256,14 +277,13 @@ function createPlaceholderScene() {
       ambient: 0.28,
       specular: 0.86,
       power: 54.0
-    }
+    },
+    [0.0, 0.8, 0.0]
   );
-  cubeNode.addShape(cubeShape);
-  cubeNode.setPosition(0.0, 0.8, 0.0);
 
-  const sphereNode = app.space.addNode(placeholderSpinNode, "uploadSphere");
-  const sphereShape = createMaterialShape(
-    app.getGL(),
+  addPlaceholderPrimitive(
+    placeholderSpinNode,
+    "uploadSphere",
     Primitive.sphere(0.85, 16, 24),
     {
       has_bone: 0,
@@ -273,10 +293,9 @@ function createPlaceholderScene() {
       specular: 0.92,
       power: 62.0,
       emissive: 0.06
-    }
+    },
+    [0.0, 2.2, 0.0]
   );
-  sphereNode.addShape(sphereShape);
-  sphereNode.setPosition(0.0, 2.2, 0.0);
 }
 
 function setNodeTreeHidden(node, hidden) {
@@ -823,11 +842,7 @@ function updateViewerDiagnosticsStats() {
       : "no",
     viewerOrbitInputSame: orbit.input === app.input ? "yes" : "no",
     viewerOrbitKeyMap: `${orbit.orbit.keyMap.left}/${orbit.orbit.keyMap.right}/${orbit.orbit.keyMap.up}/${orbit.orbit.keyMap.down}`,
-    viewerEyeRigDeltaSec: Number(orbit.debugState?.lastOrbitDeltaSec ?? 0.0).toFixed(6),
-    viewerEyeRigShiftPan: orbit.debugState?.lastOrbitShiftPan ? "yes" : "no",
-    viewerEyeRigKeyActive: orbit.debugState?.lastOrbitKeyActive ? "yes" : "no",
-    viewerEyeRigChanged: orbit.debugState?.lastOrbitChanged ? "yes" : "no",
-    viewerEyeRigInputs: `L=${orbit.debugState?.lastOrbitInputLeft ? 1 : 0} R=${orbit.debugState?.lastOrbitInputRight ? 1 : 0} U=${orbit.debugState?.lastOrbitInputUp ? 1 : 0} D=${orbit.debugState?.lastOrbitInputDown ? 1 : 0} Zi=${orbit.debugState?.lastOrbitInputZoomIn ? 1 : 0} Zo=${orbit.debugState?.lastOrbitInputZoomOut ? 1 : 0}`,
+    viewerCtxDeltaSec: formatDebugNumber(state.lastCtxDeltaSec, 6),
     viewerTarget: `${orbit.orbit.target[0].toFixed(3)}, ${orbit.orbit.target[1].toFixed(3)}, ${orbit.orbit.target[2].toFixed(3)}`,
     viewerOrbitYaw: orbit.orbit.yaw.toFixed(2),
     viewerOrbitPitch: orbit.orbit.pitch.toFixed(2),
@@ -870,8 +885,7 @@ function updateStatusPanel() {
     `arrowActive: ${(app.input.has("arrowleft") || app.input.has("arrowright") || app.input.has("arrowup") || app.input.has("arrowdown")) ? "yes" : "no"} shiftPan: ${(app.input.has("shift") && (app.input.has("arrowleft") || app.input.has("arrowright") || app.input.has("arrowup") || app.input.has("arrowdown"))) ? "yes" : "no"}`,
     `orbitInputSame: ${orbit.input === app.input ? "yes" : "no"}`,
     `orbitKeyMap: ${orbit.orbit.keyMap.left}/${orbit.orbit.keyMap.right}/${orbit.orbit.keyMap.up}/${orbit.orbit.keyMap.down}`,
-    `eyeRig dt/key/chg: ${Number(orbit.debugState?.lastOrbitDeltaSec ?? 0.0).toFixed(6)} / ${orbit.debugState?.lastOrbitKeyActive ? "yes" : "no"} / ${orbit.debugState?.lastOrbitChanged ? "yes" : "no"}`,
-    `eyeRig inputs: L=${orbit.debugState?.lastOrbitInputLeft ? 1 : 0} R=${orbit.debugState?.lastOrbitInputRight ? 1 : 0} U=${orbit.debugState?.lastOrbitInputUp ? 1 : 0} D=${orbit.debugState?.lastOrbitInputDown ? 1 : 0} shift=${orbit.debugState?.lastOrbitShiftPan ? 1 : 0}`,
+    `ctxDeltaSec: ${formatDebugNumber(state.lastCtxDeltaSec, 6)}`,
     `targetX: ${orbit.orbit.target[0].toFixed(3)}`,
     `targetY: ${orbit.orbit.target[1].toFixed(3)}`,
     `targetZ: ${orbit.orbit.target[2].toFixed(3)}`,
@@ -929,7 +943,6 @@ async function start() {
     document,
     element: app.screen.canvas,
     input: app.input,
-    requestRender: () => app.requestRender(),
     type: "orbit",
     orbit: {
       target: [...DEFAULT_ORBIT.target],
@@ -972,6 +985,7 @@ async function start() {
 
   app.start({
     onUpdate(ctx) {
+      state.lastCtxDeltaSec = ctx.deltaSec;
       const previousOrbitYaw = orbit.orbit.yaw;
       const previousOrbitPitch = orbit.orbit.pitch;
       const previousTargetX = orbit.orbit.target[0];
@@ -980,7 +994,7 @@ async function start() {
       const previousEyeAttitude = typeof app.eye?.getWorldAttitude === "function"
         ? app.eye.getWorldAttitude()
         : [NaN, NaN, NaN];
-      orbit.update(ctx.elapsedSec);
+      orbit.update(ctx.deltaSec);
       syncOrbitStateToAppCamera();
       state.orbitChangedThisFrame =
         orbit.orbit.yaw !== previousOrbitYaw
@@ -1001,8 +1015,8 @@ async function start() {
         : state.loadElapsedMs;
 
       if (!state.hasActiveModel && placeholderSpinNode) {
-        placeholderSpinNode.rotateY(22.0 * ctx.elapsedSec);
-        placeholderSpinNode.rotateX(8.0 * ctx.elapsedSec);
+        placeholderSpinNode.rotateY(22.0 * ctx.deltaSec);
+        placeholderSpinNode.rotateX(8.0 * ctx.deltaSec);
       }
 
       updateHudRows();
