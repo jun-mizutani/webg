@@ -1,0 +1,268 @@
+<!doctype html>
+<!-- webg/book/examples/03_01.html 2026/04/21 -->
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>03_01 階層構造とローカル座標系</title>
+  <link rel="stylesheet" href="./example.css" />
+</head>
+<body>
+  <div class="page">
+    <h1>book/examples</h1>
+    <h2>03_01 階層構造とローカル座標系</h2>
+    <div class="section-card">
+      <p>`book/03_3Dグラフィックスの基礎.md` に追加した、親子構造とローカル座標系の説明をそのまま動かして確認するための例です</p>
+      <p class="note">左側は太陽・地球・月の自転と公転、右側は腰・肩・上腕・前腕・手の関節チェーンです。どちらも「親の変換が子へ伝わる」という同じ原理で動いていることを、status 行の world position とあわせて確認できます</p>
+    </div>
+
+    <div class="canvas-block">
+      <canvas id="canvas" width="960" height="720"></canvas>
+    </div>
+
+    <pre id="code"></pre>
+
+    <script type="module" id="example-source">
+import WebgApp from "../../webg/WebgApp.js";
+import EyeRig from "../../webg/EyeRig.js";
+import Shape from "../../webg/Shape.js";
+import Primitive from "../../webg/Primitive.js";
+
+const app = new WebgApp({
+  document,
+  messageFontTexture: "../../webg/font512.png",
+  clearColor: [0.05, 0.08, 0.13, 1.0],
+  lightPosition: [10.0, 16.0, 24.0, 1.0],
+  layoutMode: "embedded",
+  fixedCanvasSize: {
+    width: 720,
+    height: 540,
+    useDevicePixelRatio: false
+  },
+  camera: {
+    target: [0.0, 1.8, 0.0],
+    distance: 15.0,
+    yaw: 18.0,
+    pitch: -12.0
+  }
+});
+await app.init();
+
+// 位置表示を読みやすくするため、world position を短い文字列へ整形する
+function vec3ToText(v) {
+  return `(${v[0].toFixed(2)}, ${v[1].toFixed(2)}, ${v[2].toFixed(2)})`;
+}
+
+// 各デモで共通利用する lit material 付き sphere を作る
+function createSphereShape(gpu, radius, color) {
+  const shape = new Shape(gpu);
+  shape.applyPrimitiveAsset(Primitive.sphere(radius, 24, 16, shape.getPrimitiveOptions()));
+  shape.endShape();
+  shape.setMaterial("smooth-shader", {
+    has_bone: 0,
+    use_texture: 0,
+    color,
+    ambient: 0.38,
+    specular: 0.72,
+    power: 22.0
+  });
+  return shape;
+}
+
+// 関節から関節へ伸びる部位を見やすくするため、X 方向へ長い cuboid を用意する
+function createSegmentShape(gpu, length, thickness, color) {
+  const shape = new Shape(gpu);
+  shape.applyPrimitiveAsset(
+    Primitive.cuboid(length, thickness, thickness, shape.getPrimitiveOptions())
+  );
+  shape.endShape();
+  shape.setMaterial("smooth-shader", {
+    has_bone: 0,
+    use_texture: 0,
+    color,
+    ambient: 0.34,
+    specular: 0.46,
+    power: 16.0
+  });
+  return shape;
+}
+
+// 階層全体の位置関係をつかみやすくするため、薄い floor を追加する
+function createFloor(gpu) {
+  const shape = new Shape(gpu);
+  shape.applyPrimitiveAsset(
+    Primitive.cuboid(24.0, 0.24, 12.0, shape.getPrimitiveOptions())
+  );
+  shape.endShape();
+  shape.setMaterial("smooth-shader", {
+    has_bone: 0,
+    use_texture: 0,
+    color: [0.16, 0.23, 0.34, 1.0],
+    ambient: 0.26,
+    specular: 0.10,
+    power: 8.0
+  });
+  return shape;
+}
+
+// 太陽系デモは pivot 用 node と見た目の本体 node を分け、
+// 「公転は親 pivot を回す」「自転は本体を回す」をそのまま見える形にする
+function buildSolarHierarchy(app) {
+  const gpu = app.getGL();
+  const root = app.space.addNode(null, "solarRoot");
+  root.setPosition(-5.2, 1.2, 0.0);
+
+  const sun = app.space.addNode(root, "sun");
+  sun.addShape(createSphereShape(gpu, 0.95, [1.0, 0.74, 0.18, 1.0]));
+
+  const earthOrbit = app.space.addNode(sun, "earthOrbit");
+  const earth = app.space.addNode(earthOrbit, "earth");
+  earth.setPosition(3.6, 0.0, 0.0);
+  earth.addShape(createSphereShape(gpu, 0.42, [0.24, 0.66, 1.0, 1.0]));
+
+  const moonOrbit = app.space.addNode(earth, "moonOrbit");
+  const moon = app.space.addNode(moonOrbit, "moon");
+  moon.setPosition(1.3, 0.0, 0.0);
+  moon.addShape(createSphereShape(gpu, 0.18, [0.86, 0.90, 0.98, 1.0]));
+
+  return {
+    root,
+    sun,
+    earthOrbit,
+    earth,
+    moonOrbit,
+    moon
+  };
+}
+
+// 人体デモは「関節 node」と「見た目の部位 node」を分け、
+// 各部位の local X 方向が次の関節へ伸びる様子を確認しやすくする
+function buildArmHierarchy(app) {
+  const gpu = app.getGL();
+  const root = app.space.addNode(null, "bodyRoot");
+  root.setPosition(4.4, 0.1, 0.0);
+
+  const waist = app.space.addNode(root, "waist");
+  const torso = app.space.addNode(waist, "torso");
+  torso.setPosition(0.0, 1.8, 0.0);
+  const torsoBody = app.space.addNode(torso, "torsoBody");
+  torsoBody.setPosition(0.0, 0.65, 0.0);
+  torsoBody.addShape(createSegmentShape(gpu, 0.9, 1.5, [0.52, 0.74, 0.44, 1.0]));
+
+  const shoulder = app.space.addNode(torso, "shoulder");
+  shoulder.setPosition(0.35, 1.2, 0.0);
+
+  const upperArmBody = app.space.addNode(shoulder, "upperArmBody");
+  upperArmBody.setPosition(0.70, 0.0, 0.0);
+  upperArmBody.addShape(createSegmentShape(gpu, 1.40, 0.34, [0.90, 0.45, 0.28, 1.0]));
+
+  const elbow = app.space.addNode(shoulder, "elbow");
+  elbow.setPosition(1.40, 0.0, 0.0);
+
+  const foreArmBody = app.space.addNode(elbow, "foreArmBody");
+  foreArmBody.setPosition(0.60, 0.0, 0.0);
+  foreArmBody.addShape(createSegmentShape(gpu, 1.20, 0.28, [0.96, 0.72, 0.34, 1.0]));
+
+  const wrist = app.space.addNode(elbow, "wrist");
+  wrist.setPosition(1.20, 0.0, 0.0);
+
+  const handBody = app.space.addNode(wrist, "handBody");
+  handBody.setPosition(0.34, 0.0, 0.0);
+  handBody.addShape(createSegmentShape(gpu, 0.68, 0.20, [0.98, 0.92, 0.72, 1.0]));
+
+  const jointShape = createSphereShape(gpu, 0.12, [0.95, 0.98, 1.0, 1.0]);
+  waist.addShape(jointShape.createInstance());
+  torso.addShape(jointShape.createInstance());
+  shoulder.addShape(jointShape.createInstance());
+  elbow.addShape(jointShape.createInstance());
+  wrist.addShape(jointShape.createInstance());
+
+  return {
+    root,
+    waist,
+    torso,
+    shoulder,
+    elbow,
+    wrist
+  };
+}
+
+const floor = app.space.addNode(null, "floor");
+floor.setPosition(0.0, -1.8, 0.0);
+floor.addShape(createFloor(app.getGL()));
+
+const solar = buildSolarHierarchy(app);
+const body = buildArmHierarchy(app);
+
+// 章本文と同様に orbit camera を使い、親子構造をさまざまな角度から確認できるようにする
+const orbit = new EyeRig(app.cameraRig, app.cameraRod, app.eye, {
+  document,
+  element: app.screen.canvas,
+  input: app.input,
+  type: "orbit",
+  orbit: {
+    target: [0.0, 1.8, 0.0],
+    distance: 15.0,
+    yaw: 18.0,
+    pitch: -12.0,
+    minDistance: 8.0,
+    maxDistance: 28.0,
+    wheelZoomStep: 1.0
+  }
+});
+orbit.attachPointer();
+
+app.createHelpPanel({
+  id: "example0301Help",
+  lines: [
+    "Drag: orbit camera",
+    "Wheel: zoom",
+    "Left: solar hierarchy  Right: arm hierarchy"
+  ]
+});
+
+let elapsedSec = 0.0;
+
+app.start({
+  onUpdate: ({ deltaSec }) => {
+    elapsedSec += deltaSec;
+    orbit.update(deltaSec);
+
+    // 太陽系は親 pivot を回して公転を作り、本体 node を回して自転を作る
+    solar.sun.rotateY(0.35);
+    solar.earthOrbit.rotateY(0.90);
+    solar.earth.rotateY(2.20);
+    solar.moonOrbit.rotateY(2.80);
+    solar.moon.rotateY(1.20);
+
+    // 人体側は腰の揺れ、肩の振り、肘の曲げを分け、
+    // 手先の world position が上流の関節すべてを反映することを確認する
+    body.waist.setPosition(0.0, Math.sin(elapsedSec * 1.3) * 0.12, 0.0);
+    body.torso.setAttitude(0.0, 0.0, Math.sin(elapsedSec * 0.8) * 6.0);
+    body.shoulder.setAttitude(0.0, 0.0, 24.0 + Math.sin(elapsedSec * 1.7) * 22.0);
+    body.elbow.setAttitude(0.0, 0.0, -22.0 - Math.sin(elapsedSec * 2.1) * 30.0);
+    body.wrist.setAttitude(0.0, 0.0, 8.0 + Math.sin(elapsedSec * 2.4) * 10.0);
+
+    const earthWorld = solar.earth.getWorldPosition();
+    const moonWorld = solar.moon.getWorldPosition();
+    const handWorld = body.wrist.getWorldPosition();
+
+    app.setStatusLines([
+      `earth local=(3.60, 0.00, 0.00) world=${vec3ToText(earthWorld)}`,
+      `moon  local=(1.30, 0.00, 0.00) world=${vec3ToText(moonWorld)}`,
+      `hand  wrist world=${vec3ToText(handWorld)}`
+    ], {
+      anchor: "top-left",
+      x: 0,
+      y: 0
+    });
+  }
+});
+    </script>
+    <script>
+      document.getElementById("code").textContent =
+        document.getElementById("example-source").textContent.trim();
+    </script>
+  </div>
+</body>
+</html>
