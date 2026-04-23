@@ -1,6 +1,6 @@
 // -------------------------------------------------
 // embedded_glb_viewer sample
-//   main.js       2026/04/21
+//   main.js       2026/04/23
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // -------------------------------------------------
@@ -108,6 +108,8 @@ const state = {
   screenshotName: "",
   modelSize: { ...PLACEHOLDER_SIZE },
   wireframe: false,
+  animationRunning: false,
+  animationLoopCount: 0,
   orbitChangedThisFrame: false,
   eyeChangedThisFrame: false,
   lastCtxDeltaSec: Number.NaN,
@@ -473,6 +475,8 @@ function setCurrentModel(rootNode, runtime, instantiated, size) {
   state.modelSize = { ...size };
   state.hasActiveModel = true;
   state.paused = false;
+  state.animationRunning = false;
+  state.animationLoopCount = 0;
   setPlaceholderVisible(false);
 }
 
@@ -562,6 +566,41 @@ function toggleAnimationPause() {
   app.pushToast(state.paused ? "animation paused" : "animation resumed", {
     durationMs: 900
   });
+}
+
+function getViewerAnimations() {
+  const animationMap = state.instantiated?.animationMap;
+  if (!(animationMap instanceof Map)) {
+    if (state.clipCount > 0) {
+      throw new Error("embedded_glb_viewer requires instantiated animationMap when clips are present");
+    }
+    return [];
+  }
+  return [...animationMap.values()];
+}
+
+function advanceViewerAnimations() {
+  if (!state.runtime || state.clipCount <= 0 || state.paused) {
+    state.animationRunning = false;
+    return;
+  }
+
+  const animations = getViewerAnimations();
+  if (animations.length === 0) {
+    throw new Error("embedded_glb_viewer clipCount is non-zero but no runtime animations were instantiated");
+  }
+
+  // startAllAnimations() は各 clip の schedule を先頭へ戻すだけなので、
+  // 実際の時間進行は毎 frame playAllAnimations() で明示的に進める
+  // すべての schedule が終端に到達した場合は、viewer 用に先頭から再開し、
+  // human2.glb のように末尾が初期姿勢へ戻る clip でも継続して動きを確認できるようにする
+  state.runtime.playAllAnimations();
+  state.animationRunning = animations.some((animation) => animation?.schedule && !animation.schedule.stopped);
+  if (!state.animationRunning) {
+    state.runtime.startAllAnimations();
+    state.animationLoopCount++;
+    state.animationRunning = true;
+  }
 }
 
 function toggleWireframe() {
@@ -831,6 +870,8 @@ function updateViewerDiagnosticsStats() {
     viewerNodeCount: state.nodeCount,
     viewerClipCount: state.clipCount,
     viewerPaused: state.paused ? "yes" : "no",
+    viewerAnimationRunning: state.animationRunning ? "yes" : "no",
+    viewerAnimationLoopCount: state.animationLoopCount,
     viewerWireframe: state.wireframe ? "yes" : "no",
     viewerKeyState: `L=${app.input.has("arrowleft") ? 1 : 0} R=${app.input.has("arrowright") ? 1 : 0} U=${app.input.has("arrowup") ? 1 : 0} D=${app.input.has("arrowdown") ? 1 : 0} Sh=${app.input.has("shift") ? 1 : 0}`,
     viewerArrowActive: app.input.has("arrowleft") || app.input.has("arrowright") || app.input.has("arrowup") || app.input.has("arrowdown")
@@ -1013,6 +1054,8 @@ async function start() {
       state.loadElapsedMs = state.loading
         ? Math.max(0, performance.now() - state.loadStartedAtMs)
         : state.loadElapsedMs;
+
+      advanceViewerAnimations();
 
       if (!state.hasActiveModel && placeholderSpinNode) {
         placeholderSpinNode.rotateY(22.0 * ctx.deltaSec);

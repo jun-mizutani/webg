@@ -1,5 +1,5 @@
 // ---------------------------------------------
-//  CoordinateSystem.js  2026/04/21
+//  CoordinateSystem.js  2026/04/23
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // ---------------------------------------------
@@ -30,6 +30,8 @@ export default class CoordinateSystem {
     this.endRotation = new Quat();
     this.startPosition = null;
     this.transDistance = [];
+    this.startMatrix = null;
+    this.endMatrix = null;
   }
 
   // 姿勢情報をデバッグ出力する
@@ -509,6 +511,20 @@ export default class CoordinateSystem {
     }
   }
 
+  // 行列を分解せずに次の local 行列として設定する
+  // glTF には非一様 scale を含む animation があり、その行列は
+  // position / quat / uniform scale へ安全に分解できない
+  // その場合は matrixOverride 経路を使い、入力行列の情報を失わず保持する
+  putMatrixByMatrix(matrix) {
+    this.accumulatedRatio = 0;
+    this.setMatrix();
+    this.startMatrix = this.matrix.clone();
+    this.endMatrix = matrix.clone();
+    this.matrixOverride = this.startMatrix.clone();
+    this.position = this.matrixOverride.getPosition();
+    this.dirty = false;
+  }
+
   // 補間率 `t` で回転を適用する
   execRotation(t) {
     this.quat.slerp(this.startRotation, this.endRotation, t);
@@ -544,5 +560,29 @@ export default class CoordinateSystem {
     let accum = this.accumulatedRatio;
     this.execRotation(accum);
     this.execTranslation(accum);
+  }
+
+  // 行列全体を補間実行する
+  // 回転や非一様 scale を分解せず、キー行列間を要素ごとに進める
+  // 非一様 scale を含む入力を uniform scale として丸めないための経路であり、
+  // データ側の非一様性は matrixOverride として明示的に残る
+  doMatrix(t) {
+    this.accumulatedRatio = this.accumulatedRatio + t;
+    const accum = this.accumulatedRatio;
+    if (!this.startMatrix || !this.endMatrix) {
+      throw new Error("CoordinateSystem.doMatrix requires putMatrixByMatrix before execution");
+    }
+    if (!this.matrixOverride) {
+      this.matrixOverride = new Matrix();
+    }
+    const sm = this.startMatrix.mat;
+    const em = this.endMatrix.mat;
+    const mm = this.matrixOverride.mat;
+    for (let i = 0; i < 16; i++) {
+      mm[i] = sm[i] + (em[i] - sm[i]) * accum;
+    }
+    this.matrix.copyFrom(this.matrixOverride);
+    this.position = this.matrixOverride.getPosition();
+    this.dirty = false;
   }
 };

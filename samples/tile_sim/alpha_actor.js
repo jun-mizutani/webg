@@ -1,6 +1,6 @@
 // -------------------------------------------------
 // tile_sim sample
-//   alpha_actor.js 2026/04/10
+//   alpha_actor.js 2026/04/23
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // -------------------------------------------------
@@ -231,7 +231,8 @@ const applyExplicitTextureFlagsToRuntimeShapes = (runtime) => {
 };
 
 // human.glb の shape 群へ tint color を適用する
-// - SmoothShader は `color * texColor` で最終色を作るため、shape ごとの色を変えると texture を保ったまま役割色を付けられる
+// - glTF material の `color` は元データの base color なので上書きしない
+// - SmoothShader の `multiplyColor` で後段から色を掛け、元 material の差を保ったまま役割色を付ける
 const applyTintColorToRuntimeShapes = (runtime, tintColor = null) => {
   if (!Array.isArray(tintColor) || tintColor.length < 4) {
     return;
@@ -241,52 +242,87 @@ const applyTintColorToRuntimeShapes = (runtime, tintColor = null) => {
     const shape = shapes[i];
     if (!shape?.updateMaterial) continue;
     shape.updateMaterial({
-      color: [...tintColor]
+      multiplyColor: [...tintColor]
     });
   }
 };
 
-// Alpha の skinned mesh に bind 済みの animation を直接進める
-// - rest pose のまま止まる場合、runtime 全体の animation 名よりも
-//   shape に結び付いた `shape.anim` を直接使う方が確実である
+// Alpha / support unit の skinned mesh に bind 済みの animation を直接進める
+// - glTF は material / primitive 単位で shape が分かれるため、同じ human.glb でも
+//   頭・胴体・手足のような複数 shape がそれぞれ別 skeleton / animation を持つことがある
+// - 最初の `shape.anim` だけを再生すると、material 境界で一部だけ動いて残りが静止する
+// - そのため runtime shapes から重複しない animation を全て集め、同じタイミングで開始・更新する
 // - 利用者によれば `key2 == key0` なので、clip 全体を loop すれば `0 -> 1 -> 0` に見える
 const createRuntimeIdlePlayer = (shapes) => {
-  const animShape = (shapes ?? []).find((shape) => shape?.anim);
-  const animation = animShape?.anim ?? null;
-  if (!animation) {
+  const animations = [];
+  const seenAnimations = new Set();
+  for (let i = 0; i < (shapes ?? []).length; i++) {
+    const animation = shapes[i]?.anim ?? null;
+    if (!animation || seenAnimations.has(animation)) {
+      continue;
+    }
+    seenAnimations.add(animation);
+    animations.push(animation);
+  }
+
+  if (animations.length === 0) {
     return null;
   }
 
-  const clipInfo = typeof animation.getClipInfo === "function"
-    ? animation.getClipInfo()
-    : null;
-  const durationMs = Number.isFinite(clipInfo?.durationMs)
-    ? Number(clipInfo.durationMs)
-    : null;
-  if (durationMs && durationMs > 0.0 && animation.schedule?.setSpeed) {
-    animation.schedule.setSpeed(HUMAN_IDLE_LOOP_DURATION_MS / durationMs);
+  const clipInfos = animations.map((animation) => (
+    typeof animation.getClipInfo === "function"
+      ? animation.getClipInfo()
+      : null
+  ));
+  const durationMs = clipInfos.reduce((maxDuration, clipInfo) => {
+    const clipDuration = Number.isFinite(clipInfo?.durationMs)
+      ? Number(clipInfo.durationMs)
+      : 0.0;
+    return Math.max(maxDuration, clipDuration);
+  }, 0.0);
+
+  if (durationMs > 0.0) {
+    const speed = HUMAN_IDLE_LOOP_DURATION_MS / durationMs;
+    for (let i = 0; i < animations.length; i++) {
+      animations[i].schedule?.setSpeed?.(speed);
+    }
   }
 
   return {
     durationMs,
     start() {
-      animation.start?.();
-      if (animation.schedule) {
-        animation.schedule.pause = false;
+      for (let i = 0; i < animations.length; i++) {
+        const animation = animations[i];
+        animation.start?.();
+        if (animation.schedule) {
+          animation.schedule.pause = false;
+        }
       }
     },
     update() {
-      const result = animation.play?.();
-      if (result < 0) {
-        animation.start?.();
+      let allStopped = true;
+      for (let i = 0; i < animations.length; i++) {
+        const animation = animations[i];
+        const result = animation.play?.();
+        if (result >= 0) {
+          allStopped = false;
+        }
+      }
+      if (allStopped) {
+        for (let i = 0; i < animations.length; i++) {
+          animations[i].start?.();
+        }
       }
     },
     getDebugInfo() {
       return {
-        clipName: typeof animation.getName === "function" ? animation.getName() : null,
+        clipNames: animations.map((animation) => (
+          typeof animation.getName === "function" ? animation.getName() : null
+        )),
+        animationCount: animations.length,
         durationMs,
-        paused: animation.schedule?.pause === true,
-        stopped: animation.schedule?.stopped === true
+        paused: animations.every((animation) => animation.schedule?.pause === true),
+        stopped: animations.every((animation) => animation.schedule?.stopped === true)
       };
     }
   };

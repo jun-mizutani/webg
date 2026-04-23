@@ -1,5 +1,5 @@
 // ---------------------------------------------
-//  Animation.js      2026/03/13
+//  Animation.js      2026/04/23
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // ---------------------------------------------
@@ -100,6 +100,18 @@ export default class Animation {
     return (this.times[this.times.length - 1] - this.times[0]) * 1000;
   }
 
+  // 指定キー間の姿勢行列を、通常の回転+移動補間で扱えるか判定する
+  // `putRotTransByMatrix()` は position / quat / uniform scale へ分解するため、
+  // どちらかのキーに非一様 scale が含まれる場合は matrixOverride 経路へ切り替える
+  usesMatrixCommand(boneIndex, fromKey, toKey) {
+    const fromPose = this.poses[boneIndex]?.[fromKey] ?? null;
+    const toPose = this.poses[boneIndex]?.[toKey] ?? null;
+    if (!fromPose || !toPose) {
+      throw new Error("Animation.usesMatrixCommand received an invalid pose key");
+    }
+    return fromPose.getUniformScale() === null || toPose.getUniformScale() === null;
+  }
+
   // clip 情報を要約して返す
   getClipInfo() {
     return {
@@ -172,17 +184,31 @@ export default class Animation {
     for (let key=1; key<this.times.length; key++) {
       time = (this.times[key] - this.times[key-1]) * 1000;  // msec
       for (let i=0; i<this.getNoOfBones(); i++) {
-        this.tasks[i].addCommand(
-          [ 0,
-            CoordinateSystem.prototype.putRotTransByMatrix,
-            [this.poses[i][key]]
-          ]);
-        this.tasks[i].addCommand(
-          [
-            time,
-            CoordinateSystem.prototype.doRotTrans,
-            [1.0]
-          ]);
+        if (this.usesMatrixCommand(i, key - 1, key)) {
+          this.tasks[i].addCommand(
+            [ 0,
+              CoordinateSystem.prototype.putMatrixByMatrix,
+              [this.poses[i][key]]
+            ]);
+          this.tasks[i].addCommand(
+            [
+              time,
+              CoordinateSystem.prototype.doMatrix,
+              [1.0]
+            ]);
+        } else {
+          this.tasks[i].addCommand(
+            [ 0,
+              CoordinateSystem.prototype.putRotTransByMatrix,
+              [this.poses[i][key]]
+            ]);
+          this.tasks[i].addCommand(
+            [
+              time,
+              CoordinateSystem.prototype.doRotTrans,
+              [1.0]
+            ]);
+        }
       }
     }
   }
@@ -225,15 +251,27 @@ export default class Animation {
   transitionTo(time, keyFrom, keyTo) {
     let args = [];
     let ones = [];
+    let useMatrixCommand = false;
     for (let i=0; i<this.getNoOfBones(); i++) {
       args.push(this.poses[i][keyFrom]);  // matrix
       ones.push(1.0);
+      if (this.usesMatrixCommand(i, keyFrom, keyTo)) {
+        useMatrixCommand = true;
+      }
     }
-    this.schedule.directExecution(
-      0, CoordinateSystem.prototype.putRotTransByMatrix, args);
-    this.schedule.directExecution(
-      time, CoordinateSystem.prototype.doRotTrans, ones, keyFrom * 2,
-      keyTo * 2 - 1);
+    if (useMatrixCommand) {
+      this.schedule.directExecution(
+        0, CoordinateSystem.prototype.putMatrixByMatrix, args);
+      this.schedule.directExecution(
+        time, CoordinateSystem.prototype.doMatrix, ones, keyFrom * 2,
+        keyTo * 2 - 1);
+    } else {
+      this.schedule.directExecution(
+        0, CoordinateSystem.prototype.putRotTransByMatrix, args);
+      this.schedule.directExecution(
+        time, CoordinateSystem.prototype.doRotTrans, ones, keyFrom * 2,
+        keyTo * 2 - 1);
+    }
   }
 
   // 先頭から再生開始する

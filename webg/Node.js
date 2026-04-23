@@ -1,5 +1,5 @@
 // ---------------------------------------------
-//  Node.js        2026/04/02
+//  Node.js        2026/04/23
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // ---------------------------------------------
@@ -379,7 +379,10 @@ export default class Node extends CoordinateSystem {
   setGlobalMatrixAll(wmat) {
     // 現在姿勢側の累積行列 [Cn] を再帰計算する
     // this.setWorldMatrixAll(wmat)
-    this.composeMatrixFromState(this.matrix, this.quat, this.position, this.scale);
+    // animation が非一様 scale を含む場合は matrixOverride に local 行列が入る
+    // ここで composeMatrixFromState() を直接呼ぶと override を無視してしまうため、
+    // CoordinateSystem.setMatrix() 経由で通常TRSと override の両方を反映する
+    this.setMatrix();
     this.worldMatrix.copyFrom(this.matrix);
     if ((this.rootBone === false) && (wmat !== null)) {
       this.worldMatrix.lmul(wmat);      // [Cn] = [Q0] x ... x [Qn]

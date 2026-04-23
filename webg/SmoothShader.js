@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// SmoothShader.js 2026/04/15
+// SmoothShader.js 2026/04/23
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // ---------------------------------------------
@@ -32,15 +32,17 @@ export default class SmoothShader extends Shader {
     this.OFF_NORM = 32;
     this.OFF_LIGHT = 48;
     this.OFF_COLOR = 52;
-    this.OFF_PARAMS = 56; // ambient/specular/power/emissive
-    this.OFF_FLAGS = 60; // hasBone/useTexture/weightDebug/useNormalMap
-    this.OFF_NMAP = 64; // normalStrength/unused/unused/unused
-    this.OFF_FOG_COLOR = 68;
-    this.OFF_FOG_PARAMS = 72;
-    this.OFF_DEBUG_FLAGS = 76; // backfaceDebug/unused/unused/unused
-    this.OFF_DEBUG_COLOR = 80; // backfaceColor/unused/unused/unused
+    this.OFF_MULTIPLY_COLOR = 56;
+    this.OFF_ADD_COLOR = 60;
+    this.OFF_PARAMS = 64; // ambient/specular/power/emissive
+    this.OFF_FLAGS = 68; // hasBone/useTexture/weightDebug/useNormalMap
+    this.OFF_NMAP = 72; // normalStrength/unused/unused/unused
+    this.OFF_FOG_COLOR = 76;
+    this.OFF_FOG_PARAMS = 80;
+    this.OFF_DEBUG_FLAGS = 84; // backfaceDebug/unused/unused/unused
+    this.OFF_DEBUG_COLOR = 88; // backfaceColor/unused/unused/unused
 
-    this.UNIFORM_FLOAT_COUNT = 84;
+    this.UNIFORM_FLOAT_COUNT = 92;
     this.UNIFORM_SIZE = this.UNIFORM_FLOAT_COUNT * Float32Array.BYTES_PER_ELEMENT;
     this.uniformStride = alignTo(this.UNIFORM_SIZE, 256);
     this.maxUniforms = 2048;
@@ -48,6 +50,8 @@ export default class SmoothShader extends Shader {
 
     this.default = {
       color: [0.8, 0.8, 1.0, 1.0],
+      multiplyColor: [1.0, 1.0, 1.0, 1.0],
+      addColor: [0.0, 0.0, 0.0, 0.0],
       light: [0.0, 0.0, 100.0, 1.0],
       use_texture: 0,
       use_normal_map: 0,
@@ -96,6 +100,8 @@ export default class SmoothShader extends Shader {
         normalMatrix : mat4x4<f32>,
         lightPos : vec4<f32>,
         color : vec4<f32>,
+        multiplyColor : vec4<f32>,
+        addColor : vec4<f32>,
         params : vec4<f32>,
         flags : vec4<f32>,
         normalMapParams : vec4<f32>,
@@ -268,6 +274,14 @@ export default class SmoothShader extends Shader {
           finalColor = u.color;
         }
 
+        // color は glTF material 由来の base color として残し、
+        // sample 側の役割色や選択表示は multiply / add の後段で重ねる
+        // これにより元 material を上書きせず、必要な draw だけ色味を調整できる
+        finalColor = vec4<f32>(
+          finalColor.rgb * u.multiplyColor.rgb + u.addColor.rgb,
+          finalColor.a * u.multiplyColor.a + u.addColor.a
+        );
+
         if (u.debugFlags.x != 0.0 && !input.frontFacing) {
           return vec4<f32>(u.debugColor.rgb, 1.0);
         }
@@ -394,6 +408,8 @@ export default class SmoothShader extends Shader {
 
     this.setLightPosition(this.default.light);
     this.setColor(this.default.color);
+    this.setMultiplyColor(this.default.multiplyColor);
+    this.setAddColor(this.default.addColor);
     this.useTexture(this.default.use_texture);
     this.useNormalMap(this.default.use_normal_map);
     this.setNormalStrength(this.default.normal_strength);
@@ -632,6 +648,20 @@ export default class SmoothShader extends Shader {
     this.updateUniforms();
   }
 
+  // ベースカラーへ後段で掛ける乗算色を設定する
+  // glTF material の `color` を壊さず、サンプル側の役割色を重ねたいときに使う
+  setMultiplyColor(color) {
+    this.uniformData.set(color, this.OFF_MULTIPLY_COLOR);
+    this.updateUniforms();
+  }
+
+  // ベースカラーへ後段で足す加算色を設定する
+  // ハイライトや発光寄りの強調を、元 material の色を保持したまま追加できる
+  setAddColor(color) {
+    this.uniformData.set(color, this.OFF_ADD_COLOR);
+    this.updateUniforms();
+  }
+
   // 環境光係数を設定する
   setAmbientLight(intensity) {
     this.uniformData[this.OFF_PARAMS + 0] = intensity;
@@ -791,6 +821,8 @@ export default class SmoothShader extends Shader {
   // Shape 側パラメータを一括反映する
   doParameter(param) {
     this.updateParam(param, "color", this.setColor);
+    this.updateParam(param, "multiplyColor", this.setMultiplyColor);
+    this.updateParam(param, "addColor", this.setAddColor);
     this.updateParam(param, "light", this.setLightPosition);
     this.updateParam(param, "use_texture", this.useTexture);
     this.updateParam(param, "use_normal_map", this.useNormalMap);
@@ -817,6 +849,8 @@ export default class SmoothShader extends Shader {
   setDefaultParam(key, value) {
     this.default[key] = value;
     if (key === "color") this.setColor(value);
+    else if (key === "multiplyColor") this.setMultiplyColor(value);
+    else if (key === "addColor") this.setAddColor(value);
     else if (key === "light") this.setLightPosition(value);
     else if (key === "use_texture") this.useTexture(value);
     else if (key === "use_normal_map") this.useNormalMap(value);
