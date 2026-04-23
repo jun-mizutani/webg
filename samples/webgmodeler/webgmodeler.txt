@@ -23,7 +23,7 @@
 - `Primitive.sphere()` / `Primitive.cuboid()`: 頂点 marker と grid 表示
 - `Space.raycast()`: vertex marker の pick
 - `Matrix.makeView()` と projection 行列の逆行列: canvas 座標から world ray を作成
-- `EyeRig(type="orbit")`: `embedded_glb_viewer` と同じ `attachPointer()` 経路で、左ドラッグ、wheel、Shift + drag、keyboard による camera orbit / PAN / zoom を扱う
+- `WebgApp.createOrbitEyeRig()`: `embedded_glb_viewer` と同じ orbit camera を作り、左ドラッグ、wheel、Shift + drag、keyboard による camera orbit / PAN / zoom と `WebgApp` camera state 同期を扱う
 
 確認ポイント
 - 起動直後に五角錐状の初期 mesh が表示され、各頂点に小さい marker が出ることを確認します
@@ -41,8 +41,8 @@
 操作説明
 - Select: 頂点または face を選択
 - Add Vertex: クリック位置へ頂点を追加
-- 左ドラッグ: `EyeRig.attachPointer()` による orbit
-- Shift + 左ドラッグ: `EyeRig.attachPointer()` による PAN
+- 左ドラッグ: `createOrbitEyeRig()` が接続する `EyeRig` による orbit
+- Shift + 左ドラッグ: `createOrbitEyeRig()` が接続する `EyeRig` による PAN
 - wheel: zoom
 - Arrow: orbit
 - Shift + Arrow: PAN

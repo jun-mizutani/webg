@@ -1141,6 +1141,9 @@ runtime.instantiate(app.space);
 - `attachInput(handlers = {})`: keyboard / pointer 入力を接続する。`WebgApp` の debug key 処理もこの経路で有効になる
 - `configureDebugKeyInput(options = {})`: debug key 配列を設定する。`keyInput.enabled` が false でも `F9` → `m` の mode toggle は標準で残る
 - `createCameraRig()`: 標準カメラリグを作る
+- `createOrbitEyeRig(options = {})`: 標準カメラリグ上に orbit 用 `EyeRig` を作り、pointer 入力、毎フレーム更新、`WebgApp` camera state への同期をまとめて設定する
+- `syncCameraFromEyeRig(eyeRig = this.eyeRig)`: `EyeRig` の orbit state を `WebgApp` の camera state へ反映する
+- `updateManagedEyeRig(deltaSec)`: `createOrbitEyeRig()` で作成した `EyeRig` を frame 内で更新し、必要に応じて camera state を同期する
 - `applyViewportLayout()`: canvas と HUD のレイアウトを反映する。`fixedCanvasSize` がある場合は固定サイズを優先し、`layoutMode: "embedded"` では overlay を canvas host 基準へそろえる
 - `checkEnvironment(options = {})`: 実行環境の診断レポートを作る
 - `updateProjection(viewAngle = this.viewAngle)`: projection matrix を更新する
@@ -1246,7 +1249,9 @@ runtime.instantiate(app.space);
 ### `EyeRig` と `WebgApp`
 `WebgApp.createCameraRig()` は、標準カメラリグを作る入口です。
 
-`EyeRig` は、`WebgApp` が使う視点ヘルパーの標準形を提供しますが、必要なら任意の node 階層へ差し替えられます。
+orbit camera を標準的に使う場合は、`createCameraRig()` 後の node を直接渡して `EyeRig` を作る代わりに、`WebgApp.createOrbitEyeRig()` を使えます。この入口は、`EyeRig.update(deltaSec)` と `WebgApp` の camera state 同期を `WebgApp.frame()` 内へ組み込むため、PAN による `orbit.target` 更新が `app.camera.target` で上書きされる事故を避けやすくなります。
+
+`EyeRig` は、`WebgApp` が使う視点ヘルパーの標準形を提供しますが、必要なら任意の node 階層へ差し替えられます。その場合は `syncCameraFromEyeRig()` を明示的に使うか、独自の camera state 管理を行ってください。
 
 ## 8. オーディオ / パーティクル
 

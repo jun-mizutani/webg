@@ -12,7 +12,6 @@ import Primitive from "../../webg/Primitive.js";
 import ModelAsset from "../../webg/ModelAsset.js";
 import Matrix from "../../webg/Matrix.js";
 import Diagnostics from "../../webg/Diagnostics.js";
-import EyeRig from "../../webg/EyeRig.js";
 
 // webgmodeler は「編集データ」を唯一の正として扱う
 // - vertices / faces は ModelAsset よりも操作しやすい形で保持する
@@ -212,7 +211,7 @@ function installModelerKeyBridge() {
     app.eye.setWorldMatrix();
     orbit.panViewByScreenDelta(dx, dy);
     orbit.apply();
-    syncOrbitStateToAppCamera();
+    app.syncCameraFromEyeRig(orbit);
     setMessage(`camera pan ${key}`);
     return true;
   };
@@ -258,21 +257,6 @@ function installModelerKeyBridge() {
     window.removeEventListener("keyup", onKeyUp, true);
     window.removeEventListener("blur", onBlur);
   };
-}
-
-function syncOrbitStateToAppCamera() {
-  if (!app?.camera || !orbit?.orbit) {
-    return;
-  }
-  // WebgApp は onUpdate() 後に camera effects を反映し、app.camera.target から
-  // cameraRig の位置を再設定する。EyeRig の orbit target だけを動かすと、
-  // その直後に古い app.camera.target で上書きされるため、両者を必ず同期する
-  app.camera.target[0] = orbit.orbit.target[0];
-  app.camera.target[1] = orbit.orbit.target[1];
-  app.camera.target[2] = orbit.orbit.target[2];
-  app.camera.distance = orbit.orbit.distance;
-  app.camera.yaw = orbit.orbit.yaw;
-  app.camera.pitch = orbit.orbit.pitch;
 }
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -845,7 +829,7 @@ function fitCameraToEditor() {
   orbit.orbit.keyZoomSpeed = Math.max(2.0, bounds.size * 1.2);
   orbit.setAngles(DEFAULT_CAMERA.yaw, DEFAULT_CAMERA.pitch, 0.0);
   orbit.setDistance(distance);
-  syncOrbitStateToAppCamera();
+  app.syncCameraFromEyeRig(orbit);
 }
 
 function normalizeToolName(tool) {
@@ -1232,7 +1216,7 @@ function installShiftPanBridge(canvas) {
     app.eye.setWorldMatrix();
     orbit.panViewByScreenDelta(dx, dy);
     orbit.apply();
-    syncOrbitStateToAppCamera();
+    app.syncCameraFromEyeRig(orbit);
     // この bridge が pointermove を止めた frame は EyeRig.onPointerMove() が呼ばれない
     // EyeRig 側の lastClient 座標を同じ値へ進めておくと、Shift を離した直後に
     // 溜まった差分が通常 orbit として一度に処理されることを避けられる
@@ -1693,30 +1677,23 @@ async function start() {
   });
   await app.init();
   app.attachInput();
-  orbit = new EyeRig(app.cameraRig, app.cameraRod, app.eye, {
-    document,
-    element: app.screen.canvas,
-    input: app.input,
-    type: "orbit",
-    dragButton: 0,
-    orbit: {
-      target: [...DEFAULT_CAMERA.target],
-      distance: DEFAULT_CAMERA.distance,
-      yaw: DEFAULT_CAMERA.yaw,
-      pitch: DEFAULT_CAMERA.pitch,
-      minDistance: 0.5,
-      maxDistance: 96.0,
-      wheelZoomStep: 1.0,
-      keyZoomSpeed: 8.0,
-      dragRotateSpeed: 0.28,
-      dragPanSpeed: 2.0,
-      pitchMin: -85.0,
-      pitchMax: 85.0
-    }
+  orbit = app.createOrbitEyeRig({
+    target: [...DEFAULT_CAMERA.target],
+    distance: DEFAULT_CAMERA.distance,
+    yaw: DEFAULT_CAMERA.yaw,
+    pitch: DEFAULT_CAMERA.pitch,
+    minDistance: 0.5,
+    maxDistance: 96.0,
+    wheelZoomStep: 1.0,
+    keyZoomSpeed: 8.0,
+    dragRotateSpeed: 0.28,
+    dragPanSpeed: 2.0,
+    pitchMin: -85.0,
+    pitchMax: 85.0,
+    dragButton: 0
   });
   detachShiftPanBridge?.();
   detachShiftPanBridge = installShiftPanBridge(app.screen.canvas);
-  orbit.attachPointer();
   buildGrid();
   createInitialModel();
   installDomHandlers();
@@ -1738,8 +1715,6 @@ async function start() {
 
   app.start({
     onUpdate({ screen, deltaSec }) {
-      orbit.update(deltaSec);
-      syncOrbitStateToAppCamera();
       refreshDiagnosticsStats();
       updateStatus();
       if (app.debugProbe) {

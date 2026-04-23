@@ -101,7 +101,6 @@ app.updateProjection(40.0);
 
 ```js
 import WebgApp from "./webg/WebgApp.js";
-import EyeRig from "./webg/EyeRig.js";
 
 const app = new WebgApp({
   document,
@@ -117,37 +116,28 @@ const app = new WebgApp({
 });
 await app.init();
 
-const orbit = new EyeRig(app.cameraRig, app.cameraRod, app.eye, {
-  document,
-  element: app.screen.canvas,
-  input: app.input,
-  type: "orbit",
-  orbit: {
-    target: [0.0, 0.0, 0.0],
-    distance: 8.0,
-    yaw: 24.0,
-    pitch: -12.0,
-    minDistance: 4.0,
-    maxDistance: 18.0,
-    wheelZoomStep: 1.0
-  }
+const orbit = app.createOrbitEyeRig({
+  target: [0.0, 0.0, 0.0],
+  distance: 8.0,
+  yaw: 24.0,
+  pitch: -12.0,
+  minDistance: 4.0,
+  maxDistance: 18.0,
+  wheelZoomStep: 1.0
 });
-orbit.attachPointer();
 
-app.start({
-  onUpdate: ({ deltaSec }) => {
-    orbit.update(deltaSec);
-  }
-});
+app.start();
 ```
 
-この例では、`WebgApp` が生成した `cameraRig`、`cameraRod`、`eye` をそのまま `EyeRig` に渡しています。`type: "orbit"` を指定すると、`orbit.target` が `base` の位置に、`orbit.yaw / pitch` が `rod` の向きに、`orbit.distance` が `eye` の Z 軸位置にそれぞれ反映されます。ドラッグやホイールによる入力は `attachPointer()` で受け取り、毎フレーム `update(deltaSec)` で座標に反映させます。モデル読み込み直後の高低差確認や、ライティングおよびポストプロセスの検証など、シーンを広い角度から確認したい場合に最適なモードです。
+この例では、`WebgApp` が生成した `cameraRig`、`cameraRod`、`eye` の上に、`createOrbitEyeRig()` で orbit 用の `EyeRig` を作成しています。`createOrbitEyeRig()` は、pointer 入力の接続、毎フレームの `update(deltaSec)`、そして `EyeRig` の orbit state と `WebgApp` の camera state の同期をまとめて扱います。これにより、サンプル側で `orbit.update(deltaSec)` や `app.camera.target` への手動コピーを書き忘れて、パン(PAN)が見かけ上動かない状態を避けられます。
+
+返される `orbit` は通常の `EyeRig` なので、必要に応じて `setTarget()`、`setAngles()`、`setDistance()` などもそのまま使えます。`target` が `base` の位置に、`yaw / pitch` が `rod` の向きに、`distance` が `eye` の Z 軸位置にそれぞれ反映されます。モデル読み込み直後の高低差確認や、ライティングおよびポストプロセスの検証など、シーンを広い角度から確認したい場合に最適なモードです。
 
 ここで重要なのは、orbit 視点が「回転とズームだけのカメラ」ではないという点です。実際の model viewer や editor では、見たい対象を画面の中央へ寄せ直したい場面が頻繁に発生します。たとえば、キャラクター全体を確認したあとに手元だけを拡大したい場合や、建物全景から一部の窓まわりへ視線を移したい場合に、回転だけでは目的の箇所を中央へ持ってきにくいことがあります。このような場面のために、`EyeRig` の orbit / follow には **パン(PAN)** が追加されています。
 
 パン(PAN)は、カメラ自体を別の場所へ瞬間移動させるのではなく、`orbit.target` を視線の screen 平面に沿って平行移動する操作です。これにより、現在の yaw / pitch / distance を大きく崩さずに、「見ている中心」だけを横や上へずらすことができます。設計上は、right / up の向きを `eye` の world 行列から取り出し、その方向へ `target` を動かすことで実現しています。つまりパン(PAN)はワールド座標の X / Y / Z を固定的に増減する処理ではなく、あくまで「今見えている画面上の左右上下」に対応した移動です。このため、どの角度からモデルを見ていても、直感的に視点中心を動かせます。
 
-`EyeRig` の pointer 操作では、orbit / follow モードで `Shift` を押しながらドラッグするとパン(PAN)が働きます。また、touch では 2 本指操作の中心移動がパン(PAN)に割り当てられています。さらに、キーボード操作でも `Shift + Arrow` によって同じ意味の平行移動を行えます。`EyeRig` 側にこの経路が最初から用意されているため、サンプルごとに「Shift を押したら target をどう動かすか」を個別に実装しなくても、orbit camera の挙動を共通化できます。
+`EyeRig` の pointer 操作では、orbit / follow モードで `Shift` を押しながらドラッグするとパン(PAN)が働きます。また、touch では 2 本指操作の中心移動がパン(PAN)に割り当てられています。さらに、キーボード操作でも `Shift + Arrow` によって同じ意味の平行移動を行えます。`createOrbitEyeRig()` を使うと、この入力処理と `WebgApp` camera state への同期が標準でつながるため、サンプルごとに「Shift を押したら target をどう動かすか」を個別に実装しなくても、orbit camera の挙動を共通化できます。
 
 このパン(PAN)が有用なのは、単に操作しやすいからではありません。orbit camera は構図確認に優れていますが、詳細部へ寄ったときに target が対象の中心から外れていると、少し回しただけで見たい箇所が画面外へ出やすくなります。パン(PAN)を併用すると、対象の関心点を中央へ戻した上で回転やズームを続けられるため、viewer、asset 検証、ライティング確認、書籍用の図版調整のいずれでも作業効率が大きく向上します。`gltf_loader`、`collada_loader`、`json_loader` のような loader sample で `Shift + Arrow` と `Shift + Drag` を有効にしたのも、まさにこの用途を意識したためです。
 
@@ -256,7 +246,7 @@ orbit と follow を使うときは、`setTarget()` / `setTargetOffset()` を「
 
 1. `attachPointer()` の呼び出しだけでなく、毎フレーム `update(deltaSec)` を実行すること。
 2. `EyeRig` は位置と姿勢を制御するものであり、投影行列（画角など）は変更しないこと。
-3. `WebgApp` の既定視点は固定された初期視点であるため、orbit や follow を利用する場合は明示的に `EyeRig` を追加すること。
+3. orbit の標準利用では `WebgApp.createOrbitEyeRig()` を使い、入力更新と camera state 同期を `WebgApp` 側へ任せること。
 4. `setAngles()` と `setLookAngles()` の役割を混同しないこと。
 5. orbit / follow で細部を追いたい場合は、回転だけで解決しようとせず、パン(PAN)によるターゲット調整を併用すること。
 6. 視野角や `near / far` を変更したい場合は、`WebgApp.viewAngle` および `updateProjection()` を使用すること。

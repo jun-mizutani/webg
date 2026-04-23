@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// WebgApp.js     2026/04/21
+// WebgApp.js     2026/04/24
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // ---------------------------------------------
@@ -23,6 +23,7 @@ import SceneValidator from "./SceneValidator.js";
 import SceneLoader from "./SceneLoader.js";
 import DebugDock from "./DebugDock.js";
 import FixedFormatPanel from "./FixedFormatPanel.js";
+import EyeRig from "./EyeRig.js";
 import util from "./util.js";
 import { mergeUiTheme } from "./WebgUiTheme.js";
 
@@ -138,6 +139,11 @@ export default class WebgApp {
     this.cameraRig = null;
     this.cameraRod = null;
     this.eye = null;
+    this.eyeRig = null;
+    this.eyeRigOptions = {
+      update: false,
+      syncCamera: false
+    };
     this.lightNode = null;
     this.input = null;
     this.message = null;
@@ -1431,6 +1437,86 @@ export default class WebgApp {
     this.eye.setPosition(0.0, 0.0, this.camera.distance);
     this.eye.setAttitude(0.0, 0.0, 0.0);
     this.space.setEye(this.eye);
+  }
+
+  // WebgApp 標準 cameraRig 上へ orbit 用 EyeRig を作成する
+  // 返した EyeRig は WebgApp が frame ごとに update と camera state 同期を行うため、
+  // sample 側で orbit.update(deltaSec) や app.camera.target への手動コピーを書く必要がない
+  createOrbitEyeRig(options = {}) {
+    if (!this.cameraRig || !this.cameraRod || !this.eye) {
+      throw new Error("WebgApp.createOrbitEyeRig() requires app.init() to create camera nodes first");
+    }
+    if (!this.input) {
+      throw new Error("WebgApp.createOrbitEyeRig() requires an InputController");
+    }
+
+    const attachPointer = options.attachPointer !== false;
+    const update = options.update !== false;
+    const syncCamera = options.syncCamera !== false;
+    const element = options.element ?? this.screen?.canvas ?? null;
+    const input = options.input ?? this.input;
+    const orbitOptions = {
+      ...options,
+      ...(options.orbit ?? {}),
+      target: options.target ?? options.orbit?.target ?? [...this.camera.target],
+      distance: options.distance ?? options.orbit?.distance ?? this.camera.distance,
+      yaw: options.yaw ?? options.orbit?.yaw ?? this.camera.yaw,
+      pitch: options.pitch ?? options.orbit?.pitch ?? this.camera.pitch,
+      bank: options.bank ?? options.orbit?.bank ?? this.camera.bank
+    };
+
+    if (this.eyeRig?.detachPointer) {
+      this.eyeRig.detachPointer();
+    }
+    this.eyeRig = new EyeRig(this.cameraRig, this.cameraRod, this.eye, {
+      document: this.doc,
+      element,
+      input,
+      type: "orbit",
+      dragButton: options.dragButton ?? 0,
+      orbit: orbitOptions
+    });
+    this.eyeRigOptions = {
+      update,
+      syncCamera
+    };
+    if (attachPointer) {
+      this.eyeRig.attachPointer(element);
+    }
+    this.syncCameraFromEyeRig(this.eyeRig);
+    return this.eyeRig;
+  }
+
+  // EyeRig の orbit state を WebgApp の camera state へ同期する
+  // WebgApp は camera effect の反映時に app.camera.target を cameraRig へ流すため、
+  // EyeRig が target を動かした後はこの同期を標準経路として挟む
+  syncCameraFromEyeRig(eyeRig = this.eyeRig) {
+    if (!eyeRig?.orbit) {
+      throw new Error("WebgApp.syncCameraFromEyeRig() requires an EyeRig with orbit state");
+    }
+    this.camera.target[0] = eyeRig.orbit.target[0];
+    this.camera.target[1] = eyeRig.orbit.target[1];
+    this.camera.target[2] = eyeRig.orbit.target[2];
+    this.camera.distance = eyeRig.orbit.distance;
+    this.camera.yaw = eyeRig.orbit.yaw;
+    this.camera.pitch = eyeRig.orbit.pitch;
+    this.camera.bank = eyeRig.orbit.bank;
+    return this.camera;
+  }
+
+  // frame loop 内で WebgApp 管理の EyeRig を進める
+  // sync は update しない設定でも行えるよう分離し、外部から setTarget() した場合も camera へ反映する
+  updateManagedEyeRig(deltaSec) {
+    if (!this.eyeRig) {
+      return false;
+    }
+    if (this.eyeRigOptions.update) {
+      this.eyeRig.update(deltaSec);
+    }
+    if (this.eyeRigOptions.syncCamera) {
+      this.syncCameraFromEyeRig(this.eyeRig);
+    }
+    return true;
   }
 
   // Screen、shader、camera rig、input、HUD、debug tools をまとめて起動する
@@ -3467,6 +3553,7 @@ export default class WebgApp {
     this.elapsedSec = deltaMs * 0.001;
     this.runtimeElapsedSec += this.elapsedSec;
     this.lastFrameTime = timeMs;
+    this.updateManagedEyeRig(this.elapsedSec);
     const ctx = this.getFrameContext(timeMs);
 
     if (this.handlers.onUpdate) {
@@ -3485,6 +3572,9 @@ export default class WebgApp {
     }
     this.updateParticleEmitters(deltaMs);
     this.updateCameraTarget(this.elapsedSec);
+    if (this.eyeRigOptions.syncCamera) {
+      this.syncCameraFromEyeRig(this.eyeRig);
+    }
     this.updateCameraEffects(timeMs);
     this.dialogue?.syncLayout?.();
 
