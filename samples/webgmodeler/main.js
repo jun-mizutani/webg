@@ -112,6 +112,10 @@ const cameraPointer = {
   lastY: 0.0
 };
 
+const cameraModifier = {
+  shift: false
+};
+
 const canvasClick = {
   active: false,
   pointerId: null,
@@ -188,6 +192,30 @@ function installModelerKeyBridge() {
     "arrowdown",
     "shift"
   ]);
+  const syncShiftModifier = (ev, key) => {
+    if (ev.shiftKey === true || key === "shift") {
+      cameraModifier.shift = true;
+      app.input.press("shift");
+      return true;
+    }
+    return cameraModifier.shift === true || app.input.has("shift");
+  };
+  const panByArrowKey = (key) => {
+    const panPixels = 18.0;
+    let dx = 0.0;
+    let dy = 0.0;
+    if (key === "arrowleft") dx -= panPixels;
+    else if (key === "arrowright") dx += panPixels;
+    else if (key === "arrowup") dy += panPixels;
+    else if (key === "arrowdown") dy -= panPixels;
+    else return false;
+    app.eye.setWorldMatrix();
+    orbit.panViewByScreenDelta(dx, dy);
+    orbit.apply();
+    syncOrbitStateToAppCamera();
+    setMessage(`camera pan ${key}`);
+    return true;
+  };
   const onKeyDown = (ev) => {
     const key = normalizeModelerCameraKey(ev);
     if (!bridgedKeys.has(key)) {
@@ -196,6 +224,12 @@ function installModelerKeyBridge() {
     // embedded_glb_viewer と同様に、DOM UI へ focus が移っていても
     // EyeRig.update() が読む camera key state だけは InputController 側へ確実に反映する
     ev.preventDefault();
+    const shiftDown = syncShiftModifier(ev, key);
+    if (shiftDown && key !== "shift" && panByArrowKey(key)) {
+      app.input.release(key);
+      ev.stopImmediatePropagation();
+      return;
+    }
     app.input.press(key);
   };
   const onKeyUp = (ev) => {
@@ -205,8 +239,13 @@ function installModelerKeyBridge() {
     }
     ev.preventDefault();
     app.input.release(key);
+    if (key === "shift" || ev.shiftKey !== true) {
+      cameraModifier.shift = false;
+      app.input.release("shift");
+    }
   };
   const onBlur = () => {
+    cameraModifier.shift = false;
     for (const key of bridgedKeys) {
       app.input.release(key);
     }
@@ -219,6 +258,21 @@ function installModelerKeyBridge() {
     window.removeEventListener("keyup", onKeyUp, true);
     window.removeEventListener("blur", onBlur);
   };
+}
+
+function syncOrbitStateToAppCamera() {
+  if (!app?.camera || !orbit?.orbit) {
+    return;
+  }
+  // WebgApp は onUpdate() 後に camera effects を反映し、app.camera.target から
+  // cameraRig の位置を再設定する。EyeRig の orbit target だけを動かすと、
+  // その直後に古い app.camera.target で上書きされるため、両者を必ず同期する
+  app.camera.target[0] = orbit.orbit.target[0];
+  app.camera.target[1] = orbit.orbit.target[1];
+  app.camera.target[2] = orbit.orbit.target[2];
+  app.camera.distance = orbit.orbit.distance;
+  app.camera.yaw = orbit.orbit.yaw;
+  app.camera.pitch = orbit.orbit.pitch;
 }
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -315,6 +369,13 @@ function updateStatus() {
   const meshName = importedMeshes[Number(ui.meshSelect?.value ?? -1)]?.label ?? "-";
   const faceIds = Array.from(editor.selectedFaces).join(", ") || "-";
   const vertexIds = Array.from(editor.selectedVertices).join(", ") || "-";
+  const arrowActive = app
+    ? app.input.has("arrowleft") || app.input.has("arrowright") || app.input.has("arrowup") || app.input.has("arrowdown")
+    : false;
+  const shiftActive = app
+    ? app.input.has("shift") || cameraModifier.shift
+    : cameraModifier.shift;
+  const orbitTarget = orbit?.orbit?.target ?? [NaN, NaN, NaN];
   const lines = [
     "webgmodeler",
     `tool=${editor.tool}`,
@@ -325,6 +386,9 @@ function updateStatus() {
     `undo=${editor.undoStack.length} redo=${editor.redoStack.length}`,
     `dirty=${editor.dirty ? "yes" : "no"}`,
     `saved=${lastSavedName}`,
+    `keyState: L=${app?.input.has("arrowleft") ? 1 : 0} R=${app?.input.has("arrowright") ? 1 : 0} U=${app?.input.has("arrowup") ? 1 : 0} D=${app?.input.has("arrowdown") ? 1 : 0} Sh=${shiftActive ? 1 : 0}`,
+    `arrowActive=${arrowActive ? "yes" : "no"} shiftPan=${shiftActive && arrowActive ? "yes" : "no"}`,
+    `orbitTarget=${orbitTarget.map((v) => Number.isFinite(v) ? v.toFixed(3) : "NaN").join(", ")}`,
     `message=${editor.lastMessage}`
   ];
   if (ui.status) {
@@ -335,6 +399,7 @@ function updateStatus() {
     { label: "Tool", value: editor.tool },
     { label: "V/F", value: `${editor.vertices.length}/${editor.faces.length}` },
     { label: "Selected", value: `v${editor.selectedVertices.size} f${editor.selectedFaces.size}` },
+    { label: "Keys", value: `A=${arrowActive ? 1 : 0} Sh=${shiftActive ? 1 : 0}` },
     { label: "Msg", value: editor.lastMessage }
   ], {
     x: 0,
@@ -780,6 +845,7 @@ function fitCameraToEditor() {
   orbit.orbit.keyZoomSpeed = Math.max(2.0, bounds.size * 1.2);
   orbit.setAngles(DEFAULT_CAMERA.yaw, DEFAULT_CAMERA.pitch, 0.0);
   orbit.setDistance(distance);
+  syncOrbitStateToAppCamera();
 }
 
 function normalizeToolName(tool) {
@@ -1152,7 +1218,11 @@ function installShiftPanBridge(canvas) {
     const dy = ev.clientY - cameraPointer.lastY;
     cameraPointer.lastX = ev.clientX;
     cameraPointer.lastY = ev.clientY;
-    const shiftDown = ev.shiftKey === true || app.input.has("shift");
+    if (ev.shiftKey === true) {
+      cameraModifier.shift = true;
+      app.input.press("shift");
+    }
+    const shiftDown = ev.shiftKey === true || cameraModifier.shift === true || app.input.has("shift");
     if (!shiftDown) {
       return;
     }
@@ -1162,6 +1232,7 @@ function installShiftPanBridge(canvas) {
     app.eye.setWorldMatrix();
     orbit.panViewByScreenDelta(dx, dy);
     orbit.apply();
+    syncOrbitStateToAppCamera();
     // この bridge が pointermove を止めた frame は EyeRig.onPointerMove() が呼ばれない
     // EyeRig 側の lastClient 座標を同じ値へ進めておくと、Shift を離した直後に
     // 溜まった差分が通常 orbit として一度に処理されることを避けられる
@@ -1668,6 +1739,7 @@ async function start() {
   app.start({
     onUpdate({ screen, deltaSec }) {
       orbit.update(deltaSec);
+      syncOrbitStateToAppCamera();
       refreshDiagnosticsStats();
       updateStatus();
       if (app.debugProbe) {
