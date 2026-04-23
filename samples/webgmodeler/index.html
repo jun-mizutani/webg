@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>webg sample webgmodeler</title>
+  <link rel="icon" href="data:," />
+  <style>
+    :root {
+      color-scheme: light;
+      --page-bg: #eef3f7;
+      --paper: #ffffff;
+      --line: #c9d6e2;
+      --ink: #17212c;
+      --sub: #546374;
+      --accent: #0a70a8;
+      --accent-strong: #05537d;
+      --accent-soft: #dff1fb;
+      --danger: #b43838;
+      --ok: #21845b;
+      --panel: #18232d;
+      --panel-text: #eef7ff;
+    }
+
+    html,
+    body {
+      margin: 0;
+      min-height: 100%;
+      background: var(--page-bg);
+      color: var(--ink);
+      font: 14px/1.65 "Hiragino Sans", "Yu Gothic", sans-serif;
+    }
+
+    button,
+    select,
+    input {
+      font: inherit;
+    }
+
+    .page {
+      max-width: 1360px;
+      margin: 0 auto;
+      padding: 24px 18px 64px;
+      box-sizing: border-box;
+    }
+
+    .intro,
+    .workspace {
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: 0 16px 36px rgba(18, 35, 52, 0.08);
+    }
+
+    .intro {
+      padding: 18px 22px;
+      margin-bottom: 18px;
+    }
+
+    .intro h1 {
+      margin: 0 0 8px;
+      font-size: 25px;
+      line-height: 1.35;
+    }
+
+    .intro p {
+      margin: 8px 0 0;
+      color: var(--sub);
+    }
+
+    .workspace {
+      display: grid;
+      grid-template-columns: minmax(0, 920px) minmax(300px, 1fr);
+      gap: 16px;
+      padding: 16px;
+      align-items: start;
+    }
+
+    .viewport-column,
+    .side-column {
+      min-width: 0;
+    }
+
+    .toolbar,
+    .file-row,
+    .mesh-row,
+    .action-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .toolbar {
+      margin-bottom: 10px;
+    }
+
+    .tool-button,
+    .command-button,
+    .file-label {
+      appearance: none;
+      border: 1px solid rgba(10, 112, 168, 0.24);
+      background: #f6fbff;
+      color: var(--ink);
+      border-radius: 6px;
+      padding: 8px 10px;
+      font-weight: 700;
+      cursor: pointer;
+      min-height: 36px;
+      box-sizing: border-box;
+    }
+
+    .tool-button[aria-pressed="true"] {
+      background: var(--accent);
+      border-color: var(--accent-strong);
+      color: #ffffff;
+    }
+
+    .command-button:hover,
+    .tool-button:hover,
+    .file-label:hover {
+      background: var(--accent-soft);
+    }
+
+    .tool-button[aria-pressed="true"]:hover {
+      background: var(--accent-strong);
+    }
+
+    .danger {
+      border-color: rgba(180, 56, 56, 0.34);
+      color: var(--danger);
+      background: #fff7f7;
+    }
+
+    .ok {
+      border-color: rgba(33, 132, 91, 0.28);
+      color: var(--ok);
+      background: #f3fff9;
+    }
+
+    .file-label input {
+      display: none;
+    }
+
+    .canvas-wrap {
+      overflow: auto;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #111b24;
+      padding: 0;
+    }
+
+    #canvas {
+      display: block;
+      background: #111b24;
+    }
+
+    .hint {
+      margin: 8px 0 0;
+      color: var(--sub);
+      font-size: 13px;
+    }
+
+    .side-section {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 12px;
+      margin-bottom: 12px;
+      background: #fbfdff;
+    }
+
+    .side-section h2 {
+      margin: 0 0 8px;
+      font-size: 15px;
+      line-height: 1.35;
+    }
+
+    .side-section p {
+      margin: 7px 0;
+      color: var(--sub);
+    }
+
+    select {
+      min-height: 36px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: #ffffff;
+      color: var(--ink);
+      padding: 6px 8px;
+      min-width: 210px;
+    }
+
+    #status {
+      margin: 0;
+      white-space: pre-wrap;
+      font: 12px/1.55 ui-monospace, "SFMono-Regular", "Cascadia Mono", monospace;
+      background: var(--panel);
+      color: var(--panel-text);
+      border-radius: 8px;
+      padding: 12px;
+      min-height: 190px;
+      box-sizing: border-box;
+    }
+
+    @media (max-width: 1100px) {
+      .workspace {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <section class="intro">
+      <h1>webg sample: webgmodeler</h1>
+      <p>
+        `ModelAsset` を編集データとして扱う初期版の 3D ポリゴンモデラーです。
+        canvas は 3D ビューポート、読み込み・保存・編集コマンドは DOM UI で操作します。
+      </p>
+    </section>
+
+    <section class="workspace">
+      <div class="viewport-column">
+        <div class="toolbar" aria-label="tools">
+          <button class="tool-button" data-tool="select" aria-pressed="true">Select</button>
+          <button class="tool-button" data-tool="addVertex" aria-pressed="false">Add Vertex</button>
+        </div>
+        <div class="canvas-wrap">
+          <canvas id="canvas" width="900" height="620"></canvas>
+        </div>
+        <p class="hint">
+          左ドラッグで orbit、Shift + 左ドラッグで PAN、wheel で zoom。
+          クリックで選択、Shift + クリックで選択の追加/解除です。編集移動は J/L/I/K、U/O、N/M を使います。
+        </p>
+      </div>
+
+      <div class="side-column">
+        <section class="side-section">
+          <h2>ファイル</h2>
+          <div class="file-row">
+            <label class="file-label">
+              Load Model
+              <input id="modelFile" type="file" accept=".json,.gltf,.glb,.dae,application/json,model/gltf+json,model/gltf-binary" />
+            </label>
+            <button class="command-button ok" id="saveJson">Save ModelAsset JSON</button>
+          </div>
+          <p>GLB / Collada / ModelAsset JSON を読み込み、編集対象 mesh を選択できます。</p>
+          <div class="mesh-row">
+            <select id="meshSelect" aria-label="mesh select"></select>
+            <button class="command-button" id="useMesh">Use Mesh</button>
+          </div>
+        </section>
+
+        <section class="side-section">
+          <h2>編集</h2>
+          <div class="action-row">
+            <button class="command-button" id="newScene">New</button>
+            <button class="command-button" id="makeTriangle">Triangle</button>
+            <button class="command-button" id="makeQuad">Quad</button>
+            <button class="command-button" id="extrude">Extrude</button>
+            <button class="command-button danger" id="deleteSelected">Delete</button>
+            <button class="command-button" id="undo">Undo</button>
+            <button class="command-button" id="redo">Redo</button>
+          </div>
+          <p>
+            Triangle / Quad は選択頂点数が 3 / 4 のときに作成します。
+            Extrude は選択 face を法線方向へ押し出します。選択頂点の移動や scale はキー操作で行います。
+          </p>
+        </section>
+
+        <section class="side-section">
+          <h2>Status</h2>
+          <pre id="status">initializing...</pre>
+        </section>
+      </div>
+    </section>
+  </main>
+  <script type="module" src="./main.js"></script>
+</body>
+</html>

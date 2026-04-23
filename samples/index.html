@@ -41,6 +41,7 @@ pre { background: #f6f8fa; border: 1px solid #d0d7de; padding: 12px; overflow-x:
 <li><a href='#collada_loader'>collada_loader</a></li>
 <li><a href='#breakout'>breakout</a></li>
 <li><a href='#embedded_glb_viewer'>embedded_glb_viewer</a></li>
+<li><a href='#webgmodeler'>webgmodeler</a></li>
 <li><a href='#gltf_loader'>gltf_loader</a></li>
 <li><a href='#json_loader'>json_loader</a></li>
 <li><a href='#janken'>janken</a></li>
@@ -803,6 +804,81 @@ AI / 利用者向けの読み取りポイント
 - `R`: camera reset
 - `Space`: animation pause / resume
 - `S` / touch `S`: screenshot 保存
+</pre>
+</section>
+<section class='sample'>
+<h2 id='webgmodeler'>webgmodeler</h2>
+<p>URL: <a href='./webgmodeler/index.html'>./webgmodeler/index.html</a></p>
+<pre>
+サンプル: webgmodeler
+
+概要
+- `WebgApp` の `layoutMode: "embedded"` を使い、3D ビューポートを本文内の canvas として表示し、編集コマンドやファイル操作は DOM UI で行うポリゴンモデラーの初期版です
+- 編集データは `vertices`、`faces`、`selectedVertices`、`selectedFaces` として JavaScript 側で保持し、表示用 `Shape` と保存用 `ModelAsset` はその編集データから毎回再生成します
+- 読み込みは ModelAsset JSON、glTF / GLB、Collada に対応し、読み込んだ `ModelAsset` 内の mesh 一覧から編集対象を選べます
+- 出力は `ModelAsset.downloadJSON()` を使い、編集状態を ModelAsset JSON として保存します
+- 頂点は小さい sphere primitive の marker として表示し、`Space.raycast()` で vertex marker を選択します
+- face 選択は編集データ上の ray-triangle 交差で判定し、AABB だけではなく実際の三角形面をクリック対象にします
+- Triangle / Quad は、選択頂点を現在の画面上の角度順へ並べ、いま見ている側が表になるように頂点順を調整してから面を作成します
+- 頂点追加は、クリック位置の face hit、地面 plane、camera target plane の順で交点を作り、新しい頂点として追加します
+- 左ドラッグは `embedded_glb_viewer` と同じ orbit camera 操作にそろえ、screen 平面移動、法線方向移動、選択中心基準 scale は J/L/I/K、U/O、N/M のキー操作へ分離しています
+- face 押出、undo / redo を備えています
+- 初期版のため、編集対象は単一 mesh の三角形または四角形 polygon に限定しています。複数 mesh を持つファイルは DOM の mesh select で編集対象を選びます
+- GLB export はまだ実装しておらず、この sample では ModelAsset JSON export を正式な出力としています
+
+このサンプルで使うwebg機能
+- `WebgApp`: embedded canvas、Screen / Shader / Space / Input / Message の初期化
+- `SmoothShader`: 編集 mesh、選択 face、頂点 marker、grid の表示
+- `ModelAsset`: 編集結果の保存形式、読み込み済み asset の mesh 取り出し、JSON download
+- `WebgApp.loadModel()`: glTF / GLB / Collada を ModelAsset へ正規化する入口
+- `Shape.applyPrimitiveAsset()`: 編集データから作った ModelAsset geometry を表示用 Shape へ反映
+- `Primitive.sphere()` / `Primitive.cuboid()`: 頂点 marker と grid 表示
+- `Space.raycast()`: vertex marker の pick
+- `Matrix.makeView()` と projection 行列の逆行列: canvas 座標から world ray を作成
+- `EyeRig(type="orbit")`: `embedded_glb_viewer` と同じ `attachPointer()` 経路で、左ドラッグ、wheel、Shift + drag、keyboard による camera orbit / PAN / zoom を扱う
+
+確認ポイント
+- 起動直後に五角錐状の初期 mesh が表示され、各頂点に小さい marker が出ることを確認します
+- Select で marker をクリックすると頂点が赤くなり、face をクリックすると面が黄色の overlay で強調されることを確認します
+- Shift + 左クリックで複数頂点を選択し、Triangle / Quad button で現在視点側を表にした三角形または四角形 face を作成できることを確認します
+- Add Vertex で canvas をクリックすると、face 上、地面、camera target plane のいずれかに頂点が追加されることを確認します
+- J/L/I/K で選択頂点を camera screen 平面に沿って移動できることを確認します
+- U/O で選択 face または選択頂点を法線方向へ移動できることを確認します
+- N/M で選択頂点の中心を基準に縮小 / 拡大できることを確認します
+- Extrude で選択 face から新しい face 群が作られ、新しく押し出された面が選択されることを確認します
+- Undo / Redo で直前の編集状態へ戻り、表示 Shape と marker が復元されることを確認します
+- Load Model で `.json` / `.glb` / `.gltf` / `.dae` を読み込み、mesh select から単一 mesh を編集対象へ取り込めることを確認します
+- Save ModelAsset JSON で `webgmodeler_modelasset.json` が保存され、positions / indices / polygonLoops が含まれることを確認します
+
+操作説明
+- Select: 頂点または face を選択
+- Add Vertex: クリック位置へ頂点を追加
+- 左ドラッグ: `EyeRig.attachPointer()` による orbit
+- Shift + 左ドラッグ: `EyeRig.attachPointer()` による PAN
+- wheel: zoom
+- Arrow: orbit
+- Shift + Arrow: PAN
+- `[` / `]`: zoom
+- J / L: 選択頂点を screen 左 / 右へ移動
+- I / K: 選択頂点を screen 上 / 下へ移動
+- U / O: 選択頂点を法線方向へ移動
+- N / M: 選択頂点の中心を基準に縮小 / 拡大
+- Shift + 左クリック: 選択の追加 / 解除
+- Delete / Backspace / Delete button: 選択頂点または選択 face を削除
+- Triangle: 選択頂点 3 個から face を作成
+- Quad: 選択頂点 4 個から face を作成
+- Extrude: 選択 face を法線方向へ押し出し
+- Ctrl / Cmd + Z: undo
+- Ctrl / Cmd + Y または Ctrl / Cmd + Shift + Z: redo
+- Escape: 選択解除
+- `1` / `2`: Select / Add Vertex を切り替え
+
+補足
+- この sample は webg コアを変更せず、サンプル側だけで編集体験を構成するための初期実装です
+- `Space.raycast()` は vertex marker のような小さい Shape の選択にはそのまま使えます
+- face pick は編集データから直接 ray-triangle 交差を計算しており、mesh の AABB だけで選択しないようにしています
+- 読み込んだ asset の skeleton、animation、node transform、material 分割を保持したまま編集する機能はまだ対象外です
+- 三角形と四角形以外の `polygonLoops` を持つ mesh は、この初期版では読み込み時にエラーとして扱います
 </pre>
 </section>
 <section class='sample'>
