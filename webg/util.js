@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// util.js        2026/03/09
+// util.js        2026/04/23
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // ---------------------------------------------
@@ -331,7 +331,10 @@ util.readFiniteNumber = function (value, name, {
   return numeric;
 };
 
-// 未指定時だけ fallback を返し、明示的な invalid 値は error にする
+// 任意指定の数値 option を読むための入口
+// undefined は「利用者が指定しなかった」と解釈して fallback を返すが、
+// NaN、Infinity、範囲外などの明示された不正値は呼び出し元のバグとして例外にする
+// fallback は自動補正ではなく、未指定時の既定値を一箇所で明示するための値
 util.readOptionalFiniteNumber = function (value, name, fallback, constraints = {}) {
   if (value === undefined) {
     return fallback;
@@ -339,6 +342,9 @@ util.readOptionalFiniteNumber = function (value, name, fallback, constraints = {
   return util.readFiniteNumber(value, name, constraints);
 };
 
+// 任意指定の整数 option を読むための入口
+// 個数、幅、高さ、index のように小数を許さない設定値を検証し、
+// 指定された値が整数でなければ silently round せずに例外で止める
 util.readOptionalInteger = function (value, name, fallback, { min = null, max = null } = {}) {
   return util.readOptionalFiniteNumber(value, name, fallback, {
     integer: true,
@@ -347,6 +353,8 @@ util.readOptionalInteger = function (value, name, fallback, { min = null, max = 
   });
 };
 
+// 必須の整数値を範囲付きで読むための入口
+// optional ではないため undefined も不正値として扱い、範囲外を自動補正しない
 util.readIntegerInRange = function (value, name, min, max) {
   return util.readFiniteNumber(value, name, {
     integer: true,
@@ -355,6 +363,9 @@ util.readIntegerInRange = function (value, name, min, max) {
   });
 };
 
+// 任意指定の boolean option を読むための入口
+// undefined のときだけ fallback を返し、0/1 や文字列 "true" は boolean へ変換しない
+// 設定ファイルや option object の型間違いを早い段階で見つけるための関数
 util.readOptionalBoolean = function (value, name, fallback) {
   if (value === undefined) {
     return fallback;
@@ -365,6 +376,9 @@ util.readOptionalBoolean = function (value, name, fallback) {
   return value;
 };
 
+// 任意指定の文字列 option を読むための入口
+// trim と allowEmpty により、空白除去後の空文字を許すかどうかを呼び出し側で明示する
+// 数値や boolean を文字列へ暗黙変換しないことで、設定名や DOM id の誤指定を隠さない
 util.readOptionalString = function (value, name, fallback, { trim = false, allowEmpty = true } = {}) {
   if (value === undefined) {
     return fallback;
@@ -379,6 +393,9 @@ util.readOptionalString = function (value, name, fallback, { trim = false, allow
   return text;
 };
 
+// 任意指定の callback option を読むための入口
+// 関数未指定なら fallback を返し、null を許す API かどうかは allowNull で明示する
+// function 以外を no-op 扱いにしないことで、event handler 名や callback 渡し忘れを検出する
 util.readOptionalFunction = function (value, name, fallback = null, { allowNull = true } = {}) {
   if (value === undefined) {
     return fallback;
@@ -395,6 +412,9 @@ util.readOptionalFunction = function (value, name, fallback = null, { allowNull 
   return value;
 };
 
+// 任意指定の plain object option を読むための入口
+// undefined のときだけ fallback を返し、配列や null は object 設定として受け入れない
+// ネストした option block の型間違いを、後続処理で意味不明な property access になる前に止める
 util.readPlainObject = function (value, name, fallback = {}) {
   if (value === undefined) {
     return fallback;
@@ -405,6 +425,9 @@ util.readPlainObject = function (value, name, fallback = {}) {
   return value;
 };
 
+// 任意指定の列挙値 option を読むための入口
+// mode、anchor、align のように許可された文字列だけを受け付ける設定で使う
+// 未知の文字列を既定値へ丸めずに例外にすることで、綴り間違いや未対応 mode を見逃さない
 util.readOptionalEnum = function (value, name, fallback, allowed = [], { trim = true, lowerCase = false } = {}) {
   if (value === undefined) {
     return fallback;
@@ -422,6 +445,8 @@ util.readOptionalEnum = function (value, name, fallback, allowed = [], { trim = 
   return text;
 };
 
+// 画面上の基準位置を表す anchor option を読むための専用入口
+// 汎用 enum reader に許可値を集約し、各 UI 部品で anchor 名のゆれが出ないようにする
 util.readOptionalAnchor = function (value, fallback, name = "anchor") {
   return util.readOptionalEnum(value, name, fallback, [
     "top-left",
@@ -434,14 +459,21 @@ util.readOptionalAnchor = function (value, fallback, name = "anchor") {
   ]);
 };
 
+// テキストや button group の水平揃え option を読むための専用入口
+// left、center、right 以外を受け付けず、誤った align 名を既定値へ隠さない
 util.readOptionalAlign = function (value, fallback, name = "align") {
   return util.readOptionalEnum(value, name, fallback, ["left", "center", "right"]);
 };
 
+// overlay や panel の配置方式 option を読むための専用入口
+// CSS の absolute / fixed に対応する値だけを許可し、未知の配置方式を早期に検出する
 util.readOptionalPositioningMode = function (value, name, fallback) {
   return util.readOptionalEnum(value, name, fallback, ["absolute", "fixed"]);
 };
 
+// 任意指定の DOM element 参照を読むための入口
+// HTMLElement 以外の環境も考慮して object または function を許可し、文字列 selector への暗黙解決は行わない
+// null を明示指定できる API では、呼び出し側が「要素なし」を意図したことをそのまま伝える
 util.readOptionalElement = function (value, name, fallback) {
   if (value === undefined) {
     return fallback;
