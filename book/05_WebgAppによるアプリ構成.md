@@ -1,9 +1,3 @@
-`CoordinateSystem`（座標系）と `Node` の関係は、`webg` のシーングラフ（親子構造）を理解する上での核心部分です。ここを丁寧に説明することで、読者が「なぜ `Shape` を作っただけでは表示されず、`Node` が必要なのか」を論理的に理解できるようになります。
-
-「3Dアプリの基本構造をもう一度整理する」のセクションに、この関係性を深く掘り下げた解説を統合しました。
-
----
-
 # WebgAppによるアプリ構成
 
 `WebgApp` は、`webg` で 3D アプリケーションを組み立てるときの標準的な入口です。`Screen`、`Space`、シェーダー、camera rig、入力、HUD、ダイアログ、デバッグ表示、diagnostics など、ほとんどのアプリで毎回必要になる土台をまとめて初期化し、開発者がアプリ固有の処理へ集中できるように設計されています。単にコード量を減らすための便利関数ではなく、「3D アプリの骨格を毎回同じ順序で立ち上げる」ためのフレームワークとして理解するのが適切です。
@@ -210,6 +204,15 @@ app.start({
 - `clearColor`: 背景色
 - `camera`: 初期視点
 - `shaderClass`: 既定シェーダーを差し替えたい場合
+- `viewAngle`: 基準となる視野角
+- `projectionNear` / `projectionFar`: 投影行列の near / far 平面
+- `light`: 光源を eye 固定にするか world node にするか
+- `fog`: フォグの色、距離、密度、mode
+- `useMessage` / `messageScale`: canvas HUD の有無と表示倍率
+- `attachInputOnInit`: `init()` 時に入力を自動接続するか
+- `autoDrawScene` / `autoDrawBones`: `frame()` 内で自動描画する対象
+- `debugTools`: diagnostics や debug key の初期設定
+- `uiTheme`: debug dock、fixed panel、help panel などの見た目
 - `renderMode`: `ondemand` または `continuous`
 - `layoutMode`: 通常表示か `embedded`
 - `fixedCanvasSize`: canvas を固定サイズで扱う場合
@@ -232,6 +235,47 @@ const app = new WebgApp({
 ```
 
 ここで作られる標準カメラは、まだ orbit や follow ではありません。`target` と `distance` を元にした「静的な初期視点」です。最初の表示を確実に整えたいときは、この固定視点だけでも十分役立ちます。
+
+### 視野角、光源、フォグを初期設定する
+
+`WebgApp` は camera の位置だけでなく、投影行列、光源、フォグも constructor option からまとめて受け取れます。視野角は `viewAngle`、奥行き範囲は `projectionNear` と `projectionFar` で指定します。広い scene を扱うときは `projectionFar` を大きくしたくなりますが、過剰に広げると深度精度が落ちるため、表示対象に合わせて必要な範囲へ収めるのが基本です。
+
+```js
+const app = new WebgApp({
+  document,
+  viewAngle: 50.0,
+  projectionNear: 0.1,
+  projectionFar: 180.0,
+  light: {
+    mode: "world-node",
+    position: [80.0, 120.0, 60.0, 1.0],
+    type: 1.0
+  },
+  fog: {
+    color: [0.08, 0.10, 0.12, 1.0],
+    near: 40.0,
+    far: 140.0,
+    density: 0.02,
+    mode: 1.0
+  }
+});
+```
+
+既定の光源は `eye-fixed` で、視点に対して固定された光として扱われます。モデル確認用の viewer では、視点を回しても対象が見やすいため便利です。シーン内の特定位置に光源を置きたい場合は `light.mode: "world-node"` を使うか、`await app.init()` の後で `setWorldLight()` を呼びます。フォグは `setFog()` で実行中にも変更できます。
+
+```js
+app.setWorldLight({
+  position: [40.0, 70.0, 20.0, 1.0],
+  type: 1.0
+});
+
+app.setFog({
+  color: [0.1, 0.12, 0.16, 1.0],
+  near: 30.0,
+  far: 120.0,
+  mode: 1.0
+});
+```
 
 ### initの後に何が使えるようになるか
 
@@ -297,9 +341,9 @@ app.start({
 
 ## renderModeの考え方
 
-`WebgApp` の既定の `renderMode` は `ondemand` です。これは「必要なときだけ frame を進める」方針で、タブが非表示になったときや、表示中でも `document.hasFocus()` が `false` になったときは更新を止めます。
+`WebgApp` の既定の `renderMode` は `ondemand` です。ただし、ここでいう `ondemand` は「シーンに変化があった瞬間だけ描画する」という完全な差分駆動ではありません。現在の実装では、ページが表示され、window と document が focus されている間は frame loop が継続し、タブが非表示になったときや focus を失ったときに自動で pause します。
 
-この設計は、教材ページやビューアのように、ユーザーが操作していない間は描画を止めても問題ないアプリにおいて、CPU/GPU 負荷を下げ、省電力で運用することを目指しています。
+この設計は、教材ページや viewer のように、非 active 中まで更新を続ける必要がないアプリで CPU/GPU 負荷を下げ、省電力で運用することを目指しています。`ondemand` という名前は「非表示・非 focus の間は要求されても frame を起こさない」という意味に近く、active 中のアニメーションや camera 更新は通常どおり進みます。
 
 常に動かし続けたいアプリ（例：バックグラウンドで常にアニメーションさせる必要があるもの）だけ `continuous` を使います。
 
@@ -310,7 +354,34 @@ const app = new WebgApp({
 });
 ```
 
-ただし、単に orbit camera やドラッグ操作を使うだけなら `continuous` は不要です。`WebgApp` と `EyeRig` は、継続入力中に必要な frame を起こせるよう設計されています。まずは `ondemand` を基準に考え、常時アニメーションが必要なときだけ `continuous` を選んでください。
+通常の sample、viewer、教材ページでは `ondemand` を基準に考え、ページの focus 状態に関係なく常時更新したい場合だけ `continuous` を選んでください。
+
+## 自動描画とcustom draw
+
+`WebgApp.frame()` は既定で `space.draw(app.eye)` を呼び、さらに HUD や message まで描画します。この既定動作は、通常の 3D sample ではとても便利です。一方で、post-process、offscreen render target、複数 pass の合成などを行う場合は、scene の描画順序を自分で制御したくなることがあります。
+
+その場合は `autoDrawScene: false` を指定し、`onBeforeDraw()` や `onAfterDraw3d()` の中で必要な描画処理を自分で呼びます。
+
+```js
+const app = new WebgApp({
+  document,
+  autoDrawScene: false
+});
+
+await app.init();
+
+app.start({
+  onBeforeDraw({ space, eye }) {
+    // offscreen pass や custom pass の中で space.draw(eye) を呼ぶ
+    customRenderer.drawScene(space, eye);
+  },
+  onAfterDraw3d() {
+    customRenderer.composeToScreen();
+  }
+});
+```
+
+bone 表示を自動で重ねたい場合は `autoDrawBones: true` を指定できます。これはスキニングや skeleton の確認に便利ですが、通常の viewer やゲーム表示では不要です。
 
 ## embeddedレイアウトとfixedCanvasSize
 
@@ -371,6 +442,20 @@ app.createHelpPanel({
 });
 ```
 
+HUD を表形式で出したい場合は、`setHudRows()` や `setControlRows()` を使います。`setStatusLines()` は短い自由文に向いていますが、値の名前と現在値を並べて見せたいときは row 形式の方が読みやすくなります。
+
+```js
+app.setHudRows([
+  { label: "MODE", value: mode },
+  { label: "VERTICES", value: vertexCount },
+  { label: "FPS", value: fps.toFixed(1) }
+], {
+  anchor: "top-left",
+  x: 0,
+  y: 2
+});
+```
+
 また、短い状態表示には `setStatusLines()`、固定のガイドには `setGuideLines()` を使います。debug mode だけ表示したいガイドには `setDebugGuideLines()` が便利です。
 
 ```js
@@ -412,16 +497,7 @@ app.reportRuntimeWarning(
 
 この API は `console.warn` と diagnostics / latest warning / DebugDock をまとめて更新するため、shader のような low-level ではなく、loader、scene 構築、UI 構成など高レイヤーの判断を見せたい場面で有効です。
 
-## loaderとスクリーンショット
-
-モデル読み込みや scene 読み込みも `WebgApp` の重要な役割です。フォーマットごとの差を吸収したハイレベル（高レイヤー）な入口として `loadModel()` と `loadScene()` を使えます。
-
-```js
-const modelRuntime = await app.loadModel("./assets/robot.gltf");
-const sceneRuntime = await app.loadScene(sceneData);
-```
-
-スクリーンショットは `takeScreenshot()` で予約します。これは直後に PNG を作るのではなく、次の `present()` 後に canvas 内容を保存する方式です。
+debug key は既定で `F9` を prefix として扱います。`F9` の後に `M` で debug mode の切り替え、`C` で diagnostics summary の copy、`V` で JSON report の copy を実行できます。`app.attachInput()` はこの debug key を先に処理してから利用者の handler へ渡すため、通常は `app.input.attach()` を直接呼ぶより `app.attachInput()` を使う方が安全です。
 
 ```js
 app.attachInput({
@@ -434,6 +510,90 @@ app.attachInput({
 });
 ```
 
+`F9` 以外の prefix を使いたい場合は、`configureDebugKeyInput()` で変更できます。
+
+```js
+app.configureDebugKeyInput({
+  prefixKey: "f8",
+  commands: {
+    toggleMode: "m",
+    copySummary: "c",
+    copyJson: "v"
+  }
+});
+```
+
+## WebgAppが管理する補助機能
+
+`WebgApp` は、scene の描画だけでなく、アプリでよく使う小さな runtime subsystem も管理します。すべてを最初から使う必要はありませんが、存在を知っておくと sample やゲームを読むときの見通しがよくなります。
+
+`createTween()` は、任意の object や array の値を時間で補間し、`frame()` 内で自動更新します。色、位置、UI 用の数値などを短い演出として動かしたいときに便利です。
+
+```js
+const color = [1.0, 0.2, 0.1, 1.0];
+app.createTween(color, [0.2, 0.8, 1.0, 1.0], {
+  durationMs: 600
+});
+```
+
+`createParticleEmitter()` で作成した particle emitter は、`WebgApp` が更新と描画をまとめて行います。画面効果を scene 本体の `Space` とは分けて扱いたい場合に向いています。
+
+```js
+const emitter = await app.createParticleEmitter({
+  maxParticles: 256
+});
+```
+
+カメラ演出としては、`shakeCamera()`、`followNode()`、`lockOn()` があります。`followNode()` と `lockOn()` は第6章の camera 制御と関係が深い機能ですが、`WebgApp` の frame loop の中で自動更新されることはここで覚えておくとよいでしょう。
+
+```js
+app.shakeCamera({
+  durationMs: 180,
+  strength: [0.2, 0.12, 0.0]
+});
+
+app.followNode(playerNode, {
+  smooth: 0.18,
+  offset: [0.0, 3.0, -8.0]
+});
+```
+
+簡易ゲーム HUD も用意されています。`setScore()`、`setCombo()`、`setTimer()`、`pushToast()` を使うと、得点や短い通知を `WebgApp` の HUD 描画に載せられます。
+
+```js
+app.setScore(1200);
+app.setCombo(4);
+app.setTimer(58.2);
+app.pushToast("checkpoint");
+```
+
+進行状態の保存には `saveProgress()` と `loadProgress()` を使えます。保存先は `progressStorage` option で差し替えられ、未指定時はブラウザの利用可能な storage を使う構成です。sample ごとに key を分けたい場合は `progressStoragePrefix` を設定します。
+
+```js
+app.saveProgress("stage", {
+  level: 3,
+  score: 1200
+});
+
+const progress = app.loadProgress("stage", {
+  level: 1,
+  score: 0
+});
+```
+
+## loaderとスクリーンショット
+
+モデル読み込みや scene 読み込みも `WebgApp` の重要な役割です。フォーマットごとの差を吸収したハイレベル（高レイヤー）な入口として `loadModel()` と `loadScene()` を使えます。
+
+```js
+const modelRuntime = await app.loadModel("./assets/robot.gltf");
+const sceneRuntime = await app.loadScene(sceneData);
+```
+
+スクリーンショットは `takeScreenshot()` で予約します。これは直後に PNG を作るのではなく、次の `present()` 後に canvas 内容を保存する方式です。
+
+入力と組み合わせた保存例は前節の `app.attachInput()` で示したとおりです。静止画を明示的なタイミングで保存したい場合は、`app.takeScreenshot("still.png")` のようにファイル名を直接渡すこともできます。
+
 ## 実装時に注意したいこと
 
 最後に、`WebgApp` を使うときに特に意識しておきたい点を整理します。
@@ -444,8 +604,10 @@ app.attachInput({
 - 長い説明文を HUD に押し込まず、help panel や dialogue、fixed panel と使い分ける
 - orbit や follow が必要になるまでは、固定の初期視点で十分な場面も多い
 - ハイレベル（高レイヤー）の warning は `reportRuntimeWarning()` を使うと DebugDock から追いやすい
+- custom render pass を使う場合は `autoDrawScene: false` を検討する
+- debug key を維持したい場合は `app.input.attach()` より `app.attachInput()` を使う
 
-`WebgApp` は高機能ですが、最初から全部を使い切る必要はありません。まずは「コンストラクタで土台を決め、`init()` 後にシーンを組み、`start()` の `onUpdate()` へロジックを書く」という骨格をつかんでください。その上で、必要に応じて orbit camera、help panel、dialogue、loader、diagnostics を足していくと、アプリ構成が自然に整理されます。
+`WebgApp` は高機能ですが、最初から全部を使い切る必要はありません。まずは「コンストラクタで土台を決め、`init()` 後にシーンを組み、`start()` の `onUpdate()` へロジックを書く」という骨格をつかんでください。その上で、必要に応じて orbit camera、help panel、dialogue、loader、diagnostics、tween、particle、progress 保存を足していくと、アプリ構成が自然に整理されます。
 
 ## まとめ
 
