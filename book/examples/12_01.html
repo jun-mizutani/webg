@@ -1,5 +1,5 @@
 <!doctype html>
-<!-- webg/book/examples/12_01.html 2026/04/18 -->
+<!-- webg/book/examples/12_01.html 2026/04/24 -->
 <html lang="ja">
 <head>
   <meta charset="UTF-8" />
@@ -25,7 +25,6 @@
     <script type="module" id="example-source">
 import WebgApp from "../../webg/WebgApp.js";
 import SmoothShader from "../../webg/SmoothShader.js";
-import EyeRig from "../../webg/EyeRig.js";
 import Action from "../../webg/Action.js";
 import AnimationState from "../../webg/AnimationState.js";
 
@@ -64,7 +63,7 @@ const app = new WebgApp({
   camera: {
     target: [0.0, 0.0, 0.0],
     distance: 12.0,
-    yaw: 0.0,
+    head: 0.0,
     pitch: 10.0
   }
 });
@@ -94,21 +93,14 @@ app.cameraRig.setPosition(size.centerx, size.centery, size.centerz);
 app.eye.setPosition(0.0, 0.0, Math.max(1.0, size.max * 1.25));
 app.eye.setAttitude(0.0, 10.0, 0.0);
 
-const orbit = new EyeRig(app.cameraRig, app.cameraRod, app.eye, {
-  document,
-  element: app.screen.canvas,
-  input: app.input,
-  type: "orbit",
-  orbit: {
+const orbit = app.createOrbitEyeRig({
     target: [size.centerx, size.centery, size.centerz],
     distance: Math.max(1.0, size.max * 1.25),
-    yaw: 0.0,
+    head: 0.0,
     pitch: 10.0,
     minDistance: Math.max(0.5, size.max * 0.6),
     maxDistance: Math.max(4.0, size.max * 3.0)
-  }
 });
-orbit.attachPointer();
 
 const action = new Action(animation);
 for (let i = 0; i < FINGER_PATTERNS.length; i++) {

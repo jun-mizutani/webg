@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// SmoothShader.js 2026/04/23
+// SmoothShader.js 2026/04/24
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // ---------------------------------------------
@@ -15,6 +15,55 @@ import {
 } from "./SkinningConfig.js";
 
 export default class SmoothShader extends Shader {
+
+  // shader warning は app diagnostics へ直接流さず、
+  // console 上で原因を追えるようにしつつ同じ文言の連投だけ抑える
+  static warnedMessages = new Set();
+
+  // 同一 parameter / 値の warning を 1 回だけ console へ出す
+  warnOnce(message, dedupeKey = message) {
+    const key = String(dedupeKey ?? message);
+    if (SmoothShader.warnedMessages.has(key)) {
+      return false;
+    }
+    SmoothShader.warnedMessages.add(key);
+    console.warn(String(message));
+    return true;
+  }
+
+  // 0.0-1.0 の係数 parameter は warning を出しつつ clip して継続する
+  // shader 設定値の軽い範囲逸脱で描画全体を止めず、何が clip されたかは明示的に残す
+  clipUnitIntervalParameter(value, label) {
+    if (!Number.isFinite(value)) {
+      throw new Error(`SmoothShader ${label} must be a finite number`);
+    }
+    const numeric = Number(value);
+    if (numeric >= 0.0 && numeric <= 1.0) {
+      return numeric;
+    }
+    const clipped = Math.min(1.0, Math.max(0.0, numeric));
+    this.warnOnce(
+      `SmoothShader ${label}=${numeric} is outside 0.0 - 1.0; clipped to ${clipped}`,
+      `SmoothShader:${label}:${numeric}->${clipped}`
+    );
+    return clipped;
+  }
+
+  // 非負値 parameter は warning を出しつつ 0.0 へ clip して継続する
+  clipNonNegativeParameter(value, label) {
+    if (!Number.isFinite(value)) {
+      throw new Error(`SmoothShader ${label} must be a finite number`);
+    }
+    const numeric = Number(value);
+    if (numeric >= 0.0) {
+      return numeric;
+    }
+    this.warnOnce(
+      `SmoothShader ${label}=${numeric} is below 0.0; clipped to 0.0`,
+      `SmoothShader:${label}:${numeric}->0`
+    );
+    return 0.0;
+  }
 
   // smooth shading 用の共通 shader を初期化する
   // static mesh / skinned mesh / normal map の有無を 1 本で扱うが、
@@ -664,19 +713,19 @@ export default class SmoothShader extends Shader {
 
   // 環境光係数を設定する
   setAmbientLight(intensity) {
-    this.uniformData[this.OFF_PARAMS + 0] = intensity;
+    this.uniformData[this.OFF_PARAMS + 0] = this.clipUnitIntervalParameter(intensity, "ambient");
     this.updateUniforms();
   }
 
   // 鏡面反射係数を設定する
   setSpecular(intensity) {
-    this.uniformData[this.OFF_PARAMS + 1] = intensity;
+    this.uniformData[this.OFF_PARAMS + 1] = this.clipUnitIntervalParameter(intensity, "specular");
     this.updateUniforms();
   }
 
   // 鏡面指数を設定する
   setSpecularPower(power) {
-    this.uniformData[this.OFF_PARAMS + 2] = power;
+    this.uniformData[this.OFF_PARAMS + 2] = this.clipNonNegativeParameter(power, "power");
     this.updateUniforms();
   }
 
@@ -690,10 +739,7 @@ export default class SmoothShader extends Shader {
       if (!Number.isFinite(value)) {
         throw new Error("SmoothShader emissive must be boolean or a finite number");
       }
-      numeric = Number(value);
-      if (numeric < 0.0 || numeric > 1.0) {
-        throw new Error("SmoothShader emissive must be within 0.0 - 1.0");
-      }
+      numeric = this.clipUnitIntervalParameter(value, "emissive");
     }
     this.uniformData[this.OFF_PARAMS + 3] = numeric;
     this.updateUniforms();

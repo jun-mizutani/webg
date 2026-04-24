@@ -1,5 +1,5 @@
 <!doctype html>
-<!-- webg/book/examples/06_02.html 2026/04/18 -->
+<!-- webg/book/examples/06_02.html 2026/04/24 -->
 <html lang="ja">
 <head>
   <meta charset="UTF-8" />
@@ -41,7 +41,7 @@ const app = new WebgApp({
   camera: {
     target: [0.0, 2.0, 0.0],
     distance: 14.0,
-    yaw: 12.0,
+    head: 12.0,
     pitch: -12.0
   }
 });
@@ -136,12 +136,12 @@ const followRig = new EyeRig(app.cameraRig, app.cameraRod, app.eye, {
     targetNode: targetRoot,
     targetOffset: [0.0, 2.3, 0.0],
     distance: 14.0,
-    yaw: 0.0,
+    head: 0.0,
     pitch: -12.0,
     minDistance: 7.0,
     maxDistance: 22.0,
-    inheritTargetYaw: true,
-    targetYawOffset: 180.0,
+    inheritTargetHead: true,
+    targetHeadOffset: 180.0,
     followLerp: 6.0
   }
 });

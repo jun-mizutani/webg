@@ -6,7 +6,6 @@
 // -------------------------------------------------
 
 import WebgApp from "../../webg/WebgApp.js";
-import EyeRig from "../../webg/EyeRig.js";
 import Primitive from "../../webg/Primitive.js";
 import Shape from "../../webg/Shape.js";
 import GameAudioSynth from "../../webg/GameAudioSynth.js";
@@ -1309,30 +1308,23 @@ const createDecor = (space, gpu) => {
 };
 
 const setupOrbit = () => {
-  orbit = new EyeRig(app.cameraRig, app.cameraRod, app.eye, {
-    document,
-    element: app.screen.canvas,
-    input: app.input,
-    type: "orbit",
-    orbit: {
-      target: [0.0, BASE_Y + BOARD.height * BOARD.cell * 0.42, 0.0],
-      distance: 43.0,
-      yaw: 18.0,
-      pitch: -30.0,
-      minDistance: 22.0,
-      maxDistance: 78.0,
-      wheelZoomStep: 1.4,
-      keyMap: {
-        left: "_",
-        right: "_",
-        up: "_",
-        down: "_",
-        zoomIn: "_",
-        zoomOut: "_"
-      }
+  orbit = app.createOrbitEyeRig({
+    target: [0.0, BASE_Y + BOARD.height * BOARD.cell * 0.42, 0.0],
+    distance: 43.0,
+    head: 18.0,
+    pitch: -30.0,
+    minDistance: 22.0,
+    maxDistance: 78.0,
+    wheelZoomStep: 1.4,
+    orbitKeyMap: {
+      left: "_",
+      right: "_",
+      up: "_",
+      down: "_",
+      zoomIn: "_",
+      zoomOut: "_"
     }
   });
-  orbit.attachPointer();
 };
 
 const fallIntervalSec = (runtime) => Math.max(0.42, 1.95 - (runtime.level - 1) * 0.12);

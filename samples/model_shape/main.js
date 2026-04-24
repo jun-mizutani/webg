@@ -10,7 +10,6 @@ import Primitive from "../../webg/Primitive.js";
 import ModelAsset from "../../webg/ModelAsset.js";
 import ModelValidator from "../../webg/ModelValidator.js";
 import ModelBuilder from "../../webg/ModelBuilder.js";
-import EyeRig from "../../webg/EyeRig.js";
 import SmoothShader from "../../webg/SmoothShader.js";
 import Texture from "../../webg/Texture.js";
 import Diagnostics from "../../webg/Diagnostics.js";
@@ -158,22 +157,15 @@ const start = async () => {
   await app.init();
   app.setDiagnosticsStage("load-texture");
 
-  const orbit = new EyeRig(app.cameraRig, app.cameraRod, app.eye, {
-    document,
-    element: app.screen.canvas,
-    input: app.input,
-    type: "orbit",
-    orbit: {
-      target: [0.0, 0.0, -28.0],
-      distance: 78.0,
-      yaw: 18.0,
-      pitch: -14.0,
-      minDistance: 28.0,
-      maxDistance: 140.0,
-      wheelZoomStep: 2.0
-    }
+  const orbit = app.createOrbitEyeRig({
+    target: [0.0, 0.0, -28.0],
+    distance: 78.0,
+    head: 18.0,
+    pitch: -14.0,
+    minDistance: 28.0,
+    maxDistance: 140.0,
+    wheelZoomStep: 2.0
   });
-  orbit.attachPointer();
 
   const { colorTex, normalTex } = await loadBaseAndNormalTexture(app.getGL(), "../../webg/num256.png");
   app.setDiagnosticsStage("validate-build");

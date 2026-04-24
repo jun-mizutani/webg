@@ -1,5 +1,5 @@
 <!doctype html>
-<!-- webg/book/examples/26_02.html 2026/04/18 -->
+<!-- webg/book/examples/26_02.html 2026/04/24 -->
 <html lang="ja">
 <head>
   <meta charset="UTF-8" />
@@ -24,7 +24,6 @@
 
     <script type="module" id="example-source">
 import WebgApp from "../../webg/WebgApp.js";
-import EyeRig from "../../webg/EyeRig.js";
 import Shape from "../../webg/Shape.js";
 
 const app = new WebgApp({
@@ -41,27 +40,20 @@ const app = new WebgApp({
   camera: {
     target: [0.0, 0.0, 0.0],
     distance: 6.5,
-    yaw: 24.0,
+    head: 24.0,
     pitch: -12.0
   }
 });
 await app.init();
 
-const orbit = new EyeRig(app.cameraRig, app.cameraRod, app.eye, {
-  document,
-  element: app.screen.canvas,
-  input: app.input,
-  type: "orbit",
-  orbit: {
+const orbit = app.createOrbitEyeRig({
     target: [0.0, 0.0, 0.0],
     distance: 6.5,
-    yaw: 24.0,
+    head: 24.0,
     pitch: -12.0,
     minDistance: 3.0,
     maxDistance: 12.0
-  }
 });
-orbit.attachPointer();
 
 const shape = new Shape(app.getGL());
 shape.setShader(app.shader);

@@ -8,7 +8,6 @@
 import WebgApp from "../../webg/WebgApp.js";
 import Shape from "../../webg/Shape.js";
 import Primitive from "../../webg/Primitive.js";
-import EyeRig from "../../webg/EyeRig.js";
 
 // webgクラスの役割:
 // WebgApp  : Screen / Shader / Space / Camera / Input / Message をまとめて初期化する
@@ -78,23 +77,16 @@ const buildScene = () => {
 };
 
 const setupOrbitCamera = () => {
-  // README の最小例へそのまま mouse / touch の視点操作確認を足せるように、EyeRig を追加する
-  orbit = new EyeRig(app.cameraRig, app.cameraRod, app.eye, {
-    document,
-    element: app.screen.canvas,
-    input: app.input,
-    type: "orbit",
-    orbit: {
-      target: CAMERA_CONFIG.target,
-      distance: CAMERA_CONFIG.distance,
-      yaw: CAMERA_CONFIG.yaw,
-      pitch: CAMERA_CONFIG.pitch,
-      minDistance: 4.0,
-      maxDistance: 18.0,
-      wheelZoomStep: 1.0
-    }
+  // README の最小例へそのまま mouse / touch の視点操作確認を足せるように、標準 orbit helper を使う
+  orbit = app.createOrbitEyeRig({
+    target: CAMERA_CONFIG.target,
+    distance: CAMERA_CONFIG.distance,
+    head: CAMERA_CONFIG.yaw,
+    pitch: CAMERA_CONFIG.pitch,
+    minDistance: 4.0,
+    maxDistance: 18.0,
+    wheelZoomStep: 1.0
   });
-  orbit.attachPointer();
 };
 
 const attachSampleInput = () => {

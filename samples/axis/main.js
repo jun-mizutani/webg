@@ -8,7 +8,6 @@
 import WebgApp from "../../webg/WebgApp.js";
 import Primitive from "../../webg/Primitive.js";
 import Shape from "../../webg/Shape.js";
-import EyeRig from "../../webg/EyeRig.js";
 import FullscreenPass from "../../webg/FullscreenPass.js";
 import Diagnostics from "../../webg/Diagnostics.js";
 import DofPass from "../../webg/DofPass.js";
@@ -398,22 +397,15 @@ const start = async () => {
     lines: HELP_LINES
   });
 
-  orbit = new EyeRig(app.cameraRig, app.cameraRod, app.eye, {
-    document,
-    element: app.screen.canvas,
-    input: app.input,
-    type: "orbit",
-    orbit: {
-      target: ORBIT_DEFAULT.target,
-      distance: ORBIT_DEFAULT.distance,
-      yaw: ORBIT_DEFAULT.yaw,
-      pitch: ORBIT_DEFAULT.pitch,
-      minDistance: ORBIT_DEFAULT.minDistance,
-      maxDistance: ORBIT_DEFAULT.maxDistance,
-      wheelZoomStep: ORBIT_DEFAULT.wheelZoomStep
-    }
+  orbit = app.createOrbitEyeRig({
+    target: ORBIT_DEFAULT.target,
+    distance: ORBIT_DEFAULT.distance,
+    head: ORBIT_DEFAULT.yaw,
+    pitch: ORBIT_DEFAULT.pitch,
+    minDistance: ORBIT_DEFAULT.minDistance,
+    maxDistance: ORBIT_DEFAULT.maxDistance,
+    wheelZoomStep: ORBIT_DEFAULT.wheelZoomStep
   });
-  orbit.attachPointer();
   dof = new DofPass(app.getGL(), {
     width: app.screen.getWidth(),
     height: app.screen.getHeight(),

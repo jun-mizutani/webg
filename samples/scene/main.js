@@ -7,7 +7,6 @@
 
 import WebgApp from "../../webg/WebgApp.js";
 import SmoothShader from "../../webg/SmoothShader.js";
-import EyeRig from "../../webg/EyeRig.js";
 import SceneAsset from "../../webg/SceneAsset.js";
 import Diagnostics from "../../webg/Diagnostics.js";
 import UIPanel from "../../webg/UIPanel.js";
@@ -512,19 +511,12 @@ async function start() {
 
   // Scene JSON が camera を持つ場合でも、実運用では orbit で周囲を確認したくなるため、
   // sample では scene 読み込み後に bbox 基準の距離へ合わせている
-  orbit = new EyeRig(app.cameraRig, app.cameraRod, app.eye, {
-    document,
-    element: app.screen.canvas,
-    input: app.input,
-    type: "orbit",
-    orbit: {
-      target: [0.0, 4.5, 0.0],
-      distance: 38.0,
-      yaw: 24.0,
-      pitch: -14.0
-    }
+  orbit = app.createOrbitEyeRig({
+    target: [0.0, 4.5, 0.0],
+    distance: 38.0,
+    head: 24.0,
+    pitch: -14.0
   });
-  orbit.attachPointer();
 
   app.setDiagnosticsStage("fetch");
   setUiStatus("fetching scene json");

@@ -1,5 +1,5 @@
 <!doctype html>
-<!-- webg/book/examples/24_01.html 2026/04/18 -->
+<!-- webg/book/examples/24_01.html 2026/04/24 -->
 <html lang="ja">
 <head>
   <meta charset="UTF-8" />
@@ -24,7 +24,6 @@
 
     <script type="module" id="example-source">
 import WebgApp from "../../webg/WebgApp.js";
-import EyeRig from "../../webg/EyeRig.js";
 import Matrix from "../../webg/Matrix.js";
 import { resolveCameraRelativeGridMove } from "../../webg/TileMap.js";
 import { createTileMapController } from "../../samples/tile_sim/controller.js";
@@ -74,7 +73,7 @@ const SCENE = {
   camera: {
     target: [16.0, 0.0, 16.0],
     distance: 35.0,
-    yaw: 28.0,
+    head: 28.0,
     pitch: -30.0,
     bank: 0.0,
     viewAngle: 42.0,
@@ -186,21 +185,14 @@ await app.init();
 const runtime = await app.loadScene(SCENE);
 const tileMap = runtime.tileMap;
 
-const orbit = new EyeRig(app.cameraRig, app.cameraRod, app.eye, {
-  document,
-  element: app.screen.canvas,
-  input: app.input,
-  type: "orbit",
-  orbit: {
+const orbit = app.createOrbitEyeRig({
     target: [...SCENE.camera.target],
     distance: SCENE.camera.distance,
-    yaw: SCENE.camera.yaw,
+    head: SCENE.camera.head,
     pitch: SCENE.camera.pitch,
     minDistance: 10.0,
     maxDistance: 56.0
-  }
 });
-orbit.attachPointer();
 
 const proxyNode = app.space.addNode(null, "proxyBall");
 const startCell = tileMap.getTile(3, 3);
@@ -212,7 +204,7 @@ const actor = await createTileSimAlphaActor(app, proxyNode, {
   ballLift: 0.04,
   footClearance: -0.06,
   scale: 2.0,
-  yaw: 180.0
+  head: 180.0
 });
 
 const originalMoveBall = controller.moveBall;
@@ -242,10 +234,10 @@ app.attachInput({
   onKeyDown: (key, ev) => {
     if (ev.repeat) return;
     if (key === "arrowup" || key === "arrowdown" || key === "arrowleft" || key === "arrowright") {
-      const move = resolveCameraRelativeGridMove(orbit.orbit.yaw, key);
+      const move = resolveCameraRelativeGridMove(orbit.orbit.head, key);
       controller.moveBall(move.dx, move.dy);
     } else if (key === "r") {
-      orbit.setAngles(SCENE.camera.yaw, SCENE.camera.pitch);
+      orbit.setAngles(SCENE.camera.head, SCENE.camera.pitch);
       orbit.setDistance(SCENE.camera.distance);
     }
   }

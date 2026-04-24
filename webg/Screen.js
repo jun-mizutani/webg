@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// Screen.js       2026/04/21
+// Screen.js       2026/04/24
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // ---------------------------------------------

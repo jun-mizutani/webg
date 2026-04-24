@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// EyeRig.js      2026/04/21
+// EyeRig.js      2026/04/24
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // ---------------------------------------------
@@ -43,12 +43,12 @@ export default class EyeRig {
         "orbit.target",
         [0.0, 0.0, 0.0]
       ),
-      yaw: util.readFiniteOption(
+      head: util.readFiniteOption(
         [
-          { value: options.orbit?.yaw, label: "options.orbit.yaw" },
-          { value: options.yaw, label: "options.yaw" }
+          { value: options.orbit?.head, label: "options.orbit.head" },
+          { value: options.head, label: "options.head" }
         ],
-        "orbit.yaw",
+        "orbit.head",
         0.0
       ),
       pitch: util.readFiniteOption(
@@ -67,9 +67,9 @@ export default class EyeRig {
         "orbit.bank",
         0.0
       ),
-      lookYaw: util.readFiniteOption(
-        [{ value: options.orbit?.lookYaw, label: "options.orbit.lookYaw" }],
-        "orbit.lookYaw",
+      lookHead: util.readFiniteOption(
+        [{ value: options.orbit?.lookHead, label: "options.orbit.lookHead" }],
+        "orbit.lookHead",
         0.0
       ),
       lookPitch: util.readFiniteOption(
@@ -139,6 +139,11 @@ export default class EyeRig {
         1.8,
         { min: 0.0 }
       ),
+      panModifierKey: util.readKeyOption(
+        [{ value: options.orbit?.panModifierKey, label: "options.orbit.panModifierKey" }],
+        "orbit.panModifierKey",
+        "shift"
+      ),
       pitchMin: util.readFiniteOption(
         [{ value: options.orbit?.pitchMin, label: "options.orbit.pitchMin" }],
         "orbit.pitchMin",
@@ -192,13 +197,13 @@ export default class EyeRig {
         "firstPerson.position",
         [0.0, 0.0, 0.0]
       ),
-      bodyYaw: util.readFiniteOption(
+      bodyHead: util.readFiniteOption(
         [
-          { value: options.firstPerson?.bodyYaw, label: "options.firstPerson.bodyYaw" },
-          { value: options.firstPerson?.yaw, label: "options.firstPerson.yaw" },
-          { value: options.yaw, label: "options.yaw" }
+          { value: options.firstPerson?.bodyHead, label: "options.firstPerson.bodyHead" },
+          { value: options.firstPerson?.head, label: "options.firstPerson.bodyHead" },
+          { value: options.head, label: "options.head" }
         ],
-        "firstPerson.bodyYaw",
+        "firstPerson.bodyHead",
         0.0
       ),
       bodyPitch: util.readFiniteOption(
@@ -211,9 +216,11 @@ export default class EyeRig {
         "firstPerson.bodyBank",
         0.0
       ),
-      lookYaw: util.readFiniteOption(
-        [{ value: options.firstPerson?.lookYaw, label: "options.firstPerson.lookYaw" }],
-        "firstPerson.lookYaw",
+      lookHead: util.readFiniteOption(
+        [
+          { value: options.firstPerson?.lookHead, label: "options.firstPerson.lookHead" }
+        ],
+        "firstPerson.lookHead",
         0.0
       ),
       lookPitch: util.readFiniteOption(
@@ -312,12 +319,12 @@ export default class EyeRig {
         [0.0, 0.0, 0.0]
       ),
       currentTarget: [0.0, 0.0, 0.0],
-      yaw: util.readFiniteOption(
+      head: util.readFiniteOption(
         [
-          { value: options.follow?.yaw, label: "options.follow.yaw" },
-          { value: options.yaw, label: "options.yaw" }
+          { value: options.follow?.head, label: "options.follow.head" },
+          { value: options.head, label: "options.head" }
         ],
-        "follow.yaw",
+        "follow.head",
         0.0
       ),
       pitch: util.readFiniteOption(
@@ -336,9 +343,11 @@ export default class EyeRig {
         "follow.bank",
         0.0
       ),
-      lookYaw: util.readFiniteOption(
-        [{ value: options.follow?.lookYaw, label: "options.follow.lookYaw" }],
-        "follow.lookYaw",
+      lookHead: util.readFiniteOption(
+        [
+          { value: options.follow?.lookHead, label: "options.follow.lookHead" }
+        ],
+        "follow.lookHead",
         0.0
       ),
       lookPitch: util.readFiniteOption(
@@ -408,14 +417,23 @@ export default class EyeRig {
         1.0,
         { min: 0.0 }
       ),
-      inheritTargetYaw: util.readBooleanOption(
-        [{ value: options.follow?.inheritTargetYaw, label: "options.follow.inheritTargetYaw" }],
-        "follow.inheritTargetYaw",
+      panModifierKey: util.readKeyOption(
+        [{ value: options.follow?.panModifierKey, label: "options.follow.panModifierKey" }],
+        "follow.panModifierKey",
+        "shift"
+      ),
+      inheritTargetHead: util.readBooleanOption(
+        [
+          { value: options.follow?.inheritTargetHead, label: "options.follow.inheritTargetHead" }
+        ],
+        "follow.inheritTargetHead",
         false
       ),
-      targetYawOffset: util.readFiniteOption(
-        [{ value: options.follow?.targetYawOffset, label: "options.follow.targetYawOffset" }],
-        "follow.targetYawOffset",
+      targetHeadOffset: util.readFiniteOption(
+        [
+          { value: options.follow?.targetHeadOffset, label: "options.follow.targetHeadOffset" }
+        ],
+        "follow.targetHeadOffset",
         0.0
       ),
       pitchMin: util.readFiniteOption(
@@ -619,18 +637,18 @@ export default class EyeRig {
       if (nextPitch < this.orbit.pitchMin || nextPitch > this.orbit.pitchMax) {
         throw new Error(`EyeRig orbit pitch must be within ${this.orbit.pitchMin} - ${this.orbit.pitchMax}`);
       }
-      this.orbit.yaw = nextHead;
+      this.orbit.head = nextHead;
       this.orbit.pitch = nextPitch;
       this.orbit.bank = nextBank;
     } else if (this.type === "first-person") {
-      this.firstPerson.bodyYaw = nextHead;
+      this.firstPerson.bodyHead = nextHead;
       this.firstPerson.bodyPitch = nextPitch;
       this.firstPerson.bodyBank = nextBank;
     } else {
       if (nextPitch < this.follow.pitchMin || nextPitch > this.follow.pitchMax) {
         throw new Error(`EyeRig follow pitch must be within ${this.follow.pitchMin} - ${this.follow.pitchMax}`);
       }
-      this.follow.yaw = nextHead;
+      this.follow.head = nextHead;
       this.follow.pitch = nextPitch;
       this.follow.bank = nextBank;
     }
@@ -644,18 +662,18 @@ export default class EyeRig {
     const nextPitch = util.readFiniteNumber(pitch, "lookAngles.pitch");
     const nextBank = util.readFiniteNumber(bank, "lookAngles.bank");
     if (this.type === "orbit") {
-      this.orbit.lookYaw = nextHead;
+      this.orbit.lookHead = nextHead;
       this.orbit.lookPitch = nextPitch;
       this.orbit.lookBank = nextBank;
     } else if (this.type === "first-person") {
       if (nextPitch < this.firstPerson.lookPitchMin || nextPitch > this.firstPerson.lookPitchMax) {
         throw new Error(`EyeRig firstPerson lookPitch must be within ${this.firstPerson.lookPitchMin} - ${this.firstPerson.lookPitchMax}`);
       }
-      this.firstPerson.lookYaw = nextHead;
+      this.firstPerson.lookHead = nextHead;
       this.firstPerson.lookPitch = nextPitch;
       this.firstPerson.lookBank = nextBank;
     } else {
-      this.follow.lookYaw = nextHead;
+      this.follow.lookHead = nextHead;
       this.follow.lookPitch = nextPitch;
       this.follow.lookBank = nextBank;
     }
@@ -700,12 +718,12 @@ export default class EyeRig {
     return this;
   }
 
-  resolveFollowBaseYaw() {
+  resolveFollowBaseHead() {
     const state = this.follow;
-    if (!state.inheritTargetYaw || !state.targetNode?.getWorldAttitude) {
+    if (!state.inheritTargetHead || !state.targetNode?.getWorldAttitude) {
       return 0.0;
     }
-    return state.targetNode.getWorldAttitude()[0] + state.targetYawOffset;
+    return state.targetNode.getWorldAttitude()[0] + state.targetHeadOffset;
   }
 
   apply(force = false) {
@@ -717,31 +735,31 @@ export default class EyeRig {
       this.baseNode.setPosition(state.target[0], state.target[1], state.target[2]);
       this.baseNode.setAttitude(0.0, 0.0, 0.0);
       this.rodNode.setPosition(0.0, 0.0, 0.0);
-      this.rodNode.setAttitude(state.yaw, state.pitch, state.bank);
+      this.rodNode.setAttitude(state.head, state.pitch, state.bank);
       this.eyeNode.setPosition(0.0, 0.0, state.distance);
-      this.eyeNode.setAttitude(state.lookYaw, state.lookPitch, state.lookBank);
+      this.eyeNode.setAttitude(state.lookHead, state.lookPitch, state.lookBank);
       return this;
     }
 
     if (this.type === "first-person") {
       const state = this.firstPerson;
       this.baseNode.setPosition(state.position[0], state.position[1], state.position[2]);
-      this.baseNode.setAttitude(state.bodyYaw, state.bodyPitch, state.bodyBank);
+      this.baseNode.setAttitude(state.bodyHead, state.bodyPitch, state.bodyBank);
       this.rodNode.setPosition(0.0, state.eyeHeight, 0.0);
       this.rodNode.setAttitude(0.0, 0.0, 0.0);
       this.eyeNode.setPosition(0.0, 0.0, 0.0);
-      this.eyeNode.setAttitude(state.lookYaw, state.lookPitch, state.lookBank);
+      this.eyeNode.setAttitude(state.lookHead, state.lookPitch, state.lookBank);
       return this;
     }
 
     const state = this.follow;
-    const baseYaw = this.resolveFollowBaseYaw();
+    const baseHead = this.resolveFollowBaseHead();
     this.baseNode.setPosition(state.currentTarget[0], state.currentTarget[1], state.currentTarget[2]);
-    this.baseNode.setAttitude(baseYaw, 0.0, 0.0);
+    this.baseNode.setAttitude(baseHead, 0.0, 0.0);
     this.rodNode.setPosition(0.0, 0.0, 0.0);
-    this.rodNode.setAttitude(state.yaw, state.pitch, state.bank);
+    this.rodNode.setAttitude(state.head, state.pitch, state.bank);
     this.eyeNode.setPosition(0.0, 0.0, state.distance);
-    this.eyeNode.setAttitude(state.lookYaw, state.lookPitch, state.lookBank);
+    this.eyeNode.setAttitude(state.lookHead, state.lookPitch, state.lookBank);
     return this;
   }
 
@@ -764,7 +782,7 @@ export default class EyeRig {
     if (!this.input) return;
     const state = this.orbit;
     const dt = Number.isFinite(deltaSec) ? deltaSec : 0.0;
-    const shiftPan = this.input.has("shift");
+    const shiftPan = this.isModifierKeyActive(state.panModifierKey);
     let changed = false;
     if (shiftPan) {
       let panX = 0.0;
@@ -782,11 +800,11 @@ export default class EyeRig {
       }
     } else {
       if (this.input.has(state.keyMap.left)) {
-        state.yaw -= state.keyRotateSpeed * dt;
+        state.head -= state.keyRotateSpeed * dt;
         changed = true;
       }
       if (this.input.has(state.keyMap.right)) {
-        state.yaw += state.keyRotateSpeed * dt;
+        state.head += state.keyRotateSpeed * dt;
         changed = true;
       }
       if (this.input.has(state.keyMap.up)) {
@@ -822,11 +840,11 @@ export default class EyeRig {
     const state = this.firstPerson;
     const dt = Number.isFinite(deltaSec) ? deltaSec : 0.0;
     const speed = state.moveSpeed * (this.input.has(state.keyMap.run) ? state.runMultiplier : 1.0);
-    const yawRad = state.bodyYaw * Math.PI / 180.0;
-    const forwardX = -Math.sin(yawRad);
-    const forwardZ = Math.cos(yawRad);
-    const rightX = Math.cos(yawRad);
-    const rightZ = Math.sin(yawRad);
+    const headRad = state.bodyHead * Math.PI / 180.0;
+    const forwardX = -Math.sin(headRad);
+    const forwardZ = Math.cos(headRad);
+    const rightX = Math.cos(headRad);
+    const rightZ = Math.sin(headRad);
     let moveX = 0.0;
     let moveY = 0.0;
     let moveZ = 0.0;
@@ -861,7 +879,7 @@ export default class EyeRig {
   updateFollow(deltaSec) {
     const state = this.follow;
     const dt = Number.isFinite(deltaSec) ? deltaSec : 0.0;
-    const shiftPan = this.input?.has("shift") === true;
+    const shiftPan = this.isModifierKeyActive(state.panModifierKey);
     let changed = false;
     if (this.input) {
       if (shiftPan) {
@@ -880,11 +898,11 @@ export default class EyeRig {
         }
       } else {
         if (this.input.has(state.keyMap.left)) {
-          state.yaw -= state.keyRotateSpeed * dt;
+          state.head -= state.keyRotateSpeed * dt;
           changed = true;
         }
         if (this.input.has(state.keyMap.right)) {
-          state.yaw += state.keyRotateSpeed * dt;
+          state.head += state.keyRotateSpeed * dt;
           changed = true;
         }
         if (this.input.has(state.keyMap.up)) {
@@ -990,6 +1008,20 @@ export default class EyeRig {
   // key / wheel / pinch の全経路へ共通係数を掛けて効きを半分程度にそろえる
   getZoomSensitivityScale() {
     return this.type === "orbit" ? 0.25 : 1.0;
+  }
+
+  // keyboard と pointer event で同じ modifier 名を参照できるようにする
+  // pointer event は modifier key しか直接持たないため、ここではその範囲に限定する
+  isModifierKeyActive(keyName, ev = null) {
+    const key = String(keyName ?? "").toLowerCase();
+    if (!key) return false;
+    if (this.input?.has(key) === true) return true;
+    if (!ev) return false;
+    if (key === "shift") return ev.shiftKey === true;
+    if (key === "control" || key === "ctrl") return ev.ctrlKey === true;
+    if (key === "alt" || key === "option") return ev.altKey === true;
+    if (key === "meta" || key === "command" || key === "cmd") return ev.metaKey === true;
+    return false;
   }
 
   // touch pointer だけを判定して、mouse / pen の既存 drag 経路と分ける
@@ -1214,10 +1246,13 @@ export default class EyeRig {
     this.lastClientX = ev.clientX;
     this.lastClientY = ev.clientY;
 
-    // orbit / follow では Shift を押しながら drag したときに
+    // orbit / follow では pan modifier を押しながら drag したときに
     // 視線の screen 平面に沿った pan として扱う
     // これにより、rotation と pan を同じ pointer 経路の中で切り替えられる
-    if (!this.isTouchPointerEvent(ev) && ev.shiftKey === true && this.type !== "first-person") {
+    const panModifierKey = this.type === "follow"
+      ? this.follow.panModifierKey
+      : this.orbit.panModifierKey;
+    if (!this.isTouchPointerEvent(ev) && this.type !== "first-person" && this.isModifierKeyActive(panModifierKey, ev)) {
       this.panViewByScreenDelta(dx, dy);
       this.apply();
       ev.preventDefault();
@@ -1225,21 +1260,21 @@ export default class EyeRig {
     }
 
     if (this.type === "first-person") {
-      this.firstPerson.bodyYaw += dx * dragRotateSpeed;
+      this.firstPerson.bodyHead += dx * dragRotateSpeed;
       this.firstPerson.lookPitch = this.clamp(
         this.firstPerson.lookPitch + dy * dragRotateSpeed,
         this.firstPerson.lookPitchMin,
         this.firstPerson.lookPitchMax
       );
     } else if (this.type === "follow") {
-      this.follow.yaw += dx * dragRotateSpeed;
+      this.follow.head += dx * dragRotateSpeed;
       this.follow.pitch = this.clamp(
         this.follow.pitch + dy * dragRotateSpeed,
         this.follow.pitchMin,
         this.follow.pitchMax
       );
     } else {
-      this.orbit.yaw += dx * dragRotateSpeed;
+      this.orbit.head += dx * dragRotateSpeed;
       this.orbit.pitch = this.clamp(
         this.orbit.pitch + dy * dragRotateSpeed,
         this.orbit.pitchMin,

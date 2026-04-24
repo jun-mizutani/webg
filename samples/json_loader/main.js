@@ -7,7 +7,6 @@
 
 import WebgApp from "../../webg/WebgApp.js";
 import SmoothShader from "../../webg/SmoothShader.js";
-import EyeRig from "../../webg/EyeRig.js";
 import Diagnostics from "../../webg/Diagnostics.js";
 
 const MODEL_ASSET_FILE = "./modelasset.json";
@@ -424,19 +423,12 @@ async function start() {
     lines: [...GUIDE_LINES, ...app.getDebugKeyGuideLines()]
   });
 
-  orbit = new EyeRig(app.cameraRig, app.cameraRod, app.eye, {
-    document,
-    element: app.screen.canvas,
-    input: app.input,
-    type: "orbit",
-    orbit: {
-      target: [...DEFAULT_ORBIT.target],
-      distance: DEFAULT_ORBIT.distance,
-      yaw: DEFAULT_ORBIT.yaw,
-      pitch: DEFAULT_ORBIT.pitch
-    }
+  orbit = app.createOrbitEyeRig({
+    target: [...DEFAULT_ORBIT.target],
+    distance: DEFAULT_ORBIT.distance,
+    head: DEFAULT_ORBIT.yaw,
+    pitch: DEFAULT_ORBIT.pitch
   });
-  orbit.attachPointer();
 
   // JSON も同じ facade へ寄せることで、sample 側では形式差をほぼ意識せず
   // ModelAsset と runtime を扱える

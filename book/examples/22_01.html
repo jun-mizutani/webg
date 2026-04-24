@@ -1,5 +1,5 @@
 <!doctype html>
-<!-- webg/book/examples/22_01.html 2026/04/18 -->
+<!-- webg/book/examples/22_01.html 2026/04/24 -->
 <html lang="ja">
 <head>
   <meta charset="UTF-8" />
@@ -24,7 +24,6 @@
 
     <script type="module" id="example-source">
 import WebgApp from "../../webg/WebgApp.js";
-import EyeRig from "../../webg/EyeRig.js";
 
 const terrainFromHeight = (height) => {
   if (height >= 2) return "peak";
@@ -65,7 +64,7 @@ const SCENE = {
   camera: {
     target: [12.0, 0.0, 10.0],
     distance: 35.0,
-    yaw: 28.0,
+    head: 28.0,
     pitch: -30.0,
     bank: 0.0,
     viewAngle: 44.0,
@@ -142,27 +141,20 @@ await app.init();
 const runtime = await app.loadScene(SCENE);
 const tileMap = runtime.tileMap;
 
-const orbit = new EyeRig(app.cameraRig, app.cameraRod, app.eye, {
-  document,
-  element: app.screen.canvas,
-  input: app.input,
-  type: "orbit",
-  orbit: {
+const orbit = app.createOrbitEyeRig({
     target: [...SCENE.camera.target],
     distance: SCENE.camera.distance,
-    yaw: SCENE.camera.yaw,
+    head: SCENE.camera.head,
     pitch: SCENE.camera.pitch,
     minDistance: 10.0,
     maxDistance: 56.0
-  }
 });
-orbit.attachPointer();
 
 app.attachInput({
   onKeyDown: (key, ev) => {
     if (ev.repeat) return;
     if (key === "r") {
-      orbit.setAngles(SCENE.camera.yaw, SCENE.camera.pitch);
+      orbit.setAngles(SCENE.camera.head, SCENE.camera.pitch);
       orbit.setDistance(SCENE.camera.distance);
     }
   }

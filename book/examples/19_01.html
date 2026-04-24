@@ -1,5 +1,5 @@
 <!doctype html>
-<!-- webg/book/examples/19_01.html 2026/04/18 -->
+<!-- webg/book/examples/19_01.html 2026/04/24 -->
 <html lang="ja">
 <head>
   <meta charset="UTF-8" />
@@ -24,7 +24,6 @@
 
     <script type="module" id="example-source">
 import WebgApp from "../../webg/WebgApp.js";
-import EyeRig from "../../webg/EyeRig.js";
 import Primitive from "../../webg/Primitive.js";
 import Shape from "../../webg/Shape.js";
 import Diagnostics from "../../webg/Diagnostics.js";
@@ -64,28 +63,21 @@ const app = new WebgApp({
   camera: {
     target: [0.0, -1.0, 0.0],
     distance: 28.0,
-    yaw: 24.0,
+    head: 24.0,
     pitch: -12.0
   }
 });
 await app.init();
 app.setDiagnosticsStage("runtime");
 
-const orbit = new EyeRig(app.cameraRig, app.cameraRod, app.eye, {
-  document,
-  element: app.screen.canvas,
-  input: app.input,
-  type: "orbit",
-  orbit: {
+const orbit = app.createOrbitEyeRig({
     target: [0.0, -1.0, 0.0],
     distance: 28.0,
-    yaw: 24.0,
+    head: 24.0,
     pitch: -12.0,
     minDistance: 12.0,
     maxDistance: 64.0
-  }
 });
-orbit.attachPointer();
 
 const createShape = (asset, color, material = {}) => {
   const shape = new Shape(app.getGL());
@@ -153,7 +145,7 @@ const refreshDiagnosticsStats = (frameCount = app.screen.getFrameCount()) => {
     paused: state.paused ? "yes" : "no",
     wireframe: state.wireframe ? "yes" : "no",
     palette: state.paletteIndex + 1,
-    orbitYaw: orbit.orbit.yaw.toFixed(2),
+    orbitYaw: orbit.orbit.head.toFixed(2),
     orbitPitch: orbit.orbit.pitch.toFixed(2),
     orbitDistance: orbit.orbit.distance.toFixed(2),
     envOk: envReport.ok ? "yes" : "no",
@@ -173,7 +165,7 @@ const makeProbeReport = (frameCount) => {
   Diagnostics.addDetail(report, `palette=${state.paletteIndex + 1}`);
   Diagnostics.addDetail(
     report,
-    `orbitYaw=${orbit.orbit.yaw.toFixed(2)} orbitPitch=${orbit.orbit.pitch.toFixed(2)} orbitDistance=${orbit.orbit.distance.toFixed(2)}`
+    `orbitYaw=${orbit.orbit.head.toFixed(2)} orbitPitch=${orbit.orbit.pitch.toFixed(2)} orbitDistance=${orbit.orbit.distance.toFixed(2)}`
   );
   Diagnostics.addDetail(report, `lastEvent=${state.lastEvent}`);
   if (envReport.warnings?.length) {
@@ -269,7 +261,7 @@ app.start({
       "[p] summary probe  [j] json probe  [r] reset camera",
       ...app.getDebugKeyGuideLines(),
       `palette=${state.paletteIndex + 1} paused=${state.paused ? "ON" : "OFF"} wireframe=${state.wireframe ? "ON" : "OFF"}`,
-      `yaw=${orbit.orbit.yaw.toFixed(1)} pitch=${orbit.orbit.pitch.toFixed(1)} dist=${orbit.orbit.distance.toFixed(1)}`,
+      `yaw=${orbit.orbit.head.toFixed(1)} pitch=${orbit.orbit.pitch.toFixed(1)} dist=${orbit.orbit.distance.toFixed(1)}`,
       `env=${envReport.ok ? "OK" : "WARN"} lastEvent=${state.lastEvent}`,
       app.getDiagnosticsStatusLine(),
       app.isDebugUiEnabled() ? app.getProbeStatusLine() : ""

@@ -29,8 +29,18 @@ const TOOLS = new Set([
 const DEFAULT_CAMERA = {
   target: [0.0, 0.8, 0.0],
   distance: 12.0,
-  yaw: 28.0,
+  head: 28.0,
   pitch: -18.0
+};
+
+const INITIAL_ORBIT_BINDINGS = {
+  orbitKeyMap: {
+    left: "arrowleft",
+    right: "arrowright",
+    up: "arrowup",
+    down: "arrowdown"
+  },
+  panModifierKey: "shift"
 };
 
 const MATERIAL = {
@@ -102,7 +112,7 @@ let importedAsset = null;
 let importedMeshes = [];
 let lastSavedName = "-";
 let detachModelerKeyBridge = null;
-let detachShiftPanBridge = null;
+let detachPanModifierBridge = null;
 
 const cameraPointer = {
   active: false,
@@ -162,51 +172,68 @@ function focusModelerCanvas() {
 function normalizeModelerCameraKey(ev) {
   const normalizedKey = app?.input?.normalizeKey(ev?.key ?? "") ?? "";
   const normalizedCode = String(ev?.code ?? "").toLowerCase();
-  if (normalizedKey === "shift" || normalizedCode === "shiftleft" || normalizedCode === "shiftright") {
-    return "shift";
+  const panModifierKey = getOrbitPanModifierKey();
+  if (normalizedKey === panModifierKey || normalizedCode === `${panModifierKey}left` || normalizedCode === `${panModifierKey}right`) {
+    return panModifierKey;
   }
-  if (normalizedKey === "arrowleft" || normalizedKey === "left" || normalizedCode === "arrowleft") {
-    return "arrowleft";
-  }
-  if (normalizedKey === "arrowright" || normalizedKey === "right" || normalizedCode === "arrowright") {
-    return "arrowright";
-  }
-  if (normalizedKey === "arrowup" || normalizedKey === "up" || normalizedCode === "arrowup") {
-    return "arrowup";
-  }
-  if (normalizedKey === "arrowdown" || normalizedKey === "down" || normalizedCode === "arrowdown") {
-    return "arrowdown";
+  const keyMap = orbit?.orbit?.keyMap ?? INITIAL_ORBIT_BINDINGS.orbitKeyMap;
+  for (const key of [keyMap.left, keyMap.right, keyMap.up, keyMap.down]) {
+    if (normalizedKey === key || normalizedCode === key) {
+      return key;
+    }
   }
   return normalizedKey;
+}
+
+function getOrbitPanModifierKey() {
+  return orbit?.orbit?.panModifierKey ?? INITIAL_ORBIT_BINDINGS.panModifierKey;
+}
+
+function isOrbitPanModifierEvent(ev) {
+  const panModifierKey = getOrbitPanModifierKey();
+  if (panModifierKey === "shift") return ev.shiftKey === true;
+  if (panModifierKey === "control" || panModifierKey === "ctrl") return ev.ctrlKey === true;
+  if (panModifierKey === "alt" || panModifierKey === "option") return ev.altKey === true;
+  if (panModifierKey === "meta" || panModifierKey === "command" || panModifierKey === "cmd") return ev.metaKey === true;
+  return false;
+}
+
+function isOrbitPanModifierActive(ev = null) {
+  const panModifierKey = getOrbitPanModifierKey();
+  return (ev ? isOrbitPanModifierEvent(ev) : false)
+    || cameraModifier.shift === true
+    || app.input.has(panModifierKey);
 }
 
 function installModelerKeyBridge() {
   if (typeof window === "undefined" || !app?.input) {
     return () => {};
   }
+  const keyMap = orbit?.orbit?.keyMap ?? INITIAL_ORBIT_BINDINGS.orbitKeyMap;
+  const panModifierKey = getOrbitPanModifierKey();
   const bridgedKeys = new Set([
-    "arrowleft",
-    "arrowright",
-    "arrowup",
-    "arrowdown",
-    "shift"
+    keyMap.left,
+    keyMap.right,
+    keyMap.up,
+    keyMap.down,
+    panModifierKey
   ]);
-  const syncShiftModifier = (ev, key) => {
-    if (ev.shiftKey === true || key === "shift") {
+  const syncPanModifier = (ev, key) => {
+    if (key === panModifierKey || isOrbitPanModifierEvent(ev)) {
       cameraModifier.shift = true;
-      app.input.press("shift");
+      app.input.press(panModifierKey);
       return true;
     }
-    return cameraModifier.shift === true || app.input.has("shift");
+    return isOrbitPanModifierActive(ev);
   };
   const panByArrowKey = (key) => {
     const panPixels = 18.0;
     let dx = 0.0;
     let dy = 0.0;
-    if (key === "arrowleft") dx -= panPixels;
-    else if (key === "arrowright") dx += panPixels;
-    else if (key === "arrowup") dy += panPixels;
-    else if (key === "arrowdown") dy -= panPixels;
+    if (key === keyMap.left) dx -= panPixels;
+    else if (key === keyMap.right) dx += panPixels;
+    else if (key === keyMap.up) dy += panPixels;
+    else if (key === keyMap.down) dy -= panPixels;
     else return false;
     app.eye.setWorldMatrix();
     orbit.panViewByScreenDelta(dx, dy);
@@ -223,8 +250,8 @@ function installModelerKeyBridge() {
     // embedded_glb_viewer と同様に、DOM UI へ focus が移っていても
     // EyeRig.update() が読む camera key state だけは InputController 側へ確実に反映する
     ev.preventDefault();
-    const shiftDown = syncShiftModifier(ev, key);
-    if (shiftDown && key !== "shift" && panByArrowKey(key)) {
+    const shiftDown = syncPanModifier(ev, key);
+    if (shiftDown && key !== panModifierKey && panByArrowKey(key)) {
       app.input.release(key);
       ev.stopImmediatePropagation();
       return;
@@ -238,9 +265,9 @@ function installModelerKeyBridge() {
     }
     ev.preventDefault();
     app.input.release(key);
-    if (key === "shift" || ev.shiftKey !== true) {
+    if (key === panModifierKey || !isOrbitPanModifierEvent(ev)) {
       cameraModifier.shift = false;
-      app.input.release("shift");
+      app.input.release(panModifierKey);
     }
   };
   const onBlur = () => {
@@ -353,11 +380,13 @@ function updateStatus() {
   const meshName = importedMeshes[Number(ui.meshSelect?.value ?? -1)]?.label ?? "-";
   const faceIds = Array.from(editor.selectedFaces).join(", ") || "-";
   const vertexIds = Array.from(editor.selectedVertices).join(", ") || "-";
+  const orbitKeyMap = orbit?.orbit?.keyMap ?? INITIAL_ORBIT_BINDINGS.orbitKeyMap;
+  const panModifierKey = orbit?.orbit?.panModifierKey ?? INITIAL_ORBIT_BINDINGS.panModifierKey;
   const arrowActive = app
-    ? app.input.has("arrowleft") || app.input.has("arrowright") || app.input.has("arrowup") || app.input.has("arrowdown")
+    ? app.input.has(orbitKeyMap.left) || app.input.has(orbitKeyMap.right) || app.input.has(orbitKeyMap.up) || app.input.has(orbitKeyMap.down)
     : false;
   const shiftActive = app
-    ? app.input.has("shift") || cameraModifier.shift
+    ? app.input.has(panModifierKey) || cameraModifier.shift
     : cameraModifier.shift;
   const orbitTarget = orbit?.orbit?.target ?? [NaN, NaN, NaN];
   const lines = [
@@ -370,7 +399,7 @@ function updateStatus() {
     `undo=${editor.undoStack.length} redo=${editor.redoStack.length}`,
     `dirty=${editor.dirty ? "yes" : "no"}`,
     `saved=${lastSavedName}`,
-    `keyState: L=${app?.input.has("arrowleft") ? 1 : 0} R=${app?.input.has("arrowright") ? 1 : 0} U=${app?.input.has("arrowup") ? 1 : 0} D=${app?.input.has("arrowdown") ? 1 : 0} Sh=${shiftActive ? 1 : 0}`,
+    `keyState: L=${app?.input.has(orbitKeyMap.left) ? 1 : 0} R=${app?.input.has(orbitKeyMap.right) ? 1 : 0} U=${app?.input.has(orbitKeyMap.up) ? 1 : 0} D=${app?.input.has(orbitKeyMap.down) ? 1 : 0} Pm=${shiftActive ? 1 : 0}`,
     `arrowActive=${arrowActive ? "yes" : "no"} shiftPan=${shiftActive && arrowActive ? "yes" : "no"}`,
     `orbitTarget=${orbitTarget.map((v) => Number.isFinite(v) ? v.toFixed(3) : "NaN").join(", ")}`,
     `message=${editor.lastMessage}`
@@ -827,7 +856,7 @@ function fitCameraToEditor() {
   orbit.orbit.maxDistance = Math.max(32.0, bounds.size * 12.0);
   orbit.orbit.wheelZoomStep = Math.max(0.4, bounds.size * 0.18);
   orbit.orbit.keyZoomSpeed = Math.max(2.0, bounds.size * 1.2);
-  orbit.setAngles(DEFAULT_CAMERA.yaw, DEFAULT_CAMERA.pitch, 0.0);
+  orbit.setAngles(DEFAULT_CAMERA.head, DEFAULT_CAMERA.pitch, 0.0);
   orbit.setDistance(distance);
   app.syncCameraFromEyeRig(orbit);
 }
@@ -1173,10 +1202,13 @@ function getCameraScreenBasis() {
   };
 }
 
-function installShiftPanBridge(canvas) {
+function installPanModifierBridge(canvas) {
   const resetPointer = () => {
+    const panModifierKey = getOrbitPanModifierKey();
     cameraPointer.active = false;
     cameraPointer.pointerId = null;
+    cameraModifier.shift = false;
+    app.input.release(panModifierKey);
   };
   const onPointerDownCapture = (ev) => {
     if (String(ev.pointerType ?? "") === "touch") {
@@ -1202,15 +1234,16 @@ function installShiftPanBridge(canvas) {
     const dy = ev.clientY - cameraPointer.lastY;
     cameraPointer.lastX = ev.clientX;
     cameraPointer.lastY = ev.clientY;
-    if (ev.shiftKey === true) {
+    const panModifierKey = getOrbitPanModifierKey();
+    if (isOrbitPanModifierEvent(ev)) {
       cameraModifier.shift = true;
-      app.input.press("shift");
+      app.input.press(panModifierKey);
     }
-    const shiftDown = ev.shiftKey === true || cameraModifier.shift === true || app.input.has("shift");
+    const shiftDown = isOrbitPanModifierActive(ev);
     if (!shiftDown) {
       return;
     }
-    // 一部の環境では Shift 状態が pointermove.shiftKey に乗らないことがある
+    // 一部の環境では modifier 状態が pointermove の event field に乗らないことがある
     // その場合でも InputController 側の key state を見て、EyeRig と同じ pan helper を先に実行する
     // stopImmediatePropagation() により、この frame の pointermove が EyeRig の rotate 処理へ流れないようにする
     app.eye.setWorldMatrix();
@@ -1218,7 +1251,7 @@ function installShiftPanBridge(canvas) {
     orbit.apply();
     app.syncCameraFromEyeRig(orbit);
     // この bridge が pointermove を止めた frame は EyeRig.onPointerMove() が呼ばれない
-    // EyeRig 側の lastClient 座標を同じ値へ進めておくと、Shift を離した直後に
+    // EyeRig 側の lastClient 座標を同じ値へ進めておくと、modifier を離した直後に
     // 溜まった差分が通常 orbit として一度に処理されることを避けられる
     orbit.lastClientX = ev.clientX;
     orbit.lastClientY = ev.clientY;
@@ -1665,7 +1698,7 @@ async function start() {
     camera: {
       target: [...DEFAULT_CAMERA.target],
       distance: DEFAULT_CAMERA.distance,
-      yaw: DEFAULT_CAMERA.yaw,
+      head: DEFAULT_CAMERA.head,
       pitch: DEFAULT_CAMERA.pitch
     },
     debugTools: {
@@ -1680,8 +1713,10 @@ async function start() {
   orbit = app.createOrbitEyeRig({
     target: [...DEFAULT_CAMERA.target],
     distance: DEFAULT_CAMERA.distance,
-    yaw: DEFAULT_CAMERA.yaw,
+    head: DEFAULT_CAMERA.head,
     pitch: DEFAULT_CAMERA.pitch,
+    orbitKeyMap: { ...INITIAL_ORBIT_BINDINGS.orbitKeyMap },
+    panModifierKey: INITIAL_ORBIT_BINDINGS.panModifierKey,
     minDistance: 0.5,
     maxDistance: 96.0,
     wheelZoomStep: 1.0,
@@ -1692,8 +1727,8 @@ async function start() {
     pitchMax: 85.0,
     dragButton: 0
   });
-  detachShiftPanBridge?.();
-  detachShiftPanBridge = installShiftPanBridge(app.screen.canvas);
+  detachPanModifierBridge?.();
+  detachPanModifierBridge = installPanModifierBridge(app.screen.canvas);
   buildGrid();
   createInitialModel();
   installDomHandlers();

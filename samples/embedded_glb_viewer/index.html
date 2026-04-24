@@ -255,11 +255,11 @@
   fixedCanvasSize: { width: 820, height: 560, useDevicePixelRatio: false }
 });
 
-const orbit = new EyeRig(app.cameraRig, app.cameraRod, app.eye, {
-  document,
-  element: app.screen.canvas,
-  input: app.input,
-  type: "orbit"
+const orbit = app.createOrbitEyeRig({
+  target: [0.0, 0.0, 0.0],
+  distance: 8.0,
+  head: 0.0,
+  pitch: 0.0
 });</pre>
       </div>
 

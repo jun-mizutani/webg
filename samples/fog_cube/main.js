@@ -8,7 +8,6 @@
 import WebgApp from "../../webg/WebgApp.js";
 import Primitive from "../../webg/Primitive.js";
 import Shape from "../../webg/Shape.js";
-import EyeRig from "../../webg/EyeRig.js";
 import Diagnostics from "../../webg/Diagnostics.js";
 
 // fog_cube の役割:
@@ -226,22 +225,15 @@ async function start() {
   });
   await app.init();
 
-  const orbit = new EyeRig(app.cameraRig, app.cameraRod, app.eye, {
-    document,
-    element: app.screen.canvas,
-    input: app.input,
-    type: "orbit",
-    orbit: {
-      target: [...DEFAULT_CAMERA.target],
-      distance: DEFAULT_CAMERA.distance,
-      yaw: DEFAULT_CAMERA.yaw,
-      pitch: DEFAULT_CAMERA.pitch,
-      minDistance: 36.0,
-      maxDistance: 220.0,
-      wheelZoomStep: 2.8
-    }
+  const orbit = app.createOrbitEyeRig({
+    target: [...DEFAULT_CAMERA.target],
+    distance: DEFAULT_CAMERA.distance,
+    head: DEFAULT_CAMERA.yaw,
+    pitch: DEFAULT_CAMERA.pitch,
+    minDistance: 36.0,
+    maxDistance: 220.0,
+    wheelZoomStep: 2.8
   });
-  orbit.attachPointer();
   app.setDiagnosticsStage("runtime");
 
   const scene = createScene(app);

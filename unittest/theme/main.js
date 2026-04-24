@@ -8,7 +8,6 @@
 import WebgApp from "../../webg/WebgApp.js";
 import Primitive from "../../webg/Primitive.js";
 import Shape from "../../webg/Shape.js";
-import EyeRig from "../../webg/EyeRig.js";
 import Diagnostics from "../../webg/Diagnostics.js";
 import UIPanel from "../../webg/UIPanel.js";
 import {
@@ -386,22 +385,15 @@ async function start() {
   app.setDiagnosticsStage("runtime");
   app.clearHudRows();
 
-  orbit = new EyeRig(app.cameraRig, app.cameraRod, app.eye, {
-    document,
-    element: app.screen.canvas,
-    input: app.input,
-    type: "orbit",
-    orbit: {
-      target: [0.0, 0.0, 0.0],
-      distance: 30.0,
-      yaw: 28.0,
-      pitch: -14.0,
-      minDistance: 14.0,
-      maxDistance: 70.0,
-      wheelZoomStep: 1.4
-    }
+  orbit = app.createOrbitEyeRig({
+    target: [0.0, 0.0, 0.0],
+    distance: 30.0,
+    head: 28.0,
+    pitch: -14.0,
+    minDistance: 14.0,
+    maxDistance: 70.0,
+    wheelZoomStep: 1.4
   });
-  orbit.attachPointer();
 
   // 3D 側は cube 2 個だけに絞り、
   // theme 切替で UI が変わる様子と scene が透けて見える様子を最短で見比べられる構成にする

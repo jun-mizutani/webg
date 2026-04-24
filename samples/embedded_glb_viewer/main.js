@@ -6,7 +6,6 @@
 // -------------------------------------------------
 
 import WebgApp from "../../webg/WebgApp.js";
-import EyeRig from "../../webg/EyeRig.js";
 import SmoothShader from "../../webg/SmoothShader.js";
 import Shape from "../../webg/Shape.js";
 import Primitive from "../../webg/Primitive.js";
@@ -980,22 +979,15 @@ async function start() {
   });
   await app.init();
 
-  orbit = new EyeRig(app.cameraRig, app.cameraRod, app.eye, {
-    document,
-    element: app.screen.canvas,
-    input: app.input,
-    type: "orbit",
-    orbit: {
-      target: [...DEFAULT_ORBIT.target],
-      distance: DEFAULT_ORBIT.distance,
-      yaw: DEFAULT_ORBIT.yaw,
-      pitch: DEFAULT_ORBIT.pitch,
-      minDistance: 4.0,
-      maxDistance: 56.0,
-      wheelZoomStep: 1.2
-    }
+  orbit = app.createOrbitEyeRig({
+    target: [...DEFAULT_ORBIT.target],
+    distance: DEFAULT_ORBIT.distance,
+    head: DEFAULT_ORBIT.yaw,
+    pitch: DEFAULT_ORBIT.pitch,
+    minDistance: 4.0,
+    maxDistance: 56.0,
+    wheelZoomStep: 1.2
   });
-  orbit.attachPointer();
   app.input.registerActionMap({
     "reset-view": ["r"],
     "toggle-pause": ["space"],

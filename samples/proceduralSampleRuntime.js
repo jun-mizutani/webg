@@ -6,7 +6,6 @@
 
 import WebgApp from "../webg/WebgApp.js";
 import Shape from "../webg/Shape.js";
-import EyeRig from "../webg/EyeRig.js";
 
 const FONT_FILE = "../../webg/font512.png";
 
@@ -98,23 +97,16 @@ export async function setupProceduralSampleApp(options = {}) {
     lines: helpLines
   });
 
-  const orbit = new EyeRig(app.cameraRig, app.cameraRod, app.eye, {
-    document: options.document ?? document,
-    element: app.screen.canvas,
-    input: app.input,
-    type: "orbit",
-    orbit: {
-      target: camera.target,
-      distance: camera.distance,
-      yaw: camera.yaw,
-      pitch: camera.pitch,
-      bank: camera.bank,
-      minDistance: camera.minDistance,
-      maxDistance: camera.maxDistance,
-      wheelZoomStep: camera.wheelZoomStep
-    }
+  const orbit = app.createOrbitEyeRig({
+    target: camera.target,
+    distance: camera.distance,
+    head: camera.yaw,
+    pitch: camera.pitch,
+    bank: camera.bank,
+    minDistance: camera.minDistance,
+    maxDistance: camera.maxDistance,
+    wheelZoomStep: camera.wheelZoomStep
   });
-  orbit.attachPointer();
 
 // sample ごとの材質設定を Shape へ適用し、
 // procedural build 後に毎回同じ material path を通す

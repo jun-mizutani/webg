@@ -90,7 +90,11 @@ export default class WebgApp {
       eyeName: options.camera?.eyeName ?? "eye",
       target: [...(options.camera?.target ?? [0.0, 0.0, 0.0])],
       distance: util.readOptionalFiniteNumber(options.camera?.distance, "WebgApp camera.distance", 28.0),
-      yaw: util.readOptionalFiniteNumber(options.camera?.yaw, "WebgApp camera.yaw", 0.0),
+      head: util.readOptionalFiniteNumber(
+        options.camera?.head,
+        "WebgApp camera.head",
+        0.0
+      ),
       pitch: util.readOptionalFiniteNumber(options.camera?.pitch, "WebgApp camera.pitch", 0.0),
       bank: util.readOptionalFiniteNumber(options.camera?.bank, "WebgApp camera.bank", 0.0)
     };
@@ -101,8 +105,12 @@ export default class WebgApp {
       targetOffset: [...(options.camera?.targetOffset ?? [0.0, 0.0, 0.0])],
       currentTarget: [...this.camera.target],
       smooth: util.readOptionalFiniteNumber(options.camera?.smooth, "WebgApp camera.smooth", 0.15),
-      inheritTargetYaw: options.camera?.inheritTargetYaw === true,
-      targetYawOffset: util.readOptionalFiniteNumber(options.camera?.targetYawOffset, "WebgApp camera.targetYawOffset", 0.0)
+      inheritTargetHead: options.camera?.inheritTargetHead === true,
+      targetHeadOffset: util.readOptionalFiniteNumber(
+        options.camera?.targetHeadOffset,
+        "WebgApp camera.targetHeadOffset",
+        0.0
+      )
     };
     this.fixedCanvasSize = this.normalizeFixedCanvasSize(options.fixedCanvasSize);
     this.layoutMode = this.normalizeLayoutMode(options.layoutMode);
@@ -928,11 +936,11 @@ export default class WebgApp {
       this.camera.target[2]
     );
 
-    if (state.inheritTargetYaw && typeof state.targetNode.getWorldAttitude === "function") {
+    if (state.inheritTargetHead && typeof state.targetNode.getWorldAttitude === "function") {
       const attitude = state.targetNode.getWorldAttitude();
       if (Array.isArray(attitude) && attitude.length >= 3) {
         this.cameraRig.setAttitude(
-          Number(attitude[0]) + state.targetYawOffset,
+          Number(attitude[0]) + state.targetHeadOffset,
           Number(attitude[1]),
           Number(attitude[2])
         );
@@ -950,8 +958,12 @@ export default class WebgApp {
     this.cameraFollow.targetNode = node ?? null;
     this.cameraFollow.targetOffset = [...(options.offset ?? options.targetOffset ?? this.cameraFollow.targetOffset ?? [0.0, 0.0, 0.0])];
     this.cameraFollow.smooth = util.readOptionalFiniteNumber(options.smooth, "WebgApp followNode.smooth", 0.15);
-    this.cameraFollow.inheritTargetYaw = options.inheritTargetYaw === true;
-    this.cameraFollow.targetYawOffset = util.readOptionalFiniteNumber(options.targetYawOffset, "WebgApp followNode.targetYawOffset", 0.0);
+    this.cameraFollow.inheritTargetHead = options.inheritTargetHead === true;
+    this.cameraFollow.targetHeadOffset = util.readOptionalFiniteNumber(
+      options.targetHeadOffset,
+      "WebgApp followNode.targetHeadOffset",
+      0.0
+    );
     if (this.cameraFollow.active) {
       this.updateCameraTarget(0.0, true);
     }
@@ -965,8 +977,12 @@ export default class WebgApp {
     this.cameraFollow.targetNode = target ?? null;
     this.cameraFollow.targetOffset = [...(options.offset ?? options.targetOffset ?? [0.0, 0.0, 0.0])];
     this.cameraFollow.smooth = util.readOptionalFiniteNumber(options.smooth, "WebgApp lockOn.smooth", 1.0);
-    this.cameraFollow.inheritTargetYaw = options.inheritTargetYaw === true;
-    this.cameraFollow.targetYawOffset = util.readOptionalFiniteNumber(options.targetYawOffset, "WebgApp lockOn.targetYawOffset", 0.0);
+    this.cameraFollow.inheritTargetHead = options.inheritTargetHead === true;
+    this.cameraFollow.targetHeadOffset = util.readOptionalFiniteNumber(
+      options.targetHeadOffset,
+      "WebgApp lockOn.targetHeadOffset",
+      0.0
+    );
     if (this.cameraFollow.active) {
       this.updateCameraTarget(0.0, true);
     }
@@ -978,7 +994,7 @@ export default class WebgApp {
     this.cameraFollow.active = false;
     this.cameraFollow.mode = "follow";
     this.cameraFollow.targetNode = null;
-    this.cameraFollow.inheritTargetYaw = false;
+    this.cameraFollow.inheritTargetHead = false;
     return null;
   }
 
@@ -1429,7 +1445,7 @@ export default class WebgApp {
   createCameraRig() {
     this.cameraRig = this.space.addNode(null, this.camera.rigName);
     this.cameraRig.setPosition(...this.camera.target);
-    this.cameraRig.setAttitude(this.camera.yaw, this.camera.pitch, this.camera.bank);
+    this.cameraRig.setAttitude(this.camera.head, this.camera.pitch, this.camera.bank);
     this.cameraRod = this.space.addNode(this.cameraRig, this.camera.rodName);
     this.cameraRod.setPosition(0.0, 0.0, 0.0);
     this.cameraRod.setAttitude(0.0, 0.0, 0.0);
@@ -1437,6 +1453,22 @@ export default class WebgApp {
     this.eye.setPosition(0.0, 0.0, this.camera.distance);
     this.eye.setAttitude(0.0, 0.0, 0.0);
     this.space.setEye(this.eye);
+  }
+
+  // orbit camera の既定キーバインディングを 1 か所へまとめる
+  // createOrbitEyeRig() ではこの既定値に対して差分 override を適用する
+  getDefaultOrbitEyeRigBindings() {
+    return {
+      keyMap: {
+        left: "arrowleft",
+        right: "arrowright",
+        up: "arrowup",
+        down: "arrowdown",
+        zoomIn: "[",
+        zoomOut: "]"
+      },
+      panModifierKey: "shift"
+    };
   }
 
   // WebgApp 標準 cameraRig 上へ orbit 用 EyeRig を作成する
@@ -1455,14 +1487,25 @@ export default class WebgApp {
     const syncCamera = options.syncCamera !== false;
     const element = options.element ?? this.screen?.canvas ?? null;
     const input = options.input ?? this.input;
+    const defaultBindings = this.getDefaultOrbitEyeRigBindings();
+    const orbitKeyMap = {
+      ...defaultBindings.keyMap,
+      ...(options.orbit?.keyMap ?? {}),
+      ...(options.orbitKeyMap ?? {})
+    };
+    const panModifierKey = options.panModifierKey
+      ?? options.orbit?.panModifierKey
+      ?? defaultBindings.panModifierKey;
     const orbitOptions = {
       ...options,
       ...(options.orbit ?? {}),
       target: options.target ?? options.orbit?.target ?? [...this.camera.target],
       distance: options.distance ?? options.orbit?.distance ?? this.camera.distance,
-      yaw: options.yaw ?? options.orbit?.yaw ?? this.camera.yaw,
+      head: options.head ?? options.orbit?.head ?? this.camera.head,
       pitch: options.pitch ?? options.orbit?.pitch ?? this.camera.pitch,
-      bank: options.bank ?? options.orbit?.bank ?? this.camera.bank
+      bank: options.bank ?? options.orbit?.bank ?? this.camera.bank,
+      keyMap: orbitKeyMap,
+      panModifierKey
     };
 
     if (this.eyeRig?.detachPointer) {
@@ -1498,7 +1541,7 @@ export default class WebgApp {
     this.camera.target[1] = eyeRig.orbit.target[1];
     this.camera.target[2] = eyeRig.orbit.target[2];
     this.camera.distance = eyeRig.orbit.distance;
-    this.camera.yaw = eyeRig.orbit.yaw;
+    this.camera.head = eyeRig.orbit.head;
     this.camera.pitch = eyeRig.orbit.pitch;
     this.camera.bank = eyeRig.orbit.bank;
     return this.camera;
@@ -2659,6 +2702,20 @@ export default class WebgApp {
       stage: this.diagnostics?.stage ?? "runtime"
     });
     this.updateDebugDock();
+  }
+
+  // 高レイヤーの fallback や範囲外 clip はここから warning として通知し、
+  // console と diagnostics/debug dock の両方で追える共通入口にする
+  reportRuntimeWarning(line, options = {}) {
+    const text = this.normalizeDebugDockAlertText(line);
+    if (!text) {
+      return null;
+    }
+    if (options.logToConsole !== false) {
+      console.warn(text);
+    }
+    this.addDiagnosticsWarning(text);
+    return this.latestRuntimeWarning;
   }
 
   // diagnostics の統計値をまとめて更新する
