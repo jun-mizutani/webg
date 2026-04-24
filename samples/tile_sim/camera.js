@@ -1,6 +1,6 @@
 // -------------------------------------------------
 // tile_sim sample
-//   camera.js     2026/04/01
+//   camera.js     2026/04/24
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // -------------------------------------------------
@@ -8,17 +8,8 @@
 import { CELL_SIZE, DISPLAY_AREA_SCROLL_DURATION_MS } from "./constants.js";
 
 // この module は、tile_sim の camera と pointer picking の helper をまとめる
-// - orbit 反映、displayArea 中心の camera target 同期、mouse 位置からの ray 作成をここで扱う
+// - displayArea 中心の camera target 同期、mouse 位置からの ray 作成をここで扱う
 // - 視点制御まわりを mission や controller から切り離し、責務を見やすくする
-
-const ORBIT_DRAG_YAW_SPEED = 0.30;
-const ORBIT_DRAG_PITCH_SPEED = 0.20;
-const ORBIT_PITCH_MIN = -84.0;
-const ORBIT_PITCH_MAX = -8.0;
-const ORBIT_DISTANCE_MIN = 10.0;
-const ORBIT_DISTANCE_MAX = 34.0;
-const ORBIT_PINCH_ZOOM_SPEED = 2.2;
-const ORBIT_PAN_SPEED = 2.0;
 
 // canvas 上の CSS 座標を NDC へ変換する
 // - pointer 位置から ray を作る前段として、screen 上の位置を clip space 基準へそろえる
@@ -75,83 +66,28 @@ export const getDisplayAreaCenter = (displayArea) => {
   ];
 };
 
-// orbit 情報を camera rig と eye node へ反映する
-// - yaw は cameraRig、pitch と distance は eye 側へ分け、orbit 操作を分かりやすく保つ
-export const applyOrbitCamera = (cameraPivot, eye, orbit) => {
-  cameraPivot.setAttitude(orbit.yaw, 0.0, 0.0);
-  eye.setPosition(0.0, orbit.eyeHeight, orbit.distance);
-  eye.setAttitude(0.0, orbit.pitch, 0.0);
-};
-
-// drag 量を orbit の yaw / pitch へ反映する
-// - mouse drag と 1本指 drag の両方で同じ計算を通し、sample ごとの差を増やさない
-export const applyOrbitDrag = (orbit, dx, dy) => {
-  orbit.yaw += dx * ORBIT_DRAG_YAW_SPEED;
-  orbit.pitch = Math.max(ORBIT_PITCH_MIN, Math.min(ORBIT_PITCH_MAX, orbit.pitch + dy * ORBIT_DRAG_PITCH_SPEED));
-};
-
-// wheel や pinch で camera 距離を変える
-// - zoom delta の source を問わず 1 か所で clamp し、sample 側の計算を単純に保つ
-export const applyOrbitZoomDelta = (orbit, zoomDelta) => {
-  orbit.distance = Math.max(ORBIT_DISTANCE_MIN, Math.min(ORBIT_DISTANCE_MAX, orbit.distance + zoomDelta));
-};
-
-// pinch の指間距離変化を orbit zoom へ変換する
-// - viewport が小さい端末では 1px あたりの変化が大きく感じられるため、
-//   canvas の短辺に応じて zoom 量を正規化する
-export const applyOrbitPinchZoom = (canvas, orbit, pinchDelta) => {
-  const size = Math.max(1.0, Math.min(canvas?.clientWidth ?? 0, canvas?.clientHeight ?? 0));
-  const zoomAmount = -pinchDelta * orbit.distance * ORBIT_PINCH_ZOOM_SPEED / size;
-  applyOrbitZoomDelta(orbit, zoomAmount);
-};
-
-// world 行列から得た vector を XZ 平面へ投影して unit vector へ直す
-// - tile sample の camera 移動は ground 上を滑らせたいので、Y 成分はここで除く
-const normalizeGroundVector = (v, fallback = [0.0, 0.0, 0.0]) => {
-  const x = v?.[0] ?? 0.0;
-  const z = v?.[2] ?? 0.0;
-  const len = Math.hypot(x, z);
-  if (len <= 1.0e-8) {
-    return [...fallback];
+// WebgApp 標準 orbit と app.camera の両方へ target を反映する
+// - createOrbitEyeRig() 使用時は EyeRig 側が source of truth になるため、
+//   displayArea 追従の tween も EyeRig.setTarget() を通して更新する
+// - 標準 orbit を使わない最小構成でも app.camera.target だけは更新できるようにする
+const setCameraTarget = (app, target) => {
+  if (!Array.isArray(target) || target.length < 3) {
+    throw new Error("tile_sim camera target must be a 3D vector");
   }
-  return [x / len, 0.0, z / len];
-};
-
-// 2本指 drag を ground 上の camera target 移動へ変換する
-// - TileMap sample では orbit 中心を app.camera.target で持っているため、
-//   target を XZ 平面上で動かしつつ cameraRig の位置も即座に同期して見え方を遅らせない
-export const panCameraTargetByScreenDelta = (app, canvas, orbit, dx, dy) => {
-  if (!app?.eye?.getWorldMatrix || !Array.isArray(app?.camera?.target)) {
+  if (target.some((value) => !Number.isFinite(value))) {
+    throw new Error("tile_sim camera target values must be finite");
+  }
+  if (app?.eyeRig?.setTarget) {
+    app.eyeRig.setTarget(target[0], target[1], target[2]);
+    app.syncCameraFromEyeRig?.(app.eyeRig);
     return;
   }
-  app.eye.setWorldMatrix();
-  const matrix = app.eye.getWorldMatrix();
-  const eyePos = app.eye.getWorldPosition();
-  const fallbackForward = normalizeGroundVector([
-    app.camera.target[0] - eyePos[0],
-    0.0,
-    app.camera.target[2] - eyePos[2]
-  ], [0.0, 0.0, -1.0]);
-  const right = normalizeGroundVector(
-    matrix.mul3x3Vector([1.0, 0.0, 0.0]),
-    [fallbackForward[2], 0.0, -fallbackForward[0]]
-  );
-  const screenUp = normalizeGroundVector(
-    matrix.mul3x3Vector([0.0, 1.0, 0.0]),
-    fallbackForward
-  );
-  const size = Math.max(1.0, Math.min(canvas?.clientWidth ?? 0, canvas?.clientHeight ?? 0));
-  const scale = orbit.distance * ORBIT_PAN_SPEED / size;
-  const moveX = right[0] * (-dx * scale) + screenUp[0] * (dy * scale);
-  const moveZ = right[2] * (-dx * scale) + screenUp[2] * (dy * scale);
-
-  app.camera.target[0] += moveX;
-  app.camera.target[2] += moveZ;
-  app.cameraRig?.setPosition?.(
-    app.camera.target[0],
-    app.camera.target[1],
-    app.camera.target[2]
-  );
+  if (Array.isArray(app?.camera?.target) && app.camera.target.length >= 3) {
+    app.camera.target[0] = target[0];
+    app.camera.target[1] = target[1];
+    app.camera.target[2] = target[2];
+    app.cameraRig?.setPosition?.(target[0], target[1], target[2]);
+  }
 };
 
 // ballCell に追従して displayArea と camera target を同期する helper を作る
@@ -168,11 +104,7 @@ export const createDisplayAreaSync = (tileMap, app) => {
     if (!animate) {
       cameraTargetTween = null;
       cameraTarget = [...target];
-      if (Array.isArray(app.camera?.target) && app.camera.target.length >= 3) {
-        app.camera.target[0] = target[0];
-        app.camera.target[1] = target[1];
-        app.camera.target[2] = target[2];
-      }
+      setCameraTarget(app, target);
       return displayArea;
     }
     const current = app.camera?.target ?? null;
@@ -204,17 +136,13 @@ export const createDisplayAreaSync = (tileMap, app) => {
         if (cameraTargetTween !== tweenRef) {
           return;
         }
-        app.camera.target[0] = state.x;
-        app.camera.target[1] = state.y;
-        app.camera.target[2] = state.z;
+        setCameraTarget(app, [state.x, state.y, state.z]);
       },
       onComplete: (state, tweenRef) => {
         if (cameraTargetTween !== tweenRef) {
           return;
         }
-        app.camera.target[0] = target[0];
-        app.camera.target[1] = target[1];
-        app.camera.target[2] = target[2];
+        setCameraTarget(app, target);
         cameraTargetTween = null;
       }
     });

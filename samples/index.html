@@ -1373,7 +1373,7 @@ DialogueOverlay の見方
 - 3D 側で click した cell を変えると、2D tactical map 側でも白枠の選択位置が追従することを確認します
 - 盤面を click / tap したとき、その cell の terrain / height / objective 情報が `DialogueOverlay` に出ることを確認します
 - goal へ到達すると clear result へ切り替わり、Enter / Space / GO で mission を最初からやり直せることを確認します
-- マウスでは drag で camera orbit、wheel で zoom でき、touch では 1本指 drag で orbit、2本指 drag で camera 移動、pinch で zoom できることを確認します
+- camera は `WebgApp.createOrbitEyeRig()` の標準 orbit として動作し、drag / Shift+drag / wheel / touch gesture で視点操作できることを確認します
 - clear result で `DialogueOverlay` の debrief が出て、閉じたあとに retry できることを確認します
 
 操作説明
@@ -1382,8 +1382,12 @@ DialogueOverlay の見方
 - arrow keys: Alpha を移動
 - click / tap: cell を選択して inspection を開く
 - drag: camera orbit
+- Shift + drag: camera を平行移動
 - 2本指 drag: camera を平行移動
 - pinch / wheel: zoom
+- `W / A / S / D`: camera orbit
+- `Shift + W / A / S / D`: camera を平行移動
+- `Q / E`: zoom
 - touch buttons: `← / ↑ / ↓ / → / GO / 1 / 2 / 3 / R`
 - `3`: orbit preset
 - `R`: camera を reset

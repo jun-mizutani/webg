@@ -1,6 +1,6 @@
 // -------------------------------------------------
 // tile_sim sample
-//   terrain.js    2026/04/10
+//   terrain.js    2026/04/24
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // -------------------------------------------------
@@ -276,7 +276,7 @@ export const createSceneDefinition = (terrainMaterials = null) => {
     camera: {
       target: [SCENE_MAP_WIDTH * CELL_SIZE * 0.5, 0.0, SCENE_MAP_HEIGHT * CELL_SIZE * 0.5],
       distance: 18.7,
-      yaw: 28.0,
+      head: 28.0,
       pitch: -30.0,
       bank: 0.0,
       viewAngle: 42.0,

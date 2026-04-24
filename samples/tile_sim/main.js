@@ -1,6 +1,6 @@
 // -------------------------------------------------
 // tile_sim sample
-//   main.js       2026/04/10
+//   main.js       2026/04/24
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // -------------------------------------------------
@@ -28,14 +28,7 @@ import {
   buildTerrainMaterials,
   createSceneDefinition
 } from "./terrain.js";
-import {
-  applyOrbitCamera,
-  applyOrbitDrag,
-  applyOrbitPinchZoom,
-  applyOrbitZoomDelta,
-  makeRayFromMouse,
-  panCameraTargetByScreenDelta
-} from "./camera.js";
+import { makeRayFromMouse } from "./camera.js";
 import { createTileMapController } from "./controller.js";
 import {
   createTileMapMissionRuntime,
@@ -238,15 +231,15 @@ const createScenePhaseController = (app, missionRuntime, controller, supportSqua
 
 // keyboard / touch の action を phase ごとの振る舞いへ変換する handler を作る
 // - Enter / Space は開始と retry、Arrow は移動、数字は camera preset、R は reset に割り当てる
-// - orbit の yaw を見て camera-relative movement へ変換する入口もここへ集める
-const createActionHandler = (app, controller, orbit, resetOrbit, setOrbitPreset, phaseController, isActionLocked) => {
+// - orbit の head を見て camera-relative movement へ変換する入口もここへ集める
+const createActionHandler = (app, controller, orbitRig, resetOrbit, setOrbitPreset, phaseController, isActionLocked) => {
   return (key, ev = null) => {
     const raw = String(key ?? "").toLowerCase();
     const normalized = raw === " " ? "space" : raw;
     const phase = app.getScenePhase() ?? "title";
     const dialogueState = app.getDialogueState();
     const dialogueActive = dialogueState?.active === true;
-    const relativeMove = resolveCameraRelativeGridMove(orbit.yaw, normalized);
+    const relativeMove = resolveCameraRelativeGridMove(orbitRig.orbit.head, normalized);
 
     if (dialogueActive) {
       if (relativeMove && (dialogueState?.current?.choiceCount ?? 0) > 0) {
@@ -330,14 +323,11 @@ const createActionHandler = (app, controller, orbit, resetOrbit, setOrbitPreset,
   };
 };
 
-// drag / pinch と tap selection を同じ canvas 上で扱う pointer 操作を登録する
-// - mouse は従来どおり drag で orbit、wheel で zoom、click で tile selection を行う
-// - touch は 1本指 drag で orbit、2本指 drag で camera target を平行移動、
-//   pinch で zoom、tap で tile selection を行う
-// - TileMap の pick と camera gesture を同じ入口へまとめつつ、判定条件は sample 側で明示する
-const registerPointerControls = (app, tileMap, controller, orbit, onInspect = null) => {
+// click / tap selection を canvas 上で扱う pointer 操作を登録する
+// - camera の orbit / PAN / wheel / pinch は WebgApp.createOrbitEyeRig() が標準入力として処理する
+// - sample 側では短い click / tap だけを TileMap.pickCell() へ流し、camera 実装を重複させない
+const registerPointerControls = (app, tileMap, controller, onInspect = null) => {
   const canvas = app.screen.canvas;
-  canvas.style.touchAction = "none";
   const pointerState = {
     active: false,
     moved: false,
@@ -348,13 +338,7 @@ const registerPointerControls = (app, tileMap, controller, orbit, onInspect = nu
     touchPointerId: null,
     touchMoved: false,
     touchStartX: 0,
-    touchStartY: 0,
-    touchLastX: 0,
-    touchLastY: 0,
-    touchGestureActive: false,
-    touchCenterX: 0,
-    touchCenterY: 0,
-    touchDistance: 0
+    touchStartY: 0
   };
 
   const TOUCH_DRAG_THRESHOLD_PX = 6;
@@ -373,7 +357,7 @@ const registerPointerControls = (app, tileMap, controller, orbit, onInspect = nu
     }
   };
 
-  // touch pointer の最新位置を保持し、gesture 計算を move ごとに更新できるようにする
+  // touch pointer の最新位置を保持し、tap と drag を区別できるようにする
   const storeTouchPointer = (ev) => {
     pointerState.touchPointers.set(ev.pointerId, {
       pointerId: ev.pointerId,
@@ -386,42 +370,9 @@ const registerPointerControls = (app, tileMap, controller, orbit, onInspect = nu
     pointerState.touchPointers.delete(pointerId);
   };
 
-  // multitouch gesture は最初の 2 本だけで中心移動と指間距離を読む
+  // multitouch は camera 側の gesture として扱い、sample 側では tap selection から除外する
   const getTouchPointers = () => {
     return Array.from(pointerState.touchPointers.values()).slice(0, 2);
-  };
-
-  const getTouchMetrics = () => {
-    const touches = getTouchPointers();
-    if (touches.length < 2) {
-      return {
-        centerX: 0,
-        centerY: 0,
-        distance: 0
-      };
-    }
-    const a = touches[0];
-    const b = touches[1];
-    return {
-      centerX: (a.clientX + b.clientX) * 0.5,
-      centerY: (a.clientY + b.clientY) * 0.5,
-      distance: Math.hypot(b.clientX - a.clientX, b.clientY - a.clientY)
-    };
-  };
-
-  const beginTouchGesture = () => {
-    const metrics = getTouchMetrics();
-    pointerState.touchGestureActive = true;
-    pointerState.touchCenterX = metrics.centerX;
-    pointerState.touchCenterY = metrics.centerY;
-    pointerState.touchDistance = metrics.distance;
-  };
-
-  const resetTouchGesture = () => {
-    pointerState.touchGestureActive = false;
-    pointerState.touchCenterX = 0;
-    pointerState.touchCenterY = 0;
-    pointerState.touchDistance = 0;
   };
 
   const releasePointerCaptureSafe = (pointerId) => {
@@ -440,15 +391,11 @@ const registerPointerControls = (app, tileMap, controller, orbit, onInspect = nu
       if (touches.length >= 2) {
         pointerState.touchMoved = true;
         pointerState.touchPointerId = null;
-        beginTouchGesture();
       } else {
         pointerState.touchPointerId = ev.pointerId;
         pointerState.touchMoved = false;
         pointerState.touchStartX = ev.clientX;
         pointerState.touchStartY = ev.clientY;
-        pointerState.touchLastX = ev.clientX;
-        pointerState.touchLastY = ev.clientY;
-        resetTouchGesture();
       }
       ev.preventDefault();
       return;
@@ -472,22 +419,7 @@ const registerPointerControls = (app, tileMap, controller, orbit, onInspect = nu
       storeTouchPointer(ev);
       const touches = getTouchPointers();
       if (touches.length >= 2) {
-        if (!pointerState.touchGestureActive) {
-          beginTouchGesture();
-        }
-        const metrics = getTouchMetrics();
-        const centerDx = metrics.centerX - pointerState.touchCenterX;
-        const centerDy = metrics.centerY - pointerState.touchCenterY;
-        const pinchDelta = metrics.distance - pointerState.touchDistance;
-        if (Math.abs(centerDx) + Math.abs(centerDy) > 0 || Math.abs(pinchDelta) > 0) {
-          pointerState.touchMoved = true;
-        }
-        panCameraTargetByScreenDelta(app, canvas, orbit, centerDx, centerDy);
-        applyOrbitPinchZoom(canvas, orbit, pinchDelta);
-        applyOrbitCamera(app.cameraRig, app.eye, orbit);
-        pointerState.touchCenterX = metrics.centerX;
-        pointerState.touchCenterY = metrics.centerY;
-        pointerState.touchDistance = metrics.distance;
+        pointerState.touchMoved = true;
         ev.preventDefault();
         return;
       }
@@ -502,12 +434,6 @@ const registerPointerControls = (app, tileMap, controller, orbit, onInspect = nu
         }
         pointerState.touchMoved = true;
       }
-      const dx = ev.clientX - pointerState.touchLastX;
-      const dy = ev.clientY - pointerState.touchLastY;
-      applyOrbitDrag(orbit, dx, dy);
-      applyOrbitCamera(app.cameraRig, app.eye, orbit);
-      pointerState.touchLastX = ev.clientX;
-      pointerState.touchLastY = ev.clientY;
       ev.preventDefault();
       return;
     }
@@ -519,8 +445,6 @@ const registerPointerControls = (app, tileMap, controller, orbit, onInspect = nu
     if (Math.abs(dx) + Math.abs(dy) > MOUSE_DRAG_THRESHOLD_PX) {
       pointerState.moved = true;
     }
-    applyOrbitDrag(orbit, dx, dy);
-    applyOrbitCamera(app.cameraRig, app.eye, orbit);
     pointerState.lastX = ev.clientX;
     pointerState.lastY = ev.clientY;
   });
@@ -535,16 +459,11 @@ const registerPointerControls = (app, tileMap, controller, orbit, onInspect = nu
       if (touches.length >= 2) {
         pointerState.touchPointerId = null;
         pointerState.touchMoved = true;
-        beginTouchGesture();
       } else if (touches.length === 1) {
         const remaining = touches[0];
         pointerState.touchPointerId = remaining.pointerId;
-        pointerState.touchLastX = remaining.clientX;
-        pointerState.touchLastY = remaining.clientY;
-        resetTouchGesture();
       } else {
         pointerState.touchPointerId = null;
-        resetTouchGesture();
       }
       if (tapEligible) {
         pickCellAt(ev.clientX, ev.clientY);
@@ -570,13 +489,9 @@ const registerPointerControls = (app, tileMap, controller, orbit, onInspect = nu
       if (touches.length === 1) {
         const remaining = touches[0];
         pointerState.touchPointerId = remaining.pointerId;
-        pointerState.touchLastX = remaining.clientX;
-        pointerState.touchLastY = remaining.clientY;
-        resetTouchGesture();
       } else {
         pointerState.touchPointerId = null;
         pointerState.touchMoved = false;
-        resetTouchGesture();
       }
       return;
     }
@@ -584,12 +499,6 @@ const registerPointerControls = (app, tileMap, controller, orbit, onInspect = nu
     pointerState.pointerId = null;
     pointerState.moved = false;
   });
-
-  canvas.addEventListener("wheel", (ev) => {
-    applyOrbitZoomDelta(orbit, ev.deltaY * 0.01);
-    applyOrbitCamera(app.cameraRig, app.eye, orbit);
-    ev.preventDefault();
-  }, { passive: false });
 };
 
 // sample 全体を起動する
@@ -623,7 +532,7 @@ const start = async () => {
     camera: {
       target: [MAP_WIDTH * CELL_SIZE * 0.5, 0.0, MAP_HEIGHT * CELL_SIZE * 0.5],
       distance: 18.7,
-      yaw: 28.0,
+      head: 28.0,
       pitch: -30.0,
       bank: 0.0,
       viewAngle: 42.0,
@@ -644,32 +553,51 @@ const start = async () => {
   }
 
   const { ballNode, ballShape } = createBallRig(app);
-  const orbit = { ...ORBIT_PRESETS[0] };
+  const orbitRig = app.createOrbitEyeRig({
+    target: [...app.camera.target],
+    distance: ORBIT_PRESETS[0].distance,
+    head: ORBIT_PRESETS[0].head,
+    pitch: ORBIT_PRESETS[0].pitch,
+    bank: 0.0,
+    orbit: {
+      minDistance: 8.0,
+      maxDistance: 34.0,
+      pitchMin: -84.0,
+      pitchMax: -8.0,
+      dragRotateSpeed: 0.28,
+      dragPanSpeed: 2.0,
+      pinchZoomSpeed: 2.2,
+      wheelZoomStep: 1.8
+    },
+    orbitKeyMap: {
+      left: "a",
+      right: "d",
+      up: "w",
+      down: "s",
+      zoomIn: "q",
+      zoomOut: "e"
+    },
+    panModifierKey: "shift"
+  });
 
   // orbit camera を基準 preset へ戻す
   // - 視点が崩れても 1 操作で sample 既定角度へ戻せるようにする
   const resetOrbit = () => {
     const preset = ORBIT_PRESETS[0];
-    orbit.label = preset.label;
-    orbit.yaw = preset.yaw;
-    orbit.pitch = preset.pitch;
-    orbit.distance = preset.distance;
-    orbit.eyeHeight = preset.eyeHeight;
-    app.cameraRig.clearAnimatedPosition?.();
-    applyOrbitCamera(app.cameraRig, app.eye, orbit);
+    orbitRig.orbit.label = preset.label;
+    orbitRig.setAngles(preset.head, preset.pitch, 0.0);
+    orbitRig.setDistance(preset.distance);
+    app.syncCameraFromEyeRig(orbitRig);
   };
 
   // preset 番号に応じて orbit camera を切り替える
   // - 同じ盤面を斜め / 横 / 俯瞰で見比べ、TileMap の見え方差を確認しやすくする
   const setOrbitPreset = (index) => {
     const preset = ORBIT_PRESETS[(index + ORBIT_PRESETS.length) % ORBIT_PRESETS.length];
-    orbit.label = preset.label;
-    orbit.yaw = preset.yaw;
-    orbit.pitch = preset.pitch;
-    orbit.distance = preset.distance;
-    orbit.eyeHeight = preset.eyeHeight;
-    app.cameraRig.clearAnimatedPosition?.();
-    applyOrbitCamera(app.cameraRig, app.eye, orbit);
+    orbitRig.orbit.label = preset.label;
+    orbitRig.setAngles(preset.head, preset.pitch, 0.0);
+    orbitRig.setDistance(preset.distance);
+    app.syncCameraFromEyeRig(orbitRig);
   };
 
   const missionRuntime = createTileMapMissionRuntime(app, tileMap);
@@ -762,7 +690,7 @@ const start = async () => {
   const handleAction = createActionHandler(
     app,
     controller,
-    orbit,
+    orbitRig,
     resetOrbit,
     setOrbitPreset,
     phaseController,
@@ -772,7 +700,7 @@ const start = async () => {
     onKeyDown: (key, ev) => handleAction(key, ev)
   });
   installTouchControls(app, handleAction);
-  registerPointerControls(app, tileMap, controller, orbit, (hit) => {
+  registerPointerControls(app, tileMap, controller, (hit) => {
     dialogueDirector.startCellInspect(hit, missionRuntime.mission, aiAdvisor.getSnapshot());
   });
   resetOrbit();

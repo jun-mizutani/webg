@@ -1,6 +1,6 @@
 // -------------------------------------------------
 // tile_sim sample
-//   constants.js  2026/04/01
+//   constants.js  2026/04/24
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // -------------------------------------------------
@@ -44,23 +44,20 @@ export const HUMAN_CELL_FORMATION_RATIO = 0.20;
 export const ORBIT_PRESETS = [
   {
     label: "diagonal",
-    yaw: 28.0,
+    head: 28.0,
     pitch: -30.0,
-    distance: 18.7,
-    eyeHeight: 13.0
+    distance: 18.7
   },
   {
     label: "side",
-    yaw: 90.0,
+    head: 90.0,
     pitch: -24.0,
-    distance: 20.2,
-    eyeHeight: 12.0
+    distance: 20.2
   },
   {
     label: "overhead",
-    yaw: 0.0,
+    head: 0.0,
     pitch: -78.0,
-    distance: 8.2,
-    eyeHeight: 21.6
+    distance: 8.2
   }
 ];

@@ -6,9 +6,9 @@ __MACOSX/
 Icon[]
 user/
 tools/
+inside_*.txt
 # Thumbnails
 ._*
 
 # Emacs
 *~
-

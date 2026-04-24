@@ -1,62 +1,55 @@
 # WebgAppによるアプリ構成
 
-`WebgApp` は、`webg` で 3D アプリケーションを組み立てるときの標準的な入口です。`Screen`、`Space`、シェーダー、camera rig、入力、HUD、ダイアログ、デバッグ表示、diagnostics など、ほとんどのアプリで毎回必要になる土台をまとめて初期化し、開発者がアプリ固有の処理へ集中できるように設計されています。単にコード量を減らすための便利関数ではなく、「3D アプリの骨格を毎回同じ順序で立ち上げる」ためのフレームワークとして理解するのが適切です。
+`WebgApp` は、`webg` で 3D アプリケーションを構築する際の標準的なエントリポイントです。`Screen`、`Space`、シェーダー、カメラ操作、入力、HUD、ダイアログ、デバッグ表示、診断機能など、ほとんどのアプリケーションで共通して必要となる基盤をまとめて初期化し、開発者がアプリ固有の処理に集中できるように設計されています。これは単にコード量を削減するための便利関数ではなく、「3D アプリケーションの骨格を常に一定の順序で立ち上げる」ためのフレームワークとして理解するのが適切です。
 
-本章では、`WebgApp` を使うと何が省略されるのか、どこまでが 3D 表現そのものの本質で、どこからが定型処理なのかを整理しながら解説します。第3章と第4章で扱ったローレベル（低レイヤー）な構成を踏まえた上で、`WebgApp` がどの処理を肩代わりし、利用者はどこへ自分の処理を書けばよいのかを順を追って確認します。視点ノードの詳細や `EyeRig` の考え方は第6章「カメラ制御とEyeRig」で詳しく扱うため、本章ではアプリ構成の観点から必要な範囲に絞って説明します。
+本章では、`WebgApp` を導入することでどのような定型処理が省略されるのか、そしてどこまでが 3D 表現の本質的な処理で、どこからがフレームワークによる定型処理なのかを整理して解説します。第3章と第4章で扱ったローレベル（低レイヤー）な構成を踏まえ、`WebgApp` がどの処理を担い、利用者はどこに独自の処理を記述すべきかを順を追って確認していきましょう。なお、視点ノードの詳細や `EyeRig` の概念については、第6章「カメラ制御とEyeRig」で詳しく扱うため、本章ではアプリ構成の観点から必要な範囲に絞って説明します。
 
-本章の目的は、`WebgApp` のメソッド名を個別に暗記することではありません。`init()` の前後でどの状態がそろうのか、`start()` の中でどの順序で処理が進むのか、そして HUD、help panel、dialogue、diagnostics をどう使い分けるのかを理解し、「自分のアプリをどこへ差し込めば自然に動くか」を判断できるようになることにあります。
+本章の目的は、個別のメソッド名を暗記することではありません。`init()` の前後でどのような状態が整うのか、`start()` の内部でどのような順序で処理が進むのか、そして HUD、ヘルプパネル、ダイアログ、診断機能をどのように使い分けるのかを理解し、「自身のアプリケーションをどこに組み込めば自然に動作するか」を判断できるようになることにあります。
 
-## WebgAppが引き受ける役割
+## WebgAppが担う役割と3Dシーンの基本構造
 
-`webg` のローレベル（低レイヤー） API では、利用者が次のような部品を順番に生成して接続します。
+`webg` のローレベル API では、利用者が次のようなコンポーネントを順番に生成して接続する必要があります。
 
-- `Screen`: canvas と WebGPU の準備
-- `Shape`: 形状と材質
-- `Node`: 位置、回転、スケールと `Shape` の保持（内部的に `CoordinateSystem` を継承）
+- `Screen`: canvas の準備と WebGPU の初期化
+- `Shape`: 形状と材質の定義
+- `Node`: 位置・回転・スケールの管理と `Shape` の保持（内部的に `CoordinateSystem` を継承）
 - `Space`: シーン全体の管理
-- `eye`: 視点
+- `eye`: 視点の定義
 - shader / projection matrix: 3D 空間を 2D 画面へ投影するための計算
 
-この流れは 3D 描画の理解には重要ですが、実際にアプリを作るたびに同じ初期化を繰り返すのは大きな負担になります。`WebgApp` は、ここに HUD、入力、debug dock、fixed format panel、dialogue、asset loader、スクリーンショット、scene phase 管理といった実用的な機能も加えたうえで、標準的なアプリ構成をまとめて立ち上げます。
+このフローは 3D 描画の仕組みを理解する上では重要ですが、アプリケーションを開発するたびに同じ初期化を繰り返すのは大きな負担となります。`WebgApp` は、ここに HUD、入力管理、デバッグドック、固定フォーマットパネル、ダイアログ、アセットローダー、スクリーンショット、シーンフェーズ管理といった実用的な機能を加えた上で、標準的なアプリケーション構成をまとめて立ち上げます。
 
 ![WebgApp 全体構成図](fig05_01_webgapp_overview.jpg)
 
-*WebgApp は、描画、シーン管理、視点、入力、UI、diagnostics をまとめて初期化し、3D アプリケーションの骨格を一定の形でそろえます*
+*WebgApp は、描画、シーン管理、視点、入力、UI、診断機能をまとめて初期化し、3D アプリケーションの骨格を一定の形式で整えます*
 
-ここで重要なのは、`WebgApp` が 3D の仕組みを隠しているわけではないという点です。`Shape` を `Node` に載せて `Space` に入れ、`eye` から描画するという基本構造は変わりません。`WebgApp` は、その構造を壊さずに、毎回ほぼ同じになる初期化と接続を共通化しています。
-
-## 3Dアプリの基本構造をもう一度整理する
-
-`WebgApp` を理解するためには、3D シーンの構成要素を簡潔に言い直せることが大切です。
-
-- `Shape`: 何を描くか（形状と材質）
-- `Node`: どこに置くか（位置・回転・スケール）
-- `Space`: 全体をどう管理するか（空間の統括）
-- `eye`: どこから見るか（視点）
-
-3D 描画の基本は、結局のところ「何を置くか」「どこへ置くか」「どこから見るか」に集約されます。
+ここで重要なのは、`WebgApp` が 3D の仕組みを隠蔽して不透明にしているわけではないという点です。「`Shape` を `Node` に載せて `Space` に配置し、`eye` から描画する」という基本構造は変わりません。`WebgApp` は、その構造を維持したまま、毎回ほぼ同一となる初期化と接続処理を共通化したものです。
 
 ### Node と CoordinateSystem の関係
 
-ここで、`Node` の正体について少し詳しく触れておきます。`webg` において、位置や回転、スケール、そして親子関係（シーングラフ）という「座標の計算」を専門に担う基底クラスが `CoordinateSystem` です。
+`WebgApp` をより深く理解するために、3D シーンを構成する要素を整理しましょう。
 
-`Node` はこの `CoordinateSystem` を継承して作られています。つまり、`Node` は「座標を管理する能力」を完全に持ったうえで、さらに「`Shape`（形状）を保持して描画する機能」を追加したクラスであると言えます。
+- `Shape`: 「何を描くか」（形状と材質）
+- `Node`: 「どこに置くか」（位置・回転・スケール）
+- `Space`: 「全体をどう管理するか」（空間の統括）
+- `eye`: 「どこから見るか」（視点）
 
-この設計により、次のような論理的な役割分担が実現しています。
-- **`CoordinateSystem`**: 「空間上のどこに、どの向きで存在するか」という数学的な位置情報を管理する。
-- **`Node`**: その位置情報に「具体的な見た目（`Shape`）」を結びつけ、空間に実体化させる。
+3D 描画の基本は、結局のところ「何を置くか」「どこへ置くか」「どこから見るか」に集約されます。ここで、`Node` の実体について詳しく触れておきます。`webg` において、位置や回転、スケール、そして親子関係（シーングラフ）という「座標の計算」を専門に担う基底クラスが `CoordinateSystem` です。
 
-そのため、`Shape` を定義しただけでは、それは単なる「形状データ」に過ぎず、空間上の位置を持っていません。その `Shape` を `Node` にアタッチし、さらに `Node` を `Space` に登録することで初めて、3D 空間内の特定の場所に物体が現れ、`eye`（視点）から見えるようになります。
+`Node` はこの `CoordinateSystem` を継承して作られています。つまり、`Node` は「座標を管理する能力」を備えた上で、さらに「`Shape`（形状）を保持して描画する機能」を追加したクラスであると言えます。この設計により、次のような論理的な役割分担が実現しています。
+
+- `CoordinateSystem`: 「空間上のどこに、どの向きで存在するか」という数学的な位置情報を管理する。
+- `Node`: その位置情報に「具体的な見た目（`Shape`）」を結びつけ、空間に実体化させる。
+
+したがって、`Shape` を定義しただけでは単なる「形状データ」に過ぎず、空間上の位置を持ちません。その `Shape` を `Node` にアタッチし、さらに `Node` を `Space` に登録することで初めて、3D 空間内の特定の場所に物体が現れ、`eye`（視点）から見えるようになります。
 
 ### 座標系と回転の定義
 
-`webg` の座標系は右手座標系で、`+X=右`、`+Y=上`、`+Z=前` です。回転の制御には `head / pitch / bank` という用語を用いており、これは一般的な `yaw / pitch / roll` に対応します。
+`webg` の座標系は右手座標系で、`+X=右`、`+Y=上`、`+Z=前` と定義されています。回転の制御には `head / pitch / bank` という用語を用いており、これは一般的な `yaw / pitch / roll` に対応します。`WebgApp` でも camera や follow 設定においてこの語彙を使用するため、本書全体を通して `head` を基準に理解するようにしてください。この構造を把握しておくことで、`WebgApp` を利用した際に「何が自動化され、何が利用者の責任として残るのか」を明確に区別できるようになります。
 
-`WebgApp` もこの語彙で camera や follow 設定を扱うため、書籍全体でも `head` を基準に読むようにしてください。この構造を理解しておくと、`WebgApp` を使った際にも「何が自動化され、何が利用者の責任として残るのか」を見失いにくくなります。
+## ローレベル構成とWebgAppによる実装の比較
 
-## ローレベルな最小構成を確認する
-
-まずは `WebgApp` を使わずに、必要な部品を個別に組み立てる最小例を見ておきます。これは第4章までの内容の復習でもあり、後で `WebgApp` が何を省略しているかを比較する基準にもなります。
+まずは `WebgApp` を使わずに、必要なコンポーネントを個別に組み立てる最小構成の例を見てみましょう。これは第4章までの復習であり、`WebgApp` がどのような処理を省略しているかを比較するための基準となります。
 
 ```js
 import Screen from "./webg/Screen.js";
@@ -127,11 +120,9 @@ const loop = () => {
 loop();
 ```
 
-このコードでは、画面サイズ変更時の投影行列更新、`Screen` の生成、シェーダー準備、`Space` と `eye` の用意、そして毎フレームの `clear -> draw -> present` まで、利用者がすべて自分で管理しています。これはローレベル（低レイヤー） API を理解するために非常に重要ですが、実際のアプリでは毎回書きたくない定型処理です。
+このコードでは、画面サイズ変更時の投影行列更新、`Screen` の生成、シェーダーの準備、`Space` と `eye` の構築、そして毎フレームの `clear -> draw -> present` というサイクルまで、すべてを利用者が管理しています。これは低レイヤー API を理解する上で不可欠な知識ですが、実際のアプリケーション開発で毎回記述するのは非効率です。
 
-## 同じ内容をWebgAppで書く
-
-次に、同じ題材を `WebgApp` で書き直します。`book/examples/05_02.html` でもそのまま確認できます。
+次に、同じ内容を `WebgApp` で書き直してみます。`book/examples/05_02.html` でも同様の動作を確認できます。
 
 ```js
 import WebgApp from "./webg/WebgApp.js";
@@ -172,52 +163,52 @@ app.start({
 });
 ```
 
-利用者が書いているのは、形状生成、`Node` の配置、そして `onUpdate()` のロジックだけです。`WebgApp` は次のような定型処理を引き受けます。
+利用者が記述しているのは、形状の生成、`Node` の配置、そして `onUpdate()` 内の更新ロジックのみです。`WebgApp` は、内部で次のような定型処理を自動的に実行しています。
 
 - `Screen` の作成と WebGPU の準備
 - 既定シェーダーの初期化
 - `Space` の作成
-- camera rig (`cameraRig -> cameraRod -> eye`) の構築
-- 投影行列とビューポート更新
+- カメラリグ (`cameraRig -> cameraRod -> eye`) の構築
+- 投影行列とビューポートの自動更新
 - 光源とフォグの適用
-- `InputController` と touch の初期化
-- message/HUD、debug dock、fixed format panel の準備
-- diagnostics の初期化
-- `requestAnimationFrame` ループの管理
+- `InputController` とタッチ操作の初期化
+- メッセージ/HUD、デバッグドック、固定フォーマットパネルの準備
+- 診断機能の初期化
+- `requestAnimationFrame` によるループ管理
 
-これにより、利用者は「何を作るか」と「毎フレーム何をしたいか」に集中しやすくなります。
+これにより、開発者は「何を作るか」と「毎フレームどのような挙動をさせるか」という本質的なロジックに集中することが可能になります。
 
 ## WebgAppのライフサイクル
 
-`WebgApp` を使うときは、次の 3 段階のライフサイクルで考えると分かりやすくなります。
+`WebgApp` を利用する際は、次の 3 段階のライフサイクルで考えると理解しやすくなります。
 
-1. コンストラクタで初期設定を渡す
-2. `await app.init()` で土台を作る
-3. シーンを組み立てて `app.start()` で動かす
+1. コンストラクタで初期設定を定義する
+2. `await app.init()` で基盤を構築する
+3. シーンを組み立て、`app.start()` で動作させる
 
-### コンストラクタで決めること
+### コンストラクタによる環境定義
 
-コンストラクタでは、「どのようなアプリの土台を作るか」を決めます。頻繁に使うのは次の項目です。
+コンストラクタでは、「どのようなアプリケーションの土台を作るか」を決定します。頻繁に利用する主な設定項目は以下の通りです。
 
-- `document`: ブラウザの `document`
-- `messageFontTexture`: canvas ベースの HUD / message を使うなら必要
+- `document`: ブラウザの `document` オブジェクト
+- `messageFontTexture`: canvas ベースの HUD / メッセージを利用する場合に必要
 - `clearColor`: 背景色
-- `camera`: 初期視点
-- `shaderClass`: 既定シェーダーを差し替えたい場合
+- `camera`: 初期視点の設定
+- `shaderClass`: 既定シェーダーを差し替えたい場合に指定
 - `viewAngle`: 基準となる視野角
 - `projectionNear` / `projectionFar`: 投影行列の near / far 平面
 - `light`: 光源を eye 固定にするか world node にするか
-- `fog`: フォグの色、距離、密度、mode
+- `fog`: フォグの色、距離、密度、モード
 - `useMessage` / `messageScale`: canvas HUD の有無と表示倍率
 - `attachInputOnInit`: `init()` 時に入力を自動接続するか
 - `autoDrawScene` / `autoDrawBones`: `frame()` 内で自動描画する対象
-- `debugTools`: diagnostics や debug key の初期設定
-- `uiTheme`: debug dock、fixed panel、help panel などの見た目
+- `debugTools`: 診断機能やデバッグキーの初期設定
+- `uiTheme`: デバッグドック、固定パネル、ヘルプパネルなどの外観
 - `renderMode`: `ondemand` または `continuous`
-- `layoutMode`: 通常表示か `embedded`
-- `fixedCanvasSize`: canvas を固定サイズで扱う場合
+- `layoutMode`: 通常表示か `embedded`（埋め込み）か
+- `fixedCanvasSize`: canvas を固定サイズで扱う場合の設定
 
-初期視点の指定では `target`、`distance`、`head`、`pitch`、`bank` を使います。
+初期視点の指定では `target`、`distance`、`head`、`pitch`、`bank` を使用します。
 
 ```js
 const app = new WebgApp({
@@ -234,11 +225,11 @@ const app = new WebgApp({
 });
 ```
 
-ここで作られる標準カメラは、まだ orbit や follow ではありません。`target` と `distance` を元にした「静的な初期視点」です。最初の表示を確実に整えたいときは、この固定視点だけでも十分役立ちます。
+ここで設定される標準カメラは、まだ orbit（軌道）や follow（追従）の状態ではなく、`target` と `distance` に基づいた「静的な初期視点」です。最初の表示状態を確実に制御したい場合、この固定視点設定が非常に有効です。
 
-### 視野角、光源、フォグを初期設定する
+### 投影行列、光源、およびフォグの設定
 
-`WebgApp` は camera の位置だけでなく、投影行列、光源、フォグも constructor option からまとめて受け取れます。視野角は `viewAngle`、奥行き範囲は `projectionNear` と `projectionFar` で指定します。広い scene を扱うときは `projectionFar` を大きくしたくなりますが、過剰に広げると深度精度が落ちるため、表示対象に合わせて必要な範囲へ収めるのが基本です。
+`WebgApp` では、カメラ位置だけでなく、投影行列、光源、フォグもコンストラクタオプションから一括して設定できます。視野角は `viewAngle`、奥行きの範囲は `projectionNear` と `projectionFar` で指定します。広大なシーンを扱う場合は `projectionFar` を大きく設定することになりますが、過剰に広げると深度精度（Zファイティング：奥行きの判定による描画のちらつき）が低下するため、表示対象に合わせて適切な範囲に収めるのが基本です。
 
 ```js
 const app = new WebgApp({
@@ -261,7 +252,7 @@ const app = new WebgApp({
 });
 ```
 
-既定の光源は `eye-fixed` で、視点に対して固定された光として扱われます。モデル確認用の viewer では、視点を回しても対象が見やすいため便利です。シーン内の特定位置に光源を置きたい場合は `light.mode: "world-node"` を使うか、`await app.init()` の後で `setWorldLight()` を呼びます。フォグは `setFog()` で実行中にも変更できます。
+既定の光源は `eye-fixed` であり、視点に対して固定された光として扱われます。これはモデル確認用のビューアなどで、視点を回転させても対象が適切に照らされるため便利です。シーン内の特定位置に光源を配置したい場合は、`light.mode: "world-node"` を使用するか、`await app.init()` の後に `setWorldLight()` を呼び出します。また、フォグの設定は `setFog()` を用いて実行中に変更することも可能です。
 
 ```js
 app.setWorldLight({
@@ -277,9 +268,9 @@ app.setFog({
 });
 ```
 
-### initの後に何が使えるようになるか
+### init 完了後の利用可能コンポーネント
 
-`await app.init()` は、WebGPU のコンテキスト作成やシェーダーのコンパイルなど、非同期的な準備処理をまとめて行う重要なステップです。この処理が完了すると、`WebgApp` の主要コンポーネントが利用可能になります。
+`await app.init()` は、WebGPU コンテキストの作成やシェーダーのコンパイルなど、非同期的な準備処理をまとめて行う重要なステップです。この処理が完了すると、`WebgApp` の主要なコンポーネントが利用可能になります。
 
 - `app.screen`
 - `app.shader`
@@ -291,31 +282,31 @@ app.setFog({
 - `app.message`
 - `app.dialogue`
 
-最もよく使う入口は `app.getGL()`、`app.space`、`app.eye` です。`Shape` を作るときは `app.getGL()` を、`Node` を追加するときは `app.space` を使います。
+開発者が最も頻繁に利用するのは `app.getGL()`、`app.space`、`app.eye` です。`Shape` を生成する際は `app.getGL()` を、`Node` を追加する際は `app.space` を使用します。なお、これらは `init()` の内部で生成されるため、`init()` 完了前にアクセスするとエラーとなる点に注意してください。
 
-逆に言えば、`init()` 前にこれらへ触れてはいけません。`app.getGL()` も `app.space` も `init()` の内部で初めて作られるため、初期化前アクセスは不正な順序となります。
+### start メソッドとフレーム更新の順序
 
-### startの中で何が起きるか
+`app.start()` は、単に `requestAnimationFrame` を呼び出すための関数ではなく、内部で厳密な順序に基づいた update と draw を実行します。現在の `WebgApp.frame()` は、概ね次の順序で処理が進みます。
 
-`app.start()` は、単に `requestAnimationFrame` を呼ぶための関数ではなく、内部で一定の順序に基づいた update と draw を実行します。現在の `WebgApp.frame()` は概ね次の順序で進みます。
-
-1. 経過時間と `deltaSec` を計算する
+1. 経過時間と `deltaSec`（前フレームからの経過秒数）を計算する
 2. 管理中の `EyeRig` を更新する
-3. `onUpdate(ctx)` を呼ぶ
-4. tween、shape animation、particle、camera follow/effects を更新する
-5. `screen.clear()` を呼ぶ
-6. `onBeforeDraw(ctx)` を呼ぶ
+3. `onUpdate(ctx)` を呼び出す
+4. tween（補間機能）、shape animation、particle、camera follow/effects を更新する
+5. `screen.clear()` を呼び出す
+6. `onBeforeDraw(ctx)` を呼び出す
 7. 3D シーンを描画する
-8. `onAfterDraw3d(ctx)` を呼ぶ
+8. `onAfterDraw3d(ctx)` を呼び出す
 9. particle、HUD、message を描画する
-10. `onAfterHud(ctx)` を呼ぶ
+10. `onAfterHud(ctx)` を呼び出す
 11. `screen.present()` で画面へ反映する
 
-この順序が分かっていると、「3D の前に独自 pass を差し込みたい」「3D の後に overlay を描きたい」「HUD の後で最終的な文字列を足したい」といった判断がしやすくなります。
+この実行順序を把握しておくことで、「3D 描画の前に独自のパスを挿入したい」「3D 描画の後にオーバーレイを描きたい」「HUD の後に最終的な文字列を重ねたい」といった制御が可能になります。
 
-## onUpdateに渡されるコンテキスト
+## 実行時のコンテキストと描画モード
 
-`start()` のハンドラーには `ctx` が渡されます。ここにはそのフレームで必要になりやすい参照がまとめられています。
+### onUpdate に渡されるコンテキスト
+
+`start()` のハンドラーには `ctx`（コンテキスト）が渡されます。ここには、そのフレームで必要となる参照がまとめられています。
 
 ```js
 app.start({
@@ -330,22 +321,20 @@ app.start({
 });
 ```
 
-`ctx` に含まれる代表的な値は次の通りです。
+`ctx` に含まれる代表的な値は以下の通りです。
 
 - `app` / `screen` / `shader` / `space` / `eye`
 - `cameraRig` / `cameraRod` / `cameraTarget` / `cameraFollow`
 - `input` / `projection` / `scenePhase` / `dialogue` / `gameHud`
 - `timeMs` / `timeSec` / `deltaSec`
 
-更新処理で頻繁に使うのは `ctx.input` と `ctx.deltaSec` です。アニメーションや移動量を時間ベースで安定させたいなら、固定値ではなく `deltaSec` を使って調整してください。
+特に更新処理で頻繁に利用するのが `ctx.input` と `ctx.deltaSec` です。アニメーションや移動量を時間ベースで安定させたい場合は、固定値ではなく `deltaSec` を用いて計算してください。
 
-## renderModeの考え方
+### renderMode による負荷制御
 
-`WebgApp` の既定の `renderMode` は `ondemand` です。ただし、ここでいう `ondemand` は「シーンに変化があった瞬間だけ描画する」という完全な差分駆動ではありません。現在の実装では、ページが表示され、window と document が focus されている間は frame loop が継続し、タブが非表示になったときや focus を失ったときに自動で pause します。
+`WebgApp` の既定の `renderMode` は `ondemand` です。ここでの `ondemand` は、ページが表示され、ウィンドウとページがフォーカスされている間はフレームループを継続し、タブが非表示になった際やフォーカスを失った際に自動的にポーズすることを意味します。
 
-この設計は、教材ページや viewer のように、非 active 中まで更新を続ける必要がないアプリで CPU/GPU 負荷を下げ、省電力で運用することを目指しています。`ondemand` という名前は「非表示・非 focus の間は要求されても frame を起こさない」という意味に近く、active 中のアニメーションや camera 更新は通常どおり進みます。
-
-常に動かし続けたいアプリ（例：バックグラウンドで常にアニメーションさせる必要があるもの）だけ `continuous` を使います。
+この設計は、教材ページやビューアのように、非アクティブな状態でまで更新を続ける必要がないアプリケーションにおいて、CPU/GPU 負荷を下げ、省電力で運用することを目的としています。一方で、バックグラウンドで常にアニメーションを動作させ続ける必要があるアプリケーションの場合は、`continuous` を指定してください。
 
 ```js
 const app = new WebgApp({
@@ -354,13 +343,11 @@ const app = new WebgApp({
 });
 ```
 
-通常の sample、viewer、教材ページでは `ondemand` を基準に考え、ページの focus 状態に関係なく常時更新したい場合だけ `continuous` を選んでください。
+### 自動描画とカスタム描画の切り替え
 
-## 自動描画とcustom draw
+`WebgApp.frame()` は既定で `space.draw(app.eye)` を呼び出し、さらに HUD やメッセージまで描画します。通常の 3D サンプルではこれで十分ですが、ポストプロセス（後処理）、オフスクリーンレンダーターゲット（画面外描画バッファ）、複数パスの合成などを行う場合は、描画順序を自身で制御する必要があります。
 
-`WebgApp.frame()` は既定で `space.draw(app.eye)` を呼び、さらに HUD や message まで描画します。この既定動作は、通常の 3D sample ではとても便利です。一方で、post-process、offscreen render target、複数 pass の合成などを行う場合は、scene の描画順序を自分で制御したくなることがあります。
-
-その場合は `autoDrawScene: false` を指定し、`onBeforeDraw()` や `onAfterDraw3d()` の中で必要な描画処理を自分で呼びます。
+その場合は `autoDrawScene: false` を指定し、`onBeforeDraw()` や `onAfterDraw3d()` の中で必要な描画処理を明示的に呼び出します。
 
 ```js
 const app = new WebgApp({
@@ -372,7 +359,7 @@ await app.init();
 
 app.start({
   onBeforeDraw({ space, eye }) {
-    // offscreen pass や custom pass の中で space.draw(eye) を呼ぶ
+    // オフスクリーンパスやカスタムパスの中で space.draw(eye) を呼ぶ
     customRenderer.drawScene(space, eye);
   },
   onAfterDraw3d() {
@@ -381,15 +368,17 @@ app.start({
 });
 ```
 
-bone 表示を自動で重ねたい場合は `autoDrawBones: true` を指定できます。これはスキニングや skeleton の確認に便利ですが、通常の viewer やゲーム表示では不要です。
+また、ボーン表示を自動で重ねたい場合は `autoDrawBones: true` を指定します。これはスキニングやスケルトンの確認に便利ですが、最終的なビューアやゲーム表示では不要な機能です。
 
-## embeddedレイアウトとfixedCanvasSize
+## レイアウトモードと視点制御の拡張
 
-`WebgApp` は 3D アプリを「ページ全体の主役」として置く場合だけでなく、「HTML 文書の途中へ埋め込む実行例」として使う場合も意識しています。その切り替えが `layoutMode: "embedded"` です。
+### embedded レイアウトと固定サイズ
 
-これは単に canvas を小さくする設定ではありません。`embedded` を使うと、canvas の周囲に出る help panel、dialogue、touch control、fixed panel などの UI も含めて、「その実行例の近傍にまとまって配置する」方向へ挙動が切り替わります。スクロールしても UI が canvas と一緒に動くため、教材ページやマニュアルの本文と共存しやすくなります。
+`WebgApp` は、3D アプリをページ全体の主役として配置する場合だけでなく、HTML 文書の途中に埋め込む実行例として利用する場合も想定しています。その切り替えを行うのが `layoutMode: "embedded"` です。
 
-`fixedCanvasSize` は、実行例の見え方を安定させたいときに使います。比較用スクリーンショット、書籍本文、埋め込み viewer などでは、表示サイズが毎回変わらない方が扱いやすくなります。`book/examples/05_03.html` は、この `embedded` と `fixedCanvasSize` をまとめて確認できる例です。
+`embedded` モードを有効にすると、canvas の周囲に表示されるヘルプパネル、ダイアログ、タッチコントロール、固定パネルなどの UI も含めて、「実行例の近傍にまとめて配置する」挙動に切り替わります。これにより、スクロールしても UI が canvas と共に移動するため、教材ページやマニュアルの本文と共存しやすくなります。
+
+また、実行例の見た目を安定させたい場合は `fixedCanvasSize` を使用します。比較用スクリーンショットや書籍内のビューアなどでは、表示サイズが一定である方が扱いやすいためです。`book/examples/05_03.html` では、この `embedded` と `fixedCanvasSize` の組み合わせを確認できます。
 
 ```js
 const app = new WebgApp({
@@ -404,13 +393,11 @@ const app = new WebgApp({
 });
 ```
 
-このモードでは、3D 実行例が通常の文書フローの一部になります。説明文を上に置き、canvas を中ほどに配置し、その下へ補足説明を続けるような構成が自然です。
+### 視点制御の拡張
 
-## 視点は固定から始めて必要なら拡張する
+`WebgApp.init()` は標準のカメラリグを構築します。具体的には `cameraRig -> cameraRod -> eye` という 3 段構成を作成し、`space.setEye(this.eye)` までを完了させます。これにより、単純な「初期視点から見る」アプリケーションはすぐに成立します。
 
-`WebgApp.init()` は標準の camera rig を構築します。具体的には `cameraRig -> cameraRod -> eye` という 3 段構成を作り、`space.setEye(this.eye)` まで完了させます。これだけで「初期視点から見る」アプリは成立します。
-
-より高度な視点操作が必要になったときは、第6章で解説する `EyeRig` をこの標準リグへ追加します。現在は orbit 視点の標準入口として `app.createOrbitEyeRig()` が用意されており、pointer 接続、毎フレームの update、`WebgApp` camera state との同期までまとめて扱えます。
+より高度な視点操作が必要な場合は、第6章で解説する `EyeRig` をこの標準リグに追加します。現在は orbit 視点の標準的な入口として `app.createOrbitEyeRig()` が用意されており、ポインター接続、毎フレームの更新、`WebgApp` のカメラ状態との同期までを一括して管理できます。
 
 ```js
 const orbit = app.createOrbitEyeRig({
@@ -421,15 +408,15 @@ const orbit = app.createOrbitEyeRig({
 });
 ```
 
-この helper を使うと、sample 側で `orbit.update(deltaSec)` や `app.camera.target` への同期を書き忘れて、見かけ上 PAN が動かない状態を避けやすくなります。視点制御の詳細は次章で扱いますが、「`WebgApp` は最初から視点ノードを用意してくれる」ことはここで押さえておいてください。
+このヘルパーを利用することで、`orbit.update(deltaSec)` や `app.camera.target` への同期漏れによる「視点が動かない」といった実装ミスを避けることができます。
 
-## ユーザーへの通知とデバッグ機能の使い分け
+## ユーザー通知とデバッグ機能の使い分け
 
-`WebgApp` が便利なのは描画だけではありません。アプリに必要な補助 UI を目的ごとに整理して持っています。情報の性質に応じてこれらを使い分けると、HUD に何でも詰め込むよりも視認性が高く、洗練されたアプリになります。
+`WebgApp` は、描画以外にもアプリケーションに必要な補助 UI を目的別に整理して提供しています。情報の性質に応じてこれらを使い分けることで、HUD に情報を詰め込みすぎることを避け、視認性の高い洗練された UI を構築できます。
 
 ### 操作説明とガイド（help panel / status / guide）
 
-操作説明や簡単な補足は `createHelpPanel()` が適しています。常時表示の HUD よりも、必要なときに開いて読める形式の方が、画面を広く使えます。
+操作説明や補足情報は `createHelpPanel()` が適しています。常時表示される HUD よりも、必要なときにのみ展開して読める形式の方が、画面を広く活用できます。
 
 ```js
 app.createHelpPanel({
@@ -442,7 +429,7 @@ app.createHelpPanel({
 });
 ```
 
-HUD を表形式で出したい場合は、`setHudRows()` や `setControlRows()` を使います。`setStatusLines()` は短い自由文に向いていますが、値の名前と現在値を並べて見せたいときは row 形式の方が読みやすくなります。
+HUD を表形式で表示したい場合は `setHudRows()` や `setControlRows()` を使用します。短い自由文には `setStatusLines()` が向いていますが、項目名と現在値を対にして表示したい場合は row 形式の方が読みやすくなります。
 
 ```js
 app.setHudRows([
@@ -456,22 +443,11 @@ app.setHudRows([
 });
 ```
 
-また、短い状態表示には `setStatusLines()`、固定のガイドには `setGuideLines()` を使います。debug mode だけ表示したいガイドには `setDebugGuideLines()` が便利です。
-
-```js
-app.setStatusLines([
-  "Sample cube",
-  "WebgApp minimum"
-], {
-  anchor: "top-left",
-  x: 0,
-  y: 0
-});
-```
+また、短い状態表示には `setStatusLines()`、固定のガイドには `setGuideLines()` を使用し、デバッグモード時のみ表示したいガイドには `setDebugGuideLines()` を使い分けるのが効果的です。
 
 ### 進行管理とエラー通知（dialogue / error panel）
 
-会話、チュートリアル、進行メッセージのように、読み順があるテキストは `startDialogue()` に向いています。一方、長いエラーや詳細な diagnostics は、HUD ではなく固定パネルへ分ける方が読みやすくなります。
+会話、チュートリアル、進行メッセージのように、読み順があるテキストは `startDialogue()` に向いています。一方、詳細なエラーや診断機能の結果は、HUD ではなく固定パネルに分離して表示させることで、可読性を確保できます。
 
 ```js
 try {
@@ -483,11 +459,11 @@ try {
 }
 ```
 
-### diagnosticsとDebugDock
+### 診断機能とDebugDock
 
-`WebgApp` は diagnostics を標準機能として持っています。現在の app 状態を report として保持し、最新の warning / error を debug dock から追えるようになっています。
+`WebgApp` は診断機能を標準搭載しています。アプリケーションの現在の状態をレポートとして保持し、最新の警告やエラーをデバッグドックから追跡できるようになっています。
 
-利用者がまず覚えておくとよいのは、`WebgApp` には「ハイレベル（高レイヤー）で warning を可視化する入口」があるという点です。たとえば、構造破壊ではないが、そのまま黙って続行すると利用者が不安になるような補正やフォールバックを行った場合は、`reportRuntimeWarning()` から warning を通知できます。
+特に有用なのが、ハイレベルな警告を可視化するインターフェースです。たとえば、致命的なエラーではないが、そのまま続行すると不都合が生じるため自動的に補正を行った場合などは、`reportRuntimeWarning()` を通じて通知できます。
 
 ```js
 app.reportRuntimeWarning(
@@ -495,9 +471,9 @@ app.reportRuntimeWarning(
 );
 ```
 
-この API は `console.warn` と diagnostics / latest warning / DebugDock をまとめて更新するため、shader のような low-level ではなく、loader、scene 構築、UI 構成など高レイヤーの判断を見せたい場面で有効です。
+この API は `console.warn` への出力と同時に、診断機能およびデバッグドックの更新をまとめて行うため、ローダーやシーン構築、UI 構成などの高レイヤーな判断をユーザーに提示したい場面で有効です。
 
-debug key は既定で `F9` を prefix として扱います。`F9` の後に `M` で debug mode の切り替え、`C` で diagnostics summary の copy、`V` で JSON report の copy を実行できます。`app.attachInput()` はこの debug key を先に処理してから利用者の handler へ渡すため、通常は `app.input.attach()` を直接呼ぶより `app.attachInput()` を使う方が安全です。
+デバッグキーは既定で `F9` をプリフィックスとして扱います。`F9` の後に `M` でデバッグモードの切り替え、`C` で診断機能サマリーのコピー、`V` で JSON レポートのコピーを実行できます。`app.attachInput()` は、これらのデバッグキーを優先的に処理してから利用者のハンドラーへイベントを渡すため、`app.input.attach()` を直接呼ぶよりも安全です。
 
 ```js
 app.attachInput({
@@ -510,24 +486,13 @@ app.attachInput({
 });
 ```
 
-`F9` 以外の prefix を使いたい場合は、`configureDebugKeyInput()` で変更できます。
+プリフィックスを変更したい場合は、`configureDebugKeyInput()` で設定可能です。
 
-```js
-app.configureDebugKeyInput({
-  prefixKey: "f8",
-  commands: {
-    toggleMode: "m",
-    copySummary: "c",
-    copyJson: "v"
-  }
-});
-```
+## アプリケーションを拡張する補助機能
 
-## WebgAppが管理する補助機能
+`WebgApp` はシーンの描画以外に、アプリケーションで頻繁に利用される実行時の補助機能を管理しています。
 
-`WebgApp` は、scene の描画だけでなく、アプリでよく使う小さな runtime subsystem も管理します。すべてを最初から使う必要はありませんが、存在を知っておくと sample やゲームを読むときの見通しがよくなります。
-
-`createTween()` は、任意の object や array の値を時間で補間し、`frame()` 内で自動更新します。色、位置、UI 用の数値などを短い演出として動かしたいときに便利です。
+`createTween()`（補間機能の生成）は、任意のオブジェクトや配列の値を時間経過とともに補間し、`frame()` 内で自動的に更新します。色や位置、UI 用の数値などを演出として動かしたい場合に便利です。
 
 ```js
 const color = [1.0, 0.2, 0.1, 1.0];
@@ -536,7 +501,7 @@ app.createTween(color, [0.2, 0.8, 1.0, 1.0], {
 });
 ```
 
-`createParticleEmitter()` で作成した particle emitter は、`WebgApp` が更新と描画をまとめて行います。画面効果を scene 本体の `Space` とは分けて扱いたい場合に向いています。
+`createParticleEmitter()` で作成したパーティクルエミッター（放出器）は、`WebgApp` が更新と描画をまとめて行います。画面効果をシーン本体の `Space` と切り離して管理したい場合に適しています。
 
 ```js
 const emitter = await app.createParticleEmitter({
@@ -544,7 +509,7 @@ const emitter = await app.createParticleEmitter({
 });
 ```
 
-カメラ演出としては、`shakeCamera()`、`followNode()`、`lockOn()` があります。`followNode()` と `lockOn()` は第6章の camera 制御と関係が深い機能ですが、`WebgApp` の frame loop の中で自動更新されることはここで覚えておくとよいでしょう。
+カメラ演出としては、`shakeCamera()`、`followNode()`、`lockOn()` が用意されています。これらは第6章のカメラ制御と密接に関わりますが、`WebgApp` のフレームループ内で自動更新される機能であることはここで押さえておいてください。
 
 ```js
 app.shakeCamera({
@@ -558,16 +523,9 @@ app.followNode(playerNode, {
 });
 ```
 
-簡易ゲーム HUD も用意されています。`setScore()`、`setCombo()`、`setTimer()`、`pushToast()` を使うと、得点や短い通知を `WebgApp` の HUD 描画に載せられます。
+また、簡易的なゲーム HUD も用意されており、`setScore()`、`setCombo()`、`setTimer()`、`pushToast()` を使うことで、得点や短い通知を HUD 描画に載せることができます。
 
-```js
-app.setScore(1200);
-app.setCombo(4);
-app.setTimer(58.2);
-app.pushToast("checkpoint");
-```
-
-進行状態の保存には `saveProgress()` と `loadProgress()` を使えます。保存先は `progressStorage` option で差し替えられ、未指定時はブラウザの利用可能な storage を使う構成です。sample ごとに key を分けたい場合は `progressStoragePrefix` を設定します。
+進行状態の保存には `saveProgress()` と `loadProgress()` を利用します。保存先は `progressStorage` オプションで変更可能で、未指定時はブラウザのストレージを利用します。サンプルごとに保存キーを分けたい場合は `progressStoragePrefix` を設定してください。
 
 ```js
 app.saveProgress("stage", {
@@ -581,38 +539,36 @@ const progress = app.loadProgress("stage", {
 });
 ```
 
-## loaderとスクリーンショット
+## ローダーとスクリーンショット
 
-モデル読み込みや scene 読み込みも `WebgApp` の重要な役割です。フォーマットごとの差を吸収したハイレベル（高レイヤー）な入口として `loadModel()` と `loadScene()` を使えます。
+モデルの読み込みやシーンの構築も `WebgApp` の重要な役割です。フォーマットごとの差異を吸収したハイレベル（高レイヤー）なインターフェースとして `loadModel()` と `loadScene()` が提供されています。
 
 ```js
 const modelRuntime = await app.loadModel("./assets/robot.gltf");
 const sceneRuntime = await app.loadScene(sceneData);
 ```
 
-スクリーンショットは `takeScreenshot()` で予約します。これは直後に PNG を作るのではなく、次の `present()` 後に canvas 内容を保存する方式です。
+スクリーンショットは `takeScreenshot()` で予約します。これは呼び出した瞬間に PNG を生成するのではなく、次の `present()` 完了後に canvas 内容を保存する方式を採用しています。
 
-入力と組み合わせた保存例は前節の `app.attachInput()` で示したとおりです。静止画を明示的なタイミングで保存したい場合は、`app.takeScreenshot("still.png")` のようにファイル名を直接渡すこともできます。
+## 実装時の注意点
 
-## 実装時に注意したいこと
+最後に、`WebgApp` を利用する際に特に意識すべき点をまとめます。
 
-最後に、`WebgApp` を使うときに特に意識しておきたい点を整理します。
+- `await app.init()` の完了前に `app.getGL()` や `app.space` にアクセスしない。
+- `Shape` を定義した後は必ず `endShape()` を呼び出す。
+- `Shape` を定義しただけでは表示されないため、必ず `Node` にアタッチし、`Space` に登録する。
+- 長い説明文を HUD に詰め込まず、ヘルプパネル、ダイアログ、固定パネルを適切に使い分ける。
+- orbit や follow が必要になるまでは、固定の初期視点設定で十分な場合が多い。
+- ハイレベルな警告は `reportRuntimeWarning()` を使い、デバッグドックで管理しやすくする。
+- カスタムレンダーパスを実装する場合は `autoDrawScene: false` を検討する。
+- デバッグキーの機能を維持したい場合は、`app.input.attach()` ではなく `app.attachInput()` を使用する。
 
-- `await app.init()` の前に `app.getGL()` や `app.space` を使わない
-- `Shape` を作ったら `endShape()` を忘れない
-- `Shape` だけでは表示されず、`Node` に載せて `Space` に入れる必要がある
-- 長い説明文を HUD に押し込まず、help panel や dialogue、fixed panel と使い分ける
-- orbit や follow が必要になるまでは、固定の初期視点で十分な場面も多い
-- ハイレベル（高レイヤー）の warning は `reportRuntimeWarning()` を使うと DebugDock から追いやすい
-- custom render pass を使う場合は `autoDrawScene: false` を検討する
-- debug key を維持したい場合は `app.input.attach()` より `app.attachInput()` を使う
-
-`WebgApp` は高機能ですが、最初から全部を使い切る必要はありません。まずは「コンストラクタで土台を決め、`init()` 後にシーンを組み、`start()` の `onUpdate()` へロジックを書く」という骨格をつかんでください。その上で、必要に応じて orbit camera、help panel、dialogue、loader、diagnostics、tween、particle、progress 保存を足していくと、アプリ構成が自然に整理されます。
+`WebgApp` は多機能ですが、最初からすべての機能を使い切る必要はありません。まずは「コンストラクタで土台を決め、`init()` 後にシーンを組み、`start()` の `onUpdate()` へロジックを記述する」という基本骨格を習得してください。その上で、必要に応じて orbit カメラ、ヘルプパネル、ダイアログ、ローダー、診断機能、tween（補間機能）、パーティクル、進行保存などを追加していくことで、アプリケーションの構成を自然に整理することができます。
 
 ## まとめ
 
-`WebgApp` は、`webg` における 3D アプリケーションの標準的な骨格です。`Screen`、`Space`、シェーダー、camera rig、入力、UI、diagnostics を一定の順序でまとめて立ち上げることで、利用者はアプリ固有のロジックへ集中しやすくなります。
+`WebgApp` は、`webg` における 3D アプリケーションの標準的な骨格を提供します。`Screen`、`Space`、シェーダー、カメラリグ、入力、UI、診断機能を一定の順序でまとめて立ち上げることで、開発者はアプリケーション固有のロジックに集中できるようになります。
 
-本章では、ローレベル（低レイヤー）な最小構成と比較しながら、`WebgApp` が何を肩代わりしているのかを確認しました。また、`init()` の後に何が使えるのか、`start()` の中でどの順序で処理が進むのか、`embedded` と `fixedCanvasSize` をどう理解すべきか、そして UI や diagnostics を目的別にどう使い分けるかを整理しました。
+本章では、ローレベル（低レイヤー）な最小構成と比較しながら、`WebgApp` がどのような処理を抽象化しているのかを確認しました。また、`init()` 完了後に利用可能となるコンポーネント、`start()` 内での処理順序、`embedded` モードや `fixedCanvasSize` の考え方、そして UI や診断機能の使い分けについて整理しました。
 
-次章では、この `WebgApp` が作る標準 camera rig を土台にして、`EyeRig` による orbit、first-person、follow の視点制御を詳しく見ていきます。
+次章では、この `WebgApp` が構築する標準カメラリグを土台として、`EyeRig` による orbit、first-person、follow といった高度な視点制御について詳しく解説します。

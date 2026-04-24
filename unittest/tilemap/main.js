@@ -1,6 +1,6 @@
 // -------------------------------------------------
 // tilemap unittest
-//   main.js       2026/04/10
+//   main.js       2026/04/24
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // -------------------------------------------------
@@ -41,7 +41,7 @@ const BALL_BOUNCE_HEIGHT = 0.58;
 const DISPLAY_WIDTH = 4;
 const DISPLAY_HEIGHT = 4;
 const TERRAIN_TEXTURE_SIZE = 256;
-const ORBIT_DRAG_YAW_SPEED = 0.30;
+const ORBIT_DRAG_HEAD_SPEED = 0.30;
 const ORBIT_DRAG_PITCH_SPEED = 0.20;
 const ORBIT_PITCH_MIN = -84.0;
 const ORBIT_PITCH_MAX = -8.0;
@@ -55,7 +55,7 @@ const ORBIT_PRESETS = [
   {
     id: "diag",
     label: "diagonal",
-    yaw: 28.0,
+    head: 28.0,
     pitch: -30.0,
     distance: 18.7,
     eyeHeight: 13.0
@@ -63,7 +63,7 @@ const ORBIT_PRESETS = [
   {
     id: "side",
     label: "side",
-    yaw: 90.0,
+    head: 90.0,
     pitch: -24.0,
     distance: 20.2,
     eyeHeight: 12.0
@@ -71,7 +71,7 @@ const ORBIT_PRESETS = [
   {
     id: "over",
     label: "overhead",
-    yaw: 0.0,
+    head: 0.0,
     pitch: -78.0,
     distance: 8.2,
     eyeHeight: 21.6
@@ -225,7 +225,7 @@ const SCENE = {
   camera: {
     target: [MAP_WIDTH * CELL_SIZE * 0.5, 0.0, MAP_HEIGHT * CELL_SIZE * 0.5],
     distance: 18.7,
-    yaw: 28.0,
+    head: 28.0,
     pitch: -30.0,
     bank: 0.0,
     viewAngle: 42.0,
@@ -336,15 +336,15 @@ const makeTopSelection = (cell) => {
 
 // camera preset と drag / wheel の両方から orbit camera を更新する
 const applyOrbitCamera = (cameraPivot, eye, orbit) => {
-  cameraPivot.setAttitude(orbit.yaw, 0.0, 0.0);
+  cameraPivot.setAttitude(orbit.head, 0.0, 0.0);
   eye.setPosition(0.0, orbit.eyeHeight, orbit.distance);
   eye.setAttitude(0.0, orbit.pitch, 0.0);
 };
 
-// drag 量を orbit の yaw / pitch へ反映する
+// drag 量を orbit の head / pitch へ反映する
 // - mouse drag と 1本指 drag の両方を同じ更新式へそろえる
 const applyOrbitDrag = (orbit, dx, dy) => {
-  orbit.yaw += dx * ORBIT_DRAG_YAW_SPEED;
+  orbit.head += dx * ORBIT_DRAG_HEAD_SPEED;
   orbit.pitch = Math.max(ORBIT_PITCH_MIN, Math.min(ORBIT_PITCH_MAX, orbit.pitch + dy * ORBIT_DRAG_PITCH_SPEED));
 };
 
@@ -442,7 +442,7 @@ const updateGuide = (message, selected, ballCell, tileMap, orbit, lastMoveText, 
     {
       id: "tilemap-info",
       lines: [
-        `orbit=${orbit.label} yaw=${orbit.yaw.toFixed(1)} pitch=${orbit.pitch.toFixed(1)} dist=${orbit.distance.toFixed(1)}`,
+        `orbit=${orbit.label} head=${orbit.head.toFixed(1)} pitch=${orbit.pitch.toFixed(1)} dist=${orbit.distance.toFixed(1)}`,
         `displayArea=${displayAreaToText(tileMap.displayArea)}`,
         ballLine,
         cellLine,
@@ -464,7 +464,7 @@ const updateGuide = (message, selected, ballCell, tileMap, orbit, lastMoveText, 
 const formatStatus = (selected, ballCell, tileMap, orbit, pathText, lastMoveText, count) => {
   const lines = [
     "unittest/tilemap",
-    `orbit: ${orbit.label} yaw=${orbit.yaw.toFixed(1)} pitch=${orbit.pitch.toFixed(1)} dist=${orbit.distance.toFixed(1)}`,
+    `orbit: ${orbit.label} head=${orbit.head.toFixed(1)} pitch=${orbit.pitch.toFixed(1)} dist=${orbit.distance.toFixed(1)}`,
     `displayArea: ${displayAreaToText(tileMap.displayArea)}`,
     `tiles: ${count}`,
     ballCell
@@ -565,7 +565,7 @@ const start = async ({ screen, gpu, setStatus, setViewportLayout, startLoop }) =
   let orbitIndex = 0;
   const orbit = {
     label: orbitPresets[orbitIndex].label,
-    yaw: orbitPresets[orbitIndex].yaw,
+    head: orbitPresets[orbitIndex].head,
     pitch: orbitPresets[orbitIndex].pitch,
     distance: orbitPresets[orbitIndex].distance,
     eyeHeight: orbitPresets[orbitIndex].eyeHeight
@@ -575,7 +575,7 @@ const start = async ({ screen, gpu, setStatus, setViewportLayout, startLoop }) =
   const resetOrbit = () => {
     orbitIndex = 0;
     orbit.label = orbitPresets[orbitIndex].label;
-    orbit.yaw = orbitPresets[orbitIndex].yaw;
+    orbit.head = orbitPresets[orbitIndex].head;
     orbit.pitch = orbitPresets[orbitIndex].pitch;
     orbit.distance = orbitPresets[orbitIndex].distance;
     orbit.eyeHeight = orbitPresets[orbitIndex].eyeHeight;
@@ -586,7 +586,7 @@ const start = async ({ screen, gpu, setStatus, setViewportLayout, startLoop }) =
   const setOrbitPreset = (index) => {
     orbitIndex = (index + orbitPresets.length) % orbitPresets.length;
     orbit.label = orbitPresets[orbitIndex].label;
-    orbit.yaw = orbitPresets[orbitIndex].yaw;
+    orbit.head = orbitPresets[orbitIndex].head;
     orbit.pitch = orbitPresets[orbitIndex].pitch;
     orbit.distance = orbitPresets[orbitIndex].distance;
     orbit.eyeHeight = orbitPresets[orbitIndex].eyeHeight;
@@ -1034,7 +1034,7 @@ const start = async ({ screen, gpu, setStatus, setViewportLayout, startLoop }) =
   // keydown は camera 向きに応じた grid move と、preset / reset の操作を分けて扱う
   window.addEventListener("keydown", (ev) => {
     const key = ev.key.toLowerCase();
-    const relativeMove = resolveCameraRelativeGridMove(orbit.yaw, key);
+    const relativeMove = resolveCameraRelativeGridMove(orbit.head, key);
     if (relativeMove) {
       moveBall(relativeMove.dx, relativeMove.dy);
       ev.preventDefault();

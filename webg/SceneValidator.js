@@ -1,5 +1,5 @@
 // ---------------------------------------------
-//  SceneValidator.js  2026/03/15
+//  SceneValidator.js  2026/04/24
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // ---------------------------------------------
@@ -137,7 +137,8 @@ export default class SceneValidator {
     if (!obj) return;
     if (obj.target !== undefined) this.validateNumberArray(obj.target, `${path}.target`, "target", 3);
     if (obj.distance !== undefined) this.validateFiniteNumber(obj.distance, `${path}.distance`, "distance");
-    if (obj.yaw !== undefined) this.validateFiniteNumber(obj.yaw, `${path}.yaw`, "yaw");
+    if (obj.yaw !== undefined) this.addError(`${path}.yaw`, "camera uses head, not yaw");
+    if (obj.head !== undefined) this.validateFiniteNumber(obj.head, `${path}.head`, "head");
     if (obj.pitch !== undefined) this.validateFiniteNumber(obj.pitch, `${path}.pitch`, "pitch");
     if (obj.bank !== undefined) this.validateFiniteNumber(obj.bank, `${path}.bank`, "bank");
     if (obj.viewAngle !== undefined) this.validateFiniteNumber(obj.viewAngle, `${path}.viewAngle`, "viewAngle");
