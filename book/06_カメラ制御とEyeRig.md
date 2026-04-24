@@ -18,9 +18,7 @@
 
 3Dアプリケーションでは、「どこを見るか」だけでなく、「どこを中心に回転するか」「誰を追跡するか」「身体の向きと視線の向きを分けるか」といった要求を場面に応じて切り替える必要があります。視点を単一の座標のみで管理すると、orbit と first-person を共存させた際に制御概念が混在し、設計が複雑になります。`webg` が `base -> rod -> eye` という3段構成を採用しているのは、これらの役割分担を明確に保つためです。
 
-注視点や追従対象に追随する基準位置を `base`、そこからの回転や距離を `rod`、そして最終的な独立視線を `eye` に割り当てることで、モードが切り替わっても一貫した考え方で制御が可能になります。
-
-`WebgApp.createCameraRig()` もこの設計思想に基づいて標準のカメラノードを作成します。
+注視点や追従対象に追随する基準位置を `base`、そこからの回転や距離を `rod`、そして最終的な独立視線を `eye` に割り当てることで、モードが切り替わっても一貫した考え方で制御が可能になります。`WebgApp.createCameraRig()` もこの設計思想に基づいて標準のカメラノードを作成します。
 
 ```js
 createCameraRig() {
@@ -61,9 +59,7 @@ updateProjection(viewAngle = this.viewAngle) {
 
 ここで `viewAngle` は基準となる垂直方向の視野角です。`webg` は `Screen.getRecommendedFov(base)` を介して、現在のアスペクト比に応じて実際の垂直 FOV を補正します。これにより、横長画面では基準値を維持し、縦長画面では視野を少し広げることで、デバイスの形状に関わらず視認性を維持しています。
 
-したがって、カメラの運用においては、「どこに配置し、どちらを向かせるか」は `EyeRig` や `Node` で制御し、「どれくらい広く写すか」「遠近感をどのように表現するか」は `viewAngle` と投影行列側で制御するという切り分けが重要になります。
-
-最も基本的な設定方法は、`WebgApp` の生成時に `viewAngle` および `projectionNear`、`projectionFar` を指定することです。
+したがって、カメラの運用においては、「どこに配置し、どちらを向かせるか」は `EyeRig` や `Node` で制御し、「どれくらい広く写すか」「遠近感をどのように表現するか」は `viewAngle` と投影行列側で制御するという切り分けが重要になります。最も基本的な設定方法は、`WebgApp` の生成時に `viewAngle` および `projectionNear`、`projectionFar` を指定することです。
 
 ```js
 const app = new WebgApp({
@@ -97,7 +93,7 @@ app.updateProjection(40.0);
 
 ## orbit camera の実装とパン(PAN)操作
 
-まずは、最も基本的な orbit（軌道）視点から解説します。注視点と距離を定義し、ドラッグやホイール操作で視点を回転させることで、シーン全体の空間的な位置関係を容易に確認できます。`samples/high_level（ハイレベル/高レイヤー）` でもこの構成が最小例として採用されています。
+まずは、最も基本的な orbit（軌道）視点から解説します。注視点と距離を定義し、ドラッグやホイール操作で視点を回転させることで、シーン全体の空間的な位置関係を容易に確認できます。`samples/high_level（ハイレベル（高レイヤー））` でもこの構成が最小例として採用されています。
 
 ```js
 import WebgApp from "./webg/WebgApp.js";
@@ -137,11 +133,11 @@ app.start();
 
 パン(PAN)は、カメラ自体を別の場所へ瞬間移動させるのではなく、`orbit.target` を視線の screen 平面に沿って平行移動する操作です。これにより、現在の head / pitch / distance を大きく崩さずに、「見ている中心」だけを横や上へずらすことができます。設計上は、right / up の向きを `eye` の world 行列から取り出し、その方向へ `target` を動かすことで実現しています。つまりパン(PAN)はワールド座標の X / Y / Z を固定的に増減する処理ではなく、あくまで「今見えている画面上の左右上下」に対応した移動です。このため、どの角度からモデルを見ていても、直感的に視点中心を動かせます。
 
-`EyeRig` の pointer 操作では、orbit / follow モードで `Shift` を押しながらドラッグするとパン(PAN)が働きます。また、touch では 2 本指操作の中心移動がパン(PAN)に割り当てられています。さらに、キーボード操作でも `Shift + Arrow` によって同じ意味の平行移動を行えます。`createOrbitEyeRig()` を使うと、この入力処理と `WebgApp` camera state への同期が標準でつながるため、サンプルごとに「Shift を押したら target をどう動かすか」を個別に実装しなくても、orbit camera の挙動を共通化できます。
+`EyeRig` の pointer 操作では、orbit / follow モードで `Shift` を押しながらドラッグするとパン（PAN）操作が有効になります。また、touch では 2 本指操作の中心移動がパン(PAN)に割り当てられています。さらに、キーボード操作でも `Shift + Arrow` によって同じ意味の平行移動を行えます。`createOrbitEyeRig()` を使うと、この入力処理と `WebgApp` camera state への同期が標準でつながるため、サンプルごとに「Shift を押したら target をどう動かすか」を個別に実装しなくても、orbit camera の挙動を共通化できます。
 
-このパン(PAN)が有用なのは、単に操作しやすいからではありません。orbit camera は構図確認に優れていますが、詳細部へ寄ったときに target が対象の中心から外れていると、少し回しただけで見たい箇所が画面外へ出やすくなります。パン(PAN)を併用すると、対象の関心点を中央へ戻した上で回転やズームを続けられるため、viewer、asset 検証、ライティング確認、書籍用の図版調整のいずれでも作業効率が大きく向上します。`gltf_loader`、`collada_loader`、`json_loader` のような loader sample で `Shift + Arrow` と `Shift + Drag` を有効にしたのも、まさにこの用途を意識したためです。
+このパン(PAN)が有用なのは、単に操作しやすいからではありません。orbit camera は構図確認に優れていますが、詳細部へ寄ったときに target が対象の中心から外れていると、少し回しただけで見たい箇所が画面外へ出やすくなります。パン(PAN)を併用すると、対象の関心点を中央へ戻した上で回転やズームを続けられるため、viewer、asset 検証、ライティング確認、書籍用の図版調整のいずれでも作業効率が大きく向上します。`gltf_loader`、`collada_loader`、`json_loader` のようなローダーのサンプルで `Shift + Arrow` と `Shift + Drag` を有効にしたのも、まさにこの用途を意識したためです。
 
-`createOrbitEyeRig()` の利点は、視点位置の初期化だけではありません。キーバインディングの既定値も `WebgApp` 側で管理するようになったため、利用者は「全部の keyMap を毎回書き直す」のではなく、「既定値に対して差分だけを指定する」という形で orbit camera を調整できます。特に、editor や viewer ごとに `Arrow` と `WASD` を切り替えたい場合、また PAN 用 modifier を `Shift` 以外へ変えたい場合に、この方式が有効です。
+`createOrbitEyeRig()` の利点は、視点位置の初期化だけではありません。キーバインディングの既定値は `WebgApp` 側で管理されるため、利用者は「全部の keyMap を毎回書き直す」のではなく、「既定値に対して差分だけを指定する」という形で orbit camera を調整できます。特に、editor や viewer ごとに `Arrow` と `WASD` を切り替えたい場合、また PAN 用 modifier を `Shift` 以外へ変えたい場合に、この方式が有効です。
 
 最も分かりやすい指定方法は、`orbitKeyMap` に差分だけを書く方法です。次の例では、回転キーだけを `W / A / S / D` へ変更し、ズームキーは既定値のまま使います。
 
@@ -160,7 +156,7 @@ const orbit = app.createOrbitEyeRig({
 });
 ```
 
-この場合、`zoomIn` と `zoomOut` は既定の `[` と `]` がそのまま使われます。利用者は変更したい項目だけを `orbitKeyMap` に記述すればよく、AI も「left / right / up / down だけ上書きする」と理解しやすくなります。
+この場合、`zoomIn` と `zoomOut` は既定の `[` と `]` がそのまま使われます。利用者は変更したい項目だけを `orbitKeyMap` に記述すればよく、設定内容を簡潔に管理できます。
 
 PAN に使う modifier key も、`panModifierKey` で変更できます。たとえば `Alt + Drag` と `Alt + W / A / S / D` を PAN にしたい場合は、次のように指定します。
 
@@ -191,7 +187,7 @@ const orbit = app.createOrbitEyeRig({
 
 この一覧は [16_タッチ機能と入力.md](./16_タッチ機能と入力.md) の特殊キー一覧とも一致しています。`panModifierKey` に一般の文字キーを指定しても pointer drag 側では判定できないため、ここに挙げた modifier key 名だけを使うようにしてください。
 
-既定値を確認してから一部だけ上書きしたい場合は、`getDefaultOrbitEyeRigBindings()` を使うと現在の標準設定をそのまま取得できます。書籍本文や sample の説明文を作る際に、「今の既定値が何か」を明示したい場合にも便利です。
+既定値を確認してから一部だけ上書きしたい場合は、`getDefaultOrbitEyeRigBindings()` を使うと現在の標準設定をそのまま取得できます。開発時に現在の標準設定を明示的に確認したい場合にも便利です。
 
 ```js
 const defaults = app.getDefaultOrbitEyeRigBindings();
