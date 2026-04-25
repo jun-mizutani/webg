@@ -126,6 +126,19 @@
       background: var(--accent-strong);
     }
 
+    .tool-button:disabled,
+    .command-button:disabled {
+      border-color: #d4dde5;
+      background: #eef2f5;
+      color: #8a98a6;
+      cursor: not-allowed;
+    }
+
+    .tool-button:disabled:hover,
+    .command-button:disabled:hover {
+      background: #eef2f5;
+    }
+
     .danger {
       border-color: rgba(180, 56, 56, 0.34);
       color: var(--danger);
@@ -221,16 +234,22 @@
 
     <section class="workspace">
       <div class="viewport-column">
+        <div class="toolbar" aria-label="modes">
+          <button class="tool-button" data-mode="object" aria-pressed="true">Object Mode</button>
+          <button class="tool-button" data-mode="edit" aria-pressed="false">Edit Mode</button>
+        </div>
         <div class="toolbar" aria-label="tools">
-          <button class="tool-button" data-tool="select" aria-pressed="true">Select</button>
-          <button class="tool-button" data-tool="addVertex" aria-pressed="false">Add Vertex</button>
+          <button class="tool-button" data-tool="selectVertex" aria-pressed="true" disabled>Vertex Select</button>
+          <button class="tool-button" data-tool="selectFace" aria-pressed="false" disabled>Face Select</button>
+          <button class="tool-button" data-tool="addVertex" aria-pressed="false" disabled>Add Vertex</button>
         </div>
         <div class="canvas-wrap">
           <canvas id="canvas" width="900" height="620"></canvas>
         </div>
         <p class="hint">
           左ドラッグで orbit、Shift + 左ドラッグで PAN、wheel で zoom。
-          クリックで選択、Shift + クリックで選択の追加/解除です。編集移動は J/L/I/K、U/O、N/M を使います。
+          Object Mode でオブジェクト選択、Tab / Edit Mode でアクティブオブジェクトを編集します。Vertex/Face Select でクリック選択、Shift + クリックで選択の追加/解除です。
+          G/R/S/E の後はマウス移動で移動/回転/scale/押し出し、左クリックで確定します。補助編集は J/L/I/K、U/O、N/M、面反転は F を使います。
         </p>
       </div>
 
@@ -243,6 +262,7 @@
               <input id="modelFile" type="file" accept=".json,.gltf,.glb,.dae,application/json,model/gltf+json,model/gltf-binary" />
             </label>
             <button class="command-button ok" id="saveJson">Save ModelAsset JSON</button>
+            <button class="command-button ok" id="saveGlb">Save GLB</button>
           </div>
           <p>GLB / Collada / ModelAsset JSON を読み込み、編集対象 mesh を選択できます。</p>
           <div class="mesh-row">
@@ -258,13 +278,15 @@
             <button class="command-button" id="makeTriangle">Triangle</button>
             <button class="command-button" id="makeQuad">Quad</button>
             <button class="command-button" id="extrude">Extrude</button>
+            <button class="command-button" id="flipFaces">Flip Face</button>
             <button class="command-button danger" id="deleteSelected">Delete</button>
             <button class="command-button" id="undo">Undo</button>
             <button class="command-button" id="redo">Redo</button>
           </div>
           <p>
             Triangle / Quad は選択頂点数が 3 / 4 のときに作成します。
-            Extrude は選択 face を法線方向へ押し出します。選択頂点の移動や scale はキー操作で行います。
+            Extrude は押し出し mode に入り、マウス移動で押し出し量を決め、左クリックで確定します。Flip Face は選択 face の表裏を反転します。
+            選択頂点の移動や scale はキー操作で行います。
           </p>
         </section>
 

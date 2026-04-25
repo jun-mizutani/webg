@@ -12,6 +12,44 @@ import Primitive from "../../webg/Primitive.js";
 import ModelAsset from "../../webg/ModelAsset.js";
 import Matrix from "../../webg/Matrix.js";
 import Diagnostics from "../../webg/Diagnostics.js";
+import {
+  DEFAULT_CAMERA,
+  DEFAULT_OBJECT_ID,
+  EDITOR_MODE_EDIT,
+  EDITOR_MODE_OBJECT,
+  EDITOR_MODES,
+  INITIAL_ORBIT_BINDINGS,
+  MATERIAL,
+  TOOL_ADD_VERTEX,
+  TOOL_SELECT_FACE,
+  TOOL_SELECT_VERTEX,
+  TOOLS
+} from "./modelerConfig.js";
+import {
+  add3,
+  cross3,
+  dot3,
+  length3,
+  mul3,
+  normalize3,
+  readFiniteNumber,
+  readVec3,
+  sub3
+} from "./math3d.js";
+import { buildGlbFromGeometry } from "./glbExporter.js";
+import { createEditOperations } from "./editOperations.js";
+import { createTransformController } from "./transformController.js";
+
+class ModelerSmoothShader extends SmoothShader {
+  constructor(gpu) {
+    // modeler では裏面も確認対象なので、描画時の culling は切る。
+    // frontFace は webg / WebGPU の標準どおり CCW を表として維持する。
+    super(gpu, {
+      cullMode: "none",
+      frontFace: "ccw"
+    });
+  }
+}
 
 // webgmodeler は「編集データ」を唯一の正として扱う
 // - vertices / faces は ModelAsset よりも操作しやすい形で保持する
@@ -19,86 +57,22 @@ import Diagnostics from "../../webg/Diagnostics.js";
 // - import した複雑な asset も、選択 mesh の positions / indices / polygonLoops を編集データへ写す
 // この方針により、画面表示と JSON 出力が別々の状態へずれることを防ぐ
 
-const TOOL_SELECT = "select";
-const TOOL_ADD_VERTEX = "addVertex";
-const TOOLS = new Set([
-  TOOL_SELECT,
-  TOOL_ADD_VERTEX
-]);
-
-const DEFAULT_CAMERA = {
-  target: [0.0, 0.8, 0.0],
-  distance: 12.0,
-  head: 28.0,
-  pitch: -18.0
-};
-
-const INITIAL_ORBIT_BINDINGS = {
-  orbitKeyMap: {
-    left: "arrowleft",
-    right: "arrowright",
-    up: "arrowup",
-    down: "arrowdown"
-  },
-  panModifierKey: "shift"
-};
-
-const MATERIAL = {
-  mesh: {
-    color: [0.52, 0.68, 0.82, 1.0],
-    ambient: 0.34,
-    specular: 0.42,
-    power: 24.0,
-    use_texture: 0,
-    has_bone: 0
-  },
-  selectedFace: {
-    color: [1.0, 0.72, 0.20, 1.0],
-    ambient: 0.48,
-    specular: 0.28,
-    power: 18.0,
-    use_texture: 0,
-    has_bone: 0
-  },
-  marker: {
-    color: [0.12, 0.26, 0.36, 1.0],
-    ambient: 0.42,
-    specular: 0.28,
-    power: 18.0,
-    use_texture: 0,
-    has_bone: 0
-  },
-  selectedMarker: {
-    color: [1.0, 0.22, 0.18, 1.0],
-    ambient: 0.5,
-    specular: 0.34,
-    power: 18.0,
-    use_texture: 0,
-    has_bone: 0
-  },
-  grid: {
-    color: [0.23, 0.28, 0.32, 1.0],
-    ambient: 0.58,
-    specular: 0.12,
-    power: 8.0,
-    use_texture: 0,
-    has_bone: 0
-  }
-};
-
 const ui = {
   status: null,
   fileInput: null,
   meshSelect: null,
   useMesh: null,
   saveJson: null,
+  saveGlb: null,
   newScene: null,
   deleteSelected: null,
   makeTriangle: null,
   makeQuad: null,
   extrude: null,
+  flipFaces: null,
   undo: null,
   redo: null,
+  modeButtons: [],
   toolButtons: []
 };
 
@@ -113,6 +87,9 @@ let importedMeshes = [];
 let lastSavedName = "-";
 let detachModelerKeyBridge = null;
 let detachPanModifierBridge = null;
+let detachTransformPointerBridge = null;
+let editOperations = null;
+let transformController = null;
 
 const cameraPointer = {
   active: false,
@@ -139,13 +116,18 @@ const canvasClick = {
 // - face.indices は vertex id の配列であり、三角形または四角形だけを許可する
 // - selectedVertices / selectedFaces は id の Set として保持し、UI 操作の基準にする
 const editor = {
+  mode: EDITOR_MODE_OBJECT,
+  objects: [],
+  selectedObjectIds: new Set(),
+  activeObjectId: null,
+  nextObjectId: DEFAULT_OBJECT_ID,
   vertices: [],
   faces: [],
   selectedVertices: new Set(),
   selectedFaces: new Set(),
   nextVertexId: 1,
   nextFaceId: 1,
-  tool: TOOL_SELECT,
+  tool: TOOL_SELECT_VERTEX,
   dirty: false,
   lastMessage: "ready",
   undoStack: [],
@@ -303,83 +285,33 @@ function cacheUi() {
   ui.meshSelect = document.getElementById("meshSelect");
   ui.useMesh = document.getElementById("useMesh");
   ui.saveJson = document.getElementById("saveJson");
+  ui.saveGlb = document.getElementById("saveGlb");
   ui.newScene = document.getElementById("newScene");
   ui.deleteSelected = document.getElementById("deleteSelected");
   ui.makeTriangle = document.getElementById("makeTriangle");
   ui.makeQuad = document.getElementById("makeQuad");
   ui.extrude = document.getElementById("extrude");
+  ui.flipFaces = document.getElementById("flipFaces");
   ui.undo = document.getElementById("undo");
   ui.redo = document.getElementById("redo");
+  ui.modeButtons = Array.from(document.querySelectorAll("[data-mode]"));
   ui.toolButtons = Array.from(document.querySelectorAll("[data-tool]"));
-}
-
-// 数値配列は編集データの根幹なので、import 時点で有限数だけを受け付ける
-// 不正な値を 0 に丸めると、読み込み元の破損や loader 差分を隠してしまうため例外にする
-function readFiniteNumber(value, label) {
-  const num = Number(value);
-  if (!Number.isFinite(num)) {
-    throw new Error(`${label} must be a finite number: ${value}`);
-  }
-  return num;
-}
-
-// vec3 をコピーしながら検証する
-// vertices[].position は以後の pick / drag / export の全てが参照するため、
-// 配列長と finite number の条件をここで固定する
-function readVec3(value, label) {
-  if (!Array.isArray(value) || value.length < 3) {
-    throw new Error(`${label} must be an array with at least 3 numbers`);
-  }
-  return [
-    readFiniteNumber(value[0], `${label}[0]`),
-    readFiniteNumber(value[1], `${label}[1]`),
-    readFiniteNumber(value[2], `${label}[2]`)
-  ];
-}
-
-function add3(a, b) {
-  return [a[0] + b[0], a[1] + b[1], a[2] + b[2]];
-}
-
-function sub3(a, b) {
-  return [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
-}
-
-function mul3(v, scale) {
-  return [v[0] * scale, v[1] * scale, v[2] * scale];
-}
-
-function dot3(a, b) {
-  return a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
-}
-
-function cross3(a, b) {
-  return [
-    a[1] * b[2] - a[2] * b[1],
-    a[2] * b[0] - a[0] * b[2],
-    a[0] * b[1] - a[1] * b[0]
-  ];
-}
-
-function length3(v) {
-  return Math.hypot(v[0], v[1], v[2]);
-}
-
-function normalize3(v, label = "vector") {
-  const len = length3(v);
-  if (!Number.isFinite(len) || len <= 1.0e-9) {
-    throw new Error(`${label} has zero length`);
-  }
-  return [v[0] / len, v[1] / len, v[2] / len];
 }
 
 // UI へ表示する文字列はここでまとめる
 // canvas 上の HUD だけでなく DOM 側 status へも同じ情報を出すことで、
 // クリック対象や選択数の確認がしやすくなる
 function updateStatus() {
-  const meshName = importedMeshes[Number(ui.meshSelect?.value ?? -1)]?.label ?? "-";
+  updateCommandAvailability();
+  const meshValue = ui.meshSelect?.value ?? "-1";
+  const meshName = meshValue === "all"
+    ? `all objects (${importedMeshes.length})`
+    : importedMeshes.find((entry) => entry.index === Number(meshValue))?.label ?? "-";
+  const transformState = transformController?.state ?? { mode: null, active: false };
   const faceIds = Array.from(editor.selectedFaces).join(", ") || "-";
   const vertexIds = Array.from(editor.selectedVertices).join(", ") || "-";
+  const objectIds = Array.from(editor.selectedObjectIds).join(", ") || "-";
+  const activeObject = getActiveObject();
   const orbitKeyMap = orbit?.orbit?.keyMap ?? INITIAL_ORBIT_BINDINGS.orbitKeyMap;
   const panModifierKey = orbit?.orbit?.panModifierKey ?? INITIAL_ORBIT_BINDINGS.panModifierKey;
   const arrowActive = app
@@ -391,6 +323,10 @@ function updateStatus() {
   const orbitTarget = orbit?.orbit?.target ?? [NaN, NaN, NaN];
   const lines = [
     "webgmodeler",
+    `mode=${editor.mode}`,
+    `activeObject=${activeObject ? `${activeObject.id}:${activeObject.name}` : "-"}`,
+    `objects=${editor.objects.length}`,
+    `selectedObjects=${editor.selectedObjectIds.size} [${objectIds}]`,
     `tool=${editor.tool}`,
     `vertices=${editor.vertices.length} faces=${editor.faces.length}`,
     `selectedVertices=${editor.selectedVertices.size} [${vertexIds}]`,
@@ -399,6 +335,7 @@ function updateStatus() {
     `undo=${editor.undoStack.length} redo=${editor.redoStack.length}`,
     `dirty=${editor.dirty ? "yes" : "no"}`,
     `saved=${lastSavedName}`,
+    `transform=${transformState.mode ?? "-"}${transformState.active ? " dragging" : ""}`,
     `keyState: L=${app?.input.has(orbitKeyMap.left) ? 1 : 0} R=${app?.input.has(orbitKeyMap.right) ? 1 : 0} U=${app?.input.has(orbitKeyMap.up) ? 1 : 0} D=${app?.input.has(orbitKeyMap.down) ? 1 : 0} Pm=${shiftActive ? 1 : 0}`,
     `arrowActive=${arrowActive ? "yes" : "no"} shiftPan=${shiftActive && arrowActive ? "yes" : "no"}`,
     `orbitTarget=${orbitTarget.map((v) => Number.isFinite(v) ? v.toFixed(3) : "NaN").join(", ")}`,
@@ -409,9 +346,11 @@ function updateStatus() {
   }
   app?.setHudRows?.([
     { line: "webgmodeler" },
+    { label: "Mode", value: editor.mode },
     { label: "Tool", value: editor.tool },
     { label: "V/F", value: `${editor.vertices.length}/${editor.faces.length}` },
-    { label: "Selected", value: `v${editor.selectedVertices.size} f${editor.selectedFaces.size}` },
+    { label: "Selected", value: `o${editor.selectedObjectIds.size} v${editor.selectedVertices.size} f${editor.selectedFaces.size}` },
+    { label: "Xform", value: transformState.mode ?? "-" },
     { label: "Keys", value: `A=${arrowActive ? 1 : 0} Sh=${shiftActive ? 1 : 0}` },
     { label: "Msg", value: editor.lastMessage }
   ], {
@@ -422,6 +361,36 @@ function updateStatus() {
   });
 }
 
+function setDisabled(control, disabled) {
+  if (control) {
+    control.disabled = disabled;
+  }
+}
+
+function updateCommandAvailability() {
+  const selectedVertexCount = editor.selectedVertices.size;
+  const selectedFaceCount = editor.selectedFaces.size;
+  const selectedAnything = selectedVertexCount > 0 || selectedFaceCount > 0;
+  const editMode = isEditMode();
+  for (const button of ui.modeButtons) {
+    button.setAttribute("aria-pressed", button.dataset.mode === editor.mode ? "true" : "false");
+  }
+  for (const button of ui.toolButtons) {
+    button.setAttribute("aria-pressed", button.dataset.tool === editor.tool ? "true" : "false");
+    button.disabled = !editMode;
+  }
+  setDisabled(ui.makeTriangle, !editMode || selectedVertexCount !== 3);
+  setDisabled(ui.makeQuad, !editMode || selectedVertexCount !== 4);
+  setDisabled(ui.extrude, !editMode || selectedFaceCount === 0);
+  setDisabled(ui.flipFaces, !editMode || selectedFaceCount === 0);
+  setDisabled(ui.deleteSelected, !editMode || !selectedAnything);
+  setDisabled(ui.undo, editor.undoStack.length === 0);
+  setDisabled(ui.redo, editor.redoStack.length === 0);
+  setDisabled(ui.useMesh, !importedAsset || importedMeshes.length === 0);
+  setDisabled(ui.saveJson, editor.vertices.length === 0);
+  setDisabled(ui.saveGlb, editor.vertices.length === 0 || editor.faces.length === 0);
+}
+
 function setMessage(message) {
   editor.lastMessage = String(message ?? "");
   updateStatus();
@@ -430,15 +399,26 @@ function setMessage(message) {
 // undo は編集データと選択状態だけを保存する
 // Shape や Node は表示キャッシュなので履歴に入れず、復元後に rebuildScene() で作り直す
 function makeSnapshot() {
+  commitActiveObject();
   return {
-    vertices: editor.vertices.map((vertex) => ({
-      id: vertex.id,
-      position: [...vertex.position]
+    mode: editor.mode,
+    objects: editor.objects.map((object) => ({
+      id: object.id,
+      name: object.name,
+      vertices: object.vertices.map((vertex) => ({
+        id: vertex.id,
+        position: [...vertex.position]
+      })),
+      faces: object.faces.map((face) => ({
+        id: face.id,
+        indices: [...face.indices]
+      })),
+      nextVertexId: object.nextVertexId,
+      nextFaceId: object.nextFaceId
     })),
-    faces: editor.faces.map((face) => ({
-      id: face.id,
-      indices: [...face.indices]
-    })),
+    selectedObjectIds: Array.from(editor.selectedObjectIds),
+    activeObjectId: editor.activeObjectId,
+    nextObjectId: editor.nextObjectId,
     selectedVertices: Array.from(editor.selectedVertices),
     selectedFaces: Array.from(editor.selectedFaces),
     nextVertexId: editor.nextVertexId,
@@ -447,18 +427,52 @@ function makeSnapshot() {
 }
 
 function restoreSnapshot(snapshot) {
-  editor.vertices = snapshot.vertices.map((vertex) => ({
-    id: vertex.id,
-    position: readVec3(vertex.position, `snapshot vertex ${vertex.id}`)
-  }));
-  editor.faces = snapshot.faces.map((face) => ({
-    id: face.id,
-    indices: [...face.indices]
-  }));
+  if (Array.isArray(snapshot.objects)) {
+    editor.objects = snapshot.objects.map((object) => ({
+      id: object.id,
+      name: object.name,
+      vertices: object.vertices.map((vertex) => ({
+        id: vertex.id,
+        position: readVec3(vertex.position, `snapshot object ${object.id} vertex ${vertex.id}`)
+      })),
+      faces: object.faces.map((face) => ({
+        id: face.id,
+        indices: [...face.indices]
+      })),
+      nextVertexId: object.nextVertexId,
+      nextFaceId: object.nextFaceId
+    }));
+    editor.mode = snapshot.mode ?? EDITOR_MODE_OBJECT;
+    editor.selectedObjectIds = new Set(snapshot.selectedObjectIds ?? []);
+    editor.activeObjectId = snapshot.activeObjectId ?? editor.objects[0]?.id ?? null;
+    editor.nextObjectId = snapshot.nextObjectId ?? Math.max(DEFAULT_OBJECT_ID, ...editor.objects.map((object) => object.id)) + 1;
+    const active = getActiveObject() ?? editor.objects[0] ?? null;
+    if (active) {
+      editor.activeObjectId = active.id;
+      editor.vertices = active.vertices;
+      editor.faces = active.faces;
+      editor.nextVertexId = active.nextVertexId;
+      editor.nextFaceId = active.nextFaceId;
+    } else {
+      editor.vertices = [];
+      editor.faces = [];
+      editor.nextVertexId = 1;
+      editor.nextFaceId = 1;
+    }
+  } else {
+    editor.vertices = snapshot.vertices.map((vertex) => ({
+      id: vertex.id,
+      position: readVec3(vertex.position, `snapshot vertex ${vertex.id}`)
+    }));
+    editor.faces = snapshot.faces.map((face) => ({
+      id: face.id,
+      indices: [...face.indices]
+    }));
+    editor.nextVertexId = snapshot.nextVertexId;
+    editor.nextFaceId = snapshot.nextFaceId;
+  }
   editor.selectedVertices = new Set(snapshot.selectedVertices);
   editor.selectedFaces = new Set(snapshot.selectedFaces);
-  editor.nextVertexId = snapshot.nextVertexId;
-  editor.nextFaceId = snapshot.nextFaceId;
   editor.dirty = true;
   rebuildScene();
 }
@@ -535,10 +549,38 @@ function getActiveVertexIds() {
   return Array.from(ids);
 }
 
+function getHighlightedVertexIds() {
+  const ids = new Set(editor.selectedVertices);
+  for (const face of getSelectedFaceObjects()) {
+    for (const id of face.indices) {
+      ids.add(id);
+    }
+  }
+  return ids;
+}
+
 function getActiveVertexObjects() {
   return getActiveVertexIds()
     .map((id) => getVertexById(id))
     .filter((vertex) => vertex !== null);
+}
+
+function getSelectedObjectVertexObjects() {
+  commitActiveObject();
+  const vertices = [];
+  for (const object of editor.objects) {
+    if (editor.selectedObjectIds.has(object.id)) {
+      vertices.push(...object.vertices);
+    }
+  }
+  return vertices;
+}
+
+function getTransformTargetVertexObjects(mode) {
+  if (editor.mode === EDITOR_MODE_OBJECT) {
+    return mode === "extrude" ? [] : getSelectedObjectVertexObjects();
+  }
+  return getActiveVertexObjects();
 }
 
 function computeCenter(vertices) {
@@ -577,6 +619,133 @@ function computeFaceNormal(face) {
   return [normal[0] / len, normal[1] / len, normal[2] / len];
 }
 
+function computeNormalForVertexIds(vertexIds) {
+  if (!Array.isArray(vertexIds) || vertexIds.length < 3) {
+    return [0.0, 1.0, 0.0];
+  }
+  const v0 = getVertexById(vertexIds[0]);
+  const v1 = getVertexById(vertexIds[1]);
+  const v2 = getVertexById(vertexIds[2]);
+  if (!v0 || !v1 || !v2) {
+    return [0.0, 1.0, 0.0];
+  }
+  const normal = cross3(
+    sub3(v1.position, v0.position),
+    sub3(v2.position, v0.position)
+  );
+  const len = length3(normal);
+  if (len <= 1.0e-9) {
+    return [0.0, 1.0, 0.0];
+  }
+  return [normal[0] / len, normal[1] / len, normal[2] / len];
+}
+
+function reverseVertexLoop(vertexIds) {
+  return [...vertexIds].reverse();
+}
+
+function getLoopEdgeDirection(loop, a, b) {
+  for (let i = 0; i < loop.length; i++) {
+    const current = loop[i];
+    const next = loop[(i + 1) % loop.length];
+    if (current === a && next === b) {
+      return 1;
+    }
+    if (current === b && next === a) {
+      return -1;
+    }
+  }
+  return 0;
+}
+
+function shouldFlipLoopAwayFromOrigin(vertexIds) {
+  const vertices = vertexIds
+    .map((id) => getVertexById(id))
+    .filter((vertex) => vertex !== null);
+  if (vertices.length < 3) {
+    return false;
+  }
+  const center = computeCenter(vertices);
+  const toOrigin = mul3(center, -1.0);
+  if (length3(toOrigin) <= 1.0e-8) {
+    return false;
+  }
+  const normal = computeNormalForVertexIds(vertexIds);
+  // 法線が原点方向を向く面は「原点側が裏」として反転し、孤立面でも外向きを初期表面にする
+  return dot3(normal, toOrigin) > 0.0;
+}
+
+function orientLoopByAdjacentFaces(vertexIds) {
+  let score = 0;
+  for (const face of editor.faces) {
+    for (let i = 0; i < vertexIds.length; i++) {
+      const a = vertexIds[i];
+      const b = vertexIds[(i + 1) % vertexIds.length];
+      const existingDirection = getLoopEdgeDirection(face.indices, a, b);
+      if (existingDirection === 0) {
+        continue;
+      }
+      // 隣り合う面は共有辺を逆向きに持つと winding が連続する
+      score += existingDirection === 1 ? -1 : 1;
+    }
+  }
+  if (score < 0) {
+    return reverseVertexLoop(vertexIds);
+  }
+  if (score > 0) {
+    return [...vertexIds];
+  }
+  return shouldFlipLoopAwayFromOrigin(vertexIds)
+    ? reverseVertexLoop(vertexIds)
+    : [...vertexIds];
+}
+
+function orientAllFacesConsistently() {
+  const edgeMap = new Map();
+  const edgeKey = (a, b) => a < b ? `${a}:${b}` : `${b}:${a}`;
+  for (const face of editor.faces) {
+    for (let i = 0; i < face.indices.length; i++) {
+      const a = face.indices[i];
+      const b = face.indices[(i + 1) % face.indices.length];
+      const key = edgeKey(a, b);
+      const entries = edgeMap.get(key) ?? [];
+      entries.push({ face, a, b });
+      edgeMap.set(key, entries);
+    }
+  }
+
+  const visited = new Set();
+  for (const seed of editor.faces) {
+    if (visited.has(seed.id)) {
+      continue;
+    }
+    if (shouldFlipLoopAwayFromOrigin(seed.indices)) {
+      seed.indices = reverseVertexLoop(seed.indices);
+    }
+    visited.add(seed.id);
+    const queue = [seed];
+    while (queue.length > 0) {
+      const face = queue.shift();
+      for (let i = 0; i < face.indices.length; i++) {
+        const a = face.indices[i];
+        const b = face.indices[(i + 1) % face.indices.length];
+        const entries = edgeMap.get(edgeKey(a, b)) ?? [];
+        for (const entry of entries) {
+          const other = entry.face;
+          if (other.id === face.id || visited.has(other.id)) {
+            continue;
+          }
+          if (getLoopEdgeDirection(other.indices, a, b) === 1) {
+            other.indices = reverseVertexLoop(other.indices);
+          }
+          visited.add(other.id);
+          queue.push(other);
+        }
+      }
+    }
+  }
+}
+
 function computeSelectionNormal() {
   const selectedFaces = getSelectedFaceObjects();
   if (selectedFaces.length > 0) {
@@ -597,18 +766,18 @@ function computeSelectionNormal() {
 
 // 編集データから ModelAsset を組み立てる
 // faces は三角形または四角形だけを許可し、四角形は表示用 indices へ扇形分解する
-function buildModelAssetFromEditor() {
+function buildModelAssetFromGeometry(vertices = editor.vertices, faces = editor.faces, name = "webgmodeler") {
   const idToIndex = new Map();
   const positions = [];
-  for (let i = 0; i < editor.vertices.length; i++) {
-    const vertex = editor.vertices[i];
+  for (let i = 0; i < vertices.length; i++) {
+    const vertex = vertices[i];
     idToIndex.set(vertex.id, i);
     positions.push(vertex.position[0], vertex.position[1], vertex.position[2]);
   }
 
   const indices = [];
   const polygonLoops = [];
-  for (const face of editor.faces) {
+  for (const face of faces) {
     if (face.indices.length !== 3 && face.indices.length !== 4) {
       throw new Error(`face ${face.id} must have 3 or 4 vertices`);
     }
@@ -628,7 +797,7 @@ function buildModelAssetFromEditor() {
     version: "1.0",
     type: "webg-model-asset",
     meta: {
-      name: "webgmodeler",
+      name,
       generator: "samples/webgmodeler",
       source: "editor",
       unitScale: 1.0,
@@ -643,13 +812,13 @@ function buildModelAssetFromEditor() {
     meshes: [
       {
         id: "webgmodeler_mesh",
-        name: "webgmodeler_mesh",
+        name: `${name}_mesh`,
         material: "webgmodeler_mat",
         geometry: {
-          vertexCount: editor.vertices.length,
+          vertexCount: vertices.length,
           polygonCount: indices.length / 3,
           positions,
-          uvs: new Array(editor.vertices.length * 2).fill(0.0),
+          uvs: new Array(vertices.length * 2).fill(0.0),
           indices,
           polygonLoops
         }
@@ -671,6 +840,10 @@ function buildModelAssetFromEditor() {
       }
     ]
   });
+}
+
+function buildModelAssetFromEditor() {
+  return buildModelAssetFromGeometry(editor.vertices, editor.faces, getActiveObject()?.name ?? "webgmodeler");
 }
 
 // 選択 face だけの overlay geometry を作る
@@ -731,6 +904,16 @@ function makeShapeFromAsset(asset, materialParams) {
   return shape;
 }
 
+function makeShapeInstance(baseShape, materialParams = null) {
+  const shape = new Shape(app.getGL());
+  shape.referShape(baseShape);
+  shape.copyShaderParamsFromShape(baseShape);
+  if (materialParams) {
+    shape.setMaterial("smooth-shader", materialParams);
+  }
+  return shape;
+}
+
 function removeNodeTree(node) {
   if (node) {
     app.space.removeNodeTree(node, { destroyShapes: true });
@@ -738,20 +921,34 @@ function removeNodeTree(node) {
 }
 
 function rebuildMeshShape() {
+  commitActiveObject();
   removeNodeTree(meshNode);
   meshNode = null;
-  if (editor.faces.length === 0) {
+  if (editor.objects.length === 0) {
     return;
   }
-  const asset = buildModelAssetFromEditor();
-  const shape = makeShapeFromAsset(asset, MATERIAL.mesh);
-  meshNode = app.space.addNode(null, "webgmodeler-mesh");
-  meshNode.addShape(shape);
+  meshNode = app.space.addNode(null, "webgmodeler-objects");
+  for (const object of editor.objects) {
+    if (object.faces.length === 0) {
+      continue;
+    }
+    const asset = buildModelAssetFromGeometry(object.vertices, object.faces, object.name);
+    const selectedObject = editor.mode === EDITOR_MODE_OBJECT
+      && editor.selectedObjectIds.has(object.id);
+    const shape = makeShapeFromAsset(asset, selectedObject ? MATERIAL.selectedObject : MATERIAL.mesh);
+    const node = app.space.addNode(meshNode, `object-${object.id}`);
+    node.webgmodelerKind = "object";
+    node.webgmodelerObjectId = object.id;
+    node.addShape(shape);
+  }
 }
 
 function rebuildSelectedFaceShape() {
   removeNodeTree(selectedFaceNode);
   selectedFaceNode = null;
+  if (!isEditMode()) {
+    return;
+  }
   const asset = buildSelectedFaceAsset();
   if (!asset) {
     return;
@@ -765,13 +962,19 @@ function rebuildSelectedFaceShape() {
 // Space.raycast() の hit.node から編集データの vertex id へ戻れるようにする
 function rebuildMarkers() {
   removeNodeTree(markerRoot);
+  if (!isEditMode()) {
+    markerRoot = null;
+    return;
+  }
   markerRoot = app.space.addNode(null, "webgmodeler-markers");
   const radius = getMarkerRadius();
+  const highlightedVertexIds = getHighlightedVertexIds();
+  const baseMarkerShape = makeShapeFromAsset(Primitive.sphere(radius, 8, 8), MATERIAL.marker);
   for (const vertex of editor.vertices) {
-    const selected = editor.selectedVertices.has(vertex.id);
-    const markerShape = makeShapeFromAsset(
-      Primitive.sphere(radius, 8, 8),
-      selected ? MATERIAL.selectedMarker : MATERIAL.marker
+    const selected = highlightedVertexIds.has(vertex.id);
+    const markerShape = makeShapeInstance(
+      baseMarkerShape,
+      selected ? MATERIAL.selectedMarker : null
     );
     const node = app.space.addNode(markerRoot, `vertex-${vertex.id}`);
     node.webgmodelerKind = "vertex";
@@ -793,28 +996,67 @@ function rebuildScene() {
 function buildGrid() {
   removeNodeTree(gridRoot);
   gridRoot = app.space.addNode(null, "webgmodeler-grid");
-  const lineShape = makeShapeFromAsset(Primitive.cuboid(12.0, 0.018, 0.018), MATERIAL.grid);
-  for (let i = -6; i <= 6; i++) {
-    const xNode = app.space.addNode(gridRoot, `grid-x-${i}`);
-    const xShape = new Shape(app.getGL());
-    xShape.referShape(lineShape);
-    xShape.copyShaderParamsFromShape(lineShape);
-    xNode.addShape(xShape);
-    xNode.setPosition(0.0, -0.012, i);
-    xNode.setAttitude(0.0, 0.0, 0.0);
-
-    const zNode = app.space.addNode(gridRoot, `grid-z-${i}`);
-    const zShape = new Shape(app.getGL());
-    zShape.referShape(lineShape);
-    zShape.copyShaderParamsFromShape(lineShape);
-    zNode.addShape(zShape);
-    zNode.setPosition(i, -0.018, 0.0);
-    zNode.setAttitude(90.0, 0.0, 0.0);
+  const half = 6;
+  const divisions = 12;
+  const y = -0.012;
+  const positions = [];
+  const uvs = [];
+  const indices = [];
+  const polygonLoops = [];
+  for (let z = 0; z <= divisions; z++) {
+    for (let x = 0; x <= divisions; x++) {
+      positions.push(
+        -half + (x / divisions) * half * 2.0,
+        y,
+        -half + (z / divisions) * half * 2.0
+      );
+      uvs.push(x / divisions, z / divisions);
+    }
   }
+  const row = divisions + 1;
+  for (let z = 0; z < divisions; z++) {
+    for (let x = 0; x < divisions; x++) {
+      const a = z * row + x;
+      const b = a + 1;
+      const d = (z + 1) * row + x;
+      const c = d + 1;
+      indices.push(a, b, c, a, c, d);
+      polygonLoops.push([a, b, c, d]);
+    }
+  }
+  const gridAsset = ModelAsset.fromData({
+    version: "1.0",
+    type: "webg-model-asset",
+    meta: { name: "webgmodeler_grid" },
+    materials: [],
+    meshes: [
+      {
+        id: "grid_mesh",
+        geometry: {
+          vertexCount: positions.length / 3,
+          polygonCount: indices.length / 3,
+          positions,
+          uvs,
+          indices,
+          polygonLoops
+        }
+      }
+    ],
+    skeletons: [],
+    animations: [],
+    nodes: []
+  });
+  const gridShape = makeShapeFromAsset(gridAsset, {
+    color: MATERIAL.grid.color,
+    wireframe: 1
+  });
+  gridShape.setWireframe(true);
+  const node = app.space.addNode(gridRoot, "grid-wire-plane");
+  node.addShape(gridShape);
 }
 
-function getEditorBounds() {
-  if (editor.vertices.length === 0) {
+function computeBoundsForVertices(vertices) {
+  if (vertices.length === 0) {
     return {
       min: [-2.0, 0.0, -2.0],
       max: [2.0, 2.0, 2.0],
@@ -824,7 +1066,7 @@ function getEditorBounds() {
   }
   const min = [Number.POSITIVE_INFINITY, Number.POSITIVE_INFINITY, Number.POSITIVE_INFINITY];
   const max = [Number.NEGATIVE_INFINITY, Number.NEGATIVE_INFINITY, Number.NEGATIVE_INFINITY];
-  for (const vertex of editor.vertices) {
+  for (const vertex of vertices) {
     for (let i = 0; i < 3; i++) {
       if (vertex.position[i] < min[i]) min[i] = vertex.position[i];
       if (vertex.position[i] > max[i]) max[i] = vertex.position[i];
@@ -844,8 +1086,29 @@ function getEditorBounds() {
   return { min, max, center, size };
 }
 
+function getEditorBounds() {
+  commitActiveObject();
+  const vertices = editor.objects.length > 0
+    ? editor.objects.flatMap((object) => object.vertices)
+    : editor.vertices;
+  return computeBoundsForVertices(vertices);
+}
+
+function getActiveObjectBounds() {
+  commitActiveObject();
+  const object = getActiveObject();
+  return computeBoundsForVertices(object?.vertices ?? editor.vertices);
+}
+
 function getMarkerRadius() {
-  return Math.max(0.055, getEditorBounds().size * 0.022);
+  const bounds = getActiveObjectBounds();
+  const eyePosition = app?.eye?.getWorldPosition?.() ?? null;
+  const eyeDistance = eyePosition
+    ? length3(sub3(eyePosition, bounds.center))
+    : bounds.size * 2.8;
+  const sizeRadius = Math.max(0.020, bounds.size * 0.014);
+  const viewCap = Math.max(0.020, eyeDistance * 0.018);
+  return Math.min(sizeRadius, viewCap);
 }
 
 function fitCameraToEditor() {
@@ -861,8 +1124,112 @@ function fitCameraToEditor() {
   app.syncCameraFromEyeRig(orbit);
 }
 
+function getActiveObject() {
+  return editor.objects.find((object) => object.id === editor.activeObjectId) ?? null;
+}
+
+function commitActiveObject() {
+  const object = getActiveObject();
+  if (!object) {
+    return;
+  }
+  object.vertices = editor.vertices;
+  object.faces = editor.faces;
+  object.nextVertexId = editor.nextVertexId;
+  object.nextFaceId = editor.nextFaceId;
+}
+
+function activateObject(id, { clearEditSelection = true } = {}) {
+  commitActiveObject();
+  const object = editor.objects.find((entry) => entry.id === id) ?? null;
+  if (!object) {
+    return false;
+  }
+  editor.activeObjectId = object.id;
+  editor.vertices = object.vertices;
+  editor.faces = object.faces;
+  editor.nextVertexId = object.nextVertexId;
+  editor.nextFaceId = object.nextFaceId;
+  if (clearEditSelection) {
+    clearSelection();
+  }
+  return true;
+}
+
+function isEditMode() {
+  return editor.mode === EDITOR_MODE_EDIT;
+}
+
+function resetObjectState(name = "Cube") {
+  const id = DEFAULT_OBJECT_ID;
+  editor.objects = [{
+    id,
+    name: String(name || "Object"),
+    vertices: editor.vertices,
+    faces: editor.faces,
+    nextVertexId: editor.nextVertexId,
+    nextFaceId: editor.nextFaceId
+  }];
+  editor.nextObjectId = id + 1;
+  editor.activeObjectId = id;
+  editor.selectedObjectIds = new Set([id]);
+}
+
+function selectObject(id, additive = false) {
+  const object = editor.objects.find((entry) => entry.id === id);
+  if (!object) {
+    return false;
+  }
+  if (!additive) {
+    editor.selectedObjectIds.clear();
+  }
+  if (additive && editor.selectedObjectIds.has(id)) {
+    editor.selectedObjectIds.delete(id);
+    if (editor.activeObjectId === id) {
+      editor.activeObjectId = editor.selectedObjectIds.values().next().value ?? null;
+    }
+  } else {
+    editor.selectedObjectIds.add(id);
+    activateObject(id);
+  }
+  return true;
+}
+
+function normalizeEditorMode(mode) {
+  const normalized = String(mode ?? "").trim();
+  if (!EDITOR_MODES.has(normalized)) {
+    throw new Error(`unknown editor mode: ${mode}`);
+  }
+  return normalized;
+}
+
+function setEditorMode(mode) {
+  const normalized = normalizeEditorMode(mode);
+  if (editor.mode === normalized) {
+    updateStatus();
+    return;
+  }
+  cancelTransformMode();
+  editor.mode = normalized;
+  if (normalized === EDITOR_MODE_OBJECT) {
+    clearSelection();
+    if (editor.activeObjectId !== null) {
+      editor.selectedObjectIds = new Set([editor.activeObjectId]);
+    }
+  } else {
+    if (!getActiveObject() && editor.objects.length > 0) {
+      selectObject(editor.objects[0].id, false);
+    }
+  }
+  rebuildScene();
+  setMessage(`${normalized} mode`);
+}
+
 function normalizeToolName(tool) {
   const normalized = String(tool ?? "").trim();
+  if (normalized === "select") {
+    return TOOL_SELECT_VERTEX;
+  }
   if (!TOOLS.has(normalized)) {
     throw new Error(`unknown tool: ${tool}`);
   }
@@ -871,8 +1238,9 @@ function normalizeToolName(tool) {
 
 function setTool(tool) {
   editor.tool = normalizeToolName(tool);
-  for (const button of ui.toolButtons) {
-    button.setAttribute("aria-pressed", button.dataset.tool === editor.tool ? "true" : "false");
+  if (!isEditMode()) {
+    setEditorMode(EDITOR_MODE_EDIT);
+    return;
   }
   setMessage(`tool ${editor.tool}`);
 }
@@ -905,6 +1273,23 @@ function addFace(vertexIds) {
     indices: [...vertexIds]
   });
   return id;
+}
+
+function addFaceWithStableOrientation(vertexIds) {
+  return addFace(orientLoopByAdjacentFaces(vertexIds));
+}
+
+function addFaceOrientedToDirection(vertexIds, targetDirection) {
+  let orientedIds = [...vertexIds];
+  if (length3(targetDirection) > 1.0e-9) {
+    const normal = computeNormalForVertexIds(orientedIds);
+    if (dot3(normal, targetDirection) < 0.0) {
+      orientedIds = reverseVertexLoop(orientedIds);
+    }
+  } else {
+    orientedIds = orientLoopByAdjacentFaces(orientedIds);
+  }
+  return addFace(orientedIds);
 }
 
 // 選択頂点から新しい face を作るときは、現在の視点から見た画面上の並びを使う
@@ -956,16 +1341,23 @@ function createInitialModel() {
   editor.nextFaceId = 1;
   editor.undoStack = [];
   editor.redoStack = [];
-  addVertex([-1.4, 0.0, -1.0]);
-  addVertex([1.4, 0.0, -1.0]);
-  addVertex([1.4, 0.0, 1.0]);
-  addVertex([-1.4, 0.0, 1.0]);
-  addVertex([0.0, 1.8, 0.0]);
+  addVertex([-1.0, 0.0, -1.0]);
+  addVertex([1.0, 0.0, -1.0]);
+  addVertex([1.0, 0.0, 1.0]);
+  addVertex([-1.0, 0.0, 1.0]);
+  addVertex([-1.0, 2.0, -1.0]);
+  addVertex([1.0, 2.0, -1.0]);
+  addVertex([1.0, 2.0, 1.0]);
+  addVertex([-1.0, 2.0, 1.0]);
   addFace([1, 2, 3, 4]);
-  addFace([1, 2, 5]);
-  addFace([2, 3, 5]);
-  addFace([3, 4, 5]);
-  addFace([4, 1, 5]);
+  addFace([5, 6, 7, 8]);
+  addFace([1, 2, 6, 5]);
+  addFace([2, 3, 7, 6]);
+  addFace([3, 4, 8, 7]);
+  addFace([4, 1, 5, 8]);
+  orientAllFacesConsistently();
+  resetObjectState("Cube");
+  editor.mode = EDITOR_MODE_OBJECT;
   editor.dirty = false;
   editor.lastMessage = "new model";
   rebuildScene();
@@ -977,6 +1369,27 @@ function clearSelection() {
   editor.selectedFaces.clear();
 }
 
+function syncSelectedVerticesFromSelectedFaces() {
+  editor.selectedVertices.clear();
+  for (const face of getSelectedFaceObjects()) {
+    for (const id of face.indices) {
+      editor.selectedVertices.add(id);
+    }
+  }
+}
+
+function syncSelectedFacesFromSelectedVertices() {
+  editor.selectedFaces.clear();
+  if (editor.selectedVertices.size < 3) {
+    return;
+  }
+  for (const face of editor.faces) {
+    if (face.indices.every((id) => editor.selectedVertices.has(id))) {
+      editor.selectedFaces.add(face.id);
+    }
+  }
+}
+
 function selectVertex(id, additive = false) {
   if (!additive) {
     clearSelection();
@@ -986,6 +1399,7 @@ function selectVertex(id, additive = false) {
   } else {
     editor.selectedVertices.add(id);
   }
+  syncSelectedFacesFromSelectedVertices();
 }
 
 function selectFace(id, additive = false) {
@@ -1001,80 +1415,27 @@ function selectFace(id, additive = false) {
   } else {
     editor.selectedFaces.add(id);
   }
+  syncSelectedVerticesFromSelectedFaces();
 }
 
 function deleteSelected() {
-  if (editor.selectedVertices.size === 0 && editor.selectedFaces.size === 0) {
-    setMessage("nothing selected");
-    return;
-  }
-  pushUndo("delete selection");
-  const deleteFacesOnly = editor.selectedFaces.size > 0;
-  const removedVertices = deleteFacesOnly
-    ? new Set()
-    : new Set(editor.selectedVertices);
-  editor.faces = editor.faces.filter((face) => {
-    if (editor.selectedFaces.has(face.id)) return false;
-    return !face.indices.some((vertexId) => removedVertices.has(vertexId));
-  });
-  editor.vertices = editor.vertices.filter((vertex) => !removedVertices.has(vertex.id));
-  clearSelection();
-  rebuildScene();
-  setMessage("deleted selection");
+  editOperations.deleteSelected();
 }
 
 function makeFaceFromSelection(size) {
-  const ids = Array.from(editor.selectedVertices);
-  if (ids.length !== size) {
-    setMessage(`${size === 3 ? "Triangle" : "Quad"} requires ${size} selected vertices`);
-    return;
-  }
-  pushUndo(`make ${size === 3 ? "triangle" : "quad"}`);
-  const orientedIds = orderVertexIdsForFaceFromView(ids);
-  const faceId = addFace(orientedIds);
-  editor.selectedFaces = new Set([faceId]);
-  rebuildScene();
-  setMessage(`created front-facing face ${faceId}`);
+  editOperations.makeFaceFromSelection(size);
+}
+
+function createExtrusion(distance) {
+  return editOperations.createExtrusion(distance);
 }
 
 function extrudeSelectedFaces() {
-  const faces = getSelectedFaceObjects();
-  if (faces.length === 0) {
-    setMessage("select face before extrude");
-    return;
-  }
-  pushUndo("extrude faces");
-  const newFaceIds = [];
-  const newVertexIds = new Set();
-  const bounds = getEditorBounds();
-  const distance = Math.max(0.25, bounds.size * 0.18);
-  for (const face of faces) {
-    const normal = computeFaceNormal(face);
-    const top = [];
-    for (const vertexId of face.indices) {
-      const vertex = getVertexById(vertexId);
-      if (!vertex) {
-        throw new Error(`face ${face.id} references missing vertex ${vertexId}`);
-      }
-      const id = addVertex(add3(vertex.position, mul3(normal, distance)));
-      top.push(id);
-      newVertexIds.add(id);
-    }
-    newFaceIds.push(addFace(top));
-    for (let i = 0; i < face.indices.length; i++) {
-      const next = (i + 1) % face.indices.length;
-      newFaceIds.push(addFace([
-        face.indices[i],
-        face.indices[next],
-        top[next],
-        top[i]
-      ]));
-    }
-  }
-  editor.selectedVertices = newVertexIds;
-  editor.selectedFaces = new Set(newFaceIds);
-  rebuildScene();
-  setMessage(`extruded ${faces.length} face(s)`);
+  editOperations.extrudeSelectedFaces();
+}
+
+function flipSelectedFaces() {
+  editOperations.flipSelectedFaces();
 }
 
 function cssToNdc(canvas, clientX, clientY) {
@@ -1149,12 +1510,16 @@ function intersectRayTriangle(ray, p0, p1, p2) {
   };
 }
 
-function pickFace(ray) {
+function getVertexByIdFromList(vertices, id) {
+  return vertices.find((vertex) => vertex.id === id) ?? null;
+}
+
+function pickFaceInObject(ray, object) {
   let best = null;
-  for (const face of editor.faces) {
-    const verts = face.indices.map((id) => getVertexById(id));
+  for (const face of object.faces) {
+    const verts = face.indices.map((id) => getVertexByIdFromList(object.vertices, id));
     if (verts.some((vertex) => vertex === null)) {
-      throw new Error(`face ${face.id} contains missing vertex`);
+      throw new Error(`object ${object.id} face ${face.id} contains missing vertex`);
     }
     const triangles = face.indices.length === 3
       ? [[0, 1, 2]]
@@ -1169,9 +1534,29 @@ function pickFace(ray) {
       if (hit && (!best || hit.t < best.t)) {
         best = {
           ...hit,
+          objectId: object.id,
           faceId: face.id
         };
       }
+    }
+  }
+  return best;
+}
+
+function pickFace(ray) {
+  const object = getActiveObject();
+  if (!object) {
+    return null;
+  }
+  return pickFaceInObject(ray, object);
+}
+
+function pickObjectFace(ray) {
+  let best = null;
+  for (const object of editor.objects) {
+    const hit = pickFaceInObject(ray, object);
+    if (hit && (!best || hit.t < best.t)) {
+      best = hit;
     }
   }
   return best;
@@ -1202,6 +1587,32 @@ function getCameraScreenBasis() {
   };
 }
 
+function pickVertexByRayDistance(ray) {
+  let best = null;
+  const dir = normalize3(ray.dir, "vertex pick ray");
+  const threshold = Math.max(getMarkerRadius() * 2.4, getActiveObjectBounds().size * 0.018);
+  for (const vertex of editor.vertices) {
+    const rel = sub3(vertex.position, ray.origin);
+    const t = dot3(rel, dir);
+    if (t < 0.0) {
+      continue;
+    }
+    const closest = add3(ray.origin, mul3(dir, t));
+    const distance = length3(sub3(vertex.position, closest));
+    if (distance > threshold) {
+      continue;
+    }
+    if (!best || distance < best.distance || (distance === best.distance && t < best.t)) {
+      best = {
+        vertexId: vertex.id,
+        distance,
+        t
+      };
+    }
+  }
+  return best;
+}
+
 function installPanModifierBridge(canvas) {
   const resetPointer = () => {
     const panModifierKey = getOrbitPanModifierKey();
@@ -1211,6 +1622,10 @@ function installPanModifierBridge(canvas) {
     app.input.release(panModifierKey);
   };
   const onPointerDownCapture = (ev) => {
+    const transformState = transformController?.state ?? { mode: null, active: false };
+    if (transformState.mode || transformState.active) {
+      return;
+    }
     if (String(ev.pointerType ?? "") === "touch") {
       return;
     }
@@ -1224,6 +1639,10 @@ function installPanModifierBridge(canvas) {
     cameraPointer.lastY = ev.clientY;
   };
   const onPointerMoveCapture = (ev) => {
+    const transformState = transformController?.state ?? { mode: null, active: false };
+    if (transformState.mode || transformState.active) {
+      return;
+    }
     if (!cameraPointer.active) {
       return;
     }
@@ -1280,7 +1699,21 @@ function isAdditiveSelectionEvent(ev) {
 
 function handleCanvasClick(ev) {
   const ray = makeRayFromMouse(app.screen.canvas, ev.clientX, ev.clientY);
-  const marker = pickVertexMarker(ray);
+
+  if (editor.mode === EDITOR_MODE_OBJECT) {
+    const faceHit = pickObjectFace(ray);
+    if (faceHit && selectObject(faceHit.objectId, isAdditiveSelectionEvent(ev))) {
+      rebuildScene();
+      setMessage(`selected object ${getActiveObject()?.name ?? editor.activeObjectId}`);
+      return;
+    }
+    if (!isAdditiveSelectionEvent(ev)) {
+      editor.selectedObjectIds.clear();
+      rebuildScene();
+      setMessage("object selection cleared");
+    }
+    return;
+  }
 
   if (editor.tool === TOOL_ADD_VERTEX) {
     const faceHit = pickFace(ray);
@@ -1300,19 +1733,24 @@ function handleCanvasClick(ev) {
     return;
   }
 
-  if (marker) {
+  const marker = editor.tool === TOOL_SELECT_VERTEX
+    ? (pickVertexByRayDistance(ray) ?? pickVertexMarker(ray))
+    : null;
+  if (editor.tool === TOOL_SELECT_VERTEX && marker) {
     selectVertex(marker.vertexId, isAdditiveSelectionEvent(ev));
     rebuildScene();
     setMessage(`selected vertex ${marker.vertexId}`);
     return;
   }
 
-  const faceHit = pickFace(ray);
-  if (faceHit) {
-    selectFace(faceHit.faceId, isAdditiveSelectionEvent(ev));
-    rebuildScene();
-    setMessage(`selected face ${faceHit.faceId}`);
-    return;
+  if (editor.tool === TOOL_SELECT_FACE) {
+    const faceHit = pickFace(ray);
+    if (faceHit) {
+      selectFace(faceHit.faceId, isAdditiveSelectionEvent(ev));
+      rebuildScene();
+      setMessage(`selected face ${faceHit.faceId} with vertices`);
+      return;
+    }
   }
 
   if (!isAdditiveSelectionEvent(ev)) {
@@ -1382,58 +1820,44 @@ function installPointerHandlers() {
   canvas.addEventListener("pointerleave", resetCanvasClick);
 }
 
-function getKeyboardEditStep() {
-  return Math.max(0.04, getEditorBounds().size * 0.035);
+function getTransformModeLabel(mode) {
+  return transformController.getTransformModeLabel(mode);
+}
+
+function setTransformMode(mode) {
+  return transformController.setTransformMode(mode);
+}
+
+function cancelTransformMode() {
+  return transformController.cancelTransformMode();
+}
+
+function confirmTransformMode() {
+  return transformController.confirmTransformMode();
+}
+
+function applyTransformDrag(clientX, clientY) {
+  return transformController.applyTransformDrag(clientX, clientY);
+}
+
+function installTransformPointerBridge(canvas) {
+  return transformController.installTransformPointerBridge(canvas);
 }
 
 function moveActiveVerticesBy(delta, label) {
-  const vertices = getActiveVertexObjects();
-  if (vertices.length === 0) {
-    setMessage("select vertices or faces before keyboard edit");
-    return false;
-  }
-  pushUndo(label);
-  for (const vertex of vertices) {
-    vertex.position = add3(vertex.position, delta);
-  }
-  rebuildScene();
-  setMessage(label);
-  return true;
+  return editOperations.moveActiveVerticesBy(delta, label);
 }
 
 function moveSelectionByScreenKeys(stepX, stepY) {
-  const basis = getCameraScreenBasis();
-  const step = getKeyboardEditStep();
-  const delta = add3(
-    mul3(basis.right, stepX * step),
-    mul3(basis.up, stepY * step)
-  );
-  return moveActiveVerticesBy(delta, "keyboard move screen");
+  return editOperations.moveSelectionByScreenKeys(stepX, stepY);
 }
 
 function moveSelectionByNormalKey(direction) {
-  const step = getKeyboardEditStep();
-  const normal = computeSelectionNormal();
-  return moveActiveVerticesBy(mul3(normal, direction * step), "keyboard move normal");
+  return editOperations.moveSelectionByNormalKey(direction);
 }
 
 function scaleSelectionByKeyboard(factor) {
-  const vertices = getActiveVertexObjects();
-  if (vertices.length === 0) {
-    setMessage("select vertices or faces before keyboard scale");
-    return false;
-  }
-  pushUndo("keyboard scale selection");
-  const center = computeCenter(vertices);
-  for (const vertex of vertices) {
-    vertex.position = add3(
-      center,
-      mul3(sub3(vertex.position, center), factor)
-    );
-  }
-  rebuildScene();
-  setMessage(`keyboard scale ${factor.toFixed(2)}`);
-  return true;
+  return editOperations.scaleSelectionByKeyboard(factor);
 }
 
 function installKeyboardHandlers() {
@@ -1442,19 +1866,30 @@ function installKeyboardHandlers() {
       return;
     }
     const key = String(ev.key ?? "").toLowerCase();
-    if (key === "1") setTool(TOOL_SELECT);
-    else if (key === "2") setTool(TOOL_ADD_VERTEX);
-    else if (key === "j") moveSelectionByScreenKeys(-1.0, 0.0);
-    else if (key === "l") moveSelectionByScreenKeys(1.0, 0.0);
-    else if (key === "i") moveSelectionByScreenKeys(0.0, 1.0);
-    else if (key === "k") moveSelectionByScreenKeys(0.0, -1.0);
-    else if (key === "u") moveSelectionByNormalKey(-1.0);
-    else if (key === "o") moveSelectionByNormalKey(1.0);
-    else if (key === "n") scaleSelectionByKeyboard(0.92);
-    else if (key === "m") scaleSelectionByKeyboard(1.08);
+    const plainKey = !ev.metaKey && !ev.ctrlKey && !ev.altKey;
+    if (key === "tab") setEditorMode(isEditMode() ? EDITOR_MODE_OBJECT : EDITOR_MODE_EDIT);
+    else if (key === "1") setTool(TOOL_SELECT_VERTEX);
+    else if (key === "2") setTool(TOOL_SELECT_FACE);
+    else if (key === "3") setTool(TOOL_ADD_VERTEX);
+    else if (plainKey && key === "g") setTransformMode("move");
+    else if (plainKey && key === "r") setTransformMode("rotate");
+    else if (plainKey && key === "s") setTransformMode("scale");
+    else if (plainKey && key === "e") setTransformMode("extrude");
+    else if (plainKey && key === "j") moveSelectionByScreenKeys(-1.0, 0.0);
+    else if (plainKey && key === "l") moveSelectionByScreenKeys(1.0, 0.0);
+    else if (plainKey && key === "i") moveSelectionByScreenKeys(0.0, 1.0);
+    else if (plainKey && key === "k") moveSelectionByScreenKeys(0.0, -1.0);
+    else if (plainKey && key === "u") moveSelectionByNormalKey(-1.0);
+    else if (plainKey && key === "o") moveSelectionByNormalKey(1.0);
+    else if (plainKey && key === "n") scaleSelectionByKeyboard(0.92);
+    else if (plainKey && key === "m") scaleSelectionByKeyboard(1.08);
+    else if (plainKey && key === "f") flipSelectedFaces();
     else if (key === "delete" || key === "backspace") deleteSelected();
     else if (key === "z" && (ev.metaKey || ev.ctrlKey)) undo();
     else if ((key === "y" && (ev.metaKey || ev.ctrlKey)) || (key === "z" && ev.shiftKey && (ev.metaKey || ev.ctrlKey))) redo();
+    else if (key === "escape" && cancelTransformMode()) {
+      // transform cancel handled above
+    }
     else if (key === "escape") {
       clearSelection();
       rebuildScene();
@@ -1474,15 +1909,108 @@ function detectFileFormat(file) {
   throw new Error(`unsupported file extension: ${file?.name ?? "(unknown)"}`);
 }
 
-function populateMeshSelect(asset) {
+function matrixFromNodeDef(node) {
+  const matrix = new Matrix();
+  if (Array.isArray(node?.matrix) && node.matrix.length >= 16) {
+    matrix.setBulk(node.matrix);
+    return matrix;
+  }
+  const transform = node?.transform ?? {};
+  const t = Array.isArray(transform.translation) ? transform.translation : [0, 0, 0];
+  const r = Array.isArray(transform.rotation) ? transform.rotation : [0, 0, 0, 1];
+  const s = Array.isArray(transform.scale) ? transform.scale : [1, 1, 1];
+  const x = Number(r[0] ?? 0);
+  const y = Number(r[1] ?? 0);
+  const z = Number(r[2] ?? 0);
+  const w = Number(r[3] ?? 1);
+  const sx = Number(s[0] ?? 1);
+  const sy = Number(s[1] ?? 1);
+  const sz = Number(s[2] ?? 1);
+  matrix.setBulk([
+    (1 - 2 * y * y - 2 * z * z) * sx,
+    (2 * x * y + 2 * w * z) * sx,
+    (2 * x * z - 2 * w * y) * sx,
+    0,
+    (2 * x * y - 2 * w * z) * sy,
+    (1 - 2 * x * x - 2 * z * z) * sy,
+    (2 * y * z + 2 * w * x) * sy,
+    0,
+    (2 * x * z + 2 * w * y) * sz,
+    (2 * y * z - 2 * w * x) * sz,
+    (1 - 2 * x * x - 2 * y * y) * sz,
+    0,
+    Number(t[0] ?? 0),
+    Number(t[1] ?? 0),
+    Number(t[2] ?? 0),
+    1
+  ]);
+  return matrix;
+}
+
+function buildWorldMatrixResolver(nodes) {
+  const nodeById = new Map(nodes.map((node) => [node.id, node]));
+  const cache = new Map();
+  const resolve = (node) => {
+    if (!node) {
+      return new Matrix();
+    }
+    if (cache.has(node.id)) {
+      return cache.get(node.id).clone();
+    }
+    const local = matrixFromNodeDef(node);
+    const parent = node.parent ? nodeById.get(node.parent) : null;
+    const world = parent ? resolve(parent) : new Matrix();
+    world.mul_(local);
+    cache.set(node.id, world.clone());
+    return world;
+  };
+  return resolve;
+}
+
+function makeImportEntries(asset) {
   const data = asset.getData();
   const meshes = Array.isArray(data?.meshes) ? data.meshes : [];
-  importedMeshes = meshes.map((mesh, index) => ({
+  const nodes = Array.isArray(data?.nodes) ? data.nodes : [];
+  const meshById = new Map(meshes.map((mesh, index) => [mesh.id, { mesh, index }]));
+  const resolveWorldMatrix = buildWorldMatrixResolver(nodes);
+  const entries = [];
+  for (let i = 0; i < nodes.length; i++) {
+    const node = nodes[i];
+    if (!node?.mesh || !meshById.has(node.mesh)) {
+      continue;
+    }
+    const meshEntry = meshById.get(node.mesh);
+    entries.push({
+      index: entries.length,
+      meshIndex: meshEntry.index,
+      mesh: meshEntry.mesh,
+      node,
+      worldMatrix: resolveWorldMatrix(node),
+      label: `${entries.length}: ${node.name ?? node.id ?? "node"} / ${meshEntry.mesh.name ?? meshEntry.mesh.id ?? "mesh"} v=${meshEntry.mesh.geometry?.vertexCount ?? Math.floor((meshEntry.mesh.geometry?.positions?.length ?? 0) / 3)}`
+    });
+  }
+  if (entries.length > 0) {
+    return entries;
+  }
+  return meshes.map((mesh, index) => ({
     index,
+    meshIndex: index,
     mesh,
+    node: null,
+    worldMatrix: new Matrix(),
     label: `${index}: ${mesh.name ?? mesh.id ?? "mesh"} v=${mesh.geometry?.vertexCount ?? Math.floor((mesh.geometry?.positions?.length ?? 0) / 3)}`
   }));
+}
+
+function populateMeshSelect(asset) {
+  importedMeshes = makeImportEntries(asset);
   ui.meshSelect.innerHTML = "";
+  if (importedMeshes.length > 1) {
+    const allOption = document.createElement("option");
+    allOption.value = "all";
+    allOption.textContent = `all objects (${importedMeshes.length})`;
+    ui.meshSelect.appendChild(allOption);
+  }
   for (const entry of importedMeshes) {
     const option = document.createElement("option");
     option.value = String(entry.index);
@@ -1539,29 +2067,53 @@ function importSelectedMesh() {
     setMessage("load a model file first");
     return;
   }
+  if (ui.meshSelect.value === "all") {
+    importAllMeshes();
+    return;
+  }
   const index = Number(ui.meshSelect.value);
   const entry = importedMeshes.find((item) => item.index === index);
   if (!entry) {
     setMessage("selected mesh is not available");
     return;
   }
+  const object = buildEditorObjectFromImportEntry(entry, DEFAULT_OBJECT_ID);
+  pushUndo("import mesh");
+  editor.objects = [object];
+  editor.nextObjectId = object.id + 1;
+  editor.selectedObjectIds = new Set([object.id]);
+  editor.mode = EDITOR_MODE_OBJECT;
+  activateObject(object.id);
+  orientAllFacesConsistently();
+  commitActiveObject();
+  editor.undoStack = [];
+  editor.redoStack = [];
+  editor.dirty = false;
+  rebuildScene();
+  fitCameraToEditor();
+  setMessage(`imported ${entry.label}`);
+}
+
+function buildEditorObjectFromImportEntry(entry, objectId) {
   const geometry = entry.mesh.geometry;
   if (!geometry || !Array.isArray(geometry.positions) || !Array.isArray(geometry.indices)) {
     throw new Error(`mesh ${entry.label} does not contain editable positions and indices`);
   }
-  pushUndo("import mesh");
-  editor.vertices = [];
-  editor.faces = [];
-  editor.selectedVertices = new Set();
-  editor.selectedFaces = new Set();
-  editor.nextVertexId = 1;
-  editor.nextFaceId = 1;
+  const vertices = [];
+  const faces = [];
+  let nextVertexId = 1;
+  let nextFaceId = 1;
+  const worldMatrix = entry.worldMatrix ?? new Matrix();
   for (let i = 0; i + 2 < geometry.positions.length; i += 3) {
-    addVertex([
+    const position = worldMatrix.mulVector([
       readFiniteNumber(geometry.positions[i], `positions[${i}]`),
       readFiniteNumber(geometry.positions[i + 1], `positions[${i + 1}]`),
       readFiniteNumber(geometry.positions[i + 2], `positions[${i + 2}]`)
     ]);
+    vertices.push({
+      id: nextVertexId++,
+      position: readVec3(position, `object ${objectId} vertex ${nextVertexId - 1}`)
+    });
   }
   const loops = Array.isArray(geometry.polygonLoops) && geometry.polygonLoops.length > 0
     ? geometry.polygonLoops
@@ -1572,29 +2124,63 @@ function importSelectedMesh() {
       if (!Array.isArray(loop) || (loop.length !== 3 && loop.length !== 4)) {
         throw new Error(`polygonLoops[${i}] must be a triangle or quad for this initial modeler`);
       }
-      addFace(loop.map((vertexIndex) => {
+      const indices = loop.map((vertexIndex) => {
         const id = Number(vertexIndex) + 1;
-        if (!getVertexById(id)) {
+        if (!vertices.some((vertex) => vertex.id === id)) {
           throw new Error(`polygonLoops[${i}] references missing vertex index ${vertexIndex}`);
         }
         return id;
-      }));
+      });
+      faces.push({
+        id: nextFaceId++,
+        indices
+      });
     }
   } else {
     for (let i = 0; i + 2 < geometry.indices.length; i += 3) {
-      addFace([
-        Number(geometry.indices[i]) + 1,
-        Number(geometry.indices[i + 1]) + 1,
-        Number(geometry.indices[i + 2]) + 1
-      ]);
+      faces.push({
+        id: nextFaceId++,
+        indices: [
+          Number(geometry.indices[i]) + 1,
+          Number(geometry.indices[i + 1]) + 1,
+          Number(geometry.indices[i + 2]) + 1
+        ]
+      });
     }
   }
+  return {
+    id: objectId,
+    name: entry.node?.name ?? entry.mesh.name ?? entry.mesh.id ?? `Object ${objectId}`,
+    vertices,
+    faces,
+    nextVertexId,
+    nextFaceId
+  };
+}
+
+function importAllMeshes() {
+  if (importedMeshes.length === 0) {
+    setMessage("no mesh to import");
+    return;
+  }
+  pushUndo("import all meshes");
+  editor.objects = importedMeshes.map((entry, index) => buildEditorObjectFromImportEntry(entry, DEFAULT_OBJECT_ID + index));
+  editor.nextObjectId = DEFAULT_OBJECT_ID + editor.objects.length;
+  editor.selectedObjectIds = new Set(editor.objects.length > 0 ? [editor.objects[0].id] : []);
+  editor.mode = EDITOR_MODE_OBJECT;
+  activateObject(editor.objects[0]?.id ?? null);
+  for (const object of editor.objects) {
+    activateObject(object.id);
+    orientAllFacesConsistently();
+    commitActiveObject();
+  }
+  activateObject(editor.objects[0]?.id ?? null);
   editor.undoStack = [];
   editor.redoStack = [];
   editor.dirty = false;
   rebuildScene();
   fitCameraToEditor();
-  setMessage(`imported ${entry.label}`);
+  setMessage(`imported ${editor.objects.length} object(s)`);
 }
 
 function saveModelAssetJson() {
@@ -1607,7 +2193,39 @@ function saveModelAssetJson() {
   setMessage(`saved ${filename}`);
 }
 
+function buildGlbFromEditor() {
+  return buildGlbFromGeometry({
+    vertices: editor.vertices,
+    faces: editor.faces,
+    materialColor: MATERIAL.mesh.color
+  });
+}
+
+function downloadBlob(blob, filename) {
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = filename;
+  anchor.style.display = "none";
+  document.body.appendChild(anchor);
+  anchor.click();
+  document.body.removeChild(anchor);
+  setTimeout(() => URL.revokeObjectURL(url), 0);
+}
+
+function saveGlb() {
+  const glb = buildGlbFromEditor();
+  const filename = "webgmodeler.glb";
+  downloadBlob(new Blob([glb], { type: "model/gltf-binary" }), filename);
+  lastSavedName = filename;
+  editor.dirty = false;
+  setMessage(`saved ${filename}`);
+}
+
 function installDomHandlers() {
+  for (const button of ui.modeButtons) {
+    button.addEventListener("click", () => setEditorMode(button.dataset.mode));
+  }
   for (const button of ui.toolButtons) {
     button.addEventListener("click", () => setTool(button.dataset.tool));
   }
@@ -1634,6 +2252,14 @@ function installDomHandlers() {
       setMessage(`save failed: ${err?.message ?? err}`);
     }
   });
+  ui.saveGlb.addEventListener("click", () => {
+    try {
+      saveGlb();
+    } catch (err) {
+      console.error(err);
+      setMessage(`glb export failed: ${err?.message ?? err}`);
+    }
+  });
   ui.newScene.addEventListener("click", () => {
     createInitialModel();
     setMessage("new model");
@@ -1641,7 +2267,8 @@ function installDomHandlers() {
   ui.deleteSelected.addEventListener("click", deleteSelected);
   ui.makeTriangle.addEventListener("click", () => makeFaceFromSelection(3));
   ui.makeQuad.addEventListener("click", () => makeFaceFromSelection(4));
-  ui.extrude.addEventListener("click", extrudeSelectedFaces);
+  ui.extrude.addEventListener("click", () => setTransformMode("extrude"));
+  ui.flipFaces.addEventListener("click", flipSelectedFaces);
   ui.undo.addEventListener("click", undo);
   ui.redo.addEventListener("click", redo);
 }
@@ -1652,6 +2279,9 @@ function refreshDiagnosticsStats() {
     faceCount: editor.faces.length,
     selectedVertexCount: editor.selectedVertices.size,
     selectedFaceCount: editor.selectedFaces.size,
+    selectedObjectCount: editor.selectedObjectIds.size,
+    editorMode: editor.mode,
+    activeObjectId: editor.activeObjectId ?? "-",
     tool: editor.tool,
     dirty: editor.dirty ? "yes" : "no"
   });
@@ -1660,6 +2290,7 @@ function refreshDiagnosticsStats() {
 function makeProbeReport(frameCount) {
   const report = app.createProbeReport("runtime-probe");
   Diagnostics.addDetail(report, `tool=${editor.tool}`);
+  Diagnostics.addDetail(report, `mode=${editor.mode}`);
   Diagnostics.addDetail(report, `vertices=${editor.vertices.length}`);
   Diagnostics.addDetail(report, `faces=${editor.faces.length}`);
   Diagnostics.mergeStats(report, {
@@ -1667,7 +2298,9 @@ function makeProbeReport(frameCount) {
     vertexCount: editor.vertices.length,
     faceCount: editor.faces.length,
     selectedVertexCount: editor.selectedVertices.size,
-    selectedFaceCount: editor.selectedFaces.size
+    selectedFaceCount: editor.selectedFaces.size,
+    selectedObjectCount: editor.selectedObjectIds.size,
+    editorMode: editor.mode
   });
   return report;
 }
@@ -1676,7 +2309,7 @@ async function start() {
   cacheUi();
   app = new WebgApp({
     document,
-    shaderClass: SmoothShader,
+    shaderClass: ModelerSmoothShader,
     layoutMode: "embedded",
     fixedCanvasSize: {
       width: 900,
@@ -1727,8 +2360,39 @@ async function start() {
     pitchMax: 85.0,
     dragButton: 0
   });
+  const operationContext = {
+    editor,
+    addFaceOrientedToDirection,
+    addFaceWithStableOrientation,
+    addVertex,
+    clearSelection,
+    computeCenter,
+    computeFaceNormal,
+    computeSelectionNormal,
+    createExtrusion: (distance) => editOperations.createExtrusion(distance),
+    focusModelerCanvas,
+    getActiveVertexObjects,
+    getCameraScreenBasis,
+    getCanvas: () => app.screen.canvas,
+    getEditorBounds,
+    getSelectedFaceObjects,
+    getTransformTargetVertexObjects,
+    getVertexById,
+    isEditMode,
+    makeSnapshot,
+    orderVertexIdsForFaceFromView,
+    pushUndo,
+    rebuildScene,
+    restoreSnapshot,
+    reverseVertexLoop,
+    setMessage
+  };
+  editOperations = createEditOperations(operationContext);
+  transformController = createTransformController(operationContext);
   detachPanModifierBridge?.();
   detachPanModifierBridge = installPanModifierBridge(app.screen.canvas);
+  detachTransformPointerBridge?.();
+  detachTransformPointerBridge = installTransformPointerBridge(app.screen.canvas);
   buildGrid();
   createInitialModel();
   installDomHandlers();
@@ -1736,7 +2400,7 @@ async function start() {
   installKeyboardHandlers();
   detachModelerKeyBridge?.();
   detachModelerKeyBridge = installModelerKeyBridge();
-  setTool(TOOL_SELECT);
+  updateStatus();
   focusModelerCanvas();
   populateMeshSelect(ModelAsset.fromData({
     version: "1.0",
