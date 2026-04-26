@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// EyeRig.js      2026/04/24
+// EyeRig.js      2026/04/26
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // ---------------------------------------------
@@ -143,6 +143,17 @@ export default class EyeRig {
         [{ value: options.orbit?.panModifierKey, label: "options.orbit.panModifierKey" }],
         "orbit.panModifierKey",
         "shift"
+      ),
+      dragZoomModifierKey: util.readKeyOption(
+        [{ value: options.orbit?.dragZoomModifierKey, label: "options.orbit.dragZoomModifierKey" }],
+        "orbit.dragZoomModifierKey",
+        null
+      ),
+      dragZoomSpeed: util.readFiniteOption(
+        [{ value: options.orbit?.dragZoomSpeed, label: "options.orbit.dragZoomSpeed" }],
+        "orbit.dragZoomSpeed",
+        0.01,
+        { min: 0.0 }
       ),
       pitchMin: util.readFiniteOption(
         [{ value: options.orbit?.pitchMin, label: "options.orbit.pitchMin" }],
@@ -512,6 +523,7 @@ export default class EyeRig {
     this._boundPointerMove = (ev) => this.onPointerMove(ev);
     this._boundPointerUp = (ev) => this.onPointerUp(ev);
     this._boundWheel = (ev) => this.onWheel(ev);
+    this._boundAuxClick = (ev) => this.onAuxClick(ev);
     this._boundBlur = () => this.cancelDrag();
     this.syncTarget(true);
     this.apply(true);
@@ -941,6 +953,7 @@ export default class EyeRig {
     this.element.addEventListener("pointercancel", this._boundPointerUp);
     this.element.addEventListener("pointerleave", this._boundPointerUp);
     this.element.addEventListener("wheel", this._boundWheel, { passive: false });
+    this.element.addEventListener("auxclick", this._boundAuxClick);
     if (typeof window !== "undefined") {
       window.addEventListener("blur", this._boundBlur);
     }
@@ -955,6 +968,7 @@ export default class EyeRig {
     this.element.removeEventListener("pointercancel", this._boundPointerUp);
     this.element.removeEventListener("pointerleave", this._boundPointerUp);
     this.element.removeEventListener("wheel", this._boundWheel);
+    this.element.removeEventListener("auxclick", this._boundAuxClick);
     if (this.element?.style && this.previousTouchAction !== null) {
       this.element.style.touchAction = this.previousTouchAction;
     }
@@ -1174,6 +1188,30 @@ export default class EyeRig {
     );
   }
 
+  // mouse / pen の drag zoom は、wheel と同じく現在距離を直接変える
+  // dy の符号は wheel と同じ向きにし、下方向 drag で遠ざかり、上方向 drag で近づく
+  zoomByDragDelta(dy) {
+    if (this.type === "follow") {
+      const zoomScale = Math.exp(dy * this.follow.pinchZoomSpeed * 0.004);
+      this.follow.distance = this.clamp(
+        this.follow.distance * zoomScale,
+        this.follow.minDistance,
+        this.follow.maxDistance
+      );
+      return;
+    }
+    const zoomScale = Math.exp(
+      dy
+      * this.orbit.dragZoomSpeed
+      * this.getZoomSensitivityScale()
+    );
+    this.orbit.distance = this.clamp(
+      this.orbit.distance * zoomScale,
+      this.orbit.minDistance,
+      this.orbit.maxDistance
+    );
+  }
+
   onPointerDown(ev) {
     if (!this.enabled) return;
     if (this.isTouchPointerEvent(ev)) {
@@ -1259,6 +1297,18 @@ export default class EyeRig {
       return;
     }
 
+    // orbit / follow では dragZoomModifierKey を押しながら drag したときに
+    // Blender の Ctrl+中ボタンドラッグに相当する camera zoom として扱う
+    const dragZoomModifierKey = this.type === "follow"
+      ? null
+      : this.orbit.dragZoomModifierKey;
+    if (!this.isTouchPointerEvent(ev) && this.type !== "first-person" && this.isModifierKeyActive(dragZoomModifierKey, ev)) {
+      this.zoomByDragDelta(dy);
+      this.apply();
+      ev.preventDefault();
+      return;
+    }
+
     if (this.type === "first-person") {
       this.firstPerson.bodyHead += dx * dragRotateSpeed;
       this.firstPerson.lookPitch = this.clamp(
@@ -1324,6 +1374,12 @@ export default class EyeRig {
     }
     this.cancelDrag();
     ev.preventDefault();
+  }
+
+  onAuxClick(ev) {
+    if (ev.button === this.dragButton) {
+      ev.preventDefault();
+    }
   }
 
   onWheel(ev) {

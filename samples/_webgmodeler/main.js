@@ -1,6 +1,6 @@
 // -------------------------------------------------
 // webgmodeler sample
-//   main.js       2026/04/26
+//   main.js       2026/04/24
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // -------------------------------------------------
@@ -8,6 +8,7 @@
 import WebgApp from "../../webg/WebgApp.js";
 import SmoothShader from "../../webg/SmoothShader.js";
 import Shape from "../../webg/Shape.js";
+import Primitive from "../../webg/Primitive.js";
 import ModelAsset from "../../webg/ModelAsset.js";
 import Matrix from "../../webg/Matrix.js";
 import Diagnostics from "../../webg/Diagnostics.js";
@@ -38,36 +39,15 @@ import {
 import { buildGlbFromGeometry } from "./glbExporter.js";
 import { createEditOperations } from "./editOperations.js";
 import { createTransformController } from "./transformController.js";
-import Overlay2DRenderer from "./overlay2dRenderer.js";
-import EdgeWireframeOverlayRenderer from "./edgeWireframeOverlayRenderer.js";
 
 class ModelerSmoothShader extends SmoothShader {
-  constructor(gpu, options = {}) {
+  constructor(gpu) {
     // modeler では裏面も確認対象なので、描画時の culling は切る。
     // frontFace は webg / WebGPU の標準どおり CCW を表として維持する。
     super(gpu, {
       cullMode: "none",
-      frontFace: "ccw",
-      ...options
+      frontFace: "ccw"
     });
-  }
-}
-
-class SelectedFaceOverlayShader extends ModelerSmoothShader {
-  constructor(gpu) {
-    // 選択面は通常 mesh の後に重ねるため、depth buffer を更新しない
-    // 同一深度の面を通すため depthCompare は less-equal にする
-    super(gpu, {
-      depthWriteEnabled: false,
-      depthCompare: "less-equal"
-    });
-    // world 座標の頂点を動かすと選択面が剥がれて見えるため、vertex shader の
-    // clip-space z だけをごく小さく手前へ寄せる。w 比例にすることで透視除算後の
-    // bias が距離に対して極端に変わらないようにする
-    this.wgslSrc = this.wgslSrc.replace(
-      "output.position = u.projMatrix * pos4;",
-      "output.position = u.projMatrix * pos4;\n        output.position.z = max(0.0, output.position.z - 0.00045 * output.position.w);"
-    );
   }
 }
 
@@ -92,12 +72,6 @@ const ui = {
   flipFaces: null,
   undo: null,
   redo: null,
-  overlayAlpha: null,
-  overlayAlphaValue: null,
-  overlayMarkerColor: null,
-  overlayMarkerColorValue: null,
-  overlayEdgeColor: null,
-  overlayEdgeColorValue: null,
   modeButtons: [],
   toolButtons: []
 };
@@ -108,24 +82,21 @@ let selectedFaceNode = null;
 let markerRoot = null;
 let gridRoot = null;
 let orbit = null;
-let selectedFaceShader = null;
-let overlay2d = null;
-let edgeOverlay = null;
-let overlayEdgeCache = [];
-let overlayEdgeCacheDirty = true;
-let overlayEdgeUploadDirty = true;
-let markerOverlayDirty = true;
-let markerOverlayCameraKey = "";
-let overlayAlpha = 0.65;
-let overlayMarkerColor = [0.0, 0.0, 0.0];
-let overlayEdgeColor = [0.0, 0.0, 0.0];
 let importedAsset = null;
 let importedMeshes = [];
 let lastSavedName = "-";
 let detachModelerKeyBridge = null;
+let detachPanModifierBridge = null;
 let detachTransformPointerBridge = null;
 let editOperations = null;
 let transformController = null;
+
+const cameraPointer = {
+  active: false,
+  pointerId: null,
+  lastX: 0.0,
+  lastY: 0.0
+};
 
 const cameraModifier = {
   shift: false
@@ -323,23 +294,8 @@ function cacheUi() {
   ui.flipFaces = document.getElementById("flipFaces");
   ui.undo = document.getElementById("undo");
   ui.redo = document.getElementById("redo");
-  ui.overlayAlpha = document.getElementById("overlayAlpha");
-  ui.overlayAlphaValue = document.getElementById("overlayAlphaValue");
-  ui.overlayMarkerColor = document.getElementById("overlayMarkerColor");
-  ui.overlayMarkerColorValue = document.getElementById("overlayMarkerColorValue");
-  ui.overlayEdgeColor = document.getElementById("overlayEdgeColor");
-  ui.overlayEdgeColorValue = document.getElementById("overlayEdgeColorValue");
   ui.modeButtons = Array.from(document.querySelectorAll("[data-mode]"));
   ui.toolButtons = Array.from(document.querySelectorAll("[data-tool]"));
-  if (ui.overlayAlpha) {
-    overlayAlpha = readFiniteNumber(ui.overlayAlpha.value, overlayAlpha);
-  }
-  if (ui.overlayMarkerColor) {
-    overlayMarkerColor = hexColorToRgb(ui.overlayMarkerColor.value, overlayMarkerColor);
-  }
-  if (ui.overlayEdgeColor) {
-    overlayEdgeColor = hexColorToRgb(ui.overlayEdgeColor.value, overlayEdgeColor);
-  }
 }
 
 // UI へ表示する文字列はここでまとめる
@@ -377,8 +333,6 @@ function updateStatus() {
     `selectedFaces=${editor.selectedFaces.size} [${faceIds}]`,
     `meshSelect=${meshName}`,
     `undo=${editor.undoStack.length} redo=${editor.redoStack.length}`,
-    `overlayAlpha=${overlayAlpha.toFixed(2)}`,
-    `overlayMarker=${rgbToHexColor(overlayMarkerColor)} overlayEdge=${rgbToHexColor(overlayEdgeColor)}`,
     `dirty=${editor.dirty ? "yes" : "no"}`,
     `saved=${lastSavedName}`,
     `transform=${transformState.mode ?? "-"}${transformState.active ? " dragging" : ""}`,
@@ -903,16 +857,15 @@ function buildSelectedFaceAsset() {
   const indices = [];
   let vertexOffset = 0;
   for (const face of selectedFaces) {
+    const normal = computeFaceNormal(face);
+    const offset = mul3(normal, 0.012);
     const localLoop = [];
     for (const vertexId of face.indices) {
       const vertex = getVertexById(vertexId);
       if (!vertex) {
         throw new Error(`selected face ${face.id} references missing vertex ${vertexId}`);
       }
-      // selected face は通常 mesh の後、edge / marker overlay の前に描く
-      // 別 geometry として重ねるだけなので、world-space で法線方向へ浮かせない
-      // 大きな位置 offset は薄い面や斜め視点で「剥がれた別ポリゴン」に見えるため避ける
-      const p = vertex.position;
+      const p = add3(vertex.position, offset);
       positions.push(p[0], p[1], p[2]);
       localLoop.push(vertexOffset++);
     }
@@ -943,22 +896,16 @@ function buildSelectedFaceAsset() {
   });
 }
 
-function makeShapeFromAsset(asset, materialParams, shader = null) {
+function makeShapeFromAsset(asset, materialParams) {
   const shape = new Shape(app.getGL());
-  if (shader) {
-    shape.shader = shader;
-  }
   shape.applyPrimitiveAsset(asset);
   shape.endShape();
   shape.setMaterial("smooth-shader", materialParams);
   return shape;
 }
 
-function makeShapeInstance(baseShape, materialParams = null, shader = null) {
+function makeShapeInstance(baseShape, materialParams = null) {
   const shape = new Shape(app.getGL());
-  if (shader) {
-    shape.shader = shader;
-  }
   shape.referShape(baseShape);
   shape.copyShaderParamsFromShape(baseShape);
   if (materialParams) {
@@ -1006,117 +953,42 @@ function rebuildSelectedFaceShape() {
   if (!asset) {
     return;
   }
-  const shape = makeShapeFromAsset(asset, MATERIAL.selectedFace, selectedFaceShader);
+  const shape = makeShapeFromAsset(asset, MATERIAL.selectedFace);
   selectedFaceNode = app.space.addNode(null, "webgmodeler-selected-faces");
   selectedFaceNode.addShape(shape);
 }
 
+// marker は vertex id を node 側へ保持する
+// Space.raycast() の hit.node から編集データの vertex id へ戻れるようにする
 function rebuildMarkers() {
   removeNodeTree(markerRoot);
-  markerRoot = null;
+  if (!isEditMode()) {
+    markerRoot = null;
+    return;
+  }
+  markerRoot = app.space.addNode(null, "webgmodeler-markers");
+  const radius = getMarkerRadius();
+  const highlightedVertexIds = getHighlightedVertexIds();
+  const baseMarkerShape = makeShapeFromAsset(Primitive.sphere(radius, 8, 8), MATERIAL.marker);
+  for (const vertex of editor.vertices) {
+    const selected = highlightedVertexIds.has(vertex.id);
+    const markerShape = makeShapeInstance(
+      baseMarkerShape,
+      selected ? MATERIAL.selectedMarker : null
+    );
+    const node = app.space.addNode(markerRoot, `vertex-${vertex.id}`);
+    node.webgmodelerKind = "vertex";
+    node.webgmodelerVertexId = vertex.id;
+    node.setPosition(vertex.position[0], vertex.position[1], vertex.position[2]);
+    node.addShape(markerShape);
+  }
 }
 
 function rebuildScene() {
-  overlayEdgeCacheDirty = true;
-  overlayEdgeUploadDirty = true;
-  markerOverlayDirty = true;
   rebuildMeshShape();
   rebuildSelectedFaceShape();
   rebuildMarkers();
   updateStatus();
-}
-
-function buildVertexLookup(vertices = editor.vertices) {
-  const lookup = new Map();
-  for (const vertex of vertices) {
-    lookup.set(vertex.id, vertex);
-  }
-  return lookup;
-}
-
-function matrixKey(matrix, precision = 100000) {
-  return Array.from(matrix.mat, (value) => Math.round(Number(value) * precision)).join(",");
-}
-
-function makeMarkerOverlayCameraKey(viewProjection, canvas) {
-  // marker は screen-space quad なので、camera/projection/canvas size が同じなら
-  // 静止中に全頂点を再投影する必要はない
-  return [
-    canvas.width,
-    canvas.height,
-    matrixKey(viewProjection)
-  ].join("|");
-}
-
-function rebuildEdgeOverlayBuffer() {
-  if (!edgeOverlay) {
-    return;
-  }
-  edgeOverlay.clear();
-  const vertexLookup = buildVertexLookup();
-  for (const edge of getUniqueOverlayEdges()) {
-    const va = vertexLookup.get(edge.a);
-    const vb = vertexLookup.get(edge.b);
-    if (!va || !vb) {
-      continue;
-    }
-    edgeOverlay.addLine(va.position, vb.position, getOverlayEdgeColor(edge));
-  }
-  overlayEdgeUploadDirty = false;
-}
-
-function rebuildMarkerOverlayBuffer(viewProjection, canvas, markerRadiusX, markerRadiusY) {
-  if (!overlay2d) {
-    return;
-  }
-  overlay2d.clear();
-  const highlightedVertexIds = getHighlightedVertexIds();
-  for (const vertex of editor.vertices) {
-    const p = projectWorldToNdc(viewProjection, vertex.position, 0.00035);
-    if (!p) {
-      continue;
-    }
-    overlay2d.addMarker(
-      p[0],
-      p[1],
-      p[2],
-      markerRadiusX,
-      markerRadiusY,
-      getOverlayMarkerColor(highlightedVertexIds.has(vertex.id))
-    );
-  }
-  markerOverlayDirty = false;
-}
-
-function drawEditOverlayPass() {
-  if (!overlay2d || !isEditMode() || !app?.eye || !app?.projectionMatrix) {
-    return;
-  }
-  overlay2d.clear();
-  app.eye.setWorldMatrix();
-  const view = new Matrix();
-  view.makeView(app.eye.worldMatrix);
-  const viewProjection = app.projectionMatrix.clone();
-  viewProjection.mul_(view);
-  const canvas = app.screen.canvas;
-  const markerRadiusPx = 2.5;
-  const markerRadiusX = markerRadiusPx * 2.0 / Math.max(1, canvas.width);
-  const markerRadiusY = markerRadiusPx * 2.0 / Math.max(1, canvas.height);
-
-  if (edgeOverlay) {
-    edgeOverlay.setMatrices(app.projectionMatrix, view);
-    if (overlayEdgeUploadDirty) {
-      rebuildEdgeOverlayBuffer();
-    }
-    edgeOverlay.draw();
-  }
-
-  const cameraKey = makeMarkerOverlayCameraKey(viewProjection, canvas);
-  if (markerOverlayDirty || markerOverlayCameraKey !== cameraKey) {
-    rebuildMarkerOverlayBuffer(viewProjection, canvas, markerRadiusX, markerRadiusY);
-    markerOverlayCameraKey = cameraKey;
-  }
-  overlay2d.draw();
 }
 
 // 初期状態で奥行きと高さが読みやすいよう、薄い床 grid を置く
@@ -1239,107 +1111,14 @@ function getMarkerRadius() {
   return Math.min(sizeRadius, viewCap);
 }
 
-function getOverlayMarkerColor(selected) {
-  if (selected) {
-    return [0.95, 0.08, 0.08, Math.max(overlayAlpha, 0.85)];
-  }
-  return [overlayMarkerColor[0], overlayMarkerColor[1], overlayMarkerColor[2], overlayAlpha];
-}
-
-function hexColorToRgb(value, fallback = [0.0, 0.0, 0.0]) {
-  const text = String(value ?? "").trim();
-  const match = /^#?([0-9a-fA-F]{6})$/.exec(text);
-  if (!match) {
-    return [...fallback];
-  }
-  const hex = match[1];
-  return [
-    parseInt(hex.slice(0, 2), 16) / 255.0,
-    parseInt(hex.slice(2, 4), 16) / 255.0,
-    parseInt(hex.slice(4, 6), 16) / 255.0
-  ];
-}
-
-function rgbToHexColor(color) {
-  const toHex = (value) => {
-    const byte = Math.max(0, Math.min(255, Math.round((Number(value) || 0) * 255)));
-    return byte.toString(16).padStart(2, "0");
-  };
-  return `#${toHex(color?.[0])}${toHex(color?.[1])}${toHex(color?.[2])}`;
-}
-
-function multiplyMatrixVectorRaw(matrix, point) {
-  const m = matrix.mat;
-  const x = point[0];
-  const y = point[1];
-  const z = point[2];
-  return [
-    m[0] * x + m[4] * y + m[8] * z + m[12],
-    m[1] * x + m[5] * y + m[9] * z + m[13],
-    m[2] * x + m[6] * y + m[10] * z + m[14],
-    m[3] * x + m[7] * y + m[11] * z + m[15]
-  ];
-}
-
-function projectWorldToNdc(viewProjection, point, zBias = 0.00035) {
-  const clip = multiplyMatrixVectorRaw(viewProjection, point);
-  const w = clip[3];
-  if (!Number.isFinite(w) || w <= 1.0e-6) {
-    return null;
-  }
-  const x = clip[0] / w;
-  const y = clip[1] / w;
-  const z = clip[2] / w;
-  if (!Number.isFinite(x) || !Number.isFinite(y) || !Number.isFinite(z)) {
-    return null;
-  }
-  if (x < -1.2 || x > 1.2 || y < -1.2 || y > 1.2 || z < -0.02 || z > 1.02) {
-    return null;
-  }
-  return [x, y, Math.max(0.0, Math.min(1.0, z - zBias))];
-}
-
-function getUniqueOverlayEdges() {
-  if (!overlayEdgeCacheDirty) {
-    return overlayEdgeCache;
-  }
-  const edges = new Map();
-  for (const face of editor.faces) {
-    for (let i = 0; i < face.indices.length; i++) {
-      const a = face.indices[i];
-      const b = face.indices[(i + 1) % face.indices.length];
-      const key = a < b ? `${a}:${b}` : `${b}:${a}`;
-      if (!edges.has(key)) {
-        edges.set(key, {
-          a,
-          b,
-          faceIds: new Set()
-        });
-      }
-      edges.get(key).faceIds.add(face.id);
-    }
-  }
-  overlayEdgeCache = Array.from(edges.values());
-  overlayEdgeCacheDirty = false;
-  return overlayEdgeCache;
-}
-
-function getOverlayEdgeColor(edge) {
-  const selectedFace = Array.from(edge.faceIds).some((id) => editor.selectedFaces.has(id));
-  if (selectedFace) {
-    return [0.0, 0.0, 0.0, Math.max(overlayAlpha, 0.92)];
-  }
-  return [overlayEdgeColor[0], overlayEdgeColor[1], overlayEdgeColor[2], overlayAlpha];
-}
-
 function fitCameraToEditor() {
   const bounds = getEditorBounds();
   const distance = Math.max(4.0, bounds.size * 2.8);
   orbit.setTarget(bounds.center[0], bounds.center[1], bounds.center[2]);
   orbit.orbit.minDistance = Math.max(0.5, bounds.size * 0.15);
   orbit.orbit.maxDistance = Math.max(32.0, bounds.size * 12.0);
-  orbit.orbit.wheelZoomStep = Math.max(0.2, bounds.size * 0.09);
-  orbit.orbit.keyZoomSpeed = Math.max(1.0, bounds.size * 0.6);
+  orbit.orbit.wheelZoomStep = Math.max(0.4, bounds.size * 0.18);
+  orbit.orbit.keyZoomSpeed = Math.max(2.0, bounds.size * 1.2);
   orbit.setAngles(DEFAULT_CAMERA.head, DEFAULT_CAMERA.pitch, 0.0);
   orbit.setDistance(distance);
   app.syncCameraFromEyeRig(orbit);
@@ -1375,37 +1154,6 @@ function activateObject(id, { clearEditSelection = true } = {}) {
     clearSelection();
   }
   return true;
-}
-
-function replaceObjectsAndActivate(objects, activeObjectId, {
-  selectedObjectIds = [activeObjectId],
-  mode = EDITOR_MODE_OBJECT
-} = {}) {
-  // import / new scene のように editor.objects 全体を差し替える場面では、
-  // 差し替え前の activeObjectId が新しい object id と偶然一致することがある
-  // その状態で activateObject() を直接呼ぶと、activateObject() 冒頭の
-  // commitActiveObject() が古い editor.vertices / faces を新しい object へ
-  // 書き戻してしまう。hand.glb を読み込んでも cube が残って見えた原因がこれである
-  //
-  // ここでは一度 activeObjectId を null にして、古い編集バッファを commit しない
-  // 状態を明示的に作ってから新しい object を activate する
-  if (!Array.isArray(objects) || objects.length === 0) {
-    throw new Error("replaceObjectsAndActivate requires at least one object");
-  }
-  const active = objects.find((object) => object.id === activeObjectId);
-  if (!active) {
-    throw new Error(`replaceObjectsAndActivate missing active object ${activeObjectId}`);
-  }
-  editor.objects = objects;
-  editor.nextObjectId = Math.max(...objects.map((object) => object.id)) + 1;
-  editor.selectedObjectIds = new Set(selectedObjectIds);
-  editor.mode = mode;
-  editor.activeObjectId = null;
-  editor.vertices = [];
-  editor.faces = [];
-  editor.nextVertexId = 1;
-  editor.nextFaceId = 1;
-  activateObject(activeObjectId);
 }
 
 function isEditMode() {
@@ -1670,25 +1418,6 @@ function selectFace(id, additive = false) {
   syncSelectedVerticesFromSelectedFaces();
 }
 
-function selectAllForCurrentMode() {
-  cancelTransformMode();
-  if (editor.mode === EDITOR_MODE_OBJECT) {
-    commitActiveObject();
-    editor.selectedObjectIds = new Set(editor.objects.map((object) => object.id));
-    if (!getActiveObject() && editor.objects.length > 0) {
-      activateObject(editor.objects[0].id);
-    }
-    rebuildScene();
-    setMessage(`selected all objects (${editor.selectedObjectIds.size})`);
-    return;
-  }
-
-  editor.selectedVertices = new Set(editor.vertices.map((vertex) => vertex.id));
-  syncSelectedFacesFromSelectedVertices();
-  rebuildScene();
-  setMessage(`selected all vertices (${editor.selectedVertices.size})`);
-}
-
 function deleteSelected() {
   editOperations.deleteSelected();
 }
@@ -1722,7 +1451,7 @@ function makeRayFromMouse(canvas, clientX, clientY) {
   view.makeView(app.eye.worldMatrix);
   const [nx, ny] = cssToNdc(canvas, clientX, clientY);
   const invVp = app.projectionMatrix.clone();
-  invVp.mul_(view);
+  invVp.mul(view);
   invVp.inverse_strict();
   const near = invVp.mulVector([nx, ny, -1.0]);
   const far = invVp.mulVector([nx, ny, 1.0]);
@@ -1834,9 +1563,18 @@ function pickObjectFace(ray) {
 }
 
 function pickVertexMarker(ray) {
-  // vertex marker は 2D overlay pass で描くため、Space 上には marker Node を作らない
-  // 頂点選択は pickVertexByRayDistance() が主経路なので、旧 marker Node raycast は使わない
-  return null;
+  const hit = app.space.raycast(ray.origin, ray.dir, {
+    firstHit: true,
+    filter: ({ node }) => node?.webgmodelerKind === "vertex"
+  });
+  if (!hit) {
+    return null;
+  }
+  return {
+    vertexId: hit.node.webgmodelerVertexId,
+    point: hit.point,
+    t: hit.t
+  };
 }
 
 function getCameraScreenBasis() {
@@ -1873,6 +1611,86 @@ function pickVertexByRayDistance(ray) {
     }
   }
   return best;
+}
+
+function installPanModifierBridge(canvas) {
+  const resetPointer = () => {
+    const panModifierKey = getOrbitPanModifierKey();
+    cameraPointer.active = false;
+    cameraPointer.pointerId = null;
+    cameraModifier.shift = false;
+    app.input.release(panModifierKey);
+  };
+  const onPointerDownCapture = (ev) => {
+    const transformState = transformController?.state ?? { mode: null, active: false };
+    if (transformState.mode || transformState.active) {
+      return;
+    }
+    if (String(ev.pointerType ?? "") === "touch") {
+      return;
+    }
+    if (ev.button !== 0) {
+      return;
+    }
+    focusModelerCanvas();
+    cameraPointer.active = true;
+    cameraPointer.pointerId = ev.pointerId;
+    cameraPointer.lastX = ev.clientX;
+    cameraPointer.lastY = ev.clientY;
+  };
+  const onPointerMoveCapture = (ev) => {
+    const transformState = transformController?.state ?? { mode: null, active: false };
+    if (transformState.mode || transformState.active) {
+      return;
+    }
+    if (!cameraPointer.active) {
+      return;
+    }
+    if (cameraPointer.pointerId !== null && ev.pointerId !== cameraPointer.pointerId) {
+      return;
+    }
+    const dx = ev.clientX - cameraPointer.lastX;
+    const dy = ev.clientY - cameraPointer.lastY;
+    cameraPointer.lastX = ev.clientX;
+    cameraPointer.lastY = ev.clientY;
+    const panModifierKey = getOrbitPanModifierKey();
+    if (isOrbitPanModifierEvent(ev)) {
+      cameraModifier.shift = true;
+      app.input.press(panModifierKey);
+    }
+    const shiftDown = isOrbitPanModifierActive(ev);
+    if (!shiftDown) {
+      return;
+    }
+    // 一部の環境では modifier 状態が pointermove の event field に乗らないことがある
+    // その場合でも InputController 側の key state を見て、EyeRig と同じ pan helper を先に実行する
+    // stopImmediatePropagation() により、この frame の pointermove が EyeRig の rotate 処理へ流れないようにする
+    app.eye.setWorldMatrix();
+    orbit.panViewByScreenDelta(dx, dy);
+    orbit.apply();
+    app.syncCameraFromEyeRig(orbit);
+    // この bridge が pointermove を止めた frame は EyeRig.onPointerMove() が呼ばれない
+    // EyeRig 側の lastClient 座標を同じ値へ進めておくと、modifier を離した直後に
+    // 溜まった差分が通常 orbit として一度に処理されることを避けられる
+    orbit.lastClientX = ev.clientX;
+    orbit.lastClientY = ev.clientY;
+    ev.preventDefault();
+    ev.stopImmediatePropagation();
+  };
+  canvas.addEventListener("pointerdown", onPointerDownCapture, true);
+  canvas.addEventListener("pointermove", onPointerMoveCapture, true);
+  canvas.addEventListener("pointerup", resetPointer, true);
+  canvas.addEventListener("pointercancel", resetPointer, true);
+  canvas.addEventListener("pointerleave", resetPointer, true);
+  window.addEventListener("blur", resetPointer);
+  return () => {
+    canvas.removeEventListener("pointerdown", onPointerDownCapture, true);
+    canvas.removeEventListener("pointermove", onPointerMoveCapture, true);
+    canvas.removeEventListener("pointerup", resetPointer, true);
+    canvas.removeEventListener("pointercancel", resetPointer, true);
+    canvas.removeEventListener("pointerleave", resetPointer, true);
+    window.removeEventListener("blur", resetPointer);
+  };
 }
 
 function isAdditiveSelectionEvent(ev) {
@@ -1954,8 +1772,8 @@ function handleCanvasPointerDown(ev) {
     return;
   }
   // 編集用の pick は pointerdown では実行しない
-  // pointerdown の時点で scene を再生成すると、短いクリックと選択後の drag 操作を区別しにくい
-  // 編集操作は左クリックの pointerup で確定し、中ボタン camera 操作とは入力ボタンで分ける
+  // pointerdown の時点で scene を再生成すると、同じ左ドラッグを使う EyeRig の
+  // orbit / Shift+PAN と競合しやすい。短いクリックだけを pointerup で編集操作として確定する
   canvasClick.active = true;
   canvasClick.pointerId = ev.pointerId;
   canvasClick.startX = ev.clientX;
@@ -2053,7 +1871,6 @@ function installKeyboardHandlers() {
     else if (key === "1") setTool(TOOL_SELECT_VERTEX);
     else if (key === "2") setTool(TOOL_SELECT_FACE);
     else if (key === "3") setTool(TOOL_ADD_VERTEX);
-    else if (plainKey && key === "a") selectAllForCurrentMode();
     else if (plainKey && key === "g") setTransformMode("move");
     else if (plainKey && key === "r") setTransformMode("rotate");
     else if (plainKey && key === "s") setTransformMode("scale");
@@ -2214,26 +2031,20 @@ async function loadModelFile(file) {
     return;
   }
   const format = detectFileFormat(file);
-  const fileLabel = String(file.name ?? "(unknown)");
-  setMessage(`loading ${fileLabel}`);
+  setMessage(`loading ${file.name}`);
   let asset = null;
   if (format === "json") {
     asset = ModelAsset.fromJSON(await file.text());
   } else {
     const url = URL.createObjectURL(file);
     try {
-      // GLB / glTF / Collada は embedded_glb_viewer と同じ WebgApp.loadModel()
-      // 経路でいったん ModelAsset へ正規化する。特に GLB は skinned mesh や
-      // static transform の bake を loader 側へ任せる必要があるため、
-      // webgmodeler 側で skin 解析を無効化しない。編集データへ変換する時点で
-      // skin / animation は使わないが、positions は viewer と同じ正規化済み mesh を読む
       const loaded = await app.loadModel(url, {
         format,
         instantiate: false,
         validate: true,
         startAnimations: false,
-        onStage: (stage) => {
-          setMessage(`loading ${fileLabel}: ${stage}`);
+        gltf: {
+          includeSkins: false
         }
       });
       asset = loaded.asset;
@@ -2247,7 +2058,7 @@ async function loadModelFile(file) {
   if (importedMeshes.length > 0) {
     importSelectedMesh();
   } else {
-    setMessage(`loaded ${fileLabel}, but no mesh was found`);
+    setMessage(`loaded ${file.name}, but no mesh was found`);
   }
 }
 
@@ -2268,7 +2079,11 @@ function importSelectedMesh() {
   }
   const object = buildEditorObjectFromImportEntry(entry, DEFAULT_OBJECT_ID);
   pushUndo("import mesh");
-  replaceObjectsAndActivate([object], object.id);
+  editor.objects = [object];
+  editor.nextObjectId = object.id + 1;
+  editor.selectedObjectIds = new Set([object.id]);
+  editor.mode = EDITOR_MODE_OBJECT;
+  activateObject(object.id);
   orientAllFacesConsistently();
   commitActiveObject();
   editor.undoStack = [];
@@ -2349,14 +2164,17 @@ function importAllMeshes() {
     return;
   }
   pushUndo("import all meshes");
-  const objects = importedMeshes.map((entry, index) => buildEditorObjectFromImportEntry(entry, DEFAULT_OBJECT_ID + index));
-  replaceObjectsAndActivate(objects, objects[0].id);
-  for (const object of objects) {
+  editor.objects = importedMeshes.map((entry, index) => buildEditorObjectFromImportEntry(entry, DEFAULT_OBJECT_ID + index));
+  editor.nextObjectId = DEFAULT_OBJECT_ID + editor.objects.length;
+  editor.selectedObjectIds = new Set(editor.objects.length > 0 ? [editor.objects[0].id] : []);
+  editor.mode = EDITOR_MODE_OBJECT;
+  activateObject(editor.objects[0]?.id ?? null);
+  for (const object of editor.objects) {
     activateObject(object.id);
     orientAllFacesConsistently();
     commitActiveObject();
   }
-  activateObject(objects[0].id);
+  activateObject(editor.objects[0]?.id ?? null);
   editor.undoStack = [];
   editor.redoStack = [];
   editor.dirty = false;
@@ -2413,17 +2231,10 @@ function installDomHandlers() {
   }
   ui.fileInput.addEventListener("change", () => {
     const file = ui.fileInput.files?.[0] ?? null;
-    loadModelFile(file)
-      .catch((err) => {
-        console.error(err);
-        setMessage(`load failed: ${err?.message ?? err}`);
-      })
-      .finally(() => {
-        // embedded_glb_viewer と同じく value を戻し、同じ GLB を再選択した場合も
-        // change event が発火するようにする。これは失敗後の再試行を確実にするための
-        // UI 状態リセットであり、ロード失敗を隠す fallback ではない
-        ui.fileInput.value = "";
-      });
+    loadModelFile(file).catch((err) => {
+      console.error(err);
+      setMessage(`load failed: ${err?.message ?? err}`);
+    });
   });
   ui.useMesh.addEventListener("click", () => {
     try {
@@ -2460,28 +2271,6 @@ function installDomHandlers() {
   ui.flipFaces.addEventListener("click", flipSelectedFaces);
   ui.undo.addEventListener("click", undo);
   ui.redo.addEventListener("click", redo);
-  ui.overlayAlpha?.addEventListener("input", () => {
-    overlayAlpha = readFiniteNumber(ui.overlayAlpha.value, overlayAlpha);
-    markerOverlayDirty = true;
-    overlayEdgeUploadDirty = true;
-    if (ui.overlayAlphaValue) {
-      ui.overlayAlphaValue.textContent = overlayAlpha.toFixed(2);
-    }
-  });
-  ui.overlayMarkerColor?.addEventListener("input", () => {
-    overlayMarkerColor = hexColorToRgb(ui.overlayMarkerColor.value, overlayMarkerColor);
-    markerOverlayDirty = true;
-    if (ui.overlayMarkerColorValue) {
-      ui.overlayMarkerColorValue.textContent = rgbToHexColor(overlayMarkerColor);
-    }
-  });
-  ui.overlayEdgeColor?.addEventListener("input", () => {
-    overlayEdgeColor = hexColorToRgb(ui.overlayEdgeColor.value, overlayEdgeColor);
-    overlayEdgeUploadDirty = true;
-    if (ui.overlayEdgeColorValue) {
-      ui.overlayEdgeColorValue.textContent = rgbToHexColor(overlayEdgeColor);
-    }
-  });
 }
 
 function refreshDiagnosticsStats() {
@@ -2491,14 +2280,10 @@ function refreshDiagnosticsStats() {
     selectedVertexCount: editor.selectedVertices.size,
     selectedFaceCount: editor.selectedFaces.size,
     selectedObjectCount: editor.selectedObjectIds.size,
-    objectCount: editor.objects.length,
-    importedMeshCount: importedMeshes.length,
-    importedAssetLoaded: importedAsset ? "yes" : "no",
     editorMode: editor.mode,
     activeObjectId: editor.activeObjectId ?? "-",
     tool: editor.tool,
-    dirty: editor.dirty ? "yes" : "no",
-    message: editor.lastMessage
+    dirty: editor.dirty ? "yes" : "no"
   });
 }
 
@@ -2515,12 +2300,7 @@ function makeProbeReport(frameCount) {
     selectedVertexCount: editor.selectedVertices.size,
     selectedFaceCount: editor.selectedFaces.size,
     selectedObjectCount: editor.selectedObjectIds.size,
-    objectCount: editor.objects.length,
-    importedMeshCount: importedMeshes.length,
-    importedAssetLoaded: importedAsset ? "yes" : "no",
-    editorMode: editor.mode,
-    activeObjectId: editor.activeObjectId ?? "-",
-    message: editor.lastMessage
+    editorMode: editor.mode
   });
   return report;
 }
@@ -2562,15 +2342,6 @@ async function start() {
     }
   });
   await app.init();
-  selectedFaceShader = new SelectedFaceOverlayShader(app.getGL());
-  await selectedFaceShader.init();
-  if (app.projectionMatrix) {
-    selectedFaceShader.setProjectionMatrix(app.projectionMatrix);
-  }
-  overlay2d = new Overlay2DRenderer(app.getGL(), { initialVertexCapacity: 8192 });
-  await overlay2d.init();
-  edgeOverlay = new EdgeWireframeOverlayRenderer(app.getGL(), { initialVertexCapacity: 8192 });
-  await edgeOverlay.init();
   app.attachInput();
   orbit = app.createOrbitEyeRig({
     target: [...DEFAULT_CAMERA.target],
@@ -2579,17 +2350,15 @@ async function start() {
     pitch: DEFAULT_CAMERA.pitch,
     orbitKeyMap: { ...INITIAL_ORBIT_BINDINGS.orbitKeyMap },
     panModifierKey: INITIAL_ORBIT_BINDINGS.panModifierKey,
-    dragZoomModifierKey: "control",
     minDistance: 0.5,
     maxDistance: 96.0,
-    wheelZoomStep: 0.5,
-    keyZoomSpeed: 4.0,
-    dragZoomSpeed: 0.04,
+    wheelZoomStep: 1.0,
+    keyZoomSpeed: 8.0,
     dragRotateSpeed: 0.28,
     dragPanSpeed: 2.0,
     pitchMin: -85.0,
     pitchMax: 85.0,
-    dragButton: 1
+    dragButton: 0
   });
   const operationContext = {
     editor,
@@ -2620,6 +2389,8 @@ async function start() {
   };
   editOperations = createEditOperations(operationContext);
   transformController = createTransformController(operationContext);
+  detachPanModifierBridge?.();
+  detachPanModifierBridge = installPanModifierBridge(app.screen.canvas);
   detachTransformPointerBridge?.();
   detachTransformPointerBridge = installTransformPointerBridge(app.screen.canvas);
   buildGrid();
@@ -2644,16 +2415,10 @@ async function start() {
   app.start({
     onUpdate({ screen, deltaSec }) {
       refreshDiagnosticsStats();
-      if (selectedFaceShader && app.projectionMatrix) {
-        selectedFaceShader.setProjectionMatrix(app.projectionMatrix);
-      }
       updateStatus();
       if (app.debugProbe) {
         app.debugProbe.collect = () => makeProbeReport(screen.getFrameCount());
       }
-    },
-    onAfterDraw3d() {
-      drawEditOverlayPass();
     }
   });
 }

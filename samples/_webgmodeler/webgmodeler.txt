@@ -3,47 +3,38 @@
 概要
 - `WebgApp` の `layoutMode: "embedded"` を使い、3D ビューポートを本文内の canvas として表示し、編集コマンドやファイル操作は DOM UI で行うポリゴンモデラーの初期版です
 - 編集データは `vertices`、`faces`、`selectedVertices`、`selectedFaces` として JavaScript 側で保持し、表示用 `Shape` と保存用 `ModelAsset` はその編集データから毎回再生成します
-- 読み込みは ModelAsset JSON、glTF / GLB、Collada に対応します。glTF / GLB は `embedded_glb_viewer` と同じ `WebgApp.loadModel()` 経路で skinned mesh や node transform を正規化してから、`ModelAsset` 内の mesh node を Object Mode の複数オブジェクトとして取り込みます。mesh select から単一オブジェクトだけを取り込むこともできます
-- Load Model 後は、選択中の mesh が自動で編集対象へ取り込まれます。Use Mesh は、読み込み済み asset の mesh select を変更したあと、別 mesh または `all objects` を改めて編集対象へ取り込むためのボタンです。`hand.glb` のように mesh node が 1 つだけのファイルでは、ロード後に 1 object だけ表示されるのが正常です
+- 読み込みは ModelAsset JSON、glTF / GLB、Collada に対応し、読み込んだ `ModelAsset` 内の mesh node を Object Mode の複数オブジェクトとして取り込めます。mesh select から単一オブジェクトだけを取り込むこともできます
 - 出力は ModelAsset JSON と GLB に対応します。ModelAsset JSON は `ModelAsset.downloadJSON()` を使い、GLB は sample 側の最小 exporter で保存します
-- Edit Mode の頂点 marker と辺は、scene draw 後の専用 overlay pass で描画します。marker は 2D shader の screen-space 円、辺は Wireframe 系の `line-list` shader で描画します
-- 選択 face は専用 shader で描画し、world 座標は元 face と同じまま、clip-space のごく小さい depth bias だけで通常 mesh より手前に重ねます
-- overlay pass は depth test 有効、depth write 無効です。手前の面に隠れた marker / edge は基本的に表示されず、edge は selected face overlay に負けにくいよう clip-space の小さな z bias を入れます
-- overlay の非選択 marker / edge は `Marker` / `Edge` color picker で色を変更でき、`Overlay Alpha` slider で透明度を調整できます。選択 marker は赤、選択 face の境界 edge は黒・高 alpha で描画します
-- vertex pick は頂点位置と ray の距離判定を主経路にします。marker 用の Node は作らず、数千頂点の Edit Mode でも Space traversal が増えないようにします
-- marker overlay は camera / selection / geometry / 色 / canvas size が変わった時だけ再投影し、静止中は前回 upload した GPU buffer を再利用します
-- edge overlay の辺一覧は geometry 更新時だけ作り直し、edge vertex buffer も geometry / 色が変わった時だけ upload します
+- 頂点は小さい sphere primitive の marker として表示し、`Space.raycast()` で vertex marker を選択します
+- Edit Mode の頂点 marker サイズはアクティブオブジェクトの bounds を基準にし、近距離 camera では大きくなりすぎないよう camera 距離でも上限をかけます
 - face 選択は編集データ上の ray-triangle 交差で判定し、AABB だけではなく実際の三角形面をクリック対象にします
 - Triangle / Quad は、選択頂点を現在の画面上の角度順へ並べ、いま見ている側が表になるように頂点順を調整してから面を作成します
 - face の頂点順は、表側から見て反時計回りを基本とします。隣接 face がある場合は共有辺が逆向きになるように向きをそろえ、孤立 face は原点側を裏として初期化します
 - 頂点追加は、クリック位置の face hit、地面 plane、camera target plane の順で交点を作り、新しい頂点として追加します
-- camera 操作は Blender に近い割り当てにし、中ボタンドラッグで orbit、Shift + 中ボタンドラッグで PAN、wheel または Ctrl + 中ボタンドラッグで zoom します。左ドラッグは camera 操作に使わず、面や頂点の矩形選択などの編集操作へ割り当てられる状態にしています
-- `G` / `R` / `S` / `E` で transform mode に入り、マウス移動で選択頂点または選択 face 構成頂点を移動 / 回転 / scale / 押し出しできます。E の押し出しは、複数選択 face を個別に押し出すのではなく、選択領域の共有辺を内部辺として扱い、外周 edge だけに側面を作る region extrude として動作します。左クリックで確定、Escape または右クリックでキャンセルします
+- 通常の左ドラッグは `embedded_glb_viewer` と同じ orbit camera 操作にそろえています
+- `G` / `R` / `S` / `E` で transform mode に入り、マウス移動で選択頂点または選択 face 構成頂点を移動 / 回転 / scale / 押し出しできます。左クリックで確定、Escape または右クリックでキャンセルします
 - Blender と同様に Object Mode / Edit Mode を持ちます。Object Mode ではオブジェクト全体をクリック選択し、G/R/S で選択オブジェクト全体を移動 / 回転 / scale できます。Edit Mode ではアクティブオブジェクトの頂点 / face を編集します。Tab で mode を切り替えます
-- A キーは mode に応じて全選択します。Object Mode では全 object、Edit Mode ではアクティブ object の全頂点を選択し、全頂点が含まれる face も選択状態にします
 - screen 平面移動、法線方向移動、選択中心基準 scale は補助操作として J/L/I/K、U/O、N/M のキー操作でも使えます
-- 選択領域の外周を押し出す face 押出、undo / redo を備えています
+- face 押出、undo / redo を備えています
 - 選択 face の表裏反転を備えています
 - 初期版のため、Edit Mode で同時に編集できるのはアクティブオブジェクト 1 つです。複数 mesh / node を持つファイルは Object Mode でオブジェクト選択し、選択したアクティブオブジェクトを Edit Mode で編集します
 - GLB export は編集 mesh の positions / triangulated indices / material を glTF 2.0 binary として出力します
 
 このサンプルで使うwebg機能
 - `WebgApp`: embedded canvas、Screen / Shader / Space / Input / Message の初期化
-- `SmoothShader`: 編集 mesh、選択 face、grid の表示
-- `SelectedFaceOverlayShader`: 選択 face を world-space offset なしで重ねるための sample 内 shader
+- `SmoothShader`: 編集 mesh、選択 face、頂点 marker、grid の表示
 - `ModelAsset`: 編集結果の保存形式、読み込み済み asset の mesh 取り出し、JSON download
-- `WebgApp.loadModel()`: glTF / GLB / Collada を ModelAsset へ正規化する入口。GLB では `embedded_glb_viewer` と同じ loader 設定を使い、skin 解析や static transform bake を loader 側に任せます
+- `WebgApp.loadModel()`: glTF / GLB / Collada を ModelAsset へ正規化する入口
 - `Shape.applyPrimitiveAsset()`: 編集データから作った ModelAsset geometry を表示用 Shape へ反映
-- `Overlay2DRenderer`: Edit Mode の頂点 marker を 2D overlay pass で描画
-- `EdgeWireframeOverlayRenderer`: Edit Mode の辺を Wireframe 系の line-list overlay pass で描画
-- `Space.raycast()`: object / face pick と、必要時の fallback pick
+- `Primitive.sphere()`: 頂点 marker 表示
+- `Space.raycast()`: vertex marker の pick
 - `Matrix.makeView()` と projection 行列の逆行列: canvas 座標から world ray を作成
-- `WebgApp.createOrbitEyeRig()`: orbit camera を作り、`dragButton`、`panModifierKey`、`dragZoomModifierKey`、wheel、keyboard による camera orbit / PAN / zoom と `WebgApp` camera state 同期を扱う
+- `WebgApp.createOrbitEyeRig()`: `embedded_glb_viewer` と同じ orbit camera を作り、左ドラッグ、wheel、Shift + drag、keyboard による camera orbit / PAN / zoom と `WebgApp` camera state 同期を扱う
 
 確認ポイント
 - 起動直後は Object Mode で立方体の初期 mesh が選択色で表示されることを確認します
-- Tab または Edit Mode button で Edit Mode に入ると、各頂点に小さい 2D marker と辺 overlay が出ることを確認します
-- Select で marker をクリックすると頂点 marker が赤くなり、face をクリックすると面が黄色の overlay で強調されることを確認します
+- Tab または Edit Mode button で Edit Mode に入ると、各頂点に小さい marker が出ることを確認します
+- Select で marker をクリックすると頂点が赤くなり、face をクリックすると面が黄色の overlay で強調されることを確認します
 - face を選択すると、その face を構成する頂点 marker も選択色で強調されることを確認します
 - Vertex Select で face を囲む全頂点を選択すると、その face も選択状態になることを確認します
 - Shift + 左クリックで複数頂点を選択し、Triangle / Quad button で現在視点側を表にした三角形または四角形 face を作成できることを確認します
@@ -52,12 +43,11 @@
 - U/O で選択 face または選択頂点を法線方向へ移動できることを確認します
 - N/M で選択頂点の中心を基準に縮小 / 拡大できることを確認します
 - G / R / S を押してからマウスを移動すると、選択頂点または選択 face 構成頂点を移動 / 回転 / scale でき、左クリックで確定できることを確認します
-- E または Extrude button で押し出し mode に入り、複数 face を選択した場合は共有 edge に側面を作らず、選択領域の外周だけから新しい側面が作られ、新しく押し出された面が選択され、左クリックで確定できることを確認します
+- E または Extrude button で押し出し mode に入り、マウス移動で選択 face から新しい face 群が作られ、新しく押し出された面が選択され、左クリックで確定できることを確認します
 - Flip Face で選択 face の表裏が反転することを確認します
 - Undo / Redo で直前の編集状態へ戻り、表示 Shape と marker が復元されることを確認します
-- Load Model で `.json` / `.glb` / `.gltf` / `.dae` を読み込み、`.glb` では `embedded_glb_viewer` と同じ正規化済み mesh が編集対象へ取り込まれることを確認します。複数 mesh node がある場合は mesh select に `all objects` が出て、Use Mesh で複数オブジェクトとして取り込めることを確認します
+- Load Model で `.json` / `.glb` / `.gltf` / `.dae` を読み込み、複数 mesh node がある場合は `all objects` として複数オブジェクトが表示されることを確認します
 - Object Mode で各オブジェクトをクリック選択し、Edit Mode で選択したアクティブオブジェクトだけの頂点 marker が出ることを確認します
-- Object Mode で A を押すと全オブジェクトが選択され、Edit Mode で A を押すとアクティブオブジェクトの全頂点と全 face が選択されることを確認します
 - Object Mode でオブジェクトを選択し、G / R / S を押してからマウス移動、左クリック確定で選択オブジェクト全体を変形できることを確認します
 - Save ModelAsset JSON で `webgmodeler_modelasset.json` が保存され、positions / indices / polygonLoops が含まれることを確認します
 - Save GLB で `webgmodeler.glb` が保存され、glTF / GLB viewer で編集 mesh が表示できることを確認します
@@ -66,14 +56,11 @@
 - Face Select: face を選択し、その face に属する頂点も選択状態にする
 - Add Vertex: クリック位置へ頂点を追加
 - Object Mode: オブジェクト全体をクリック選択
-- Use Mesh: 読み込み済み asset から mesh select の現在項目を編集対象へ再取り込み
-- A: Object Mode では全 object、Edit Mode では全頂点を選択
 - Object Mode の G / R / S: 選択オブジェクト全体を移動 / 回転 / scale
 - Edit Mode: アクティブオブジェクトの Vertex Select / Face Select / Add Vertex を有効化
 - Tab: Object Mode / Edit Mode を切り替え
-- 中ボタンドラッグ: `createOrbitEyeRig()` の `dragButton: 1` による orbit
-- Shift + 中ボタンドラッグ: `panModifierKey: "shift"` による PAN
-- Ctrl + 中ボタンドラッグ: `dragZoomModifierKey: "control"` による drag zoom
+- 左ドラッグ: `createOrbitEyeRig()` が接続する `EyeRig` による orbit
+- Shift + 左ドラッグ: `createOrbitEyeRig()` が接続する `EyeRig` による PAN
 - wheel: zoom
 - Arrow: orbit
 - Shift + Arrow: PAN
@@ -85,7 +72,7 @@
 - G: Move mode。マウス移動で選択対象を camera screen 平面に沿って移動、左クリックで確定
 - R: Rotate mode。マウス移動で選択対象を選択中心まわりに回転、左クリックで確定
 - S: Scale mode。マウス移動で選択対象を選択中心まわりに拡大縮小、左クリックで確定
-- E / Extrude: Extrude mode。マウス移動で選択 face 領域の外周を法線方向へ押し出し、左クリックで確定
+- E / Extrude: Extrude mode。マウス移動で選択 face を法線方向へ押し出し、左クリックで確定
 - Shift + 左クリック: 選択の追加 / 解除
 - Delete / Backspace / Delete button: 選択頂点または選択 face を削除
 - Triangle: 選択頂点 3 個から face を作成

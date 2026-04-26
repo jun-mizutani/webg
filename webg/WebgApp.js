@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// WebgApp.js     2026/04/24
+// WebgApp.js     2026/04/26
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // ---------------------------------------------
@@ -1467,7 +1467,8 @@ export default class WebgApp {
         zoomIn: "[",
         zoomOut: "]"
       },
-      panModifierKey: "shift"
+      panModifierKey: "shift",
+      dragZoomModifierKey: null
     };
   }
 
@@ -1496,6 +1497,9 @@ export default class WebgApp {
     const panModifierKey = options.panModifierKey
       ?? options.orbit?.panModifierKey
       ?? defaultBindings.panModifierKey;
+    const dragZoomModifierKey = options.dragZoomModifierKey
+      ?? options.orbit?.dragZoomModifierKey
+      ?? defaultBindings.dragZoomModifierKey;
     const orbitOptions = {
       ...options,
       ...(options.orbit ?? {}),
@@ -1505,7 +1509,8 @@ export default class WebgApp {
       pitch: options.pitch ?? options.orbit?.pitch ?? this.camera.pitch,
       bank: options.bank ?? options.orbit?.bank ?? this.camera.bank,
       keyMap: orbitKeyMap,
-      panModifierKey
+      panModifierKey,
+      dragZoomModifierKey
     };
 
     if (this.eyeRig?.detachPointer) {

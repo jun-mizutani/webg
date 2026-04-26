@@ -1,6 +1,5 @@
 // -------------------------------------------------
 // webgmodeler edit operations
-//   editOperations.js 2026/04/26
 // -------------------------------------------------
 
 import { add3, mul3, sub3 } from "./math3d.js";
@@ -66,85 +65,40 @@ export function createEditOperations(ctx) {
       : Math.max(0.001, ctx.getEditorBounds().size * 0.0001);
     const resetTopVertices = Math.abs(distance) <= 1.0e-8;
     const topBasePositions = new Map();
-    const selectedVertexIds = new Set();
-    const vertexNormalSums = new Map();
-    const edgeRecords = new Map();
-    const edgeKey = (a, b) => a < b ? `${a}:${b}` : `${b}:${a}`;
-
-    // Blender の region extrude と同様に、選択 face 群を 1 つの領域として扱う
-    // 選択 face 同士が共有する edge は内部 edge なので側面を作らず、
-    // 1 枚の選択 face にしか属さない boundary edge だけから側面を作る
     for (const face of faces) {
       const normal = ctx.computeFaceNormal(face);
-      for (const vertexId of face.indices) {
-        selectedVertexIds.add(vertexId);
-        const sum = vertexNormalSums.get(vertexId) ?? [0.0, 0.0, 0.0];
-        sum[0] += normal[0];
-        sum[1] += normal[1];
-        sum[2] += normal[2];
-        vertexNormalSums.set(vertexId, sum);
-      }
-      for (let i = 0; i < face.indices.length; i++) {
-        const a = face.indices[i];
-        const b = face.indices[(i + 1) % face.indices.length];
-        const key = edgeKey(a, b);
-        if (!edgeRecords.has(key)) {
-          edgeRecords.set(key, []);
-        }
-        edgeRecords.get(key).push({ face, a, b });
-      }
-    }
-
-    const topByBaseVertex = new Map();
-    for (const vertexId of selectedVertexIds) {
-      const vertex = ctx.getVertexById(vertexId);
-      if (!vertex) {
-        throw new Error(`selected face references missing vertex ${vertexId}`);
-      }
-      const sum = vertexNormalSums.get(vertexId) ?? ctx.computeSelectionNormal();
-      const len = Math.hypot(sum[0], sum[1], sum[2]);
-      const normal = len > 1.0e-9
-        ? [sum[0] / len, sum[1] / len, sum[2] / len]
-        : ctx.computeSelectionNormal();
-      const id = ctx.addVertex(add3(vertex.position, mul3(normal, buildDistance)));
-      topByBaseVertex.set(vertexId, id);
-      newVertexIds.add(id);
-      extrudeVertexNormals.set(id, normal);
-      topBasePositions.set(id, [...vertex.position]);
-    }
-
-    const regionVertices = Array.from(selectedVertexIds)
-      .map((id) => ctx.getVertexById(id))
-      .filter((vertex) => vertex !== null);
-    const regionCenter = ctx.computeCenter(regionVertices);
-
-    for (const face of faces) {
-      const normal = ctx.computeFaceNormal(face);
-      const top = face.indices.map((vertexId) => topByBaseVertex.get(vertexId));
-      if (top.some((vertexId) => vertexId === undefined)) {
-        throw new Error(`extrude face ${face.id} is missing duplicated top vertices`);
-      }
-      newFaceIds.push(ctx.addFaceOrientedToDirection(top, normal));
-    }
-
-    for (const records of edgeRecords.values()) {
-      if (records.length !== 1) {
-        continue;
-      }
-      const { a, b } = records[0];
-      const topA = topByBaseVertex.get(a);
-      const topB = topByBaseVertex.get(b);
-      if (topA === undefined || topB === undefined) {
-        throw new Error(`extrude boundary edge ${a}-${b} is missing duplicated top vertices`);
-      }
-      const sideLoop = [a, b, topB, topA];
-      const sideVertices = sideLoop
+      const baseVertices = face.indices
         .map((id) => ctx.getVertexById(id))
         .filter((vertex) => vertex !== null);
-      const sideCenter = ctx.computeCenter(sideVertices);
-      newFaceIds.push(ctx.addFaceOrientedToDirection(sideLoop, sub3(sideCenter, regionCenter)));
+      const faceCenter = ctx.computeCenter(baseVertices);
+      const top = [];
+      for (const vertexId of face.indices) {
+        const vertex = ctx.getVertexById(vertexId);
+        if (!vertex) {
+          throw new Error(`face ${face.id} references missing vertex ${vertexId}`);
+        }
+        const id = ctx.addVertex(add3(vertex.position, mul3(normal, buildDistance)));
+        top.push(id);
+        newVertexIds.add(id);
+        extrudeVertexNormals.set(id, normal);
+        topBasePositions.set(id, [...vertex.position]);
+      }
+      newFaceIds.push(ctx.addFaceOrientedToDirection(top, normal));
+      for (let i = 0; i < face.indices.length; i++) {
+        const next = (i + 1) % face.indices.length;
+        const sideLoop = [
+          face.indices[i],
+          face.indices[next],
+          top[next],
+          top[i]
+        ];
+        const sideVertices = sideLoop
+          .map((id) => ctx.getVertexById(id))
+          .filter((vertex) => vertex !== null);
+        const sideCenter = ctx.computeCenter(sideVertices);
+        newFaceIds.push(ctx.addFaceOrientedToDirection(sideLoop, sub3(sideCenter, faceCenter)));
+      }
     }
-
     if (resetTopVertices) {
       for (const [id, position] of topBasePositions.entries()) {
         const vertex = ctx.getVertexById(id);
