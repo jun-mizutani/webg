@@ -400,9 +400,9 @@ uiPanels.setTheme(app.uiTheme.uiPanel);
 
 この問題を回避し、安定したレイアウトを実現するためのポイントは以下の 3 点です。
 
-1. **canvas 領域の制御を集約する**: canvas を狭める処理は `WebgApp.applyViewportLayout()` に集約し、サンプル側で個別に canvas style を補正しないようにします。これにより、`--webg-canvas-right-inset` という CSS 変数が document に適切に配布されます。
-2. **有効表示領域を基準にする**: DOM オーバーレイ側はビューポート基準ではなく、「canvas 右端までの有効表示領域」を基準にしたオフセットを参照させます。`DialogueOverlay` や `FixedFormatPanel` は内部で `getDockOffset()` を使用しており、独自 DOM を構築する場合は `--webg-canvas-right-inset` を参照させる必要があります。
-3. **レスポンシブクラスでのオフセット保持**: `DialogueOverlay` のように `.is-stacked` などのレスポンシブ用クラスを持つ UI では、ルート要素だけでなく、各クラス側の定義においても dock offset が保持されている必要があります。
+1. canvas 領域の制御を集約する: canvas を狭める処理は `WebgApp.applyViewportLayout()` に集約し、サンプル側で個別に canvas style を補正しないようにします。これにより、`--webg-canvas-right-inset` という CSS 変数が document に適切に配布されます。
+2. 有効表示領域を基準にする: DOM オーバーレイ側はビューポート基準ではなく、「canvas 右端までの有効表示領域」を基準にしたオフセットを参照させます。`DialogueOverlay` や `FixedFormatPanel` は内部で `getDockOffset()` を使用しており、独自 DOM を構築する場合は `--webg-canvas-right-inset` を参照させる必要があります。
+3. レスポンシブクラスでのオフセット保持: `DialogueOverlay` のように `.is-stacked` などのレスポンシブ用クラスを持つ UI では、ルート要素だけでなく、各クラス側の定義においても dock offset が保持されている必要があります。
 
 トラブルシューティングの際は、まず「特定のパネルだけが外に出るのか（クラス切り替え側の問題）」、あるいは「すべての固定 DOM が外に出るのか（CSS 変数の配布や canvas 縮小自体の問題）」を確認してください。
 
