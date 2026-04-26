@@ -6,6 +6,7 @@
 // -------------------------------------------------
 
 export default class EdgeWireframeOverlayRenderer {
+  // インスタンス生成時に renderer や shader が使う状態を初期化する
   constructor(gpu, {
     initialVertexCapacity = 4096,
     zBias = 0.00028
@@ -43,6 +44,7 @@ export default class EdgeWireframeOverlayRenderer {
     this.zBias = zBias;
   }
 
+  // WebGPU resource を作る前に GPU の準備完了を待ち、必要な buffer や pipeline を初期化する
   async init() {
     // WebGPUContext は非同期で device / queue を用意する
     // renderer 側では gpu.ready を待ってから GPU resource を生成する
@@ -59,6 +61,7 @@ export default class EdgeWireframeOverlayRenderer {
     this.createPipeline();
   }
 
+  // 頂点数に応じた WebGPU vertex buffer を作成する
   createVertexBuffer(vertexCapacity) {
     // COPY_DST を付け、draw() ごとに queue.writeBuffer() で CPU 側 edge list を転送する
     // 現状の modeler では edge overlay は小規模かつ毎 frame 再構築なので、
@@ -70,6 +73,7 @@ export default class EdgeWireframeOverlayRenderer {
     });
   }
 
+  // overlay 用の shader module と render pipeline を作成する
   createPipeline() {
     // Wireframe.js と同じ line-list topology を使うが、こちらは sample overlay 用に
     // alpha blend と z bias を持たせた軽量 pipeline として分ける
@@ -184,12 +188,14 @@ fn fsMain(input : VSOut) -> @location(0) vec4f {
     });
   }
 
+  // 次の再構築に備えて CPU 側の描画データを空にする
   clear() {
     // frame ごとの一時 vertex list だけを消すGPUBuffer は再利用する
     this.vertices.length = 0;
     this.bufferDirty = true;
   }
 
+  // camera の projection / view 行列を overlay shader の uniform に反映する
   setMatrices(projectionMatrix, viewMatrix) {
     // projection と view は main.js 側で WebgApp / eye から取得する
     // Matrix.mul() は剛体変換向けなので、ここでは合成済み行列ではなく
@@ -204,6 +210,7 @@ fn fsMain(input : VSOut) -> @location(0) vec4f {
     this.uniformData[35] = 0.0;
   }
 
+  // 1 頂点分の position と color を描画用配列へ追加する
   pushVertex(position, color) {
     // color は [r, g, b, a] の linear 0..1 値
     // edge ごとの色分けをしたいので uniform color ではなく vertex attribute にする
@@ -214,6 +221,7 @@ fn fsMain(input : VSOut) -> @location(0) vec4f {
     this.bufferDirty = true;
   }
 
+  // 2 点を結ぶ edge overlay の line-list 頂点を追加する
   addLine(a, b, color) {
     // line-list は 2 vertex で 1 本の線を表す
     // main.js 側で face loop から重複 edge を作り、ここへ world 座標を渡す
@@ -221,6 +229,7 @@ fn fsMain(input : VSOut) -> @location(0) vec4f {
     this.pushVertex(b, color);
   }
 
+  // 現在の頂点数を収められるよう GPU buffer 容量を必要に応じて拡張する
   ensureCapacity(vertexCount) {
     // 既存 capacity で足りる限りは GPUBuffer を作り直さない
     // 足りない場合だけ倍々に増やし、頻繁な再確保を避ける
@@ -236,6 +245,7 @@ fn fsMain(input : VSOut) -> @location(0) vec4f {
     this.bufferDirty = true;
   }
 
+  // 蓄積済みの overlay 頂点を現在の render pass へ描画する
   draw() {
     const vertexCount = this.vertices.length / this.vertexStrideFloats;
     if (vertexCount <= 0) {

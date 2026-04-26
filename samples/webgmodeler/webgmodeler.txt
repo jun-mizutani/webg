@@ -18,6 +18,7 @@
 - face の頂点順は、表側から見て反時計回りを基本とします。隣接 face がある場合は共有辺が逆向きになるように向きをそろえ、孤立 face は原点側を裏として初期化します
 - 頂点追加は、クリック位置の face hit、地面 plane、camera target plane の順で交点を作り、新しい頂点として追加します
 - camera 操作は Blender に近い割り当てにし、中ボタンドラッグで orbit、Shift + 中ボタンドラッグで PAN、wheel または Ctrl + 中ボタンドラッグで zoom します。左ドラッグは camera 操作に使わず、面や頂点の矩形選択などの編集操作へ割り当てられる状態にしています
+- 左ドラッグは矩形選択として使います。Object Mode では矩形内の object、Edit Mode の Vertex Select では矩形内の頂点、Face Select では矩形内に中心が入った face を選択します。Shift + 左ドラッグは既存選択へ追加します
 - `G` / `R` / `S` / `E` で transform mode に入り、マウス移動で選択頂点または選択 face 構成頂点を移動 / 回転 / scale / 押し出しできます。E の押し出しは、複数選択 face を個別に押し出すのではなく、選択領域の共有辺を内部辺として扱い、外周 edge だけに側面を作る region extrude として動作します。左クリックで確定、Escape または右クリックでキャンセルします
 - Blender と同様に Object Mode / Edit Mode を持ちます。Object Mode ではオブジェクト全体をクリック選択し、G/R/S で選択オブジェクト全体を移動 / 回転 / scale できます。Edit Mode ではアクティブオブジェクトの頂点 / face を編集します。Tab で mode を切り替えます
 - A キーは mode に応じて全選択します。Object Mode では全 object、Edit Mode ではアクティブ object の全頂点を選択し、全頂点が含まれる face も選択状態にします
@@ -66,6 +67,8 @@
 - Face Select: face を選択し、その face に属する頂点も選択状態にする
 - Add Vertex: クリック位置へ頂点を追加
 - Object Mode: オブジェクト全体をクリック選択
+- 左ドラッグ: 現在の mode / tool に応じて矩形選択
+- Shift + 左ドラッグ: 矩形選択を既存選択へ追加
 - Use Mesh: 読み込み済み asset から mesh select の現在項目を編集対象へ再取り込み
 - A: Object Mode では全 object、Edit Mode では全頂点を選択
 - Object Mode の G / R / S: 選択オブジェクト全体を移動 / 回転 / scale

@@ -4,6 +4,7 @@
 
 import { add3, cross3, dot3, mul3, normalize3, sub3 } from "./math3d.js";
 
+// mouse move preview 型の G/R/S/E transform controller を作る
 export function createTransformController(ctx) {
   const state = {
     mode: null,
@@ -23,6 +24,7 @@ export function createTransformController(ctx) {
     changed: false
   };
 
+  // transformController の mode 表示名を UI へ中継する
   function getTransformModeLabel(mode) {
     if (mode === "move") return "move";
     if (mode === "rotate") return "rotate";
@@ -31,6 +33,7 @@ export function createTransformController(ctx) {
     return "-";
   }
 
+  // transform 開始時の基準 mouse 座標を現在位置または canvas 中心から決める
   function getTransformStartPoint() {
     if (state.hasPointer) {
       return [state.lastX, state.lastY];
@@ -42,11 +45,13 @@ export function createTransformController(ctx) {
     ];
   }
 
+  // transformController の mode 開始を UI へ中継する
   function setTransformMode(mode) {
     const normalized = mode === "move" || mode === "rotate" || mode === "scale" || mode === "extrude"
       ? mode
       : null;
     if (!normalized) {
+      // transformController の cancel を UI へ中継する
       cancelTransformMode();
       return true;
     }
@@ -55,6 +60,7 @@ export function createTransformController(ctx) {
       return false;
     }
     if (state.active) {
+      // transformController の cancel を UI へ中継する
       cancelTransformMode();
     }
     if (normalized === "extrude" && ctx.getSelectedFaceObjects().length === 0) {
@@ -117,15 +123,18 @@ export function createTransformController(ctx) {
     return true;
   }
 
+  // transform 開始時 snapshot を復元して preview 変更を取り消す
   function restoreTransformStart() {
     if (state.startSnapshot) {
       ctx.restoreSnapshot(state.startSnapshot);
     }
   }
 
+  // transformController の cancel を UI へ中継する
   function cancelTransformMode() {
     const hadMode = state.mode !== null || state.active;
     if (state.active && (state.changed || state.mode === "extrude")) {
+      // transform 開始時 snapshot を復元して preview 変更を取り消す
       restoreTransformStart();
     }
     if (state.active && ctx.editor.undoStack.length > 0) {
@@ -147,6 +156,7 @@ export function createTransformController(ctx) {
     return hadMode;
   }
 
+  // transformController の confirm を UI へ中継する
   function confirmTransformMode() {
     if (!state.active) {
       return false;
@@ -154,6 +164,7 @@ export function createTransformController(ctx) {
     const mode = state.mode;
     if (!state.changed && ctx.editor.undoStack.length > 0) {
       if (mode === "extrude") {
+        // transform 開始時 snapshot を復元して preview 変更を取り消す
         restoreTransformStart();
       }
       ctx.editor.undoStack.pop();
@@ -172,6 +183,7 @@ export function createTransformController(ctx) {
     return true;
   }
 
+  // 指定軸まわりに点を回転させるための Rodrigues 回転を計算する
   function rotatePointAroundAxis(point, center, axis, angleRad) {
     const rel = sub3(point, center);
     const n = normalize3(axis, "transform rotate axis");
@@ -183,6 +195,7 @@ export function createTransformController(ctx) {
     return add3(center, add3(add3(term1, term2), term3));
   }
 
+  // transformController の preview 更新を UI へ中継する
   function applyTransformDrag(clientX, clientY) {
     const vertices = Array.from(state.initialPositions.keys());
     if (vertices.length === 0 || !state.basis) {
@@ -202,7 +215,9 @@ export function createTransformController(ctx) {
       }
       if (state.mode === "move") {
         const delta = add3(
+          // vec3 を scalar 倍する
           mul3(basis.right, dx * worldPerPixel),
+          // vec3 を scalar 倍する
           mul3(basis.up, -dy * worldPerPixel)
         );
         vertex.position = add3(initial, delta);
@@ -213,6 +228,7 @@ export function createTransformController(ctx) {
         const factor = Math.max(0.02, Math.exp((dx - dy) * 0.006));
         vertex.position = add3(
           state.center,
+          // vec3 を scalar 倍する
           mul3(sub3(initial, state.center), factor)
         );
       } else if (state.mode === "extrude") {
@@ -226,16 +242,20 @@ export function createTransformController(ctx) {
     ctx.setMessage(`${getTransformModeLabel(state.mode)} drag`);
   }
 
+  // transformController の pointer bridge を登録する
   function installTransformPointerBridge(canvas) {
+    // transform 中の pointer event を通常選択や camera 操作へ流さないよう止める
     const stopTransformEvent = (ev) => {
       ev.preventDefault();
       ev.stopImmediatePropagation();
     };
+    // transform mode に入る前の最新 mouse 座標を開始基準として保持する
     const rememberPointer = (ev) => {
       state.lastX = ev.clientX;
       state.lastY = ev.clientY;
       state.hasPointer = true;
     };
+    // 左クリックは確定、右クリックは cancel として capture phase で先に処理する
     const onPointerDownCapture = (ev) => {
       rememberPointer(ev);
       if (!state.active) {
@@ -249,6 +269,7 @@ export function createTransformController(ctx) {
         stopTransformEvent(ev);
       }
     };
+    // transform active 中は mouse move を preview 更新として扱う
     const onPointerMoveCapture = (ev) => {
       rememberPointer(ev);
       if (!state.active) {

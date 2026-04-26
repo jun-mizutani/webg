@@ -2,10 +2,12 @@
 // webgmodeler minimal GLB exporter
 // -------------------------------------------------
 
+// GLB の各 chunk が 4 byte 境界に揃うよう byte length を切り上げる
 function align4(value) {
   return (value + 3) & ~3;
 }
 
+// GLB chunk 用に指定 byte で padding 済みの Uint8Array を作る
 function makePaddedUint8Array(source, paddedLength, padValue = 0) {
   const bytes = source instanceof Uint8Array ? source : new Uint8Array(source);
   const padded = new Uint8Array(paddedLength);
@@ -14,12 +16,14 @@ function makePaddedUint8Array(source, paddedLength, padValue = 0) {
   return padded;
 }
 
+// DataView の指定 offset へ ASCII 文字列を書き込む
 function writeAscii(view, offset, text) {
   for (let i = 0; i < text.length; i++) {
     view.setUint8(offset + i, text.charCodeAt(i));
   }
 }
 
+// 編集 geometry から最小構成の glTF 2.0 binary GLB を組み立てる
 export function buildGlbFromGeometry({
   vertices,
   faces,

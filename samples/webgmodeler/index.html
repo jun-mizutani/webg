@@ -161,11 +161,21 @@
       border-radius: 8px;
       background: #111b24;
       padding: 0;
+      position: relative;
     }
 
     #canvas {
       display: block;
       background: #111b24;
+    }
+
+    .selection-rect {
+      position: absolute;
+      display: none;
+      pointer-events: none;
+      border: 1px solid rgba(98, 181, 255, 0.92);
+      background: rgba(98, 181, 255, 0.14);
+      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.16);
     }
 
     .hint {
@@ -271,7 +281,7 @@
         </div>
         <p class="hint">
           中ボタンドラッグで orbit、Shift + 中ボタンドラッグで PAN、Ctrl + 中ボタンドラッグまたは wheel で zoom。
-          Object Mode でオブジェクト選択、Tab / Edit Mode でアクティブオブジェクトを編集します。Vertex/Face Select でクリック選択、Shift + クリックで選択の追加/解除、A で全選択です。
+          Object Mode でオブジェクト選択、Tab / Edit Mode でアクティブオブジェクトを編集します。Vertex/Face Select でクリック選択、左ドラッグで矩形選択、Shift 併用で追加選択、A で全選択です。
           G/R/S/E の後はマウス移動で移動/回転/scale/押し出し、左クリックで確定します。補助編集は J/L/I/K、U/O、N/M、面反転は F を使います。
         </p>
       </div>

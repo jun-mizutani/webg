@@ -3,6 +3,7 @@
 // -------------------------------------------------
 
 export default class Overlay2DRenderer {
+  // インスタンス生成時に renderer や shader が使う状態を初期化する
   constructor(gpu, {
     initialVertexCapacity = 4096
   } = {}) {
@@ -18,6 +19,7 @@ export default class Overlay2DRenderer {
     this.markerPipeline = null;
   }
 
+  // WebGPU resource を作る前に GPU の準備完了を待ち、必要な buffer や pipeline を初期化する
   async init() {
     if (this.gpu?.ready) {
       await this.gpu.ready;
@@ -27,6 +29,7 @@ export default class Overlay2DRenderer {
     this.createPipelines();
   }
 
+  // 頂点数に応じた WebGPU vertex buffer を作成する
   createVertexBuffer(vertexCapacity, label) {
     return this.device.createBuffer({
       label,
@@ -35,6 +38,7 @@ export default class Overlay2DRenderer {
     });
   }
 
+  // overlay 用の shader module と render pipeline 群を作成する
   createPipelines() {
     const vertexBuffers = [
       {
@@ -117,11 +121,13 @@ fn fsMain(input : VSOut) -> @location(0) vec4f {
     });
   }
 
+  // 次の再構築に備えて CPU 側の描画データを空にする
   clear() {
     this.markerVertices.length = 0;
     this.bufferDirty = true;
   }
 
+  // 1 頂点分の position と color を描画用配列へ追加する
   pushVertex(list, x, y, z, lx, ly, color) {
     list.push(
       x, y, z,
@@ -131,6 +137,7 @@ fn fsMain(input : VSOut) -> @location(0) vec4f {
     this.bufferDirty = true;
   }
 
+  // screen-space の円 marker を 2 枚の三角形として追加する
   addMarker(x, y, z, radiusNdcX, radiusNdcY, color) {
     const left = x - radiusNdcX;
     const right = x + radiusNdcX;
@@ -145,6 +152,7 @@ fn fsMain(input : VSOut) -> @location(0) vec4f {
     this.pushVertex(v, left, top, z, -1, 1, color);
   }
 
+  // 現在の頂点数を収められるよう GPU buffer 容量を必要に応じて拡張する
   ensureCapacity(vertexCount) {
     if (vertexCount <= this.vertexCapacity) {
       return;
@@ -158,6 +166,7 @@ fn fsMain(input : VSOut) -> @location(0) vec4f {
     this.bufferDirty = true;
   }
 
+  // 指定された頂点配列を GPU へ upload して pipeline で描画する
   drawList(vertices, pipeline) {
     const vertexCount = vertices.length / this.vertexStrideFloats;
     if (vertexCount <= 0) {
@@ -179,6 +188,7 @@ fn fsMain(input : VSOut) -> @location(0) vec4f {
     pass.draw(vertexCount, 1, 0, 0);
   }
 
+  // 蓄積済みの overlay 頂点を現在の render pass へ描画する
   draw() {
     this.drawList(this.markerVertices, this.markerPipeline);
   }

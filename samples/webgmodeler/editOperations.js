@@ -5,9 +5,12 @@
 
 import { add3, mul3, sub3 } from "./math3d.js";
 
+// main.js から渡された context を使い、編集操作 API をまとめて作る
 export function createEditOperations(ctx) {
+  // keyboard 補助操作で使う 1 回分の移動量を model size から決める
   const getKeyboardEditStep = () => Math.max(0.04, ctx.getEditorBounds().size * 0.035);
 
+  // editOperations の削除処理を UI から呼び出す薄い wrapper
   function deleteSelected() {
     const { editor } = ctx;
     if (!ctx.isEditMode()) {
@@ -33,6 +36,7 @@ export function createEditOperations(ctx) {
     ctx.setMessage("deleted selection");
   }
 
+  // editOperations の face 作成処理を UI から呼び出す薄い wrapper
   function makeFaceFromSelection(size) {
     const { editor } = ctx;
     if (!ctx.isEditMode()) {
@@ -52,6 +56,7 @@ export function createEditOperations(ctx) {
     ctx.setMessage(`created front-facing face ${faceId}`);
   }
 
+  // editOperations の extrusion 作成処理を transform から呼べるよう中継する
   function createExtrusion(distance) {
     const { editor } = ctx;
     const faces = ctx.getSelectedFaceObjects();
@@ -69,6 +74,7 @@ export function createEditOperations(ctx) {
     const selectedVertexIds = new Set();
     const vertexNormalSums = new Map();
     const edgeRecords = new Map();
+    // edge の向きに依存せず同じ共有辺として集計するための key を作る
     const edgeKey = (a, b) => a < b ? `${a}:${b}` : `${b}:${a}`;
 
     // Blender の region extrude と同様に、選択 face 群を 1 つの領域として扱う
@@ -162,6 +168,7 @@ export function createEditOperations(ctx) {
     };
   }
 
+  // editOperations の即時 extrude 処理を呼び出す
   function extrudeSelectedFaces() {
     const faces = ctx.getSelectedFaceObjects();
     if (faces.length === 0) {
@@ -171,11 +178,13 @@ export function createEditOperations(ctx) {
     ctx.pushUndo("extrude faces");
     const bounds = ctx.getEditorBounds();
     const distance = Math.max(0.25, bounds.size * 0.18);
+    // editOperations の extrusion 作成処理を transform から呼べるよう中継する
     createExtrusion(distance);
     ctx.rebuildScene();
     ctx.setMessage(`extruded ${faces.length} face(s)`);
   }
 
+  // editOperations の face 反転処理を呼び出す
   function flipSelectedFaces() {
     if (!ctx.isEditMode()) {
       ctx.setMessage("switch to edit mode before flipping faces");
@@ -194,6 +203,7 @@ export function createEditOperations(ctx) {
     ctx.setMessage(`flipped ${faces.length} face(s)`);
   }
 
+  // keyboard 補助移動を editOperations へ中継する
   function moveActiveVerticesBy(delta, label) {
     if (!ctx.isEditMode()) {
       ctx.setMessage("switch to edit mode before keyboard edit");
@@ -213,22 +223,27 @@ export function createEditOperations(ctx) {
     return true;
   }
 
+  // screen 平面 keyboard 移動を editOperations へ中継する
   function moveSelectionByScreenKeys(stepX, stepY) {
     const basis = ctx.getCameraScreenBasis();
     const step = getKeyboardEditStep();
     const delta = add3(
+      // vec3 を scalar 倍する
       mul3(basis.right, stepX * step),
+      // vec3 を scalar 倍する
       mul3(basis.up, stepY * step)
     );
     return moveActiveVerticesBy(delta, "keyboard move screen");
   }
 
+  // 法線方向 keyboard 移動を editOperations へ中継する
   function moveSelectionByNormalKey(direction) {
     const step = getKeyboardEditStep();
     const normal = ctx.computeSelectionNormal();
     return moveActiveVerticesBy(mul3(normal, direction * step), "keyboard move normal");
   }
 
+  // keyboard scale を editOperations へ中継する
   function scaleSelectionByKeyboard(factor) {
     if (!ctx.isEditMode()) {
       ctx.setMessage("switch to edit mode before keyboard scale");
@@ -244,6 +259,7 @@ export function createEditOperations(ctx) {
     for (const vertex of vertices) {
       vertex.position = add3(
         center,
+        // vec3 を scalar 倍する
         mul3(sub3(vertex.position, center), factor)
       );
     }
