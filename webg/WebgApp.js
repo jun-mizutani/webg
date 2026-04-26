@@ -1468,7 +1468,9 @@ export default class WebgApp {
         zoomOut: "]"
       },
       panModifierKey: "shift",
-      dragZoomModifierKey: null
+      dragZoomModifierKey: null,
+      alternateDragButton: null,
+      alternateDragModifierKey: null
     };
   }
 
@@ -1500,6 +1502,12 @@ export default class WebgApp {
     const dragZoomModifierKey = options.dragZoomModifierKey
       ?? options.orbit?.dragZoomModifierKey
       ?? defaultBindings.dragZoomModifierKey;
+    const alternateDragButton = options.alternateDragButton
+      ?? options.orbit?.alternateDragButton
+      ?? defaultBindings.alternateDragButton;
+    const alternateDragModifierKey = options.alternateDragModifierKey
+      ?? options.orbit?.alternateDragModifierKey
+      ?? defaultBindings.alternateDragModifierKey;
     const orbitOptions = {
       ...options,
       ...(options.orbit ?? {}),
@@ -1522,6 +1530,8 @@ export default class WebgApp {
       input,
       type: "orbit",
       dragButton: options.dragButton ?? 0,
+      alternateDragButton,
+      alternateDragModifierKey,
       orbit: orbitOptions
     });
     this.eyeRigOptions = {

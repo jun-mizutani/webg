@@ -1,5 +1,7 @@
 # カメラ制御とEyeRig
 
+最終更新: 2026-04-26
+
 `WebgApp` でアプリケーションの基盤が整った後、次に検討すべきは「視点をどのような単位で制御するか」という点です。`webg` では、視点を単一の座標として扱うのではなく、`Space` 内に配置された `cameraRig`、`cameraRod`、`eye` という3段のノード構成を組み合わせてカメラを表現します。`EyeRig` は、この3段構成に対して orbit（軌道）、first-person（一人称）、follow（追従）という3つの視点操作を共通の概念で提供するヘルパークラスです。
 
 本章では、`webg/EyeRig.js` と `webg/WebgApp.js` をベースに、各ノードの役割や3段構成を採用している理由、そして利用者側で制御すべきポイントについて詳述します。第5章で解説した `WebgApp` の標準リグの上に、どのように視点操作を実装するかを順を追って紐解いていきましょう。
@@ -187,6 +189,62 @@ const orbit = app.createOrbitEyeRig({
 
 この一覧は [16_タッチ機能と入力.md](./16_タッチ機能と入力.md) の特殊キー一覧とも一致しています。`panModifierKey` に一般の文字キーを指定しても pointer drag 側では判定できないため、ここに挙げた modifier key 名だけを使うようにしてください。
 
+### drag button と代替 drag 入力の調整
+
+viewer だけを作る場合、左ドラッグを orbit 回転に割り当てても大きな問題はありません。しかし、modeler や editor では左ドラッグを矩形選択、頂点移動、面選択、ツール操作などに使いたくなるため、カメラ操作を別のボタンへ移す必要があります。`EyeRig` はこの用途のために、通常の camera drag を開始する `dragButton` を受け取ります。
+
+`dragButton` は pointer event の `button` 値です。左ボタンは `0`、中ボタンは `1`、右ボタンは `2` です。`WebgApp.createOrbitEyeRig()` の既定値は左ボタンですが、editor では中ボタンへ変更すると、左ボタンを選択操作へ空けられます。
+
+```js
+const orbit = app.createOrbitEyeRig({
+  target: [0.0, 0.0, 0.0],
+  distance: 8.0,
+  head: 24.0,
+  pitch: -12.0,
+  dragButton: 1
+});
+```
+
+この設定では、中ボタンドラッグが orbit 回転になります。`panModifierKey` が既定の `"shift"` であれば `Shift + 中ボタンドラッグ` がパン(PAN)になり、wheel は従来通り zoom として動作します。さらに、Blender に近い操作へ寄せたい場合は、`dragZoomModifierKey` を指定すると、modifier 付き drag を wheel とは別の zoom 操作として扱えます。
+
+```js
+const orbit = app.createOrbitEyeRig({
+  target: [0.0, 0.0, 0.0],
+  distance: 8.0,
+  head: 24.0,
+  pitch: -12.0,
+  dragButton: 1,
+  panModifierKey: "shift",
+  dragZoomModifierKey: "control",
+  dragZoomSpeed: 0.04
+});
+```
+
+この例では、中ボタンドラッグが orbit 回転、`Shift + 中ボタンドラッグ` がパン(PAN)、`Ctrl + 中ボタンドラッグ` が drag zoom になります。`dragZoomSpeed` は drag zoom の感度で、wheel zoom の `wheelZoomStep` とは別に調整できます。中ボタンを camera 用に使う構成は、左ドラッグを矩形選択や編集操作へ使うアプリケーションで特に有効です。
+
+一方で、macOS のトラックパッド環境や一部のマウス設定では、中ボタンドラッグがブラウザまで届かないことがあります。この場合に、アプリケーション側で中ボタンだけを前提にしてしまうと、カメラを回転できない利用者が出ます。そこで `EyeRig` には、通常の `dragButton` とは別に、modifier 付きの代替 drag 開始条件を指定できる `alternateDragButton` と `alternateDragModifierKey` が用意されています。
+
+```js
+const orbit = app.createOrbitEyeRig({
+  target: [0.0, 0.0, 0.0],
+  distance: 8.0,
+  head: 24.0,
+  pitch: -12.0,
+  dragButton: 1,
+  panModifierKey: "shift",
+  dragZoomModifierKey: "control",
+  dragZoomSpeed: 0.04,
+  alternateDragButton: 0,
+  alternateDragModifierKey: "alt"
+});
+```
+
+この設定では、通常は中ボタンドラッグで orbit 回転を行います。加えて、`Option + 左ドラッグ` も camera drag の開始条件として認識されます。`alternateDragModifierKey` が押されている場合だけ代替入力として扱うため、左ドラッグ単体は矩形選択や編集操作に残せます。macOS では `Alt` が `Option` キーに相当するため、設定値は `"alt"` または `"option"` のどちらでも同じ意味になります。
+
+代替 drag は `EyeRig` の通常の pointer drag 経路に入るため、drag 開始後の操作分岐は通常の中ボタンドラッグと同じです。上の例では、`Option + 左ドラッグ` が orbit 回転、`Shift + Option + 左ドラッグ` がパン(PAN)、`Ctrl + Option + 左ドラッグ` が drag zoom として扱われます。これは webgmodeler のように「左ドラッグ単体は選択に使い、macOS では Option + 左ドラッグを中ボタン相当として使う」場合に向いた構成です。
+
+ここで注意したいのは、これは不具合を隠すための自動補正ではなく、利用者に公開する明示的な代替操作だという点です。中ボタンが届く環境では `dragButton: 1` がそのまま使われ、macOS などで中ボタン操作が困難な場合だけ `Option + 左ドラッグ` を同じ camera drag として使えるようにします。左ドラッグ単体を代替入力にしてしまうと editor の選択操作と衝突するため、必ず `alternateDragModifierKey` と組み合わせて指定してください。
+
 既定値を確認してから一部だけ上書きしたい場合は、`getDefaultOrbitEyeRigBindings()` を使うと現在の標準設定をそのまま取得できます。開発時に現在の標準設定を明示的に確認したい場合にも便利です。
 
 ```js
@@ -194,6 +252,7 @@ const defaults = app.getDefaultOrbitEyeRigBindings();
 
 console.log(defaults.keyMap.left);       // "arrowleft"
 console.log(defaults.panModifierKey);    // "shift"
+console.log(defaults.alternateDragButton); // null
 ```
 
 返される `orbit` は通常の `EyeRig` なので、生成後に動的変更することもできます。たとえば一時的に editor mode へ入ったときだけ回転キーを変えたい場合は、`orbit.orbit.keyMap` や `orbit.orbit.panModifierKey` を直接更新すれば十分です。
@@ -206,7 +265,7 @@ orbit.orbit.keyMap.down = "k";
 orbit.orbit.panModifierKey = "control";
 ```
 
-このように、`createOrbitEyeRig()` は「orbit camera を作る helper」であると同時に、「orbit camera の入力設定を既定値付きで扱う入口」でもあります。利用者は `EyeRig` の内部構造を細かく知らなくても、`head`、`distance`、`orbitKeyMap`、`panModifierKey` を与えるだけで、用途に合った orbit camera を素直に構成できます。
+このように、`createOrbitEyeRig()` は「orbit camera を作る helper」であると同時に、「orbit camera の入力設定を既定値付きで扱う入口」でもあります。利用者は `EyeRig` の内部構造を細かく知らなくても、`head`、`distance`、`orbitKeyMap`、`panModifierKey`、`dragButton`、`alternateDragButton` を与えるだけで、用途に合った orbit camera を素直に構成できます。
 
 コード上で orbit target を明示的にずらしたい場合は、直接 `setTarget()` を呼んでも構いません。たとえば、読み込んだ model の bounding box を使って初期表示を決めたあと、頭部や手元を少し中央へ寄せたいときには、次のように target を更新できます。
 
@@ -316,7 +375,8 @@ orbit と follow を使うときは、`setTarget()` / `setTargetOffset()` を「
 3. orbit の標準利用では `WebgApp.createOrbitEyeRig()` を使い、入力更新と camera state 同期を `WebgApp` 側へ任せること。
 4. `setAngles()` と `setLookAngles()` の役割を混同しないこと。
 5. orbit / follow で細部を追いたい場合は、回転だけで解決しようとせず、パン(PAN)によるターゲット調整を併用すること。
-6. 視野角や `near / far` を変更したい場合は、`WebgApp.viewAngle` および `updateProjection()` を使用すること。
+6. editor で左ドラッグを選択操作へ使う場合は、`dragButton: 1` などで camera drag を別ボタンへ移し、macOS 向けには `alternateDragButton` と `alternateDragModifierKey` による明示的な代替操作を用意すること。
+7. 視野角や `near / far` を変更したい場合は、`WebgApp.viewAngle` および `updateProjection()` を使用すること。
 
 `EyeRig` は「視点をどこに置き、どちらに向かせるか」というレイヤーであり、「どのように写すか」というレイヤーではありません。この分離を意識することで、カメラに関する原因の切り分けを迅速に行うことが可能になります。
 

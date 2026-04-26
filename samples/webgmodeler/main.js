@@ -141,7 +141,8 @@ const canvasClick = {
   startY: 0.0,
   lastX: 0.0,
   lastY: 0.0,
-  additive: false
+  additive: false,
+  allowRectangle: true
 };
 
 const rawInputDebug = {
@@ -2125,6 +2126,25 @@ function isAdditiveSelectionEvent(ev) {
   return ev.shiftKey === true || app.input.has("shift");
 }
 
+// 左ドラッグ矩形選択は modifier なしの左ドラッグだけで開始する
+// Option + 左ドラッグは macOS 向け orbit fallback、Ctrl + 左ドラッグは drag zoom fallback、
+// Shift + 左ドラッグは fallback PAN へ使うため、選択矩形としては扱わない
+function isPlainLeftDragSelectionEvent(ev) {
+  return ev.button === 0
+    && ev.shiftKey !== true
+    && ev.ctrlKey !== true
+    && ev.altKey !== true
+    && ev.metaKey !== true
+    && !app.input.has("shift")
+    && !app.input.has("control")
+    && !app.input.has("ctrl")
+    && !app.input.has("alt")
+    && !app.input.has("option")
+    && !app.input.has("meta")
+    && !app.input.has("command")
+    && !app.input.has("cmd");
+}
+
 // 左クリックを mode / tool に応じた選択または頂点追加として処理する
 function handleCanvasClick(ev) {
   const ray = makeRayFromMouse(app.screen.canvas, ev.clientX, ev.clientY);
@@ -2266,6 +2286,9 @@ function updateSelectionRectElement() {
 // 現在の左ドラッグが矩形選択表示を出す距離に達したか判定する
 function shouldShowSelectionRect() {
   if (!canvasClick.active) {
+    return false;
+  }
+  if (!canvasClick.allowRectangle) {
     return false;
   }
   if (editor.mode === EDITOR_MODE_EDIT && editor.tool === TOOL_ADD_VERTEX) {
@@ -2500,6 +2523,7 @@ function handleCanvasPointerDown(ev) {
   canvasClick.lastX = ev.clientX;
   canvasClick.lastY = ev.clientY;
   canvasClick.additive = isAdditiveSelectionEvent(ev);
+  canvasClick.allowRectangle = isPlainLeftDragSelectionEvent(ev);
 }
 
 // 左ドラッグ中の位置更新と矩形表示更新を行う
@@ -2536,10 +2560,11 @@ function handleCanvasPointerUp(ev) {
   const moveDistance = Math.hypot(ev.clientX - canvasClick.startX, ev.clientY - canvasClick.startY);
   const dragRect = makeClientRect(canvasClick.startX, canvasClick.startY, ev.clientX, ev.clientY);
   const additive = canvasClick.additive;
+  const allowRectangle = canvasClick.allowRectangle;
   // 左クリック / 矩形選択 tracking 状態を初期化する
   resetCanvasClick();
   if (moveDistance > 4.0) {
-    if (!(editor.mode === EDITOR_MODE_EDIT && editor.tool === TOOL_ADD_VERTEX)) {
+    if (allowRectangle && !(editor.mode === EDITOR_MODE_EDIT && editor.tool === TOOL_ADD_VERTEX)) {
       // 現在 mode / tool に応じて client 矩形内の object / vertex / face を選択する
       selectByClientRect(dragRect, additive);
       ev.preventDefault();
@@ -3277,7 +3302,9 @@ async function start() {
     dragPanSpeed: 2.0,
     pitchMin: -85.0,
     pitchMax: 85.0,
-    dragButton: 1
+    dragButton: 1,
+    alternateDragButton: 0,
+    alternateDragModifierKey: "alt"
   });
   const operationContext = {
     editor,

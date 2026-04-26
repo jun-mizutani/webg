@@ -33,6 +33,27 @@ export default class EyeRig {
       0,
       { integer: true, min: 0 }
     );
+    this.alternateDragButton = util.readFiniteOption(
+      [
+        {
+          value: options.alternateDragButton ?? undefined,
+          label: "options.alternateDragButton"
+        }
+      ],
+      "alternateDragButton",
+      null,
+      { integer: true, min: 0 }
+    );
+    this.alternateDragModifierKey = util.readKeyOption(
+      [
+        {
+          value: options.alternateDragModifierKey ?? undefined,
+          label: "options.alternateDragModifierKey"
+        }
+      ],
+      "alternateDragModifierKey",
+      null
+    );
 
     this.orbit = {
       target: util.readVec3Option(
@@ -1238,7 +1259,7 @@ export default class EyeRig {
       ev.preventDefault();
       return;
     }
-    if (ev.button !== this.dragButton) return;
+    if (!this.isDragStartEvent(ev)) return;
     this.dragging = true;
     this.pointerId = ev.pointerId;
     this.lastClientX = ev.clientX;
@@ -1247,6 +1268,22 @@ export default class EyeRig {
       this.element.setPointerCapture(ev.pointerId);
     }
     ev.preventDefault();
+  }
+
+  // dragButton は通常の camera drag button を表す
+  // alternateDragButton は macOS の Option+左ドラッグのような代替入力で、
+  // modifier が押されている時だけ camera drag として扱い、左ドラッグ単体を編集操作へ残す
+  isDragStartEvent(ev) {
+    if (ev.button === this.dragButton) {
+      return true;
+    }
+    if (this.alternateDragButton === null) {
+      return false;
+    }
+    if (ev.button !== this.alternateDragButton) {
+      return false;
+    }
+    return this.isModifierKeyActive(this.alternateDragModifierKey, ev);
   }
 
   onPointerMove(ev) {
