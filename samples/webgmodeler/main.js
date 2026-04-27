@@ -1,6 +1,6 @@
 // -------------------------------------------------
 // webgmodeler sample
-//   main.js       2026/04/26
+//   main.js       2026/04/27
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // -------------------------------------------------
@@ -85,6 +85,7 @@ const ui = {
   meshSelect: null,
   useMesh: null,
   saveJson: null,
+  saveJsonGz: null,
   saveGlb: null,
   newScene: null,
   deleteSelected: null,
@@ -344,6 +345,7 @@ function cacheUi() {
   ui.meshSelect = document.getElementById("meshSelect");
   ui.useMesh = document.getElementById("useMesh");
   ui.saveJson = document.getElementById("saveJson");
+  ui.saveJsonGz = document.getElementById("saveJsonGz");
   ui.saveGlb = document.getElementById("saveGlb");
   ui.newScene = document.getElementById("newScene");
   ui.deleteSelected = document.getElementById("deleteSelected");
@@ -481,6 +483,8 @@ function updateCommandAvailability() {
   setDisabled(ui.useMesh, !importedAsset || importedMeshes.length === 0);
   // DOM control の disabled 状態を null 安全に切り替える
   setDisabled(ui.saveJson, editor.vertices.length === 0);
+  // DOM control の disabled 状態を null 安全に切り替える
+  setDisabled(ui.saveJsonGz, editor.vertices.length === 0);
   // DOM control の disabled 状態を null 安全に切り替える
   setDisabled(ui.saveGlb, editor.vertices.length === 0 || editor.faces.length === 0);
 }
@@ -2698,7 +2702,7 @@ function installKeyboardHandlers() {
 // 読み込み file 名から json / gltf / dae などの形式を判定する
 function detectFileFormat(file) {
   const name = String(file?.name ?? "").toLowerCase();
-  if (name.endsWith(".json")) return "json";
+  if (name.endsWith(".json") || name.endsWith(".json.gz")) return "json";
   if (name.endsWith(".gltf") || name.endsWith(".glb")) return "gltf";
   if (name.endsWith(".dae")) return "collada";
   throw new Error(`unsupported file extension: ${file?.name ?? "(unknown)"}`);
@@ -2838,7 +2842,11 @@ async function loadModelFile(file) {
   setMessage(`loading ${fileLabel}`);
   let asset = null;
   if (format === "json") {
-    asset = ModelAsset.fromJSON(await file.text());
+    if (ModelAsset.isGzipSource(file.name)) {
+      asset = await ModelAsset.fromGzipBlob(file);
+    } else {
+      asset = ModelAsset.fromJSON(await file.text());
+    }
   } else {
     const url = URL.createObjectURL(file);
     try {
@@ -3027,6 +3035,18 @@ function saveModelAssetJson() {
   setMessage(`saved ${filename}`);
 }
 
+// active object を gzip 圧縮済み ModelAsset JSON として保存する
+async function saveModelAssetJsonGz() {
+  const asset = buildModelAssetFromEditor();
+  asset.assertValid();
+  const filename = "webgmodeler_modelasset.json.gz";
+  await asset.downloadJSONGz(filename, 2);
+  lastSavedName = filename;
+  editor.dirty = false;
+  // 最後のユーザー向け message を保存し status を更新する
+  setMessage(`saved ${filename}`);
+}
+
 // active object の geometry から GLB binary を作る
 function buildGlbFromEditor() {
   return buildGlbFromGeometry({
@@ -3099,6 +3119,16 @@ function installDomHandlers() {
     try {
       // active object を ModelAsset JSON として保存する
       saveModelAssetJson();
+    } catch (err) {
+      console.error(err);
+      // 最後のユーザー向け message を保存し status を更新する
+      setMessage(`save failed: ${err?.message ?? err}`);
+    }
+  });
+  ui.saveJsonGz.addEventListener("click", async () => {
+    try {
+      // active object を gzip 圧縮済み ModelAsset JSON として保存する
+      await saveModelAssetJsonGz();
     } catch (err) {
       console.error(err);
       // 最後のユーザー向け message を保存し status を更新する

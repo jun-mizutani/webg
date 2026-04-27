@@ -1,0 +1,29 @@
+サンプル: compression
+
+概要
+- Compression Streams API を使い、ModelAsset JSON を gzip 圧縮してから Decompression Streams API で復元する単体テストです
+- GPU や webg 描画には依存せず、ブラウザ標準の `CompressionStream` / `DecompressionStream` の利用可否、圧縮率、復元一致を確認します
+- 既定では `Primitive.cube()` から作った ModelAsset JSON を textarea に読み込みます。任意の ModelAsset JSON ファイルや `.json.gz` ファイルも読み込めます
+
+このサンプルで使うwebg機能
+- `Primitive`: 確認用の ModelAsset JSON を生成
+- `ModelValidator`: 圧縮前に ModelAsset として妥当か確認
+
+確認ポイント
+- `CompressionStream` と `DecompressionStream` が利用可能なブラウザでは、Compress で `.json.gz` 相当の Blob が作られることを確認します
+- 圧縮後に即時復元し、元 JSON 文字列と復元結果が完全一致することを確認します
+- status に original / compressed / restored の byte 数と圧縮率が表示されることを確認します
+- Download `.json.gz` で gzip 圧縮済み JSON を保存できることを確認します
+- Download restored JSON で復元後の JSON を保存できることを確認します
+
+操作説明
+- Load Sample: 確認用 ModelAsset JSON を textarea に読み込み
+- Open JSON: 任意の ModelAsset JSON または `.json.gz` を読み込み
+- Compress: textarea の JSON を gzip 圧縮し、同じ Blob を復元して一致確認
+- Decompress: 直近の圧縮 Blob を再度復元
+- Download .json.gz: 直近の圧縮 Blob を保存
+- Download restored JSON: 直近の復元 JSON を保存
+
+補足
+- Compression Streams API はブラウザ実装に依存します。未対応ブラウザではボタンが無効になります
+- この test は gzip を使います。ModelAsset の構造や読み込み形式を変えず、保存・転送用の byte stream として圧縮します

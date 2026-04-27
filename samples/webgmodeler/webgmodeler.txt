@@ -3,9 +3,9 @@
 概要
 - `WebgApp` の `layoutMode: "embedded"` を使い、3D ビューポートを本文内の canvas として表示し、編集コマンドやファイル操作は DOM UI で行うポリゴンモデラーの初期版です
 - 編集データは `vertices`、`faces`、`selectedVertices`、`selectedFaces` として JavaScript 側で保持し、表示用 `Shape` と保存用 `ModelAsset` はその編集データから毎回再生成します
-- 読み込みは ModelAsset JSON、glTF / GLB、Collada に対応します。glTF / GLB は `embedded_glb_viewer` と同じ `WebgApp.loadModel()` 経路で skinned mesh や node transform を正規化してから、`ModelAsset` 内の mesh node を Object Mode の複数オブジェクトとして取り込みます。mesh select から単一オブジェクトだけを取り込むこともできます
+- 読み込みは ModelAsset JSON、gzip 圧縮済み ModelAsset JSON (`.json.gz`)、glTF / GLB、Collada に対応します。glTF / GLB は `embedded_glb_viewer` と同じ `WebgApp.loadModel()` 経路で skinned mesh や node transform を正規化してから、`ModelAsset` 内の mesh node を Object Mode の複数オブジェクトとして取り込みます。mesh select から単一オブジェクトだけを取り込むこともできます
 - Load Model 後は、選択中の mesh が自動で編集対象へ取り込まれます。Use Mesh は、読み込み済み asset の mesh select を変更したあと、別 mesh または `all objects` を改めて編集対象へ取り込むためのボタンです。`hand.glb` のように mesh node が 1 つだけのファイルでは、ロード後に 1 object だけ表示されるのが正常です
-- 出力は ModelAsset JSON と GLB に対応します。ModelAsset JSON は `ModelAsset.downloadJSON()` を使い、GLB は sample 側の最小 exporter で保存します
+- 出力は ModelAsset JSON、gzip 圧縮済み ModelAsset JSON (`.json.gz`)、GLB に対応します。通常 JSON は `ModelAsset.downloadJSON()`、gzip 版は `ModelAsset.downloadJSONGz()` を使い、GLB は sample 側の最小 exporter で保存します
 - Edit Mode の頂点 marker と辺は、scene draw 後の専用 overlay pass で描画します。marker は 2D shader の screen-space 円、辺は Wireframe 系の `line-list` shader で描画します
 - 選択 face は専用 shader で描画し、world 座標は元 face と同じまま、clip-space のごく小さい depth bias だけで通常 mesh より手前に重ねます
 - overlay pass は depth test 有効、depth write 無効です。手前の面に隠れた marker / edge は基本的に表示されず、edge は selected face overlay に負けにくいよう clip-space の小さな z bias を入れます
@@ -17,8 +17,8 @@
 - Triangle / Quad は、選択頂点を現在の画面上の角度順へ並べ、いま見ている側が表になるように頂点順を調整してから面を作成します
 - face の頂点順は、表側から見て反時計回りを基本とします。隣接 face がある場合は共有辺が逆向きになるように向きをそろえ、孤立 face は原点側を裏として初期化します
 - 頂点追加は、クリック位置の face hit、地面 plane、camera target plane の順で交点を作り、新しい頂点として追加します
-- camera 操作は Blender に近い割り当てにし、中ボタンドラッグで orbit、Shift + 中ボタンドラッグで PAN、wheel または Ctrl + 中ボタンドラッグで zoom します。macOS などで中ボタンが使いにくい環境では、Option + 左ドラッグを中ボタンドラッグ相当の代替操作として使えます。左ドラッグ単体は camera 操作に使わず、面や頂点の矩形選択などの編集操作へ割り当てられる状態にしています
-- modifier なしの左ドラッグは矩形選択として使います。Object Mode では矩形内の object、Edit Mode の Vertex Select では矩形内の頂点、Face Select では矩形内に中心が入った face を選択します。Shift / Ctrl / Option / Command を押した左ドラッグは camera fallback や OS / browser 操作との競合を避けるため矩形選択として扱いません
+- camera 操作は Blender に近い割り当てにし、中ボタンドラッグで orbit、Shift + 中ボタンドラッグで PAN、wheel または Ctrl + 中ボタンドラッグで zoom します。左ドラッグは camera 操作に使わず、面や頂点の矩形選択などの編集操作へ割り当てられる状態にしています
+- 左ドラッグは矩形選択として使います。Object Mode では矩形内の object、Edit Mode の Vertex Select では矩形内の頂点、Face Select では矩形内に中心が入った face を選択します。Shift + 左ドラッグは既存選択へ追加します
 - `G` / `R` / `S` / `E` で transform mode に入り、マウス移動で選択頂点または選択 face 構成頂点を移動 / 回転 / scale / 押し出しできます。E の押し出しは、複数選択 face を個別に押し出すのではなく、選択領域の共有辺を内部辺として扱い、外周 edge だけに側面を作る region extrude として動作します。左クリックで確定、Escape または右クリックでキャンセルします
 - Blender と同様に Object Mode / Edit Mode を持ちます。Object Mode ではオブジェクト全体をクリック選択し、G/R/S で選択オブジェクト全体を移動 / 回転 / scale できます。Edit Mode ではアクティブオブジェクトの頂点 / face を編集します。Tab で mode を切り替えます
 - A キーは mode に応じて全選択します。Object Mode では全 object、Edit Mode ではアクティブ object の全頂点を選択し、全頂点が含まれる face も選択状態にします
@@ -27,6 +27,7 @@
 - 選択 face の表裏反転を備えています
 - 初期版のため、Edit Mode で同時に編集できるのはアクティブオブジェクト 1 つです。複数 mesh / node を持つファイルは Object Mode でオブジェクト選択し、選択したアクティブオブジェクトを Edit Mode で編集します
 - GLB export は編集 mesh の positions / triangulated indices / material を glTF 2.0 binary として出力します
+- Blender 用の ModelAsset JSON import / export アドオンは `samples/webgmodeler/blender_modelasset_io.py` です。Blender の Add-ons 画面からこの `.py` をインストールすると、File > Import / Export に `WebG ModelAsset JSON (.json)` が追加されます。通常の `.json` と gzip 圧縮済みの `.json.gz` を読み書きできます。export では `Export as .json.gz` checkbox が既定で有効で、無効にすると通常の `.json` として保存します。Blender は Z-up、ModelAsset は Y-up のため、既定では import 時に `(X,Y,Z) -> (X,-Z,Y)`、export 時に `(X,Y,Z) -> (X,Z,-Y)` の軸変換を行います
 
 このサンプルで使うwebg機能
 - `WebgApp`: embedded canvas、Screen / Shader / Space / Input / Message の初期化
@@ -39,7 +40,7 @@
 - `EdgeWireframeOverlayRenderer`: Edit Mode の辺を Wireframe 系の line-list overlay pass で描画
 - `Space.raycast()`: object / face pick と、必要時の fallback pick
 - `Matrix.makeView()` と projection 行列の逆行列: canvas 座標から world ray を作成
-- `WebgApp.createOrbitEyeRig()`: orbit camera を作り、`dragButton`、`alternateDragButton`、`alternateDragModifierKey`、`panModifierKey`、`dragZoomModifierKey`、wheel、keyboard による camera orbit / PAN / zoom と `WebgApp` camera state 同期を扱う
+- `WebgApp.createOrbitEyeRig()`: orbit camera を作り、`dragButton`、`panModifierKey`、`dragZoomModifierKey`、wheel、keyboard による camera orbit / PAN / zoom と `WebgApp` camera state 同期を扱う
 
 確認ポイント
 - 起動直後は Object Mode で立方体の初期 mesh が選択色で表示されることを確認します
@@ -61,24 +62,23 @@
 - Object Mode で A を押すと全オブジェクトが選択され、Edit Mode で A を押すとアクティブオブジェクトの全頂点と全 face が選択されることを確認します
 - Object Mode でオブジェクトを選択し、G / R / S を押してからマウス移動、左クリック確定で選択オブジェクト全体を変形できることを確認します
 - Save ModelAsset JSON で `webgmodeler_modelasset.json` が保存され、positions / indices / polygonLoops が含まれることを確認します
+- Save ModelAsset GZ で `webgmodeler_modelasset.json.gz` が保存され、Load Model で同じ `.json.gz` を読み戻せることを確認します
 - Save GLB で `webgmodeler.glb` が保存され、glTF / GLB viewer で編集 mesh が表示できることを確認します
 
 - Vertex Select: 頂点 marker を選択
 - Face Select: face を選択し、その face に属する頂点も選択状態にする
 - Add Vertex: クリック位置へ頂点を追加
 - Object Mode: オブジェクト全体をクリック選択
-- modifier なしの左ドラッグ: 現在の mode / tool に応じて矩形選択
+- 左ドラッグ: 現在の mode / tool に応じて矩形選択
+- Shift + 左ドラッグ: 矩形選択を既存選択へ追加
 - Use Mesh: 読み込み済み asset から mesh select の現在項目を編集対象へ再取り込み
 - A: Object Mode では全 object、Edit Mode では全頂点を選択
 - Object Mode の G / R / S: 選択オブジェクト全体を移動 / 回転 / scale
 - Edit Mode: アクティブオブジェクトの Vertex Select / Face Select / Add Vertex を有効化
 - Tab: Object Mode / Edit Mode を切り替え
 - 中ボタンドラッグ: `createOrbitEyeRig()` の `dragButton: 1` による orbit
-- Option + 左ドラッグ: `alternateDragButton: 0` と `alternateDragModifierKey: "alt"` による macOS 向け orbit
 - Shift + 中ボタンドラッグ: `panModifierKey: "shift"` による PAN
-- Shift + Option + 左ドラッグ: macOS 向け PAN
 - Ctrl + 中ボタンドラッグ: `dragZoomModifierKey: "control"` による drag zoom
-- Ctrl + Option + 左ドラッグ: macOS 向け drag zoom
 - wheel: zoom
 - Arrow: orbit
 - Shift + Arrow: PAN

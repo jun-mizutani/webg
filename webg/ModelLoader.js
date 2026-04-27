@@ -1,5 +1,5 @@
 // ---------------------------------------------
-//  ModelLoader.js   2026/04/21
+//  ModelLoader.js   2026/04/27
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // ---------------------------------------------
@@ -35,19 +35,22 @@ export default class ModelLoader {
       if (explicitFormat === "gltf" || explicitFormat === "collada" || explicitFormat === "json") {
         return explicitFormat;
       }
+      if (explicitFormat === "json.gz" || explicitFormat === "gzip-json" || explicitFormat === "gz") {
+        return "json";
+      }
       throw new Error(`Unsupported model format option: ${options.format}`);
     }
     if (typeof source !== "string" || source.trim().length === 0) {
       throw new Error(`ModelLoader.detectFormat requires a non-empty source string: ${source}`);
     }
-    const normalized = source.trim().toLowerCase();
+    const normalized = source.trim().toLowerCase().split(/[?#]/, 1)[0];
     if (normalized.endsWith(".gltf") || normalized.endsWith(".glb")) {
       return "gltf";
     }
     if (normalized.endsWith(".dae")) {
       return "collada";
     }
-    if (normalized.endsWith(".json")) {
+    if (normalized.endsWith(".json") || normalized.endsWith(".json.gz")) {
       return "json";
     }
     throw new Error(`Cannot detect model format: ${source}`);
@@ -192,6 +195,9 @@ export default class ModelLoader {
       },
       downloadJSON(filename = "modelasset.json", indent = 2) {
         return asset.downloadJSON(filename, indent);
+      },
+      async downloadJSONGz(filename = "modelasset.json.gz", indent = 2) {
+        return await asset.downloadJSONGz(filename, indent);
       }
     };
   }

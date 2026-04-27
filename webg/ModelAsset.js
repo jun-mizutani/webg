@@ -1,5 +1,5 @@
 // ---------------------------------------------
-//  ModelAsset.js    2026/04/21
+//  ModelAsset.js    2026/04/27
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // ---------------------------------------------
@@ -31,7 +31,54 @@ export default class ModelAsset {
     }
   }
 
-  // URL から JSON をロードする
+  // ファイル名や URL から gzip 圧縮された ModelAsset JSON か判定する
+  // Content-Type ではなく拡張子で判定することで、静的 file server ごとの MIME 差を避ける
+  static isGzipSource(source) {
+    const path = String(source ?? "").trim().toLowerCase().split(/[?#]/, 1)[0];
+    return path.endsWith(".json.gz");
+  }
+
+  // Compression Streams API の対応状況を、処理の入口で明示的に検査する
+  // gzip は保存・転送形式であり、未対応環境で通常 JSON として誤読すると原因が見えにくいため例外にする
+  static assertCompressionStreamSupport(operation = "gzip ModelAsset JSON") {
+    if (typeof Blob !== "function" || typeof Response !== "function") {
+      throw new Error(`${operation} requires Blob and Response APIs`);
+    }
+    if (typeof CompressionStream !== "function") {
+      throw new Error(`${operation} requires CompressionStream API`);
+    }
+    if (typeof DecompressionStream !== "function") {
+      throw new Error(`${operation} requires DecompressionStream API`);
+    }
+  }
+
+  // JSON 文字列を gzip Blob へ変換する
+  // ModelAsset の構造は変更せず、UTF-8 JSON byte stream だけを gzip 圧縮する
+  static async compressTextToGzipBlob(text) {
+    ModelAsset.assertCompressionStreamSupport("ModelAsset gzip compression");
+    const source = new Blob([String(text)], { type: "application/json" });
+    const stream = source.stream().pipeThrough(new CompressionStream("gzip"));
+    return await new Response(stream).blob();
+  }
+
+  // gzip Blob を復元して JSON 文字列として返す
+  // 復元に失敗した場合は gzip stream ではない可能性が高いため、通常 JSON へ自動的には切り替えない
+  static async decompressGzipBlobToText(blob) {
+    ModelAsset.assertCompressionStreamSupport("ModelAsset gzip decompression");
+    const stream = blob.stream().pipeThrough(new DecompressionStream("gzip"));
+    return await new Response(stream).text();
+  }
+
+  // gzip 圧縮された ModelAsset JSON Blob から生成する
+  static async fromGzipBlob(blob) {
+    try {
+      return ModelAsset.fromJSON(await ModelAsset.decompressGzipBlobToText(blob));
+    } catch (err) {
+      throw new Error(`Failed to parse gzip ModelAsset JSON: ${err?.message ?? err}`);
+    }
+  }
+
+  // URL から JSON または .json.gz をロードする
   static async load(url) {
     let response;
     try {
@@ -41,6 +88,13 @@ export default class ModelAsset {
     }
     if (!response.ok) {
       throw new Error(`Failed to load ModelAsset: ${url} (${response.status} ${response.statusText})`);
+    }
+    if (ModelAsset.isGzipSource(url)) {
+      try {
+        return await ModelAsset.fromGzipBlob(await response.blob());
+      } catch (err) {
+        throw new Error(`Failed to parse gzip ModelAsset JSON: ${url} (${err?.message ?? err})`);
+      }
     }
     try {
       return new ModelAsset(await response.json());
@@ -205,10 +259,14 @@ export default class ModelAsset {
     return formatJSON(this.data, indent);
   }
 
-  // 現在の ModelAsset を JSON ファイルとしてダウンロードする
-  downloadJSON(filename = "modelasset.json", indent = 2) {
-    const text = this.toJSONText(indent);
-    const blob = new Blob([text], { type: "application/json" });
+  // 現在の ModelAsset を gzip Blob へ変換する
+  // download を伴わない経路でも使えるよう、Blob 生成と保存開始を分離しておく
+  async toJSONGzBlob(indent = 2) {
+    return await ModelAsset.compressTextToGzipBlob(this.toJSONText(indent));
+  }
+
+  // Blob を一時 URL にして browser download を開始する
+  static downloadBlob(blob, filename) {
     const url = URL.createObjectURL(blob);
     const anchor = document.createElement("a");
 
@@ -219,7 +277,26 @@ export default class ModelAsset {
     anchor.click();
     document.body.removeChild(anchor);
     setTimeout(() => URL.revokeObjectURL(url), 0);
+  }
+
+  // 現在の ModelAsset を JSON ファイルとしてダウンロードする
+  downloadJSON(filename = "modelasset.json", indent = 2) {
+    const text = this.toJSONText(indent);
+    const blob = new Blob([text], { type: "application/json" });
+    ModelAsset.downloadBlob(blob, filename);
     return text;
+  }
+
+  // 現在の ModelAsset を gzip 圧縮済み JSON としてダウンロードする
+  // 非同期 API なので、呼び出し側は await し、未対応環境の例外を UI に表示する
+  async downloadJSONGz(filename = "modelasset.json.gz", indent = 2) {
+    const text = this.toJSONText(indent);
+    const blob = await ModelAsset.compressTextToGzipBlob(text);
+    ModelAsset.downloadBlob(blob, filename);
+    return {
+      text,
+      blob
+    };
   }
 
   // 妥当性検証を実行する

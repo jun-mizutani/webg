@@ -292,9 +292,10 @@
           <div class="file-row">
             <label class="file-label">
               Load Model
-              <input id="modelFile" type="file" accept=".json,.gltf,.glb,.dae,application/json,model/gltf+json,model/gltf-binary" />
+              <input id="modelFile" type="file" accept=".json,.json.gz,.gltf,.glb,.dae,application/json,application/gzip,model/gltf+json,model/gltf-binary" />
             </label>
             <button class="command-button ok" id="saveJson">Save ModelAsset JSON</button>
+            <button class="command-button ok" id="saveJsonGz">Save ModelAsset GZ</button>
             <button class="command-button ok" id="saveGlb">Save GLB</button>
           </div>
           <p>ロード後は選択中の mesh が自動で取り込まれます。複数 mesh のファイルでは、select で別 mesh や all objects を選び、Use Mesh で再取り込みできます。</p>
