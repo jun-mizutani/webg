@@ -22,6 +22,8 @@
 - `G` / `R` / `S` / `E` で transform mode に入り、マウス移動で選択頂点または選択 face 構成頂点を移動 / 回転 / scale / 押し出しできます。E の押し出しは、複数選択 face を個別に押し出すのではなく、選択領域の共有辺を内部辺として扱い、外周 edge だけに側面を作る region extrude として動作します。左クリックで確定、Escape または右クリックでキャンセルします
 - Blender と同様に Object Mode / Edit Mode を持ちます。Object Mode ではオブジェクト全体をクリック選択し、G/R/S で選択オブジェクト全体を移動 / 回転 / scale できます。Edit Mode ではアクティブオブジェクトの頂点 / face を編集します。Tab で mode を切り替えます
 - A キーは mode に応じて全選択します。Object Mode では全 object、Edit Mode ではアクティブ object の全頂点を選択し、全頂点が含まれる face も選択状態にします
+- W キーまたは Object Wireframe button で Object Mode の mesh 表示を wireframe に切り替えられます。表示用 Shape は編集データから作る ModelAsset の `polygonLoops` を持つため、`Shape.addPolygon([a,b,c,d])` や Quad 作成で作った四角面は対角線を出さず、face loop の外周だけを表示します。Edit Mode では marker / edge overlay を優先するため Object Wireframe は解除されます
+- X キー、Delete / Backspace、Delete button で選択対象を削除します。Object Mode では選択 object を削除し、Edit Mode の Vertex Select / Add Vertex では選択 vertex と参照 face を削除し、Face Select では選択 face だけを削除して vertex は残します
 - screen 平面移動、法線方向移動、選択中心基準 scale は補助操作として J/L/I/K、U/O、N/M のキー操作でも使えます
 - 選択領域の外周を押し出す face 押出、undo / redo を備えています
 - 選択 face の表裏反転を備えています
@@ -60,6 +62,9 @@
 - Load Model で `.json` / `.glb` / `.gltf` / `.dae` を読み込み、`.glb` では `embedded_glb_viewer` と同じ正規化済み mesh が編集対象へ取り込まれることを確認します。複数 mesh node がある場合は mesh select に `all objects` が出て、Use Mesh で複数オブジェクトとして取り込めることを確認します
 - Object Mode で各オブジェクトをクリック選択し、Edit Mode で選択したアクティブオブジェクトだけの頂点 marker が出ることを確認します
 - Object Mode で A を押すと全オブジェクトが選択され、Edit Mode で A を押すとアクティブオブジェクトの全頂点と全 face が選択されることを確認します
+- Object Wireframe button または W で Object Mode の wireframe 表示を切り替え、Quad の四角面では対角線が出ず、外周 edge だけが表示されることを確認します
+- Object Mode で X を押すと選択 object が削除され、残った object があれば次の active object として表示されることを確認します
+- Edit Mode の Vertex Select で X を押すと選択 vertex と参照 face が削除され、Face Select で X を押すと選択 face だけが削除されて vertex が残ることを確認します
 - Object Mode でオブジェクトを選択し、G / R / S を押してからマウス移動、左クリック確定で選択オブジェクト全体を変形できることを確認します
 - Save ModelAsset JSON で `webgmodeler_modelasset.json` が保存され、positions / indices / polygonLoops が含まれることを確認します
 - Save ModelAsset GZ で `webgmodeler_modelasset.json.gz` が保存され、Load Model で同じ `.json.gz` を読み戻せることを確認します
@@ -73,6 +78,8 @@
 - Shift + 左ドラッグ: 矩形選択を既存選択へ追加
 - Use Mesh: 読み込み済み asset から mesh select の現在項目を編集対象へ再取り込み
 - A: Object Mode では全 object、Edit Mode では全頂点を選択
+- W / Object Wireframe: Object Mode の wireframe 表示を切り替え
+- X: 現在 mode / tool の選択対象を削除。Object Mode では object、Vertex Select では vertex と参照 face、Face Select では face だけを削除
 - Object Mode の G / R / S: 選択オブジェクト全体を移動 / 回転 / scale
 - Edit Mode: アクティブオブジェクトの Vertex Select / Face Select / Add Vertex を有効化
 - Tab: Object Mode / Edit Mode を切り替え
@@ -92,7 +99,7 @@
 - S: Scale mode。マウス移動で選択対象を選択中心まわりに拡大縮小、左クリックで確定
 - E / Extrude: Extrude mode。マウス移動で選択 face 領域の外周を法線方向へ押し出し、左クリックで確定
 - Shift + 左クリック: 選択の追加 / 解除
-- Delete / Backspace / Delete button: 選択頂点または選択 face を削除
+- Delete / Backspace / Delete button: X と同じ削除処理を実行
 - Triangle: 選択頂点 3 個から face を作成
 - Quad: 選択頂点 4 個から face を作成
 - Flip Face / F: 選択 face の表裏を反転

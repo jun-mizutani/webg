@@ -1,6 +1,6 @@
 // -------------------------------------------------
 // webgmodeler edit operations
-//   editOperations.js 2026/04/26
+//   editOperations.js 2026/04/27
 // -------------------------------------------------
 
 import { add3, mul3, sub3 } from "./math3d.js";
@@ -10,7 +10,48 @@ export function createEditOperations(ctx) {
   // keyboard 補助操作で使う 1 回分の移動量を model size から決める
   const getKeyboardEditStep = () => Math.max(0.04, ctx.getEditorBounds().size * 0.035);
 
-  // editOperations の削除処理を UI から呼び出す薄い wrapper
+  // 選択 face だけを削除する
+  // face を削除しても vertex は残すため、穴を開ける操作や面の張り直しに使える
+  function deleteSelectedFaces() {
+    const { editor } = ctx;
+    if (!ctx.isEditMode()) {
+      ctx.setMessage("switch to edit mode before deleting faces");
+      return;
+    }
+    if (editor.selectedFaces.size === 0) {
+      ctx.setMessage("select faces before deleting faces");
+      return;
+    }
+    ctx.pushUndo("delete faces");
+    editor.faces = editor.faces.filter((face) => !editor.selectedFaces.has(face.id));
+    ctx.clearSelection();
+    ctx.rebuildScene();
+    ctx.setMessage("deleted faces");
+  }
+
+  // 選択 vertex と、その vertex を参照する face を削除する
+  // dangling face を残すと ModelAsset 構築時に壊れるため、参照 face は必ず同時に消す
+  function deleteSelectedVertices() {
+    const { editor } = ctx;
+    if (!ctx.isEditMode()) {
+      ctx.setMessage("switch to edit mode before deleting vertices");
+      return;
+    }
+    if (editor.selectedVertices.size === 0) {
+      ctx.setMessage("select vertices before deleting vertices");
+      return;
+    }
+    ctx.pushUndo("delete vertices");
+    const removedVertices = new Set(editor.selectedVertices);
+    editor.faces = editor.faces.filter((face) => !face.indices.some((vertexId) => removedVertices.has(vertexId)));
+    editor.vertices = editor.vertices.filter((vertex) => !removedVertices.has(vertex.id));
+    ctx.clearSelection();
+    ctx.rebuildScene();
+    ctx.setMessage("deleted vertices");
+  }
+
+  // 現在の Edit Mode tool に合わせて削除対象を決める
+  // Face Select では face だけ、Vertex Select / Add Vertex では vertex と参照 face を削除する
   function deleteSelected() {
     const { editor } = ctx;
     if (!ctx.isEditMode()) {
@@ -21,19 +62,11 @@ export function createEditOperations(ctx) {
       ctx.setMessage("nothing selected");
       return;
     }
-    ctx.pushUndo("delete selection");
-    const deleteFacesOnly = editor.selectedFaces.size > 0;
-    const removedVertices = deleteFacesOnly
-      ? new Set()
-      : new Set(editor.selectedVertices);
-    editor.faces = editor.faces.filter((face) => {
-      if (editor.selectedFaces.has(face.id)) return false;
-      return !face.indices.some((vertexId) => removedVertices.has(vertexId));
-    });
-    editor.vertices = editor.vertices.filter((vertex) => !removedVertices.has(vertex.id));
-    ctx.clearSelection();
-    ctx.rebuildScene();
-    ctx.setMessage("deleted selection");
+    if (editor.tool === "selectFace") {
+      deleteSelectedFaces();
+      return;
+    }
+    deleteSelectedVertices();
   }
 
   // editOperations の face 作成処理を UI から呼び出す薄い wrapper
@@ -271,6 +304,8 @@ export function createEditOperations(ctx) {
   return {
     createExtrusion,
     deleteSelected,
+    deleteSelectedFaces,
+    deleteSelectedVertices,
     extrudeSelectedFaces,
     flipSelectedFaces,
     makeFaceFromSelection,

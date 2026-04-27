@@ -1,6 +1,6 @@
 // -------------------------------------------------
 // skinning_basic sample
-//   main.js       2026/04/12
+//   main.js       2026/04/27
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // -------------------------------------------------
@@ -28,7 +28,7 @@ const OBJECT_HEAD_DEG = 45.0;
 const ROOT_YAW_DEG = 8.0;
 const CHILD_BEND_DEG = 60.0;
 
-const start = async ({ screen, gpu, setStatus, setViewportLayout, startLoop }) => {
+const start = async ({ screen, gpu, setStatus, setViewportLayout, startLoop, document }) => {
   const shader = new SmoothShader(gpu);
   await shader.init();
   Shape.prototype.shader = shader;
@@ -58,6 +58,22 @@ const start = async ({ screen, gpu, setStatus, setViewportLayout, startLoop }) =
 
   skeleton.setBoneShape(createDebugBoneShape(gpu, boneShader, 0.6));
   skeleton.showBone(true);
+
+  let wireframe = false;
+  const setWireframeState = (enabled) => {
+    // skinned mesh のまま Shape.setWireframe() を切り替え、
+    // Wireframe shader が SmoothShader と同じ bone palette を受け取れることを確認する
+    wireframe = !!enabled;
+    shape.setWireframe(wireframe);
+  };
+
+  document.addEventListener("keydown", (event) => {
+    // W は描画 shader だけを line-list 用へ差し替え、skeleton / animation / texture 状態は保持する
+    // この unittest では skinned mesh の線がボーン変形に追従するかを最小手順で確認する
+    if (event.key.toLowerCase() === "w") {
+      setWireframeState(!wireframe);
+    }
+  });
 
   const space = new Space();
   const eye = space.addNode(null, "eye");
@@ -90,8 +106,10 @@ const start = async ({ screen, gpu, setStatus, setViewportLayout, startLoop }) =
       + "shader: SmoothShader (has_bone=1, normal map=off)\n"
       + "mesh: two-bone prism\n"
       + "texture: num256.png\n"
+      + `wireframe: ${wireframe ? "on" : "off"}\n`
       + "debug bones: on\n"
-      + "observe: mesh follows bones smoothly"
+      + "observe: mesh follows bones smoothly\n"
+      + "[w] toggle skinned wireframe"
     );
   });
 };

@@ -282,7 +282,7 @@
         <p class="hint">
           中ボタンドラッグまたは Option + 左ドラッグで orbit、Shift 併用で PAN、Ctrl 併用または wheel で zoom。
           Object Mode でオブジェクト選択、Tab / Edit Mode でアクティブオブジェクトを編集します。Vertex/Face Select でクリック選択、modifier なしの左ドラッグで矩形選択、A で全選択です。
-          G/R/S/E の後はマウス移動で移動/回転/scale/押し出し、左クリックで確定します。補助編集は J/L/I/K、U/O、N/M、面反転は F を使います。
+          W で Object Mode の wireframe を切り替え、X で現在 mode / tool の選択対象を削除します。G/R/S/E の後はマウス移動で移動/回転/scale/押し出し、左クリックで確定します。補助編集は J/L/I/K、U/O、N/M、面反転は F を使います。
         </p>
       </div>
 
@@ -326,6 +326,9 @@
 
         <section class="side-section">
           <h2>表示</h2>
+          <div class="action-row">
+            <button class="tool-button" id="objectWireframe" aria-pressed="false">Object Wireframe</button>
+          </div>
           <label class="setting-row" for="overlayAlpha">
             <span>Overlay Alpha</span>
             <input id="overlayAlpha" type="range" min="0.05" max="1" step="0.05" value="0.65" />

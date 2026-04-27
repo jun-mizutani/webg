@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// Shape.js        2026/04/20
+// Shape.js        2026/04/27
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // ---------------------------------------------
@@ -605,7 +605,8 @@ export default class Shape {
         }
       }
     } else {
-      // polygon 情報が無い旧データだけ、従来どおり triangle 辺から線枠を作る
+      // polygon 情報が無いデータは、入力された triangle mesh そのものを尊重する
+      // 四角面として表示したい場合は addPolygon([a,b,c,d]) / addPlane() で polygonLoops を残す
       for (let i = 0; i + 2 < this.indicesArray.length; i += 3) {
         const a = this.indicesArray[i];
         const b = this.indicesArray[i + 1];
@@ -734,7 +735,9 @@ export default class Shape {
     const baseShader = this.shader;
     let shd = baseShader;
     const wireParam = this.shaderParam?.wireframe;
-    const useWire = (this.wireframeMode || wireParam === 1 || wireParam === true) && !this.hasSkeleton;
+    // Wireframe は SmoothShader と同じ vertex slot0/slot1 と bone palette group2 を受け取れる
+    // そのため skinned shape でも通常 shader と同じ Shape.draw() の処理フローで線描画へ切り替えられる
+    const useWire = this.wireframeMode || wireParam === 1 || wireParam === true;
     if (useWire) {
       shd = this._getWireframeShader(baseShader);
       if (!shd) shd = baseShader;

@@ -95,6 +95,7 @@ const ui = {
   flipFaces: null,
   undo: null,
   redo: null,
+  objectWireframe: null,
   overlayAlpha: null,
   overlayAlphaValue: null,
   overlayMarkerColor: null,
@@ -122,6 +123,7 @@ let markerOverlayCameraKey = "";
 let overlayAlpha = 0.65;
 let overlayMarkerColor = [0.0, 0.0, 0.0];
 let overlayEdgeColor = [0.0, 0.0, 0.0];
+let objectWireframe = false;
 let importedAsset = null;
 let importedMeshes = [];
 let lastSavedName = "-";
@@ -355,6 +357,7 @@ function cacheUi() {
   ui.flipFaces = document.getElementById("flipFaces");
   ui.undo = document.getElementById("undo");
   ui.redo = document.getElementById("redo");
+  ui.objectWireframe = document.getElementById("objectWireframe");
   ui.overlayAlpha = document.getElementById("overlayAlpha");
   ui.overlayAlphaValue = document.getElementById("overlayAlphaValue");
   ui.overlayMarkerColor = document.getElementById("overlayMarkerColor");
@@ -406,6 +409,7 @@ function updateStatus() {
     `activeObject=${activeObject ? `${activeObject.id}:${activeObject.name}` : "-"}`,
     `objects=${editor.objects.length}`,
     `selectedObjects=${editor.selectedObjectIds.size} [${objectIds}]`,
+    `objectWireframe=${objectWireframe ? "on" : "off"}`,
     `tool=${editor.tool}`,
     `vertices=${editor.vertices.length} faces=${editor.faces.length}`,
     `selectedVertices=${editor.selectedVertices.size} [${vertexIds}]`,
@@ -431,6 +435,7 @@ function updateStatus() {
     { line: "webgmodeler" },
     { label: "Mode", value: editor.mode },
     { label: "Tool", value: editor.tool },
+    { label: "Wire", value: objectWireframe ? "on" : "off" },
     { label: "V/F", value: `${editor.vertices.length}/${editor.faces.length}` },
     { label: "Selected", value: `o${editor.selectedObjectIds.size} v${editor.selectedVertices.size} f${editor.selectedFaces.size}` },
     { label: "Xform", value: transformState.mode ?? "-" },
@@ -465,6 +470,10 @@ function updateCommandAvailability() {
     button.setAttribute("aria-pressed", button.dataset.tool === editor.tool ? "true" : "false");
     button.disabled = !editMode;
   }
+  if (ui.objectWireframe) {
+    ui.objectWireframe.setAttribute("aria-pressed", objectWireframe ? "true" : "false");
+    ui.objectWireframe.disabled = editMode;
+  }
   // DOM control の disabled 状態を null 安全に切り替える
   setDisabled(ui.makeTriangle, !editMode || selectedVertexCount !== 3);
   // DOM control の disabled 状態を null 安全に切り替える
@@ -474,7 +483,9 @@ function updateCommandAvailability() {
   // DOM control の disabled 状態を null 安全に切り替える
   setDisabled(ui.flipFaces, !editMode || selectedFaceCount === 0);
   // DOM control の disabled 状態を null 安全に切り替える
-  setDisabled(ui.deleteSelected, !editMode || !selectedAnything);
+  setDisabled(ui.deleteSelected, editMode
+    ? !selectedAnything
+    : editor.selectedObjectIds.size === 0);
   // DOM control の disabled 状態を null 安全に切り替える
   setDisabled(ui.undo, editor.undoStack.length === 0);
   // DOM control の disabled 状態を null 安全に切り替える
@@ -1083,6 +1094,12 @@ function rebuildMeshShape() {
     const selectedObject = editor.mode === EDITOR_MODE_OBJECT
       && editor.selectedObjectIds.has(object.id);
     const shape = makeShapeFromAsset(asset, selectedObject ? MATERIAL.selectedObject : MATERIAL.mesh);
+    // Object Mode の wireframe は Shape が保持する polygonLoops から線を作る
+    // color は materialParams 側の値をそのまま使い、edge overlay 用の黒や選択 face 用の黄色を混ぜない
+    // そのため object の通常色を保ったまま、Quad / addPolygon の face loop 外周だけを表示できる
+    if (editor.mode === EDITOR_MODE_OBJECT && objectWireframe) {
+      shape.setWireframe(true);
+    }
     const node = app.space.addNode(meshNode, `object-${object.id}`);
     node.webgmodelerKind = "object";
     node.webgmodelerObjectId = object.id;
@@ -1656,6 +1673,9 @@ function setEditorMode(mode) {
       editor.selectedObjectIds = new Set([editor.activeObjectId]);
     }
   } else {
+    // Edit Mode では vertex marker / edge overlay / selected face overlay が主役になる
+    // Object Wireframe を残すと通常 mesh が line-list 化され、overlay の見え方と役割が混ざるため解除する
+    objectWireframe = false;
     if (!getActiveObject() && editor.objects.length > 0) {
       // Object Mode の object 選択を追加または置換する
       selectObject(editor.objects[0].id, false);
@@ -1926,7 +1946,60 @@ function selectAllForCurrentMode() {
 
 // editOperations の削除処理を UI から呼び出す薄い wrapper
 function deleteSelected() {
+  if (editor.mode === EDITOR_MODE_OBJECT) {
+    deleteSelectedObjects();
+    return;
+  }
   editOperations.deleteSelected();
+}
+
+// Object Mode で選択 object を削除する
+// active object の編集配列を object 一覧へ書き戻してから削除し、残った object を新しい active にする
+function deleteSelectedObjects() {
+  if (editor.mode !== EDITOR_MODE_OBJECT) {
+    setMessage("switch to object mode before deleting objects");
+    return;
+  }
+  if (editor.selectedObjectIds.size === 0) {
+    setMessage("select objects before deleting objects");
+    return;
+  }
+  pushUndo("delete objects");
+  commitActiveObject();
+  const removedIds = new Set(editor.selectedObjectIds);
+  editor.objects = editor.objects.filter((object) => !removedIds.has(object.id));
+  editor.selectedObjectIds.clear();
+  editor.activeObjectId = null;
+  editor.vertices = [];
+  editor.faces = [];
+  editor.nextVertexId = 1;
+  editor.nextFaceId = 1;
+  if (editor.objects.length > 0) {
+    const nextObject = editor.objects[0];
+    editor.selectedObjectIds = new Set([nextObject.id]);
+    // 指定 object を active にし、編集配列をその object へ接続する
+    activateObject(nextObject.id);
+  }
+  // edit selection の vertex / face を空にする
+  clearSelection();
+  // mesh / selected face / marker の表示をまとめて再構築する
+  rebuildScene();
+  // 最後のユーザー向け message を保存し status を更新する
+  setMessage(`deleted ${removedIds.size} object(s)`);
+}
+
+// Object Mode で mesh 本体を Wireframe shader に切り替える
+// Edit Mode の edge overlay とは別に、object 全体の面ループを Shape.setWireframe() で確認する
+function toggleObjectWireframe() {
+  if (editor.mode !== EDITOR_MODE_OBJECT) {
+    setMessage("switch to object mode before wireframe display");
+    return;
+  }
+  objectWireframe = !objectWireframe;
+  // mesh / selected face / marker の表示をまとめて再構築する
+  rebuildScene();
+  // 最後のユーザー向け message を保存し status を更新する
+  setMessage(`object wireframe ${objectWireframe ? "on" : "off"}`);
 }
 
 // editOperations の face 作成処理を UI から呼び出す薄い wrapper
@@ -2679,6 +2752,8 @@ function installKeyboardHandlers() {
     else if (plainKey && key === "n") scaleSelectionByKeyboard(0.92);
     else if (plainKey && key === "m") scaleSelectionByKeyboard(1.08);
     else if (plainKey && key === "f") flipSelectedFaces();
+    else if (plainKey && key === "w") toggleObjectWireframe();
+    else if (plainKey && key === "x") deleteSelected();
     else if (key === "delete" || key === "backspace") deleteSelected();
     else if (key === "z" && (ev.metaKey || ev.ctrlKey)) undo();
     else if ((key === "y" && (ev.metaKey || ev.ctrlKey)) || (key === "z" && ev.shiftKey && (ev.metaKey || ev.ctrlKey))) redo();
@@ -3152,6 +3227,7 @@ function installDomHandlers() {
     setMessage("new model");
   });
   ui.deleteSelected.addEventListener("click", deleteSelected);
+  ui.objectWireframe?.addEventListener("click", toggleObjectWireframe);
   ui.makeTriangle.addEventListener("click", () => makeFaceFromSelection(3));
   ui.makeQuad.addEventListener("click", () => makeFaceFromSelection(4));
   ui.extrude.addEventListener("click", () => setTransformMode("extrude"));
@@ -3196,6 +3272,7 @@ function refreshDiagnosticsStats() {
     importedMeshCount: importedMeshes.length,
     importedAssetLoaded: importedAsset ? "yes" : "no",
     editorMode: editor.mode,
+    objectWireframe: objectWireframe ? "on" : "off",
     activeObjectId: editor.activeObjectId ?? "-",
     tool: editor.tool,
     dirty: editor.dirty ? "yes" : "no",
@@ -3226,6 +3303,7 @@ function makeProbeReport(frameCount) {
   const pointerDebug = getPointerDebugSnapshot();
   Diagnostics.addDetail(report, `tool=${editor.tool}`);
   Diagnostics.addDetail(report, `mode=${editor.mode}`);
+  Diagnostics.addDetail(report, `objectWireframe=${objectWireframe ? "on" : "off"}`);
   Diagnostics.addDetail(report, `vertices=${editor.vertices.length}`);
   Diagnostics.addDetail(report, `faces=${editor.faces.length}`);
   Diagnostics.addDetail(report, `rawInput=${rawInput.text}`);
@@ -3244,6 +3322,7 @@ function makeProbeReport(frameCount) {
     importedMeshCount: importedMeshes.length,
     importedAssetLoaded: importedAsset ? "yes" : "no",
     editorMode: editor.mode,
+    objectWireframe: objectWireframe ? "on" : "off",
     activeObjectId: editor.activeObjectId ?? "-",
     rawInput: rawInput.text,
     rawInputHistory: rawInput.historyText,
