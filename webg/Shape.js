@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// Shape.js        2026/04/27
+// Shape.js        2026/04/28
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // ---------------------------------------------
@@ -741,9 +741,7 @@ export default class Shape {
     if (useWire) {
       shd = this._getWireframeShader(baseShader);
       if (!shd) shd = baseShader;
-      if (baseShader?.projectionMatrix && shd?.setProjectionMatrix) {
-        shd.setProjectionMatrix(baseShader.projectionMatrix);
-      }
+      this._syncWireframeShaderFromBase(shd, baseShader);
     }
     const pass = this.gpu.passEncoder;
     if (!shd || !pass) return;
@@ -888,11 +886,40 @@ export default class Shape {
     const shd = new Wireframe(this.gpu);
     shd.device = this.gpu.device;
     shd.createResources();
-    if (baseShader?.projectionMatrix && shd.setProjectionMatrix) {
-      shd.setProjectionMatrix(baseShader.projectionMatrix);
-    }
     wireframeShaderCache.set(this.gpu, shd);
     return shd;
+  }
+
+  // 通常シェーダから wireframe へ、描画空間と環境表現に関わる設定を引き継ぐ
+  // Wireframe は GPU ごとにキャッシュされるため、アプリ側で fog を変更したあとも
+  // Shape.draw() の切り替え時に最新の default を反映できるようにする
+  _syncWireframeShaderFromBase(wireShader, baseShader) {
+    if (!wireShader || !baseShader || wireShader === baseShader) {
+      return;
+    }
+    if (baseShader?.projectionMatrix && wireShader.setProjectionMatrix) {
+      wireShader.setProjectionMatrix(baseShader.projectionMatrix);
+    }
+    if (!wireShader.setDefaultParam) {
+      return;
+    }
+    const syncParam = (key) => {
+      const value = baseShader.default?.[key];
+      if (value === undefined) {
+        return;
+      }
+      wireShader.setDefaultParam(key, Array.isArray(value) ? [...value] : value);
+    };
+    syncParam("fog_color");
+    syncParam("fog_near");
+    syncParam("fog_far");
+    syncParam("fog_density");
+    syncParam("fog_mode");
+    const useFog = baseShader.default?.use_fog;
+    if (useFog !== undefined) {
+      const fogMode = baseShader.default?.fog_mode ?? 0.0;
+      wireShader.setDefaultParam("fog_mode", useFog ? (fogMode || 1.0) : 0.0);
+    }
   }
 
   // 直前頂点を上書きする

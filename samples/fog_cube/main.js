@@ -1,6 +1,6 @@
 // -------------------------------------------------
 // fog_cube sample
-//   main.js       2026/04/12
+//   main.js       2026/04/28
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // -------------------------------------------------
@@ -19,6 +19,7 @@ const GUIDE_LINES = [
   "Drag or Arrow keys: orbit camera",
   "[ / ] or wheel: zoom",
   "[1] off  [2] linear  [3] exp fog",
+  "[0] solid  [4] some cube wire  [5] all wire",
   "[q]/[w] near -/+  [a]/[s] far -/+",
   "[z]/[x] density -/+  [c] fog color",
   "[space] pause motion  [r] reset view and fog"
@@ -46,6 +47,10 @@ const DEFAULT_FOG = {
   density: 0.018,
   presetIndex: 0
 };
+
+const WIREFRAME_SOLID = "solid";
+const WIREFRAME_PARTIAL = "partial";
+const WIREFRAME_ALL = "all";
 
 let app = null;
 
@@ -92,6 +97,9 @@ function createPrimitiveNode(app, name, asset, material, position, attitude = [0
   node.setPosition(position[0], position[1], position[2]);
   node.setAttitude(attitude[0], attitude[1], attitude[2]);
   node.addShape(shape);
+  // fog_cube の wireframe 切替では、node から対応 shape を即座に辿れるよう保持する
+  // Node.shapes だけに依存してもよいが、サンプルの意図を読みやすくするため明示する
+  node.fogCubeShape = shape;
   return node;
 }
 
@@ -182,6 +190,12 @@ function modeLabel(mode) {
   return "exp";
 }
 
+function wireframeLabel(mode) {
+  if (mode === WIREFRAME_PARTIAL) return "some cubes";
+  if (mode === WIREFRAME_ALL) return "all";
+  return "solid";
+}
+
 async function start() {
   const initialPreset = FOG_PRESETS[DEFAULT_FOG.presetIndex];
   app = new WebgApp({
@@ -243,7 +257,8 @@ async function start() {
     near: DEFAULT_FOG.near,
     far: DEFAULT_FOG.far,
     density: DEFAULT_FOG.density,
-    presetIndex: DEFAULT_FOG.presetIndex
+    presetIndex: DEFAULT_FOG.presetIndex,
+    wireframeMode: WIREFRAME_SOLID
   };
 
   const applyFog = () => {
@@ -269,6 +284,23 @@ async function start() {
     }
     return shapes;
   };
+  const applyWireframe = () => {
+    // wireframe 表示は fog と同じ scene で見え方を比較するための表示モード
+    // solid / 一部 cube / scene 全体を明示的に切り替え、前状態が残らないよう毎回全 shape を設定する
+    const shapes = getSceneShapes();
+    const allWireframe = state.wireframeMode === WIREFRAME_ALL;
+    for (let i = 0; i < shapes.length; i++) {
+      shapes[i]?.setWireframe?.(allWireframe);
+    }
+    if (state.wireframeMode !== WIREFRAME_PARTIAL) {
+      return;
+    }
+    for (let i = 0; i < scene.cubes.length; i++) {
+      const cubeShape = scene.cubes[i].node?.fogCubeShape ?? scene.cubes[i].node?.shapes?.[0];
+      // 奥行き方向の見え方を比較しやすいよう、各距離列から一部の cube だけを線表示にする
+      cubeShape?.setWireframe?.(i % 3 === 0);
+    }
+  };
   const refreshDiagnosticsStats = (frameCount = app.screen.getFrameCount()) => {
     const envReport = app.checkEnvironment({
       stage: "runtime-check",
@@ -282,6 +314,7 @@ async function start() {
       fogFar: state.far.toFixed(2),
       fogDensity: state.density.toFixed(4),
       fogColor: preset.label,
+      wireframe: wireframeLabel(state.wireframeMode),
       paused: state.paused ? "yes" : "no",
       cubeCount: scene.cubes.length,
       pillarCount: scene.pillars.length,
@@ -300,12 +333,14 @@ async function start() {
     Diagnostics.addDetail(report, `fogMode=${modeLabel(state.mode)}`);
     Diagnostics.addDetail(report, `fogNear=${state.near.toFixed(2)} fogFar=${state.far.toFixed(2)} density=${state.density.toFixed(4)}`);
     Diagnostics.addDetail(report, `fogColor=${preset.label}`);
+    Diagnostics.addDetail(report, `wireframe=${wireframeLabel(state.wireframeMode)}`);
     if (envReport.warnings?.length) {
       Diagnostics.addDetail(report, `envWarning=${envReport.warnings[0]}`);
     }
     Diagnostics.mergeStats(report, {
       frameCount,
       fogMode: modeLabel(state.mode),
+      wireframe: wireframeLabel(state.wireframeMode),
       paused: state.paused ? "yes" : "no",
       cubeCount: scene.cubes.length,
       pillarCount: scene.pillars.length,
@@ -320,13 +355,16 @@ async function start() {
     state.far = DEFAULT_FOG.far;
     state.density = DEFAULT_FOG.density;
     state.presetIndex = DEFAULT_FOG.presetIndex;
+    state.wireframeMode = WIREFRAME_SOLID;
     orbit.setTarget(...DEFAULT_CAMERA.target);
     orbit.setAngles(DEFAULT_CAMERA.yaw, DEFAULT_CAMERA.pitch);
     orbit.setDistance(DEFAULT_CAMERA.distance);
     applyFog();
+    applyWireframe();
   };
 
   applyFog();
+  applyWireframe();
   app.configureDiagnosticsCapture({
     labelPrefix: "fog_cube",
     collect: () => makeProbeReport(app.screen.getFrameCount())
@@ -342,6 +380,16 @@ async function start() {
         state.mode = 1.0;
       } else if (key === "3") {
         state.mode = 2.0;
+      } else if (key === "0") {
+        state.wireframeMode = WIREFRAME_SOLID;
+      } else if (key === "4") {
+        state.wireframeMode = state.wireframeMode === WIREFRAME_PARTIAL
+          ? WIREFRAME_SOLID
+          : WIREFRAME_PARTIAL;
+      } else if (key === "5") {
+        state.wireframeMode = state.wireframeMode === WIREFRAME_ALL
+          ? WIREFRAME_SOLID
+          : WIREFRAME_ALL;
       } else if (key === "q") {
         state.near -= 4.0;
       } else if (key === "w") {
@@ -365,6 +413,7 @@ async function start() {
         return;
       }
       applyFog();
+      applyWireframe();
     }
   });
 
@@ -390,7 +439,8 @@ async function start() {
         `mode=${modeLabel(state.mode)} paused=${state.paused ? "yes" : "no"}`,
         `near=${state.near.toFixed(1)} far=${state.far.toFixed(1)}`,
         `density=${state.density.toFixed(3)} color=${preset.label}`,
-        `yaw=${orbit.orbit.yaw.toFixed(1)} pitch=${orbit.orbit.pitch.toFixed(1)} dist=${orbit.orbit.distance.toFixed(1)}`,
+        `wireframe=${wireframeLabel(state.wireframeMode)}`,
+        `head=${orbit.orbit.head.toFixed(1)} pitch=${orbit.orbit.pitch.toFixed(1)} dist=${orbit.orbit.distance.toFixed(1)}`,
         `env=${envReport.ok ? "OK" : "WARN"}`,
         app.getDiagnosticsStatusLine(),
         app.isDebugUiEnabled() ? app.getProbeStatusLine() : ""

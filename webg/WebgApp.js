@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// WebgApp.js     2026/04/26
+// WebgApp.js     2026/04/28
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // ---------------------------------------------
@@ -1296,21 +1296,22 @@ export default class WebgApp {
       this.fog.mode = Number(options.mode);
     }
 
-    if (typeof this.shader?.setFogColor === "function") {
-      this.shader.setFogColor(this.fog.color);
-    }
-    if (typeof this.shader?.setFogNear === "function") {
-      this.shader.setFogNear(this.fog.near);
-    }
-    if (typeof this.shader?.setFogFar === "function") {
-      this.shader.setFogFar(this.fog.far);
-    }
-    if (typeof this.shader?.setFogDensity === "function") {
-      this.shader.setFogDensity(this.fog.density);
-    }
-    if (typeof this.shader?.setFogMode === "function") {
-      this.shader.setFogMode(this.fog.mode);
-    }
+    const applyShaderFog = (key, value, setterName) => {
+      // WebgApp の fog は scene 全体の基準値なので、shader の default として更新する
+      // Shape.draw() の per-shape parameter 復帰や Wireframe への同期も、この default を参照する
+      if (typeof this.shader?.setDefaultParam === "function") {
+        this.shader.setDefaultParam(key, value);
+        return;
+      }
+      if (typeof this.shader?.[setterName] === "function") {
+        this.shader[setterName](value);
+      }
+    };
+    applyShaderFog("fog_color", this.fog.color, "setFogColor");
+    applyShaderFog("fog_near", this.fog.near, "setFogNear");
+    applyShaderFog("fog_far", this.fog.far, "setFogFar");
+    applyShaderFog("fog_density", this.fog.density, "setFogDensity");
+    applyShaderFog("fog_mode", this.fog.mode, "setFogMode");
     return { ...this.fog, color: [...this.fog.color] };
   }
 

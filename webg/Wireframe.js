@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// Wireframe.js   2026/04/27
+// Wireframe.js   2026/04/28
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // ---------------------------------------------
@@ -22,11 +22,16 @@ export default class Wireframe extends Shader {
 
     this.default = {
       color: [0.2, 0.95, 0.2, 1.0],
-      has_bone: 0
+      has_bone: 0,
+      fog_color: [0.1, 0.15, 0.1, 1.0],
+      fog_near: 20.0,
+      fog_far: 80.0,
+      fog_density: 0.03,
+      fog_mode: 0.0
     };
     this.change = {};
 
-    this.uniformData = new Float32Array(40);
+    this.uniformData = new Float32Array(48);
     this.uniformStride = 256;
     this.maxUniforms = 2048;
     this.dynamicOffsetGroup0 = true;
@@ -43,6 +48,8 @@ export default class Wireframe extends Shader {
     this.OFF_MV = 16;
     this.OFF_COLOR = 32;
     this.OFF_FLAGS = 36; // hasBone/unused/unused/unused
+    this.OFF_FOG_COLOR = 40;
+    this.OFF_FOG_PARAMS = 44; // near/far/density/mode
   }
 
   // line-list用WGSL・Pipeline・Uniformを作成する
@@ -54,6 +61,8 @@ struct Uniforms {
   modelView : mat4x4f,
   color : vec4f,
   flags : vec4f,
+  fogColor : vec4f,
+  fogParams : vec4f,
 };
 
 struct SkinUniforms {
@@ -74,6 +83,7 @@ struct VSIn {
 struct VSOut {
   @builtin(position) position : vec4f,
   @location(0) color : vec4f,
+  @location(1) vPosition : vec3f,
 };
 
 @vertex
@@ -116,12 +126,27 @@ fn vsMain(input : VSIn) -> VSOut {
   let worldPos = uniforms.modelView * skinMat * vec4f(input.position, 1.0);
   output.position = uniforms.proj * worldPos;
   output.color = uniforms.color;
+  output.vPosition = worldPos.xyz;
   return output;
 }
 
 @fragment
 fn fsMain(input : VSOut) -> @location(0) vec4f {
-  return input.color;
+  let fogDistance = length(input.vPosition);
+  let fogNear = uniforms.fogParams.x;
+  let fogFar = uniforms.fogParams.y;
+  let fogDensity = uniforms.fogParams.z;
+  let fogMode = uniforms.fogParams.w;
+  var fogFactor = 1.0;
+  if (fogMode > 0.5 && fogMode < 1.5) {
+    let fogRange = max(fogFar - fogNear, 0.0001);
+    let linearFactor = clamp((fogFar - fogDistance) / fogRange, 0.0, 1.0);
+    let linearWeight = clamp(fogDensity * 50.0, 0.0, 1.0);
+    fogFactor = 1.0 - (1.0 - linearFactor) * linearWeight;
+  } else if (fogMode >= 1.5) {
+    fogFactor = clamp(exp(-fogDensity * fogDistance), 0.0, 1.0);
+  }
+  return vec4f(mix(uniforms.fogColor.rgb, input.color.rgb, fogFactor), input.color.a);
 }
 `;
 
@@ -193,6 +218,11 @@ fn fsMain(input : VSOut) -> @location(0) vec4f {
     this.createDefaultBoneBindGroup();
     this.setColor(this.default.color);
     this.setHasBone(this.default.has_bone);
+    this.setFogColor(this.default.fog_color);
+    this.setFogNear(this.default.fog_near);
+    this.setFogFar(this.default.fog_far);
+    this.setFogDensity(this.default.fog_density);
+    this.setFogMode(this.default.fog_mode);
   }
 
   // Group0（Uniform）BindGroupを返す
@@ -304,6 +334,43 @@ fn fsMain(input : VSOut) -> @location(0) vec4f {
     this.updateUniforms();
   }
 
+  // フォグ色 `[r,g,b,a]` を設定する
+  // 線描画では alpha は線色側を維持し、rgb だけを距離に応じて補間する
+  setFogColor(color) {
+    this.uniformData.set(color, this.OFF_FOG_COLOR);
+    this.updateUniforms();
+  }
+
+  // 線形フォグ開始距離を設定する
+  setFogNear(value) {
+    this.uniformData[this.OFF_FOG_PARAMS + 0] = value;
+    this.updateUniforms();
+  }
+
+  // 線形フォグ終了距離を設定する
+  setFogFar(value) {
+    this.uniformData[this.OFF_FOG_PARAMS + 1] = value;
+    this.updateUniforms();
+  }
+
+  // 指数フォグ密度を設定する
+  setFogDensity(value) {
+    this.uniformData[this.OFF_FOG_PARAMS + 2] = value;
+    this.updateUniforms();
+  }
+
+  // フォグモードを設定する 0=off 1=linear 2=exp
+  setFogMode(value) {
+    this.uniformData[this.OFF_FOG_PARAMS + 3] = value;
+    this.updateUniforms();
+  }
+
+  // 既存の fog_mode を保ったまま ON/OFF だけ切り替える
+  setUseFog(flag) {
+    const fogMode = this.change.fog_mode ?? this.default.fog_mode;
+    this.setFogMode(flag ? fogMode : 0.0);
+  }
+
   // bone palette を skeleton ごとの専用 buffer へ書き込む
   setMatrixPalette(matrixPalette, skinSource = this.manualSkinSource) {
     if (!matrixPalette) {
@@ -327,5 +394,24 @@ fn fsMain(input : VSOut) -> @location(0) vec4f {
   doParameter(param) {
     this.updateParam(param, "color", this.setColor.bind(this));
     this.updateParam(param, "has_bone", this.setHasBone.bind(this));
+    this.updateParam(param, "fog_color", this.setFogColor.bind(this));
+    this.updateParam(param, "fog_near", this.setFogNear.bind(this));
+    this.updateParam(param, "fog_far", this.setFogFar.bind(this));
+    this.updateParam(param, "fog_density", this.setFogDensity.bind(this));
+    this.updateParam(param, "fog_mode", this.setFogMode.bind(this));
+    this.updateParam(param, "use_fog", this.setUseFog.bind(this));
+  }
+
+  // default 値を更新し、通常シェーダから引き継いだ設定を即時反映する
+  setDefaultParam(key, value) {
+    this.default[key] = value;
+    if (key === "color") this.setColor(value);
+    else if (key === "has_bone") this.setHasBone(value);
+    else if (key === "fog_color") this.setFogColor(value);
+    else if (key === "fog_near") this.setFogNear(value);
+    else if (key === "fog_far") this.setFogFar(value);
+    else if (key === "fog_density") this.setFogDensity(value);
+    else if (key === "fog_mode") this.setFogMode(value);
+    else if (key === "use_fog") this.setFogMode(value ? 1.0 : 0.0);
   }
 }

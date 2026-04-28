@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// EyeRig.js      2026/04/26
+// EyeRig.js      2026/04/28
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // ---------------------------------------------
@@ -166,7 +166,10 @@ export default class EyeRig {
         "shift"
       ),
       dragZoomModifierKey: util.readKeyOption(
-        [{ value: options.orbit?.dragZoomModifierKey, label: "options.orbit.dragZoomModifierKey" }],
+        [{
+          value: options.orbit?.dragZoomModifierKey ?? undefined,
+          label: "options.orbit.dragZoomModifierKey"
+        }],
         "orbit.dragZoomModifierKey",
         null
       ),

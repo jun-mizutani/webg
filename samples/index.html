@@ -563,6 +563,7 @@ pre { background: #f6f8fa; border: 1px solid #d0d7de; padding: 12px; overflow-x:
 - `EyeRig(type="orbit")`: ドラッグ、矢印キー、ホイールで視点を調整
 - `Primitive`: floor、wall、cube、pillar の形状を `ModelAsset` として生成
 - `Shape.setMaterial("smooth-shader", ...)`: 各 object に fog が掛かる標準材質を適用
+- `Shape.setWireframe()`: 一部 cube または scene 全体を wireframe 表示に切り替え、wireframe でも fog が効くことを確認
 - `Message`: 操作ガイドと fog 状態の表示
 
 確認ポイント
@@ -570,6 +571,7 @@ pre { background: #f6f8fa; border: 1px solid #d0d7de; padding: 12px; overflow-x:
 - `Q` / `W` で `near`、`A` / `S` で `far` を変え、linear fog の開始位置と終端位置が想定どおり動くかを確認します。
 - `Z` / `X` で `density` を変え、exp fog の減衰の強さが滑らかに変化するかを確認します。
 - `C` で fog color を切り替えたとき、背景色と fog 色が揃って scene 全体の空気感が変わることを確認します。暗い青系だけでなく、白い霧のような preset も含まれます。
+- `4` で一部の cube だけを wireframe 表示にし、`5` で scene 全体を wireframe 表示にします。wireframe の線も通常描画と同じ fog 設定で遠景に溶け込むことを確認します。
 - orbit camera を動かしても、object 単位ではなく view 距離ベースで fog が掛かり続けることを確認します。
 
 操作説明
@@ -578,6 +580,9 @@ pre { background: #f6f8fa; border: 1px solid #d0d7de; padding: 12px; overflow-x:
 - `1`: fog off
 - `2`: linear fog
 - `3`: exp fog
+- `0`: solid 表示へ戻す
+- `4`: 一部 cube の wireframe 表示を切替
+- `5`: scene 全体の wireframe 表示を切替
 - `Q` / `W`: fog near を減少 / 増加
 - `A` / `S`: fog far を減少 / 増加
 - `Z` / `X`: fog density を減少 / 増加
