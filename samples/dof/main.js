@@ -272,7 +272,7 @@ async function start() {
   const orbit = app.createOrbitEyeRig({
     target: [0.0, 0.0, 0.0],
     distance: 36.0,
-    head: 18.0,
+    yaw: 18.0,
     pitch: -10.0,
     minDistance: 16.0,
     maxDistance: 88.0,

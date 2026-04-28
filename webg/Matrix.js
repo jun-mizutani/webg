@@ -173,15 +173,15 @@ export default class Matrix {
     return [rx, ry, rz];
   }
 
-  // webg順Euler(Y/X/Z)で行列を構築する
-  setByEuler(head, pitch, bank) {
+  // webg順Euler(Y/X/Z: yaw/pitch/roll)で行列を構築する
+  setByEuler(yaw, pitch, roll) {
     let a = this.mat;
-    let cosZ = Math.cos(RAD(bank ));
+    let cosZ = Math.cos(RAD(roll ));
     let cosX = Math.cos(RAD(pitch));
-    let cosY = Math.cos(RAD(head ));
-    let sinZ = Math.sin(RAD(bank ));
+    let cosY = Math.cos(RAD(yaw ));
+    let sinZ = Math.sin(RAD(roll ));
     let sinX = Math.sin(RAD(pitch));
-    let sinY = Math.sin(RAD(head ));
+    let sinY = Math.sin(RAD(yaw ));
 
     let cosYcosZ = cosZ * cosY;
     let sinYsinZ = sinZ * sinY;
@@ -202,12 +202,12 @@ export default class Matrix {
     a[15] = 1.0;
   }
 
-  // webg順Eulerへ変換して返す
+  // webg順Euler(Y/X/Z: yaw/pitch/roll)へ変換して返す
   matToEuler() {
-    let rz = DEG(-Math.atan2(this.mat[4], this.mat[5]));  //  bank
+    let rz = DEG(-Math.atan2(this.mat[4], this.mat[5]));  //  roll
     let rx = DEG(Math.asin(this.mat[6]));                 //  pitch
-    let ry = DEG(-Math.atan2(this.mat[2], this.mat[10])); //  head
-    return [ry, rx, rz];             //  [head, pitch, bank]
+    let ry = DEG(-Math.atan2(this.mat[2], this.mat[10])); //  yaw
+    return [ry, rx, rz];             //  [yaw, pitch, roll]
   }
 
   // 平行移動成分を設定する
@@ -578,9 +578,9 @@ export default class Matrix {
     let sz = Math.sqrt( m[2]*m[2] + m[6]*m[6] + m[10]*m[10] );
     let fmt = "sx:% 8.11e   sy:% 8.11e   sz:%8.11e\n";
     util.printf(fmt, sx, sy, sz);
-    let hpb = this.matToEuler();
-    fmt = "h: % 8.11e   p: % 8.11e   b: : % 8.11e\n"
-    util.printf(fmt, hpb[0], hpb[1], hpb[2]);
+    let ypr = this.matToEuler();
+    fmt = "yaw: % 8.11e   pitch: % 8.11e   roll: % 8.11e\n"
+    util.printf(fmt, ypr[0], ypr[1], ypr[2]);
   }
 
 }  // class Matrix

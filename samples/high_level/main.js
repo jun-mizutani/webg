@@ -23,7 +23,7 @@ const CAMERA_CONFIG = {
   distance: 8.0,
   yaw: 0.0,
   pitch: 0.0,
-  bank: 0.0
+  roll: 0.0
 };
 const ROTATE_Y_SPEED = 0.8;
 const ROTATE_X_SPEED = 0.4;
@@ -81,7 +81,7 @@ const setupOrbitCamera = () => {
   orbit = app.createOrbitEyeRig({
     target: CAMERA_CONFIG.target,
     distance: CAMERA_CONFIG.distance,
-    head: CAMERA_CONFIG.yaw,
+    yaw: CAMERA_CONFIG.yaw,
     pitch: CAMERA_CONFIG.pitch,
     minDistance: 4.0,
     maxDistance: 18.0,

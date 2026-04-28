@@ -123,9 +123,9 @@ export default class SceneLoader {
     }
     const requiredNumbers = [
       ["distance", camera.distance],
-      ["head", camera.head],
+      ["yaw", camera.yaw],
       ["pitch", camera.pitch],
-      ["bank", camera.bank],
+      ["roll", camera.roll],
       ["viewAngle", camera.viewAngle],
       ["near", camera.near],
       ["far", camera.far]
@@ -138,16 +138,16 @@ export default class SceneLoader {
     }
     this.app.camera.target = [...target];
     this.app.camera.distance = camera.distance;
-    this.app.camera.head = camera.head;
+    this.app.camera.yaw = camera.yaw;
     this.app.camera.pitch = camera.pitch;
-    this.app.camera.bank = camera.bank;
+    this.app.camera.roll = camera.roll;
     this.app.viewAngle = camera.viewAngle;
     this.app.projectionNear = camera.near;
     this.app.projectionFar = camera.far;
 
     if (this.app.cameraRig && this.app.eye) {
       this.app.cameraRig.setPosition(...this.app.camera.target);
-      this.app.cameraRig.setAttitude(this.app.camera.head, this.app.camera.pitch, this.app.camera.bank);
+      this.app.cameraRig.setAttitude(this.app.camera.yaw, this.app.camera.pitch, this.app.camera.roll);
       this.app.eye.setPosition(0.0, 0.0, this.app.camera.distance);
       this.app.eye.setAttitude(0.0, 0.0, 0.0);
     }

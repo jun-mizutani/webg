@@ -36,7 +36,7 @@ export default class CoordinateSystem {
 
   // 姿勢情報をデバッグ出力する
   print(str, q, pos) {
-    util.printf("%s h.%8.3f p.%8.3f b.%8.3f ", str, q.quatToEuler());
+    util.printf("%s yaw.%8.3f pitch.%8.3f roll.%8.3f ", str, ...q.quatToEuler());
     util.printf(" x.%9.4f y.%9.4f z.%9.4f\n", ...pos);
   }
 
@@ -95,31 +95,25 @@ export default class CoordinateSystem {
     return this.name;
   }
 
-  // 姿勢を設定する（head=Y, pitch=X, bank=Z）
-  // 一般的な3D用語では yaw=Y, pitch=X, roll=Z に相当する
-  setAttitude(head, pitch, bank) {
+  // 姿勢を設定する（yaw=Y, pitch=X, roll=Z）
+  setAttitude(yaw, pitch, roll) {
     this.matrixOverride = null;
-    this.quat.eulerToQuat(head, pitch, bank);
+    this.quat.eulerToQuat(yaw, pitch, roll);
     this.dirty = true;
   }
 
-  // `setAttitude` の一般3D向け別名（yaw=Y, pitch=X, roll=Z）
-  setYawPitchRoll(yaw, pitch, roll) {
-    this.setAttitude(yaw, pitch, roll);
-  }
-
-  // ワールド姿勢(Euler)を返す
+  // ワールド姿勢(Euler [yaw, pitch, roll])を返す
   getWorldAttitude() {
     this.setWorldMatrix();
     const rigid = this.getRigidMatrix(this.worldMatrix);
-    return rigid.matToEuler();  // return [ry, rx, rz]
+    return rigid.matToEuler();  // return [yaw, pitch, roll]
   }
 
-  // ローカル姿勢(Euler)を返す
+  // ローカル姿勢(Euler [yaw, pitch, roll])を返す
   getLocalAttitude() {
     this.setMatrix();
     const rigid = this.getRigidMatrix(this.matrix);
-    return rigid.matToEuler();       // return [ry, rx, rz]
+    return rigid.matToEuler();       // return [yaw, pitch, roll]
   }
 
   // ワールド位置を返す
@@ -211,34 +205,13 @@ export default class CoordinateSystem {
     this.dirty = true;
   }
 
-  // Euler回転を加算する
-  // 引数順は webg 伝統の head(Y) / pitch(X) / bank(Z)
-  rotate(head, pitch, bank) {
+  // Euler回転を加算する（yaw=Y, pitch=X, roll=Z）
+  rotate(yaw, pitch, roll) {
     let qq = new Quat();
     this.matrixOverride = null;
-    qq.eulerToQuat(head, pitch, bank);
+    qq.eulerToQuat(yaw, pitch, roll);
     this.quat.mulQuat(qq);
     this.dirty = true;
-  }
-
-  // `rotate` の一般3D向け別名（yaw=Y, pitch=X, roll=Z）
-  rotateYawPitchRoll(yaw, pitch, roll) {
-    this.rotate(yaw, pitch, roll);
-  }
-
-  // yaw は Y軸回転に相当する
-  rotateYaw(degree) {
-    this.rotateY(degree);
-  }
-
-  // pitch は X軸回転に相当する
-  rotatePitch(degree) {
-    this.rotateX(degree);
-  }
-
-  // roll は Z軸回転に相当する
-  rotateRoll(degree) {
-    this.rotateZ(degree);
   }
 
   // ローカル平行移動を加算する
@@ -447,10 +420,10 @@ export default class CoordinateSystem {
   }
 
   // 回転差分を設定する
-  putRotation(head, pitch, bank) {
+  putRotation(yaw, pitch, roll) {
     this.accumulatedRatio = 0;
     let qq = new Quat();
-    qq.eulerToQuat(head, pitch, bank);
+    qq.eulerToQuat(yaw, pitch, roll);
     this.startRotation.copyFrom(this.quat);
     this.endRotation.copyFrom(this.quat);
     this.endRotation.mulQuat(qq);
@@ -472,10 +445,10 @@ export default class CoordinateSystem {
   }
 
   // 絶対姿勢をEulerで設定する
-  putAttitude(head, pitch, bank) {
+  putAttitude(yaw, pitch, roll) {
     this.accumulatedRatio = 0;
     this.startRotation.copyFrom(this.quat);
-    this.endRotation.eulerToQuat(head, pitch, bank);
+    this.endRotation.eulerToQuat(yaw, pitch, roll);
   }
 
   // 移動差分を設定する

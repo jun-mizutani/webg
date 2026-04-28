@@ -44,19 +44,19 @@ export const HUMAN_CELL_FORMATION_RATIO = 0.20;
 export const ORBIT_PRESETS = [
   {
     label: "diagonal",
-    head: 28.0,
+    yaw: 28.0,
     pitch: -30.0,
     distance: 18.7
   },
   {
     label: "side",
-    head: 90.0,
+    yaw: 90.0,
     pitch: -24.0,
     distance: 20.2
   },
   {
     label: "overhead",
-    head: 0.0,
+    yaw: 0.0,
     pitch: -78.0,
     distance: 8.2
   }

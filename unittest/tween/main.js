@@ -117,16 +117,16 @@ rotationNode.animateRotation([90.0, 0.0, 0.0], {
 });
 const rotationActiveAfterHalf = rotationSpace.updateNodeAnimations(500);
 check("space reports active node animation", rotationActiveAfterHalf >= 1);
-let [head, pitch, bank] = rotationNode.getLocalAttitude();
-check("node rotation advances halfway", approx(head, 45.0, 0.5));
+let [yaw, pitch, roll] = rotationNode.getLocalAttitude();
+check("node rotation advances halfway", approx(yaw, 45.0, 0.5));
 check("node rotation keeps pitch near zero", approx(pitch, 0.0, 0.5));
-check("node rotation keeps bank near zero", approx(bank, 0.0, 0.5));
+check("node rotation keeps roll near zero", approx(roll, 0.0, 0.5));
 
 rotationSpace.updateNodeAnimations(500);
-[head, pitch, bank] = rotationNode.getLocalAttitude();
-check("node rotation reaches target head", approx(head, 90.0, 0.5));
+[yaw, pitch, roll] = rotationNode.getLocalAttitude();
+check("node rotation reaches target yaw", approx(yaw, 90.0, 0.5));
 check("node rotation reaches target pitch", approx(pitch, 0.0, 0.5));
-check("node rotation reaches target bank", approx(bank, 0.0, 0.5));
+check("node rotation reaches target roll", approx(roll, 0.0, 0.5));
 
 // WebgApp の tween helper は、sample 側が game object をそのまま動かせる入口になる
 // camera shake と toast も合わせて、演出 API が state を壊さないかを見る

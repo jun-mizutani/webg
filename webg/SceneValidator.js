@@ -137,10 +137,9 @@ export default class SceneValidator {
     if (!obj) return;
     if (obj.target !== undefined) this.validateNumberArray(obj.target, `${path}.target`, "target", 3);
     if (obj.distance !== undefined) this.validateFiniteNumber(obj.distance, `${path}.distance`, "distance");
-    if (obj.yaw !== undefined) this.addError(`${path}.yaw`, "camera uses head, not yaw");
-    if (obj.head !== undefined) this.validateFiniteNumber(obj.head, `${path}.head`, "head");
+    if (obj.yaw !== undefined) this.validateFiniteNumber(obj.yaw, `${path}.yaw`, "yaw");
     if (obj.pitch !== undefined) this.validateFiniteNumber(obj.pitch, `${path}.pitch`, "pitch");
-    if (obj.bank !== undefined) this.validateFiniteNumber(obj.bank, `${path}.bank`, "bank");
+    if (obj.roll !== undefined) this.validateFiniteNumber(obj.roll, `${path}.roll`, "roll");
     if (obj.viewAngle !== undefined) this.validateFiniteNumber(obj.viewAngle, `${path}.viewAngle`, "viewAngle");
     if (obj.near !== undefined) this.validateFiniteNumber(obj.near, `${path}.near`, "near");
     if (obj.far !== undefined) this.validateFiniteNumber(obj.far, `${path}.far`, "far");

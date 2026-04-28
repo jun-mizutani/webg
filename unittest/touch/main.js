@@ -59,7 +59,7 @@ const start = async () => {
   const space = new Space();
   const eye = space.addNode(null, "eye");
   eye.setPosition(0.0, 15.0, 52.0);
-  // setAttitude は heading/pitch/bank 順なので、左右オフセットを避けるため
+  // setAttitude は yaw/pitch/roll 順なので、左右オフセットを避けるため
   // headingは0のまま、pitch側だけを負方向へ傾ける
   eye.setAttitude(0.0, -16.0, 0.0);
 

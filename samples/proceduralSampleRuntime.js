@@ -38,7 +38,7 @@ export function resetOrbitView(orbit, camera) {
   orbit
     .setTarget(camera.target[0], camera.target[1], camera.target[2])
     .setDistance(camera.distance)
-    .setAngles(camera.yaw, camera.pitch, camera.bank ?? 0.0)
+    .setAngles(camera.yaw, camera.pitch, camera.roll ?? 0.0)
     .setLookAngles(0.0, 0.0, 0.0);
 }
 
@@ -60,7 +60,7 @@ export async function setupProceduralSampleApp(options = {}) {
     distance: Number(options.camera?.distance ?? 8.0),
     yaw: Number(options.camera?.yaw ?? 20.0),
     pitch: Number(options.camera?.pitch ?? -12.0),
-    bank: Number(options.camera?.bank ?? 0.0),
+    roll: Number(options.camera?.roll ?? 0.0),
     minDistance: Number(options.camera?.minDistance ?? 4.0),
     maxDistance: Number(options.camera?.maxDistance ?? 18.0),
     wheelZoomStep: Number(options.camera?.wheelZoomStep ?? 1.0)
@@ -82,7 +82,7 @@ export async function setupProceduralSampleApp(options = {}) {
       distance: camera.distance,
       yaw: camera.yaw,
       pitch: camera.pitch,
-      bank: camera.bank
+      roll: camera.roll
     },
     light: options.light
   });
@@ -100,9 +100,9 @@ export async function setupProceduralSampleApp(options = {}) {
   const orbit = app.createOrbitEyeRig({
     target: camera.target,
     distance: camera.distance,
-    head: camera.yaw,
+    yaw: camera.yaw,
     pitch: camera.pitch,
-    bank: camera.bank,
+    roll: camera.roll,
     minDistance: camera.minDistance,
     maxDistance: camera.maxDistance,
     wheelZoomStep: camera.wheelZoomStep

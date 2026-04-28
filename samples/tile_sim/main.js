@@ -231,7 +231,7 @@ const createScenePhaseController = (app, missionRuntime, controller, supportSqua
 
 // keyboard / touch の action を phase ごとの振る舞いへ変換する handler を作る
 // - Enter / Space は開始と retry、Arrow は移動、数字は camera preset、R は reset に割り当てる
-// - orbit の head を見て camera-relative movement へ変換する入口もここへ集める
+// - orbit の yaw を見て camera-relative movement へ変換する入口もここへ集める
 const createActionHandler = (app, controller, orbitRig, resetOrbit, setOrbitPreset, phaseController, isActionLocked) => {
   return (key, ev = null) => {
     const raw = String(key ?? "").toLowerCase();
@@ -239,7 +239,7 @@ const createActionHandler = (app, controller, orbitRig, resetOrbit, setOrbitPres
     const phase = app.getScenePhase() ?? "title";
     const dialogueState = app.getDialogueState();
     const dialogueActive = dialogueState?.active === true;
-    const relativeMove = resolveCameraRelativeGridMove(orbitRig.orbit.head, normalized);
+    const relativeMove = resolveCameraRelativeGridMove(orbitRig.orbit.yaw, normalized);
 
     if (dialogueActive) {
       if (relativeMove && (dialogueState?.current?.choiceCount ?? 0) > 0) {
@@ -532,9 +532,9 @@ const start = async () => {
     camera: {
       target: [MAP_WIDTH * CELL_SIZE * 0.5, 0.0, MAP_HEIGHT * CELL_SIZE * 0.5],
       distance: 18.7,
-      head: 28.0,
+      yaw: 28.0,
       pitch: -30.0,
-      bank: 0.0,
+      roll: 0.0,
       viewAngle: 42.0,
       near: 0.1,
       far: 1000.0
@@ -556,9 +556,9 @@ const start = async () => {
   const orbitRig = app.createOrbitEyeRig({
     target: [...app.camera.target],
     distance: ORBIT_PRESETS[0].distance,
-    head: ORBIT_PRESETS[0].head,
+    yaw: ORBIT_PRESETS[0].yaw,
     pitch: ORBIT_PRESETS[0].pitch,
-    bank: 0.0,
+    roll: 0.0,
     orbit: {
       minDistance: 8.0,
       maxDistance: 34.0,
@@ -585,7 +585,7 @@ const start = async () => {
   const resetOrbit = () => {
     const preset = ORBIT_PRESETS[0];
     orbitRig.orbit.label = preset.label;
-    orbitRig.setAngles(preset.head, preset.pitch, 0.0);
+    orbitRig.setAngles(preset.yaw, preset.pitch, 0.0);
     orbitRig.setDistance(preset.distance);
     app.syncCameraFromEyeRig(orbitRig);
   };
@@ -595,7 +595,7 @@ const start = async () => {
   const setOrbitPreset = (index) => {
     const preset = ORBIT_PRESETS[(index + ORBIT_PRESETS.length) % ORBIT_PRESETS.length];
     orbitRig.orbit.label = preset.label;
-    orbitRig.setAngles(preset.head, preset.pitch, 0.0);
+    orbitRig.setAngles(preset.yaw, preset.pitch, 0.0);
     orbitRig.setDistance(preset.distance);
     app.syncCameraFromEyeRig(orbitRig);
   };

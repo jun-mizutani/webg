@@ -227,7 +227,7 @@ const start = async () => {
       distance: 34.0,
       yaw: 0.0,
       pitch: 0.0,
-      bank: 0.0
+      roll: 0.0
     },
     light: {
       mode: "eye-fixed",

@@ -112,14 +112,14 @@ export default class Quat {
     this.q[3] = Math.sin(r);
   }
 
-  // Euler(Y/X/Z)から変換する
-  eulerToQuat(head, pitch, bank) {
-    let cosB = Math.cos(RAD(bank ) * 0.5);
+  // Euler(Y/X/Z: yaw/pitch/roll)から変換する
+  eulerToQuat(yaw, pitch, roll) {
+    let cosB = Math.cos(RAD(roll ) * 0.5);
     let cosP = Math.cos(RAD(pitch) * 0.5);
-    let cosH = Math.cos(RAD(head ) * 0.5);
-    let sinB = Math.sin(RAD(bank ) * 0.5);
+    let cosH = Math.cos(RAD(yaw ) * 0.5);
+    let sinB = Math.sin(RAD(roll ) * 0.5);
     let sinP = Math.sin(RAD(pitch) * 0.5);
-    let sinH = Math.sin(RAD(head ) * 0.5);
+    let sinH = Math.sin(RAD(yaw ) * 0.5);
 
     let cosBcosP = cosB * cosP;
     let sinBsinP = sinB * sinP;
@@ -264,6 +264,6 @@ export default class Quat {
   quatToEuler() {
     let mat = new Matrix();
     mat.setByQuat(this);
-    return mat.matToEuler();  // return head, pitch, bank;
+    return mat.matToEuler();  // return yaw, pitch, roll;
   }
 };

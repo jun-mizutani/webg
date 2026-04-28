@@ -96,7 +96,7 @@ const createOrbitRig = (app) => {
   const orbit = app.createOrbitEyeRig({
     target: [0.0, 0.0, 0.0],
     distance: 8.0,
-    head: 0.0,
+    yaw: 0.0,
     pitch: 0.0
   });
   return orbit;

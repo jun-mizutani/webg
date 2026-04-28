@@ -26,7 +26,7 @@ const CAMERA_CONFIG = {
   distance: 140.0,
   yaw: 0.0,
   pitch: 0.0,
-  bank: 0.0
+  roll: 0.0
 };
 const HUD_GUIDE_COLOR = [0.70, 0.90, 1.0];
 const HUD_STATUS_COLOR = [1.0, 0.92, 0.78];

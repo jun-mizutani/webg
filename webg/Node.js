@@ -138,10 +138,10 @@ export default class Node extends CoordinateSystem {
     this.restScale = transform.scale;
   }
 
-  // レスト姿勢に回転を加える
-  rotateRest(head, pitch, bank) {
+  // レスト姿勢に回転を加える（yaw=Y, pitch=X, roll=Z）
+  rotateRest(yaw, pitch, roll) {
     let qq = new Quat();
-    qq.eulerToQuat(head, pitch, bank);
+    qq.eulerToQuat(yaw, pitch, roll);
     this.restQuat.mulQuat(qq);
     this.quat.copyFrom(this.restQuat);
   }
@@ -213,7 +213,7 @@ export default class Node extends CoordinateSystem {
   }
 
   // local rotation を時間をかけて移動する
-  // target は Euler [head, pitch, bank] を基本にし、relative=true なら現在姿勢からの差分として扱う
+  // target は Euler [yaw, pitch, roll] を基本にし、relative=true なら現在姿勢からの差分として扱う
   animateRotation(to, options = {}) {
     if (!to) {
       return null;
@@ -256,24 +256,20 @@ export default class Node extends CoordinateSystem {
         quat.normalize();
         targetQuat = quat;
       } else {
-        const head = readAngle(to.head, "head");
         const yaw = readAngle(to.yaw, "yaw");
         const pitch = readAngle(to.pitch, "pitch");
-        const bank = readAngle(to.bank, "bank");
         const roll = readAngle(to.roll, "roll");
         if (
-          head === undefined
-          && yaw === undefined
+          yaw === undefined
           && pitch === undefined
-          && bank === undefined
           && roll === undefined
         ) {
           throw new Error("Node.animateRotation target object must define quat or Euler angles");
         }
-        const resolvedHead = head ?? yaw ?? 0.0;
+        const resolvedYaw = yaw ?? 0.0;
         const resolvedPitch = pitch ?? 0.0;
-        const resolvedBank = bank ?? roll ?? 0.0;
-        toQuat.eulerToQuat(resolvedHead, resolvedPitch, resolvedBank);
+        const resolvedRoll = roll ?? 0.0;
+        toQuat.eulerToQuat(resolvedYaw, resolvedPitch, resolvedRoll);
         targetQuat = toQuat;
       }
     }

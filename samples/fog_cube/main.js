@@ -235,14 +235,23 @@ async function start() {
         width: 40,
         wrap: true
       }
+    },
+    debugDock: {
+      showCanvasHudWhenDockActive: true
     }
   });
   await app.init();
+  // fog_cube も bloom / dof と同じ標準 help panel へ操作説明を出す
+  // 現在値は canvas HUD と diagnostics に分け、help は畳める説明として扱う
+  app.createHelpPanel({
+    id: "fogCubeHelpOverlay",
+    lines: GUIDE_LINES
+  });
 
   const orbit = app.createOrbitEyeRig({
     target: [...DEFAULT_CAMERA.target],
     distance: DEFAULT_CAMERA.distance,
-    head: DEFAULT_CAMERA.yaw,
+    yaw: DEFAULT_CAMERA.yaw,
     pitch: DEFAULT_CAMERA.pitch,
     minDistance: 36.0,
     maxDistance: 220.0,
@@ -440,12 +449,12 @@ async function start() {
         `near=${state.near.toFixed(1)} far=${state.far.toFixed(1)}`,
         `density=${state.density.toFixed(3)} color=${preset.label}`,
         `wireframe=${wireframeLabel(state.wireframeMode)}`,
-        `head=${orbit.orbit.head.toFixed(1)} pitch=${orbit.orbit.pitch.toFixed(1)} dist=${orbit.orbit.distance.toFixed(1)}`,
+        `yaw=${orbit.orbit.yaw.toFixed(1)} pitch=${orbit.orbit.pitch.toFixed(1)} dist=${orbit.orbit.distance.toFixed(1)}`,
         `env=${envReport.ok ? "OK" : "WARN"}`,
         app.getDiagnosticsStatusLine(),
         app.isDebugUiEnabled() ? app.getProbeStatusLine() : ""
       ];
-      const controlLines = [...GUIDE_LINES, ...app.getDebugKeyGuideLines(), ...statusLines.filter(Boolean)];
+      const controlLines = statusLines.filter(Boolean);
       app.setControlRows(app.isDebugUiEnabled() ? app.makeTextControlRows(controlLines) : []);
     }
   });

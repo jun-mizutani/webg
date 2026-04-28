@@ -1528,7 +1528,7 @@ function fitCameraToEditor() {
   orbit.orbit.maxDistance = Math.max(32.0, bounds.size * 12.0);
   orbit.orbit.wheelZoomStep = Math.max(0.2, bounds.size * 0.09);
   orbit.orbit.keyZoomSpeed = Math.max(1.0, bounds.size * 0.6);
-  orbit.setAngles(DEFAULT_CAMERA.head, DEFAULT_CAMERA.pitch, 0.0);
+  orbit.setAngles(DEFAULT_CAMERA.yaw, DEFAULT_CAMERA.pitch, 0.0);
   orbit.setDistance(distance);
   app.syncCameraFromEyeRig(orbit);
 }
@@ -3373,7 +3373,7 @@ async function start() {
     camera: {
       target: [...DEFAULT_CAMERA.target],
       distance: DEFAULT_CAMERA.distance,
-      head: DEFAULT_CAMERA.head,
+      yaw: DEFAULT_CAMERA.yaw,
       pitch: DEFAULT_CAMERA.pitch
     },
     debugTools: {
@@ -3397,7 +3397,7 @@ async function start() {
   orbit = app.createOrbitEyeRig({
     target: [...DEFAULT_CAMERA.target],
     distance: DEFAULT_CAMERA.distance,
-    head: DEFAULT_CAMERA.head,
+    yaw: DEFAULT_CAMERA.yaw,
     pitch: DEFAULT_CAMERA.pitch,
     orbitKeyMap: { ...INITIAL_ORBIT_BINDINGS.orbitKeyMap },
     panModifierKey: INITIAL_ORBIT_BINDINGS.panModifierKey,

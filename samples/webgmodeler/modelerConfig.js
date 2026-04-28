@@ -23,7 +23,7 @@ export const DEFAULT_OBJECT_ID = 1;
 export const DEFAULT_CAMERA = {
   target: [0.0, 0.8, 0.0],
   distance: 12.0,
-  head: 28.0,
+  yaw: 28.0,
   pitch: -18.0
 };
 

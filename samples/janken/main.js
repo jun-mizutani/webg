@@ -236,7 +236,7 @@ async function createHandController(options) {
   // root は手全体の配置と向きを持つ node
   // 左右の位置やロール角はここでまとめて管理する
   root.setPosition(options.positionX, 0.0, 0.0);
-  root.setAttitude(options.yaw, 0.0, options.bank ?? 0.0);
+  root.setAttitude(options.yaw, 0.0, options.roll ?? 0.0);
 
   const fig = { shapes };
 
@@ -597,7 +597,7 @@ async function start() {
     id: "player",
     positionX: -HAND_SPACING_X,
     yaw: 14.0,
-    bank: -30.0,
+    roll: -30.0,
     color: [0.95, 0.77, 0.71, 1.0]
   });
   cpuHand = await createHandController({
@@ -605,7 +605,7 @@ async function start() {
     positionX: HAND_SPACING_X,
     // 右側の青い手は親指が見えるよう、local Y を少し内向きに振る
     yaw: 164.0,
-    bank: 30.0,
+    roll: 30.0,
     color: [0.66, 0.82, 1.0, 1.0]
   });
   cpuHand.root.setPosition(HAND_SPACING_X, 0.0, HAND_DEPTH_Z);

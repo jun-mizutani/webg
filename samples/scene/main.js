@@ -514,7 +514,7 @@ async function start() {
   orbit = app.createOrbitEyeRig({
     target: [0.0, 4.5, 0.0],
     distance: 38.0,
-    head: 24.0,
+    yaw: 24.0,
     pitch: -14.0
   });
 

@@ -132,7 +132,7 @@ export default class Diagnostics {
       "eyeZ",
       "eyeYaw",
       "eyePitch",
-      "eyeBank",
+      "eyeRoll",
       "cameraTargetX",
       "cameraTargetY",
       "cameraTargetZ",

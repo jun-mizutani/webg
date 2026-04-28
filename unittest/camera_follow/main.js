@@ -55,8 +55,8 @@ const createCameraRigStub = () => ({
   setPosition(x, y, z) {
     this.position = [x, y, z];
   },
-  setAttitude(head, pitch, bank) {
-    this.attitude = [head, pitch, bank];
+  setAttitude(yaw, pitch, roll) {
+    this.attitude = [yaw, pitch, roll];
   }
 });
 
@@ -270,17 +270,17 @@ const updateVisualFrame = (ctx) => {
   const x = from[0] + (to[0] - from[0]) * t;
   const y = TARGET_HEIGHT;
   const z = from[2] + (to[2] - from[2]) * t;
-  const head = Math.atan2(to[2] - from[2], to[0] - from[0]) * 180.0 / Math.PI;
+  const yaw = Math.atan2(to[2] - from[2], to[0] - from[0]) * 180.0 / Math.PI;
 
   visualState.targetPos[0] = x;
   visualState.targetPos[1] = y;
   visualState.targetPos[2] = z;
-  visualState.targetHeadingDeg = head;
+  visualState.targetHeadingDeg = yaw;
 
   // target の位置と向きを更新して、camera が追う基準を作る
-  // setAttitude(head, pitch, bank) なので、heading は第1引数へ入れる
+  // setAttitude(yaw, pitch, roll) なので、heading は第1引数へ入れる
   targetRoot.setPosition(x, y, z);
-  targetRoot.setAttitude(head, 0.0, 0.0);
+  targetRoot.setAttitude(yaw, 0.0, 0.0);
 
   const runEdge = (name, callback) => {
     // action の押下は 1 frame だけ拾う
@@ -385,7 +385,7 @@ const startVisualPhase = async () => {
       distance: 28.0,
       yaw: 18.0,
       pitch: -22.0,
-      bank: 0.0
+      roll: 0.0
     }
   });
   await visualRuntime.app.init();

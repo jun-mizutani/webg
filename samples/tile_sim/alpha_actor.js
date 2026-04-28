@@ -100,7 +100,7 @@ const getFormationWorldOffset = (yawDeg, formationOffset = {}) => {
 };
 
 // XZ 平面の進行ベクトルから webg の yaw(deg) を計算する
-// - CoordinateSystem の Y 回転は、pitch=bank=0 のとき local +Z を `[sin(yaw), 0, cos(yaw)]` へ向ける
+// - CoordinateSystem の Y 回転は、pitch=roll=0 のとき local +Z を `[sin(yaw), 0, cos(yaw)]` へ向ける
 // - そのため world の移動差分 `(dx, dz)` に対して `atan2(dx, dz)` を使うと、
 //   Alpha が進行方向を素直に向く
 const getYawFromDirection = (dx, dz) => {

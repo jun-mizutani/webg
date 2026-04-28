@@ -276,9 +276,9 @@ export const createSceneDefinition = (terrainMaterials = null) => {
     camera: {
       target: [SCENE_MAP_WIDTH * CELL_SIZE * 0.5, 0.0, SCENE_MAP_HEIGHT * CELL_SIZE * 0.5],
       distance: 18.7,
-      head: 28.0,
+      yaw: 28.0,
       pitch: -30.0,
-      bank: 0.0,
+      roll: 0.0,
       viewAngle: 42.0,
       near: 0.1,
       far: 1000.0

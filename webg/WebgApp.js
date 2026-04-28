@@ -90,13 +90,13 @@ export default class WebgApp {
       eyeName: options.camera?.eyeName ?? "eye",
       target: [...(options.camera?.target ?? [0.0, 0.0, 0.0])],
       distance: util.readOptionalFiniteNumber(options.camera?.distance, "WebgApp camera.distance", 28.0),
-      head: util.readOptionalFiniteNumber(
-        options.camera?.head,
-        "WebgApp camera.head",
+      yaw: util.readOptionalFiniteNumber(
+        options.camera?.yaw,
+        "WebgApp camera.yaw",
         0.0
       ),
       pitch: util.readOptionalFiniteNumber(options.camera?.pitch, "WebgApp camera.pitch", 0.0),
-      bank: util.readOptionalFiniteNumber(options.camera?.bank, "WebgApp camera.bank", 0.0)
+      roll: util.readOptionalFiniteNumber(options.camera?.roll, "WebgApp camera.roll", 0.0)
     };
     this.cameraFollow = {
       active: false,
@@ -105,10 +105,10 @@ export default class WebgApp {
       targetOffset: [...(options.camera?.targetOffset ?? [0.0, 0.0, 0.0])],
       currentTarget: [...this.camera.target],
       smooth: util.readOptionalFiniteNumber(options.camera?.smooth, "WebgApp camera.smooth", 0.15),
-      inheritTargetHead: options.camera?.inheritTargetHead === true,
-      targetHeadOffset: util.readOptionalFiniteNumber(
-        options.camera?.targetHeadOffset,
-        "WebgApp camera.targetHeadOffset",
+      inheritTargetYaw: options.camera?.inheritTargetYaw === true,
+      targetYawOffset: util.readOptionalFiniteNumber(
+        options.camera?.targetYawOffset,
+        "WebgApp camera.targetYawOffset",
         0.0
       )
     };
@@ -936,11 +936,11 @@ export default class WebgApp {
       this.camera.target[2]
     );
 
-    if (state.inheritTargetHead && typeof state.targetNode.getWorldAttitude === "function") {
+    if (state.inheritTargetYaw && typeof state.targetNode.getWorldAttitude === "function") {
       const attitude = state.targetNode.getWorldAttitude();
       if (Array.isArray(attitude) && attitude.length >= 3) {
         this.cameraRig.setAttitude(
-          Number(attitude[0]) + state.targetHeadOffset,
+          Number(attitude[0]) + state.targetYawOffset,
           Number(attitude[1]),
           Number(attitude[2])
         );
@@ -958,10 +958,10 @@ export default class WebgApp {
     this.cameraFollow.targetNode = node ?? null;
     this.cameraFollow.targetOffset = [...(options.offset ?? options.targetOffset ?? this.cameraFollow.targetOffset ?? [0.0, 0.0, 0.0])];
     this.cameraFollow.smooth = util.readOptionalFiniteNumber(options.smooth, "WebgApp followNode.smooth", 0.15);
-    this.cameraFollow.inheritTargetHead = options.inheritTargetHead === true;
-    this.cameraFollow.targetHeadOffset = util.readOptionalFiniteNumber(
-      options.targetHeadOffset,
-      "WebgApp followNode.targetHeadOffset",
+    this.cameraFollow.inheritTargetYaw = options.inheritTargetYaw === true;
+    this.cameraFollow.targetYawOffset = util.readOptionalFiniteNumber(
+      options.targetYawOffset,
+      "WebgApp followNode.targetYawOffset",
       0.0
     );
     if (this.cameraFollow.active) {
@@ -977,10 +977,10 @@ export default class WebgApp {
     this.cameraFollow.targetNode = target ?? null;
     this.cameraFollow.targetOffset = [...(options.offset ?? options.targetOffset ?? [0.0, 0.0, 0.0])];
     this.cameraFollow.smooth = util.readOptionalFiniteNumber(options.smooth, "WebgApp lockOn.smooth", 1.0);
-    this.cameraFollow.inheritTargetHead = options.inheritTargetHead === true;
-    this.cameraFollow.targetHeadOffset = util.readOptionalFiniteNumber(
-      options.targetHeadOffset,
-      "WebgApp lockOn.targetHeadOffset",
+    this.cameraFollow.inheritTargetYaw = options.inheritTargetYaw === true;
+    this.cameraFollow.targetYawOffset = util.readOptionalFiniteNumber(
+      options.targetYawOffset,
+      "WebgApp lockOn.targetYawOffset",
       0.0
     );
     if (this.cameraFollow.active) {
@@ -994,7 +994,7 @@ export default class WebgApp {
     this.cameraFollow.active = false;
     this.cameraFollow.mode = "follow";
     this.cameraFollow.targetNode = null;
-    this.cameraFollow.inheritTargetHead = false;
+    this.cameraFollow.inheritTargetYaw = false;
     return null;
   }
 
@@ -1094,23 +1094,20 @@ export default class WebgApp {
       text: "",
       code: options.code !== false
     });
-    if (this.isEmbeddedLayout()) {
-      const maxWidth = this.resolveHelpPanelEmbeddedMaxWidth(options);
-      const wrap = column === layout.right ? layout.rightWrap : layout.leftWrap;
-      // 教材ページへ埋め込む canvas では、help panel を畳んだときに
-      // 枠だけが host 全幅へ広がると説明文の上に不自然な空白が残る
-      // そのため embedded 時は panel だけでなく親 column も内容幅へ寄せ、
-      // layout 全体が canvas 幅いっぱいへ伸びる挙動を避ける
-      wrap.style.width = "fit-content";
-      wrap.style.maxWidth = `min(calc(100% - 24px), ${maxWidth})`;
-      column.style.width = "fit-content";
-      column.style.maxWidth = "100%";
-      column.style.alignItems = column === layout.right ? "flex-end" : "flex-start";
-      panel.style.width = "fit-content";
-      panel.style.maxWidth = `min(calc(100% - 24px), ${maxWidth})`;
-      textBlock.style.maxWidth = "100%";
-      textBlock.style.boxSizing = "border-box";
-    }
+    const helpPanelBackdropBlur = typeof options.backdropBlur === "string" ? options.backdropBlur : "1px";
+    const maxWidth = this.resolveHelpPanelEmbeddedMaxWidth(options);
+    const wrap = column === layout.right ? layout.rightWrap : layout.leftWrap;
+    // help panel は操作説明を読む幅だけあればよいので、debug dock 表示時も
+    // overlay column 全体へ stretch させず内容幅へ寄せる
+    wrap.style.width = "fit-content";
+    wrap.style.maxWidth = `min(calc(100% - 24px), ${maxWidth})`;
+    column.style.width = "fit-content";
+    column.style.maxWidth = "100%";
+    column.style.alignItems = column === layout.right ? "flex-end" : "flex-start";
+    panel.style.width = "fit-content";
+    panel.style.maxWidth = `min(calc(100% - 24px), ${maxWidth})`;
+    textBlock.style.maxWidth = "100%";
+    textBlock.style.boxSizing = "border-box";
     const helpPanel = {
       id: options.id ?? null,
       uiPanels,
@@ -1119,6 +1116,7 @@ export default class WebgApp {
       toggleButton,
       body,
       textBlock,
+      backdropBlur: helpPanelBackdropBlur,
       visible: options.visible !== false,
       lines: []
     };
@@ -1188,8 +1186,26 @@ export default class WebgApp {
     helpPanel.visible = visible !== false;
     helpPanel.body.style.display = helpPanel.visible ? "" : "none";
     helpPanel.toggleButton.textContent = helpPanel.visible ? "Hide Help" : "Show Help";
+    this.applyHelpPanelCollapsedStyle(helpPanel);
     helpPanel.uiPanels.setButtonActive(helpPanel.toggleButton, helpPanel.visible);
     return helpPanel.visible;
+  }
+
+  // 折り畳み時は操作説明本体だけでなく外枠も消し、再表示 button だけを残す
+  applyHelpPanelCollapsedStyle(helpPanel) {
+    if (!helpPanel?.panel) {
+      return;
+    }
+    if (helpPanel.visible) {
+      helpPanel.uiPanels?.applyThemeToLayout?.(helpPanel.layout);
+      helpPanel.panel.style.backdropFilter = `blur(${helpPanel.backdropBlur ?? "1px"})`;
+      return;
+    }
+    helpPanel.panel.style.padding = "0";
+    helpPanel.panel.style.border = "0";
+    helpPanel.panel.style.background = "transparent";
+    helpPanel.panel.style.boxShadow = "none";
+    helpPanel.panel.style.backdropFilter = "none";
   }
 
   // help panel は viewport 固定の DOM overlay なので、
@@ -1205,6 +1221,7 @@ export default class WebgApp {
         : 0);
     helpPanel.uiPanels.setDockOffset(helpPanel.layout, dockOffset);
     helpPanel.uiPanels.syncResponsiveLayout(helpPanel.layout);
+    this.applyHelpPanelCollapsedStyle(helpPanel);
   }
 
   // 複数の help panel を使う sample でも viewport 更新を 1 回で反映できるようにする
@@ -1446,7 +1463,7 @@ export default class WebgApp {
   createCameraRig() {
     this.cameraRig = this.space.addNode(null, this.camera.rigName);
     this.cameraRig.setPosition(...this.camera.target);
-    this.cameraRig.setAttitude(this.camera.head, this.camera.pitch, this.camera.bank);
+    this.cameraRig.setAttitude(this.camera.yaw, this.camera.pitch, this.camera.roll);
     this.cameraRod = this.space.addNode(this.cameraRig, this.camera.rodName);
     this.cameraRod.setPosition(0.0, 0.0, 0.0);
     this.cameraRod.setAttitude(0.0, 0.0, 0.0);
@@ -1514,9 +1531,9 @@ export default class WebgApp {
       ...(options.orbit ?? {}),
       target: options.target ?? options.orbit?.target ?? [...this.camera.target],
       distance: options.distance ?? options.orbit?.distance ?? this.camera.distance,
-      head: options.head ?? options.orbit?.head ?? this.camera.head,
+      yaw: options.yaw ?? options.orbit?.yaw ?? this.camera.yaw,
       pitch: options.pitch ?? options.orbit?.pitch ?? this.camera.pitch,
-      bank: options.bank ?? options.orbit?.bank ?? this.camera.bank,
+      roll: options.roll ?? options.orbit?.roll ?? this.camera.roll,
       keyMap: orbitKeyMap,
       panModifierKey,
       dragZoomModifierKey
@@ -1557,9 +1574,9 @@ export default class WebgApp {
     this.camera.target[1] = eyeRig.orbit.target[1];
     this.camera.target[2] = eyeRig.orbit.target[2];
     this.camera.distance = eyeRig.orbit.distance;
-    this.camera.head = eyeRig.orbit.head;
+    this.camera.yaw = eyeRig.orbit.yaw;
     this.camera.pitch = eyeRig.orbit.pitch;
-    this.camera.bank = eyeRig.orbit.bank;
+    this.camera.roll = eyeRig.orbit.roll;
     return this.camera;
   }
 
@@ -2467,7 +2484,7 @@ export default class WebgApp {
     if (Array.isArray(eyeAttitude) && eyeAttitude.length >= 3) {
       stats.eyeYaw = Number(eyeAttitude[0]).toFixed(2);
       stats.eyePitch = Number(eyeAttitude[1]).toFixed(2);
-      stats.eyeBank = Number(eyeAttitude[2]).toFixed(2);
+      stats.eyeRoll = Number(eyeAttitude[2]).toFixed(2);
     }
     const cameraTarget = this.getDiagnosticsCameraTarget();
     if (Array.isArray(cameraTarget) && cameraTarget.length >= 3) {

@@ -29,7 +29,7 @@ const CAMERA_CONFIG = {
   distance: 38.0,
   yaw: 0.0,
   pitch: -8.0,
-  bank: 0.0
+  roll: 0.0
 };
 
 const CORE_RADIUS = 4.4;
@@ -55,7 +55,7 @@ let paused = false;
 let fps = 0.0;
 let userYaw = 0.0;
 let userPitch = 0.0;
-let userBank = 0.0;
+let userRoll = 0.0;
 let auxShader = null;
 
 const rotateKeys = {
@@ -574,9 +574,9 @@ const updateCreature = (timeMs, deltaSec) => {
     if (rotateKeys.xNeg) userPitch -= step;
     if (rotateKeys.yPos) userYaw += step;
     if (rotateKeys.yNeg) userYaw -= step;
-    if (rotateKeys.zPos) userBank += step;
-    if (rotateKeys.zNeg) userBank -= step;
-    creatureRoot.setAttitude(userYaw * 4.0, userPitch, userBank);
+    if (rotateKeys.zPos) userRoll += step;
+    if (rotateKeys.zNeg) userRoll -= step;
+    creatureRoot.setAttitude(userYaw * 4.0, userPitch, userRoll);
 
     const camYaw = Math.sin(t * 0.5) * 8.0;
     const camPitch = -8.0 + Math.cos(t * 0.5) * 5.0;
@@ -587,10 +587,10 @@ const updateCreature = (timeMs, deltaSec) => {
       for (let b = 1; b < td.bones.length; b++) {
         const ratio = b / (td.bones.length - 1);
         const ph = t * 1.18 + td.phase + b * 0.42;
-        const head = Math.sin(ph) * (20.0 * ratio);
+        const yaw = Math.sin(ph) * (20.0 * ratio);
         const pitch = Math.cos(ph * 1.2) * (18.0 * ratio);
-        const bank = Math.sin(ph * 1.5) * (14.0 * ratio);
-        td.bones[b].setAttitude(head, pitch, bank);
+        const roll = Math.sin(ph * 1.5) * (14.0 * ratio);
+        td.bones[b].setAttitude(yaw, pitch, roll);
       }
     }
   }

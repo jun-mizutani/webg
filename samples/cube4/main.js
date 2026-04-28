@@ -647,10 +647,10 @@ const rotateCell = ([x, y, z], axis) => {
 };
 
 const rotateCells = (cells, axis) => cells.map((cell) => rotateCell(cell, axis));
-const rotatePointEuler = (point, yawDeg, pitchDeg, bankDeg) => {
+const rotatePointEuler = (point, yawDeg, pitchDeg, rollDeg) => {
   const yaw = yawDeg * Math.PI / 180.0;
   const pitch = pitchDeg * Math.PI / 180.0;
-  const bank = bankDeg * Math.PI / 180.0;
+  const roll = rollDeg * Math.PI / 180.0;
   let [x, y, z] = point;
 
   const cy = Math.cos(yaw);
@@ -661,8 +661,8 @@ const rotatePointEuler = (point, yawDeg, pitchDeg, bankDeg) => {
   const sx = Math.sin(pitch);
   [y, z] = [y * cx - z * sx, y * sx + z * cx];
 
-  const cz = Math.cos(bank);
-  const sz = Math.sin(bank);
+  const cz = Math.cos(roll);
+  const sz = Math.sin(roll);
   [x, y] = [x * cz - y * sz, x * sz + y * cz];
 
   return [x, y, z];
@@ -805,12 +805,12 @@ const createDemoGallery = (space, gpu) => {
       baseAngles: {
         yaw: index * 24.0,
         pitch: -14.0 + (index % 3) * 9.0,
-        bank: (index % 2 === 0 ? 12.0 : -12.0)
+        roll: (index % 2 === 0 ? 12.0 : -12.0)
       },
       speed: {
         yaw: (index % 2 === 0 ? 1 : -1) * (3.0 + index * 0.45),
         pitch: (index % 3 === 0 ? -1 : 1) * (1.4 + (index % 4) * 0.35),
-        bank: (index % 2 === 0 ? 1 : -1) * (1.9 + (index % 3) * 0.45)
+        roll: (index % 2 === 0 ? 1 : -1) * (1.9 + (index % 3) * 0.45)
       },
       basePosition: positions[index]
     };
@@ -841,12 +841,12 @@ const updateDemoGallery = (gallery, visible, timeSec) => {
     item.root.dirty = true;
     const yaw = item.baseAngles.yaw + timeSec * item.speed.yaw;
     const pitch = item.baseAngles.pitch + Math.sin(timeSec * item.speed.pitch + i * 0.7) * 18.0;
-    const bank = item.baseAngles.bank + Math.cos(timeSec * item.speed.bank + i * 0.45) * 16.0;
+    const roll = item.baseAngles.roll + Math.cos(timeSec * item.speed.roll + i * 0.45) * 16.0;
     for (let j = 0; j < item.slots.length; j++) {
       const slot = item.slots[j];
-      const rotated = rotatePointEuler(item.localPositions[j], yaw, pitch, bank);
+      const rotated = rotatePointEuler(item.localPositions[j], yaw, pitch, roll);
       slot.node.setPosition(rotated[0], rotated[1], rotated[2]);
-      slot.node.setAttitude(yaw, pitch, bank);
+      slot.node.setAttitude(yaw, pitch, roll);
       slot.node.dirty = true;
     }
   }
@@ -1311,7 +1311,7 @@ const setupOrbit = () => {
   orbit = app.createOrbitEyeRig({
     target: [0.0, BASE_Y + BOARD.height * BOARD.cell * 0.42, 0.0],
     distance: 43.0,
-    head: 18.0,
+    yaw: 18.0,
     pitch: -30.0,
     minDistance: 22.0,
     maxDistance: 78.0,
