@@ -14,7 +14,7 @@
 - marker overlay は camera / selection / geometry / 色 / canvas size が変わった時だけ再投影し、静止中は前回 upload した GPU buffer を再利用します
 - edge overlay の辺一覧は geometry 更新時だけ作り直し、edge vertex buffer も geometry / 色が変わった時だけ upload します
 - face 選択は編集データ上の ray-triangle 交差で判定し、AABB だけではなく実際の三角形面をクリック対象にします
-- Triangle / Quad は、選択頂点を現在の画面上の角度順へ並べ、いま見ている側が表になるように頂点順を調整してから面を作成します
+- Face button または F キーは、選択頂点が 3 個なら三角形、4 個なら四角形を作成します。選択頂点を現在の画面上の角度順へ並べ、いま見ている側が表になるように頂点順を調整してから面を作成します
 - face の頂点順は、表側から見て反時計回りを基本とします。隣接 face がある場合は共有辺が逆向きになるように向きをそろえ、孤立 face は原点側を裏として初期化します
 - 頂点追加は、クリック位置の face hit、地面 plane、camera target plane の順で交点を作り、新しい頂点として追加します
 - camera 操作は Blender に近い割り当てにし、中ボタンドラッグで orbit、Shift + 中ボタンドラッグで PAN、wheel または Ctrl + 中ボタンドラッグで zoom します。左ドラッグは camera 操作に使わず、面や頂点の矩形選択などの編集操作へ割り当てられる状態にしています
@@ -23,7 +23,7 @@
 - Blender と同様に Object Mode / Edit Mode を持ちます。Object Mode ではオブジェクト全体をクリック選択し、G/R/S で選択オブジェクト全体を移動 / 回転 / scale できます。Edit Mode ではアクティブオブジェクトの頂点 / face を編集します。Tab で mode を切り替えます
 - A キーは mode に応じて全選択します。Object Mode では全 object、Edit Mode ではアクティブ object の全頂点を選択し、全頂点が含まれる face も選択状態にします
 - W キーまたは Object Wireframe button で Object Mode の mesh 表示を wireframe に切り替えられます。表示用 Shape は編集データから作る ModelAsset の `polygonLoops` を持つため、`Shape.addPolygon([a,b,c,d])` や Quad 作成で作った四角面は対角線を出さず、face loop の外周だけを表示します。Edit Mode では marker / edge overlay を優先するため Object Wireframe は解除されます
-- X キー、Delete / Backspace、Delete button で選択対象を削除します。Object Mode では選択 object を削除し、Edit Mode の Vertex Select / Add Vertex では選択 vertex と参照 face を削除し、Face Select では選択 face だけを削除して vertex は残します
+- X キー、Delete / Backspace で選択対象を削除します。Object Mode では選択 object を削除し、Edit Mode の Vertex Select / Add Vertex では選択 vertex と参照 face を削除し、Face Select では選択 face だけを削除して vertex は残します
 - screen 平面移動、法線方向移動、選択中心基準 scale は補助操作として J/L/I/K、U/O、N/M のキー操作でも使えます
 - 選択領域の外周を押し出す face 押出、undo / redo を備えています
 - 選択 face の表裏反転を備えています
@@ -50,14 +50,14 @@
 - Select で marker をクリックすると頂点 marker が赤くなり、face をクリックすると面が黄色の overlay で強調されることを確認します
 - face を選択すると、その face を構成する頂点 marker も選択色で強調されることを確認します
 - Vertex Select で face を囲む全頂点を選択すると、その face も選択状態になることを確認します
-- Shift + 左クリックで複数頂点を選択し、Triangle / Quad button で現在視点側を表にした三角形または四角形 face を作成できることを確認します
+- Shift + 左クリックで複数頂点を選択し、Face button または F キーで現在視点側を表にした三角形または四角形 face を作成できることを確認します
 - Add Vertex で canvas をクリックすると、face 上、地面、camera target plane のいずれかに頂点が追加されることを確認します
 - J/L/I/K で選択頂点を camera screen 平面に沿って移動できることを確認します
 - U/O で選択 face または選択頂点を法線方向へ移動できることを確認します
 - N/M で選択頂点の中心を基準に縮小 / 拡大できることを確認します
 - G / R / S を押してからマウスを移動すると、選択頂点または選択 face 構成頂点を移動 / 回転 / scale でき、左クリックで確定できることを確認します
-- E または Extrude button で押し出し mode に入り、複数 face を選択した場合は共有 edge に側面を作らず、選択領域の外周だけから新しい側面が作られ、新しく押し出された面が選択され、左クリックで確定できることを確認します
-- Flip Face で選択 face の表裏が反転することを確認します
+- E で押し出し mode に入り、複数 face を選択した場合は共有 edge に側面を作らず、選択領域の外周だけから新しい側面が作られ、新しく押し出された面が選択され、左クリックで確定できることを確認します
+- Flip Face button で選択 face の表裏が反転することを確認します
 - Undo / Redo で直前の編集状態へ戻り、表示 Shape と marker が復元されることを確認します
 - Load Model で `.json` / `.glb` / `.gltf` / `.dae` を読み込み、`.glb` では `embedded_glb_viewer` と同じ正規化済み mesh が編集対象へ取り込まれることを確認します。複数 mesh node がある場合は mesh select に `all objects` が出て、Use Mesh で複数オブジェクトとして取り込めることを確認します
 - Object Mode で各オブジェクトをクリック選択し、Edit Mode で選択したアクティブオブジェクトだけの頂点 marker が出ることを確認します
@@ -97,12 +97,11 @@
 - G: Move mode。マウス移動で選択対象を camera screen 平面に沿って移動、左クリックで確定
 - R: Rotate mode。マウス移動で選択対象を選択中心まわりに回転、左クリックで確定
 - S: Scale mode。マウス移動で選択対象を選択中心まわりに拡大縮小、左クリックで確定
-- E / Extrude: Extrude mode。マウス移動で選択 face 領域の外周を法線方向へ押し出し、左クリックで確定
+- E: Extrude mode。マウス移動で選択 face 領域の外周を法線方向へ押し出し、左クリックで確定
 - Shift + 左クリック: 選択の追加 / 解除
-- Delete / Backspace / Delete button: X と同じ削除処理を実行
-- Triangle: 選択頂点 3 個から face を作成
-- Quad: 選択頂点 4 個から face を作成
-- Flip Face / F: 選択 face の表裏を反転
+- Delete / Backspace: X と同じ削除処理を実行
+- F / Face button: 選択頂点 3 個から三角形 face、4 個から四角形 face を作成
+- Flip Face button: 選択 face の表裏を反転
 - Ctrl / Cmd + Z: undo
 - Ctrl / Cmd + Y または Ctrl / Cmd + Shift + Z: redo
 - Escape: 選択解除

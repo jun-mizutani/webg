@@ -1,6 +1,6 @@
 // -------------------------------------------------
 // webgmodeler edit operations
-//   editOperations.js 2026/04/27
+//   editOperations.js 2026/04/28
 // -------------------------------------------------
 
 import { add3, mul3, sub3 } from "./math3d.js";
@@ -69,19 +69,26 @@ export function createEditOperations(ctx) {
     deleteSelectedVertices();
   }
 
-  // editOperations の face 作成処理を UI から呼び出す薄い wrapper
-  function makeFaceFromSelection(size) {
+  // 選択 vertex から face を作成する
+  // size を指定した場合は Triangle / Quad の旧 UI と同じく厳密に個数を確認し、
+  // size を省略した場合は Blender の F と同様に 3 点なら三角形、4 点なら四角形として扱う
+  function makeFaceFromSelection(size = null) {
     const { editor } = ctx;
     if (!ctx.isEditMode()) {
       ctx.setMessage("switch to edit mode before creating faces");
       return;
     }
     const ids = Array.from(editor.selectedVertices);
-    if (ids.length !== size) {
-      ctx.setMessage(`${size === 3 ? "Triangle" : "Quad"} requires ${size} selected vertices`);
+    const expectedSize = size ?? ids.length;
+    if (expectedSize !== 3 && expectedSize !== 4) {
+      ctx.setMessage("Face requires 3 or 4 selected vertices");
       return;
     }
-    ctx.pushUndo(`make ${size === 3 ? "triangle" : "quad"}`);
+    if (ids.length !== expectedSize) {
+      ctx.setMessage(`${expectedSize === 3 ? "Triangle" : "Quad"} requires ${expectedSize} selected vertices`);
+      return;
+    }
+    ctx.pushUndo(`make ${expectedSize === 3 ? "triangle" : "quad"}`);
     const orientedIds = ctx.orderVertexIdsForFaceFromView(ids);
     const faceId = ctx.addFaceWithStableOrientation(orientedIds);
     editor.selectedFaces = new Set([faceId]);

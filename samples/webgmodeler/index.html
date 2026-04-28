@@ -282,7 +282,7 @@
         <p class="hint">
           中ボタンドラッグまたは Option + 左ドラッグで orbit、Shift 併用で PAN、Ctrl 併用または wheel で zoom。
           Object Mode でオブジェクト選択、Tab / Edit Mode でアクティブオブジェクトを編集します。Vertex/Face Select でクリック選択、modifier なしの左ドラッグで矩形選択、A で全選択です。
-          W で Object Mode の wireframe を切り替え、X で現在 mode / tool の選択対象を削除します。G/R/S/E の後はマウス移動で移動/回転/scale/押し出し、左クリックで確定します。補助編集は J/L/I/K、U/O、N/M、面反転は F を使います。
+          W で Object Mode の wireframe を切り替え、X で現在 mode / tool の選択対象を削除します。G/R/S/E の後はマウス移動で移動/回転/scale/押し出し、左クリックで確定します。F は選択 3 / 4 頂点から面を作成し、補助編集は J/L/I/K、U/O、N/M を使います。
         </p>
       </div>
 
@@ -309,18 +309,14 @@
           <h2>編集</h2>
           <div class="action-row">
             <button class="command-button" id="newScene">New</button>
-            <button class="command-button" id="makeTriangle">Triangle</button>
-            <button class="command-button" id="makeQuad">Quad</button>
-            <button class="command-button" id="extrude">Extrude</button>
+            <button class="command-button" id="makeFace">Face</button>
             <button class="command-button" id="flipFaces">Flip Face</button>
-            <button class="command-button danger" id="deleteSelected">Delete</button>
             <button class="command-button" id="undo">Undo</button>
             <button class="command-button" id="redo">Redo</button>
           </div>
           <p>
-            Triangle / Quad は選択頂点数が 3 / 4 のときに作成します。
-            Extrude は押し出し mode に入り、選択 face 群の外周を押し出して、マウス移動で押し出し量を決め、左クリックで確定します。Flip Face は選択 face の表裏を反転します。
-            選択頂点の移動や scale はキー操作で行います。
+            Face は選択頂点数が 3 / 4 のときに三角形 / 四角形を作成します。
+            移動 / 回転 / scale / 押し出し / 削除は Blender 相当の G / R / S / E / X キーを使います。Flip Face は選択 face の表裏を反転します。
           </p>
         </section>
 

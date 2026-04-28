@@ -1,6 +1,6 @@
 // -------------------------------------------------
 // webgmodeler sample
-//   main.js       2026/04/27
+//   main.js       2026/04/28
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // -------------------------------------------------
@@ -88,10 +88,7 @@ const ui = {
   saveJsonGz: null,
   saveGlb: null,
   newScene: null,
-  deleteSelected: null,
-  makeTriangle: null,
-  makeQuad: null,
-  extrude: null,
+  makeFace: null,
   flipFaces: null,
   undo: null,
   redo: null,
@@ -350,10 +347,7 @@ function cacheUi() {
   ui.saveJsonGz = document.getElementById("saveJsonGz");
   ui.saveGlb = document.getElementById("saveGlb");
   ui.newScene = document.getElementById("newScene");
-  ui.deleteSelected = document.getElementById("deleteSelected");
-  ui.makeTriangle = document.getElementById("makeTriangle");
-  ui.makeQuad = document.getElementById("makeQuad");
-  ui.extrude = document.getElementById("extrude");
+  ui.makeFace = document.getElementById("makeFace");
   ui.flipFaces = document.getElementById("flipFaces");
   ui.undo = document.getElementById("undo");
   ui.redo = document.getElementById("redo");
@@ -461,7 +455,6 @@ function setDisabled(control, disabled) {
 function updateCommandAvailability() {
   const selectedVertexCount = editor.selectedVertices.size;
   const selectedFaceCount = editor.selectedFaces.size;
-  const selectedAnything = selectedVertexCount > 0 || selectedFaceCount > 0;
   const editMode = isEditMode();
   for (const button of ui.modeButtons) {
     button.setAttribute("aria-pressed", button.dataset.mode === editor.mode ? "true" : "false");
@@ -475,17 +468,9 @@ function updateCommandAvailability() {
     ui.objectWireframe.disabled = editMode;
   }
   // DOM control の disabled 状態を null 安全に切り替える
-  setDisabled(ui.makeTriangle, !editMode || selectedVertexCount !== 3);
-  // DOM control の disabled 状態を null 安全に切り替える
-  setDisabled(ui.makeQuad, !editMode || selectedVertexCount !== 4);
-  // DOM control の disabled 状態を null 安全に切り替える
-  setDisabled(ui.extrude, !editMode || selectedFaceCount === 0);
+  setDisabled(ui.makeFace, !editMode || (selectedVertexCount !== 3 && selectedVertexCount !== 4));
   // DOM control の disabled 状態を null 安全に切り替える
   setDisabled(ui.flipFaces, !editMode || selectedFaceCount === 0);
-  // DOM control の disabled 状態を null 安全に切り替える
-  setDisabled(ui.deleteSelected, editMode
-    ? !selectedAnything
-    : editor.selectedObjectIds.size === 0);
   // DOM control の disabled 状態を null 安全に切り替える
   setDisabled(ui.undo, editor.undoStack.length === 0);
   // DOM control の disabled 状態を null 安全に切り替える
@@ -2002,8 +1987,8 @@ function toggleObjectWireframe() {
   setMessage(`object wireframe ${objectWireframe ? "on" : "off"}`);
 }
 
-// editOperations の face 作成処理を UI から呼び出す薄い wrapper
-function makeFaceFromSelection(size) {
+// editOperations の face 作成処理を UI / keyboard から呼び出す薄い wrapper
+function makeFaceFromSelection(size = null) {
   editOperations.makeFaceFromSelection(size);
 }
 
@@ -2751,7 +2736,7 @@ function installKeyboardHandlers() {
     else if (plainKey && key === "o") moveSelectionByNormalKey(1.0);
     else if (plainKey && key === "n") scaleSelectionByKeyboard(0.92);
     else if (plainKey && key === "m") scaleSelectionByKeyboard(1.08);
-    else if (plainKey && key === "f") flipSelectedFaces();
+    else if (plainKey && key === "f") makeFaceFromSelection();
     else if (plainKey && key === "w") toggleObjectWireframe();
     else if (plainKey && key === "x") deleteSelected();
     else if (key === "delete" || key === "backspace") deleteSelected();
@@ -3226,12 +3211,9 @@ function installDomHandlers() {
     // 最後のユーザー向け message を保存し status を更新する
     setMessage("new model");
   });
-  ui.deleteSelected.addEventListener("click", deleteSelected);
   ui.objectWireframe?.addEventListener("click", toggleObjectWireframe);
-  ui.makeTriangle.addEventListener("click", () => makeFaceFromSelection(3));
-  ui.makeQuad.addEventListener("click", () => makeFaceFromSelection(4));
-  ui.extrude.addEventListener("click", () => setTransformMode("extrude"));
-  ui.flipFaces.addEventListener("click", flipSelectedFaces);
+  ui.makeFace?.addEventListener("click", () => makeFaceFromSelection());
+  ui.flipFaces?.addEventListener("click", flipSelectedFaces);
   ui.undo.addEventListener("click", undo);
   ui.redo.addEventListener("click", redo);
   ui.overlayAlpha?.addEventListener("input", () => {
