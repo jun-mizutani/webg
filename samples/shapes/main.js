@@ -1,6 +1,6 @@
 // -------------------------------------------------
 // shapes sample
-//   main.js       2026/04/12
+//   main.js       2026/04/28
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // -------------------------------------------------
@@ -105,9 +105,8 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 });
 
-const loadTextureFlipX = async (gpu, url) => {
-  // 既存 primitive 比較 sample と同じ向きで比較できるよう、
-  // 検査用 texture は X 反転して取り込む
+const loadTextureFlipY = async (gpu, url) => {
+  // canvas は上端から画素を返すため、webg の Bottom-Left UV 基準に合わせて Y 方向だけ反転する
   const response = await fetch(url);
   const blob = await response.blob();
   const bitmap = await createImageBitmap(blob);
@@ -115,8 +114,8 @@ const loadTextureFlipX = async (gpu, url) => {
   canvas.width = bitmap.width;
   canvas.height = bitmap.height;
   const ctx = canvas.getContext("2d");
-  ctx.translate(canvas.width, 0);
-  ctx.scale(-1, 1);
+  ctx.translate(0, canvas.height);
+  ctx.scale(1, -1);
   ctx.drawImage(bitmap, 0, 0);
   const rgba = new Uint8Array(ctx.getImageData(0, 0, canvas.width, canvas.height).data);
 
@@ -305,7 +304,7 @@ const start = async () => {
   await app.init();
   app.setDiagnosticsStage("load-texture");
 
-  const { rgba, width, height, colorTex } = await loadTextureFlipX(app.getGL(), "../../webg/num256.png");
+  const { rgba, width, height, colorTex } = await loadTextureFlipY(app.getGL(), "../../webg/num256.png");
   const imageNormalTex = await createImageNormalTexture(app.getGL(), rgba, width, height);
   const proceduralNormals = await createProceduralNormalTextures(app.getGL());
 

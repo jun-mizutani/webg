@@ -1,6 +1,6 @@
 // -------------------------------------------------
 // demo_spheres sample
-//   main.js       2026/04/10
+//   main.js       2026/04/28
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // -------------------------------------------------
@@ -38,8 +38,8 @@ const color = (div, i, count) => {
   return [d * i + 0.5, ((count % 2000) * 0.00025) + 0.5, 1.0 - d * i, 1.0];
 };
 
-const loadTextureFlipX = async (gpu, url) => {
-  // 既存サンプルに合わせ、画像を左右反転してテクスチャ化する
+const loadTextureFlipY = async (gpu, url) => {
+  // canvas は上端から画素を返すため、webg の Bottom-Left UV 基準に合わせて Y 方向だけ反転する
   const response = await fetch(url);
   const blob = await response.blob();
   const bitmap = await createImageBitmap(blob);
@@ -47,8 +47,8 @@ const loadTextureFlipX = async (gpu, url) => {
   canvas.width = bitmap.width;
   canvas.height = bitmap.height;
   const ctx = canvas.getContext("2d");
-  ctx.translate(canvas.width, 0);
-  ctx.scale(-1, 1);
+  ctx.translate(0, canvas.height);
+  ctx.scale(1, -1);
   ctx.drawImage(bitmap, 0, 0);
   const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
   const tex = new Texture(gpu);
@@ -114,7 +114,7 @@ const start = async () => {
   window.addEventListener("orientationchange", applyViewportLayout);
   shader.setLightPosition([0, 100, 1000, 1]);
 
-  const tex = await loadTextureFlipX(screen.getGL(), "../../webg/num256.png");
+  const tex = await loadTextureFlipY(screen.getGL(), "../../webg/num256.png");
 
   const shapes = makeShapes(screen.getGL(), tex);
   const numNodes = 40;

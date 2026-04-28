@@ -1,6 +1,6 @@
 // -------------------------------------------------
 // detouch/main.js
-//   main.js       2026/04/12
+//   main.js       2026/04/28
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // detach_attach.html 相当の挙動を current webg API で実装したサンプル
@@ -46,9 +46,8 @@ let rTop = null;
 let sphereObj = null;
 let satelliteObj = null;
 
-// detouch では X 反転した番号テクスチャを使い、
-// 左右で parent を付け替えても文字向きの確認がしやすい状態を作る
-const loadTextureFlipX = async (gpu, url) => {
+// canvas の画素列は上端から並ぶため、webg の Bottom-Left UV 基準に合わせて Y 方向だけ反転する
+const loadTextureFlipY = async (gpu, url) => {
   const response = await fetch(url);
   const blob = await response.blob();
   const bitmap = await createImageBitmap(blob);
@@ -56,8 +55,8 @@ const loadTextureFlipX = async (gpu, url) => {
   canvas.width = bitmap.width;
   canvas.height = bitmap.height;
   const ctx = canvas.getContext("2d");
-  ctx.translate(canvas.width, 0);
-  ctx.scale(-1, 1);
+  ctx.translate(0, canvas.height);
+  ctx.scale(1, -1);
   ctx.drawImage(bitmap, 0, 0);
   const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
   const tex = new Texture(gpu);
@@ -217,7 +216,7 @@ const handleKey = (key) => {
 // 表示系と入力系だけを WebgApp 標準経路へ寄せる
 const buildScene = async () => {
   const gpu = app.getGL();
-  const tex = await loadTextureFlipX(gpu, TEXTURE_FILE);
+  const tex = await loadTextureFlipY(gpu, TEXTURE_FILE);
 
   // WebgApp の camera rig を detouch 向け位置へ寄せ、
   // 旧 sample と同じく少し上からアーム全体を見下ろす構図にする

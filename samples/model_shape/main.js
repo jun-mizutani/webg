@@ -1,6 +1,6 @@
 // -------------------------------------------------
 // model_shape sample
-//   main.js       2026/04/12
+//   main.js       2026/04/28
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // -------------------------------------------------
@@ -25,8 +25,8 @@ const SPEED = 0.6;
 let app = null;
 
 const loadBaseAndNormalTexture = async (gpu, url) => {
-  // 既存 primitive 比較 sample と同じく、元画像を左右反転して取り込み、
-  // 同一画素からカラー用テクスチャと法線マップを構築する
+  // canvas の画素列は上端から並ぶため、webg の Bottom-Left UV 基準に合わせて Y 方向だけ反転する
+  // 同じ補正後画素からカラー用テクスチャと法線マップを構築する
   const response = await fetch(url);
   const blob = await response.blob();
   const bitmap = await createImageBitmap(blob);
@@ -34,8 +34,8 @@ const loadBaseAndNormalTexture = async (gpu, url) => {
   canvas.width = bitmap.width;
   canvas.height = bitmap.height;
   const ctx = canvas.getContext("2d");
-  ctx.translate(canvas.width, 0);
-  ctx.scale(-1, 1);
+  ctx.translate(0, canvas.height);
+  ctx.scale(1, -1);
   ctx.drawImage(bitmap, 0, 0);
   const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
   const rgba = new Uint8Array(imageData);

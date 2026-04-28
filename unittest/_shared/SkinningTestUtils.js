@@ -1,6 +1,6 @@
 // -------------------------------------------------
 // SkinningTestUtils.js
-//   SkinningTestUtils.js 2026/04/15
+//   SkinningTestUtils.js 2026/04/28
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // -------------------------------------------------
@@ -207,10 +207,12 @@ export const createTwoBoneSkinnedTube = (gpu, options = {}) => {
     const r1 = (i + 1) * segments;
     for (let j = 0; j < segments; j++) {
       const j1i = (j + 1) % segments;
-      // prism と同様に、tube 側面の auto normal が常に外向きになるよう
-      // quad を 2 triangle へ分ける順序をそろえる
-      shape.addTriangle(r0 + j, r0 + j1i, r1 + j);
-      shape.addTriangle(r0 + j1i, r1 + j1i, r1 + j);
+      // tube は上リングから下リングへ頂点を作るため、bottom-to-top に積む prism と同じ
+      // triangle 順序を使うと winding が反転し、auto normal が内向きになる
+      // backface_debug ではこの差がマゼンタの裏面表示として出るので、ring の進行方向に合わせて
+      // quad の 2 triangle を反対順にし、筒の外側が正面になるよう固定する
+      shape.addTriangle(r0 + j, r1 + j, r0 + j1i);
+      shape.addTriangle(r0 + j1i, r1 + j, r1 + j1i);
     }
   }
 
