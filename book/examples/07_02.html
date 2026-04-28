@@ -93,7 +93,7 @@ const app = new WebgApp({
   camera: {
     target: [0.0, 0.0, 0.0],
     distance: 58.0,
-    head: 14.0,
+    yaw: 14.0,
     pitch: -8.0
   }
 });
@@ -103,7 +103,7 @@ app.shader.setLightPosition(LIGHT);
 const orbit = app.createOrbitEyeRig({
     target: [0.0, 0.0, 0.0],
     distance: 58.0,
-    head: 14.0,
+    yaw: 14.0,
     pitch: -8.0,
     minDistance: 34.0,
     maxDistance: 90.0

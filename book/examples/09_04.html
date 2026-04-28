@@ -125,7 +125,7 @@ const app = new WebgApp({
   camera: {
     target: [0.0, 0.2, 0.0],
     distance: 13.0,
-    head: 24.0,
+    yaw: 24.0,
     pitch: -12.0
   }
 });
@@ -135,7 +135,7 @@ app.shader.setLightPosition(LIGHT);
 const orbit = app.createOrbitEyeRig({
     target: [0.0, 0.2, 0.0],
     distance: 13.0,
-    head: 24.0,
+    yaw: 24.0,
     pitch: -12.0,
     minDistance: 7.0,
     maxDistance: 24.0,
@@ -217,7 +217,7 @@ app.start({
 
     app.setStatusLines([
       `weightDebug=${state.weightDebug ? "on" : "off"} bones=${state.showBones ? "on" : "off"}`,
-      `rootYaw=${(Math.sin(elapsedSec * 1.1) * 10.0).toFixed(1)} childBank=${(Math.sin(elapsedSec * 1.7) * 58.0).toFixed(1)}`,
+      `rootYaw=${(Math.sin(elapsedSec * 1.1) * 10.0).toFixed(1)} childRoll=${(Math.sin(elapsedSec * 1.7) * 58.0).toFixed(1)}`,
       "same cylinder flow as 28_02, shader switched to BonePhong.js"
     ], {
       anchor: "top-left",

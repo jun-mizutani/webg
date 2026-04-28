@@ -102,7 +102,7 @@ const cs = new CoordinateSystem(null, "marker");
 // 位置を決める
 cs.setPosition(2.0, 1.0, 0.0);
 
-// head(Y), pitch(X), bank(Z) の順で回転を決める
+// yaw(Y), pitch(X), roll(Z) の順で回転を決める
 cs.setAttitude(45.0, 15.0, 0.0);
 
 // uniform scale を設定する
@@ -115,7 +115,7 @@ console.log(cs.getWorldPosition());
 console.log(cs.getWorldAttitude());
 ```
 
-特に注意すべき点は、回転の適用順が `head (Y軸) → pitch (X軸) → bank (Z軸)` であることです。これは `webg` 全体における共通規約となっており、後の `Matrix` や `Quat` の処理においても一貫して適用されます。
+特に注意すべき点は、回転の適用順が `yaw (Y軸) → pitch (X軸) → roll (Z軸)` であることです。これは `webg` 全体における共通規約となっており、後の `Matrix` や `Quat` の処理においても一貫して適用されます。
 
 ### Node
 
@@ -161,7 +161,7 @@ import Matrix from "./webg/Matrix.js";
 
 const m = new Matrix();
 
-// head, pitch, bank から回転を作る
+// yaw, pitch, roll から回転を作る
 m.setByEuler(30.0, 10.0, 0.0);
 
 // 最後の列へ平行移動を入れる
@@ -202,7 +202,7 @@ import Matrix from "./webg/Matrix.js";
 
 const q = new Quat();
 
-// head(Y), pitch(X), bank(Z) から quaternion を作る
+// yaw(Y), pitch(X), roll(Z) から quaternion を作る
 q.eulerToQuat(45.0, 10.0, 0.0);
 
 // 行列へ変換して確認する
@@ -324,7 +324,7 @@ loop();
 4. 描画の実行: `Node` を作成しても、`Space.draw(eye)` を呼び出さなければ描画されないこと。
 5. 行列の形式: `Matrix` は列優先（column-major）であること。
 6. クォータニオンの順序: `Quat` は `[w, x, y, z]` の順で保持すること。
-7. 回転の適用順: 回転順は `head (Y) → pitch (X) → bank (Z)` であること。
+7. 回転の適用順: 回転順は `yaw (Y) → pitch (X) → roll (Z)` であること。
 
 これらの基本仕様をあらかじめ固定して理解しておくことで、実装時の混乱を避けることができます。
 

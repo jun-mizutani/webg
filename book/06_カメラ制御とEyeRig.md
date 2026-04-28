@@ -32,8 +32,8 @@ createCameraRig() {
 ここで重要なのは、`EyeRig` がなければ視点を作成できないわけではないということです。`EyeRig` は、既存の3段構成に対して orbit / first-person / follow という意味付けを与えるヘルパーであると理解してください。`WebgApp.init()` は標準の `cameraRig`、`cameraRod`、`eye` を作成し、`space.setEye(this.eye)` までを完了させるため、利用者はその構造の上に `EyeRig` を適用させるだけで十分です。
 
 モードごとの役割分担を整理すると以下のようになります。
-- 軌道視点 (orbit): `base` が注視点、`rod` が head / pitch（回転）、`eye` が distance（距離）を担います。
-- 一人称視点 (first-person): `base` が身体の位置と body head、`rod` が eye height（目の高さ）、`eye` が独立視線を担います。
+- 軌道視点 (orbit): `base` が注視点、`rod` が yaw / pitch（回転）、`eye` が distance（距離）を担います。
+- 一人称視点 (first-person): `base` が身体の位置と body yaw、`rod` が eye height（目の高さ）、`eye` が独立視線を担います。
 - 追従視点 (follow): `base` が追従対象の現在位置、`rod` が後方から見下ろす向き、`eye` が追従距離を担います。
 
 このように共通構造を持つことで、「全景を俯瞰する」「主人公の視点で歩く」「対象を後方から追う」といった異なる視点操作を、同一の型で効率的に扱うことができます。
@@ -71,7 +71,7 @@ const app = new WebgApp({
   camera: {
     target: [0.0, 6.0, 0.0],
     distance: 46.0,
-    head: 28.0,
+    yaw: 28.0,
     pitch: -18.0
   }
 });
@@ -105,9 +105,9 @@ const app = new WebgApp({
   camera: {
     target: [0.0, 0.0, 0.0],
     distance: 8.0,
-    head: 0.0,
+    yaw: 0.0,
     pitch: 0.0,
-    bank: 0.0
+    roll: 0.0
   }
 });
 await app.init();
@@ -115,7 +115,7 @@ await app.init();
 const orbit = app.createOrbitEyeRig({
   target: [0.0, 0.0, 0.0],
   distance: 8.0,
-  head: 24.0,
+  yaw: 24.0,
   pitch: -12.0,
   minDistance: 4.0,
   maxDistance: 18.0,
@@ -127,11 +127,11 @@ app.start();
 
 この例では、`WebgApp` が生成した `cameraRig`、`cameraRod`、`eye` の上に、`createOrbitEyeRig()` で軌道用の `EyeRig` を作成しています。`createOrbitEyeRig()` は、pointer 入力の接続、毎フレームの `update(deltaSec)`、そして `EyeRig` の orbit state と `WebgApp` の camera state の同期をまとめて扱います。これにより、サンプル側で `orbit.update(deltaSec)` や `app.camera.target` への手動コピーを書き忘れて、パン（PAN）操作が正しく機能しない事態を防ぎます。
 
-返される `orbit` は通常の `EyeRig` なので、必要に応じて `setTarget()`、`setAngles()`、`setDistance()` などもそのまま使えます。`target` が `base` の位置に、`head / pitch` が `rod` の向きに、`distance` が `eye` の Z 軸位置にそれぞれ反映されます。
+返される `orbit` は通常の `EyeRig` なので、必要に応じて `setTarget()`、`setAngles()`、`setDistance()` などもそのまま使えます。`target` が `base` の位置に、`yaw / pitch` が `rod` の向きに、`distance` が `eye` の Z 軸位置にそれぞれ反映されます。
 
 ここで重要なのは、軌道視点が「回転とズームだけのカメラ」ではないという点です。実際のモデルビューアやエディタでは、見たい対象を画面の中央へ寄せ直したい場面が頻繁に発生します。たとえば、キャラクター全体を確認したあとに手元だけを拡大したい場合や、建物全景から一部の窓まわりへ視線を移したい場合に、回転だけでは目的の箇所を中央へ持ってきにくいことがあります。このような場面のために、`EyeRig` の orbit / follow には パン（PAN） が実装されています。
 
-パン（PAN）は、カメラ自体を別の場所へ瞬間移動させるのではなく、`orbit.target` を視線のスクリーン平面に沿って平行移動する操作です。これにより、現在の head / pitch / distance を大きく崩さずに、「見ている中心」だけを横や上へずらすことができます。設計上は、right / up の向きを `eye` のワールド行列から取り出し、その方向へ `target` を動かすことで実現しています。つまりパン（PAN）はワールド座標の X / Y / Z を固定的に増減する処理ではなく、あくまで「今見えている画面上の左右上下」に対応した移動です。このため、どの角度からモデルを見ていても、直感的に視点中心を動かせます。
+パン（PAN）は、カメラ自体を別の場所へ瞬間移動させるのではなく、`orbit.target` を視線のスクリーン平面に沿って平行移動する操作です。これにより、現在の yaw / pitch / distance を大きく崩さずに、「見ている中心」だけを横や上へずらすことができます。設計上は、right / up の向きを `eye` のワールド行列から取り出し、その方向へ `target` を動かすことで実現しています。つまりパン（PAN）はワールド座標の X / Y / Z を固定的に増減する処理ではなく、あくまで「今見えている画面上の左右上下」に対応した移動です。このため、どの角度からモデルを見ていても、直感的に視点中心を動かせます。
 
 `EyeRig` の pointer 操作では、orbit / follow モードで `Shift` を押しながらドラッグするとパン（PAN）操作が有効になります。また、タッチ操作では 2 本指操作の中心移動がパン（PAN）に割り当てられています。さらに、キーボード操作でも `Shift + Arrow` によって同じ平行移動を行えます。`createOrbitEyeRig()` を使うと、この入力処理と `WebgApp` camera state への同期が標準で接続されるため、サンプルごとに個別の実装を行うことなく、軌道カメラの挙動を共通化できます。
 
@@ -145,7 +145,7 @@ app.start();
 const orbit = app.createOrbitEyeRig({
   target: [0.0, 0.0, 0.0],
   distance: 8.0,
-  head: 24.0,
+  yaw: 24.0,
   pitch: -12.0,
   orbitKeyMap: {
     left: "a",
@@ -162,7 +162,7 @@ const orbit = app.createOrbitEyeRig({
 const orbit = app.createOrbitEyeRig({
   target: [0.0, 0.0, 0.0],
   distance: 8.0,
-  head: 24.0,
+  yaw: 24.0,
   pitch: -12.0,
   orbitKeyMap: {
     left: "a",
@@ -195,7 +195,7 @@ const orbit = app.createOrbitEyeRig({
 const orbit = app.createOrbitEyeRig({
   target: [0.0, 0.0, 0.0],
   distance: 8.0,
-  head: 24.0,
+  yaw: 24.0,
   pitch: -12.0,
   dragButton: 1
 });
@@ -207,7 +207,7 @@ const orbit = app.createOrbitEyeRig({
 const orbit = app.createOrbitEyeRig({
   target: [0.0, 0.0, 0.0],
   distance: 8.0,
-  head: 24.0,
+  yaw: 24.0,
   pitch: -12.0,
   dragButton: 1,
   panModifierKey: "shift",
@@ -224,7 +224,7 @@ const orbit = app.createOrbitEyeRig({
 const orbit = app.createOrbitEyeRig({
   target: [0.0, 0.0, 0.0],
   distance: 8.0,
-  head: 24.0,
+  yaw: 24.0,
   pitch: -12.0,
   dragButton: 1,
   panModifierKey: "shift",
@@ -273,7 +273,7 @@ orbit.setTarget(
 
 ## 一人称視点：身体の向きと視線の方向の独立制御
 
-一人称（first-person）視点は、カメラがオブジェクトの内部に配置され、前後左右に移動する視点です。ここでの設計のポイントは、進行方向と視線の方向を完全に同一視させないことです。`EyeRig` では、`base` に身体の位置と身体の向き（body head）を配置し、`eye` に独立した視線角度（look pitch）を持たせています。
+一人称（first-person）視点は、カメラがオブジェクトの内部に配置され、前後左右に移動する視点です。ここでの設計のポイントは、進行方向と視線の方向を完全に同一視させないことです。`EyeRig` では、`base` に身体の位置と身体の向き（body yaw）を配置し、`eye` に独立した視線角度（look pitch）を持たせています。
 
 ```js
 const eyeRig = new EyeRig(app.cameraRig, app.cameraRod, app.eye, {
@@ -283,7 +283,7 @@ const eyeRig = new EyeRig(app.cameraRig, app.cameraRod, app.eye, {
   type: "first-person",
   firstPerson: {
     position: [0.0, 0.0, 28.0],
-    bodyHead: 180.0,
+    bodyYaw: 180.0,
     lookPitch: -8.0,
     eyeHeight: 1.8,
     moveSpeed: 12.0,
@@ -314,7 +314,7 @@ eyeRig.setLookAngles(0.0, -10.0, 0.0);
 
 ## 追従視点：追従対象と挙動の分離
 
-追従（follow）カメラは、プレイヤーや特定の移動ターゲットを後方から捉える視点です。重要なのは、「追従対象そのもの」と「そこからどのような相対位置・角度で追従するか」という挙動の設定を分離して管理することです。`EyeRig` では、`targetNode` と `targetOffset` で対象を指定し、`distance`、`head`、`pitch`、`followLerp` で追従挙動を定義します。
+追従（follow）カメラは、プレイヤーや特定の移動ターゲットを後方から捉える視点です。重要なのは、「追従対象そのもの」と「そこからどのような相対位置・角度で追従するか」という挙動の設定を分離して管理することです。`EyeRig` では、`targetNode` と `targetOffset` で対象を指定し、`distance`、`yaw`、`pitch`、`followLerp` で追従挙動を定義します。
 
 ```js
 const followRig = new EyeRig(app.cameraRig, app.cameraRod, app.eye, {
@@ -326,12 +326,12 @@ const followRig = new EyeRig(app.cameraRig, app.cameraRod, app.eye, {
     targetNode: playerNode,
     targetOffset: [0.0, 2.3, 0.0],
     distance: 16.0,
-    head: 0.0,
+    yaw: 0.0,
     pitch: -12.0,
     minDistance: 6.0,
     maxDistance: 40.0,
-    inheritTargetHead: true,
-    targetHeadOffset: 180.0,
+    inheritTargetYaw: true,
+    targetYawOffset: 180.0,
     followLerp: 6.0
   }
 });
@@ -344,7 +344,7 @@ app.start({
 });
 ```
 
-追従対象を変更する場合は `setTargetNode()` を、追従位置を調整（例：頭上や胸元へずらす）したい場合は `setTargetOffset()` を使用します。`inheritTargetHead: true` を指定すると、対象ノードの向きに合わせて視点も回転するため、常に後方視点を維持しやすくなります。`samples/camera_controller` の follow モードはこの設計に基づいており、ターゲットが複雑な軌道を移動しても視点の整合性が保たれています。
+追従対象を変更する場合は `setTargetNode()` を、追従位置を調整（例：頭上や胸元へずらす）したい場合は `setTargetOffset()` を使用します。`inheritTargetYaw: true` を指定すると、対象ノードの向きに合わせて視点も回転するため、常に後方視点を維持しやすくなります。`samples/camera_controller` の follow モードはこの設計に基づいており、ターゲットが複雑な軌道を移動しても視点の整合性が保たれています。
 
 ## EyeRig の補助 API
 

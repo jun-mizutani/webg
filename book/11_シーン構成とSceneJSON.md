@@ -195,7 +195,7 @@ Scene JSON のトップレベルは、主に以下の項目で構成されます
 }
 ```
 
-- `camera`: アプリ起動時のカメラ状態（`target`, `distance`, `head`, `pitch`, `bank`, `viewAngle`, `near`, `far`）を定義します。`WebgApp` を対象にビルドした場合、これらの値がアプリのカメラに反映されます。
+- `camera`: アプリ起動時のカメラ状態（`target`, `distance`, `yaw`, `pitch`, `roll`, `viewAngle`, `near`, `far`）を定義します。`WebgApp` を対象にビルドした場合、これらの値がアプリのカメラに反映されます。
 - `hud`: ガイドテキストとステータステキストの初期表示を定義します。実用的には各行を `{ x, y, text, color }` で明示するオブジェクト形式を推奨します。
 - `input`: キーからアクションへの対応表です。ここではアクション名のみを定義し、実処理は `createInputHandler()` で紐付けます。
 - `tileMap`: 高さ情報を持つ盤面の定義です。内部的に `TileMap.fromScene(...).build()` が呼ばれるため、盤面付きシーンを単一の JSON で管理できます。
@@ -258,9 +258,9 @@ Scene JSON 関連の機能を変更する際は、整合性を保つため、以
   "camera": {
     "target": [0, 0, 0],
     "distance": 30,
-    "head": 0,
+    "yaw": 0,
     "pitch": 0,
-    "bank": 0,
+    "roll": 0,
     "viewAngle": 55,
     "near": 0.1,
     "far": 1000

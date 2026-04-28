@@ -64,9 +64,9 @@ const SCENE = {
   camera: {
     target: [12.0, 0.0, 10.0],
     distance: 35.0,
-    head: 28.0,
+    yaw: 28.0,
     pitch: -30.0,
-    bank: 0.0,
+    roll: 0.0,
     viewAngle: 44.0,
     near: 0.1,
     far: 1000.0
@@ -144,7 +144,7 @@ const tileMap = runtime.tileMap;
 const orbit = app.createOrbitEyeRig({
     target: [...SCENE.camera.target],
     distance: SCENE.camera.distance,
-    head: SCENE.camera.head,
+    yaw: SCENE.camera.yaw,
     pitch: SCENE.camera.pitch,
     minDistance: 10.0,
     maxDistance: 56.0
@@ -154,7 +154,7 @@ app.attachInput({
   onKeyDown: (key, ev) => {
     if (ev.repeat) return;
     if (key === "r") {
-      orbit.setAngles(SCENE.camera.head, SCENE.camera.pitch);
+      orbit.setAngles(SCENE.camera.yaw, SCENE.camera.pitch);
       orbit.setDistance(SCENE.camera.distance);
     }
   }

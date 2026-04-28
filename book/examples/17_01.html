@@ -42,7 +42,7 @@ const app = new WebgApp({
   camera: {
     target: [0.0, -1.0, -18.0],
     distance: 46.0,
-    head: 24.0,
+    yaw: 24.0,
     pitch: -10.0
   }
 });
@@ -51,7 +51,7 @@ await app.init();
 const orbit = app.createOrbitEyeRig({
     target: [0.0, -1.0, -18.0],
     distance: 46.0,
-    head: 24.0,
+    yaw: 24.0,
     pitch: -10.0,
     minDistance: 18.0,
     maxDistance: 80.0

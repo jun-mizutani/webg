@@ -45,7 +45,7 @@
 
 ### 座標系と回転の定義
 
-`webg` の座標系は右手座標系で、`+X=右`、`+Y=上`、`+Z=前` と定義されています。回転の制御には `head / pitch / bank` という用語を用いており、これは一般的な `yaw / pitch / roll` に対応します。`WebgApp` でも camera や follow 設定においてこの語彙を使用するため、本書全体を通して `head` を基準に理解するようにしてください。この構造を把握しておくことで、`WebgApp` を利用した際に「何が自動化され、何が利用者の責任として残るのか」を明確に区別できるようになります。
+`webg` の座標系は右手座標系で、`+X=右`、`+Y=上`、`+Z=前` と定義されています。回転の制御には `yaw / pitch / roll` という用語を用います。`WebgApp` でも camera や follow 設定においてこの語彙を使用するため、本書全体を通して `yaw` を基準に理解するようにしてください。この構造を把握しておくことで、`WebgApp` を利用した際に「何が自動化され、何が利用者の責任として残るのか」を明確に区別できるようになります。
 
 ## ローレベル構成とWebgAppによる実装の比較
 
@@ -136,7 +136,7 @@ const app = new WebgApp({
   camera: {
     target: [0.0, 0.0, 0.0],
     distance: 8.0,
-    head: 0.0,
+    yaw: 0.0,
     pitch: 0.0
   }
 });
@@ -208,7 +208,7 @@ app.start({
 - `layoutMode`: 通常表示か `embedded`（埋め込み）か
 - `fixedCanvasSize`: canvas を固定サイズで扱う場合の設定
 
-初期視点の指定では `target`、`distance`、`head`、`pitch`、`bank` を使用します。
+初期視点の指定では `target`、`distance`、`yaw`、`pitch`、`roll` を使用します。
 
 ```js
 const app = new WebgApp({
@@ -218,9 +218,9 @@ const app = new WebgApp({
   camera: {
     target: [0.0, 0.0, 0.0],
     distance: 12.0,
-    head: 24.0,
+    yaw: 24.0,
     pitch: -12.0,
-    bank: 0.0
+    roll: 0.0
   }
 });
 ```
@@ -403,7 +403,7 @@ const app = new WebgApp({
 const orbit = app.createOrbitEyeRig({
   target: [0.0, 0.0, 0.0],
   distance: 8.0,
-  head: 24.0,
+  yaw: 24.0,
   pitch: -12.0
 });
 ```

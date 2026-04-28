@@ -149,7 +149,7 @@ const CAMERA_CONFIG = {
   distance: 8.0,
   yaw: 0.0,
   pitch: 0.0,
-  bank: 0.0
+  roll: 0.0
 };
 
 const app = new WebgApp({

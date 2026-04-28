@@ -41,7 +41,7 @@ const app = new WebgApp({
   camera: {
     target: [16.0, 0.0, 16.0],
     distance: 18.0,
-    head: 0.0,
+    yaw: 0.0,
     pitch: -24.0
   }
 });
@@ -124,7 +124,7 @@ app.start({
   onUpdate: () => {
     if (!moveTween || moveTween.isFinished()) {
       if (app.wasActionPressed("move_up")) {
-        const move = resolveCameraRelativeGridMove(app.camera.head, "arrowup");
+        const move = resolveCameraRelativeGridMove(app.camera.yaw, "arrowup");
         const next = tileMap.getTile(playerCell.col 
                    + move.dx, playerCell.row + move.dy);
         startMoveTo(next);
@@ -406,7 +406,7 @@ TileMap のセル移動と glb のアニメーションを同時に制御する�
 app.start({
   onUpdate: ({ deltaSec }) => {
     const move = app.wasActionPressed("move_up")
-      ? resolveCameraRelativeGridMove(app.camera.head, "arrowup")
+      ? resolveCameraRelativeGridMove(app.camera.yaw, "arrowup")
       : null;
 
     if (move && (!moveTween || moveTween.isFinished())) {
