@@ -20,6 +20,7 @@ export function createTransformController(ctx) {
     basis: null,
     center: [0.0, 0.0, 0.0],
     initialPositions: new Map(),
+    xMirrorPairs: [],
     extrudeVertexNormals: new Map(),
     startSnapshot: null,
     wasDirty: false,
@@ -91,9 +92,10 @@ export function createTransformController(ctx) {
         return false;
       }
       extrudeVertexNormals = extrusion.extrudeVertexNormals;
-      vertices = Array.from(extrusion.newVertexIds)
+      vertices = Array.from(extrusion.sourceNewVertexIds ?? extrusion.newVertexIds)
         .map((id) => ctx.getVertexById(id))
         .filter((vertex) => vertex !== null);
+      state.xMirrorPairs = extrusion.mirrorTopVertexPairs ?? [];
       ctx.rebuildScene();
     } else {
       vertices = ctx.getTransformTargetVertexObjects(normalized);
@@ -117,6 +119,9 @@ export function createTransformController(ctx) {
       vertex,
       [...vertex.position]
     ]));
+    if (normalized !== "extrude") {
+      state.xMirrorPairs = ctx.makeXMirrorEditPairs?.(vertices, state.initialPositions) ?? [];
+    }
     state.extrudeVertexNormals = extrudeVertexNormals;
     state.startSnapshot = startSnapshot;
     state.wasDirty = wasDirty;
@@ -148,6 +153,7 @@ export function createTransformController(ctx) {
     state.pointerId = null;
     state.basis = null;
     state.initialPositions = new Map();
+    state.xMirrorPairs = [];
     state.extrudeVertexNormals = new Map();
     state.startSnapshot = null;
     state.wasDirty = false;
@@ -177,6 +183,7 @@ export function createTransformController(ctx) {
     state.pointerId = null;
     state.basis = null;
     state.initialPositions = new Map();
+    state.xMirrorPairs = [];
     state.extrudeVertexNormals = new Map();
     state.startSnapshot = null;
     state.wasDirty = false;
@@ -239,6 +246,7 @@ export function createTransformController(ctx) {
         vertex.position = add3(initial, mul3(normal, distance));
       }
     }
+    ctx.applyXMirrorEdit?.(vertices, state.initialPositions, state.xMirrorPairs);
     state.changed = true;
     ctx.rebuildScene();
     ctx.setMessage(`${getTransformModeLabel(state.mode)} drag`);

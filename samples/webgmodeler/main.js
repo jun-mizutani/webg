@@ -118,6 +118,7 @@ const ui = {
   newScene: null,
   makeFace: null,
   flipFaces: null,
+  xMirrorEdit: null,
   undo: null,
   redo: null,
   objectWireframe: null,
@@ -153,6 +154,8 @@ let overlayEdgeColor = [0.0, 0.0, 0.0];
 let objectWireframe = false;
 let lightBackground = false;
 let visiblePickOnly = true;
+let xMirrorEdit = false;
+const explicitXMirrorVertexPairs = new Map();
 let importedAsset = null;
 let importedMeshes = [];
 let lastSavedName = "-";
@@ -182,6 +185,23 @@ const MARKER_Z_BIAS_ORTHOGRAPHIC = 0.00002;
 const Z_BIAS_REFERENCE_VIEW_ANGLE = 50.0;
 const BACKGROUND_DARK_COLOR = [0.07, 0.11, 0.15, 1.0];
 const BACKGROUND_LIGHT_COLOR = [0.42, 0.45, 0.48, 1.0];
+const VISIBLE_PICK_GRID_COLS = 48;
+const VISIBLE_PICK_GRID_ROWS = 48;
+const VISIBLE_PICK_GRID_PADDING_PX = 3.0;
+const ORBIT_VIEW_PRESETS = {
+  "1": {
+    forward: { label: "-Z", yaw: 0.0, pitch: 0.0 },
+    reverse: { label: "+Z", yaw: 180.0, pitch: 0.0 }
+  },
+  "3": {
+    forward: { label: "-X", yaw: 90.0, pitch: 0.0 },
+    reverse: { label: "+X", yaw: -90.0, pitch: 0.0 }
+  },
+  "7": {
+    forward: { label: "-Y", yaw: 0.0, pitch: -90.0 },
+    reverse: { label: "+Y", yaw: 0.0, pitch: 90.0 }
+  }
+};
 
 const cameraModifier = {
   shift: false
@@ -208,6 +228,44 @@ const rawInputDebug = {
   x: 0.0,
   y: 0.0
 };
+
+const visiblePickStats = {
+  mode: "-",
+  candidates: 0,
+  selected: 0,
+  gridFaces: 0,
+  gridCells: 0,
+  avgFacesPerFilledCell: 0.0,
+  maxFacesPerCell: 0
+};
+
+function resetVisiblePickStats(mode = "-") {
+  visiblePickStats.mode = mode;
+  visiblePickStats.candidates = 0;
+  visiblePickStats.selected = 0;
+  visiblePickStats.gridFaces = 0;
+  visiblePickStats.gridCells = 0;
+  visiblePickStats.avgFacesPerFilledCell = 0.0;
+  visiblePickStats.maxFacesPerCell = 0;
+}
+
+function setVisiblePickSelectionStats(mode, candidates, selected, context = null) {
+  visiblePickStats.mode = mode;
+  visiblePickStats.candidates = candidates;
+  visiblePickStats.selected = selected;
+  const grid = context?.occlusionGrid ?? null;
+  if (!grid) {
+    visiblePickStats.gridFaces = 0;
+    visiblePickStats.gridCells = 0;
+    visiblePickStats.avgFacesPerFilledCell = 0.0;
+    visiblePickStats.maxFacesPerCell = 0;
+    return;
+  }
+  visiblePickStats.gridFaces = grid.faceCount;
+  visiblePickStats.gridCells = grid.filledCellCount;
+  visiblePickStats.avgFacesPerFilledCell = grid.avgFacesPerFilledCell;
+  visiblePickStats.maxFacesPerCell = grid.maxFacesPerCell;
+}
 const rawInputHistory = [];
 const rawInputButtonHistory = [];
 
@@ -225,6 +283,7 @@ const editor = {
   faces: [],
   selectedVertices: new Set(),
   selectedFaces: new Set(),
+  lastSelectedVertexId: null,
   nextVertexId: 1,
   nextFaceId: 1,
   tool: TOOL_SELECT_VERTEX,
@@ -604,6 +663,7 @@ function cacheUi() {
   ui.newScene = document.getElementById("newScene");
   ui.makeFace = document.getElementById("makeFace");
   ui.flipFaces = document.getElementById("flipFaces");
+  ui.xMirrorEdit = document.getElementById("xMirrorEdit");
   ui.undo = document.getElementById("undo");
   ui.redo = document.getElementById("redo");
   ui.objectWireframe = document.getElementById("objectWireframe");
@@ -665,10 +725,13 @@ function updateStatus() {
     `vertices=${editor.vertices.length} faces=${editor.faces.length}`,
     `selectedVertices=${editor.selectedVertices.size} [${vertexIds}]`,
     `selectedFaces=${editor.selectedFaces.size} [${faceIds}]`,
+    `lastVertex=${getLastSelectedVertexLabel()}`,
     `meshSelect=${meshName}`,
     `undo=${editor.undoStack.length} redo=${editor.redoStack.length}`,
+    `xMirror=${xMirrorEdit ? "on" : "off"}`,
     `background=${lightBackground ? "light" : "dark"}`,
     `visiblePick=${visiblePickOnly ? "visible only" : "through"}`,
+    `visiblePickStats=${visiblePickStats.mode} candidates=${visiblePickStats.candidates} selected=${visiblePickStats.selected} gridFaces=${visiblePickStats.gridFaces} filledCells=${visiblePickStats.gridCells} avgFaces=${visiblePickStats.avgFacesPerFilledCell.toFixed(1)} maxFaces=${visiblePickStats.maxFacesPerCell}`,
     `overlayAlpha=${overlayAlpha.toFixed(2)}`,
     `overlayMarker=${rgbToHexColor(overlayMarkerColor)} overlayEdge=${rgbToHexColor(overlayEdgeColor)}`,
     `projection=${getProjectionLabel()}`,
@@ -692,6 +755,7 @@ function updateStatus() {
     { label: "Lens", value: getFocalLengthLabel() },
     { label: "V/F", value: `${editor.vertices.length}/${editor.faces.length}` },
     { label: "Selected", value: `o${editor.selectedObjectIds.size} v${editor.selectedVertices.size} f${editor.selectedFaces.size}` },
+    { label: "Vertex", value: getLastSelectedVertexLabel() },
     { label: "Msg", value: editor.lastMessage }
   ], {
     x: 0,
@@ -729,6 +793,9 @@ function updateCommandAvailability() {
   }
   if (ui.visiblePickOnly) {
     ui.visiblePickOnly.setAttribute("aria-pressed", visiblePickOnly ? "true" : "false");
+  }
+  if (ui.xMirrorEdit) {
+    ui.xMirrorEdit.setAttribute("aria-pressed", xMirrorEdit ? "true" : "false");
   }
   // DOM control の disabled 状態を null 安全に切り替える
   setDisabled(ui.makeFace, !editMode || (selectedVertexCount !== 3 && selectedVertexCount !== 4));
@@ -781,6 +848,8 @@ function makeSnapshot() {
     nextObjectId: editor.nextObjectId,
     selectedVertices: Array.from(editor.selectedVertices),
     selectedFaces: Array.from(editor.selectedFaces),
+    lastSelectedVertexId: editor.lastSelectedVertexId,
+    explicitXMirrorVertexPairs: Array.from(explicitXMirrorVertexPairs.entries()),
     nextVertexId: editor.nextVertexId,
     nextFaceId: editor.nextFaceId
   };
@@ -834,6 +903,11 @@ function restoreSnapshot(snapshot) {
   }
   editor.selectedVertices = new Set(snapshot.selectedVertices);
   editor.selectedFaces = new Set(snapshot.selectedFaces);
+  editor.lastSelectedVertexId = snapshot.lastSelectedVertexId ?? null;
+  explicitXMirrorVertexPairs.clear();
+  for (const [sourceId, mirrorId] of snapshot.explicitXMirrorVertexPairs ?? []) {
+    explicitXMirrorVertexPairs.set(sourceId, mirrorId);
+  }
   editor.dirty = true;
   // mesh / selected face / marker の表示をまとめて再構築する
   rebuildScene();
@@ -934,6 +1008,25 @@ function getHighlightedVertexIds() {
   return ids;
 }
 
+// HUD へ表示する最後の直接選択 vertex を取得する
+// 選択解除や Shift で選択から外れた場合は古い座標を出さない
+function getLastSelectedVertex() {
+  if (editor.lastSelectedVertexId === null || !editor.selectedVertices.has(editor.lastSelectedVertexId)) {
+    return null;
+  }
+  return getVertexById(editor.lastSelectedVertexId);
+}
+
+// HUD へ収めやすい短い vertex 座標表示を作る
+function getLastSelectedVertexLabel() {
+  const vertex = getLastSelectedVertex();
+  if (!vertex) {
+    return "-";
+  }
+  const coords = vertex.position.map((value) => Number(value).toFixed(3)).join(", ");
+  return `v${vertex.id} (${coords})`;
+}
+
 // transform 対象 vertex id を vertex object 配列へ変換する
 function getActiveVertexObjects() {
   return getActiveVertexIds()
@@ -974,6 +1067,243 @@ function computeCenter(vertices) {
     sum[2] += vertex.position[2];
   }
   return [sum[0] / vertices.length, sum[1] / vertices.length, sum[2] / vertices.length];
+}
+
+// X Mirror 用の位置許容差を model size から決める
+// 読み込み model の scale が大きく違っても、同じ相対精度で対称頂点を探せるようにする
+function getXMirrorTolerance() {
+  return Math.max(getEditorBounds().size * 1.0e-4, 1.0e-5);
+}
+
+// X=0 平面を境にした対称位置を返す
+// モデラーでの X Mirror として扱うため、X 符号だけを反転し、Y/Z は維持する
+function makeXMirrorPosition(position) {
+  return [-position[0], position[1], position[2]];
+}
+
+// 指定 vertex の X Mirror 対応頂点を active object 内から探す
+// 同じ vertex 自身や今回の直接編集対象は除外し、対称相手を上書きして操作意図が競合しないようにする
+function findXMirrorVertex(vertex, referencePosition, excludedVertexIds = new Set()) {
+  if (!vertex) {
+    return null;
+  }
+  const tolerance = getXMirrorTolerance();
+  const target = makeXMirrorPosition(referencePosition);
+  let best = null;
+  let bestDistanceSq = Infinity;
+  for (const candidate of editor.vertices) {
+    if (candidate.id === vertex.id || excludedVertexIds.has(candidate.id)) {
+      continue;
+    }
+    const dx = candidate.position[0] - target[0];
+    const dy = candidate.position[1] - target[1];
+    const dz = candidate.position[2] - target[2];
+    if (Math.abs(dx) > tolerance || Math.abs(dy) > tolerance || Math.abs(dz) > tolerance) {
+      continue;
+    }
+    const distanceSq = dx * dx + dy * dy + dz * dz;
+    if (distanceSq < bestDistanceSq) {
+      best = candidate;
+      bestDistanceSq = distanceSq;
+    }
+  }
+  return best;
+}
+
+// X Mirror が有効なとき、直接編集した vertex の結果を対称側の既存 vertex へ反映する
+// 新しい vertex / face は作らないため、対称相手が存在しない場合は何も補完しない
+function makeXMirrorEditPairs(sourceVertices, initialPositions = null) {
+  if (!xMirrorEdit || !isEditMode() || !Array.isArray(sourceVertices) || sourceVertices.length === 0) {
+    return [];
+  }
+  const sourceIds = new Set(sourceVertices.map((vertex) => vertex.id));
+  const pairs = [];
+  for (const vertex of sourceVertices) {
+    const explicitMirrorId = explicitXMirrorVertexPairs.get(vertex.id);
+    const explicitMirror = explicitMirrorId === undefined || sourceIds.has(explicitMirrorId)
+      ? null
+      : getVertexById(explicitMirrorId);
+    if (explicitMirror) {
+      pairs.push({
+        sourceId: vertex.id,
+        mirrorId: explicitMirror.id
+      });
+      continue;
+    }
+    const referencePosition = initialPositions?.get?.(vertex) ?? vertex.position;
+    const mirror = findXMirrorVertex(vertex, referencePosition, sourceIds);
+    if (mirror) {
+      pairs.push({
+        sourceId: vertex.id,
+        mirrorId: mirror.id
+      });
+    }
+  }
+  return pairs;
+}
+
+// X Mirror が有効なとき、直接編集した vertex の結果を対称側の既存 vertex へ反映する
+// drag preview では最初に見つけた対応関係を使い続け、移動後の mirror 位置で再探索しない
+function applyXMirrorEdit(sourceVertices, initialPositions = null, mirrorPairs = null) {
+  if (!xMirrorEdit || !isEditMode() || !Array.isArray(sourceVertices) || sourceVertices.length === 0) {
+    return {
+      updated: 0,
+      missing: 0
+    };
+  }
+  if (Array.isArray(mirrorPairs)) {
+    let updated = 0;
+    for (const pair of mirrorPairs) {
+      const source = getVertexById(pair.sourceId);
+      const mirror = getVertexById(pair.mirrorId);
+      if (!source || !mirror) {
+        continue;
+      }
+      mirror.position = makeXMirrorPosition(source.position);
+      updated += 1;
+    }
+    return {
+      updated,
+      missing: sourceVertices.length - updated
+    };
+  }
+  const sourceIds = new Set(sourceVertices.map((vertex) => vertex.id));
+  let updated = 0;
+  let missing = 0;
+  for (const vertex of sourceVertices) {
+    const referencePosition = initialPositions?.get?.(vertex) ?? vertex.position;
+    const mirror = findXMirrorVertex(vertex, referencePosition, sourceIds);
+    if (!mirror) {
+      missing += Math.abs(referencePosition[0]) > getXMirrorTolerance() ? 1 : 0;
+      continue;
+    }
+    mirror.position = makeXMirrorPosition(vertex.position);
+    updated += 1;
+  }
+  return {
+    updated,
+    missing
+  };
+}
+
+// X Mirror 表示用に、選択 vertex の反対側にある既存 vertex id を集める
+// 選択済み vertex は赤表示を優先するため、mirror marker には含めない
+function getXMirrorSelectedVertexIds() {
+  const ids = new Set();
+  if (!xMirrorEdit || !isEditMode() || editor.selectedVertices.size === 0) {
+    return ids;
+  }
+  const selectedIds = new Set(editor.selectedVertices);
+  for (const id of selectedIds) {
+    const vertex = getVertexById(id);
+    if (!vertex) {
+      continue;
+    }
+    const explicitMirrorId = explicitXMirrorVertexPairs.get(vertex.id);
+    if (explicitMirrorId !== undefined && !selectedIds.has(explicitMirrorId) && getVertexById(explicitMirrorId)) {
+      ids.add(explicitMirrorId);
+      continue;
+    }
+    const mirror = findXMirrorVertex(vertex, vertex.position, selectedIds);
+    if (mirror && !selectedIds.has(mirror.id)) {
+      ids.add(mirror.id);
+    }
+  }
+  return ids;
+}
+
+// X Mirror 押し出し用に、選択 face と対称位置にある既存 face を探す
+// X=0 上の vertex は同じ vertex を使い、片側だけにある vertex は既存の反対側 vertex を要求する
+function findXMirrorFace(face, excludedFaceIds = new Set()) {
+  if (!face) {
+    return null;
+  }
+  const mirroredIds = [];
+  for (const vertexId of face.indices) {
+    const vertex = getVertexById(vertexId);
+    if (!vertex) {
+      return null;
+    }
+    if (Math.abs(vertex.position[0]) <= getXMirrorTolerance()) {
+      mirroredIds.push(vertex.id);
+      continue;
+    }
+    const mirror = findXMirrorVertex(vertex, vertex.position);
+    if (!mirror) {
+      return null;
+    }
+    mirroredIds.push(mirror.id);
+  }
+  const sourceKey = [...face.indices].sort((a, b) => a - b).join(":");
+  const mirrorKey = [...mirroredIds].sort((a, b) => a - b).join(":");
+  if (sourceKey === mirrorKey) {
+    return null;
+  }
+  for (const candidate of editor.faces) {
+    if (candidate.id === face.id || excludedFaceIds.has(candidate.id) || candidate.indices.length !== mirroredIds.length) {
+      continue;
+    }
+    const candidateKey = [...candidate.indices].sort((a, b) => a - b).join(":");
+    if (candidateKey === mirrorKey) {
+      return {
+        face: candidate,
+        vertexPairs: face.indices
+          .map((sourceId, index) => ({
+            sourceId,
+            mirrorId: mirroredIds[index]
+          }))
+          .filter((pair) => pair.sourceId !== pair.mirrorId)
+      };
+    }
+  }
+  return null;
+}
+
+// X Mirror が有効な押し出しでは、選択 face の反対側 face も同じ region extrude 対象へ含める
+// mirror 側から派生する新規 vertex を通常選択に混ぜないよう、base vertex の対応関係も返す
+function getXMirrorExtrusionFaces(faces) {
+  const empty = {
+    faces,
+    mirrorFaceIds: new Set(),
+    vertexPairs: []
+  };
+  if (!xMirrorEdit || !isEditMode() || !Array.isArray(faces) || faces.length === 0) {
+    return empty;
+  }
+  const result = [...faces];
+  const includedFaceIds = new Set(result.map((face) => face.id));
+  const mirrorFaceIds = new Set();
+  const vertexPairs = [];
+  for (const face of faces) {
+    const mirrorInfo = findXMirrorFace(face, includedFaceIds);
+    if (!mirrorInfo) {
+      continue;
+    }
+    result.push(mirrorInfo.face);
+    includedFaceIds.add(mirrorInfo.face.id);
+    mirrorFaceIds.add(mirrorInfo.face.id);
+    vertexPairs.push(...mirrorInfo.vertexPairs);
+  }
+  return {
+    faces: result,
+    mirrorFaceIds,
+    vertexPairs
+  };
+}
+
+// 通常選択 vertex と X Mirror 対応 vertex の id pair を明示的に登録する
+// 押し出しで新しく生成した mirror 側 vertex は既存位置探索では見つけにくいため、派生元から対応を引き継ぐ
+function addExplicitXMirrorVertexPairs(pairs) {
+  if (!Array.isArray(pairs) || pairs.length === 0) {
+    return;
+  }
+  for (const pair of pairs) {
+    if (!Number.isInteger(pair?.sourceId) || !Number.isInteger(pair?.mirrorId) || pair.sourceId === pair.mirrorId) {
+      continue;
+    }
+    explicitXMirrorVertexPairs.set(pair.sourceId, pair.mirrorId);
+    explicitXMirrorVertexPairs.set(pair.mirrorId, pair.sourceId);
+  }
 }
 
 // face の法線は頂点順に従って計算する
@@ -1449,11 +1779,17 @@ function rebuildMarkerOverlayBuffer(viewProjection, canvas, markerRadiusX, marke
   }
   overlay2d.clear();
   const highlightedVertexIds = getHighlightedVertexIds();
+  const xMirrorVertexIds = getXMirrorSelectedVertexIds();
   for (const vertex of editor.vertices) {
     const p = projectWorldToNdc(viewProjection, vertex.position, getMarkerOverlayZBias());
     if (!p) {
       continue;
     }
+    const markerKind = highlightedVertexIds.has(vertex.id)
+      ? "selected"
+      : xMirrorVertexIds.has(vertex.id)
+        ? "mirror"
+        : "default";
     overlay2d.addMarker(
       p[0],
       p[1],
@@ -1461,7 +1797,7 @@ function rebuildMarkerOverlayBuffer(viewProjection, canvas, markerRadiusX, marke
       markerRadiusX,
       markerRadiusY,
       // 選択状態に応じて marker overlay の色と alpha を決める
-      getOverlayMarkerColor(highlightedVertexIds.has(vertex.id))
+      getOverlayMarkerColor(markerKind)
     );
   }
   markerOverlayDirty = false;
@@ -1630,9 +1966,12 @@ function getMarkerRadius() {
 }
 
 // 選択状態に応じて marker overlay の色と alpha を決める
-function getOverlayMarkerColor(selected) {
-  if (selected) {
+function getOverlayMarkerColor(kind = "default") {
+  if (kind === "selected") {
     return [0.95, 0.08, 0.08, Math.max(overlayAlpha, 0.85)];
+  }
+  if (kind === "mirror") {
+    return [0.0, 0.85, 1.0, Math.max(overlayAlpha, 0.88)];
   }
   return [overlayMarkerColor[0], overlayMarkerColor[1], overlayMarkerColor[2], overlayAlpha];
 }
@@ -1785,6 +2124,26 @@ function fitCameraToEditor() {
   orbit.setAngles(DEFAULT_CAMERA.yaw, DEFAULT_CAMERA.pitch, 0.0);
   orbit.setDistance(distance);
   app.syncCameraFromEyeRig(orbit);
+}
+
+// Blender のテンキー操作に近い固定 view へ orbit camera を切り替える
+// target と distance は維持し、視線方向だけを X/Y/Z 軸方向へそろえる
+function setOrbitViewPreset(key, reversed = false) {
+  const preset = ORBIT_VIEW_PRESETS[key]?.[reversed ? "reverse" : "forward"] ?? null;
+  if (!preset) {
+    return false;
+  }
+  // transform 中に視点を切り替えると、mouse preview の screen basis と実 view がずれるため先に確定 / cancel させる
+  if (transformController?.state?.active) {
+    setMessage("confirm or cancel transform before changing view");
+    return true;
+  }
+  orbit.setAngles(preset.yaw, preset.pitch, 0.0);
+  app.syncCameraFromEyeRig(orbit);
+  markerOverlayDirty = true;
+  // 最後のユーザー向け message を保存し status を更新する
+  setMessage(`view ${preset.label}`);
+  return true;
 }
 
 // activeObjectId に対応する object を取得する
@@ -2062,6 +2421,8 @@ function createInitialModel() {
   editor.faces = [];
   editor.selectedVertices = new Set();
   editor.selectedFaces = new Set();
+  editor.lastSelectedVertexId = null;
+  explicitXMirrorVertexPairs.clear();
   editor.nextVertexId = 1;
   editor.nextFaceId = 1;
   editor.undoStack = [];
@@ -2111,6 +2472,7 @@ function createInitialModel() {
 function clearSelection() {
   editor.selectedVertices.clear();
   editor.selectedFaces.clear();
+  editor.lastSelectedVertexId = null;
 }
 
 // 選択 face の構成 vertex を selectedVertices へ同期する
@@ -2120,6 +2482,9 @@ function syncSelectedVerticesFromSelectedFaces() {
     for (const id of face.indices) {
       editor.selectedVertices.add(id);
     }
+  }
+  if (editor.lastSelectedVertexId !== null && !editor.selectedVertices.has(editor.lastSelectedVertexId)) {
+    editor.lastSelectedVertexId = null;
   }
 }
 
@@ -2144,8 +2509,12 @@ function selectVertex(id, additive = false) {
   }
   if (editor.selectedVertices.has(id) && additive) {
     editor.selectedVertices.delete(id);
+    if (editor.lastSelectedVertexId === id) {
+      editor.lastSelectedVertexId = null;
+    }
   } else {
     editor.selectedVertices.add(id);
+    editor.lastSelectedVertexId = id;
   }
   // 全頂点が選択された face を selectedFaces へ同期する
   syncSelectedFacesFromSelectedVertices();
@@ -2190,6 +2559,9 @@ function selectAllForCurrentMode() {
   }
 
   editor.selectedVertices = new Set(editor.vertices.map((vertex) => vertex.id));
+  editor.lastSelectedVertexId = editor.vertices.length > 0
+    ? editor.vertices[editor.vertices.length - 1].id
+    : null;
   // 全頂点が選択された face を selectedFaces へ同期する
   syncSelectedFacesFromSelectedVertices();
   // mesh / selected face / marker の表示をまとめて再構築する
@@ -2280,6 +2652,15 @@ function toggleVisiblePickOnly() {
   setMessage(`visible pick ${visiblePickOnly ? "only" : "through"}`);
 }
 
+// X=0 平面を境にした対称編集を切り替える
+// 既存の対称頂点へ位置を反映するだけで、新しい頂点や face は自動生成しない
+function toggleXMirrorEdit() {
+  xMirrorEdit = !xMirrorEdit;
+  markerOverlayDirty = true;
+  // 最後のユーザー向け message を保存し status を更新する
+  setMessage(`X mirror edit ${xMirrorEdit ? "on" : "off"}`);
+}
+
 // editOperations の face 作成処理を UI / keyboard から呼び出す薄い wrapper
 function makeFaceFromSelection(size = null) {
   editOperations.makeFaceFromSelection(size);
@@ -2326,6 +2707,7 @@ function makeRayFromMouse(canvas, clientX, clientY) {
       near,
       far,
       ndc: [nx, ny],
+      client: { x: clientX, y: clientY },
       projectionMode
     };
   }
@@ -2336,6 +2718,7 @@ function makeRayFromMouse(canvas, clientX, clientY) {
     near,
     far,
     ndc: [nx, ny],
+    client: { x: clientX, y: clientY },
     projectionMode
   };
 }
@@ -2429,8 +2812,9 @@ function pickFaceInObject(ray, object, options = {}) {
   const visibleOnly = options.visibleOnly === true;
   const ignoreFaceId = options.ignoreFaceId ?? null;
   const ignoreVertexId = options.ignoreVertexId ?? null;
+  const faces = Array.isArray(options.faces) ? options.faces : object.faces;
   let best = null;
-  for (const face of object.faces) {
+  for (const face of faces) {
     if (face.id === ignoreFaceId || (ignoreVertexId !== null && face.indices.includes(ignoreVertexId))) {
       continue;
     }
@@ -2523,9 +2907,14 @@ function isPointOccludedByActiveObject(point, ray, options = {}) {
   if (!object || object.faces.length === 0) {
     return false;
   }
+  const candidateFaces = Array.isArray(options.faces) ? options.faces : null;
+  if (candidateFaces && candidateFaces.length === 0) {
+    return false;
+  }
   const hit = pickFaceInObject(ray, object, {
     ignoreFaceId: options.ignoreFaceId ?? null,
-    ignoreVertexId: options.ignoreVertexId ?? null
+    ignoreVertexId: options.ignoreVertexId ?? null,
+    faces: candidateFaces
   });
   if (!hit) {
     return false;
@@ -2539,9 +2928,116 @@ function isPointOccludedByActiveObject(point, ray, options = {}) {
   return hit.t < pointT - tolerance;
 }
 
+// face の投影 bbox を grid 化し、候補点の近くにある face だけを遮蔽判定へ渡す
+// Visible Pick の矩形選択では候補頂点ごとに全 face を raycast すると重くなるため、screen-space で粗く絞る
+function makeVisibleOcclusionGrid(viewProjection) {
+  if (!viewProjection) {
+    return null;
+  }
+  const rect = app.screen.canvas.getBoundingClientRect();
+  const cols = VISIBLE_PICK_GRID_COLS;
+  const rows = VISIBLE_PICK_GRID_ROWS;
+  const cells = Array.from({ length: cols * rows }, () => []);
+  const pad = VISIBLE_PICK_GRID_PADDING_PX;
+  let faceCount = 0;
+  const addFaceToCells = (face, bounds) => {
+    const left = Math.max(rect.left, bounds.left - pad);
+    const right = Math.min(rect.right, bounds.right + pad);
+    const top = Math.max(rect.top, bounds.top - pad);
+    const bottom = Math.min(rect.bottom, bounds.bottom + pad);
+    if (right < rect.left || left > rect.right || bottom < rect.top || top > rect.bottom) {
+      return;
+    }
+    const col0 = Math.max(0, Math.min(cols - 1, Math.floor(((left - rect.left) / rect.width) * cols)));
+    const col1 = Math.max(0, Math.min(cols - 1, Math.floor(((right - rect.left) / rect.width) * cols)));
+    const row0 = Math.max(0, Math.min(rows - 1, Math.floor(((top - rect.top) / rect.height) * rows)));
+    const row1 = Math.max(0, Math.min(rows - 1, Math.floor(((bottom - rect.top) / rect.height) * rows)));
+    for (let row = row0; row <= row1; row++) {
+      for (let col = col0; col <= col1; col++) {
+        cells[row * cols + col].push(face);
+      }
+    }
+  };
+  for (const face of editor.faces) {
+    faceCount += 1;
+    const projected = face.indices
+      .map((id) => getVertexById(id))
+      .filter((vertex) => vertex !== null)
+      .map((vertex) => projectWorldToClient(viewProjection, vertex.position))
+      .filter((point) => point !== null);
+    if (projected.length === 0) {
+      addFaceToCells(face, {
+        left: rect.left,
+        right: rect.right,
+        top: rect.top,
+        bottom: rect.bottom
+      });
+      continue;
+    }
+    if (projected.length !== face.indices.length) {
+      addFaceToCells(face, {
+        left: rect.left,
+        right: rect.right,
+        top: rect.top,
+        bottom: rect.bottom
+      });
+      continue;
+    }
+    const bounds = projected.reduce((acc, point) => ({
+      left: Math.min(acc.left, point.x),
+      right: Math.max(acc.right, point.x),
+      top: Math.min(acc.top, point.y),
+      bottom: Math.max(acc.bottom, point.y)
+    }), {
+      left: Infinity,
+      right: -Infinity,
+      top: Infinity,
+      bottom: -Infinity
+    });
+    addFaceToCells(face, bounds);
+  }
+  let filledCellCount = 0;
+  let totalCellFaces = 0;
+  let maxFacesPerCell = 0;
+  for (const cell of cells) {
+    if (cell.length === 0) {
+      continue;
+    }
+    filledCellCount += 1;
+    totalCellFaces += cell.length;
+    maxFacesPerCell = Math.max(maxFacesPerCell, cell.length);
+  }
+  return {
+    rect,
+    cols,
+    rows,
+    cells,
+    faceCount,
+    filledCellCount,
+    avgFacesPerFilledCell: filledCellCount > 0 ? totalCellFaces / filledCellCount : 0.0,
+    maxFacesPerCell
+  };
+}
+
+// 候補点の screen cell に入っている face だけを返す
+// grid がない場合は null を返し、従来どおり全 face 判定へ戻す
+function getVisibleOcclusionFaces(clientPoint, context = null) {
+  const grid = context?.occlusionGrid ?? null;
+  if (!grid || !clientPoint) {
+    return null;
+  }
+  const { rect, cols, rows, cells } = grid;
+  if (clientPoint.x < rect.left || clientPoint.x > rect.right || clientPoint.y < rect.top || clientPoint.y > rect.bottom) {
+    return [];
+  }
+  const col = Math.max(0, Math.min(cols - 1, Math.floor(((clientPoint.x - rect.left) / rect.width) * cols)));
+  const row = Math.max(0, Math.min(rows - 1, Math.floor(((clientPoint.y - rect.top) / rect.height) * rows)));
+  return cells[row * cols + col];
+}
+
 // 1 回の選択処理内で使い回す可視性判定用の情報を作る
 // vertex ごとに隣接 face を毎回全探索すると多頂点 model で重くなるため、先に表へまとめる
-function makeVisiblePickContext() {
+function makeVisiblePickContext(viewProjection = null) {
   const adjacentFacesByVertexId = new Map();
   for (const face of editor.faces) {
     for (const vertexId of face.indices) {
@@ -2554,7 +3050,8 @@ function makeVisiblePickContext() {
     }
   }
   return {
-    adjacentFacesByVertexId
+    adjacentFacesByVertexId,
+    occlusionGrid: makeVisibleOcclusionGrid(viewProjection)
   };
 }
 
@@ -2577,13 +3074,15 @@ function isVertexSelectableFromView(vertex, ray, context = null) {
   if (!isVertexFrontFacingRay(vertex, ray, context)) {
     return false;
   }
+  const candidateFaces = getVisibleOcclusionFaces(ray.client, context);
   return !isPointOccludedByActiveObject(vertex.position, ray, {
-    ignoreVertexId: vertex.id
+    ignoreVertexId: vertex.id,
+    faces: candidateFaces
   });
 }
 
 // Visible Pick が有効なとき、裏向きまたは手前の面に隠れた face center を選択候補から外す
-function isFaceSelectableFromView(face, ray) {
+function isFaceSelectableFromView(face, ray, context = null) {
   if (!visiblePickOnly) {
     return true;
   }
@@ -2594,8 +3093,10 @@ function isFaceSelectableFromView(face, ray) {
   if (!center) {
     return false;
   }
+  const candidateFaces = getVisibleOcclusionFaces(ray.client, context);
   return !isPointOccludedByActiveObject(center, ray, {
-    ignoreFaceId: face.id
+    ignoreFaceId: face.id,
+    faces: candidateFaces
   });
 }
 
@@ -2624,11 +3125,13 @@ function pickVertexByRayDistance(ray) {
   }
   candidates.sort((a, b) => (a.distance - b.distance) || (a.t - b.t));
   if (!visiblePickOnly) {
+    setVisiblePickSelectionStats("click-vertex", candidates.length, candidates.length > 0 ? 1 : 0);
     return candidates[0] ?? null;
   }
-  const context = makeVisiblePickContext();
+  const context = makeVisiblePickContext(getCurrentViewProjectionMatrix());
   for (const candidate of candidates) {
     if (isVertexSelectableFromView(candidate.vertex, ray, context)) {
+      setVisiblePickSelectionStats("click-vertex", candidates.length, 1, context);
       return {
         vertexId: candidate.vertexId,
         distance: candidate.distance,
@@ -2636,6 +3139,7 @@ function pickVertexByRayDistance(ray) {
       };
     }
   }
+  setVisiblePickSelectionStats("click-vertex", candidates.length, 0, context);
   return null;
 }
 
@@ -2850,6 +3354,7 @@ function objectIntersectsClientRect(object, viewProjection, rect) {
 // 現在 mode / tool に応じて client 矩形内の object / vertex / face を選択する
 function selectByClientRect(rect, additive = false) {
   const viewProjection = getCurrentViewProjectionMatrix();
+  resetVisiblePickStats("box");
   if (editor.mode === EDITOR_MODE_OBJECT) {
     // 現在の editor.vertices / faces を active object へ書き戻す
     commitActiveObject();
@@ -2886,7 +3391,7 @@ function selectByClientRect(rect, additive = false) {
         };
       })
       .filter((entry) => clientPointInRect(entry.projected, rect));
-    const context = visiblePickOnly ? makeVisiblePickContext() : null;
+    const context = visiblePickOnly ? makeVisiblePickContext(viewProjection) : null;
     const selectedIds = selectedVertexEntries
       .filter((entry) => {
         if (!visiblePickOnly) {
@@ -2896,12 +3401,16 @@ function selectByClientRect(rect, additive = false) {
         return isVertexSelectableFromView(entry.vertex, ray, context);
       })
       .map((entry) => entry.vertex.id);
+    setVisiblePickSelectionStats("box-vertex", selectedVertexEntries.length, selectedIds.length, context);
     if (!additive) {
       // edit selection の vertex / face を空にする
       clearSelection();
     }
     for (const id of selectedIds) {
       editor.selectedVertices.add(id);
+    }
+    if (selectedIds.length > 0) {
+      editor.lastSelectedVertexId = selectedIds[selectedIds.length - 1];
     }
     // 全頂点が選択された face を selectedFaces へ同期する
     syncSelectedFacesFromSelectedVertices();
@@ -2924,15 +3433,17 @@ function selectByClientRect(rect, additive = false) {
         };
       })
       .filter((entry) => entry.center && clientPointInRect(entry.projected, rect));
+    const context = visiblePickOnly ? makeVisiblePickContext(viewProjection) : null;
     const selectedIds = selectedFaces
       .filter((entry) => {
         if (!visiblePickOnly) {
           return true;
         }
         const ray = makeRayFromMouse(app.screen.canvas, entry.projected.x, entry.projected.y);
-        return isFaceSelectableFromView(entry.face, ray);
+        return isFaceSelectableFromView(entry.face, ray, context);
       })
       .map((entry) => entry.face.id);
+    setVisiblePickSelectionStats("box-face", selectedFaces.length, selectedIds.length, context);
     if (!additive) {
       // edit selection の vertex / face を空にする
       clearSelection();
@@ -3207,10 +3718,17 @@ function installKeyboardHandlers() {
     }
     const key = String(ev.key ?? "").toLowerCase();
     const plainKey = !ev.metaKey && !ev.ctrlKey && !ev.altKey;
+    const viewPresetKey = ORBIT_VIEW_PRESETS[key] ? key : null;
+    if (viewPresetKey && !ev.metaKey && !ev.altKey) {
+      if (setOrbitViewPreset(viewPresetKey, ev.ctrlKey)) {
+        ev.preventDefault();
+      }
+      return;
+    }
     if (key === "tab") setEditorMode(isEditMode() ? EDITOR_MODE_OBJECT : EDITOR_MODE_EDIT);
-    else if (key === "1") setTool(TOOL_SELECT_VERTEX);
-    else if (key === "2") setTool(TOOL_SELECT_FACE);
-    else if (key === "3") setTool(TOOL_ADD_VERTEX);
+    else if (plainKey && key === "4") setTool(TOOL_SELECT_VERTEX);
+    else if (plainKey && key === "2") setTool(TOOL_SELECT_FACE);
+    else if (plainKey && key === "5") setTool(TOOL_ADD_VERTEX);
     else if (plainKey && key === "a") selectAllForCurrentMode();
     else if (plainKey && key === "g") setTransformMode("move");
     else if (plainKey && key === "r") setTransformMode("rotate");
@@ -3726,6 +4244,7 @@ function installDomHandlers() {
   ui.objectWireframe?.addEventListener("click", toggleObjectWireframe);
   ui.lightBackground?.addEventListener("click", toggleLightBackground);
   ui.visiblePickOnly?.addEventListener("click", toggleVisiblePickOnly);
+  ui.xMirrorEdit?.addEventListener("click", toggleXMirrorEdit);
   ui.makeFace?.addEventListener("click", () => makeFaceFromSelection());
   ui.flipFaces?.addEventListener("click", flipSelectedFaces);
   ui.undo.addEventListener("click", undo);
@@ -3769,7 +4288,15 @@ function refreshDiagnosticsStats() {
     importedAssetLoaded: importedAsset ? "yes" : "no",
     editorMode: editor.mode,
     objectWireframe: objectWireframe ? "on" : "off",
+    xMirrorEdit: xMirrorEdit ? "on" : "off",
     visiblePick: visiblePickOnly ? "visible only" : "through",
+    visiblePickMode: visiblePickStats.mode,
+    visiblePickCandidates: visiblePickStats.candidates,
+    visiblePickSelected: visiblePickStats.selected,
+    visiblePickGridFaces: visiblePickStats.gridFaces,
+    visiblePickGridCells: visiblePickStats.gridCells,
+    visiblePickAvgFacesPerCell: visiblePickStats.avgFacesPerFilledCell.toFixed(1),
+    visiblePickMaxFacesPerCell: visiblePickStats.maxFacesPerCell,
     projection: getProjectionLabel(),
     focalLength: getFocalLengthLabel(),
     activeObjectId: editor.activeObjectId ?? "-",
@@ -3803,7 +4330,9 @@ function makeProbeReport(frameCount) {
   Diagnostics.addDetail(report, `tool=${editor.tool}`);
   Diagnostics.addDetail(report, `mode=${editor.mode}`);
   Diagnostics.addDetail(report, `objectWireframe=${objectWireframe ? "on" : "off"}`);
+  Diagnostics.addDetail(report, `xMirrorEdit=${xMirrorEdit ? "on" : "off"}`);
   Diagnostics.addDetail(report, `visiblePick=${visiblePickOnly ? "visible only" : "through"}`);
+  Diagnostics.addDetail(report, `visiblePickStats=${visiblePickStats.mode} candidates=${visiblePickStats.candidates} selected=${visiblePickStats.selected} gridFaces=${visiblePickStats.gridFaces} filledCells=${visiblePickStats.gridCells} avgFaces=${visiblePickStats.avgFacesPerFilledCell.toFixed(1)} maxFaces=${visiblePickStats.maxFacesPerCell}`);
   Diagnostics.addDetail(report, `projection=${getProjectionLabel()}`);
   Diagnostics.addDetail(report, `focalLength=${getFocalLengthLabel()}`);
   Diagnostics.addDetail(report, `vertices=${editor.vertices.length}`);
@@ -3825,7 +4354,15 @@ function makeProbeReport(frameCount) {
     importedAssetLoaded: importedAsset ? "yes" : "no",
     editorMode: editor.mode,
     objectWireframe: objectWireframe ? "on" : "off",
+    xMirrorEdit: xMirrorEdit ? "on" : "off",
     visiblePick: visiblePickOnly ? "visible only" : "through",
+    visiblePickMode: visiblePickStats.mode,
+    visiblePickCandidates: visiblePickStats.candidates,
+    visiblePickSelected: visiblePickStats.selected,
+    visiblePickGridFaces: visiblePickStats.gridFaces,
+    visiblePickGridCells: visiblePickStats.gridCells,
+    visiblePickAvgFacesPerCell: visiblePickStats.avgFacesPerFilledCell.toFixed(1),
+    visiblePickMaxFacesPerCell: visiblePickStats.maxFacesPerCell,
     projection: getProjectionLabel(),
     focalLength: getFocalLengthLabel(),
     activeObjectId: editor.activeObjectId ?? "-",
@@ -3914,17 +4451,19 @@ async function start() {
     dragZoomSpeed: 0.04,
     dragRotateSpeed: 0.28,
     dragPanSpeed: 2.0,
-    pitchMin: -85.0,
-    pitchMax: 85.0,
+    pitchMin: -90.0,
+    pitchMax: 90.0,
     dragButton: 1,
     alternateDragButton: 0,
     alternateDragModifierKey: "alt"
   });
   const operationContext = {
     editor,
+    addExplicitXMirrorVertexPairs,
     addFaceOrientedToDirection,
     addFaceWithStableOrientation,
     addVertex,
+    applyXMirrorEdit,
     clearSelection,
     computeCenter,
     computeFaceNormal,
@@ -3938,7 +4477,9 @@ async function start() {
     getSelectedFaceObjects,
     getTransformTargetVertexObjects,
     getVertexById,
+    getXMirrorExtrusionFaces,
     isEditMode,
+    makeXMirrorEditPairs,
     makeSnapshot,
     orderVertexIdsForFaceFromView,
     pushUndo,

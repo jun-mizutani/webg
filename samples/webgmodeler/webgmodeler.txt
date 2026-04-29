@@ -14,7 +14,8 @@
 - overlay の非選択 marker / edge は `Marker` / `Edge` color picker で色を変更でき、`Overlay Alpha` slider で透明度を調整できます。選択 marker は赤、選択 face の境界 edge は黒・高 alpha で描画します
 - Light Background button は、viewport の clear color を暗色から少し明るいグレーへ切り替えます。暗いモデルや黒い wireframe / overlay を確認しにくいときに使います
 - Visible Pick button は、Edit Mode の vertex / face 選択で、現在の視点から見える要素だけを選択対象にするかを切り替えます。有効時は裏向きの face と、手前の面に隠れている vertex / face center を選択候補から外します。無効時は従来どおり ray や矩形に入った奥側の要素も選択できます
-- canvas HUD は projection、フルサイズ換算の焦点距離、頂点 / face 数、選択数、message だけを表示し、mode / tool / key / pointer などの詳細状態は DOM status 側で確認します
+- X Mirror button は、Edit Mode の移動 / 回転 / scale / keyboard 補助編集で、X=0 平面を境にした反対側の既存 vertex へ位置を反映します。対称相手は `[-x, y, z]` に十分近い vertex として探し、通常の移動 / 回転 / scale では新しい vertex や face は自動生成しません。左右どちらか片側の頂点を編集し、反対側に同じ構成の頂点がある場合に使います。X Mirror が有効なときは、選択 vertex の対称相手をシアンの marker で表示し、どの頂点へ反映されるかを事前に確認できるようにします。押し出しでは、選択 face と対称位置にある既存 face も region extrude 対象へ加え、左右両側へ新しい上面と側面を生成します。押し出しで派生した反対側 vertex は通常選択へ混ぜず、source 側の新規 vertex と明示的な X Mirror 対応として登録するため、確定後の移動 / 回転 / scale でも X 方向を反転した対称編集を継続できます
+- canvas HUD は projection、フルサイズ換算の焦点距離、頂点 / face 数、最後に直接選択した vertex 座標、選択数、message だけを表示し、mode / tool / key / pointer などの詳細状態は DOM status 側で確認します
 - 画面上部の mode / select / view 操作は canvas の上にまとめ、右側 panel は実行ボタンと設定だけを置きます。操作説明、編集説明、ファイル読み込み説明は canvas 下側の説明カードへ集約し、viewport と panel の役割が分かれるようにします
 - vertex pick は頂点位置と ray の距離判定を主経路にします。marker 用の Node は作らず、数千頂点の Edit Mode でも Space traversal が増えないようにします
 - marker overlay は camera / selection / geometry / 色 / canvas size が変わった時だけ再投影し、静止中は前回 upload した GPU buffer を再利用します
@@ -24,8 +25,10 @@
 - face の頂点順は、表側から見て反時計回りを基本とします。隣接 face がある場合は共有辺が逆向きになるように向きをそろえ、孤立 face は原点側を裏として初期化します
 - 頂点追加は、クリック位置の face hit、地面 plane、camera target plane の順で交点を作り、新しい頂点として追加します
 - camera 操作は Blender に近い割り当てにし、中ボタンドラッグで orbit、Shift + 中ボタンドラッグで PAN、wheel または Ctrl + 中ボタンドラッグで zoom します。左ドラッグは camera 操作に使わず、面や頂点の矩形選択などの編集操作へ割り当てられる状態にしています
+- `1` / `3` / `7` は camera の固定 view へ切り替えます。`1` は -Z、`3` は -X、`7` は -Y 方向を向き、Ctrl を併用すると反対側の +Z / +X / +Y 方向を向きます。orbit target と distance は維持し、yaw / pitch だけを切り替えます
 - 左ドラッグは矩形選択として使います。Object Mode では矩形内の object、Edit Mode の Vertex Select では矩形内の頂点、Face Select では矩形内に中心が入った face を選択します。Shift + 左ドラッグは既存選択へ追加します
 - `G` / `R` / `S` / `E` で transform mode に入り、マウス移動で選択頂点または選択 face 構成頂点を移動 / 回転 / scale / 押し出しできます。E の押し出しは、複数選択 face を個別に押し出すのではなく、選択領域の共有辺を内部辺として扱い、外周 edge だけに側面を作る region extrude として動作します。左クリックで確定、Escape または右クリックでキャンセルします
+- 押し出し後の face 選択は、次の連続押し出し対象になる新しい上面だけへ移ります。押し出しで作られた側面は選択状態にしないため、次の `E` では側面まで一緒に伸びません
 - Blender と同様に Object Mode / Edit Mode を持ちます。Object Mode ではオブジェクト全体をクリック選択し、G/R/S で選択オブジェクト全体を移動 / 回転 / scale できます。Edit Mode ではアクティブオブジェクトの頂点 / face を編集します。Tab で mode を切り替えます
 - A キーは mode に応じて全選択します。Object Mode では全 object、Edit Mode ではアクティブ object の全頂点を選択し、全頂点が含まれる face も選択状態にします
 - W キーまたは Object Wireframe button で Object Mode の mesh 表示を wireframe に切り替えられます。表示用 Shape は編集データから作る ModelAsset の `polygonLoops` を持つため、`Shape.addPolygon([a,b,c,d])` や Quad 作成で作った四角面は対角線を出さず、face loop の外周だけを表示します。Edit Mode では marker / edge overlay を優先するため Object Wireframe は解除されます
@@ -118,7 +121,9 @@
 - Ctrl / Cmd + Z: undo
 - Ctrl / Cmd + Y または Ctrl / Cmd + Shift + Z: redo
 - Escape: 選択解除
-- `1` / `2` / `3`: Vertex Select / Face Select / Add Vertex を切り替え
+- `1` / `3` / `7`: camera view を -Z / -X / -Y へ切り替え
+- Ctrl + `1` / `3` / `7`: camera view を +Z / +X / +Y へ切り替え
+- `4` / `2` / `5`: Vertex Select / Face Select / Add Vertex を切り替え
 
 補足
 - この sample は webg コアを変更せず、サンプル側だけで編集体験を構成するための初期実装です

@@ -375,12 +375,18 @@
             <strong>操作</strong>
             中ボタンドラッグまたは Option + 左ドラッグで orbit、Shift 併用で PAN、Ctrl 併用または wheel で zoom。
             P で Perspective / Orthographic 表示、V / Shift + V でフルサイズ換算の焦点距離を段階切替します。
+            1 / 3 / 7 で -Z / -X / -Y 方向、Ctrl + 1 / 3 / 7 で +Z / +X / +Y 方向の固定 view へ切り替えます。
           </p>
           <p class="hint">
             <strong>編集</strong>
             Object Mode でオブジェクト選択、Tab / Edit Mode でアクティブオブジェクトを編集します。Vertex / Face Select でクリック選択、modifier なしの左ドラッグで矩形選択、A で全選択です。
             Visible Pick が有効なときは、裏向きの face や手前の面に隠れた vertex / face を選択候補から外します。
+            最後に直接選択した vertex の座標は HUD の Vertex 行に表示されます。
+            X Mirror が有効なときは、X=0 を境にした反対側の既存 vertex へ移動 / 回転 / scale の結果を反映し、押し出しでは反対側の既存 face も同時に押し出します。
+            押し出しで派生した反対側 vertex は通常選択に混ぜず、X Mirror の対応 vertex として扱い続けます。
+            対応 vertex はシアンの marker で表示します。
             Face は選択頂点数が 3 / 4 のときに三角形 / 四角形を作成し、Flip Face は選択 face の表裏を反転します。
+            押し出し後は新しい上面だけが選択状態になり、側面は次の押し出し対象に含めません。
           </p>
           <p class="hint">
             <strong>ファイル</strong>
@@ -393,6 +399,7 @@
             <span>E Extrude</span>
             <span>X Delete</span>
             <span>F Face</span>
+            <span>1/3/7 View</span>
             <span>W Wireframe</span>
             <span>J/L/I/K U/O N/M Assist</span>
           </div>
@@ -423,6 +430,7 @@
             <button class="command-button" id="newScene">New</button>
             <button class="command-button" id="makeFace">Face</button>
             <button class="command-button" id="flipFaces">Flip Face</button>
+            <button class="tool-button" id="xMirrorEdit" aria-pressed="false">X Mirror</button>
             <button class="command-button" id="undo">Undo</button>
             <button class="command-button" id="redo">Redo</button>
           </div>

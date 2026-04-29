@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// samples/webgmodeler/editOperations.js  2026/04/28
+// samples/webgmodeler/editOperations.js  2026/04/29
 //   webgmodeler edit operations
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -100,12 +100,22 @@ export function createEditOperations(ctx) {
   // editOperations の extrusion 作成処理を transform から呼べるよう中継する
   function createExtrusion(distance) {
     const { editor } = ctx;
-    const faces = ctx.getSelectedFaceObjects();
-    if (faces.length === 0) {
+    const selectedFaces = ctx.getSelectedFaceObjects();
+    if (selectedFaces.length === 0) {
       return null;
     }
+    const mirrorExtrusion = ctx.getXMirrorExtrusionFaces?.(selectedFaces) ?? {
+      faces: selectedFaces,
+      mirrorFaceIds: new Set(),
+      vertexPairs: []
+    };
+    const faces = mirrorExtrusion.faces;
+    const mirrorBaseVertexIds = new Set(mirrorExtrusion.vertexPairs.map((pair) => pair.mirrorId));
     const newFaceIds = [];
+    const topNewFaceIds = new Set();
+    const sourceTopNewFaceIds = new Set();
     const newVertexIds = new Set();
+    const sourceNewVertexIds = new Set();
     const extrudeVertexNormals = new Map();
     const buildDistance = Math.abs(distance) > 1.0e-8
       ? distance
@@ -156,9 +166,18 @@ export function createEditOperations(ctx) {
       const id = ctx.addVertex(add3(vertex.position, mul3(normal, buildDistance)));
       topByBaseVertex.set(vertexId, id);
       newVertexIds.add(id);
+      if (!mirrorBaseVertexIds.has(vertexId)) {
+        sourceNewVertexIds.add(id);
+      }
       extrudeVertexNormals.set(id, normal);
       topBasePositions.set(id, [...vertex.position]);
     }
+    const mirrorTopVertexPairs = mirrorExtrusion.vertexPairs
+      .map((pair) => ({
+        sourceId: topByBaseVertex.get(pair.sourceId),
+        mirrorId: topByBaseVertex.get(pair.mirrorId)
+      }))
+      .filter((pair) => pair.sourceId !== undefined && pair.mirrorId !== undefined);
 
     const regionVertices = Array.from(selectedVertexIds)
       .map((id) => ctx.getVertexById(id))
@@ -171,7 +190,12 @@ export function createEditOperations(ctx) {
       if (top.some((vertexId) => vertexId === undefined)) {
         throw new Error(`extrude face ${face.id} is missing duplicated top vertices`);
       }
-      newFaceIds.push(ctx.addFaceOrientedToDirection(top, normal));
+      const faceId = ctx.addFaceOrientedToDirection(top, normal);
+      newFaceIds.push(faceId);
+      topNewFaceIds.add(faceId);
+      if (!mirrorExtrusion.mirrorFaceIds.has(face.id)) {
+        sourceTopNewFaceIds.add(faceId);
+      }
     }
 
     for (const records of edgeRecords.values()) {
@@ -189,7 +213,8 @@ export function createEditOperations(ctx) {
         .map((id) => ctx.getVertexById(id))
         .filter((vertex) => vertex !== null);
       const sideCenter = ctx.computeCenter(sideVertices);
-      newFaceIds.push(ctx.addFaceOrientedToDirection(sideLoop, sub3(sideCenter, regionCenter)));
+      const faceId = ctx.addFaceOrientedToDirection(sideLoop, sub3(sideCenter, regionCenter));
+      newFaceIds.push(faceId);
     }
 
     if (resetTopVertices) {
@@ -200,10 +225,17 @@ export function createEditOperations(ctx) {
         }
       }
     }
-    editor.selectedVertices = newVertexIds;
-    editor.selectedFaces = new Set(newFaceIds);
+    ctx.addExplicitXMirrorVertexPairs?.(mirrorTopVertexPairs);
+    editor.selectedVertices = sourceNewVertexIds;
+    editor.selectedFaces = mirrorTopVertexPairs.length > 0
+      ? sourceTopNewFaceIds
+      : topNewFaceIds;
     return {
       newVertexIds,
+      sourceNewVertexIds,
+      topNewFaceIds,
+      sourceTopNewFaceIds,
+      mirrorTopVertexPairs,
       newFaceIds,
       extrudeVertexNormals
     };
@@ -256,9 +288,14 @@ export function createEditOperations(ctx) {
       return false;
     }
     ctx.pushUndo(label);
+    const initialPositions = new Map(vertices.map((vertex) => [
+      vertex,
+      [...vertex.position]
+    ]));
     for (const vertex of vertices) {
       vertex.position = add3(vertex.position, delta);
     }
+    ctx.applyXMirrorEdit?.(vertices, initialPositions);
     ctx.rebuildScene();
     ctx.setMessage(label);
     return true;
@@ -297,6 +334,10 @@ export function createEditOperations(ctx) {
     }
     ctx.pushUndo("keyboard scale selection");
     const center = ctx.computeCenter(vertices);
+    const initialPositions = new Map(vertices.map((vertex) => [
+      vertex,
+      [...vertex.position]
+    ]));
     for (const vertex of vertices) {
       vertex.position = add3(
         center,
@@ -304,6 +345,7 @@ export function createEditOperations(ctx) {
         mul3(sub3(vertex.position, center), factor)
       );
     }
+    ctx.applyXMirrorEdit?.(vertices, initialPositions);
     ctx.rebuildScene();
     ctx.setMessage(`keyboard scale ${factor.toFixed(2)}`);
     return true;

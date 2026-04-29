@@ -1133,7 +1133,7 @@ runtime.instantiate(app.space);
 - `getDebugInfo()`: デバッグ用の状態情報を返す
 
 ### `EyeRig`
-`EyeRig` は `base -> rod -> eye` の 3 段視点ヘルパーです。`../discontinued/demo1`、`samples/scene`、`samples/raycast`、`samples/animation_state` などでよく使います。
+`EyeRig` は `base -> rod -> eye` の 3 段視点ヘルパーです。`samples/scene`、`samples/raycast`、`samples/animation_state` などでよく使います。
 
 `attachPointer()` を使うと、mouse / pen / touch の pointer event を同じ経路で扱えます。orbit / follow では 1 本指 drag で回転、2 本指 drag で平行移動、pinch で zoom ができ、first-person では 1 本指 drag を視線回転として使います。pan / pinch の係数は `constructor()` の `orbit.dragPanSpeed`、`orbit.pinchZoomSpeed`、`follow.dragPanSpeed`、`follow.pinchZoomSpeed` で調整できます。
 
