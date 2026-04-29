@@ -1,10 +1,9 @@
-// -------------------------------------------------
-// primitive_normal_map sample
-//   main.js       2026/04/12
+// ---------------------------------------------
+// unittest/primitive_normal_map/main.js  2026/04/12
+//   primitive_normal_map sample
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
-// -------------------------------------------------
-
+// ---------------------------------------------
 import Space from "../../webg/Space.js";
 import Primitive from "../../webg/Primitive.js";
 import Shape from "../../webg/Shape.js";

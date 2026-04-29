@@ -1,10 +1,9 @@
-// -------------------------------------------------
-// circular_breaker sample
-//   constants.js  2026/03/03
+// ---------------------------------------------
+// samples/circular_breaker/constants.js  2026/03/03
+//   circular_breaker sample
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
-// -------------------------------------------------
-
+// ---------------------------------------------
 // 角度変換用の定数（degree <-> radian）
 export const DEG = Math.PI / 180.0;
 export const RAD = 180.0 / Math.PI;

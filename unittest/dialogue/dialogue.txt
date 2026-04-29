@@ -39,7 +39,7 @@
 ## 関連文書
 
 - [14_UI表示の設計.md](../../book/14_UI表示の設計.md)
-- [15_HUDとオーバーレイ.md](../../book/15_HUDとオーバーレイ.md)
+- [15_HUDとオーバーレイの設計.md](../../book/15_HUDとオーバーレイの設計.md)
 - [UIPanel.js](../../webg/UIPanel.js)
 - [WebgApp.js](../../webg/WebgApp.js)
 - [DialogueOverlay.js](../../webg/DialogueOverlay.js)

@@ -1,10 +1,9 @@
-// -------------------------------------------------
-// camera_controller sample
-//   main.js       2026/04/22
+// ---------------------------------------------
+// samples/camera_controller/main.js  2026/04/22
+//   camera_controller sample
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
-// -------------------------------------------------
-
+// ---------------------------------------------
 import WebgApp from "../../webg/WebgApp.js";
 import Primitive from "../../webg/Primitive.js";
 import Shape from "../../webg/Shape.js";
@@ -626,7 +625,7 @@ async function start() {
     viewAngle: 54.0,
     messageFontTexture: "../../webg/font512.png",
     debugTools: {
-      mode: "debug",
+      mode: "release",
       system: "camera_controller",
       source: "samples/camera_controller/main.js",
       probeDefaultAfterFrames: 1

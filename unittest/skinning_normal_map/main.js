@@ -1,10 +1,9 @@
-// -------------------------------------------------
-// skinning_normal_map sample
-//   main.js       2026/04/12
+// ---------------------------------------------
+// unittest/skinning_normal_map/main.js  2026/04/12
+//   skinning_normal_map sample
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
-// -------------------------------------------------
-
+// ---------------------------------------------
 import SmoothShader from "../../webg/SmoothShader.js";
 import Shape from "../../webg/Shape.js";
 import Space from "../../webg/Space.js";

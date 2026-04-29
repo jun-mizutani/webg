@@ -1,10 +1,9 @@
-// -------------------------------------------------
-// circular_breaker sample
-//   blockField.js 2026/04/10
+// ---------------------------------------------
+// samples/circular_breaker/blockField.js  2026/04/10
+//   circular_breaker sample
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
-// -------------------------------------------------
-
+// ---------------------------------------------
 import Shape from "../../webg/Shape.js";
 import Texture from "../../webg/Texture.js";
 

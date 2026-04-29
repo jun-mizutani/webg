@@ -20,6 +20,9 @@ The library features a layered API design, allowing developers to choose the lev
 Furthermore, `webg` maintains strict alignment between its implementation and its documentation. The following resources are bundled together, enabling a synergistic learning experience:
 
 - **`book/`**: Comprehensive technical documentation covering everything from the fundamentals of 3D mathematics to the principles of skinning.
+  - `AppendixA_For_Coding_AI.md`: Reference order and API search protocol for AI-assisted development.
+  - `付録A_コーディングAIの皆さまへ.md`: Japanese version of Appendix A.
+  - `付録B_API一覧.md`: API index for `webg`.
 - **`samples/`**: Practical implementation examples demonstrating each feature.
 - **`unittest/`**: A minimal environment for isolated functional verification and debugging.
 
@@ -98,6 +101,8 @@ To deeply understand the design philosophy of `webg`, we recommend the following
 ## For AI Assistants
 
 `webg` is engineered with strict consistency in terminology and a clear separation of layers, making it highly suitable for AI-assisted development. When using LLMs (Large Language Models) to generate code or solve problems, providing the relevant chapters from `book/` or implementation examples from `samples/` as context will result in highly accurate suggestions that align with the library's design philosophy.
+
+For implementation assistance, we recommend giving the AI `book/AppendixA_For_Coding_AI.md` first. When the task requires finding a method or class, also provide `book/付録B_API一覧.md` as the API index.
 
 **Note on Language:** While the documentation and internal code comments are predominantly written in Japanese, the source code itself is written in English. Since modern LLMs are proficient in both languages, non-Japanese speakers can seamlessly use AI to bridge the language gap and obtain accurate technical guidance by providing the relevant chapters from `book/` or implementation examples from `samples/` as context.
 

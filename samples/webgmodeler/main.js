@@ -1,10 +1,9 @@
-// -------------------------------------------------
-// webgmodeler sample
-//   main.js       2026/04/29
+// ---------------------------------------------
+// samples/webgmodeler/main.js  2026/04/29
+//   webgmodeler sample
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
-// -------------------------------------------------
-
+// ---------------------------------------------
 import WebgApp from "../../webg/WebgApp.js";
 import SmoothShader from "../../webg/SmoothShader.js";
 import Shape from "../../webg/Shape.js";

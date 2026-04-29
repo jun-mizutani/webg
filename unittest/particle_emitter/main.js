@@ -1,10 +1,9 @@
-// -------------------------------------------------
-// particle_emitter unittest
-//   main.js       2026/04/10
+// ---------------------------------------------
+// unittest/particle_emitter/main.js  2026/04/10
+//   particle_emitter unittest
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
-// -------------------------------------------------
-
+// ---------------------------------------------
 import WebgApp from "../../webg/WebgApp.js";
 import Primitive from "../../webg/Primitive.js";
 import Shape from "../../webg/Shape.js";

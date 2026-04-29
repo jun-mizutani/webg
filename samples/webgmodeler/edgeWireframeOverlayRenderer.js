@@ -1,10 +1,9 @@
-// -------------------------------------------------
-// line-list edge overlay renderer
-//   edgeWireframeOverlayRenderer.js 2026/04/26
+// ---------------------------------------------
+// samples/webgmodeler/edgeWireframeOverlayRenderer.js  2026/04/26
+//   line-list edge overlay renderer
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
-// -------------------------------------------------
-
+// ---------------------------------------------
 export default class EdgeWireframeOverlayRenderer {
   // インスタンス生成時に renderer や shader が使う状態を初期化する
   constructor(gpu, {

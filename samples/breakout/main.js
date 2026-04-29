@@ -1,11 +1,9 @@
 // ---------------------------------------------
-// main.js       2026/04/10
+// samples/breakout/main.js  2026/04/10
+//   breakout sample
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
-//
-// breakout sample
 // ---------------------------------------------
-
 import WebgApp from "../../webg/WebgApp.js";
 import Primitive from "../../webg/Primitive.js";
 import Shape from "../../webg/Shape.js";

@@ -1,10 +1,9 @@
-// -------------------------------------------------
-// demo_spheres sample
-//   main.js       2026/04/28
+// ---------------------------------------------
+// samples/demo_spheres/main.js  2026/04/28
+//   demo_spheres sample
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
-// -------------------------------------------------
-
+// ---------------------------------------------
 import Screen from "../../webg/Screen.js";
 import Space from "../../webg/Space.js";
 import Primitive from "../../webg/Primitive.js";

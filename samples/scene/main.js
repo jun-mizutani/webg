@@ -1,10 +1,9 @@
-// -------------------------------------------------
-// scene sample
-//   main.js       2026/04/12
+// ---------------------------------------------
+// samples/scene/main.js  2026/04/12
+//   scene sample
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
-// -------------------------------------------------
-
+// ---------------------------------------------
 import WebgApp from "../../webg/WebgApp.js";
 import SmoothShader from "../../webg/SmoothShader.js";
 import SceneAsset from "../../webg/SceneAsset.js";
@@ -13,7 +12,7 @@ import UIPanel from "../../webg/UIPanel.js";
 
 const SCENE_FILE = "./scene.json";
 const DOWNLOAD_FILE = "scene_copy.json";
-const DEBUG_MODE = "debug";
+const DEBUG_MODE = "release";
 const GUIDE_LINES = [
   "Drag or Arrow: orbit",
   "[ / ] or wheel: zoom",

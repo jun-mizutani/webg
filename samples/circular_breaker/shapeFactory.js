@@ -1,10 +1,9 @@
-// -------------------------------------------------
-// circular_breaker sample
-//   shapeFactory.js  2026/04/10
+// ---------------------------------------------
+// samples/circular_breaker/shapeFactory.js  2026/04/10
+//   circular_breaker sample
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
-// -------------------------------------------------
-
+// ---------------------------------------------
 import Primitive from "../../webg/Primitive.js";
 import Shape from "../../webg/Shape.js";
 import { clamp } from "./constants.js";

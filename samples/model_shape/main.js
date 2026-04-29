@@ -1,10 +1,9 @@
-// -------------------------------------------------
-// model_shape sample
-//   main.js       2026/04/28
+// ---------------------------------------------
+// samples/model_shape/main.js  2026/04/28
+//   model_shape sample
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
-// -------------------------------------------------
-
+// ---------------------------------------------
 import WebgApp from "../../webg/WebgApp.js";
 import Primitive from "../../webg/Primitive.js";
 import ModelAsset from "../../webg/ModelAsset.js";
@@ -142,7 +141,7 @@ const start = async () => {
     viewAngle: 53.0,
     messageFontTexture: "../../webg/font512.png",
     debugTools: {
-      mode: "debug",
+      mode: "release",
       system: "model_shape",
       source: "samples/model_shape/main.js",
       probeDefaultAfterFrames: 1

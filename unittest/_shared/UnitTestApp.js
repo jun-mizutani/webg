@@ -1,10 +1,8 @@
-// -------------------------------------------------
-// UnitTestApp.js
-//   UnitTestApp.js 2026/03/14
+// ---------------------------------------------
+// unittest/_shared/UnitTestApp.js  2026/03/14
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
-// -------------------------------------------------
-
+// ---------------------------------------------
 import Screen from "../../webg/Screen.js";
 
 // UnitTestApp:

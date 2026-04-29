@@ -1,10 +1,9 @@
-// -------------------------------------------------
-// smooth_shader sample
-//   main.js       2026/04/15
+// ---------------------------------------------
+// unittest/smooth_shader/main.js  2026/04/15
+//   smooth_shader sample
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
-// -------------------------------------------------
-
+// ---------------------------------------------
 import Primitive from "../../webg/Primitive.js";
 import Shape from "../../webg/Shape.js";
 import SmoothShader from "../../webg/SmoothShader.js";

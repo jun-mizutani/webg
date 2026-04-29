@@ -1,7 +1,9 @@
-// -------------------------------------------------
-// webgmodeler sample configuration
-// -------------------------------------------------
-
+// ---------------------------------------------
+// samples/webgmodeler/modelerConfig.js  2026/04/29
+//   webgmodeler sample configuration
+//   Copyright (c) 2026 Jun Mizutani,
+//   released under the MIT open source license.
+// ---------------------------------------------
 export const TOOL_SELECT_VERTEX = "selectVertex";
 export const TOOL_SELECT_FACE = "selectFace";
 export const TOOL_ADD_VERTEX = "addVertex";

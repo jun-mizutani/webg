@@ -1,10 +1,9 @@
-// -------------------------------------------------
-// circular_breaker sample
-//   main.js       2026/04/10
+// ---------------------------------------------
+// samples/circular_breaker/main.js  2026/04/10
+//   circular_breaker sample
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
-// -------------------------------------------------
-
+// ---------------------------------------------
 import WebgApp from "../../webg/WebgApp.js";
 import SmoothShader from "../../webg/SmoothShader.js";
 import GameAudioSynth from "../../webg/GameAudioSynth.js";

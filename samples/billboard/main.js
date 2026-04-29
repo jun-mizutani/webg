@@ -1,10 +1,9 @@
-// -------------------------------------------------
-// billboard sample
-//   main.js       2026/04/12
+// ---------------------------------------------
+// samples/billboard/main.js  2026/04/12
+//   billboard sample
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
-// -------------------------------------------------
-
+// ---------------------------------------------
 import WebgApp from "../../webg/WebgApp.js";
 import Primitive from "../../webg/Primitive.js";
 import Shape from "../../webg/Shape.js";
@@ -167,7 +166,7 @@ const start = async () => {
     projectionFar: 1200.0,
     messageFontTexture: "../../webg/font512.png",
     debugTools: {
-      mode: "debug",
+      mode: "release",
       system: "billboard",
       source: "samples/billboard/main.js",
       probeDefaultAfterFrames: 1

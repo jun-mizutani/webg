@@ -1,10 +1,9 @@
-// -------------------------------------------------
-// circular_breaker sample
-//   inputConfig.js 2026/03/26
+// ---------------------------------------------
+// samples/circular_breaker/inputConfig.js  2026/03/26
+//   circular_breaker sample
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
-// -------------------------------------------------
-
+// ---------------------------------------------
 import Diagnostics from "../../webg/Diagnostics.js";
 import DebugConfig from "../../webg/DebugConfig.js";
 

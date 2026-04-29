@@ -1,10 +1,9 @@
-// -------------------------------------------------
-// textdemo sample
-//   main.js       2026/03/14
+// ---------------------------------------------
+// unittest/textdemo/main.js  2026/03/14
+//   textdemo sample
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
-// -------------------------------------------------
-
+// ---------------------------------------------
 import Screen from "../../webg/Screen.js";
 import Text from "../../webg/Text.js";
 

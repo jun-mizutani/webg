@@ -1,10 +1,9 @@
-// -------------------------------------------------
-// circular_breaker sample
-//   highScoreStore.js 2026/03/26
+// ---------------------------------------------
+// samples/circular_breaker/highScoreStore.js  2026/03/26
+//   circular_breaker sample
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
-// -------------------------------------------------
-
+// ---------------------------------------------
 const HIGH_SCORE_KEY = "circular_breaker.highscores.v1";
 
 // この file は gameRuntime.js から createHighScoreStore() として呼ばれ、

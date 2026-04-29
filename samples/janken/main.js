@@ -1,11 +1,9 @@
 // ---------------------------------------------
-// main.js       2026/04/12
+// samples/janken/main.js  2026/04/12
+//   Janken game using hand.glb and AnimationState
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
-//
-// Janken game using hand.glb and AnimationState
 // ---------------------------------------------
-
 import WebgApp from "../../webg/WebgApp.js";
 import SmoothShader from "../../webg/SmoothShader.js";
 import Action from "../../webg/Action.js";

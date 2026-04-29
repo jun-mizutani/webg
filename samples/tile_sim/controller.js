@@ -1,10 +1,9 @@
-// -------------------------------------------------
-// tile_sim sample
-//   controller.js 2026/03/28
+// ---------------------------------------------
+// samples/tile_sim/controller.js  2026/03/28
+//   tile_sim sample
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
-// -------------------------------------------------
-
+// ---------------------------------------------
 import {
   BALL_BOUNCE_HEIGHT,
   BALL_LIFT,

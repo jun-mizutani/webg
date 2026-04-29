@@ -1,10 +1,9 @@
-// -------------------------------------------------
-// circular_breaker sample
-//   Hud.js  2026/03/26
+// ---------------------------------------------
+// samples/circular_breaker/Hud.js  2026/03/26
+//   circular_breaker sample
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
-// -------------------------------------------------
-
+// ---------------------------------------------
 // この file は main.js の render loop から drawHud() として呼ばれ、
 // gameplay HUD、待機表示、result 表示をまとめて描く
 // 状態遷移そのものは scenePhases.js に残し、

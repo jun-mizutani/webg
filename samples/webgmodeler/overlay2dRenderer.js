@@ -1,7 +1,9 @@
-// -------------------------------------------------
-// webgmodeler clip-space 2D overlay renderer
-// -------------------------------------------------
-
+// ---------------------------------------------
+// samples/webgmodeler/overlay2dRenderer.js  2026/04/29
+//   webgmodeler clip-space 2D overlay renderer
+//   Copyright (c) 2026 Jun Mizutani,
+//   released under the MIT open source license.
+// ---------------------------------------------
 export default class Overlay2DRenderer {
   // インスタンス生成時に renderer や shader が使う状態を初期化する
   constructor(gpu, {

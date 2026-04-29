@@ -1,10 +1,9 @@
-// -------------------------------------------------
-// collada_loader sample
-//   main.js       2026/04/20
+// ---------------------------------------------
+// samples/collada_loader/main.js  2026/04/20
+//   collada_loader sample
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
-// -------------------------------------------------
-
+// ---------------------------------------------
 import WebgApp from "../../webg/WebgApp.js";
 import SmoothShader from "../../webg/SmoothShader.js";
 import Diagnostics from "../../webg/Diagnostics.js";
@@ -13,7 +12,7 @@ import Diagnostics from "../../webg/Diagnostics.js";
 // ぶつからないよう export 時に追加変換を入れないファイルを前提とする
 const COLLADA_FILE = "./hand.dae";
 const DOWNLOAD_FILE = "collada_modelasset.json";
-const DEBUG_MODE = "debug";
+const DEBUG_MODE = "release";
 const DEFAULT_ORBIT = {
   yaw: 20.0,
   pitch: -10.0,

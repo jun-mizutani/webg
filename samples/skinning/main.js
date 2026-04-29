@@ -1,10 +1,9 @@
-// -------------------------------------------------
-// skinning sample
-//   main.js       2026/04/12
+// ---------------------------------------------
+// samples/skinning/main.js  2026/04/12
+//   skinning sample
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
-// -------------------------------------------------
-
+// ---------------------------------------------
 import WebgApp from "../../webg/WebgApp.js";
 import Matrix from "../../webg/Matrix.js";
 import Primitive from "../../webg/Primitive.js";
@@ -282,7 +281,7 @@ const start = async () => {
     projectionFar: 200.0,
     messageFontTexture: "../../webg/font512.png",
     debugTools: {
-      mode: "debug",
+      mode: "release",
       system: "skinning",
       source: "samples/skinning/main.js",
       probeDefaultAfterFrames: 1

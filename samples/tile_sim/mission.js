@@ -1,10 +1,9 @@
-// -------------------------------------------------
-// tile_sim sample
-//   mission.js    2026/04/10
+// ---------------------------------------------
+// samples/tile_sim/mission.js  2026/04/10
+//   tile_sim sample
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
-// -------------------------------------------------
-
+// ---------------------------------------------
 import Primitive from "../../webg/Primitive.js";
 import Shape from "../../webg/Shape.js";
 import {

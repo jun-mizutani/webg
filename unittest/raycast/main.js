@@ -1,8 +1,9 @@
-// -------------------------------------------------
-// raycast unittest
-//   main.js       2026/04/10
-// -------------------------------------------------
-
+// ---------------------------------------------
+// unittest/raycast/main.js  2026/04/10
+//   raycast unittest
+//   Copyright (c) 2026 Jun Mizutani,
+//   released under the MIT open source license.
+// ---------------------------------------------
 import Screen from "../../webg/Screen.js";
 import Space from "../../webg/Space.js";
 import Primitive from "../../webg/Primitive.js";

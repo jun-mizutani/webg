@@ -1,10 +1,9 @@
-// -------------------------------------------------
-// tile_sim sample
-//   constants.js  2026/04/24
+// ---------------------------------------------
+// samples/tile_sim/constants.js  2026/04/24
+//   tile_sim sample
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
-// -------------------------------------------------
-
+// ---------------------------------------------
 // この module は、tile_sim sample 全体で共有する定数をまとめる
 // - 盤面サイズ、ball の見え方、marker 寸法、mission 制約を 1 か所で読めるようにする
 // - terrain / camera / mission / controller の各 module が同じ値を参照し、値のずれを防ぐ

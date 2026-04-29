@@ -1,10 +1,9 @@
-// -------------------------------------------------
-// dialogue unittest
-//   main.js       2026/03/26
+// ---------------------------------------------
+// unittest/dialogue/main.js  2026/03/26
+//   dialogue unittest
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
-// -------------------------------------------------
-
+// ---------------------------------------------
 import WebgApp from "../../webg/WebgApp.js";
 
 // webgクラスの役割:

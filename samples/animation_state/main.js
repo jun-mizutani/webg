@@ -1,11 +1,9 @@
 // ---------------------------------------------
-// main.js       2026/04/12
+// samples/animation_state/main.js  2026/04/12
+//   AnimationState sample based on hand sample
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
-//
-// AnimationState sample based on hand sample
 // ---------------------------------------------
-
 import WebgApp from "../../webg/WebgApp.js";
 import Primitive from "../../webg/Primitive.js";
 import Shape from "../../webg/Shape.js";
@@ -469,7 +467,7 @@ async function start() {
     messageFontTexture: "../../webg/font512.png",
     autoDrawBones: false,
     debugTools: {
-      mode: "debug",
+      mode: "release",
       system: "animation_state",
       source: "samples/animation_state/main.js",
       probeDefaultAfterFrames: 1

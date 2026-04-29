@@ -1,10 +1,9 @@
-// -------------------------------------------------
-// high_level sample
-//   main.js       2026/04/12
+// ---------------------------------------------
+// samples/high_level/main.js  2026/04/12
+//   high_level sample
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
-// -------------------------------------------------
-
+// ---------------------------------------------
 import WebgApp from "../../webg/WebgApp.js";
 import Shape from "../../webg/Shape.js";
 import Primitive from "../../webg/Primitive.js";

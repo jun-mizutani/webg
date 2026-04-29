@@ -1,10 +1,9 @@
-// -------------------------------------------------
-// detouch_min sample
-//   main.js       2026/04/10
+// ---------------------------------------------
+// unittest/detouch_min/main.js  2026/04/10
+//   detouch_min sample
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
-// -------------------------------------------------
-
+// ---------------------------------------------
 import Space from "../../webg/Space.js";
 import Primitive from "../../webg/Primitive.js";
 import Shape from "../../webg/Shape.js";

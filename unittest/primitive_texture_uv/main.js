@@ -1,10 +1,9 @@
-// -------------------------------------------------
-// primitive_texture_uv sample
-//   main.js       2026/04/28
+// ---------------------------------------------
+// unittest/primitive_texture_uv/main.js  2026/04/28
+//   primitive_texture_uv sample
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
-// -------------------------------------------------
-
+// ---------------------------------------------
 import Space from "../../webg/Space.js";
 import Primitive from "../../webg/Primitive.js";
 import Shape from "../../webg/Shape.js";

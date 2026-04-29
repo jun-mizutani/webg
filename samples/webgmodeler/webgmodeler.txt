@@ -122,7 +122,7 @@
 
 補足
 - この sample は webg コアを変更せず、サンプル側だけで編集体験を構成するための初期実装です
-- `Space.raycast()` は vertex marker のような小さい Shape の選択にはそのまま使えます
+- 現在の vertex pick は marker Shape を作らず、ray と頂点位置の距離で判定します。`Space.raycast()` は object pick など Shape ベースの対象に使います
 - face pick は編集データから直接 ray-triangle 交差を計算しており、mesh の AABB だけで選択しないようにしています
 - 読み込んだ asset の skeleton、animation、node transform、material 分割を保持したまま編集する機能はまだ対象外です
 - 三角形と四角形以外の `polygonLoops` を持つ mesh は、この初期版では読み込み時にエラーとして扱います

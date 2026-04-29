@@ -32,8 +32,8 @@
 
 ## 関連文書
 
-- [05_WebgAppによるアプリ構成.md](../../book/05_WebgAppによるアプリ構成.md)
-- [15_HUDとオーバーレイ.md](../../book/15_HUDとオーバーレイ.md)
+- [05_WebgAppによるアプリ構成.md](../../book/05_WebgAppによるアプリ構成.md)
+- [15_HUDとオーバーレイの設計.md](../../book/15_HUDとオーバーレイの設計.md)
 - [WebgApp.js](../../webg/WebgApp.js)
 - [UIPanel.js](../../webg/UIPanel.js)
 - [DialogueOverlay.js](../../webg/DialogueOverlay.js)

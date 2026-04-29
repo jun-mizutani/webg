@@ -1,10 +1,9 @@
-// -------------------------------------------------
-// primitive_modelasset sample
-//   main.js       2026/04/12
+// ---------------------------------------------
+// unittest/primitive_modelasset/main.js  2026/04/12
+//   primitive_modelasset sample
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
-// -------------------------------------------------
-
+// ---------------------------------------------
 import Space from "../../webg/Space.js";
 import Primitive from "../../webg/Primitive.js";
 import ModelAsset from "../../webg/ModelAsset.js";

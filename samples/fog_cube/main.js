@@ -1,10 +1,9 @@
-// -------------------------------------------------
-// fog_cube sample
-//   main.js       2026/04/28
+// ---------------------------------------------
+// samples/fog_cube/main.js  2026/04/28
+//   fog_cube sample
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
-// -------------------------------------------------
-
+// ---------------------------------------------
 import WebgApp from "../../webg/WebgApp.js";
 import Primitive from "../../webg/Primitive.js";
 import Shape from "../../webg/Shape.js";
@@ -224,7 +223,7 @@ async function start() {
       mode: DEFAULT_FOG.mode
     },
     debugTools: {
-      mode: "debug",
+      mode: "release",
       system: "fog_cube",
       source: "samples/fog_cube/main.js",
       guideLines: GUIDE_LINES,

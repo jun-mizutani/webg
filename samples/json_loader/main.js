@@ -1,17 +1,16 @@
-// -------------------------------------------------
-// json_loader sample
-//   main.js       2026/04/20
+// ---------------------------------------------
+// samples/json_loader/main.js  2026/04/20
+//   json_loader sample
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
-// -------------------------------------------------
-
+// ---------------------------------------------
 import WebgApp from "../../webg/WebgApp.js";
 import SmoothShader from "../../webg/SmoothShader.js";
 import Diagnostics from "../../webg/Diagnostics.js";
 
 const MODEL_ASSET_FILE = "./modelasset.json";
 const DOWNLOAD_FILE = "modelasset_copy.json";
-const DEBUG_MODE = "debug";
+const DEBUG_MODE = "release";
 const DEFAULT_ORBIT = {
   yaw: 20.0,
   pitch: -14.0,

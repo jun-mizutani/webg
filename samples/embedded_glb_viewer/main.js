@@ -1,10 +1,9 @@
-// -------------------------------------------------
-// embedded_glb_viewer sample
-//   main.js       2026/04/23
+// ---------------------------------------------
+// samples/embedded_glb_viewer/main.js  2026/04/23
+//   embedded_glb_viewer sample
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
-// -------------------------------------------------
-
+// ---------------------------------------------
 import WebgApp from "../../webg/WebgApp.js";
 import SmoothShader from "../../webg/SmoothShader.js";
 import Shape from "../../webg/Shape.js";

@@ -1,10 +1,9 @@
-// -------------------------------------------------
-// low_level sample
-//   main.js       2026/04/12
+// ---------------------------------------------
+// samples/low_level/main.js  2026/04/12
+//   low_level sample
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
-// -------------------------------------------------
-
+// ---------------------------------------------
 import Screen from "../../webg/Screen.js";
 import Space from "../../webg/Space.js";
 import Shape from "../../webg/Shape.js";

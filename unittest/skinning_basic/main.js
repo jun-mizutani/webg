@@ -1,10 +1,9 @@
-// -------------------------------------------------
-// skinning_basic sample
-//   main.js       2026/04/27
+// ---------------------------------------------
+// unittest/skinning_basic/main.js  2026/04/27
+//   skinning_basic sample
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
-// -------------------------------------------------
-
+// ---------------------------------------------
 import SmoothShader from "../../webg/SmoothShader.js";
 import Shape from "../../webg/Shape.js";
 import Space from "../../webg/Space.js";

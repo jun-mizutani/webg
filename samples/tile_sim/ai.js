@@ -1,10 +1,9 @@
-// -------------------------------------------------
-// tile_sim sample
-//   ai.js         2026/04/01
+// ---------------------------------------------
+// samples/tile_sim/ai.js  2026/04/01
+//   tile_sim sample
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
-// -------------------------------------------------
-
+// ---------------------------------------------
 import { MAX_TERRAIN_HEIGHT } from "./constants.js";
 import {
   createPathMoveCounter,

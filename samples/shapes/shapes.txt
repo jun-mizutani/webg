@@ -22,6 +22,7 @@
 操作説明
 - `C`: solid color 表示
 - `T`: texture 表示
+- `I`: image normal 表示
 - `N`: noise normal 表示
 - `D`: dots normal 表示
 - `1` - `9`: 対応シェイプのワイヤーフレームON/OFF

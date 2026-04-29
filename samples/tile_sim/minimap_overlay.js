@@ -1,10 +1,9 @@
-// -------------------------------------------------
-// tile_sim sample
-//   minimap_overlay.js 2026/03/30
+// ---------------------------------------------
+// samples/tile_sim/minimap_overlay.js  2026/03/30
+//   tile_sim sample
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
-// -------------------------------------------------
-
+// ---------------------------------------------
 // この module は、tile_sim 用の小さい 2D tactical map overlay を担当する
 // - 3D の TileMap を見失わないよう、盤面全体を俯瞰する小さい DOM canvas を追加する
 // - Alpha / Bravo / Mule / Warden / beacon / goal / selection を同じ 2D 上で確認できるようにする

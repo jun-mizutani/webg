@@ -1,7 +1,9 @@
-// -------------------------------------------------
-// webgmodeler small math helpers
-// -------------------------------------------------
-
+// ---------------------------------------------
+// samples/webgmodeler/math3d.js  2026/04/29
+//   webgmodeler small math helpers
+//   Copyright (c) 2026 Jun Mizutani,
+//   released under the MIT open source license.
+// ---------------------------------------------
 // 外部入力や DOM 文字列を数値として扱う前に有限数か検証する
 export function readFiniteNumber(value, label) {
   const num = Number(value);

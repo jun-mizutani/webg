@@ -1,10 +1,9 @@
-// -------------------------------------------------
-// tile_sim sample
-//   dialogue_flow.js 2026/04/01
+// ---------------------------------------------
+// samples/tile_sim/dialogue_flow.js  2026/04/01
+//   tile_sim sample
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
-// -------------------------------------------------
-
+// ---------------------------------------------
 // この module は、tile_sim で DialogueOverlay をどう使うかをまとめる
 // - title の導入説明、play 開始時の briefing、turn 中の短い event、result の締めを同じ進行モデルへそろえる
 // - tile_sim は DialogueOverlay の有効性確認も目的に含むため、必要な情報を会話 overlay 側へ寄せる

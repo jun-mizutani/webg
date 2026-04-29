@@ -1,10 +1,8 @@
-// -------------------------------------------------
-// SkinningTestUtils.js
-//   SkinningTestUtils.js 2026/04/28
+// ---------------------------------------------
+// unittest/_shared/SkinningTestUtils.js  2026/04/28
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
-// -------------------------------------------------
-
+// ---------------------------------------------
 import Matrix from "../../webg/Matrix.js";
 import Primitive from "../../webg/Primitive.js";
 import Shape from "../../webg/Shape.js";

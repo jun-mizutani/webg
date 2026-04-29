@@ -68,3 +68,6 @@
 - `P`: pause
 - `R`: restart
 - `K`: screenshot
+- `B`: block shape mode 切替
+- `T`: desktop で touch controls の表示 / 非表示を切替
+- touch ボタン: `RX` / `RY` / `RZ` / `⬇`、`←` / `→` / `↑` / `↓`、`R`

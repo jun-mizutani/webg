@@ -1,10 +1,9 @@
-// -------------------------------------------------
-// tilemap unittest
-//   main.js       2026/04/24
+// ---------------------------------------------
+// unittest/tilemap/main.js  2026/04/24
+//   tilemap unittest
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
-// -------------------------------------------------
-
+// ---------------------------------------------
 import SceneAsset from "../../webg/SceneAsset.js";
 import Matrix from "../../webg/Matrix.js";
 import Primitive from "../../webg/Primitive.js";

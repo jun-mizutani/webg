@@ -25,6 +25,7 @@
 - `W` / `S`: モデルを X 軸回転
 - `A` / `D`: モデルを Y 軸回転
 - `Z` / `X`: モデルを Z 軸回転
+- `J`: ボーン一覧を console 出力
 - `E` / `R`: 選択中ボーンを X 軸回転
 - `Y` / `U`: 選択中ボーンを Y 軸回転
 - `C` / `V`: 選択中ボーンを Z 軸回転
@@ -38,6 +39,7 @@
 - `P`: auto cycle の ON / OFF
 - `7` / `8`: 描画 ON / OFF
 - `K`: 遅延描画モード ON
+- `Q`: sample 停止
 
 補足
 - `AnimationState` は clip データを持たず、既存 `Action` を controller として受ける薄い制御層です

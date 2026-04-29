@@ -1,10 +1,9 @@
-// -------------------------------------------------
-// circular_breaker sample
-//   arenaScene.js 2026/03/26
+// ---------------------------------------------
+// samples/circular_breaker/arenaScene.js  2026/03/26
+//   circular_breaker sample
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
-// -------------------------------------------------
-
+// ---------------------------------------------
 import Primitive from "../../webg/Primitive.js";
 import Shape from "../../webg/Shape.js";
 

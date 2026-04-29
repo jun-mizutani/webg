@@ -33,6 +33,11 @@
 - `K`: 一時停止のON/OFF
 - `O`: ゲームオーバーを強制
 - `P`: スクリーンショット保存
-- 任意キーまたはクリック: ステージ開始待機中の開始トリガ
+- `Q` / `W`: diagnostics を text / json で probe 表示
+- `C` / `V`: diagnostics を text / json で clipboard copy
+- `J` / `L`: diagnostics を text / json で console log
+- `F` / `G`: diagnostics を text / json で保存
+- `M`: debug / release 表示切替
+- `Enter` / `Space` / クリック: ステージ開始待機中の開始トリガ
 - スマホ（coarse pointer）では画面下にタッチボタン `← / → / A / D / R` を表示
-- スマホUIに `O / P / K` は表示しない
+- スマホUIに pause / debug / diagnostics 系の `K / O / P / Q / W / C / V / J / L / F / G / M` は表示しない

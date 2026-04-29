@@ -1,10 +1,9 @@
-// -------------------------------------------------
-// lowlevel_terrain sample
-//   main.js       2026/04/12
+// ---------------------------------------------
+// samples/lowlevel_terrain/main.js  2026/04/12
+//   lowlevel_terrain sample
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
-// -------------------------------------------------
-
+// ---------------------------------------------
 import {
   buildFractalTerrain,
   buildTerrainBandTexturePixels

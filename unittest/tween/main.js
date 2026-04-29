@@ -1,10 +1,9 @@
-// -------------------------------------------------
-// tween unittest
-//   main.js       2026/04/10
+// ---------------------------------------------
+// unittest/tween/main.js  2026/04/10
+//   tween unittest
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
-// -------------------------------------------------
-
+// ---------------------------------------------
 import Tween from "../../webg/Tween.js";
 import WebgApp from "../../webg/WebgApp.js";
 import Shape from "../../webg/Shape.js";

@@ -1,10 +1,9 @@
-// -------------------------------------------------
-// sound sample
-//   main.js       2026/04/09
+// ---------------------------------------------
+// samples/sound/main.js  2026/04/09
+//   sound sample
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
-// -------------------------------------------------
-
+// ---------------------------------------------
 import GameAudioSynth from "../../webg/GameAudioSynth.js";
 
 const $ = (id) => document.getElementById(id);

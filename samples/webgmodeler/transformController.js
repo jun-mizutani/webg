@@ -1,7 +1,9 @@
-// -------------------------------------------------
-// webgmodeler transform controller
-// -------------------------------------------------
-
+// ---------------------------------------------
+// samples/webgmodeler/transformController.js  2026/04/29
+//   webgmodeler transform controller
+//   Copyright (c) 2026 Jun Mizutani,
+//   released under the MIT open source license.
+// ---------------------------------------------
 import { add3, cross3, dot3, mul3, normalize3, sub3 } from "./math3d.js";
 
 // mouse move preview 型の G/R/S/E transform controller を作る

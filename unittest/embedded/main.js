@@ -1,10 +1,9 @@
-// -------------------------------------------------
-// embedded unittest
-//   main.js       2026/04/12
+// ---------------------------------------------
+// unittest/embedded/main.js  2026/04/12
+//   embedded unittest
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
-// -------------------------------------------------
-
+// ---------------------------------------------
 import WebgApp from "../../webg/WebgApp.js";
 import Shape from "../../webg/Shape.js";
 import Primitive from "../../webg/Primitive.js";

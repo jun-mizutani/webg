@@ -1,10 +1,9 @@
-// -------------------------------------------------
-// destroy_lifecycle unittest
-//   main.js       2026/04/20
+// ---------------------------------------------
+// unittest/destroy_lifecycle/main.js  2026/04/20
+//   destroy_lifecycle unittest
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
-// -------------------------------------------------
-
+// ---------------------------------------------
 import Space from "../../webg/Space.js";
 import Primitive from "../../webg/Primitive.js";
 import Shape from "../../webg/Shape.js";

@@ -1,11 +1,10 @@
-// -------------------------------------------------
-// detouch/main.js
-//   main.js       2026/04/28
+// ---------------------------------------------
+// samples/detouch/main.js  2026/04/28
+//   detouch/main.js
+//   detach_attach.html 相当の挙動を current webg API で実装したサンプル
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
-// detach_attach.html 相当の挙動を current webg API で実装したサンプル
-// -------------------------------------------------
-
+// ---------------------------------------------
 import WebgApp from "../../webg/WebgApp.js";
 import Primitive from "../../webg/Primitive.js";
 import Shape from "../../webg/Shape.js";

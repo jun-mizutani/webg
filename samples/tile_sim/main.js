@@ -1,10 +1,9 @@
-// -------------------------------------------------
-// tile_sim sample
-//   main.js       2026/04/24
+// ---------------------------------------------
+// samples/tile_sim/main.js  2026/04/24
+//   tile_sim sample
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
-// -------------------------------------------------
-
+// ---------------------------------------------
 import WebgApp from "../../webg/WebgApp.js";
 import SceneAsset from "../../webg/SceneAsset.js";
 import Matrix from "../../webg/Matrix.js";
@@ -514,9 +513,8 @@ const start = async () => {
     projectionNear: 0.1,
     projectionFar: 1000.0,
     debugTools: {
-      // tile_sim は現在 core fallback 削減後の挙動確認にも使っているため、
-      // sample 起動直後から debug dock と diagnostics を見られる debug mode を既定にする
-      mode: "debug",
+      // 公開 sample としては debug dock を出さず、必要時だけ diagnostic key で確認する
+      mode: "release",
       keyInput: {
         enabled: false
       },

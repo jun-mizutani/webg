@@ -1,10 +1,9 @@
-// -------------------------------------------------
-// cube4
-//   main.js       2026/04/19
+// ---------------------------------------------
+// samples/cube4/main.js  2026/04/19
+//   cube4
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
-// -------------------------------------------------
-
+// ---------------------------------------------
 import WebgApp from "../../webg/WebgApp.js";
 import Primitive from "../../webg/Primitive.js";
 import Shape from "../../webg/Shape.js";

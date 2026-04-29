@@ -1,10 +1,9 @@
-// -------------------------------------------------
-// gltf_loader sample
-//   main.js       2026/04/20
+// ---------------------------------------------
+// samples/gltf_loader/main.js  2026/04/20
+//   gltf_loader sample
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
-// -------------------------------------------------
-
+// ---------------------------------------------
 import WebgApp from "../../webg/WebgApp.js";
 import SmoothShader from "../../webg/SmoothShader.js";
 import Matrix from "../../webg/Matrix.js";
@@ -14,7 +13,7 @@ import util from "../../webg/util.js";
 // Blender から glTF を書き出す場合は、Y-up で出力したファイルを前提とする
 const GLTF_FILE = "./hand.glb";
 const DOWNLOAD_FILE = "gltf_modelasset.json";
-const DEBUG_MODE = "debug";
+const DEBUG_MODE = "release";
 const INTERPOLATION_NOTICE_ID = "gltf-interpolation-notice";
 const DEFAULT_ORBIT = {
   yaw: 20.0,

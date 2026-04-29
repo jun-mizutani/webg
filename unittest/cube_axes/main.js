@@ -1,10 +1,9 @@
-// -------------------------------------------------
-// Cube demo: hardcoded by addVertex/addPlane
-//   main.js       2026/04/10
+// ---------------------------------------------
+// unittest/cube_axes/main.js  2026/04/10
+//   Cube demo: hardcoded by addVertex/addPlane
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
-// -------------------------------------------------
-
+// ---------------------------------------------
 import Space from "../../webg/Space.js";
 import Shape from "../../webg/Shape.js";
 import Matrix from "../../webg/Matrix.js";

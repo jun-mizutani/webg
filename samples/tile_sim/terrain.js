@@ -1,10 +1,9 @@
-// -------------------------------------------------
-// tile_sim sample
-//   terrain.js    2026/04/24
+// ---------------------------------------------
+// samples/tile_sim/terrain.js  2026/04/24
+//   tile_sim sample
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
-// -------------------------------------------------
-
+// ---------------------------------------------
 import Texture from "../../webg/Texture.js";
 import {
   TERRAIN_TEXTURE_SIZE,

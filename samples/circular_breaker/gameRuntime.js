@@ -1,10 +1,9 @@
-// -------------------------------------------------
-// circular_breaker sample
-//   gameRuntime.js  2026/04/09
+// ---------------------------------------------
+// samples/circular_breaker/gameRuntime.js  2026/04/09
+//   circular_breaker sample
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
-// -------------------------------------------------
-
+// ---------------------------------------------
 import {
   ARENA_RADIUS,
   BLOCK_RING_RADIUS,

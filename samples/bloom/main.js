@@ -1,10 +1,9 @@
-// -------------------------------------------------
-// bloom sample
-//   main.js       2026/04/21
+// ---------------------------------------------
+// samples/bloom/main.js  2026/04/21
+//   bloom sample
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
-// -------------------------------------------------
-
+// ---------------------------------------------
 import WebgApp from "../../webg/WebgApp.js";
 import Primitive from "../../webg/Primitive.js";
 import Shape from "../../webg/Shape.js";
@@ -249,7 +248,7 @@ async function start() {
       type: 1.0
     },
     debugTools: {
-      mode: "debug",
+      mode: "release",
       system: "bloom",
       source: "samples/bloom/main.js",
       probeDefaultAfterFrames: 1

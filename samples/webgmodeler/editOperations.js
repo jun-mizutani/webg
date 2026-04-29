@@ -1,8 +1,9 @@
-// -------------------------------------------------
-// webgmodeler edit operations
-//   editOperations.js 2026/04/28
-// -------------------------------------------------
-
+// ---------------------------------------------
+// samples/webgmodeler/editOperations.js  2026/04/28
+//   webgmodeler edit operations
+//   Copyright (c) 2026 Jun Mizutani,
+//   released under the MIT open source license.
+// ---------------------------------------------
 import { add3, mul3, sub3 } from "./math3d.js";
 
 // main.js から渡された context を使い、編集操作 API をまとめて作る

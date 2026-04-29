@@ -1,10 +1,9 @@
-// -------------------------------------------------
-// axis sample
-//   main.js       2026/04/12
+// ---------------------------------------------
+// samples/axis/main.js  2026/04/12
+//   axis sample
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
-// -------------------------------------------------
-
+// ---------------------------------------------
 import WebgApp from "../../webg/WebgApp.js";
 import Primitive from "../../webg/Primitive.js";
 import Shape from "../../webg/Shape.js";
@@ -369,7 +368,7 @@ const start = async () => {
     viewAngle: state.viewAngle,
     messageFontTexture: FONT_FILE,
     debugTools: {
-      mode: "debug",
+      mode: "release",
       system: "axis",
       source: "samples/axis/main.js",
       probeDefaultAfterFrames: 1

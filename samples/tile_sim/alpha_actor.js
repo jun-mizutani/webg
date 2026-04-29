@@ -1,10 +1,9 @@
-// -------------------------------------------------
-// tile_sim sample
-//   alpha_actor.js 2026/04/23
+// ---------------------------------------------
+// samples/tile_sim/alpha_actor.js  2026/04/23
+//   tile_sim sample
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
-// -------------------------------------------------
-
+// ---------------------------------------------
 import SmoothShader from "../../webg/SmoothShader.js";
 import ModelAsset from "../../webg/ModelAsset.js";
 import ModelBuilder from "../../webg/ModelBuilder.js";

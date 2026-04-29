@@ -1,10 +1,9 @@
-// -------------------------------------------------
-// compression unittest
-//   main.js       2026/04/27
+// ---------------------------------------------
+// unittest/compression/main.js  2026/04/27
+//   compression unittest
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
-// -------------------------------------------------
-
+// ---------------------------------------------
 import Primitive from "../../webg/Primitive.js";
 import ModelValidator from "../../webg/ModelValidator.js";
 import ModelAsset from "../../webg/ModelAsset.js";

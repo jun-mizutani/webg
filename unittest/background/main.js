@@ -1,10 +1,9 @@
-// -------------------------------------------------
-// background sample
-//   main.js       2026/03/14
+// ---------------------------------------------
+// unittest/background/main.js  2026/03/14
+//   background sample
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
-// -------------------------------------------------
-
+// ---------------------------------------------
 import Background from "../../webg/Background.js";
 import { bootUnitTestApp } from "../_shared/UnitTestApp.js";
 

@@ -1,10 +1,9 @@
-// -------------------------------------------------
-// tile_sim sample
-//   camera.js     2026/04/24
+// ---------------------------------------------
+// samples/tile_sim/camera.js  2026/04/24
+//   tile_sim sample
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
-// -------------------------------------------------
-
+// ---------------------------------------------
 import { CELL_SIZE, DISPLAY_AREA_SCROLL_DURATION_MS } from "./constants.js";
 
 // この module は、tile_sim の camera と pointer picking の helper をまとめる

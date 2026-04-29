@@ -1,10 +1,9 @@
-// -------------------------------------------------
-// input_controller unittest
-//   main.js       2026/04/12
+// ---------------------------------------------
+// unittest/input_controller/main.js  2026/04/12
+//   input_controller unittest
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
-// -------------------------------------------------
-
+// ---------------------------------------------
 import InputController from "../../webg/InputController.js";
 import Touch from "../../webg/Touch.js";
 

@@ -1,7 +1,9 @@
-// -------------------------------------------------
-// webgmodeler minimal GLB exporter
-// -------------------------------------------------
-
+// ---------------------------------------------
+// samples/webgmodeler/glbExporter.js  2026/04/29
+//   webgmodeler minimal GLB exporter
+//   Copyright (c) 2026 Jun Mizutani,
+//   released under the MIT open source license.
+// ---------------------------------------------
 // GLB の各 chunk が 4 byte 境界に揃うよう byte length を切り上げる
 function align4(value) {
   return (value + 3) & ~3;

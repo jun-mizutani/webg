@@ -1,10 +1,9 @@
-// -------------------------------------------------
-// circular_breaker sample
-//   scenePhases.js 2026/04/09
+// ---------------------------------------------
+// samples/circular_breaker/scenePhases.js  2026/04/09
+//   circular_breaker sample
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
-// -------------------------------------------------
-
+// ---------------------------------------------
 import GameStateManager from "../GameStateManager.js";
 import { applyGameBgmPreset, playGameEventSound } from "../GameAudioPresets.js";
 

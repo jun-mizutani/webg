@@ -1,11 +1,10 @@
-// -------------------------------------------------
-// message sample
-//   main.js       2026/03/14
+// ---------------------------------------------
+// unittest/message/main.js  2026/03/14
+//   message sample
+//   Text.js and Message.js comparison sample.
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
-// Text.js and Message.js comparison sample.
-// -------------------------------------------------
-
+// ---------------------------------------------
 import Text from "../../webg/Text.js";
 import Message from "../../webg/Message.js";
 import { bootUnitTestApp } from "../_shared/UnitTestApp.js";
