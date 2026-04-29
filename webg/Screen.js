@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// Screen.js       2026/04/24
+// Screen.js       2026/04/29
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // ---------------------------------------------
@@ -255,17 +255,27 @@ export default class Screen {
   }
 
   // 現在アスペクトに応じた推奨縦FOVを返す
-  // 目安:
-  // - 横長: base
-  // - 標準: base + 4
-  // - やや縦長: base + 8
-  // - 縦長: base + 12
+  // `base` は短辺方向のFOVとして扱う。
+  // 横長画面では縦方向が短辺なので `base` をそのまま縦FOVにする。
+  // 縦長画面では横方向が短辺なので、横FOVが `base` になる縦FOVを逆算する。
   getRecommendedFov(base = 55.0) {
+    if (!Number.isFinite(base) || base <= 0.0 || base >= 180.0) {
+      throw new Error(`Screen.getRecommendedFov base must be in the range 0..180 degrees: ${base}`);
+    }
     const aspect = this.getAspect();
-    if (aspect >= 1.6) return base;
-    if (aspect >= 1.0) return base + 4.0;
-    if (aspect >= 0.7) return base + 8.0;
-    return base + 12.0;
+    if (!Number.isFinite(aspect) || aspect <= 0.0) {
+      throw new Error(`Screen.getRecommendedFov aspect must be a positive finite number: ${aspect}`);
+    }
+    if (aspect >= 1.0) {
+      return base;
+    }
+    const shortHalfAngle = base * 0.5 * Math.PI / 180.0;
+    const verticalHalfAngle = Math.atan(Math.tan(shortHalfAngle) / aspect);
+    const vfov = verticalHalfAngle * 2.0 * 180.0 / Math.PI;
+    if (!Number.isFinite(vfov) || vfov <= 0.0 || vfov >= 180.0) {
+      throw new Error(`Screen.getRecommendedFov produced invalid vertical fov: ${vfov}`);
+    }
+    return vfov;
   }
 
   // クリア色 `[r,g,b,a]` を設定する

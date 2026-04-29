@@ -276,11 +276,16 @@
           <button class="tool-button" data-tool="selectFace" aria-pressed="false" disabled>Face Select</button>
           <button class="tool-button" data-tool="addVertex" aria-pressed="false" disabled>Add Vertex</button>
         </div>
+        <div class="toolbar" aria-label="view commands">
+          <button class="tool-button" id="screenshot">Screenshot</button>
+        </div>
         <div class="canvas-wrap">
           <canvas id="canvas" width="900" height="620"></canvas>
         </div>
         <p class="hint">
           中ボタンドラッグまたは Option + 左ドラッグで orbit、Shift 併用で PAN、Ctrl 併用または wheel で zoom。
+          P で Perspective / Orthographic 表示を切り替えます。
+          V でフルサイズ換算の焦点距離を標準から望遠側へ段階切替、Shift + V で逆順に切り替えます。
           Object Mode でオブジェクト選択、Tab / Edit Mode でアクティブオブジェクトを編集します。Vertex/Face Select でクリック選択、modifier なしの左ドラッグで矩形選択、A で全選択です。
           W で Object Mode の wireframe を切り替え、X で現在 mode / tool の選択対象を削除します。G/R/S/E の後はマウス移動で移動/回転/scale/押し出し、左クリックで確定します。F は選択 3 / 4 頂点から面を作成し、補助編集は J/L/I/K、U/O、N/M を使います。
         </p>
@@ -324,6 +329,7 @@
           <h2>表示</h2>
           <div class="action-row">
             <button class="tool-button" id="objectWireframe" aria-pressed="false">Object Wireframe</button>
+            <button class="tool-button" id="lightBackground" aria-pressed="false">Light Background</button>
           </div>
           <label class="setting-row" for="overlayAlpha">
             <span>Overlay Alpha</span>

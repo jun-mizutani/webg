@@ -7,9 +7,11 @@
 - Load Model 後は、選択中の mesh が自動で編集対象へ取り込まれます。Use Mesh は、読み込み済み asset の mesh select を変更したあと、別 mesh または `all objects` を改めて編集対象へ取り込むためのボタンです。`hand.glb` のように mesh node が 1 つだけのファイルでは、ロード後に 1 object だけ表示されるのが正常です
 - 出力は ModelAsset JSON、gzip 圧縮済み ModelAsset JSON (`.json.gz`)、GLB に対応します。通常 JSON は `ModelAsset.downloadJSON()`、gzip 版は `ModelAsset.downloadJSONGz()` を使い、GLB は sample 側の最小 exporter で保存します
 - Edit Mode の頂点 marker と辺は、scene draw 後の専用 overlay pass で描画します。marker は 2D shader の screen-space 円、辺は Wireframe 系の `line-list` shader で描画します
+- Screenshot button は、現在の 3D ビューポートを次の frame の `present()` 後に PNG として保存します。保存名は `WebgApp.takeScreenshot()` の標準規則に従い、`webgmodeler_YYYYMMDD_HHMMSS.png` 形式になります
 - 選択 face は専用 shader で描画し、world 座標は元 face と同じまま、clip-space のごく小さい depth bias だけで通常 mesh より手前に重ねます
-- overlay pass は depth test 有効、depth write 無効です。手前の面に隠れた marker / edge は基本的に表示されず、edge は selected face overlay に負けにくいよう clip-space の小さな z bias を入れます
+- overlay pass は depth test 有効、depth write 無効です。手前の面に隠れた marker / edge は基本的に表示されず、edge は selected face overlay に負けにくいよう clip-space の小さな z bias を入れます。Perspective 表示では望遠側で z bias が効きすぎないよう、短辺 FOV の `tan(fov / 2)` 比に合わせて edge / marker の z bias を小さくします
 - overlay の非選択 marker / edge は `Marker` / `Edge` color picker で色を変更でき、`Overlay Alpha` slider で透明度を調整できます。選択 marker は赤、選択 face の境界 edge は黒・高 alpha で描画します
+- Light Background button は、viewport の clear color を暗色から少し明るいグレーへ切り替えます。暗いモデルや黒い wireframe / overlay を確認しにくいときに使います
 - vertex pick は頂点位置と ray の距離判定を主経路にします。marker 用の Node は作らず、数千頂点の Edit Mode でも Space traversal が増えないようにします
 - marker overlay は camera / selection / geometry / 色 / canvas size が変わった時だけ再投影し、静止中は前回 upload した GPU buffer を再利用します
 - edge overlay の辺一覧は geometry 更新時だけ作り直し、edge vertex buffer も geometry / 色が変わった時だけ upload します
@@ -63,9 +65,11 @@
 - Object Mode で各オブジェクトをクリック選択し、Edit Mode で選択したアクティブオブジェクトだけの頂点 marker が出ることを確認します
 - Object Mode で A を押すと全オブジェクトが選択され、Edit Mode で A を押すとアクティブオブジェクトの全頂点と全 face が選択されることを確認します
 - Object Wireframe button または W で Object Mode の wireframe 表示を切り替え、Quad の四角面では対角線が出ず、外周 edge だけが表示されることを確認します
+- Light Background button で viewport 背景が少し明るいグレーになり、もう一度押すと暗色へ戻ることを確認します
 - Object Mode で X を押すと選択 object が削除され、残った object があれば次の active object として表示されることを確認します
 - Edit Mode の Vertex Select で X を押すと選択 vertex と参照 face が削除され、Face Select で X を押すと選択 face だけが削除されて vertex が残ることを確認します
 - Object Mode でオブジェクトを選択し、G / R / S を押してからマウス移動、左クリック確定で選択オブジェクト全体を変形できることを確認します
+- Screenshot button で、現在の canvas 表示が `webgmodeler_YYYYMMDD_HHMMSS.png` として保存されることを確認します。`WebgApp.pushToast()` は canvas HUD に描かれるため、保存画像内へファイル名が写り込まないよう screenshot 予約時には toast を出しません
 - Save ModelAsset JSON で `webgmodeler_modelasset.json` が保存され、positions / indices / polygonLoops が含まれることを確認します
 - Save ModelAsset GZ で `webgmodeler_modelasset.json.gz` が保存され、Load Model で同じ `.json.gz` を読み戻せることを確認します
 - Save GLB で `webgmodeler.glb` が保存され、glTF / GLB viewer で編集 mesh が表示できることを確認します
@@ -79,6 +83,7 @@
 - Use Mesh: 読み込み済み asset から mesh select の現在項目を編集対象へ再取り込み
 - A: Object Mode では全 object、Edit Mode では全頂点を選択
 - W / Object Wireframe: Object Mode の wireframe 表示を切り替え
+- Light Background button: viewport 背景を暗色 / 明るいグレーで切り替え
 - X: 現在 mode / tool の選択対象を削除。Object Mode では object、Vertex Select では vertex と参照 face、Face Select では face だけを削除
 - Object Mode の G / R / S: 選択オブジェクト全体を移動 / 回転 / scale
 - Edit Mode: アクティブオブジェクトの Vertex Select / Face Select / Add Vertex を有効化
@@ -90,6 +95,10 @@
 - Arrow: orbit
 - Shift + Arrow: PAN
 - `[` / `]`: zoom
+- P: Perspective / Orthographic 表示を切り替え
+- V: フルサイズ換算の焦点距離を標準から望遠側へ段階切替
+- Shift + V: フルサイズ換算の焦点距離を逆順に段階切替
+- Screenshot button: 現在の 3D ビューポートを PNG として保存
 - J / L: 選択頂点を screen 左 / 右へ移動
 - I / K: 選択頂点を screen 上 / 下へ移動
 - U / O: 選択頂点を法線方向へ移動

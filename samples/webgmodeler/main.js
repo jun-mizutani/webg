@@ -1,6 +1,6 @@
 // -------------------------------------------------
 // webgmodeler sample
-//   main.js       2026/04/28
+//   main.js       2026/04/29
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // -------------------------------------------------
@@ -54,6 +54,34 @@ class ModelerSmoothShader extends SmoothShader {
   }
 }
 
+class ModelerWebgApp extends WebgApp {
+  // webg コアの WebgApp は透視投影を標準入口にしている。
+  // webgmodeler ではコアを変更せず、サンプル専用 subclass で正射影行列だけを追加する。
+  updateOrthographicProjection(viewHeight) {
+    if (!Number.isFinite(viewHeight) || viewHeight <= 0.0) {
+      throw new Error(`ModelerWebgApp.updateOrthographicProjection requires positive viewHeight: ${viewHeight}`);
+    }
+    const aspect = this.screen.getAspect();
+    if (!Number.isFinite(aspect) || aspect <= 0.0) {
+      throw new Error(`ModelerWebgApp.updateOrthographicProjection requires positive aspect: ${aspect}`);
+    }
+    const halfHeight = viewHeight * 0.5;
+    const halfWidth = halfHeight * aspect;
+    const proj = new Matrix();
+    proj.makeProjectionMatrixOrtho(
+      this.projectionNear,
+      this.projectionFar,
+      halfWidth,
+      halfHeight
+    );
+    this.projectionMatrix = proj;
+    if (this.shader?.setProjectionMatrix) {
+      this.shader.setProjectionMatrix(proj);
+    }
+    return proj;
+  }
+}
+
 class SelectedFaceOverlayShader extends ModelerSmoothShader {
   // インスタンス生成時に renderer や shader が使う状態を初期化する
   constructor(gpu) {
@@ -87,12 +115,14 @@ const ui = {
   saveJson: null,
   saveJsonGz: null,
   saveGlb: null,
+  screenshot: null,
   newScene: null,
   makeFace: null,
   flipFaces: null,
   undo: null,
   redo: null,
   objectWireframe: null,
+  lightBackground: null,
   overlayAlpha: null,
   overlayAlphaValue: null,
   overlayMarkerColor: null,
@@ -121,6 +151,7 @@ let overlayAlpha = 0.65;
 let overlayMarkerColor = [0.0, 0.0, 0.0];
 let overlayEdgeColor = [0.0, 0.0, 0.0];
 let objectWireframe = false;
+let lightBackground = false;
 let importedAsset = null;
 let importedMeshes = [];
 let lastSavedName = "-";
@@ -129,6 +160,27 @@ let detachModelerKeyBridge = null;
 let detachTransformPointerBridge = null;
 let editOperations = null;
 let transformController = null;
+
+const VIEW_ANGLE_PRESETS = [50.0, 40.0, 32.0, 24.0, 18.0, 12.0, 6.0];
+let viewAnglePresetIndex = 0;
+const PROJECTION_MODE_PERSPECTIVE = "perspective";
+const PROJECTION_MODE_ORTHOGRAPHIC = "orthographic";
+let projectionMode = PROJECTION_MODE_PERSPECTIVE;
+let projectionUpdateKey = "";
+const MIN_CAMERA_DISTANCE = 0.03;
+const FIT_MIN_DISTANCE_RATIO = 0.02;
+const MIN_WHEEL_ZOOM_STEP = 0.03;
+const FIT_WHEEL_ZOOM_RATIO = 0.04;
+const MIN_KEY_ZOOM_SPEED = 0.25;
+const FIT_KEY_ZOOM_RATIO = 0.35;
+const FULL_FRAME_SENSOR_HEIGHT_MM = 24.0;
+const EDGE_Z_BIAS_PERSPECTIVE = 0.00028;
+const EDGE_Z_BIAS_ORTHOGRAPHIC = 0.00002;
+const MARKER_Z_BIAS_PERSPECTIVE = 0.00035;
+const MARKER_Z_BIAS_ORTHOGRAPHIC = 0.00002;
+const Z_BIAS_REFERENCE_VIEW_ANGLE = 50.0;
+const BACKGROUND_DARK_COLOR = [0.07, 0.11, 0.15, 1.0];
+const BACKGROUND_LIGHT_COLOR = [0.42, 0.45, 0.48, 1.0];
 
 const cameraModifier = {
   shift: false
@@ -197,6 +249,185 @@ function focusModelerCanvas() {
       preventScroll: true
     });
   }
+}
+
+// 現在の短辺 FOV から、フルサイズ短辺 24mm を前提にした焦点距離相当を計算する
+// webg の viewAngle は短辺方向の制御値なので、HUD では利用者が直感しやすい mm 表示へ変換する
+function getFullFrameFocalLengthMm() {
+  const viewAngle = Number(app?.viewAngle ?? VIEW_ANGLE_PRESETS[viewAnglePresetIndex]);
+  if (!Number.isFinite(viewAngle) || viewAngle <= 0.0) {
+    return NaN;
+  }
+  const halfAngleRad = viewAngle * 0.5 * Math.PI / 180.0;
+  const tangent = Math.tan(halfAngleRad);
+  if (!Number.isFinite(tangent) || tangent <= 0.0) {
+    return NaN;
+  }
+  return FULL_FRAME_SENSOR_HEIGHT_MM / (2.0 * tangent);
+}
+
+// HUD / status / diagnostics には視野角の度数ではなく、
+// フルサイズ換算で何 mm 相当の見え方かを表示する
+function getFocalLengthLabel() {
+  const focalLengthMm = getFullFrameFocalLengthMm();
+  const value = Number.isFinite(focalLengthMm)
+    ? (focalLengthMm >= 10.0 ? focalLengthMm.toFixed(0) : focalLengthMm.toFixed(1))
+    : "-";
+  return `${value} mm ${viewAnglePresetIndex + 1}/${VIEW_ANGLE_PRESETS.length}`;
+}
+
+function getProjectionLabel() {
+  return projectionMode === PROJECTION_MODE_ORTHOGRAPHIC ? "Ortho" : "Persp";
+}
+
+// Perspective の clip-space zBias は望遠側ほど効きすぎて見えやすい。
+// 短辺 FOV の tan 比で弱めると、画面上の見え方の変化に合わせて bias も小さくできる。
+function getPerspectiveZBiasScale() {
+  const viewAngle = Number(app?.viewAngle ?? VIEW_ANGLE_PRESETS[viewAnglePresetIndex]);
+  if (!Number.isFinite(viewAngle) || viewAngle <= 0.0 || viewAngle >= 180.0) {
+    throw new Error(`webgmodeler zBias scale requires valid viewAngle: ${viewAngle}`);
+  }
+  const currentTan = Math.tan(viewAngle * 0.5 * Math.PI / 180.0);
+  const referenceTan = Math.tan(Z_BIAS_REFERENCE_VIEW_ANGLE * 0.5 * Math.PI / 180.0);
+  if (!Number.isFinite(currentTan) || currentTan <= 0.0 || !Number.isFinite(referenceTan) || referenceTan <= 0.0) {
+    throw new Error(`webgmodeler zBias scale produced invalid tangent: current=${currentTan} reference=${referenceTan}`);
+  }
+  return currentTan / referenceTan;
+}
+
+function getEdgeOverlayZBias() {
+  if (projectionMode === PROJECTION_MODE_ORTHOGRAPHIC) {
+    return EDGE_Z_BIAS_ORTHOGRAPHIC;
+  }
+  return EDGE_Z_BIAS_PERSPECTIVE * getPerspectiveZBiasScale();
+}
+
+function getMarkerOverlayZBias() {
+  if (projectionMode === PROJECTION_MODE_ORTHOGRAPHIC) {
+    return MARKER_Z_BIAS_ORTHOGRAPHIC;
+  }
+  return MARKER_Z_BIAS_PERSPECTIVE * getPerspectiveZBiasScale();
+}
+
+function markProjectionDependentsDirty() {
+  selectedFaceShader?.setProjectionMatrix?.(app.projectionMatrix);
+  markerOverlayDirty = true;
+  overlayEdgeUploadDirty = true;
+}
+
+function getOrthographicViewHeight() {
+  const distance = Number(orbit?.orbit?.distance);
+  const viewAngle = Number(app?.viewAngle);
+  if (!Number.isFinite(distance) || distance <= 0.0) {
+    throw new Error(`orthographic projection requires positive orbit distance: ${distance}`);
+  }
+  if (!Number.isFinite(viewAngle) || viewAngle <= 0.0) {
+    throw new Error(`orthographic projection requires positive viewAngle: ${viewAngle}`);
+  }
+  const vfov = app.screen.getRecommendedFov(viewAngle);
+  if (!Number.isFinite(vfov) || vfov <= 0.0) {
+    throw new Error(`orthographic projection requires positive recommended fov: ${vfov}`);
+  }
+  return 2.0 * distance * Math.tan(vfov * 0.5 * Math.PI / 180.0);
+}
+
+function readPositiveRecommendedFov(viewAngle, label) {
+  const vfov = app.screen.getRecommendedFov(viewAngle);
+  if (!Number.isFinite(vfov) || vfov <= 0.0) {
+    throw new Error(`${label} requires positive recommended fov: ${vfov}`);
+  }
+  return vfov;
+}
+
+function adjustPerspectiveDistanceForViewAngle(oldViewAngle, newViewAngle) {
+  if (!app || !orbit || projectionMode !== PROJECTION_MODE_PERSPECTIVE) {
+    return;
+  }
+  const distance = Number(orbit.orbit.distance);
+  if (!Number.isFinite(distance) || distance <= 0.0) {
+    throw new Error(`viewAngle distance compensation requires positive orbit distance: ${distance}`);
+  }
+  const oldFov = readPositiveRecommendedFov(oldViewAngle, "old viewAngle compensation");
+  const newFov = readPositiveRecommendedFov(newViewAngle, "new viewAngle compensation");
+  const oldTan = Math.tan(oldFov * 0.5 * Math.PI / 180.0);
+  const newTan = Math.tan(newFov * 0.5 * Math.PI / 180.0);
+  if (!Number.isFinite(oldTan) || oldTan <= 0.0 || !Number.isFinite(newTan) || newTan <= 0.0) {
+    throw new Error(`viewAngle distance compensation produced invalid tangent: old=${oldTan} new=${newTan}`);
+  }
+  orbit.setDistance(distance * oldTan / newTan);
+  app.syncCameraFromEyeRig(orbit);
+}
+
+function makeProjectionUpdateKey() {
+  if (!app) {
+    throw new Error("makeProjectionUpdateKey requires initialized app");
+  }
+  const distance = Number(orbit?.orbit?.distance);
+  const aspect = app.screen.getAspect();
+  return [
+    projectionMode,
+    Number(app.viewAngle).toFixed(6),
+    Number(app.projectionNear).toFixed(6),
+    Number(app.projectionFar).toFixed(6),
+    Number.isFinite(distance) ? distance.toFixed(6) : "no-orbit-distance",
+    Number(aspect).toFixed(6)
+  ].join("|");
+}
+
+function applyModelerProjection(options = {}) {
+  if (!app) {
+    throw new Error("applyModelerProjection requires initialized app");
+  }
+  const nextProjectionKey = makeProjectionUpdateKey();
+  if (options.force !== true && projectionUpdateKey === nextProjectionKey) {
+    return false;
+  }
+  if (projectionMode === PROJECTION_MODE_ORTHOGRAPHIC) {
+    app.updateOrthographicProjection(getOrthographicViewHeight());
+  } else {
+    app.updateProjection(app.viewAngle);
+  }
+  projectionUpdateKey = nextProjectionKey;
+  markProjectionDependentsDirty();
+  if (options.announce === true) {
+    setMessage(`projection ${getProjectionLabel()} ${getFocalLengthLabel()}`);
+  } else if (options.updateStatus === true) {
+    updateStatus();
+  }
+  return true;
+}
+
+function applyViewAnglePreset(index, options = {}) {
+  const total = VIEW_ANGLE_PRESETS.length;
+  const oldViewAngle = Number(app?.viewAngle ?? VIEW_ANGLE_PRESETS[viewAnglePresetIndex]);
+  viewAnglePresetIndex = ((Math.floor(index) % total) + total) % total;
+  const viewAngle = VIEW_ANGLE_PRESETS[viewAnglePresetIndex];
+  if (app) {
+    adjustPerspectiveDistanceForViewAngle(oldViewAngle, viewAngle);
+    app.viewAngle = viewAngle;
+    applyModelerProjection({
+      updateStatus: false
+    });
+  }
+  if (options.announce !== false) {
+    setMessage(`focalLength ${getProjectionLabel()} ${getFocalLengthLabel()}`);
+  } else {
+    updateStatus();
+  }
+}
+
+function cycleViewAnglePreset(direction = 1) {
+  applyViewAnglePreset(viewAnglePresetIndex + direction);
+}
+
+function toggleProjectionMode() {
+  projectionMode = projectionMode === PROJECTION_MODE_ORTHOGRAPHIC
+    ? PROJECTION_MODE_PERSPECTIVE
+    : PROJECTION_MODE_ORTHOGRAPHIC;
+  applyModelerProjection({
+    force: true,
+    announce: true
+  });
 }
 
 // KeyboardEvent の key / code を EyeRig が使う camera key 名へ正規化する
@@ -346,12 +577,14 @@ function cacheUi() {
   ui.saveJson = document.getElementById("saveJson");
   ui.saveJsonGz = document.getElementById("saveJsonGz");
   ui.saveGlb = document.getElementById("saveGlb");
+  ui.screenshot = document.getElementById("screenshot");
   ui.newScene = document.getElementById("newScene");
   ui.makeFace = document.getElementById("makeFace");
   ui.flipFaces = document.getElementById("flipFaces");
   ui.undo = document.getElementById("undo");
   ui.redo = document.getElementById("redo");
   ui.objectWireframe = document.getElementById("objectWireframe");
+  ui.lightBackground = document.getElementById("lightBackground");
   ui.overlayAlpha = document.getElementById("overlayAlpha");
   ui.overlayAlphaValue = document.getElementById("overlayAlphaValue");
   ui.overlayMarkerColor = document.getElementById("overlayMarkerColor");
@@ -410,8 +643,11 @@ function updateStatus() {
     `selectedFaces=${editor.selectedFaces.size} [${faceIds}]`,
     `meshSelect=${meshName}`,
     `undo=${editor.undoStack.length} redo=${editor.redoStack.length}`,
+    `background=${lightBackground ? "light" : "dark"}`,
     `overlayAlpha=${overlayAlpha.toFixed(2)}`,
     `overlayMarker=${rgbToHexColor(overlayMarkerColor)} overlayEdge=${rgbToHexColor(overlayEdgeColor)}`,
+    `projection=${getProjectionLabel()}`,
+    `focalLength=${getFocalLengthLabel()}`,
     `dirty=${editor.dirty ? "yes" : "no"}`,
     `saved=${lastSavedName}`,
     `transform=${transformState.mode ?? "-"}${transformState.active ? " dragging" : ""}`,
@@ -430,6 +666,9 @@ function updateStatus() {
     { label: "Mode", value: editor.mode },
     { label: "Tool", value: editor.tool },
     { label: "Wire", value: objectWireframe ? "on" : "off" },
+    { label: "Bg", value: lightBackground ? "light" : "dark" },
+    { label: "Proj", value: getProjectionLabel() },
+    { label: "Lens", value: getFocalLengthLabel() },
     { label: "V/F", value: `${editor.vertices.length}/${editor.faces.length}` },
     { label: "Selected", value: `o${editor.selectedObjectIds.size} v${editor.selectedVertices.size} f${editor.selectedFaces.size}` },
     { label: "Xform", value: transformState.mode ?? "-" },
@@ -466,6 +705,9 @@ function updateCommandAvailability() {
   if (ui.objectWireframe) {
     ui.objectWireframe.setAttribute("aria-pressed", objectWireframe ? "true" : "false");
     ui.objectWireframe.disabled = editMode;
+  }
+  if (ui.lightBackground) {
+    ui.lightBackground.setAttribute("aria-pressed", lightBackground ? "true" : "false");
   }
   // DOM control の disabled 状態を null 安全に切り替える
   setDisabled(ui.makeFace, !editMode || (selectedVertexCount !== 3 && selectedVertexCount !== 4));
@@ -1157,6 +1399,10 @@ function makeMarkerOverlayCameraKey(viewProjection, canvas) {
   ].join("|");
 }
 
+function makeUndirectedEdgeKey(a, b) {
+  return a < b ? `${a}:${b}` : `${b}:${a}`;
+}
+
 // edge overlay の line-list 頂点を geometry から再構築する
 function rebuildEdgeOverlayBuffer() {
   if (!edgeOverlay) {
@@ -1183,7 +1429,7 @@ function rebuildMarkerOverlayBuffer(viewProjection, canvas, markerRadiusX, marke
   overlay2d.clear();
   const highlightedVertexIds = getHighlightedVertexIds();
   for (const vertex of editor.vertices) {
-    const p = projectWorldToNdc(viewProjection, vertex.position, 0.00035);
+    const p = projectWorldToNdc(viewProjection, vertex.position, getMarkerOverlayZBias());
     if (!p) {
       continue;
     }
@@ -1214,8 +1460,11 @@ function drawEditOverlayPass() {
   const markerRadiusPx = 2.5;
   const markerRadiusX = markerRadiusPx * 2.0 / Math.max(1, canvas.width);
   const markerRadiusY = markerRadiusPx * 2.0 / Math.max(1, canvas.height);
+  const cameraKey = makeMarkerOverlayCameraKey(viewProjection, canvas);
+  const rebuildMarkers = markerOverlayDirty || markerOverlayCameraKey !== cameraKey;
 
   if (edgeOverlay) {
+    edgeOverlay.zBias = getEdgeOverlayZBias();
     edgeOverlay.setMatrices(app.projectionMatrix, view);
     if (overlayEdgeUploadDirty) {
       // edge overlay の line-list 頂点を geometry から再構築する
@@ -1224,8 +1473,7 @@ function drawEditOverlayPass() {
     edgeOverlay.draw();
   }
 
-  const cameraKey = makeMarkerOverlayCameraKey(viewProjection, canvas);
-  if (markerOverlayDirty || markerOverlayCameraKey !== cameraKey) {
+  if (rebuildMarkers) {
     // vertex marker overlay を現在 camera で再投影して buffer を作り直す
     rebuildMarkerOverlayBuffer(viewProjection, canvas, markerRadiusX, markerRadiusY);
     markerOverlayCameraKey = cameraKey;
@@ -1479,7 +1727,7 @@ function getUniqueOverlayEdges() {
     for (let i = 0; i < face.indices.length; i++) {
       const a = face.indices[i];
       const b = face.indices[(i + 1) % face.indices.length];
-      const key = a < b ? `${a}:${b}` : `${b}:${a}`;
+      const key = makeUndirectedEdgeKey(a, b);
       if (!edges.has(key)) {
         edges.set(key, {
           a,
@@ -1509,10 +1757,10 @@ function fitCameraToEditor() {
   const bounds = getEditorBounds();
   const distance = Math.max(4.0, bounds.size * 2.8);
   orbit.setTarget(bounds.center[0], bounds.center[1], bounds.center[2]);
-  orbit.orbit.minDistance = Math.max(0.5, bounds.size * 0.15);
+  orbit.orbit.minDistance = Math.max(MIN_CAMERA_DISTANCE, bounds.size * FIT_MIN_DISTANCE_RATIO);
   orbit.orbit.maxDistance = Math.max(32.0, bounds.size * 12.0);
-  orbit.orbit.wheelZoomStep = Math.max(0.2, bounds.size * 0.09);
-  orbit.orbit.keyZoomSpeed = Math.max(1.0, bounds.size * 0.6);
+  orbit.orbit.wheelZoomStep = Math.max(MIN_WHEEL_ZOOM_STEP, bounds.size * FIT_WHEEL_ZOOM_RATIO);
+  orbit.orbit.keyZoomSpeed = Math.max(MIN_KEY_ZOOM_SPEED, bounds.size * FIT_KEY_ZOOM_RATIO);
   orbit.setAngles(DEFAULT_CAMERA.yaw, DEFAULT_CAMERA.pitch, 0.0);
   orbit.setDistance(distance);
   app.syncCameraFromEyeRig(orbit);
@@ -1987,6 +2235,23 @@ function toggleObjectWireframe() {
   setMessage(`object wireframe ${objectWireframe ? "on" : "off"}`);
 }
 
+// viewport の clear color を暗色 / 明るいグレーで切り替える
+// app.clearColor と Screen 側の実際の clear color を同時に更新し、次 frame から背景へ反映する
+function applyBackgroundColor() {
+  const color = lightBackground ? BACKGROUND_LIGHT_COLOR : BACKGROUND_DARK_COLOR;
+  if (app) {
+    app.clearColor = [...color];
+    app.screen?.setClearColor?.(app.clearColor);
+  }
+}
+
+function toggleLightBackground() {
+  lightBackground = !lightBackground;
+  applyBackgroundColor();
+  // 最後のユーザー向け message を保存し status を更新する
+  setMessage(`background ${lightBackground ? "light gray" : "dark"}`);
+}
+
 // editOperations の face 作成処理を UI / keyboard から呼び出す薄い wrapper
 function makeFaceFromSelection(size = null) {
   editOperations.makeFaceFromSelection(size);
@@ -2026,13 +2291,24 @@ function makeRayFromMouse(canvas, clientX, clientY) {
   invVp.inverse_strict();
   const near = invVp.mulVector([nx, ny, -1.0]);
   const far = invVp.mulVector([nx, ny, 1.0]);
+  if (projectionMode === PROJECTION_MODE_ORTHOGRAPHIC) {
+    return {
+      origin: near,
+      dir: sub3(far, near),
+      near,
+      far,
+      ndc: [nx, ny],
+      projectionMode
+    };
+  }
   const eyePos = app.eye.getWorldPosition();
   return {
     origin: eyePos,
     dir: sub3(far, eyePos),
     near,
     far,
-    ndc: [nx, ny]
+    ndc: [nx, ny],
+    projectionMode
   };
 }
 
@@ -2737,6 +3013,8 @@ function installKeyboardHandlers() {
     else if (plainKey && key === "n") scaleSelectionByKeyboard(0.92);
     else if (plainKey && key === "m") scaleSelectionByKeyboard(1.08);
     else if (plainKey && key === "f") makeFaceFromSelection();
+    else if (plainKey && key === "p") toggleProjectionMode();
+    else if (plainKey && key === "v") cycleViewAnglePreset(ev.shiftKey ? -1 : 1);
     else if (plainKey && key === "w") toggleObjectWireframe();
     else if (plainKey && key === "x") deleteSelected();
     else if (key === "delete" || key === "backspace") deleteSelected();
@@ -3141,6 +3419,18 @@ function saveGlb() {
   setMessage(`saved ${filename}`);
 }
 
+// 現在の canvas 内容を次の present 後に PNG として保存する
+// WebgApp 側の screenshot 入口を使い、ファイル名規則と保存処理を app 共通にそろえる
+function takeModelerScreenshot() {
+  const filename = app.takeScreenshot({
+    prefix: "webgmodeler"
+  });
+  focusModelerCanvas();
+  // screenshot は次の present 後に保存されるため、canvas toast へ filename を描かない
+  // WebgApp.pushToast() は canvas HUD に描かれるので、保存画像内へ filename が写り込む
+  setMessage("screenshot requested");
+}
+
 // HTML button / input / select の event handler を登録する
 function installDomHandlers() {
   for (const button of ui.modeButtons) {
@@ -3205,6 +3495,16 @@ function installDomHandlers() {
       setMessage(`glb export failed: ${err?.message ?? err}`);
     }
   });
+  ui.screenshot?.addEventListener("click", () => {
+    try {
+      // 現在 frame の描画完了後に canvas を PNG として保存する
+      takeModelerScreenshot();
+    } catch (err) {
+      console.error(err);
+      // 最後のユーザー向け message を保存し status を更新する
+      setMessage(`screenshot failed: ${err?.message ?? err}`);
+    }
+  });
   ui.newScene.addEventListener("click", () => {
     // 起動時の初期 cube object を作り scene と camera を初期化する
     createInitialModel();
@@ -3212,6 +3512,7 @@ function installDomHandlers() {
     setMessage("new model");
   });
   ui.objectWireframe?.addEventListener("click", toggleObjectWireframe);
+  ui.lightBackground?.addEventListener("click", toggleLightBackground);
   ui.makeFace?.addEventListener("click", () => makeFaceFromSelection());
   ui.flipFaces?.addEventListener("click", flipSelectedFaces);
   ui.undo.addEventListener("click", undo);
@@ -3255,6 +3556,8 @@ function refreshDiagnosticsStats() {
     importedAssetLoaded: importedAsset ? "yes" : "no",
     editorMode: editor.mode,
     objectWireframe: objectWireframe ? "on" : "off",
+    projection: getProjectionLabel(),
+    focalLength: getFocalLengthLabel(),
     activeObjectId: editor.activeObjectId ?? "-",
     tool: editor.tool,
     dirty: editor.dirty ? "yes" : "no",
@@ -3286,6 +3589,8 @@ function makeProbeReport(frameCount) {
   Diagnostics.addDetail(report, `tool=${editor.tool}`);
   Diagnostics.addDetail(report, `mode=${editor.mode}`);
   Diagnostics.addDetail(report, `objectWireframe=${objectWireframe ? "on" : "off"}`);
+  Diagnostics.addDetail(report, `projection=${getProjectionLabel()}`);
+  Diagnostics.addDetail(report, `focalLength=${getFocalLengthLabel()}`);
   Diagnostics.addDetail(report, `vertices=${editor.vertices.length}`);
   Diagnostics.addDetail(report, `faces=${editor.faces.length}`);
   Diagnostics.addDetail(report, `rawInput=${rawInput.text}`);
@@ -3305,6 +3610,8 @@ function makeProbeReport(frameCount) {
     importedAssetLoaded: importedAsset ? "yes" : "no",
     editorMode: editor.mode,
     objectWireframe: objectWireframe ? "on" : "off",
+    projection: getProjectionLabel(),
+    focalLength: getFocalLengthLabel(),
     activeObjectId: editor.activeObjectId ?? "-",
     rawInput: rawInput.text,
     rawInputHistory: rawInput.historyText,
@@ -3331,7 +3638,7 @@ function makeProbeReport(frameCount) {
 async function start() {
   // HTML 上の button / input / select を取得して ui 参照へまとめる
   cacheUi();
-  app = new WebgApp({
+  app = new ModelerWebgApp({
     document,
     shaderClass: ModelerSmoothShader,
     layoutMode: "embedded",
@@ -3340,8 +3647,8 @@ async function start() {
       height: 620,
       useDevicePixelRatio: false
     },
-    clearColor: [0.07, 0.11, 0.15, 1.0],
-    viewAngle: 50.0,
+    clearColor: BACKGROUND_DARK_COLOR,
+    viewAngle: VIEW_ANGLE_PRESETS[viewAnglePresetIndex],
     projectionNear: 0.05,
     projectionFar: 1000.0,
     messageFontTexture: "../../webg/font512.png",
@@ -3384,10 +3691,10 @@ async function start() {
     orbitKeyMap: { ...INITIAL_ORBIT_BINDINGS.orbitKeyMap },
     panModifierKey: INITIAL_ORBIT_BINDINGS.panModifierKey,
     dragZoomModifierKey: "control",
-    minDistance: 0.5,
+    minDistance: MIN_CAMERA_DISTANCE,
     maxDistance: 96.0,
-    wheelZoomStep: 0.5,
-    keyZoomSpeed: 4.0,
+    wheelZoomStep: 0.25,
+    keyZoomSpeed: 2.0,
     dragZoomSpeed: 0.04,
     dragRotateSpeed: 0.28,
     dragPanSpeed: 2.0,
@@ -3458,6 +3765,13 @@ async function start() {
   app.start({
     // frame ごとに diagnostics と UI 表示を更新し、projection 依存 shader へ現在行列を渡す
     onUpdate({ screen, deltaSec }) {
+      if (projectionMode === PROJECTION_MODE_ORTHOGRAPHIC) {
+        // Orthographic では orbit distance を表示スケールとして使うため、
+        // wheel / drag zoom 後の距離を毎 frame projection に反映する。
+        applyModelerProjection({
+          updateStatus: false
+        });
+      }
       // DebugDock 用に editor / input / camera 周辺の stats を更新する
       refreshDiagnosticsStats();
       if (selectedFaceShader && app.projectionMatrix) {
