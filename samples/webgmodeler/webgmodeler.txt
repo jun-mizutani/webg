@@ -10,8 +10,12 @@
 - Screenshot button は、現在の 3D ビューポートを次の frame の `present()` 後に PNG として保存します。保存名は `WebgApp.takeScreenshot()` の標準規則に従い、`webgmodeler_YYYYMMDD_HHMMSS.png` 形式になります
 - 選択 face は専用 shader で描画し、world 座標は元 face と同じまま、clip-space のごく小さい depth bias だけで通常 mesh より手前に重ねます
 - overlay pass は depth test 有効、depth write 無効です。手前の面に隠れた marker / edge は基本的に表示されず、edge は selected face overlay に負けにくいよう clip-space の小さな z bias を入れます。Perspective 表示では望遠側で z bias が効きすぎないよう、短辺 FOV の `tan(fov / 2)` 比に合わせて edge / marker の z bias を小さくします
+- Orthographic 表示中に `V` でレンズ表示を切り替える場合は、見える高さが変わらないよう orbit distance を逆補正します。Perspective 表示ではレンズ変更に合わせて注視対象の見た目の大きさを保つため、Orthographic 表示では平行投影の作業倍率を保つために、それぞれ補正の目的を分けています
 - overlay の非選択 marker / edge は `Marker` / `Edge` color picker で色を変更でき、`Overlay Alpha` slider で透明度を調整できます。選択 marker は赤、選択 face の境界 edge は黒・高 alpha で描画します
 - Light Background button は、viewport の clear color を暗色から少し明るいグレーへ切り替えます。暗いモデルや黒い wireframe / overlay を確認しにくいときに使います
+- Visible Pick button は、Edit Mode の vertex / face 選択で、現在の視点から見える要素だけを選択対象にするかを切り替えます。有効時は裏向きの face と、手前の面に隠れている vertex / face center を選択候補から外します。無効時は従来どおり ray や矩形に入った奥側の要素も選択できます
+- canvas HUD は projection、フルサイズ換算の焦点距離、頂点 / face 数、選択数、message だけを表示し、mode / tool / key / pointer などの詳細状態は DOM status 側で確認します
+- 画面上部の mode / select / view 操作は canvas の上にまとめ、右側 panel は実行ボタンと設定だけを置きます。操作説明、編集説明、ファイル読み込み説明は canvas 下側の説明カードへ集約し、viewport と panel の役割が分かれるようにします
 - vertex pick は頂点位置と ray の距離判定を主経路にします。marker 用の Node は作らず、数千頂点の Edit Mode でも Space traversal が増えないようにします
 - marker overlay は camera / selection / geometry / 色 / canvas size が変わった時だけ再投影し、静止中は前回 upload した GPU buffer を再利用します
 - edge overlay の辺一覧は geometry 更新時だけ作り直し、edge vertex buffer も geometry / 色が変わった時だけ upload します

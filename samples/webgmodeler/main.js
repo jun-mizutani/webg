@@ -123,6 +123,7 @@ const ui = {
   redo: null,
   objectWireframe: null,
   lightBackground: null,
+  visiblePickOnly: null,
   overlayAlpha: null,
   overlayAlphaValue: null,
   overlayMarkerColor: null,
@@ -152,6 +153,7 @@ let overlayMarkerColor = [0.0, 0.0, 0.0];
 let overlayEdgeColor = [0.0, 0.0, 0.0];
 let objectWireframe = false;
 let lightBackground = false;
+let visiblePickOnly = true;
 let importedAsset = null;
 let importedMeshes = [];
 let lastSavedName = "-";
@@ -358,6 +360,27 @@ function adjustPerspectiveDistanceForViewAngle(oldViewAngle, newViewAngle) {
   app.syncCameraFromEyeRig(orbit);
 }
 
+// Orthographic では orbit distance を表示高さの計算に使うため、
+// viewAngle 変更時に distance を逆補正して画面上の拡大率を保つ
+function adjustOrthographicDistanceForViewAngle(oldViewAngle, newViewAngle) {
+  if (!app || !orbit || projectionMode !== PROJECTION_MODE_ORTHOGRAPHIC) {
+    return;
+  }
+  const distance = Number(orbit.orbit.distance);
+  if (!Number.isFinite(distance) || distance <= 0.0) {
+    throw new Error(`orthographic viewAngle compensation requires positive orbit distance: ${distance}`);
+  }
+  const oldFov = readPositiveRecommendedFov(oldViewAngle, "old orthographic viewAngle compensation");
+  const newFov = readPositiveRecommendedFov(newViewAngle, "new orthographic viewAngle compensation");
+  const oldTan = Math.tan(oldFov * 0.5 * Math.PI / 180.0);
+  const newTan = Math.tan(newFov * 0.5 * Math.PI / 180.0);
+  if (!Number.isFinite(oldTan) || oldTan <= 0.0 || !Number.isFinite(newTan) || newTan <= 0.0) {
+    throw new Error(`orthographic viewAngle compensation produced invalid tangent: old=${oldTan} new=${newTan}`);
+  }
+  orbit.setDistance(distance * oldTan / newTan);
+  app.syncCameraFromEyeRig(orbit);
+}
+
 function makeProjectionUpdateKey() {
   if (!app) {
     throw new Error("makeProjectionUpdateKey requires initialized app");
@@ -404,6 +427,7 @@ function applyViewAnglePreset(index, options = {}) {
   const viewAngle = VIEW_ANGLE_PRESETS[viewAnglePresetIndex];
   if (app) {
     adjustPerspectiveDistanceForViewAngle(oldViewAngle, viewAngle);
+    adjustOrthographicDistanceForViewAngle(oldViewAngle, viewAngle);
     app.viewAngle = viewAngle;
     applyModelerProjection({
       updateStatus: false
@@ -585,6 +609,7 @@ function cacheUi() {
   ui.redo = document.getElementById("redo");
   ui.objectWireframe = document.getElementById("objectWireframe");
   ui.lightBackground = document.getElementById("lightBackground");
+  ui.visiblePickOnly = document.getElementById("visiblePickOnly");
   ui.overlayAlpha = document.getElementById("overlayAlpha");
   ui.overlayAlphaValue = document.getElementById("overlayAlphaValue");
   ui.overlayMarkerColor = document.getElementById("overlayMarkerColor");
@@ -644,6 +669,7 @@ function updateStatus() {
     `meshSelect=${meshName}`,
     `undo=${editor.undoStack.length} redo=${editor.redoStack.length}`,
     `background=${lightBackground ? "light" : "dark"}`,
+    `visiblePick=${visiblePickOnly ? "visible only" : "through"}`,
     `overlayAlpha=${overlayAlpha.toFixed(2)}`,
     `overlayMarker=${rgbToHexColor(overlayMarkerColor)} overlayEdge=${rgbToHexColor(overlayEdgeColor)}`,
     `projection=${getProjectionLabel()}`,
@@ -663,17 +689,10 @@ function updateStatus() {
   }
   app?.setHudRows?.([
     { line: "webgmodeler" },
-    { label: "Mode", value: editor.mode },
-    { label: "Tool", value: editor.tool },
-    { label: "Wire", value: objectWireframe ? "on" : "off" },
-    { label: "Bg", value: lightBackground ? "light" : "dark" },
     { label: "Proj", value: getProjectionLabel() },
     { label: "Lens", value: getFocalLengthLabel() },
     { label: "V/F", value: `${editor.vertices.length}/${editor.faces.length}` },
     { label: "Selected", value: `o${editor.selectedObjectIds.size} v${editor.selectedVertices.size} f${editor.selectedFaces.size}` },
-    { label: "Xform", value: transformState.mode ?? "-" },
-    { label: "Keys", value: `A=${arrowActive ? 1 : 0} Sh=${shiftActive ? 1 : 0}` },
-    { label: "Ptr", value: pointerDebug.action },
     { label: "Msg", value: editor.lastMessage }
   ], {
     x: 0,
@@ -708,6 +727,9 @@ function updateCommandAvailability() {
   }
   if (ui.lightBackground) {
     ui.lightBackground.setAttribute("aria-pressed", lightBackground ? "true" : "false");
+  }
+  if (ui.visiblePickOnly) {
+    ui.visiblePickOnly.setAttribute("aria-pressed", visiblePickOnly ? "true" : "false");
   }
   // DOM control の disabled 状態を null 安全に切り替える
   setDisabled(ui.makeFace, !editMode || (selectedVertexCount !== 3 && selectedVertexCount !== 4));
@@ -2252,6 +2274,13 @@ function toggleLightBackground() {
   setMessage(`background ${lightBackground ? "light gray" : "dark"}`);
 }
 
+// Edit Mode のクリック / 矩形選択で、手前から見える要素だけを選ぶか切り替える
+function toggleVisiblePickOnly() {
+  visiblePickOnly = !visiblePickOnly;
+  // 最後のユーザー向け message を保存し status を更新する
+  setMessage(`visible pick ${visiblePickOnly ? "only" : "through"}`);
+}
+
 // editOperations の face 作成処理を UI / keyboard から呼び出す薄い wrapper
 function makeFaceFromSelection(size = null) {
   editOperations.makeFaceFromSelection(size);
@@ -2363,10 +2392,52 @@ function getVertexByIdFromList(vertices, id) {
   return vertices.find((vertex) => vertex.id === id) ?? null;
 }
 
+// face の法線を任意の vertex 配列から計算する
+// active object 以外も object 選択で扱うため、editor.vertices 固定の computeFaceNormal() とは分ける
+function computeFaceNormalFromVertices(face, vertices) {
+  if (!face || face.indices.length < 3) {
+    return null;
+  }
+  const v0 = getVertexByIdFromList(vertices, face.indices[0]);
+  const v1 = getVertexByIdFromList(vertices, face.indices[1]);
+  const v2 = getVertexByIdFromList(vertices, face.indices[2]);
+  if (!v0 || !v1 || !v2) {
+    throw new Error(`face ${face?.id ?? "-"} contains missing vertex for normal`);
+  }
+  const normal = cross3(
+    sub3(v1.position, v0.position),
+    sub3(v2.position, v0.position)
+  );
+  const len = length3(normal);
+  if (!Number.isFinite(len) || len <= 1.0e-8) {
+    return null;
+  }
+  return [normal[0] / len, normal[1] / len, normal[2] / len];
+}
+
+// ray から見て face の表側がこちらを向いているか判定する
+// WebGPU の frontFace と同じく、編集データの頂点順から得た法線を表側として扱う
+function isFaceFrontFacingRay(face, vertices, ray) {
+  const normal = computeFaceNormalFromVertices(face, vertices);
+  if (!normal) {
+    return false;
+  }
+  return dot3(normal, ray.dir) < -1.0e-8;
+}
+
 // 指定 object 内で ray に最も近く当たる face を探す
-function pickFaceInObject(ray, object) {
+function pickFaceInObject(ray, object, options = {}) {
+  const visibleOnly = options.visibleOnly === true;
+  const ignoreFaceId = options.ignoreFaceId ?? null;
+  const ignoreVertexId = options.ignoreVertexId ?? null;
   let best = null;
   for (const face of object.faces) {
+    if (face.id === ignoreFaceId || (ignoreVertexId !== null && face.indices.includes(ignoreVertexId))) {
+      continue;
+    }
+    if (visibleOnly && !isFaceFrontFacingRay(face, object.vertices, ray)) {
+      continue;
+    }
     const verts = face.indices.map((id) => getVertexByIdFromList(object.vertices, id));
     if (verts.some((vertex) => vertex === null)) {
       throw new Error(`object ${object.id} face ${face.id} contains missing vertex`);
@@ -2394,12 +2465,12 @@ function pickFaceInObject(ray, object) {
 }
 
 // active object 内で ray に当たる face を探す
-function pickFace(ray) {
+function pickFace(ray, options = {}) {
   const object = getActiveObject();
   if (!object) {
     return null;
   }
-  return pickFaceInObject(ray, object);
+  return pickFaceInObject(ray, object, options);
 }
 
 // 全 object から ray に最も近く当たる object face を探す
@@ -2432,9 +2503,106 @@ function getCameraScreenBasis() {
   };
 }
 
+// world point が ray 上でどの距離にあるかを求める
+// occlusion 判定では、手前の face hit と候補点の ray 方向距離を比較する
+function getPointRayDistance(ray, point) {
+  const denom = dot3(ray.dir, ray.dir);
+  if (!Number.isFinite(denom) || denom <= 0.0) {
+    throw new Error(`point visibility requires non-zero ray direction: ${denom}`);
+  }
+  const t = dot3(sub3(point, ray.origin), ray.dir) / denom;
+  if (!Number.isFinite(t)) {
+    throw new Error(`point visibility produced invalid ray distance: ${t}`);
+  }
+  return t;
+}
+
+// 候補点より手前に active object の面があるか調べる
+// ignoreFaceId / ignoreVertexId は、候補自身を構成する面で自己遮蔽しないための除外指定
+function isPointOccludedByActiveObject(point, ray, options = {}) {
+  const object = getActiveObject();
+  if (!object || object.faces.length === 0) {
+    return false;
+  }
+  const hit = pickFaceInObject(ray, object, {
+    ignoreFaceId: options.ignoreFaceId ?? null,
+    ignoreVertexId: options.ignoreVertexId ?? null
+  });
+  if (!hit) {
+    return false;
+  }
+  const pointT = getPointRayDistance(ray, point);
+  const rayLength = length3(ray.dir);
+  if (!Number.isFinite(rayLength) || rayLength <= 0.0) {
+    throw new Error(`point occlusion requires positive ray length: ${rayLength}`);
+  }
+  const tolerance = Math.max(getActiveObjectBounds().size * 1.0e-4, 1.0e-5) / rayLength;
+  return hit.t < pointT - tolerance;
+}
+
+// 1 回の選択処理内で使い回す可視性判定用の情報を作る
+// vertex ごとに隣接 face を毎回全探索すると多頂点 model で重くなるため、先に表へまとめる
+function makeVisiblePickContext() {
+  const adjacentFacesByVertexId = new Map();
+  for (const face of editor.faces) {
+    for (const vertexId of face.indices) {
+      let faces = adjacentFacesByVertexId.get(vertexId);
+      if (!faces) {
+        faces = [];
+        adjacentFacesByVertexId.set(vertexId, faces);
+      }
+      faces.push(face);
+    }
+  }
+  return {
+    adjacentFacesByVertexId
+  };
+}
+
+// vertex が現在視点から選択可能な表側に属しているか判定する
+// 孤立頂点は所属 face がないため、手前の面に隠れていなければ選択可能とする
+function isVertexFrontFacingRay(vertex, ray, context = null) {
+  const adjacentFaces = context?.adjacentFacesByVertexId?.get(vertex.id)
+    ?? editor.faces.filter((face) => face.indices.includes(vertex.id));
+  if (adjacentFaces.length === 0) {
+    return true;
+  }
+  return adjacentFaces.some((face) => isFaceFrontFacingRay(face, editor.vertices, ray));
+}
+
+// Visible Pick が有効なとき、裏側または面の奥に隠れた vertex を選択候補から外す
+function isVertexSelectableFromView(vertex, ray, context = null) {
+  if (!visiblePickOnly) {
+    return true;
+  }
+  if (!isVertexFrontFacingRay(vertex, ray, context)) {
+    return false;
+  }
+  return !isPointOccludedByActiveObject(vertex.position, ray, {
+    ignoreVertexId: vertex.id
+  });
+}
+
+// Visible Pick が有効なとき、裏向きまたは手前の面に隠れた face center を選択候補から外す
+function isFaceSelectableFromView(face, ray) {
+  if (!visiblePickOnly) {
+    return true;
+  }
+  if (!isFaceFrontFacingRay(face, editor.vertices, ray)) {
+    return false;
+  }
+  const center = getFaceCenterFromVertices(face, editor.vertices);
+  if (!center) {
+    return false;
+  }
+  return !isPointOccludedByActiveObject(center, ray, {
+    ignoreFaceId: face.id
+  });
+}
+
 // ray と vertex の最短距離からクリック対象 vertex を探す
 function pickVertexByRayDistance(ray) {
-  let best = null;
+  const candidates = [];
   const dir = normalize3(ray.dir, "vertex pick ray");
   const threshold = Math.max(getMarkerRadius() * 2.4, getActiveObjectBounds().size * 0.018);
   for (const vertex of editor.vertices) {
@@ -2448,15 +2616,28 @@ function pickVertexByRayDistance(ray) {
     if (distance > threshold) {
       continue;
     }
-    if (!best || distance < best.distance || (distance === best.distance && t < best.t)) {
-      best = {
-        vertexId: vertex.id,
-        distance,
-        t
+    candidates.push({
+      vertex,
+      vertexId: vertex.id,
+      distance,
+      t
+    });
+  }
+  candidates.sort((a, b) => (a.distance - b.distance) || (a.t - b.t));
+  if (!visiblePickOnly) {
+    return candidates[0] ?? null;
+  }
+  const context = makeVisiblePickContext();
+  for (const candidate of candidates) {
+    if (isVertexSelectableFromView(candidate.vertex, ray, context)) {
+      return {
+        vertexId: candidate.vertexId,
+        distance: candidate.distance,
+        t: candidate.t
       };
     }
   }
-  return best;
+  return null;
 }
 
 // Shift が押されているかを見て追加選択か判定する
@@ -2543,7 +2724,9 @@ function handleCanvasClick(ev) {
   }
 
   if (editor.tool === TOOL_SELECT_FACE) {
-    const faceHit = pickFace(ray);
+    const faceHit = pickFace(ray, {
+      visibleOnly: visiblePickOnly
+    });
     if (faceHit) {
       // face を選択または Shift 追加選択で切り替え、構成 vertex も同期する
       selectFace(faceHit.faceId, isAdditiveSelectionEvent(ev));
@@ -2695,9 +2878,25 @@ function selectByClientRect(rect, additive = false) {
   }
 
   if (editor.tool === TOOL_SELECT_VERTEX) {
-    const selectedIds = editor.vertices
-      .filter((vertex) => clientPointInRect(projectWorldToClient(viewProjection, vertex.position), rect))
-      .map((vertex) => vertex.id);
+    const selectedVertexEntries = editor.vertices
+      .map((vertex) => {
+        const projected = projectWorldToClient(viewProjection, vertex.position);
+        return {
+          vertex,
+          projected
+        };
+      })
+      .filter((entry) => clientPointInRect(entry.projected, rect));
+    const context = visiblePickOnly ? makeVisiblePickContext() : null;
+    const selectedIds = selectedVertexEntries
+      .filter((entry) => {
+        if (!visiblePickOnly) {
+          return true;
+        }
+        const ray = makeRayFromMouse(app.screen.canvas, entry.projected.x, entry.projected.y);
+        return isVertexSelectableFromView(entry.vertex, ray, context);
+      })
+      .map((entry) => entry.vertex.id);
     if (!additive) {
       // edit selection の vertex / face を空にする
       clearSelection();
@@ -2715,12 +2914,26 @@ function selectByClientRect(rect, additive = false) {
   }
 
   if (editor.tool === TOOL_SELECT_FACE) {
-    const selectedIds = editor.faces
-      .filter((face) => {
+    const selectedFaces = editor.faces
+      .map((face) => {
         const center = getFaceCenterFromVertices(face, editor.vertices);
-        return center && clientPointInRect(projectWorldToClient(viewProjection, center), rect);
+        const projected = center ? projectWorldToClient(viewProjection, center) : null;
+        return {
+          face,
+          center,
+          projected
+        };
       })
-      .map((face) => face.id);
+      .filter((entry) => entry.center && clientPointInRect(entry.projected, rect));
+    const selectedIds = selectedFaces
+      .filter((entry) => {
+        if (!visiblePickOnly) {
+          return true;
+        }
+        const ray = makeRayFromMouse(app.screen.canvas, entry.projected.x, entry.projected.y);
+        return isFaceSelectableFromView(entry.face, ray);
+      })
+      .map((entry) => entry.face.id);
     if (!additive) {
       // edit selection の vertex / face を空にする
       clearSelection();
@@ -3513,6 +3726,7 @@ function installDomHandlers() {
   });
   ui.objectWireframe?.addEventListener("click", toggleObjectWireframe);
   ui.lightBackground?.addEventListener("click", toggleLightBackground);
+  ui.visiblePickOnly?.addEventListener("click", toggleVisiblePickOnly);
   ui.makeFace?.addEventListener("click", () => makeFaceFromSelection());
   ui.flipFaces?.addEventListener("click", flipSelectedFaces);
   ui.undo.addEventListener("click", undo);
@@ -3556,6 +3770,7 @@ function refreshDiagnosticsStats() {
     importedAssetLoaded: importedAsset ? "yes" : "no",
     editorMode: editor.mode,
     objectWireframe: objectWireframe ? "on" : "off",
+    visiblePick: visiblePickOnly ? "visible only" : "through",
     projection: getProjectionLabel(),
     focalLength: getFocalLengthLabel(),
     activeObjectId: editor.activeObjectId ?? "-",
@@ -3589,6 +3804,7 @@ function makeProbeReport(frameCount) {
   Diagnostics.addDetail(report, `tool=${editor.tool}`);
   Diagnostics.addDetail(report, `mode=${editor.mode}`);
   Diagnostics.addDetail(report, `objectWireframe=${objectWireframe ? "on" : "off"}`);
+  Diagnostics.addDetail(report, `visiblePick=${visiblePickOnly ? "visible only" : "through"}`);
   Diagnostics.addDetail(report, `projection=${getProjectionLabel()}`);
   Diagnostics.addDetail(report, `focalLength=${getFocalLengthLabel()}`);
   Diagnostics.addDetail(report, `vertices=${editor.vertices.length}`);
@@ -3610,6 +3826,7 @@ function makeProbeReport(frameCount) {
     importedAssetLoaded: importedAsset ? "yes" : "no",
     editorMode: editor.mode,
     objectWireframe: objectWireframe ? "on" : "off",
+    visiblePick: visiblePickOnly ? "visible only" : "through",
     projection: getProjectionLabel(),
     focalLength: getFocalLengthLabel(),
     activeObjectId: editor.activeObjectId ?? "-",
