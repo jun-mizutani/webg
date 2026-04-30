@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// unittest/dialogue/main.js  2026/03/26
+// unittest/dialogue/main.js  2026/04/30
 //   dialogue unittest
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -99,7 +99,7 @@ const start = async () => {
     debugTools: {
       mode: "release",
       system: "dialogue",
-      source: "unittest/dialogue"
+      source: "unittest/dialogue/main.js"
     },
     camera: {
       target: [0.0, 0.0, 0.0],

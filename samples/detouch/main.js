@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// samples/detouch/main.js  2026/04/28
+// samples/detouch/main.js  2026/04/30
 //   detouch/main.js
 //   detach_attach.html 相当の挙動を current webg API で実装したサンプル
 //   Copyright (c) 2026 Jun Mizutani,
@@ -341,7 +341,12 @@ const start = async () => {
     clearColor: CLEAR_COLOR,
     viewAngle: 53.0,
     camera: CAMERA_CONFIG,
-    lightPosition: [0.0, 100.0, 100.0, 1.0]
+    lightPosition: [0.0, 100.0, 100.0, 1.0],
+    debugTools: {
+      mode: "release",
+      system: "detouch",
+      source: "samples/detouch/main.js"
+    }
   });
   await app.init();
 

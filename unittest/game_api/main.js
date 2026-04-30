@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// unittest/game_api/main.js  2026/04/10
+// unittest/game_api/main.js  2026/04/30
 //   game_api unittest
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -71,7 +71,7 @@ const start = async () => {
     debugTools: {
       mode: "release",
       system: "game_api",
-      source: "unittest/game_api"
+      source: "unittest/game_api/main.js"
     },
     camera: {
       target: [0.0, 0.0, 0.0],

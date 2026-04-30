@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// samples/circular_breaker/main.js  2026/04/10
+// samples/circular_breaker/main.js  2026/04/30
 //   circular_breaker sample
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -67,7 +67,9 @@ const start = async () => {
     projectionFar: 2000.0,
     lightPosition: [0.0, 110.0, 90.0, 1.0],
     debugTools: {
-      mode: DEBUG_MODE
+      mode: DEBUG_MODE,
+      system: "circular_breaker",
+      source: "samples/circular_breaker/main.js"
     }
   });
   await app.init();

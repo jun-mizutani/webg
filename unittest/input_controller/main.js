@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// unittest/input_controller/main.js  2026/04/12
+// unittest/input_controller/main.js  2026/04/30
 //   input_controller unittest
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -250,7 +250,7 @@ const recordedFrame = autoInput.captureFrameState({
   timeMs: 3456,
   elapsedSec: 1.5,
   label: "input-controller-record",
-  source: "unittest/input_controller"
+  source: "unittest/input_controller/main.js"
 });
 check("captureFrameState stores frame number", recordedFrame.frame === 12, JSON.stringify(recordedFrame));
 check("captureFrameState stores held keys", JSON.stringify(recordedFrame.keys) === JSON.stringify(["a"]), JSON.stringify(recordedFrame.keys));

@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// unittest/tween/main.js  2026/04/10
+// unittest/tween/main.js  2026/04/30
 //   tween unittest
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -138,7 +138,7 @@ const app = new WebgApp({
   debugTools: {
     mode: "release",
     system: "tween",
-    source: "unittest/tween"
+    source: "unittest/tween/main.js"
   }
 });
 

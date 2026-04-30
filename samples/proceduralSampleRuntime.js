@@ -1,5 +1,5 @@
 // -------------------------------------------------
-// proceduralSampleRuntime.js      2026/04/12
+// proceduralSampleRuntime.js      2026/04/30
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // -------------------------------------------------
@@ -84,7 +84,12 @@ export async function setupProceduralSampleApp(options = {}) {
       pitch: camera.pitch,
       roll: camera.roll
     },
-    light: options.light
+    light: options.light,
+    debugTools: {
+      mode: "release",
+      system: sampleId,
+      source: options.source ?? `samples/${sampleId}/main.js`
+    }
   });
   await app.init();
 

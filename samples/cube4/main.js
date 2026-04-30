@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// samples/cube4/main.js  2026/04/19
+// samples/cube4/main.js  2026/04/30
 //   cube4
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -1647,7 +1647,9 @@ const start = async () => {
       pitch: -30.0
     },
     debugTools: {
-      mode: "release"
+      mode: "release",
+      system: "cube4",
+      source: "samples/cube4/main.js"
     }
   });
   await app.init();

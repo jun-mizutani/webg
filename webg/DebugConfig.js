@@ -1,5 +1,5 @@
 // ---------------------------------------------
-//  DebugConfig.js 2026/04/08
+//  DebugConfig.js 2026/04/30
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // ---------------------------------------------
@@ -21,12 +21,17 @@ export default class DebugConfig {
     };
   }
 
-  static mode = "debug";
-  static flags = DebugConfig.createFlags("debug");
+  // WebgApp を何も指定せずに起動したときは、利用者向けの画面を優先する
+  // DebugDock や probe は開発時に明示的に debug mode へ切り替えた場合だけ有効にする
+  static mode = "release";
+  static flags = DebugConfig.createFlags("release");
 
   // debug / release をまとめて切り替える
-  static setMode(mode = "debug") {
-    this.mode = mode === "release" ? "release" : "debug";
+  static setMode(mode = "release") {
+    if (mode !== "debug" && mode !== "release") {
+      throw new Error(`DebugConfig.setMode requires "debug" or "release", got "${mode}"`);
+    }
+    this.mode = mode;
     this.flags = this.createFlags(this.mode);
     return this.flags;
   }

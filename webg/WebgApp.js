@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// WebgApp.js     2026/04/28
+// WebgApp.js     2026/04/30
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // ---------------------------------------------
@@ -158,7 +158,9 @@ export default class WebgApp {
     this.helpPanelUi = null;
     this.helpPanels = [];
     this.debugTools = {
-      mode: options.debugTools?.mode ?? "debug",
+      // 既定では初心者向けの実行画面を保ち、DebugDock は表示しない
+      // 開発中に常時表示したい sample だけ debugTools.mode: "debug" を明示する
+      mode: options.debugTools?.mode ?? "release",
       system: options.debugTools?.system ?? "app",
       source: options.debugTools?.source ?? "",
       guideLines: [...(options.debugTools?.guideLines ?? [])],
@@ -2783,13 +2785,15 @@ export default class WebgApp {
     });
   }
 
-  // debug/release を切り替え、ガイド表示を更新する
-  toggleDebugMode() {
-    if (DebugConfig.isRelease()) {
-      DebugConfig.setMode("debug");
-    } else {
-      DebugConfig.setMode("release");
+  // debug/release を明示的に設定し、ガイド表示と DebugDock の表示状態を更新する
+  // app.debugTools.mode への直接代入だけでは DebugConfig や layout が更新されないため、
+  // 実行中に mode を変える場合はこのメソッドを入口にする
+  setDebugMode(mode = "release") {
+    if (mode !== "debug" && mode !== "release") {
+      throw new Error(`WebgApp.setDebugMode requires "debug" or "release", got "${mode}"`);
     }
+    this.debugTools.mode = mode;
+    DebugConfig.setMode(mode);
     this.applyDebugGuideLines();
     // mode 切替では dock の表示有無だけでなく canvas 幅と panel / dialogue の right inset も変わる
     // resize event を待つと fixed panel の位置が古いまま残るため、
@@ -2801,6 +2805,12 @@ export default class WebgApp {
       this.updateDebugDock();
     }
     return DebugConfig.mode;
+  }
+
+  // debug/release を切り替え、ガイド表示を更新する
+  toggleDebugMode() {
+    const nextMode = DebugConfig.isRelease() ? "debug" : "release";
+    return this.setDebugMode(nextMode);
   }
 
   // 現在の debug mode を返す

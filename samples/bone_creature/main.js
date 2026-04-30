@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// samples/bone_creature/main.js  2026/04/12
+// samples/bone_creature/main.js  2026/04/30
 //   bone_creature sample
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -611,7 +611,12 @@ const start = async () => {
     clearColor: CLEAR_COLOR,
     viewAngle: 56.0,
     camera: CAMERA_CONFIG,
-    lightPosition: [0.0, 40.0, 40.0, 1.0]
+    lightPosition: [0.0, 40.0, 40.0, 1.0],
+    debugTools: {
+      mode: "release",
+      system: "bone_creature",
+      source: "samples/bone_creature/main.js"
+    }
   });
   await app.init();
   auxShader = new SmoothShader(app.getGL());

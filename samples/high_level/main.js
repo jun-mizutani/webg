@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// samples/high_level/main.js  2026/04/12
+// samples/high_level/main.js  2026/04/30
 //   high_level sample
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -110,7 +110,12 @@ const start = async () => {
     document,
     messageFontTexture: FONT_FILE,
     clearColor: CLEAR_COLOR,
-    camera: CAMERA_CONFIG
+    camera: CAMERA_CONFIG,
+    debugTools: {
+      mode: "release",
+      system: "high_level",
+      source: "samples/high_level/main.js"
+    }
   });
   await app.init();
 

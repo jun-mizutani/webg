@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// unittest/embedded/main.js  2026/04/12
+// unittest/embedded/main.js  2026/04/30
 //   embedded unittest
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -389,7 +389,7 @@ const start = async () => {
     debugTools: {
       mode: "release",
       system: "embedded",
-      source: "unittest/embedded"
+      source: "unittest/embedded/main.js"
     },
     camera: {
       target: [0.0, 0.0, 0.0],

@@ -208,6 +208,27 @@ app.start({
 - `layoutMode`: 通常表示か `embedded`（埋め込み）か
 - `fixedCanvasSize`: canvas を固定サイズで扱う場合の設定
 
+この一覧の中で、開発を始める段階から特に意識しておきたいのが `debugTools` です。`WebgApp` は診断機能とデバッグキーを標準で備えていますが、何も指定しない場合は `release` モードで起動します。これは、はじめてサンプルを実行した利用者が「よく分からない開発者向けパネルが表示され、消し方も分からない」状態になることを避けるためです。`release` モードでは `DebugDock` や probe は無効になり、アプリケーション本来の表示を優先します。
+
+開発中に `DebugDock` や診断レポートを最初から使いたい場合は、`WebgApp` のコンストラクタへ渡す `debugTools.mode` に `"debug"` を指定し、`app.attachInput()` で入力を接続します。これにより、起動直後から `DebugDock` が表示され、実行中に `F9` を押した後で `M` を押すことでデバッグモードの表示を切り替えられます。ここでの `F9` と `M` は同時押しではなく、`F9` を押してから次に `M` を押す順次入力です。同じく `F9` の後に `C` で要約テキスト、`V` で JSON 形式の診断レポートをコピーできます。
+
+```js
+const app = new WebgApp({
+  document,
+  messageFontTexture: "./webg/font512.png",
+  debugTools: {
+    mode: "debug"
+  }
+});
+
+await app.init();
+app.attachInput();
+```
+
+`app.attachInput()` は、通常のキー入力を `InputController` へ渡すだけでなく、`F9` を起点とするデバッグキーを優先的に処理します。そのため、デバッグモードや診断レポートのコピーを利用したいアプリでは、`app.input.attach()` を直接呼ぶのではなく、まず `app.attachInput()` を使うのが基本です。`app.attachInput()` を使わずに raw `InputController` だけを接続した場合、`F9` 系のキー操作は `WebgApp` に届きません。診断レポートの内容や `DebugDock` の詳しい使い方は第19章で扱いますが、動作確認中に「今の状態を見たい」「AI や他の開発者へ状況を共有したい」と感じたときは、まず `debugTools.mode` と `app.attachInput()` の設定を確認するとよいでしょう。
+
+起動時のモードは、コンストラクタの `debugTools.mode` で指定するのが基本です。実行中にプログラムから切り替える場合は、`app.setDebugMode("debug")` または `app.setDebugMode("release")` を使います。`app.debugTools.mode = "release"` のようにプロパティへ直接代入しても、実際の診断フラグを管理する `DebugConfig` や `DebugDock` の表示状態、canvas のレイアウト更新には反映されません。直接代入は設定値を書き換えるだけで、切り替え処理としては不十分です。
+
 初期視点の指定では `target`、`distance`、`yaw`、`pitch`、`roll` を使用します。
 
 ```js
@@ -461,7 +482,7 @@ try {
 
 ### 診断機能とDebugDock
 
-`WebgApp` は診断機能を標準搭載しています。アプリケーションの現在の状態をレポートとして保持し、最新の警告やエラーをデバッグドックから追跡できるようになっています。
+`WebgApp` は診断機能を標準搭載しています。アプリケーションの現在の状態をレポートとして保持し、必要に応じて最新の警告やエラーをデバッグドックから追跡できるようになっています。ただし、既定の起動モードは `release` です。`DebugDock` を最初から表示したい開発用アプリでは、`debugTools.mode: "debug"` を明示します。
 
 特に有用なのが、ハイレベルな警告を可視化するインターフェースです。たとえば、致命的なエラーではないが、そのまま続行すると不都合が生じるため自動的に補正を行った場合などは、`reportRuntimeWarning()` を通じて通知できます。
 
@@ -473,7 +494,7 @@ app.reportRuntimeWarning(
 
 この API は `console.warn` への出力と同時に、診断機能およびデバッグドックの更新をまとめて行うため、ローダーやシーン構築、UI 構成などの高レイヤーな判断をユーザーに提示したい場面で有効です。
 
-デバッグキーは既定で `F9` をプリフィックスとして扱います。`F9` の後に `M` でデバッグモードの切り替え、`C` で診断機能サマリーのコピー、`V` で JSON レポートのコピーを実行できます。`app.attachInput()` は、これらのデバッグキーを優先的に処理してから利用者のハンドラーへイベントを渡すため、`app.input.attach()` を直接呼ぶよりも安全です。
+デバッグキーは既定で `F9` をプリフィックスとして扱います。`app.attachInput()` を使って入力を接続している場合、`F9` の後に `M` でデバッグモードの切り替え、`C` で診断機能サマリーのコピー、`V` で JSON レポートのコピーを実行できます。`app.attachInput()` は、これらのデバッグキーを優先的に処理してから利用者のハンドラーへイベントを渡すため、`app.input.attach()` を直接呼ぶよりも安全です。
 
 ```js
 app.attachInput({

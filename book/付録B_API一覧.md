@@ -1204,7 +1204,7 @@ runtime.instantiate(app.space);
 `DebugConfig` はデバッグ / リリースの切り替えとフラグ管理を担当します。
 
 - `createFlags(mode)`: mode から既定フラグ群を作る
-- `setMode(mode = "debug")`: デバッグ / リリースを切り替える
+- `setMode(mode = "release")`: デバッグ / リリースを切り替える。既定は利用者向け表示を優先する `release`
 - `configure(flags = {})`: 個別フラグを上書きする
 - `isDebug()`: デバッグモードかを返す
 - `isRelease()`: リリースモードかを返す
@@ -1232,7 +1232,7 @@ runtime.instantiate(app.space);
 
 最小サンプルなら `init()` と `start()` だけでも動きますし、必要に応じてローダー、debug dock、dialogue、probe を少しずつ足していけます。
 
-`WebgApp` を使うサンプルでは、リリースモードで起動していても `F9` のあとに `m` を押すとデバッグモードへ切り替えられます。`keyInput.enabled` を false にしているサンプルでも、mode toggle だけは標準で残るため、「通常表示で動作確認してから必要な時だけデバッグに入る」流れを共通で使えます。
+`WebgApp` を使うサンプルは、何も指定しない場合 `release` モードで起動します。`app.attachInput()` で入力を接続していれば、`F9` のあとに `m` を押すとデバッグモードへ切り替えられます。`keyInput.enabled` を false にしているサンプルでも、mode toggle だけは標準で残るため、「通常表示で動作確認してから必要な時だけデバッグに入る」流れを共通で使えます。
 
 注意点として、このショートカットは `WebgApp` の入力処理に乗っている場合だけに有効です。サンプル側が raw `InputController` を直接使って keyboard を処理している構成では、自動では有効になりません。その場合はサンプル側で同等の mode 切替を実装してください。
 
@@ -1347,6 +1347,7 @@ runtime.instantiate(app.space);
 - `setDiagnosticsReport(report)`: レポートを差し替える
 - `getDiagnosticsReport()`: 現在のレポートを返す
 - `createProbeReport(stage = "runtime-probe")`: probe 用レポートを作る
+- `setDebugMode(mode = "release")`: debug / release を明示的に設定し、DebugConfig、DebugDock、レイアウトを更新する
 - `toggleDebugMode()`: デバッグ / リリースの表示を切り替える
 - `getDebugMode()`: 現在のデバッグモードを返す
 - `isConsoleEnabled()`: console 出力が有効かを返す
