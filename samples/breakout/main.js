@@ -522,6 +522,26 @@ const start = async () => {
     minScale: 0.76
   });
 
+  const renderGameHud = () => {
+    app.message.setLines("gamehud-left", [
+      `score: ${state.score}`,
+      `combo: ${state.combo}`
+    ], {
+      anchor: "top-left",
+      x: 0,
+      y: 4,
+      color: [1.0, 0.95, 0.72]
+    });
+    app.message.setLines("gamehud-right", [
+      `time: ${Math.max(0.0, state.timeLeft).toFixed(1)}`
+    ], {
+      anchor: "top-right",
+      x: -1,
+      y: 0,
+      color: [0.92, 0.97, 1.0]
+    });
+  };
+
   const resetLevel = () => {
     state.paddleX = 0.0;
     state.ballX = 0.0;
@@ -545,10 +565,7 @@ const start = async () => {
     }
     paddleNode.setPosition(0.0, PADDLE.y, 0.0);
     ballNode.setPosition(state.ballX, state.ballY, 0.0);
-    app.clearGameHud();
-    app.setScore(state.score);
-    app.setCombo(state.combo);
-    app.setTimer(state.timeLeft);
+    renderGameHud();
     app.pushToast("Breakout ready", {
       id: "breakout-ready",
       durationMs: 1200,
@@ -596,7 +613,7 @@ const start = async () => {
 
   const resetAfterLifeLost = () => {
     state.combo = 0;
-    app.setCombo(state.combo);
+    renderGameHud();
     attachBallToPaddle();
     app.pushToast(`Lives left: ${state.lives}`, {
       id: "breakout-life",
@@ -726,7 +743,7 @@ const start = async () => {
     state.ballVy = (vy / len) * BALL.speed;
     state.ballY = PADDLE.y + PADDLE.height * 0.5 + BALL.radius + 0.04;
     state.combo = 0;
-    app.setCombo(state.combo);
+    renderGameHud();
     app.pushToast(offset < -0.45
       ? "Left edge"
       : offset > 0.45
@@ -745,8 +762,7 @@ const start = async () => {
     state.bricksRemaining = Math.max(0, state.bricksRemaining - 1);
     state.combo += 1;
     state.score += 100 + Math.min(5, state.combo - 1) * 20;
-    app.setScore(state.score);
-    app.setCombo(state.combo);
+    renderGameHud();
     app.pushToast(`Brick +${100 + Math.min(5, state.combo - 1) * 20}`, {
       id: `brick-hit-${brick.id}`,
       durationMs: 700,
@@ -788,7 +804,7 @@ const start = async () => {
     if (floorHit) {
       state.lives -= 1;
       state.combo = 0;
-      app.setCombo(state.combo);
+      renderGameHud();
       app.pushToast("Miss", {
         id: "breakout-miss",
         durationMs: 900,
@@ -851,9 +867,7 @@ const start = async () => {
   };
 
   const updateHud = () => {
-    app.setScore(state.score);
-    app.setCombo(state.combo);
-    app.setTimer(Math.max(0.0, state.timeLeft));
+    renderGameHud();
     app.message.setLines("status", [
       `phase: ${gsm.currentStateId ?? "title"}`,
       `result: ${state.resultKind}`,

@@ -346,7 +346,7 @@ app.start({
 
 - `app` / `screen` / `shader` / `space` / `eye`
 - `cameraRig` / `cameraRod` / `cameraTarget` / `cameraFollow`
-- `input` / `projection` / `scenePhase` / `dialogue` / `gameHud`
+- `input` / `projection` / `scenePhase`
 - `timeMs` / `timeSec` / `deltaSec`
 
 特に更新処理で頻繁に利用するのが `ctx.input` と `ctx.deltaSec` です。アニメーションや移動量を時間ベースで安定させたい場合は、固定値ではなく `deltaSec` を用いて計算してください。
@@ -544,7 +544,7 @@ app.followNode(playerNode, {
 });
 ```
 
-また、簡易的なゲーム HUD も用意されており、`setScore()`、`setCombo()`、`setTimer()`、`pushToast()` を使うことで、得点や短い通知を HUD 描画に載せることができます。
+短時間だけ見せたい通知については `pushToast()` を使うと、canvas HUD の下端へ重ねて表示できます。得点や残り時間のような数値は、用途固定の API に頼らず `app.message.setLines()` や `setHudRows()` で app 側が明示的に構成する方針です。
 
 進行状態の保存には `saveProgress()` と `loadProgress()` を利用します。保存先は `progressStorage` オプションで変更可能で、未指定時はブラウザのストレージを利用します。サンプルごとに保存キーを分けたい場合は `progressStoragePrefix` を設定してください。
 

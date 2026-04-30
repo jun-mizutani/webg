@@ -317,7 +317,7 @@ ArrowLeft / ArrowRight / A / D、または touch の ← / → で player を移
 - `InputController.registerActionMap()` で keyboard と touch を同じ action に束ねられるか
 - app 側 `GameStateManager` が title / play / pause / result を分けて扱えるか
 - `Shape.setCollisionShape()` の sphere 定義が `Space.addCollisionBody()` に渡るか
-- `WebgApp.setScore()` / `setTimer()` / `setCombo()` / `pushToast()` が HUD として自然に出るか
+- `app.message.setLines()` で構成した score / combo / time 表示と `pushToast()` が HUD として自然に出るか
 - `WebgApp.setControlRows()` が canvas HUD と debug dock の両方に流せる形になっているか
 </pre>
 </section>

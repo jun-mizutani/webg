@@ -65,13 +65,8 @@ export default class WebgApp {
     this.autoDrawScene = options.autoDrawScene !== false;
     this.autoDrawBones = options.autoDrawBones === true;
     this.scenePhase = options.scenePhase ?? null;
-    this.gameHud = {
-      score: null,
-      combo: null,
-      timer: null,
-      toasts: [],
-      toastLimit: util.readOptionalInteger(options.gameHud?.toastLimit, "WebgApp gameHud.toastLimit", 4, { min: 1 })
-    };
+    this.toastQueue = [];
+    this.toastLimit = util.readOptionalInteger(options.toastLimit, "WebgApp toastLimit", 4, { min: 1 });
     // 保存済み progress は WebgApp が名前空間を決めて扱い、
     // sample 側は save/load の中身だけに集中できるようにする
     this.progressStorage = options.progressStorage ?? null;
@@ -1157,7 +1152,7 @@ export default class WebgApp {
     return null;
   }
 
-  // 短い通知を game HUD の toast として出す
+  // 短い通知を canvas HUD の toast として出す
   // Message が無い場合は null を返して、sample 側が任意に分岐できるようにする
   flashMessage(text, options = {}) {
     if (!this.message || typeof this.message.pushToast !== "function") {
@@ -1847,21 +1842,6 @@ export default class WebgApp {
     this.clearHudRows();
   }
 
-  // ゲーム HUD の共通状態を初期化する
-  clearGameHud() {
-    this.gameHud.score = null;
-    this.gameHud.combo = null;
-    this.gameHud.timer = null;
-    this.gameHud.toasts = [];
-  }
-
-  readHudNumber(value, methodName, name) {
-    if (!Number.isFinite(value)) {
-      throw new Error(`WebgApp.${methodName} requires finite ${name}`);
-    }
-    return Number(value);
-  }
-
   readHudOptionalInt(value, methodName, name, fallback) {
     if (value === undefined) {
       return fallback;
@@ -1940,60 +1920,7 @@ export default class WebgApp {
     return true;
   }
 
-  // score 表示の値とレイアウトを更新する
-  // game HUD の中では最も基本になるため、label と位置も一緒に持たせる
-  setScore(value, options = {}) {
-    const score = this.readHudNumber(value, "setScore", "value");
-    this.gameHud.score = {
-      value: score,
-      label: String(options.label ?? "SCORE"),
-      color: [...(options.color ?? [1.0, 0.95, 0.72])],
-      anchor: options.anchor ?? "top-left",
-      x: this.readHudOptionalInt(options.x, "setScore", "options.x", 0),
-      y: this.readHudOptionalInt(options.y, "setScore", "options.y", 0)
-    };
-    return score;
-  }
-
-  // 現在 score へ増分を足し込み、そのまま HUD state を更新する
-  // sample 側は内部値を別管理せず、この helper で加算処理まで済ませられる
-  addScore(delta = 0, options = {}) {
-    const base = this.gameHud.score?.value ?? 0;
-    const inc = this.readHudNumber(delta, "addScore", "delta");
-    return this.setScore(base + inc, options);
-  }
-
-  // combo 表示の値とレイアウトを更新する
-  // score と同じ形式へ寄せて、描画側が共通処理で扱えるようにする
-  setCombo(value, options = {}) {
-    const combo = this.readHudNumber(value, "setCombo", "value");
-    this.gameHud.combo = {
-      value: combo,
-      label: String(options.label ?? "COMBO"),
-      color: [...(options.color ?? [0.78, 1.0, 0.78])],
-      anchor: options.anchor ?? "top-left",
-      x: this.readHudOptionalInt(options.x, "setCombo", "options.x", 0),
-      y: this.readHudOptionalInt(options.y, "setCombo", "options.y", 1)
-    };
-    return combo;
-  }
-
-  // timer 表示の値とレイアウトを更新する
-  // 右上固定を既定にして、score / combo と競合しにくい位置から始める
-  setTimer(value, options = {}) {
-    const timer = this.readHudNumber(value, "setTimer", "value");
-    this.gameHud.timer = {
-      value: timer,
-      label: String(options.label ?? "TIME"),
-      color: [...(options.color ?? [0.92, 0.97, 1.0])],
-      anchor: options.anchor ?? "top-right",
-      x: this.readHudOptionalInt(options.x, "setTimer", "options.x", -1),
-      y: this.readHudOptionalInt(options.y, "setTimer", "options.y", 0)
-    };
-    return timer;
-  }
-
-  // 一時通知を game HUD queue へ積む
+  // 一時通知を toast queue へ積む
   // expiresAt を持たせて draw 側で自然に消える toast として扱う
   pushToast(text, options = {}) {
     const durationMs = options.durationMs === undefined
@@ -2002,7 +1929,7 @@ export default class WebgApp {
         ? Math.floor(Number(options.durationMs))
         : (() => { throw new Error("WebgApp.pushToast requires options.durationMs >= 0"); })();
     const toast = {
-      id: String(options.id ?? `toast_${this.gameHud.toasts.length + 1}`),
+      id: String(options.id ?? `toast_${this.toastQueue.length + 1}`),
       text: String(text),
       color: [...(options.color ?? [1.0, 0.92, 0.55])],
       anchor: options.anchor ?? "bottom-center",
@@ -2011,9 +1938,9 @@ export default class WebgApp {
       durationMs,
       expiresAtMs: Date.now() + durationMs
     };
-    this.gameHud.toasts.push(toast);
-    if (this.gameHud.toasts.length > this.gameHud.toastLimit) {
-      this.gameHud.toasts.splice(0, this.gameHud.toasts.length - this.gameHud.toastLimit);
+    this.toastQueue.push(toast);
+    if (this.toastQueue.length > this.toastLimit) {
+      this.toastQueue.splice(0, this.toastQueue.length - this.toastLimit);
     }
     return toast.id;
   }
@@ -2021,57 +1948,15 @@ export default class WebgApp {
   // 登録済み toast をすべて消す
   // phase 切替や result 画面遷移で古い通知を残したくないときに使う
   clearToasts() {
-    this.gameHud.toasts = [];
+    this.toastQueue = [];
   }
 
-  // score / combo / timer の数値を HUD 表示向け文字列へ整形する
-  // 小数は 1 桁だけ残し、整数はそのまま出して視認性を保つ
-  formatGameHudNumber(value) {
-    if (!Number.isFinite(value)) {
-      throw new Error(`WebgApp.formatGameHudNumber requires finite value: ${value}`);
-    }
-    return Number.isInteger(value) ? `${value}` : value.toFixed(1);
-  }
-
-  // 現在の game HUD state を Message entry 配列へ変換する
-  // score / combo / timer / toast を 1 つの draw 経路へそろえるための中継点にする
-  getGameHudEntries(nowMs = Date.now()) {
+  // 現在有効な toast を Message entry 配列へ変換する
+  // toast 自体は generic な短時間通知であり、HUD row や status line と同じ描画経路へ合流させる
+  collectToastEntries(nowMs = Date.now()) {
     const entries = [];
-    const score = this.gameHud.score;
-    const combo = this.gameHud.combo;
-    const timer = this.gameHud.timer;
-    if (score) {
-      entries.push({
-        id: "game-score",
-        text: `${score.label} ${this.formatGameHudNumber(score.value)}`,
-        color: score.color,
-        anchor: score.anchor,
-        x: score.x,
-        y: score.y
-      });
-    }
-    if (combo && Number(combo.value) > 0) {
-      entries.push({
-        id: "game-combo",
-        text: `${combo.label} ${this.formatGameHudNumber(combo.value)}x`,
-        color: combo.color,
-        anchor: combo.anchor,
-        x: combo.x,
-        y: combo.y
-      });
-    }
-    if (timer) {
-      entries.push({
-        id: "game-timer",
-        text: `${timer.label} ${this.formatGameHudNumber(timer.value)}`,
-        color: timer.color,
-        anchor: timer.anchor,
-        x: timer.x,
-        y: timer.y
-      });
-    }
-    const activeToasts = this.gameHud.toasts.filter((toast) => toast.expiresAtMs > nowMs);
-    this.gameHud.toasts = activeToasts;
+    const activeToasts = this.toastQueue.filter((toast) => toast.expiresAtMs > nowMs);
+    this.toastQueue = activeToasts;
     for (let i = 0; i < activeToasts.length; i++) {
       const toast = activeToasts[i];
       entries.push({
@@ -2102,7 +1987,10 @@ export default class WebgApp {
   // controls row だけを少し下げたい場合に使い、利用者側の `app.message` には干渉しない
   setHudLayoutOffsets(options = {}) {
     if (options.rowsOffsetY !== undefined) {
-      this.hudLayoutOffsets.rowsOffsetY = this.readHudNumber(options.rowsOffsetY, "setHudLayoutOffsets", "options.rowsOffsetY");
+      this.hudLayoutOffsets.rowsOffsetY = util.readFiniteNumber(
+        options.rowsOffsetY,
+        "WebgApp setHudLayoutOffsets.options.rowsOffsetY"
+      );
     }
   }
 
@@ -3387,7 +3275,7 @@ export default class WebgApp {
     };
   }
 
-  // 利用者側の `app.message` と、WebgApp 内部の HUD row / game HUD を順に描画する
+  // 利用者側の `app.message` と、WebgApp 内部の HUD row / toast を順に描画する
   drawMessages() {
     if (!this.message) return;
     const nowMs = Date.now();
@@ -3418,9 +3306,9 @@ export default class WebgApp {
     } else {
       this.hudMessage.shader.setScale(this.messageScale);
     }
-    const gameHudEntries = this.getGameHudEntries(nowMs);
-    for (let i = 0; i < gameHudEntries.length; i++) {
-      entries.push(gameHudEntries[i]);
+    const toastEntries = this.collectToastEntries(nowMs);
+    for (let i = 0; i < toastEntries.length; i++) {
+      entries.push(toastEntries[i]);
     }
     this.hudMessage.replaceAll(entries);
     this.hudMessage.drawScreen();
@@ -3435,7 +3323,6 @@ export default class WebgApp {
     return {
       app: this,
       scenePhase: this.getScenePhase(),
-      gameHud: this.gameHud,
       timeMs,
       timeSec: timeMs * 0.001,
       deltaSec: this.elapsedSec,

@@ -171,7 +171,7 @@ const start = async () => {
     state.phaseHint = "play";
     placeTarget(state.playerX);
     playerNode.setPosition(state.playerX, 0.0, 0.0);
-    app.clearGameHud();
+    renderHudNumbers();
   };
 
   app.registerActionMap({
@@ -268,14 +268,32 @@ const start = async () => {
     minScale: 0.76
   });
 
+  const renderHudNumbers = () => {
+    app.message.setLines("gamehud-left", [
+      `score: ${state.score}`,
+      `combo: ${state.combo}`
+    ], {
+      anchor: "top-left",
+      x: 0,
+      y: 5,
+      color: [1.0, 0.95, 0.72]
+    });
+    app.message.setLines("gamehud-right", [
+      `time: ${Math.max(0.0, state.timeLeft).toFixed(1)}`
+    ], {
+      anchor: "top-right",
+      x: -1,
+      y: 0,
+      color: [0.92, 0.97, 1.0]
+    });
+  };
+
   gsm.addState({
     id: "play",
     onEnter: () => {
       state.phaseHint = "play";
       resetRound();
-      app.setScore(state.score);
-      app.setCombo(state.combo);
-      app.setTimer(state.timeLeft);
+      renderHudNumbers();
       app.pushToast("Use arrows or touch to move");
     },
     onUpdate: ({ context }) => {
@@ -326,9 +344,7 @@ const start = async () => {
     id: "result",
     onEnter: () => {
       state.phaseHint = "result";
-      app.setScore(state.score);
-      app.setCombo(state.combo);
-      app.setTimer(0.0);
+      renderHudNumbers();
       app.pushToast(`Result ${state.score} pts`);
     },
     transitions: [
@@ -422,25 +438,17 @@ const start = async () => {
             state.combo += 1;
             state.lastHitMs = nowMs;
             state.timeLeft = Math.min(30.0, state.timeLeft + 1.5);
-            app.setScore(state.score);
-            app.setCombo(state.combo);
-            app.setTimer(state.timeLeft);
+            renderHudNumbers();
             app.pushToast(`hit +100  combo ${state.combo}`);
             placeTarget(state.playerX);
           }
         }
 
-        app.setScore(state.score);
-        app.setCombo(state.combo);
-        app.setTimer(state.timeLeft);
+        renderHudNumbers();
       } else if (livePhase === "pause") {
-        app.setScore(state.score);
-        app.setCombo(state.combo);
-        app.setTimer(state.timeLeft);
+        renderHudNumbers();
       } else if (livePhase === "result") {
-        app.setScore(state.score);
-        app.setCombo(state.combo);
-        app.setTimer(0.0);
+        renderHudNumbers();
       }
 
       app.message.setLines("status", [
