@@ -165,7 +165,7 @@ app.start({
     orbit.update(deltaSec);
     node.rotateY(0.9);
     node.rotateX(0.2);
-    app.setStatusLines([
+    app.message.setLines("status", [
       `vertices=${info.vertexCount}`,
       `triangles=${info.faceCount}`,
       `camera=${orbit.orbit.distance.toFixed(1)}`

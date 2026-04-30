@@ -173,7 +173,7 @@ app.start({
 
     followRig.update(deltaSec);
 
-    app.setStatusLines([
+    app.message.setLines("status", [
       `target x=${x.toFixed(2)} z=${z.toFixed(2)}`,
       `follow distance=${followRig.getModeState().distance.toFixed(2)}`,
       "EyeRig follow sample"

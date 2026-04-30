@@ -220,7 +220,7 @@ app.start({
     const debugInfo = machine.getDebugInfo();
     const transitionInfo = machine.getCurrentTransition();
 
-    app.setStatusLines([
+    app.message.setLines("status", [
       `desired=${state.desiredPoseId} current=${debugInfo.stateId ?? "-"}`,
       `action=${debugInfo.actionId ?? "-"} pattern=${patternInfo?.id ?? "-"} transition=${transitionInfo?.label ?? "-"}`,
       `playing=${debugInfo.playing ? "yes" : "no"} paused=${debugInfo.paused ? "yes" : "no"} auto=${state.autoCycle ? "on" : "off"} last=${state.lastEvent}`,

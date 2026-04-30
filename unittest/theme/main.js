@@ -8,7 +8,6 @@ import WebgApp from "../../webg/WebgApp.js";
 import Primitive from "../../webg/Primitive.js";
 import Shape from "../../webg/Shape.js";
 import Diagnostics from "../../webg/Diagnostics.js";
-import UIPanel from "../../webg/UIPanel.js";
 import {
   DEFAULT_UI_THEME,
   DEFAULT_UI_LIGHT_THEME,
@@ -19,7 +18,7 @@ import {
 const FIXED_PANEL_ID = "theme-preview";
 
 // unittest/theme の確認対象:
-// - WebgApp.setUiTheme() で debugDock / fixedFormatPanel / uiPanel をまとめて差し替えられるか
+// - WebgApp.setUiTheme() で debugDock / OverlayPanel / error panel をまとめて差し替えられるか
 // - preset ごとに透明度、accent、文字色が破綻せず読めるか
 // - runtime 中の theme 切替で debug key, diagnostics, FixedFormatPanel が崩れないか
 const THEME_PRESETS = [
@@ -79,8 +78,6 @@ let ui = null;
 let currentThemeIndex = 0;
 let previewPanelVisible = true;
 let paused = false;
-let uiPanels = null;
-let overlayLayout = null;
 
 document.addEventListener("DOMContentLoaded", () => {
   start().catch((err) => {
@@ -97,53 +94,52 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 }, false);
 
-// unittest/theme は overlay の見た目そのものも確認対象なので、
-// 文面や section 構成だけをここで定義し、CSS と theme 適用は共通 manager へ任せる
 function buildThemeOverlay() {
-  uiPanels = new UIPanel({
-    document,
-    theme: app?.uiTheme?.uiPanel
+  app.showOverlayPanel({
+    id: "theme-controls",
+    title: "UI Theme Switch Test",
+    lines: ["initializing..."],
+    anchor: "top-left",
+    width: "min(470px, calc(100vw - 32px))",
+    buttons: [
+      { id: "next", label: "Next Theme", kind: "primary" },
+      { id: "togglePreview", label: "Preview Panel", kind: "secondary" },
+      { id: "resetCamera", label: "Reset Camera", kind: "secondary" }
+    ],
+    choices: THEME_PRESETS.map((preset) => ({
+      id: preset.id,
+      label: `[${preset.keyLabel}] ${preset.label}`
+    })),
+    onAction: ({ actionId }) => {
+      if (actionId === "next") {
+        applyThemePreset(currentThemeIndex + 1);
+        return;
+      }
+      if (actionId === "togglePreview") {
+        setPreviewPanelVisible(!previewPanelVisible);
+        return;
+      }
+      if (actionId === "resetCamera") {
+        resetCamera();
+        return;
+      }
+      const presetIndex = THEME_PRESETS.findIndex((preset) => preset.id === actionId);
+      if (presetIndex >= 0) {
+        applyThemePreset(presetIndex);
+      }
+    }
   });
-  overlayLayout = uiPanels.createLayout({
-    id: "themeOverlay",
-    leftWidth: "minmax(320px, 470px)",
-    rightWidth: "minmax(280px, 420px)",
-    gap: 14,
-    scrollColumns: true,
-    collapseWidth: 980,
-    compactWidth: 980
+  app.showOverlayPanel({
+    id: "theme-info",
+    title: "Theme Overview",
+    lines: ["loading..."],
+    anchor: "top-right",
+    width: "min(420px, calc(100vw - 32px))"
   });
-
-  const refs = {};
-  const controlPanel = uiPanels.createPanel(overlayLayout.left);
-  uiPanels.createEyebrow(controlPanel, "unittest / theme");
-  uiPanels.createTitle(controlPanel, "UI Theme Switch Test");
-  refs.themeLead = uiPanels.createCopy(controlPanel, "initializing...");
-  refs.themeButtons = uiPanels.createButtonGrid(controlPanel, { columns: 2 });
-  const buttonRow = uiPanels.createButtonRow(controlPanel);
-  refs.btnNextTheme = uiPanels.createButton(buttonRow, { id: "btnNextTheme", text: "Next Theme" });
-  refs.btnTogglePanel = uiPanels.createButton(buttonRow, { id: "btnTogglePanel", text: "Preview Panel" });
-  refs.btnResetCamera = uiPanels.createButton(buttonRow, { id: "btnResetCamera", text: "Reset Camera" });
-
-  const infoPanel = uiPanels.createPanel(overlayLayout.right);
-  refs.themeBadge = uiPanels.createPill(infoPanel, { id: "themeBadge", text: "Theme" });
-  refs.themeOverview = uiPanels.createTextBlock(infoPanel, { id: "themeOverview", text: "loading...", code: true });
-  const bindingsGroup = uiPanels.createGroup(infoPanel);
-  uiPanels.createTitle(bindingsGroup, "Bindings", 2);
-  refs.themeBindings = uiPanels.createTextBlock(bindingsGroup, { id: "themeBindings", text: "loading...", code: true });
-  uiPanels.applyThemeToLayout(overlayLayout);
-  return refs;
-}
-
-function applyOverlayTheme(theme = {}) {
-  uiPanels?.setTheme(theme);
-}
-
-function updateOverlayDockOffset() {
-  const dockOffset = app?.isDebugDockActive?.()
-    ? (app.debugDock.reserveWidth + app.debugDock.gap)
-    : 0;
-  uiPanels?.setDockOffset(overlayLayout, dockOffset);
+  return {
+    controlsId: "theme-controls",
+    infoId: "theme-info"
+  };
 }
 
 function updateShapeColors(preset) {
@@ -177,7 +173,7 @@ function buildOverviewText(preset) {
     `clear=${preset.clearColor.map((value) => value.toFixed(2)).join(", ")}`,
     `dockBg=${app.uiTheme.debugDock.rootBackground}`,
     `overlayBg=${app.uiTheme.uiPanel.panelBackground}`,
-    `fixedBg=${app.uiTheme.fixedFormatPanel.errorBackground}`
+    `errorBg=${app.uiTheme.fixedFormatPanel.errorBackground}`
   ].join("\n");
 }
 
@@ -233,10 +229,7 @@ function applyThemePreset(nextIndex) {
   currentThemeIndex = (nextIndex + THEME_PRESETS.length) % THEME_PRESETS.length;
   const preset = THEME_PRESETS[currentThemeIndex];
 
-  // WebgApp が管理する dock / FixedFormatPanel は setUiTheme() でまとめて差し替え、
-  // sample 固有 overlay は同じ preset の uiPanel group を使って同期する
   app.setUiTheme(preset.uiTheme);
-  applyOverlayTheme(app.uiTheme.uiPanel);
   updateShapeColors(preset);
   setPreviewPanelVisible(previewPanelVisible);
   renderUi();
@@ -245,22 +238,31 @@ function applyThemePreset(nextIndex) {
 function renderUi() {
   if (!ui || !app) return;
   const preset = THEME_PRESETS[currentThemeIndex];
-  updateOverlayDockOffset();
   syncPreviewPanel();
-  ui.themeLead.textContent = preset.lead;
-  ui.themeBadge.textContent = `${preset.label} theme`;
-  ui.themeOverview.textContent = buildOverviewText(preset);
-  ui.themeBindings.textContent = buildBindingText();
-  ui.btnTogglePanel.textContent = previewPanelVisible ? "Hide Preview Panel" : "Show Preview Panel";
-
-  const buttons = ui.themeButtons.querySelectorAll("button[data-theme-index]");
-  for (let i = 0; i < buttons.length; i++) {
-    const index = Number(buttons[i].dataset.themeIndex);
-    const active = index === currentThemeIndex;
-    buttons[i].classList.toggle("is-active", active);
-    buttons[i].setAttribute("aria-pressed", active ? "true" : "false");
-    uiPanels?.setButtonActive?.(buttons[i], active);
-  }
+  app.updateOverlayPanel(ui.controlsId, {
+    title: `UI Theme Switch Test / ${preset.label}`,
+    lines: [
+      preset.lead,
+      "",
+      buildBindingText(),
+      "",
+      `previewPanel=${previewPanelVisible ? "ON" : "OFF"} paused=${paused ? "ON" : "OFF"}`
+    ],
+    buttons: [
+      { id: "next", label: "Next Theme", kind: "primary" },
+      { id: "togglePreview", label: previewPanelVisible ? "Hide Preview Panel" : "Show Preview Panel", kind: "secondary" },
+      { id: "resetCamera", label: "Reset Camera", kind: "secondary" }
+    ]
+  });
+  app.updateOverlayPanel(ui.infoId, {
+    title: `${preset.label} theme`,
+    lines: [
+      buildOverviewText(preset),
+      "",
+      "Bindings",
+      buildBindingText()
+    ]
+  });
 }
 
 function buildDockRows(preset, envReport, frameCount) {
@@ -271,7 +273,7 @@ function buildDockRows(preset, envReport, frameCount) {
     `yaw=${orbit.orbit.yaw.toFixed(1)} pitch=${orbit.orbit.pitch.toFixed(1)} dist=${orbit.orbit.distance.toFixed(1)}`,
     `dockBg=${app.uiTheme.debugDock.rootBackground}`,
     `overlayBg=${app.uiTheme.uiPanel.panelBackground}`,
-    `fixedBg=${app.uiTheme.fixedFormatPanel.errorBackground}`,
+    `errorBg=${app.uiTheme.fixedFormatPanel.errorBackground}`,
     `env=${envReport.ok ? "OK" : "WARN"} ${envReport.warnings?.[0] ?? ""}`.trim(),
     app.getDiagnosticsStatusLine(),
     app.getProbeStatusLine()
@@ -330,32 +332,9 @@ function resetCamera() {
 }
 
 function bindUiEvents() {
-  ui.btnNextTheme.addEventListener("click", () => applyThemePreset(currentThemeIndex + 1));
-  ui.btnTogglePanel.addEventListener("click", () => setPreviewPanelVisible(!previewPanelVisible));
-  ui.btnResetCamera.addEventListener("click", () => resetCamera());
-}
-
-function buildPresetButtons() {
-  const fragment = document.createDocumentFragment();
-  for (let i = 0; i < THEME_PRESETS.length; i++) {
-    const preset = THEME_PRESETS[i];
-    const button = document.createElement("button");
-    button.type = "button";
-    button.className = "webg-overlay-button";
-    button.dataset.themeIndex = String(i);
-    button.innerHTML = [
-      `<span class="webg-overlay-button-label">[${preset.keyLabel}] ${preset.label}</span>`,
-      `<span class="webg-overlay-button-note">${preset.note}</span>`
-    ].join("");
-    button.addEventListener("click", () => applyThemePreset(i));
-    fragment.appendChild(button);
-  }
-  ui.themeButtons.replaceChildren(fragment);
 }
 
 async function start() {
-  ui = buildThemeOverlay();
-
   app = new WebgApp({
     document,
     clearColor: [...THEME_PRESETS[0].clearColor],
@@ -381,6 +360,7 @@ async function start() {
     }
   });
   await app.init();
+  ui = buildThemeOverlay();
   app.setDiagnosticsStage("runtime");
   app.clearHudRows();
 
@@ -437,8 +417,6 @@ async function start() {
     }
   });
 
-  buildPresetButtons();
-  bindUiEvents();
   applyThemePreset(0);
 
   app.start({

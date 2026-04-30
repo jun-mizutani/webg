@@ -12,7 +12,7 @@
     <h1>book/examples</h1>
     <h2>14_01 HUD と overlay</h2>
     <div class="section-card">
-      <p>`book/14_UI表示の設計.md` の `setGuideLines()`、`setStatusLines()`、`startDialogue()`、`showFixedFormatPanel()` を 1 つの埋め込み page に集めた例です</p>
+      <p>`book/14_UI表示の設計.md` の `app.message.setLines()`、`startDialogue()`、`showFixedFormatPanel()` を 1 つの埋め込み page に集めた例です</p>
       <p class="note">短い HUD は canvas 上、日本語の説明や長文は DOM overlay へ分ける構成を、そのまま見比べられます。`D` で dialogue を出し直し、`F` で fixed-format panel を開閉できます</p>
     </div>
 
@@ -150,7 +150,7 @@ app.start({
     node.rotateX(0.3);
 
     const dialogueState = app.getDialogueState();
-    app.setGuideLines([
+    app.message.setLines("guide", [
       "guide lines -> short操作説明",
       "status lines -> current state",
       "dialogue / panel -> 日本語と長文"
@@ -162,7 +162,7 @@ app.start({
       wrap: true
     });
 
-    app.setStatusLines([
+    app.message.setLines("status", [
       `dialogue=${dialogueState?.active ? "active" : "idle"}`,
       `fixed-panel=${app.hasFixedFormatPanel("ui-design-note") ? "open" : "closed"}`,
       `time=${elapsedSec.toFixed(1)} sec`

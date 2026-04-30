@@ -576,7 +576,7 @@ async function start() {
   }
   // guide は sample の固定説明なので起動時に一度だけ登録し、
   // 毎 frame は変化する status だけ更新する
-  app.setGuideLines(buildGuideLines(), {
+  app.message.setLines("guide", buildGuideLines(), {
     anchor: "bottom-left",
     x: 0,
     y: -2,
@@ -630,14 +630,14 @@ async function start() {
 
       const envReport = updateDiagnosticsStats();
       if (app.isDebugUiEnabled()) {
-        app.setStatusLines(buildStatusLines(envReport).filter(Boolean), {
+        app.message.setLines("status", buildStatusLines(envReport).filter(Boolean), {
           anchor: "top-left",
           x: 0,
           y: 0,
           color: [1.0, 0.88, 0.72]
         });
       } else {
-        app.setStatusLines([]);
+        app.message.setLines("status", []);
       }
     },
     onAfterHud: () => {

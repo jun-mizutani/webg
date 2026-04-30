@@ -131,7 +131,7 @@ const detachAttachRight = () => {
 // 操作説明は guide block として bottom-left に固定し、
 // detouch sample が今どの入力を受け付けるかを毎 frame 変えずに読めるようにする
 const updateGuideLines = () => {
-  app.setGuideLines([
+  app.message.setLines("guide", [
     "[Space] exchange parent  [D] detach/attach right",
     "[W]/[Z] pitch  [A]/[S] yaw  [F]/[G] zoom",
     "[Q] pause animation  [X] resume animation"
@@ -152,7 +152,7 @@ const updateStatusLines = () => {
   const localAtt = sphereObj.getLocalAttitude();
   const parentName = sphereObj.parent ? sphereObj.parent.name : "null";
 
-  app.setStatusLines([
+  app.message.setLines("status", [
     `FPS: ${fps.toFixed(1)}  touch ui: ${touchUiEnabled ? "ON" : "OFF"}  anim: ${animationPaused ? "PAUSED" : "RUN"}`,
     `Right x:${right[0].toFixed(2)} y:${right[1].toFixed(2)}  Left x:${left[0].toFixed(2)} y:${left[1].toFixed(2)}`,
     `sphere parent: ${parentName}`,

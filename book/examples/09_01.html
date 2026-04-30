@@ -169,7 +169,7 @@ app.start({
       glossyNode.rotateY(-28.0 * deltaSec);
       torusNode.rotateY(20.0 * deltaSec);
     }
-    app.setStatusLines([
+    app.message.setLines("status", [
       `matte ambient=0.34 specular=0.16 power=8`,
       `glossy ambient=0.18 specular=0.96 power=72  wireframe=${state.wireframeEnabled ? "on" : "off"}`,
       "Shape.setMaterial(\"smooth-shader\", ...) + Shape.setWireframe(true)"

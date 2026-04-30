@@ -83,7 +83,7 @@ app.start({
     orbit.update(deltaSec);
     node.rotateY(0.9);
     node.rotateX(0.4);
-    app.setStatusLines([
+    app.message.setLines("status", [
       "Shape.applyPrimitiveAsset()",
       "Primitive.cube() -> endShape()",
       `camera=${orbit.orbit.distance.toFixed(1)}`

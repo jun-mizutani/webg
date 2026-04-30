@@ -197,7 +197,7 @@ app.start({
       skinnedNormalRig.j1.setAttitude(0.0, 0.0, Math.sin(elapsedSec * 1.2) * 60.0);
     }
 
-    app.setStatusLines([
+    app.message.setLines("status", [
       "same shader = SmoothShader",
       "left column: normal map off  right column: normal map on",
       "upper row: static  lower row: skinned"

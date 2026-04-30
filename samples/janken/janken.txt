@@ -7,12 +7,12 @@
 - 画面下には touch ボタンも表示し、PC でも `G` / `C` / `P` を直接押して操作できます。
 - `hand.glb` は 1 回だけ build し、その runtime から player / cpu の 2 hand を `instantiate()` しているため、geometry / GPU buffer は共有しつつ animation runtime は別々に進みます。
 - 各 hand は独立した `Action` と `AnimationState` を持ち、同じ asset を使っても別々に animation を再生できます。
-- 操作ガイドは `WebgApp.setGuideLines()`、現在状態は `WebgApp.setStatusLines()` でそろえ、勝敗だけを 2 倍スケールの短い `Message` で中央表示します。
+- 操作ガイドと現在状態は `app.message.setLines()` でそろえ、勝敗だけを 2 倍スケールの短い `Message` で中央表示します。
 - 2 つの hand は少し引いた距離からやや見上げ気味に見えるようにし、左右に約 30 度ロールさせています。
 - ジャンケンの手遷移は `entryDurationMs = 250` にそろえ、0.25 秒程度で次の手へ移る設定です。
 
 このサンプルで使うwebg機能
-- `WebgApp`: Screen / Shader / Space / Input / Message をまとめて初期化し、`setGuideLines()` / `setStatusLines()` と `loadModel(..., { format: "gltf", instantiate: false })` で shared runtime を 1 回 build したあと、`runtime.instantiate()` で 2 hand を起こす
+- `WebgApp`: Screen / Shader / Space / Input / Message をまとめて初期化し、`app.message.setLines()` と `loadModel(..., { format: "gltf", instantiate: false })` で shared runtime を 1 回 build したあと、`runtime.instantiate()` で 2 hand を起こす
 - `Action`: hand の key 区間を `N0` / `N2` / `N5` の action として再生する
 - `Message`: 勝敗結果の短い ASCII title を大きく中央表示する
 

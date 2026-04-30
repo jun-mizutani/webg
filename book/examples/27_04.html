@@ -195,7 +195,7 @@ app.createHelpPanel({
 app.start({
   onUpdate: ({ deltaSec }) => {
     orbit.update(deltaSec);
-    app.setStatusLines([
+    app.message.setLines("status", [
       `rows=${info.rows} cols=${info.cols}`,
       `vertices=${info.vertexCount}`,
       `quads=${info.quadCount}`

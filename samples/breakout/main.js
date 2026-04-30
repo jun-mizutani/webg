@@ -472,7 +472,7 @@ const start = async () => {
     }
   }
 
-  app.setGuideLines([
+  app.message.setLines("guide", [
     "breakout sample",
     "Enter / Space: launch or resume",
     "P / Esc: pause",
@@ -854,7 +854,7 @@ const start = async () => {
     app.setScore(state.score);
     app.setCombo(state.combo);
     app.setTimer(Math.max(0.0, state.timeLeft));
-    app.setStatusLines([
+    app.message.setLines("status", [
       `phase: ${gsm.currentStateId ?? "title"}`,
       `result: ${state.resultKind}`,
       `lives: ${state.lives}  bricks: ${state.bricksRemaining}`,

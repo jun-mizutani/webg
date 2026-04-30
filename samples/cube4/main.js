@@ -1244,8 +1244,8 @@ const renderBoard = (runtime) => {
 const updateHud = (runtime) => {
   // cube4 では Text.js ベースの固定 HUD を常時重ねるため、
   // WebgApp 標準の guide/status は空にして表示領域を競合させない
-  app.setStatusLines([], HUD_STATUS_OPTIONS);
-  app.setGuideLines([], HUD_GUIDE_OPTIONS);
+  app.message.setLines("status", [], HUD_STATUS_OPTIONS);
+  app.message.setLines("guide", [], HUD_GUIDE_OPTIONS);
 };
 
 const createDecor = (space, gpu) => {

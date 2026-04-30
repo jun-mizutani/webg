@@ -114,7 +114,7 @@ app.start({
     orbit.update(deltaSec);
     originalNode.rotateY(0.8);
     scaledNode.rotateY(-0.8);
-    app.setStatusLines([
+    app.message.setLines("status", [
       `validate.ok=${report.ok ? "yes" : "no"}`,
       `original shapes=${original.shapes.length} scaled shapes=${scaled.shapes.length}`,
       "ModelAsset -> build() -> instantiate()"

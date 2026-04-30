@@ -710,13 +710,13 @@ const start = async () => {
       enemyScout.updateActor(deltaSec * 1000.0);
       missionRuntime.updateMarkers(deltaSec);
       minimapOverlay.update();
-      app.setGuideLines([], {
+      app.message.setLines("guide", [], {
         anchor: "bottom-left",
         x: 0,
         y: -2,
         color: [0.90, 0.95, 1.0]
       });
-      app.setStatusLines([], {
+      app.message.setLines("status", [], {
         anchor: "top-left",
         x: 0,
         y: 0,

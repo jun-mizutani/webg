@@ -192,7 +192,7 @@ app.start({
       orbs[i].setPosition(Math.cos(angle) * radius, height, Math.sin(angle) * radius);
     }
 
-    app.setStatusLines([
+    app.message.setLines("status", [
       `bloom=${bloom.enabled ? "on" : "off"}`,
       `view=${state.bloomView}`,
       "BloomPass sample"

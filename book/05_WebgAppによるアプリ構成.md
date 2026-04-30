@@ -450,7 +450,7 @@ app.createHelpPanel({
 });
 ```
 
-HUD を表形式で表示したい場合は `setHudRows()` や `setControlRows()` を使用します。短い自由文には `setStatusLines()` が向いていますが、項目名と現在値を対にして表示したい場合は row 形式の方が読みやすくなります。
+HUD を表形式で表示したい場合は `setHudRows()` や `setControlRows()` を使用します。短い自由文は `app.message.setLine()` や `app.message.setLines()` で十分ですが、項目名と現在値を対にして表示したい場合は row 形式の方が読みやすくなります。
 
 ```js
 app.setHudRows([
@@ -464,7 +464,7 @@ app.setHudRows([
 });
 ```
 
-また、短い状態表示には `setStatusLines()`、固定のガイドには `setGuideLines()` を使用し、デバッグモード時のみ表示したいガイドには `setDebugGuideLines()` を使い分けるのが効果的です。
+また、短い状態表示や固定ガイドは `app.message.setLine()` / `setLines()` で管理し、項目が増えて整列が必要になった段階で `setHudRows()` へ移るのが効果的です。
 
 ### 進行管理とエラー通知（dialogue / error panel）
 

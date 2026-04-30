@@ -35,6 +35,94 @@ const dialogueEntries = [
   }
 ];
 
+// embedded unittest では「会話専用 API が core にあるか」ではなく、
+// host 基準で panel が追従するかだけを見たい
+// そのため会話進行は sample 内 helper として閉じ、WebgApp には残さない
+const createDialogueOverlay = (app) => {
+  const state = {
+    active: false,
+    currentIndex: 0,
+    entries: []
+  };
+
+  const buildLines = () => {
+    const entry = state.entries[state.currentIndex] ?? null;
+    if (!entry) {
+      return ["dialogue is closed"];
+    }
+    const header = [entry.speaker, entry.title].filter(Boolean).join(" / ");
+    const lines = [];
+    if (header) {
+      lines.push(`[${header}]`);
+    }
+    lines.push(...entry.lines.map((line) => String(line)));
+    lines.push("");
+    lines.push("Enter / Space: next  D: close");
+    return lines;
+  };
+
+  const sync = () => {
+    const entry = state.entries[state.currentIndex] ?? null;
+    const options = {
+      id: "embeddedDialogue",
+      title: "embedded dialogue test",
+      lines: buildLines(),
+      anchor: entry?.side === "right" ? "top-right" : "top-left",
+      width: "min(420px, calc(100% - 32px))",
+      top: 16,
+      left: entry?.side === "right" ? undefined : 16,
+      right: entry?.side === "right" ? 16 : undefined,
+      visible: state.active === true,
+      closable: true,
+      showCloseButton: true,
+      closeOnEsc: true,
+      onClose: () => {
+        state.active = false;
+        sync();
+      }
+    };
+    if (app.getOverlayPanel(options.id)) {
+      app.updateOverlayPanel(options.id, options);
+    } else {
+      app.showOverlayPanel(options);
+    }
+  };
+
+  return {
+    show(entries = []) {
+      state.entries = entries.map((entry) => ({
+        ...entry,
+        lines: Array.isArray(entry?.lines) ? entry.lines.map((line) => String(line)) : []
+      }));
+      state.currentIndex = 0;
+      state.active = state.entries.length > 0;
+      sync();
+    },
+    next() {
+      if (!state.active) {
+        return false;
+      }
+      state.currentIndex += 1;
+      if (state.currentIndex >= state.entries.length) {
+        state.active = false;
+        state.currentIndex = Math.max(0, state.entries.length - 1);
+      }
+      sync();
+      return state.active;
+    },
+    clear() {
+      state.active = false;
+      sync();
+    },
+    isActive() {
+      return state.active === true;
+    },
+    getPanel() {
+      return app.getOverlayPanel("embeddedDialogue");
+    }
+  };
+};
+
 const fixedPanelLines = [
   "embedded fixed-format panel",
   "",
@@ -103,13 +191,8 @@ const createOrbitRig = (app) => {
 
 // dialogue の表示開始は 1 か所へまとめ、再表示時も同じ entry 列を使う
 // これにより toggle 時の見え方差分が overlay 配置だけに絞られる
-const showDialogue = (app) => {
-  app.startDialogue(dialogueEntries, {
-    title: "embedded dialogue test",
-    footer: "Enter / Space: next  D: close  2: jump to canvas",
-    showRestartButton: false,
-    showHideButton: true
-  });
+const showDialogue = (dialogueOverlay) => {
+  dialogueOverlay.show(dialogueEntries);
 };
 
 // fixed-format panel は表示中 node を state に保持し、
@@ -226,15 +309,14 @@ const updateExternalStatus = (app, helpPanel, state) => {
   const hostRect = host.getBoundingClientRect();
   const canvasRect = canvas.getBoundingClientRect();
   const helpRect = helpPanel?.panel?.getBoundingClientRect?.() ?? null;
-  const dialogueRect = app.dialogue?.layout?.root?.hidden === true
-    ? null
-    : app.dialogue?.layout?.root?.getBoundingClientRect?.() ?? null;
+  const dialoguePanel = state.dialogueOverlay.getPanel();
+  const dialogueRect = dialoguePanel?.getState?.().visible === true
+    ? dialoguePanel.panel?.getBoundingClientRect?.() ?? null
+    : null;
   const fixedRect = state.fixedPanelNode?.isConnected
     ? state.fixedPanelNode.getBoundingClientRect()
     : null;
   const touchRect = app.input?.touch?.root?.getBoundingClientRect?.() ?? null;
-  const dialogueState = app.getDialogueState();
-
   statusEl.textContent = [
     "unittest/embedded",
     `scrollY: ${Math.round(window.scrollY)}`,
@@ -252,7 +334,7 @@ const updateExternalStatus = (app, helpPanel, state) => {
     }),
     evaluateTouchAlignment(touchRect, hostRect),
     `helpVisible: ${helpPanel?.visible ? "yes" : "no"}`,
-    `dialogueActive: ${dialogueState?.active ? "yes" : "no"}`,
+    `dialogueActive: ${state.dialogueOverlay.isActive() ? "yes" : "no"}`,
     `fixedVisible: ${state.fixedPanelVisible ? "yes" : "no"}`,
     `touchVisible: ${app.input?.touch?.root ? "yes" : "no"}`,
     `lastShot: ${state.lastScreenshot || "-"}`,
@@ -263,17 +345,17 @@ const updateExternalStatus = (app, helpPanel, state) => {
 // onUpdate から呼ぶ操作処理を 1 本へまとめる
 // ここを分けることで、描画更新と入力 edge 処理を追いやすくする
 const handleFrameActions = (app, helpPanel, orbit, state) => {
-  if (app.wasActionPressed("next_dialogue") && app.getDialogueState()?.active) {
-    app.nextDialogue();
+  if (app.wasActionPressed("next_dialogue") && state.dialogueOverlay.isActive()) {
+    state.dialogueOverlay.next();
   }
   if (app.wasActionPressed("toggle_help")) {
     toggleHelpPanel(app, helpPanel);
   }
   if (app.wasActionPressed("toggle_dialogue")) {
-    if (app.getDialogueState()?.active) {
-      app.clearDialogue();
+    if (state.dialogueOverlay.isActive()) {
+      state.dialogueOverlay.clear();
     } else {
-      showDialogue(app);
+      showDialogue(state.dialogueOverlay);
     }
   }
   if (app.wasActionPressed("toggle_fixed")) {
@@ -349,7 +431,7 @@ const installActionBindings = (app) => {
 // 外部 status と canvas 内 HUD の両方を更新し、
 // page 側と canvas 側のどちらから見ても test 状態が分かるようにする
 const updateHud = (app, helpPanel, state) => {
-  app.setGuideLines([
+  app.message.setLines("guide", [
     "embedded unittest",
     "mouse drag: orbit",
     "Enter/Space: next dialogue",
@@ -361,9 +443,9 @@ const updateHud = (app, helpPanel, state) => {
     color: [0.90, 0.95, 1.0]
   });
 
-  app.setStatusLines([
+  app.message.setLines("status", [
     `help=${helpPanel.visible ? "show" : "hide"}`,
-    `dialogue=${app.getDialogueState()?.active ? "show" : "hide"}`,
+    `dialogue=${state.dialogueOverlay.isActive() ? "show" : "hide"}`,
     `fixed=${state.fixedPanelVisible ? "show" : "hide"}`,
     `scrollY=${Math.round(window.scrollY)}`
   ], {
@@ -402,6 +484,7 @@ const start = async () => {
 
   const cubeNode = createCubeNode(app);
   const orbit = createOrbitRig(app);
+  const dialogueOverlay = createDialogueOverlay(app);
   const helpPanel = app.createHelpPanel({
     id: "embeddedHelp",
     leftWidth: "minmax(0, 320px)",
@@ -423,10 +506,11 @@ const start = async () => {
     spinPhase: 0.0,
     fixedPanelVisible: false,
     fixedPanelNode: null,
-    lastScreenshot: ""
+    lastScreenshot: "",
+    dialogueOverlay
   };
 
-  showDialogue(app);
+  showDialogue(dialogueOverlay);
   showFixedPanel(app, state);
 
   app.start({

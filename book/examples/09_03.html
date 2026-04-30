@@ -131,7 +131,7 @@ app.start({
       torusNode.rotateX(8.0 * deltaSec);
     }
 
-    app.setStatusLines([
+    app.message.setLines("status", [
       "shader: NormPhong.js",
       `normal map=${state.useNormalMap ? "on" : "off"} source=../../webg/num256.png`,
       "same image used for base texture and generated normal map"

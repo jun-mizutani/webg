@@ -218,7 +218,7 @@ const start = async () => {
     }
   }
 
-  app.setGuideLines([
+  app.message.setLines("guide", [
     "game_api unittest",
     "Enter / Start: resume from pause/result",
     "P / Pause: toggle pause",
@@ -340,7 +340,7 @@ const start = async () => {
   });
 
   setGamePhase("play", { force: true });
-  app.setStatusLines([
+  app.message.setLines("status", [
     `phase: ${state.phaseHint}`,
     "goal: score 300 or survive until time out",
     "collision: player sphere vs target sphere"
@@ -443,7 +443,7 @@ const start = async () => {
         app.setTimer(0.0);
       }
 
-      app.setStatusLines([
+      app.message.setLines("status", [
         `phase: ${livePhase}`,
         `score: ${state.score}  combo: ${state.combo}  time: ${state.timeLeft.toFixed(1)}`,
         `left=${isMoveLeft() ? 1 : 0} right=${isMoveRight() ? 1 : 0} a=${app.input?.has?.("a") ? 1 : 0} d=${app.input?.has?.("d") ? 1 : 0} start=${phaseKey("start") ? 1 : 0} pause=${phaseKey("pause") ? 1 : 0} reset=${phaseKey("reset") ? 1 : 0}`

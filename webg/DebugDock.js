@@ -25,7 +25,6 @@ export default class DebugDock {
       : 16;
     this.font = options.font ?? "13px/1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace";
     this.title = options.title ?? null;
-    this.showCanvasHudWhenDockActive = options.showCanvasHudWhenDockActive === true;
     this.rows = [];
     this.refs = null;
     this.theme = {

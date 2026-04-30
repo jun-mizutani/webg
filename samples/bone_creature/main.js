@@ -371,7 +371,7 @@ const createTentacleTextures = async (gpu) => {
 // static guide は bottom-left に固定し、
 // この sample で何を回せるかをいつでも読み返せるようにする
 const updateGuideLines = () => {
-  app.setGuideLines([
+  app.message.setLines("guide", [
     "[Arrows] rotate creature X/Y  [Q/E] rotate creature Z",
     "[B] bones on/off  [P] pause on/off  [S] screenshot",
     "Touch buttons: same actions on mobile"
@@ -386,7 +386,7 @@ const updateGuideLines = () => {
 // 動作状態は status block にまとめ、
 // bones / pause / inspection flag / FPS を画面上部から順に読めるようにする
 const updateStatusLines = () => {
-  app.setStatusLines([
+  app.message.setLines("status", [
     `FPS: ${fps.toFixed(1)}  tentacles: ${tentacles.length}  bones(total): ${totalBones}`,
     `bones: ${showBones ? "ON" : "OFF"}  pause: ${paused ? "ON" : "OFF"}  freeze: ${FREEZE_TENTACLE_MOTION_FOR_INSPECTION ? "ON" : "OFF"}`,
     `maps: ${DISABLE_TENTACLE_MAPS_FOR_INSPECTION ? "OFF" : "ON"}  core: ${HIDE_CORE_FOR_INSPECTION ? "OFF" : "ON"}  lit: ${FLAT_TENTACLE_LIGHTING_FOR_INSPECTION ? "OFF" : "ON"}`

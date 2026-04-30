@@ -121,7 +121,7 @@ app.start({
     flatNode.rotateY(0.5);
     smoothNode.rotateY(0.5);
 
-    app.setStatusLines([
+    app.message.setLines("status", [
       "left = SmoothShader flat_shading=1",
       "right = SmoothShader flat_shading=0",
       `time=${elapsedSec.toFixed(1)} sec`

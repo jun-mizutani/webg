@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// Shader.js       2026/03/30
+// Shader.js       2026/04/30
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // ---------------------------------------------
@@ -248,9 +248,11 @@ export default class Shader {
   // 動的オフセット用インデックスを確保する
   allocUniformIndex() {
     // 1フレーム内の動的uniformスロット番号を払い出す
+    // slot 0 は Font の基礎設定(scale / color / texStep など)の
+    // 即時更新領域として予約しているため、描画用 slot は 1 から使う
     if (!this.gpu) return 0;
     if (this.gpu.uniformIndex === undefined) {
-      this.gpu.uniformIndex = 0;
+      this.gpu.uniformIndex = 1;
     }
     const idx = this.gpu.uniformIndex;
     this.gpu.uniformIndex += 1;

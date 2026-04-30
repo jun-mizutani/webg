@@ -165,10 +165,10 @@ message.replaceAll([
 ]);
 ```
 
-通常のサンプルでは `Message` を直接操作する代わりに、`WebgApp` のヘルパーメソッドを利用することでより簡潔に記述できます。短い操作説明や状態表示は `setGuideLines()`、`setStatusLines()`、あるいは `setHudRows()` に集約させると、コードの流れが整理されます。HUD や診断情報を後から場当たり的に追加するのではなく、初期段階からアプリケーション構造に組み込んでおくという `webg` の設計思想に基づいた実装が推奨されます。
+通常のサンプルでは、短い操作説明や状態表示を `Message.setLine()` / `setLines()` で直接管理し、項目が増えて整列が必要になったときだけ `setHudRows()` へ移す構成が分かりやすいです。HUD や診断情報を後から場当たり的に追加するのではなく、初期段階からアプリケーション構造に組み込んでおくという `webg` の設計思想に基づいた実装が推奨されます。
 
 ```js
-app.setGuideLines([
+app.message.setLines("guide", [
   "[WASD] move",
   "[R] reset",
   "[B] bloom"
@@ -180,7 +180,7 @@ app.setGuideLines([
   wrap: true
 });
 
-app.setStatusLines([
+app.message.setLines("status", [
   `mode=${mode}`,
   `threshold=${threshold.toFixed(2)}`,
   `strength=${strength.toFixed(2)}`
@@ -399,7 +399,7 @@ uiPanels.setTheme(app.uiTheme.uiPanel);
 最後に、実装におけるコンポーネントの選定基準をまとめます。
 
 *   `Text`: 端末風の固定座標表示や、ローレベル（低レイヤー）での動作確認。
-*   `Message` (または `WebgApp.setGuideLines()` / `setStatusLines()` / `setHudRows()`): スコア、ガイド、タイマー、コントロール行などの簡潔な ASCII HUD。
+*   `Message` / `setHudRows()`: スコア、ガイド、タイマー、コントロール行などの簡潔な ASCII HUD。
 *   `DebugDock`: デスクトップ環境における詳細な診断情報とコントロールの表示。
 *   `FixedFormatPanel`: エラー全文や長文のレポート表示。
 *   `UIPanel`: 日本語を含む説明文、ボタン、選択 UI、ステータスカードをシーン上に重ねる場合。

@@ -190,7 +190,7 @@ const orbit = new EyeRig(app.cameraRig, app.cameraRod, app.eye, {
 });
 orbit.attachPointer();
 
-app.setGuideLines([
+app.message.setLines("guide", [
   "Drag: orbit",
   "2-finger drag: pan",
   "Pinch / wheel: zoom"
@@ -200,7 +200,7 @@ app.setGuideLines([
   y: -2
 });
 
-app.setStatusLines([
+app.message.setLines("status", [
   "Manual example",
   "WebgApp + EyeRig"
 ], {
@@ -226,7 +226,7 @@ app.start({
 
 `webg` では、HUD や診断情報を後から無理に付け足すのではなく、初期段階からアプリケーションの構造に組み込んでおくことで、管理が容易になります。
 
-- テキスト表示: 短い操作説明や状態表示には `Message`、`setGuideLines()`、`setStatusLines()` を使用し、詳細な説明やエラー理由の提示には `FixedFormatPanel` を使用します。
+- テキスト表示: 短い操作説明や状態表示には `Message` の `setLine()` / `setLines()` を使用し、詳細な説明やエラー理由の提示には `OverlayPanel` 系の panel を使用します。
 - デバッグ・調査: 調査用レポートには `Diagnostics` と `DebugProbe` を活用し、シーン上に重ねる UI には `DialogueOverlay` や `UIPanel` を使用します。
 
 ここでは詳細な使い方まで習得する必要はありませんが、「表示周りの機能も描画と同様に、アプリケーション構造の一部として扱う」という考え方を押さえておいてください。

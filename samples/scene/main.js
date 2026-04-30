@@ -8,7 +8,6 @@ import WebgApp from "../../webg/WebgApp.js";
 import SmoothShader from "../../webg/SmoothShader.js";
 import SceneAsset from "../../webg/SceneAsset.js";
 import Diagnostics from "../../webg/Diagnostics.js";
-import UIPanel from "../../webg/UIPanel.js";
 
 const SCENE_FILE = "./scene.json";
 const DOWNLOAD_FILE = "scene_copy.json";
@@ -33,64 +32,52 @@ let floorEntry = null;
 let totalTriangles = 0;
 let uiStatusText = "loading scene sample";
 let actionHandlers = null;
-let uiPanels = null;
-let overlayLayout = null;
-
-// scene sample 固有の文面や button 配置だけをここで組み、
-// panel の CSS / blur / radius / theme 反映は UIPanel 側へ集約する
 function buildSceneOverlay() {
-  uiPanels = new UIPanel({
-    document,
-    theme: app?.uiTheme?.uiPanel
+  app.showOverlayPanel({
+    id: "scene-controls",
+    title: "Scene Loader Playground",
+    lines: [
+      "`scene.json` の camera / primitives / model / input mapping をまとめて読み込みます。",
+      "Keyboard でも同じ処理を触れます。Drag / Arrow で orbit、wheel / [ / ] で zoom です。",
+      "",
+      `status=${uiStatusText}`
+    ],
+    anchor: "top-left",
+    width: "min(340px, calc(100vw - 32px))",
+    buttons: [
+      { id: "toggle-pause", label: "Pause Scene", kind: "primary" },
+      { id: "replay-model", label: "Replay Model", kind: "secondary" },
+      { id: "toggle-floor-wireframe", label: "Floor Wire", kind: "secondary" },
+      { id: "reset-camera", label: "Reset Camera", kind: "secondary" },
+      { id: "download-scene", label: "Download Scene JSON", kind: "secondary" },
+      { id: "copy-summary", label: "Copy Summary", kind: "secondary" },
+      { id: "copy-json", label: "Copy JSON", kind: "secondary" }
+    ],
+    onAction: async ({ actionId }) => {
+      if (actionId === "copy-summary") {
+        const copied = await app.copyDiagnosticsSummary();
+        setUiStatus(copied ? "diagnostics summary copied" : "diagnostics summary copy failed");
+        return;
+      }
+      if (actionId === "copy-json") {
+        const copied = await app.copyDiagnosticsReportJSON();
+        setUiStatus(copied ? "diagnostics json copied" : "diagnostics json copy failed");
+        return;
+      }
+      runSceneAction(actionId);
+    }
   });
-  overlayLayout = uiPanels.createLayout({
-    id: "sceneOverlay",
-    leftWidth: "minmax(0, 340px)",
-    rightWidth: "minmax(0, 300px)",
-    gap: 12,
-    scrollColumns: true,
-    collapseWidth: 920,
-    compactWidth: 720
+  app.showOverlayPanel({
+    id: "scene-info",
+    title: "Overview / Bindings / Status",
+    lines: ["loading..."],
+    anchor: "top-right",
+    width: "min(300px, calc(100vw - 32px))"
   });
-
-  const refs = {};
-  const introPanel = uiPanels.createPanel(overlayLayout.left);
-  uiPanels.createEyebrow(introPanel, "Scene JSON Sample");
-  uiPanels.createTitle(introPanel, "Scene Loader Playground");
-  uiPanels.createCopy(
-    introPanel,
-    "`scene.json` の camera / primitives / model / input mapping をまとめて読み込み、JavaScript 側では action handler と diagnostics だけを足す構成を確認できます。"
-  );
-  const actionGrid = uiPanels.createButtonGrid(introPanel, { columns: 2 });
-  refs.btnTogglePause = uiPanels.createButton(actionGrid, { id: "btnTogglePause", text: "Pause Scene", disabled: true });
-  refs.btnReplayModel = uiPanels.createButton(actionGrid, { id: "btnReplayModel", text: "Replay Model", disabled: true });
-  refs.btnToggleFloorWire = uiPanels.createButton(actionGrid, { id: "btnToggleFloorWire", text: "Floor Wire", disabled: true });
-  refs.btnResetCamera = uiPanels.createButton(actionGrid, { id: "btnResetCamera", text: "Reset Camera", disabled: true });
-  refs.btnDownloadScene = uiPanels.createButton(actionGrid, { id: "btnDownloadScene", text: "Download Scene JSON", disabled: true });
-  uiPanels.createHint(
-    introPanel,
-    "Keyboard でも同じ処理を触れます。ドラッグ / 矢印キーで orbit、ホイール / `[` / `]` で zoom です。"
-  );
-
-  const diagnosticsPanel = uiPanels.createPanel(overlayLayout.left);
-  uiPanels.createTitle(diagnosticsPanel, "Diagnostics", 2);
-  const diagnosticsGrid = uiPanels.createButtonGrid(diagnosticsPanel, { columns: 2 });
-  refs.btnCopySummary = uiPanels.createButton(diagnosticsGrid, { id: "btnCopySummary", text: "Copy Summary", disabled: true });
-  refs.btnCopyJson = uiPanels.createButton(diagnosticsGrid, { id: "btnCopyJson", text: "Copy JSON", disabled: true });
-
-  const overviewPanel = uiPanels.createPanel(overlayLayout.right, { stack: true });
-  const overviewGroup = uiPanels.createGroup(overviewPanel);
-  uiPanels.createTitle(overviewGroup, "Overview", 2);
-  refs.sceneOverview = uiPanels.createTextBlock(overviewGroup, { id: "sceneOverview", text: "loading...", code: true });
-  const bindingsGroup = uiPanels.createGroup(overviewPanel);
-  uiPanels.createTitle(bindingsGroup, "Bindings", 2);
-  refs.sceneBindings = uiPanels.createTextBlock(bindingsGroup, { id: "sceneBindings", text: "loading...", code: true });
-
-  const statusPanel = uiPanels.createPanel(overlayLayout.right);
-  uiPanels.createTitle(statusPanel, "Status", 2);
-  refs.sceneStatus = uiPanels.createTextBlock(statusPanel, { id: "sceneStatus", text: "loading...", code: true });
-  uiPanels.applyThemeToLayout(overlayLayout);
-  return refs;
+  return {
+    controlsId: "scene-controls",
+    infoId: "scene-info"
+  };
 }
 
 function countSceneEntryTypes(entries = []) {
@@ -151,33 +138,6 @@ function getBindingDefinitions() {
   return sceneRuntime?.scene?.input?.bindings
     ?? sceneAsset?.getData?.()?.input?.bindings
     ?? [];
-}
-
-function setUiEnabled(enabled) {
-  if (!ui) return;
-  const controls = [
-    ui.btnTogglePause,
-    ui.btnReplayModel,
-    ui.btnToggleFloorWire,
-    ui.btnResetCamera,
-    ui.btnDownloadScene,
-    ui.btnCopySummary,
-    ui.btnCopyJson
-  ];
-  for (let i = 0; i < controls.length; i++) {
-    if (controls[i]) controls[i].disabled = !enabled;
-  }
-}
-
-function updateUiDockOffset() {
-  const dockOffset = app?.isDebugDockActive?.()
-    ? (app.debugDock.reserveWidth + app.debugDock.gap)
-    : 0;
-  uiPanels?.setDockOffset(overlayLayout, dockOffset);
-}
-
-function applyOverlayTheme(theme = {}) {
-  uiPanels?.setTheme(theme);
 }
 
 function setUiStatus(text) {
@@ -247,40 +207,41 @@ function buildUiStatusLines() {
 
 function updateActionButtonLabels() {
   if (!ui) return;
-  ui.btnTogglePause.textContent = paused ? "Resume Scene" : "Pause Scene";
-  ui.btnToggleFloorWire.textContent = floorWireframe ? "Floor Wire: ON" : "Floor Wire: OFF";
+  app.updateOverlayPanel(ui.controlsId, {
+    buttons: [
+      { id: "toggle-pause", label: paused ? "Resume Scene" : "Pause Scene", kind: "primary" },
+      { id: "replay-model", label: "Replay Model", kind: "secondary" },
+      { id: "toggle-floor-wireframe", label: floorWireframe ? "Floor Wire: ON" : "Floor Wire", kind: "secondary" },
+      { id: "reset-camera", label: "Reset Camera", kind: "secondary" },
+      { id: "download-scene", label: "Download Scene JSON", kind: "secondary" },
+      { id: "copy-summary", label: "Copy Summary", kind: "secondary" },
+      { id: "copy-json", label: "Copy JSON", kind: "secondary" }
+    ]
+  });
 }
 
 function renderUiPanels() {
   if (!ui) return;
-  updateUiDockOffset();
   updateActionButtonLabels();
-  ui.sceneOverview.textContent = buildOverviewLines().join("\n");
-  ui.sceneBindings.textContent = buildBindingLines().join("\n");
-  ui.sceneStatus.textContent = buildUiStatusLines().join("\n");
-}
-
-function bindUiEvents() {
-  if (!ui) return;
-
-  // sample 固有 action は keyboard / button の両方から同じ handler を通す
-  // button 側だけ別処理にすると説明と実挙動がずれやすいため、
-  // ここでは action 名を共通入口として再利用する
-  ui.btnTogglePause.addEventListener("click", () => runSceneAction("toggle-pause"));
-  ui.btnReplayModel.addEventListener("click", () => runSceneAction("replay-model"));
-  ui.btnToggleFloorWire.addEventListener("click", () => runSceneAction("toggle-floor-wireframe"));
-  ui.btnResetCamera.addEventListener("click", () => runSceneAction("reset-camera"));
-  ui.btnDownloadScene.addEventListener("click", () => runSceneAction("download-scene"));
-
-  // diagnostics 系 button も Current State と同じ現在 report を使い、
-  // HTML overlay と dock のどちらから見ても内容がずれないようにする
-  ui.btnCopySummary.addEventListener("click", async () => {
-    const copied = await app.copyDiagnosticsSummary();
-    setUiStatus(copied ? "diagnostics summary copied" : "diagnostics summary copy failed");
+  app.updateOverlayPanel(ui.controlsId, {
+    lines: [
+      "`scene.json` の camera / primitives / model / input mapping をまとめて読み込みます。",
+      "Keyboard でも同じ処理を触れます。Drag / Arrow で orbit、wheel / [ / ] で zoom です。",
+      "",
+      `status=${uiStatusText}`
+    ]
   });
-  ui.btnCopyJson.addEventListener("click", async () => {
-    const copied = await app.copyDiagnosticsReportJSON();
-    setUiStatus(copied ? "diagnostics json copied" : "diagnostics json copy failed");
+  app.updateOverlayPanel(ui.infoId, {
+    lines: [
+      "Overview",
+      ...buildOverviewLines(),
+      "",
+      "Bindings",
+      ...buildBindingLines(),
+      "",
+      "Status",
+      ...buildUiStatusLines()
+    ]
   });
 }
 
@@ -342,8 +303,10 @@ function makeProbeReport(frameCount) {
 
 document.addEventListener("DOMContentLoaded", () => {
   start().catch((err) => {
-    ui ??= buildSceneOverlay();
-    setUiStatus(`scene sample failed (${err?.message ?? err})`);
+    if (app) {
+      ui ??= buildSceneOverlay();
+      setUiStatus(`scene sample failed (${err?.message ?? err})`);
+    }
     app?.setDiagnosticsReport(Diagnostics.createErrorReport(err, {
       system: "scene",
       source: SCENE_FILE,
@@ -470,11 +433,6 @@ function runSceneAction(actionName) {
 }
 
 async function start() {
-  ui = buildSceneOverlay();
-  bindUiEvents();
-  setUiEnabled(false);
-  renderUiPanels();
-
   // Scene JSON の結果を 3D 上へ出すため、スキニング付き model も扱える SmoothShader を使う
   app = new WebgApp({
     document,
@@ -493,19 +451,18 @@ async function start() {
       mode: DEBUG_MODE,
       system: "scene",
       source: SCENE_FILE,
-      guideLines: GUIDE_LINES,
-      guideOptions: {
-        anchor: "top-left",
-        x: 0,
-        y: 0,
-        width: 44,
-        wrap: true
-      },
       probeDefaultAfterFrames: 1
     }
   });
   await app.init();
-  applyOverlayTheme(app.uiTheme.uiPanel);
+  ui = buildSceneOverlay();
+  app.message.setLines("guide", GUIDE_LINES, {
+    anchor: "bottom-left",
+    x: 0,
+    y: -2,
+    width: 44,
+    clip: false
+  });
   renderUiPanels();
 
   // Scene JSON が camera を持つ場合でも、実運用では orbit で周囲を確認したくなるため、
@@ -560,7 +517,6 @@ async function start() {
     }
   });
 
-  setUiEnabled(true);
   setUiStatus("scene ready");
 
   app.start({
@@ -574,7 +530,7 @@ async function start() {
       refreshDiagnosticsStats();
       app.updateDebugProbe();
       renderUiPanels();
-      // UIPanel で情報を読む構成へ寄せたため、
+      // OverlayPanel で情報を読む構成へ寄せたため、
       // 操作説明は debug dock へ出さず scene 側 panel に集約する
       app.clearDebugDockRows();
       app.clearHudRows();

@@ -263,7 +263,7 @@ app.start({
     const debugInfo = actor.getDebugInfo();
     const idleInfo = debugInfo.idle ?? {};
     const selected = controller.selected;
-    app.setStatusLines([
+    app.message.setLines("status", [
       `proxyCell=(${controller.ballCell.col},${controller.ballCell.row}) moving=${controller.isBallMoving() ? "yes" : "no"} displayArea=${displayAreaToText(tileMap.displayArea)}`,
       `selected=${selected ? `(${selected.cell.col},${selected.cell.row}) ${selected.hitFace}` : "(none)"}`,
       `actorScale=${debugInfo.runtimeScale?.toFixed?.(2) ?? "-"} importedRootScale=${debugInfo.importedRootScale?.toFixed?.(2) ?? "-"} facingYaw=${actor.getFacingYaw().toFixed(1)}`,

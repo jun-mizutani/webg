@@ -1,0 +1,34 @@
+サンプル: overlay_panel
+
+概要
+- DOM 文字表示 UI を `OverlayPanel` へ統合した新仕様を確認する unittest です
+- 3D scene の上に複数の panel を重ね、anchor、collapse、pre 表示、scroll、modal、buttons、choices、debug dock 回避の組み合わせを 1 つの app で見比べます
+- 既存の `HelpPanel`、`FixedFormatPanel`、`UIPanel` の公開 API を直接触らず、`WebgApp.showOverlayPanel()` を中心に確認します
+
+このサンプルで使うwebg機能
+- `WebgApp`: Screen、Input、Message、debug dock、`OverlayPanel` facade をまとめて初期化
+- `OverlayPanel`: DOM 上の説明、ログ、modal panel、choice button を 1 つの基盤で表示
+- `Primitive` / `Shape`: 背景として回転 cube を描き、panel の邪魔になり方を確認しやすくする
+- `EyeRig`: orbit camera の最小確認
+
+確認ポイント
+- `anchor` を `top-left` から `bottom-right` まで切り替えたとき、同じ panel が 9 方向へ移動することを確認します
+- help preset 相当の panel が collapse / expand を切り替え、再表示 button を残せることを確認します
+- `format: "pre"` と `scrollY: true` を組み合わせた log panel が、長い本文を崩さず読めることを確認します
+- `modal: true` と `pauseScene: true` を持つ center panel を開いたとき、test 側がその state を読んで回転停止できることを確認します
+- `buttons` と `choices` の click が `onAction` へ同じ経路で届くことを確認します
+- debug mode へ切り替えて dock を出したとき、右寄せ anchor の panel が dock 領域を避けることを確認します
+
+操作説明
+- `1` から `9`: anchor panel の配置を 9 方向へ切り替える
+- `H`: help panel を collapse / expand する
+- `L`: log panel を表示 / 非表示する
+- `M`: modal panel を表示 / 非表示する
+- `R`: action log を初期状態へ戻す
+- `F9` のあと `M`: debug mode を切り替え、dock 回避を確認する
+- Drag / Arrow keys: orbit camera
+- `[ / ]` または wheel: zoom
+
+補足
+- modal panel 自体は scene を自動停止しません。この unittest では `panel.getState().pauseScene` を読んで、回転を止める側の実装例を示しています
+- `Enter` は modal panel の defaultAction に割り当ててあり、panel が focus を持っている間は既定 button が発火します

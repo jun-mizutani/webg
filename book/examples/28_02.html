@@ -238,7 +238,7 @@ app.start({
     rootBone.setAttitude(0.0, Math.sin(elapsedSec * 1.1) * 10.0, 0.0);
     childBone.setAttitude(0.0, 0.0, Math.sin(elapsedSec * 1.7) * 58.0);
 
-    app.setStatusLines([
+    app.message.setLines("status", [
       `weightDebug=${state.weightDebug ? "on" : "off"} bones=${state.showBones ? "on" : "off"}`,
       `rootYaw=${(Math.sin(elapsedSec * 1.1) * 10.0).toFixed(1)} childRoll=${(Math.sin(elapsedSec * 1.7) * 58.0).toFixed(1)}`,
       "Cylinder-only view for mesh / weight verification"

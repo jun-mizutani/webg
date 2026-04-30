@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// Screen.js       2026/04/29
+// Screen.js       2026/04/30
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // ---------------------------------------------
@@ -90,7 +90,11 @@ class WebGPUContext {
       this.passEncoder.end();
       this.passEncoder = null;
     }
-    this.uniformIndex = 0;
+    // dynamic offset の slot 0 は Font の scale / color / texStep など
+    // 即時設定の書き込み先として使っている
+    // 文字描画で slot 0 を再利用すると、フレーム中の後続設定更新で
+    // 最初の1文字だけ内容が上書きされるため、描画用 slot は 1 から始める
+    this.uniformIndex = 1;
     if (!this.commandEncoder) {
       // Start one command encoder per frame (or per clearDepthBuffer restart).
       this.commandEncoder = this.device.createCommandEncoder();

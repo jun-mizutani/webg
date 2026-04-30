@@ -317,7 +317,7 @@ app.start({
     markerNodes.childOnly.setPosition(lastChildOnly[0], lastChildOnly[1], lastChildOnly[2]);
     markerNodes.blended.setPosition(lastBlended[0], lastBlended[1], lastBlended[2]);
 
-    app.setStatusLines([
+    app.message.setLines("status", [
       `weights: root=${representativeWeights.root.toFixed(2)} child=${representativeWeights.child.toFixed(2)} bones=${state.showBones ? "on" : "off"}`,
       `rest=${vec3ToText(lastRest)}`,
       `rootOnly=${vec3ToText(lastRootOnly)} childOnly=${vec3ToText(lastChildOnly)}`,

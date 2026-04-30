@@ -168,7 +168,7 @@ app.start({
     rightShape.shaderParameter("emissive", 0.15 + pulse * 0.85);
     rightShape.shaderParameter("ambient", 0.18 + pulse * 0.20);
 
-    app.setStatusLines([
+    app.message.setLines("status", [
       `fog=${state.fogEnabled ? "on" : "off"}`,
       `emissive=${(0.15 + pulse * 0.85).toFixed(2)}`,
       "setMaterial + shaderParameter sample"

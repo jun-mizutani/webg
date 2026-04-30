@@ -276,7 +276,7 @@ app.start({
     state.detailedCount = detailedPairs.length;
     updateEntryColors(broadPairs, detailedPairs);
 
-    app.setStatusLines([
+    app.message.setLines("status", [
       `raycast hit=${state.selectedName}  ${state.lastRayInfo}`,
       `broad=${state.broadCount} detailed=${state.detailedCount} paused=${state.paused ? "yes" : "no"}`,
       "Space.raycast() / checkCollisions() / checkCollisionsDetailed()"

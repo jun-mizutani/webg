@@ -105,7 +105,7 @@ rg -n "^(##|###|####) " book/付録B_API一覧.md
 利用者が「画面に情報を表示したい」と要望した場合、AI は目的に応じて以下のコンポーネントを適切に使い分ける提案を行ってください。
 
 - **操作説明やヘルプ**: `app.createHelpPanel()`（左上に表示され、折りたたみが可能）
-- **動的な数値や状態の表示**: `app.setStatusLines()` または HUD (`setHudRows`)（簡潔な情報を整然と表示）
+- **動的な数値や状態の表示**: `app.message.setLines("status", [...], options)` または HUD (`setHudRows`)（簡潔な情報を整然と表示）
 - **会話形式の演出やチュートリアル**: `app.startDialogue()`（UTF-8 テキストを適切に表示）
 - **詳細な情報やエラー理由の提示**: `app.showErrorPanel()` または `showFixedFormatPanel()`（長文メッセージを視認性高く表示）
 

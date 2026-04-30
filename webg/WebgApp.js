@@ -9,8 +9,6 @@ import Matrix from "./Matrix.js";
 import Space from "./Space.js";
 import Shape from "./Shape.js";
 import Message from "./Message.js";
-import UIPanel from "./UIPanel.js";
-import DialogueOverlay from "./DialogueOverlay.js";
 import InputController from "./InputController.js";
 import Tween from "./Tween.js";
 import ParticleEmitter from "./ParticleEmitter.js";
@@ -22,7 +20,7 @@ import ModelLoader from "./ModelLoader.js";
 import SceneValidator from "./SceneValidator.js";
 import SceneLoader from "./SceneLoader.js";
 import DebugDock from "./DebugDock.js";
-import FixedFormatPanel from "./FixedFormatPanel.js";
+import OverlayPanel from "./OverlayPanel.js?v=20260430_overlaypanel2";
 import EyeRig from "./EyeRig.js";
 import util from "./util.js";
 import { mergeUiTheme } from "./WebgUiTheme.js";
@@ -66,7 +64,6 @@ export default class WebgApp {
     this.attachInputOnInit = options.attachInputOnInit !== false;
     this.autoDrawScene = options.autoDrawScene !== false;
     this.autoDrawBones = options.autoDrawBones === true;
-    this.dialogue = null;
     this.scenePhase = options.scenePhase ?? null;
     this.gameHud = {
       score: null,
@@ -118,10 +115,6 @@ export default class WebgApp {
     this.windowHasFocus = true;
     this.documentHasFocus = true;
     this.canvasHost = null;
-    this.guideEntries = [];
-    this.statusEntries = [];
-    this.guideOptions = { x: 0, y: 0, color: [0.90, 0.95, 1.0] };
-    this.statusOptions = { x: 0, y: 6, color: [1.0, 0.88, 0.72] };
     this.hudRows = [];
     this.hudRowsOptions = {
       x: 0,
@@ -138,8 +131,6 @@ export default class WebgApp {
       minScale: 0.82
     };
     this.hudLayoutOffsets = {
-      guideOffsetY: util.readOptionalFiniteNumber(options.hudLayoutOffsets?.guideOffsetY, "WebgApp hudLayoutOffsets.guideOffsetY", 0),
-      statusOffsetY: util.readOptionalFiniteNumber(options.hudLayoutOffsets?.statusOffsetY, "WebgApp hudLayoutOffsets.statusOffsetY", 0),
       rowsOffsetY: util.readOptionalFiniteNumber(options.hudLayoutOffsets?.rowsOffsetY, "WebgApp hudLayoutOffsets.rowsOffsetY", 0)
     };
     this.screen = null;
@@ -155,16 +146,15 @@ export default class WebgApp {
     this.lightNode = null;
     this.input = null;
     this.message = null;
-    this.helpPanelUi = null;
+    this.hudMessage = null;
     this.helpPanels = [];
+    this.overlayPanels = new Map();
     this.debugTools = {
       // 既定では初心者向けの実行画面を保ち、DebugDock は表示しない
       // 開発中に常時表示したい sample だけ debugTools.mode: "debug" を明示する
       mode: options.debugTools?.mode ?? "release",
       system: options.debugTools?.system ?? "app",
       source: options.debugTools?.source ?? "",
-      guideLines: [...(options.debugTools?.guideLines ?? [])],
-      guideOptions: { ...(options.debugTools?.guideOptions ?? {}) },
       probeDefaultAfterFrames: Number.isInteger(options.debugTools?.probeDefaultAfterFrames)
         ? Math.max(1, options.debugTools.probeDefaultAfterFrames)
         : 1
@@ -255,17 +245,6 @@ export default class WebgApp {
       updatedAtMs: 0,
       intervalMs: 1000
     };
-    this.fixedFormatPanels = new FixedFormatPanel({
-      document: this.doc,
-      theme: this.uiTheme.fixedFormatPanel,
-      // fixed の DOM panel は canvas 外まで広がると sample の button を覆いやすいので、
-      // 既定では canvas の矩形を基準にしつつ、dock 分の右余白も同時に避ける
-      getDockOffset: () => this.isDebugDockActive()
-        ? this.debugDock.reserveWidth + this.debugDock.gap + 12
-        : 12,
-      getContainerElement: () => this.getOverlayContainerElement(),
-      getPositioningMode: () => this.getOverlayPositioningMode()
-    });
     this.modelRuntime = null;
     this.sceneRuntime = null;
   }
@@ -432,16 +411,194 @@ export default class WebgApp {
   }
 
   // uiTheme は app 起動時だけでなく runtime でも差し替えられるようにし、
-  // debug dock / fixed-format panel / UI panel を同じ preset へ寄せやすくする
+  // debug dock と OverlayPanel 群を同じ preset へ寄せやすくする
   setUiTheme(theme = {}) {
     this.uiTheme = mergeUiTheme(theme ?? {});
     this.debugDock.setTheme(this.uiTheme.debugDock);
-    this.fixedFormatPanels.setTheme(this.uiTheme.fixedFormatPanel);
-    this.helpPanelUi?.setTheme?.(this.uiTheme.uiPanel);
-    this.dialogue?.setTheme?.(this.uiTheme.uiPanel);
-    this.syncAllHelpPanels();
+    this.overlayPanels.forEach((panel) => panel.setTheme(this.uiTheme.uiPanel));
+    this.syncAllOverlayPanels();
     this.updateDebugDock();
     return this.uiTheme;
+  }
+
+  // OverlayPanel は app 単位で id 管理し、
+  // sample 側は panel instance を直接保持しなくても更新できるようにする
+  createOverlayPanel(options = {}) {
+    const safeOptions = util.readPlainObject(options, "WebgApp createOverlayPanel options");
+    const panelId = util.readOptionalString(safeOptions.id, "WebgApp createOverlayPanel options.id", undefined, {
+      trim: true,
+      allowEmpty: false
+    });
+    if (!panelId) {
+      throw new Error("WebgApp.createOverlayPanel requires options.id");
+    }
+    if (this.overlayPanels.has(panelId)) {
+      throw new Error(`WebgApp.createOverlayPanel duplicate id: ${panelId}`);
+    }
+    const panel = new OverlayPanel({
+      document: this.doc,
+      theme: this.uiTheme.uiPanel,
+      getDockOffset: () => this.getOverlayDockOffset(),
+      ...this.getOverlayLayoutOptions(),
+      ...safeOptions
+    });
+    this.overlayPanels.set(panelId, panel);
+    if (panel.options?.visible === true) {
+      panel.show();
+    }
+    return panel;
+  }
+
+  resolveOverlayPanel(panelOrId) {
+    if (typeof panelOrId === "string") {
+      return this.overlayPanels.get(panelOrId) ?? null;
+    }
+    if (panelOrId && typeof panelOrId === "object" && typeof panelOrId.update === "function") {
+      return panelOrId;
+    }
+    return null;
+  }
+
+  showOverlayPanel(options = {}) {
+    const safeOptions = util.readPlainObject(options, "WebgApp showOverlayPanel options");
+    const panelId = util.readOptionalString(safeOptions.id, "WebgApp showOverlayPanel options.id", undefined, {
+      trim: true,
+      allowEmpty: false
+    });
+    if (!panelId) {
+      throw new Error("WebgApp.showOverlayPanel requires options.id");
+    }
+    const existing = this.overlayPanels.get(panelId);
+    if (existing) {
+      existing.update({
+        ...this.getOverlayLayoutOptions(),
+        theme: this.uiTheme.uiPanel,
+        ...safeOptions,
+        visible: safeOptions.visible !== false
+      });
+      return existing.show();
+    }
+    return this.createOverlayPanel({
+      ...safeOptions,
+      visible: safeOptions.visible !== false
+    });
+  }
+
+  updateOverlayPanel(panelOrId, patch = {}) {
+    const panel = this.resolveOverlayPanel(panelOrId);
+    if (!panel) {
+      return null;
+    }
+    return panel.update({
+      ...this.getOverlayLayoutOptions(),
+      theme: this.uiTheme.uiPanel,
+      ...patch
+    });
+  }
+
+  hideOverlayPanel(panelOrId) {
+    const panel = this.resolveOverlayPanel(panelOrId);
+    if (!panel) {
+      return false;
+    }
+    panel.hide();
+    return true;
+  }
+
+  removeOverlayPanel(panelOrId) {
+    const panel = this.resolveOverlayPanel(panelOrId);
+    if (!panel) {
+      return false;
+    }
+    this.overlayPanels.delete(panel.options?.id);
+    panel.remove();
+    return true;
+  }
+
+  clearOverlayPanels() {
+    const ids = [...this.overlayPanels.keys()];
+    for (let i = 0; i < ids.length; i++) {
+      this.removeOverlayPanel(ids[i]);
+    }
+  }
+
+  getOverlayPanel(panelId) {
+    return this.overlayPanels.get(panelId) ?? null;
+  }
+
+  hasOverlayPanel(panelId) {
+    return this.overlayPanels.has(panelId);
+  }
+
+  listOverlayPanels() {
+    return [...this.overlayPanels.values()];
+  }
+
+  syncAllOverlayPanels() {
+    this.overlayPanels.forEach((panel) => {
+      panel.setTheme(this.uiTheme.uiPanel);
+      panel.update(this.getOverlayLayoutOptions());
+      panel.syncLayout();
+    });
+  }
+
+  buildHelpPanelOptions(options = {}) {
+    const safeOptions = util.readPlainObject(options, "WebgApp buildHelpPanelOptions options");
+    const lines = Array.isArray(safeOptions.lines) ? safeOptions.lines.map((line) => String(line)) : [];
+    return {
+      id: safeOptions.id ?? "help",
+      title: safeOptions.title ?? "",
+      lines,
+      anchor: safeOptions.anchor ?? "top-left",
+      offsetX: util.readOptionalFiniteNumber(safeOptions.offsetX, "WebgApp helpPanel.offsetX", 0),
+      offsetY: util.readOptionalFiniteNumber(safeOptions.offsetY, "WebgApp helpPanel.offsetY", 0),
+      width: safeOptions.width,
+      minWidth: safeOptions.minWidth,
+      maxWidth: safeOptions.maxWidth ?? this.resolveHelpPanelEmbeddedMaxWidth(safeOptions),
+      format: safeOptions.code === false ? "plain" : "pre",
+      scrollY: safeOptions.scrollY === true,
+      closable: false,
+      collapsible: true,
+      collapsed: safeOptions.visible === false,
+      showCollapseButton: true,
+      collapseLabelExpanded: safeOptions.hideLabel ?? "Hide Help",
+      collapseLabelCollapsed: safeOptions.showLabel ?? "Show Help",
+      avoidDebugDock: true,
+      ...this.translateLegacyPanelPositionOptions(safeOptions)
+    };
+  }
+
+  buildErrorPanelOptions(error, options = {}) {
+    const safeOptions = util.readPlainObject(options, "WebgApp buildErrorPanelOptions options");
+    return {
+      id: safeOptions.id ?? "start-error",
+      title: safeOptions.title ?? `${this.debugTools.system} failed`,
+      text: error?.message ?? String(error ?? ""),
+      anchor: safeOptions.anchor ?? "bottom-right",
+      offsetX: util.readOptionalFiniteNumber(safeOptions.offsetX, "WebgApp errorPanel.offsetX", 0),
+      offsetY: util.readOptionalFiniteNumber(safeOptions.offsetY, "WebgApp errorPanel.offsetY", 0),
+      format: "pre",
+      scrollY: true,
+      closable: true,
+      modal: true,
+      pauseScene: true,
+      showCloseButton: true,
+      maxHeight: safeOptions.maxHeight ?? "40vh",
+      color: safeOptions.color ?? this.uiTheme.fixedFormatPanel.errorText,
+      background: safeOptions.background ?? this.uiTheme.fixedFormatPanel.errorBackground,
+      ...this.translateLegacyPanelPositionOptions(safeOptions)
+    };
+  }
+
+  // 旧 API が持っていた top / left / right / bottom は公開の中心にはしないが、
+  // 移行途中の sample からは内部変換で受けられるようにしておく
+  translateLegacyPanelPositionOptions(options = {}) {
+    return {
+      top: options.top === undefined ? undefined : util.readOptionalFiniteNumber(options.top, "WebgApp panel.top", undefined),
+      left: options.left === undefined ? undefined : util.readOptionalFiniteNumber(options.left, "WebgApp panel.left", undefined),
+      right: options.right === undefined ? undefined : util.readOptionalFiniteNumber(options.right, "WebgApp panel.right", undefined),
+      bottom: options.bottom === undefined ? undefined : util.readOptionalFiniteNumber(options.bottom, "WebgApp panel.bottom", undefined)
+    };
   }
 
   // Scene JSON の妥当性検証結果を返す
@@ -1009,126 +1166,16 @@ export default class WebgApp {
     return this.message.pushToast(text, options);
   }
 
-  // 会話 / tutorial を DOM overlay へ重ねる helper を用意する
-  createDialogue(options = {}) {
-    if (!this.dialogue) {
-      this.dialogue = new DialogueOverlay({
-        document: this.doc,
-        theme: this.uiTheme.uiPanel,
-        ...this.getOverlayLayoutOptions(),
-        // DialogueOverlay も canvas 基準の overlay として扱い、
-        // viewport / embedded の違いを WebgApp 側の helper へ集約する
-        getDockOffset: () => this.getOverlayDockOffset(),
-        ...options
-      });
-    } else {
-      this.dialogue.setLayout({
-        ...this.getOverlayLayoutOptions(),
-        ...options
-      });
-    }
-    return this.dialogue;
-  }
-
-  // 会話 entry 群を受け取り、dialogue overlay の表示を開始する
-  // sample 側は createDialogue() を意識せず、この入口だけで会話開始まで進められる
-  startDialogue(entries = [], options = {}) {
-    return this.createDialogue(options).start(entries, options);
-  }
-
-  // 現在表示中の会話を 1 段先へ進める
-  // dialogue 未生成でも落ちないようにして、sample 側の分岐を減らす
-  nextDialogue() {
-    if (!this.dialogue) {
-      return null;
-    }
-    return this.dialogue.next();
-  }
-
-  // choice 付き会話で選択肢 index を確定する
-  // branch の結果は Dialogue 側へ委譲し、WebgApp は呼び出し口だけをそろえる
-  chooseDialogue(index = 0) {
-    if (!this.dialogue) {
-      return null;
-    }
-    return this.dialogue.choose(index);
-  }
-
-  // 既存 queue の末尾へ会話 entry を追加する
-  // tutorial の追記や後段の分岐会話をつなぐときに使う
-  enqueueDialogue(entries = []) {
-    return this.createDialogue().enqueue(entries);
-  }
-
-  // 本文ログだけを overlay へ追記する
-  // gameplay を止めたくない report や inspection を受動表示したいときに使う
-  logDialogue(entries = [], options = {}) {
-    return this.createDialogue(options).appendLog(entries, options);
-  }
-
-  // 通常 sample の操作説明は bloom と同じ「畳める help panel」へ寄せる
-  // 毎 sample で UIPanel の組み立てを繰り返さず、`lines` を渡すだけで
-  // 左上の標準 panel を出せるようにする
+  // 操作説明の標準 preset は OverlayPanel へ統合し、
+  // 呼び出し側は lines と anchor を決めるだけで畳める help 表示を作れるようにする
   createHelpPanel(options = {}) {
-    const uiPanels = this.getHelpPanelUi();
-    const layout = uiPanels.createLayout({
-      ...this.getOverlayLayoutOptions(),
+    const helpPanel = this.showOverlayPanel(this.buildHelpPanelOptions({
       id: options.id ?? `helpOverlay${this.helpPanels.length + 1}`,
-      leftWidth: options.leftWidth ?? "minmax(0, 340px)",
-      rightWidth: options.rightWidth ?? "minmax(0, 0px)",
-      gap: util.readOptionalFiniteNumber(options.gap, "WebgApp helpPanel.gap", 0),
-      collapseWidth: util.readOptionalInteger(options.collapseWidth, "WebgApp helpPanel.collapseWidth", 760, { min: 1 }),
-      compactWidth: util.readOptionalInteger(options.compactWidth, "WebgApp helpPanel.compactWidth", 560, { min: 1 }),
-      top: options.top === undefined ? undefined : util.readOptionalInteger(options.top, "WebgApp helpPanel.top", undefined),
-      left: options.left === undefined ? undefined : util.readOptionalInteger(options.left, "WebgApp helpPanel.left", undefined),
-      right: options.right === undefined ? undefined : util.readOptionalInteger(options.right, "WebgApp helpPanel.right", undefined)
-    });
-    const column = options.column === "right" ? layout.right : layout.left;
-    const panel = uiPanels.createPanel(column);
-    const buttonRow = uiPanels.createButtonRow(panel);
-    const toggleButton = uiPanels.createButton(buttonRow, {
-      id: options.buttonId ?? `${options.id ?? "help"}Toggle`,
-      text: "Hide Help"
-    });
-    const body = uiPanels.createGroup(panel);
-    const textBlock = uiPanels.createTextBlock(body, {
-      id: options.textId ?? `${options.id ?? "help"}Text`,
-      text: "",
-      code: options.code !== false
-    });
-    const helpPanelBackdropBlur = typeof options.backdropBlur === "string" ? options.backdropBlur : "1px";
-    const maxWidth = this.resolveHelpPanelEmbeddedMaxWidth(options);
-    const wrap = column === layout.right ? layout.rightWrap : layout.leftWrap;
-    // help panel は操作説明を読む幅だけあればよいので、debug dock 表示時も
-    // overlay column 全体へ stretch させず内容幅へ寄せる
-    wrap.style.width = "fit-content";
-    wrap.style.maxWidth = `min(calc(100% - 24px), ${maxWidth})`;
-    column.style.width = "fit-content";
-    column.style.maxWidth = "100%";
-    column.style.alignItems = column === layout.right ? "flex-end" : "flex-start";
-    panel.style.width = "fit-content";
-    panel.style.maxWidth = `min(calc(100% - 24px), ${maxWidth})`;
-    textBlock.style.maxWidth = "100%";
-    textBlock.style.boxSizing = "border-box";
-    const helpPanel = {
-      id: options.id ?? null,
-      uiPanels,
-      layout,
-      panel,
-      toggleButton,
-      body,
-      textBlock,
-      backdropBlur: helpPanelBackdropBlur,
-      visible: options.visible !== false,
-      lines: []
-    };
-    toggleButton.addEventListener("click", () => {
-      this.setHelpPanelVisible(helpPanel, !helpPanel.visible);
-    });
-    this.helpPanels.push(helpPanel);
-    this.setHelpPanelLines(helpPanel, options.lines ?? []);
-    this.setHelpPanelVisible(helpPanel, options.visible !== false);
-    this.syncHelpPanelLayout(helpPanel);
+      ...options
+    }));
+    if (!this.helpPanels.includes(helpPanel)) {
+      this.helpPanels.push(helpPanel);
+    }
     return helpPanel;
   }
 
@@ -1147,20 +1194,6 @@ export default class WebgApp {
     return "340px";
   }
 
-  // help panel も UIPanel と同じ theme を共有し、
-  // resize ごとに listener を増やさないよう instance は app ごとに 1 つだけ持つ
-  getHelpPanelUi() {
-    if (!this.helpPanelUi) {
-      this.helpPanelUi = new UIPanel({
-        document: this.doc,
-        theme: this.uiTheme.uiPanel
-      });
-    } else {
-      this.helpPanelUi.setTheme(this.uiTheme.uiPanel);
-    }
-    return this.helpPanelUi;
-  }
-
   readHelpPanelLines(lines, methodName) {
     if (!Array.isArray(lines)) {
       throw new Error(`WebgApp.${methodName} requires lines to be an array`);
@@ -1171,83 +1204,46 @@ export default class WebgApp {
   // help panel の本文は 1 行 1 操作を基本にし、
   // sample 側は行配列を渡すだけで panel text を更新できるようにする
   setHelpPanelLines(helpPanel, lines = []) {
-    if (!helpPanel?.textBlock) {
+    const panel = this.resolveOverlayPanel(helpPanel);
+    if (!panel) {
       return [];
     }
-    helpPanel.lines = this.readHelpPanelLines(lines, "setHelpPanelLines");
-    helpPanel.textBlock.textContent = helpPanel.lines.join("\n");
-    return [...helpPanel.lines];
+    const normalizedLines = this.readHelpPanelLines(lines, "setHelpPanelLines");
+    panel.update({
+      lines: normalizedLines
+    });
+    return [...normalizedLines];
   }
 
-  // panel を畳んだ状態では `Show Help` button だけを残し、
-  // 操作一覧が不要な間も再表示入口だけは失わないようにする
+  // help panel は「非表示」ではなく折りたたみで扱い、
+  // 再表示ボタンだけは残して scene 上の邪魔を減らす
   setHelpPanelVisible(helpPanel, visible = true) {
-    if (!helpPanel?.body || !helpPanel?.toggleButton) {
+    const panel = this.resolveOverlayPanel(helpPanel);
+    if (!panel) {
       return false;
     }
-    helpPanel.visible = visible !== false;
-    helpPanel.body.style.display = helpPanel.visible ? "" : "none";
-    helpPanel.toggleButton.textContent = helpPanel.visible ? "Hide Help" : "Show Help";
-    this.applyHelpPanelCollapsedStyle(helpPanel);
-    helpPanel.uiPanels.setButtonActive(helpPanel.toggleButton, helpPanel.visible);
-    return helpPanel.visible;
-  }
-
-  // 折り畳み時は操作説明本体だけでなく外枠も消し、再表示 button だけを残す
-  applyHelpPanelCollapsedStyle(helpPanel) {
-    if (!helpPanel?.panel) {
-      return;
-    }
-    if (helpPanel.visible) {
-      helpPanel.uiPanels?.applyThemeToLayout?.(helpPanel.layout);
-      helpPanel.panel.style.backdropFilter = `blur(${helpPanel.backdropBlur ?? "1px"})`;
-      return;
-    }
-    helpPanel.panel.style.padding = "0";
-    helpPanel.panel.style.border = "0";
-    helpPanel.panel.style.background = "transparent";
-    helpPanel.panel.style.boxShadow = "none";
-    helpPanel.panel.style.backdropFilter = "none";
-  }
-
-  // help panel は viewport 固定の DOM overlay なので、
-  // debug dock 表示時は同じ右 inset を反映して canvas と重なりにくくする
-  syncHelpPanelLayout(helpPanel) {
-    if (!helpPanel?.layout || !helpPanel?.uiPanels) {
-      return;
-    }
-    const dockOffset = this.isEmbeddedLayout()
-      ? 0
-      : (this.isDebugDockActive()
-        ? (this.debugDock.reserveWidth + this.debugDock.gap)
-        : 0);
-    helpPanel.uiPanels.setDockOffset(helpPanel.layout, dockOffset);
-    helpPanel.uiPanels.syncResponsiveLayout(helpPanel.layout);
-    this.applyHelpPanelCollapsedStyle(helpPanel);
+    panel.setCollapsed(visible !== true);
+    return visible !== false;
   }
 
   // 複数の help panel を使う sample でも viewport 更新を 1 回で反映できるようにする
   syncAllHelpPanels() {
     for (let i = 0; i < this.helpPanels.length; i++) {
-      this.syncHelpPanelLayout(this.helpPanels[i]);
+      this.helpPanels[i]?.syncLayout?.();
     }
   }
 
   // sample 切替や UI 再構築で help panel を個別に片付けたいときの入口
   clearHelpPanel(helpPanel) {
-    if (!helpPanel) {
+    const panel = this.resolveOverlayPanel(helpPanel);
+    if (!panel) {
       return false;
     }
-    const index = this.helpPanels.indexOf(helpPanel);
+    const index = this.helpPanels.indexOf(panel);
     if (index >= 0) {
       this.helpPanels.splice(index, 1);
     }
-    const layoutIndex = helpPanel.uiPanels?.layouts?.indexOf?.(helpPanel.layout) ?? -1;
-    if (layoutIndex >= 0) {
-      helpPanel.uiPanels.layouts.splice(layoutIndex, 1);
-    }
-    helpPanel.layout?.root?.remove?.();
-    return true;
+    return this.removeOverlayPanel(panel);
   }
 
   // app が管理する help panel をすべて閉じる
@@ -1256,22 +1252,6 @@ export default class WebgApp {
     for (let i = 0; i < panels.length; i++) {
       this.clearHelpPanel(panels[i]);
     }
-  }
-
-  // 現在の会話表示を消して queue も空に戻す
-  // scene 遷移や title へ戻る段階で overlay を確実に片付けたいときに使う
-  clearDialogue() {
-    if (!this.dialogue) {
-      return false;
-    }
-    this.dialogue.clear();
-    return true;
-  }
-
-  // 現在の会話 state をそのまま返す
-  // sample 側は speaker や choice 状態を HUD や diagnostics へ出すときに使える
-  getDialogueState() {
-    return this.dialogue?.getState() ?? null;
   }
 
   // action map を input controller へ委譲する
@@ -1452,7 +1432,7 @@ export default class WebgApp {
     if (this.doc?.body?.style) {
       this.doc.body.style.setProperty("--webg-canvas-right-inset", `${canvasRightInset}px`);
     }
-    this.dialogue?.syncLayout?.();
+    this.syncAllOverlayPanels();
     this.syncAllHelpPanels();
     this.screen.resize(width, height);
     this.syncCanvasHostLayout(this.screen.displayWidth, this.screen.displayHeight);
@@ -1657,6 +1637,9 @@ export default class WebgApp {
       this.message = new Message(this.screen.getGL());
       await this.message.init(this.messageFontTexture);
       this.message.shader.setScale(this.messageScale);
+      this.hudMessage = new Message(this.screen.getGL());
+      await this.hudMessage.init(this.messageFontTexture);
+      this.hudMessage.shader.setScale(this.messageScale);
     }
 
     // 起動直後の app 構成は diagnostics の標準入力として自動採取し、
@@ -1831,69 +1814,6 @@ export default class WebgApp {
     }
   }
 
-  // ガイド文は主に固定の操作説明を置くためのブロックとして使う
-  setGuideLines(lines, options = {}) {
-    const x = this.readHudNumber(options.x === undefined ? 0 : options.x, "setGuideLines", "options.x");
-    const y = this.readHudNumber(options.y === undefined ? 0 : options.y, "setGuideLines", "options.y");
-    const color = this.readHudColor(options.color, "setGuideLines", [0.90, 0.95, 1.0]);
-    const normalizedLines = this.readHudLines(lines, "setGuideLines");
-    this.guideOptions = {
-      x,
-      y,
-      color,
-      anchor: options.anchor,
-      offsetX: options.offsetX,
-      offsetY: options.offsetY,
-      gap: options.gap,
-      align: options.align,
-      width: options.width,
-      wrap: options.wrap,
-      clip: options.clip
-    };
-    this.guideEntries = normalizedLines.map((line, index) => ({
-      x,
-      y: y + index,
-      text: line,
-      color
-    }));
-    this.updateDebugDock();
-  }
-
-  // ステータス文は guide とは別ブロックで毎フレーム更新しやすくする
-  setStatusLines(lines, options = {}) {
-    const x = this.readHudNumber(options.x === undefined ? 0 : options.x, "setStatusLines", "options.x");
-    const y = this.readHudNumber(options.y === undefined ? 6 : options.y, "setStatusLines", "options.y");
-    const color = this.readHudColor(options.color, "setStatusLines", [1.0, 0.88, 0.72]);
-    const normalizedLines = this.readHudLines(lines, "setStatusLines");
-    this.statusOptions = {
-      x,
-      y,
-      color,
-      anchor: options.anchor,
-      offsetX: options.offsetX,
-      offsetY: options.offsetY,
-      gap: options.gap,
-      align: options.align,
-      width: options.width,
-      wrap: options.wrap,
-      clip: options.clip
-    };
-    this.statusEntries = normalizedLines.map((line, index) => ({
-      x,
-      y: y + index,
-      text: line,
-      color
-    }));
-    this.updateDebugDock();
-  }
-
-  // status block を空にして、guide や scene 自体は残したまま状態表示だけ消す
-  // phase 遷移で一時的に status を差し替えたいときの基本操作にする
-  clearStatusLines() {
-    this.statusEntries = [];
-    this.updateDebugDock();
-  }
-
   // canvas HUD を「1 行 1 parameter」形式で組みたい場合の構造化 row を設定する
   // sample 側では dock 用 row と同じ配列を渡し、表示媒体に応じた整形だけを WebgApp 側へ任せられる
   setHudRows(rows = [], options = {}) {
@@ -1950,13 +1870,6 @@ export default class WebgApp {
       throw new Error(`WebgApp.${methodName} requires integer ${name}`);
     }
     return Number(value);
-  }
-
-  readHudLines(lines, methodName) {
-    if (!Array.isArray(lines)) {
-      throw new Error(`WebgApp.${methodName} requires an array of lines`);
-    }
-    return lines.map((line) => String(line));
   }
 
   readHudColor(color, methodName, fallback) {
@@ -2173,7 +2086,7 @@ export default class WebgApp {
     return entries;
   }
 
-  // 既存 sample の guide/status 文字列を、新しい controls row へ最小変換する
+  // 既存 sample の短い HUD 文字列を、新しい controls row へ最小変換する
   // line 文字列は dock/HUD の両方でそのまま 1 行として表示し、旧い補助経路を挟まずに新しい表示系へ載せる
   makeTextControlRows(lines = []) {
     if (!Array.isArray(lines)) {
@@ -2185,15 +2098,9 @@ export default class WebgApp {
       .map((line) => ({ line }));
   }
 
-  // WebgApp 管理の HUD block を app 固有 HUD と重ならない位置へずらす
-  // guide/status/hudRows を別々に動かせるようにし、sample 側が毎回 y を書き換えなくて済むようにする
+  // WebgApp 管理の HUD row block を app 固有 HUD と重ならない位置へずらす
+  // controls row だけを少し下げたい場合に使い、利用者側の `app.message` には干渉しない
   setHudLayoutOffsets(options = {}) {
-    if (options.guideOffsetY !== undefined) {
-      this.hudLayoutOffsets.guideOffsetY = this.readHudNumber(options.guideOffsetY, "setHudLayoutOffsets", "options.guideOffsetY");
-    }
-    if (options.statusOffsetY !== undefined) {
-      this.hudLayoutOffsets.statusOffsetY = this.readHudNumber(options.statusOffsetY, "setHudLayoutOffsets", "options.statusOffsetY");
-    }
     if (options.rowsOffsetY !== undefined) {
       this.hudLayoutOffsets.rowsOffsetY = this.readHudNumber(options.rowsOffsetY, "setHudLayoutOffsets", "options.rowsOffsetY");
     }
@@ -2672,22 +2579,6 @@ export default class WebgApp {
     return stats;
   }
 
-  // debug 用ガイド文は mode 切替に追従しやすいよう別設定として保持する
-  setDebugGuideLines(lines, options = {}) {
-    this.debugTools.guideLines = (lines ?? []).map((line) => String(line));
-    this.debugTools.guideOptions = { ...options };
-    this.applyDebugGuideLines();
-  }
-
-  // debug mode 時だけガイド文を出し、release では消す
-  applyDebugGuideLines() {
-    this.setGuideLines(
-      DebugConfig.isDebug() ? this.debugTools.guideLines : [],
-      this.debugTools.guideOptions ?? {}
-    );
-    this.updateDebugDock();
-  }
-
   // 共通 diagnostics report を作り直す
   resetDiagnostics(stage = "init") {
     this.diagnostics = Diagnostics.createSuccessReport({
@@ -2794,7 +2685,6 @@ export default class WebgApp {
     }
     this.debugTools.mode = mode;
     DebugConfig.setMode(mode);
-    this.applyDebugGuideLines();
     // mode 切替では dock の表示有無だけでなく canvas 幅と panel / dialogue の right inset も変わる
     // resize event を待つと fixed panel の位置が古いまま残るため、
     // ここで即座に viewport layout を再適用する
@@ -3149,7 +3039,6 @@ export default class WebgApp {
   // update 前に visibility だけ先に合わせ、DOM 側の表示崩れを避ける
   syncDebugDockVisibility() {
     this.debugDock.syncVisibility(this.isDebugDockActive());
-    this.dialogue?.syncLayout?.();
   }
 
   // debug dock には Current State だけを出し、
@@ -3391,37 +3280,64 @@ export default class WebgApp {
     if (Number.isFinite(this.hudRowsOptions.width)) {
       return Math.max(1, Math.floor(this.hudRowsOptions.width));
     }
-    return this.message.getLayoutInfo(scale).visibleCols;
+    const hudMessage = this.hudMessage ?? this.message;
+    if (!hudMessage) {
+      return 80;
+    }
+    return hudMessage.getLayoutInfo(scale).visibleCols;
   }
 
   // Message より長い文面を読みやすく出す fixed-format panel を表示する
   // loader 失敗だけでなく、長い diagnostics や調査メモの一時表示にも使える
   showFixedFormatPanel(text, options = {}) {
-    return this.fixedFormatPanels.showText(text, {
-      ...this.getOverlayLayoutOptions(),
-      viewportElement: options.viewportElement ?? this.screen?.canvas ?? null,
-      ...options
+    const panel = this.showOverlayPanel({
+      id: options.id ?? "default",
+      title: options.title ?? "",
+      text: String(text ?? ""),
+      format: "pre",
+      scrollY: true,
+      anchor: options.anchor ?? "top-left",
+      width: options.width,
+      minWidth: options.minWidth,
+      maxWidth: options.maxWidth,
+      maxHeight: options.maxHeight ?? "40vh",
+      font: options.font,
+      color: options.color,
+      background: options.background,
+      border: options.border,
+      borderRadius: options.borderRadius,
+      boxShadow: options.boxShadow,
+      padding: options.padding,
+      ...this.translateLegacyPanelPositionOptions(options)
     });
+    return panel?.panel ?? null;
   }
 
   // fixed-format panel を閉じる
   clearFixedFormatPanel(panelId = "default") {
-    return this.fixedFormatPanels.clear(panelId);
+    return this.removeOverlayPanel(panelId);
   }
 
   // 指定 panel が現在表示中かを返す
   hasFixedFormatPanel(panelId = "default") {
-    return this.fixedFormatPanels.has(panelId);
+    return this.hasOverlayPanel(panelId);
   }
 
   // fixed-format panel をすべて閉じる
   clearAllFixedFormatPanels() {
-    this.fixedFormatPanels.clearAll();
+    const ids = [];
+    this.overlayPanels.forEach((panel, id) => {
+      if (panel.options?.format === "pre") {
+        ids.push(id);
+      }
+    });
+    for (let i = 0; i < ids.length; i++) {
+      this.removeOverlayPanel(ids[i]);
+    }
   }
 
   // 起動失敗や重い diagnostics を共通の fixed-format panel で出す
   showErrorPanel(error, options = {}) {
-    const fixedFormatPanelTheme = this.uiTheme.fixedFormatPanel;
     const title = options.title ?? `${this.debugTools.system} failed`;
     const message = error?.message ?? String(error ?? "");
     this.setLatestRuntimeError(error, {
@@ -3430,11 +3346,10 @@ export default class WebgApp {
       system: options.system ?? this.debugTools.system ?? "app"
     });
     this.updateDebugDock();
-    return this.showFixedFormatPanel(`${title}\n${message}`, {
-      id: options.id ?? "start-error",
-      color: options.color ?? fixedFormatPanelTheme.errorText,
-      background: options.background ?? fixedFormatPanelTheme.errorBackground,
-      ...options
+    return this.showOverlayPanel({
+      ...this.buildErrorPanelOptions(error, options),
+      title,
+      text: message
     });
   }
 
@@ -3472,38 +3387,17 @@ export default class WebgApp {
     };
   }
 
-  // Message に guide / status を流し込み、HUD として重ね描きする
+  // 利用者側の `app.message` と、WebgApp 内部の HUD row / game HUD を順に描画する
   drawMessages() {
     if (!this.message) return;
     const nowMs = Date.now();
+    this.message.drawScreen();
+    if (!this.hudMessage) {
+      return;
+    }
     const entries = [];
-    const dockActive = this.isDebugDockActive();
-    const drawGuide = !dockActive || this.debugDock.showCanvasHudWhenDockActive;
-    const drawStatus = !dockActive || this.debugDock.showCanvasHudWhenDockActive;
     let hudRowsForCanvas = null;
-    if (drawGuide) {
-      const guideBlock = this.buildHudTextBlockEntry(
-        "guide-block",
-        this.guideEntries,
-        this.guideOptions,
-        this.hudLayoutOffsets.guideOffsetY
-      );
-      if (guideBlock) {
-        entries.push(guideBlock);
-      }
-    }
-    if (drawStatus) {
-      const statusBlock = this.buildHudTextBlockEntry(
-        "status-block",
-        this.statusEntries,
-        this.statusOptions,
-        this.hudLayoutOffsets.statusOffsetY
-      );
-      if (statusBlock) {
-        entries.push(statusBlock);
-      }
-    }
-    if ((drawGuide || drawStatus) && this.hudRows.length > 0) {
+    if (this.hudRows.length > 0) {
       hudRowsForCanvas = this.formatHudRowsForCanvas();
       entries.push({
         id: "hud-rows",
@@ -3520,17 +3414,17 @@ export default class WebgApp {
         wrap: hudRowsForCanvas.options.wrap,
         clip: hudRowsForCanvas.options.clip
       });
-      this.message.shader.setScale(hudRowsForCanvas.scale);
+      this.hudMessage.shader.setScale(hudRowsForCanvas.scale);
     } else {
-      this.message.shader.setScale(this.messageScale);
+      this.hudMessage.shader.setScale(this.messageScale);
     }
     const gameHudEntries = this.getGameHudEntries(nowMs);
     for (let i = 0; i < gameHudEntries.length; i++) {
       entries.push(gameHudEntries[i]);
     }
-    this.message.replaceAll(entries);
-    this.message.drawScreen();
-    this.message.shader.setScale(this.messageScale);
+    this.hudMessage.replaceAll(entries);
+    this.hudMessage.drawScreen();
+    this.hudMessage.shader.setScale(this.messageScale);
   }
 
   // 現在 frame の代表 state を callback 用 object へまとめる
@@ -3542,8 +3436,6 @@ export default class WebgApp {
       app: this,
       scenePhase: this.getScenePhase(),
       gameHud: this.gameHud,
-      dialogue: this.dialogue,
-      dialogueState: this.getDialogueState(),
       timeMs,
       timeSec: timeMs * 0.001,
       deltaSec: this.elapsedSec,
@@ -3676,8 +3568,6 @@ export default class WebgApp {
       this.syncCameraFromEyeRig(this.eyeRig);
     }
     this.updateCameraEffects(timeMs);
-    this.dialogue?.syncLayout?.();
-
     this.screen.clear();
     if (this.handlers.onBeforeDraw) {
       this.handlers.onBeforeDraw(ctx);

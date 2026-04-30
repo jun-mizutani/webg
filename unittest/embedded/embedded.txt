@@ -4,9 +4,9 @@
 
 この unittest は、`WebgApp` の `layoutMode: "embedded"` と `fixedCanvasSize` を組み合わせたときに、固定サイズ canvas を HTML 文書の途中へ置き、その上に重なる DOM overlay も同じ host 要素を基準に動くかを確認するための test です。通常の fullscreen sample では、canvas と overlay は viewport 全体を前提にしていても気付きにくいのですが、教材ページのように本文の前後へ説明文やコード例を置く構成では、scroll 中に overlay が canvas から外れて見えないことが重要になります。
 
-ここでは、canvas のまわりへ長い本文を意図的に置き、ページ自体は普通にスクロールできるようにしています。そのうえで `HelpPanel`、`DialogueOverlay`、`FixedFormatPanel`、`Touch` を同時に出し、右側の status で host / canvas / overlay の矩形差分を毎フレーム表示します。これにより、単に「見た目で何となく追従している」だけでなく、「left / top / right / bottom の差分がどの程度か」も数値で追えます。
+ここでは、canvas のまわりへ長い本文を意図的に置き、ページ自体は普通にスクロールできるようにしています。そのうえで `HelpPanel`、`OverlayPanel` による会話風 panel、`showFixedFormatPanel()` による長文 panel、`Touch` を同時に出し、右側の status で host / canvas / overlay の矩形差分を毎フレーム表示します。これにより、単に「見た目で何となく追従している」だけでなく、「left / top / right / bottom の差分がどの程度か」も数値で追えます。
 
-この unittest の役割は、`embedded` を使った教材ページ、解説記事、社内ドキュメント用ページを作る前に、`WebgApp` 側の埋め込み配置が崩れていないかを一通りまとめて確認することです。`fixedCanvasSize` だけでなく、`app.takeScreenshot()`、`app.createHelpPanel()`、`app.startDialogue()`、`app.showFixedFormatPanel()`、`InputController.installTouchControls()` の組み合わせが同じ host 要素で揃うかを見ます。
+この unittest の役割は、`embedded` を使った教材ページ、解説記事、社内ドキュメント用ページを作る前に、`WebgApp` 側の埋め込み配置が崩れていないかを一通りまとめて確認することです。`fixedCanvasSize` だけでなく、`app.takeScreenshot()`、`app.createHelpPanel()`、`app.showOverlayPanel()`、`app.showFixedFormatPanel()`、`InputController.installTouchControls()` の組み合わせが同じ host 要素で揃うかを見ます。
 
 ## この unittest で確認すること
 
@@ -18,7 +18,7 @@
 
 ## この unittest で使う webg 機能
 
-この unittest では、`WebgApp`、`EyeRig`、`UIPanel`、`DialogueOverlay`、`FixedFormatPanel`、`InputController`、`Touch`、`Shape`、`Primitive` を使います。`WebgApp` は embedded host と overlay の共通配置を担当し、`EyeRig` は orbit camera、`UIPanel` と `DialogueOverlay` は HelpPanel / 会話表示、`FixedFormatPanel` は長文 panel、`InputController` と `Touch` は keyboard / touch の共通入力を担当します。3D 表示自体は立方体 1 個だけに絞り、配置確認を主役にしています。
+この unittest では、`WebgApp`、`EyeRig`、`OverlayPanel`、`InputController`、`Touch`、`Shape`、`Primitive` を使います。`WebgApp` は embedded host と overlay の共通配置を担当し、`EyeRig` は orbit camera、`OverlayPanel` は HelpPanel と会話風 panel と長文 panel の土台、`InputController` と `Touch` は keyboard / touch の共通入力を担当します。3D 表示自体は立方体 1 個だけに絞り、配置確認を主役にしています。
 
 ## 操作説明
 
@@ -35,6 +35,4 @@
 - [05_WebgAppによるアプリ構成.md](../../book/05_WebgAppによるアプリ構成.md)
 - [15_HUDとオーバーレイの設計.md](../../book/15_HUDとオーバーレイの設計.md)
 - [WebgApp.js](../../webg/WebgApp.js)
-- [UIPanel.js](../../webg/UIPanel.js)
-- [DialogueOverlay.js](../../webg/DialogueOverlay.js)
 - [Touch.js](../../webg/Touch.js)

@@ -239,7 +239,7 @@ app.start({
     const moonWorld = solar.moon.getWorldPosition();
     const handWorld = body.wrist.getWorldPosition();
 
-    app.setStatusLines([
+    app.message.setLines("status", [
       `earth local=(3.60, 0.00, 0.00) world=${vec3ToText(earthWorld)}`,
       `moon  local=(1.30, 0.00, 0.00) world=${vec3ToText(moonWorld)}`,
       `hand  wrist world=${vec3ToText(handWorld)}`

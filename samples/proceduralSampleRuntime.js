@@ -155,7 +155,7 @@ export async function setupProceduralSampleApp(options = {}) {
       info,
       title
     });
-    app.setStatusLines(lines, statusOptions);
+    app.message.setLines("status", lines, statusOptions);
   };
 
   // camera を sample の初期 view へ戻し、

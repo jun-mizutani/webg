@@ -142,7 +142,7 @@ let elapsedSec = 0.0;
 app.start({
   onUpdate: ({ deltaSec }) => {
     elapsedSec += deltaSec;
-    app.setGuideLines([
+    app.message.setLines("guide", [
       "theme switch example",
       "DOM UI changes, HUD stays simple"
     ], {
@@ -150,7 +150,7 @@ app.start({
       x: 0,
       y: -2
     });
-    app.setStatusLines([
+    app.message.setLines("status", [
       `theme=${currentThemeId}`,
       `time=${elapsedSec.toFixed(1)} sec`
     ], {

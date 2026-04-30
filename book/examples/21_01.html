@@ -157,7 +157,7 @@ app.start({
       emitBurst();
     }
 
-    app.setStatusLines([
+    app.message.setLines("status", [
       `preset=${PRESETS[state.presetIndex]}`,
       `alive=${emitter.getAliveCount()} / 320`,
       `event=${state.lastEvent}`

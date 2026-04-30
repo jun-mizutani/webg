@@ -1,10 +1,10 @@
 // ---------------------------------------------
-// Message.js     2026/04/21
+// Message.js     2026/04/30
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // ---------------------------------------------
 
-import Text from "./Text.js";
+import Text from "./Text.js?v=20260430_fontfix1";
 import util from "./util.js";
 
 export default class Message extends Text {
@@ -19,6 +19,7 @@ export default class Message extends Text {
     super(gpu, options);
     this.color = [1.0, 1.0, 1.0];
     this.entries = new Map();
+    this.lineGroups = new Map();
     this.autoId = 0;
   }
 
@@ -190,6 +191,43 @@ export default class Message extends Text {
     return safeId;
   }
 
+  // 複数行の HUD 文字列を、`prefix:0`, `prefix:1` ... の line 群として登録または更新する
+  // guide/status のように行数が増減する表示を扱うため、前回より短くなった場合は余剰行も削除する
+  setLines(idPrefix, lines = [], options = {}) {
+    const prefix = String(idPrefix ?? `lines_${this.autoId++}`);
+    if (!Array.isArray(lines)) {
+      throw new Error("Message.setLines requires lines to be an array");
+    }
+    const color = this.normalizeColor(options.color);
+    const anchor = util.readOptionalAnchor(options.anchor, "top-left", "Message anchor");
+    const x = util.readOptionalInteger(options.x, "Message x", 0);
+    const y = util.readOptionalInteger(options.y, "Message y", 0);
+    const offsetX = util.readOptionalInteger(options.offsetX, "Message offsetX", 0);
+    const offsetY = util.readOptionalInteger(options.offsetY, "Message offsetY", 0);
+    const gap = util.readOptionalInteger(options.gap, "Message gap", 1, { min: 1 });
+    const clip = util.readOptionalBoolean(options.clip, "Message clip", true) !== false;
+    const visible = util.readOptionalBoolean(options.visible, "Message visible", true) !== false;
+    const previousCount = this.lineGroups.get(prefix) ?? 0;
+
+    for (let i = 0; i < lines.length; i++) {
+      this.setLine(`${prefix}:${i}`, String(lines[i] ?? ""), {
+        color,
+        visible,
+        x,
+        y: y + i * gap,
+        anchor,
+        offsetX,
+        offsetY,
+        clip
+      });
+    }
+    for (let i = lines.length; i < previousCount; i++) {
+      this.remove(`${prefix}:${i}`);
+    }
+    this.lineGroups.set(prefix, lines.length);
+    return prefix;
+  }
+
   // 一時表示向けの toast を追加する
   setToast(id, text, options = {}) {
     const durationMs = util.readOptionalInteger(options.durationMs, "Message durationMs", 1500, { min: 0 });
@@ -229,6 +267,7 @@ export default class Message extends Text {
   // 全メッセージを削除する
   clear() {
     this.entries = new Map();
+    this.lineGroups = new Map();
     this.autoId = 0;
   }
 

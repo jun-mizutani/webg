@@ -172,7 +172,7 @@ app.createHelpPanel({
 app.start({
   onUpdate: ({ deltaSec }) => {
     orbit.update(deltaSec);
-    app.setStatusLines([
+    app.message.setLines("status", [
       `cells=${tileMap.cells.length} visible=${tileMap.visibleCells.length} displayArea=${displayAreaToText(tileMap.displayArea)}`,
       `cellSize=${tileMap.cellSize.toFixed(2)} gap=${tileMap.cellGap.toFixed(2)} floorY=${tileMap.floorY.toFixed(2)} stepY=${tileMap.heightStepY.toFixed(2)}`,
       "TileMap build from Scene JSON is complete"

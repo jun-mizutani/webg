@@ -112,7 +112,7 @@ rg -n "export default class ClassName|export class ClassName|export function fun
 When the user wants to display information on screen, choose the UI component based on the purpose.
 
 - **Controls and help**: `app.createHelpPanel()` for a collapsible help panel near the upper-left area.
-- **Dynamic numbers and state**: `app.setStatusLines()` or HUD rows through `setHudRows()`.
+- **Dynamic numbers and state**: `app.message.setLines("status", [...], options)` or HUD rows through `setHudRows()`.
 - **Dialogue, tutorial text, UTF-8 text**: `app.startDialogue()`.
 - **Detailed information or error reasons**: `app.showErrorPanel()` or `showFixedFormatPanel()`.
 

@@ -123,7 +123,7 @@ const start = async () => {
   setupOrbitCamera();
   attachSampleInput();
 
-  app.setGuideLines([
+  app.message.setLines("guide", [
     "Drag: orbit",
     "2-finger drag: pan",
     "Pinch / wheel: zoom",
@@ -134,7 +134,7 @@ const start = async () => {
     y: -2
   });
 
-  app.setStatusLines([
+  app.message.setLines("status", [
     "high_level sample",
     "WebgApp + EyeRig"
   ], {

@@ -149,7 +149,7 @@ app.start({
   onUpdate: ({ deltaSec }) => {
     orbit.update(deltaSec);
     node.rotateY(0.8);
-    app.setStatusLines([
+    app.message.setLines("status", [
       `depth=${info.depth} tetra=${info.tetraCount}`,
       `triangles=${info.triangleCount}`,
       `camera=${orbit.orbit.distance.toFixed(1)}`
