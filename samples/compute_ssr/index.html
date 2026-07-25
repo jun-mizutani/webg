@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>compute_ssr</title>
+  <link rel="icon" href="data:," />
+  <!-- 2026/06/19 -->
+  <style>
+
+:root {
+  color-scheme: light;
+  --bg: #eef3f8;
+  --paper: rgba(255, 255, 255, 0.94);
+  --line: #c8d5e4;
+  --ink: #17324a;
+  --muted: #5c748b;
+  --accent: #1566ab;
+  --accent-soft: #dfeefe;
+  --code-bg: #f3f7fb;
+  --shadow: rgba(29, 52, 79, 0.10);
+}
+* { box-sizing: border-box; }
+html, body {
+  margin: 0;
+  min-height: 100%;
+}
+body {
+  background:
+    radial-gradient(circle at top left, rgba(21, 102, 171, 0.12), transparent 24%),
+    radial-gradient(circle at top right, rgba(255, 191, 118, 0.10), transparent 22%),
+    linear-gradient(180deg, #f8fbfd 0%, var(--bg) 100%);
+  color: var(--ink);
+  font: 16px/1.78 "Avenir Next", "Hiragino Sans", "Yu Gothic", sans-serif;
+}
+.page {
+  width: min(1080px, calc(100% - 28px));
+  margin: 0 auto;
+  padding: 24px 0 56px;
+}
+.hero,
+.doc {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  box-shadow: 0 22px 52px var(--shadow);
+}
+.hero {
+  padding: 22px 24px;
+  margin-bottom: 18px;
+}
+.hero h1 {
+  margin: 0 0 8px;
+  font-size: clamp(2rem, 4vw, 3rem);
+  line-height: 1.08;
+}
+.hero p {
+  margin: 0;
+  color: var(--muted);
+}
+.doc {
+  padding: 28px;
+}
+.doc > :first-child {
+  margin-top: 0;
+}
+h1, h2, h3, h4, h5, h6 {
+  line-height: 1.25;
+  margin: 1.45em 0 0.55em;
+}
+h1 {
+  font-size: 2.2rem;
+}
+h2 {
+  padding-bottom: 0.28em;
+  border-bottom: 1px solid var(--line);
+  font-size: 1.48rem;
+}
+h3 {
+  font-size: 1.14rem;
+}
+p, ul, ol, table, pre, blockquote {
+  margin: 0 0 1em;
+}
+ul, ol {
+  padding-left: 1.4em;
+}
+li + li {
+  margin-top: 0.26em;
+}
+a {
+  color: var(--accent);
+  text-decoration: none;
+}
+a:hover {
+  text-decoration: underline;
+}
+img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  border-radius: 16px;
+  border: 1px solid var(--line);
+  box-shadow: 0 12px 32px rgba(29, 52, 79, 0.08);
+  margin: 1.1em 0 1.4em;
+}
+code {
+  padding: 0.12em 0.38em;
+  border-radius: 0.45em;
+  background: var(--code-bg);
+  border: 1px solid #dbe6f1;
+  font: 0.92em/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+pre {
+  padding: 14px 16px;
+  overflow-x: auto;
+  border-radius: 14px;
+  background: #0f1720;
+  color: #ecf5ff;
+}
+pre code {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #ffffff;
+}
+th, td {
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  text-align: left;
+  vertical-align: top;
+}
+th {
+  background: #f5f9fc;
+}
+hr {
+  border: 0;
+  border-top: 1px solid var(--line);
+  margin: 1.5em 0;
+}
+blockquote {
+  padding: 0.3em 0 0.3em 1em;
+  border-left: 4px solid #c9dbef;
+  color: var(--muted);
+}
+@media (max-width: 720px) {
+  .page {
+    width: min(100% - 18px, 1080px);
+    padding-top: 16px;
+  }
+  .hero,
+  .doc {
+    border-radius: 18px;
+  }
+  .doc {
+    padding: 20px;
+  }
+}
+
+  </style>
+</head>
+<body>
+  <main class="page">
+    <section class="hero">
+      <h1>compute_ssr</h1>
+    </section>
+    <article class="doc">
+<h1>compute_ssr</h1>
+<p><a href="index.en.html">English</a> | 日本語</p>
+<p><img src="./compute_ssr.jpg" alt="compute_ssr" /></p>
+<h2>概要</h2>
+<p>SSR は、画面内にすでに描かれている color、depth、normal を使って反射を近似する screen-space effect です。このサンプルでは <code>GeometryBufferPass</code> が生成する albedo、view-space normal、depth を <code>ComputeSsrPass</code> が読み、view-space の反射 ray を screen へ再投影しながら探索します。</p>
+<p><code>ComputeSsrPass</code> では、固定の <code>distance / steps</code> 間隔だけで進める方式ではなく、screen 上の移動量を見て coarse step 数を動的に決めます。<code>distance</code> は UI 上の探索距離上限として扱い、camera 方向へ進む ray は near plane 手前で <code>usableDistance</code> に切ります。そのうえで ray の screen 上の主軸 pixel 長から coarse step 数を求めます。</p>
+<p>5 回の binary search で交差区間を 1/32 まで詰められる前提にし、coarse march は約 8px 間隔を目安にします。ただし負荷を抑えるため、最大 coarse step 数は <code>steps * 2</code>、絶対上限は 128 です。binary search と「最初の有効 hit だけ採用」は維持しています。</p>
+<p>負荷を下げるため、<code>ComputeSsrPass</code> は SSR の出力 target だけを低解像度化できます。既定の <code>resolutionScale</code> は <code>0.7</code> で、指定範囲は <code>0.5..1.0</code> です。G-buffer は full 解像度のまま保持し、低解像度の SSR pixel から対応する G-buffer pixel を参照します。また <code>reflectivityThreshold</code> の既定値は <code>0.05</code> で、<code>albedo.a * intensity</code> がこの値以下の pixel では ray marching を省略します。<code>enabled=false</code> や <code>intensity=0</code> のときも ray marching を行わず、base color または reflection view の黒を返します。</p>
+<pre><code class="language-text">dynamicSteps = clamp(
+  ceil(projectedRayPixels / 8),
+  baseSteps,
+  min(baseSteps * 2, 128)
+)
+
+stepLength = usableDistance / dynamicSteps</code></pre>
+<p><code>FrameTimer</code> は G-buffer 生成を GPU Render 時間、SSR ray marching を GPU Compute 時間として timestamp query で計測します。Help panel と CommandPalette には各時間と frame 間隔に対する load を表示します。最後の fullscreen copy は計測対象外です。</p>
+<h2>実行方法</h2>
+<ul><li>実行ファイルは <a href="./compute_ssr.html">./compute_ssr.html</a> です</li><li>WebGPU 対応ブラウザで開き、Help panel と CommandPalette を合わせて確認してください</li></ul>
+<h2>確認ポイント</h2>
+<p><code>V</code> で <code>composite / scene / reflection / normal / depth</code> を切り替えます。<code>reflection</code> 表示では反射成分だけを確認でき、<code>normal</code> と <code>depth</code> 表示では ray marching の入力を確認できます。</p>
+<p><code>1</code> と <code>2</code> は reflection intensity、<code>3</code> と <code>4</code> は ray distance、<code>5</code> と <code>6</code> は depth thickness、<code>7</code> と <code>8</code> は基準 step 数です。<code>9</code> と <code>0</code> は <code>SSR Scale</code> を下げる / 上げる操作で、<code>Reflect Min</code> は CommandPalette の3ページ目で変更します。distance を長くすると遠い反射候補へ届きますが、screen-space SSR なので画面外や遮蔽物の裏側は反射できません。</p>
+<p>Help panel の <code>GPU compute / GPU render / GPU total / JS time</code> と load が更新されることも確認します。GPU Compute は SSR pass だけを計測するため、同じ scene と画面解像度で ray marching 方式を比較しやすくなっています。</p>
+    </article>
+  </main>
+</body>
+</html>

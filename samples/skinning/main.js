@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// samples/skinning/main.js  2026/04/12
+// samples/skinning/main.js  2026/07/25
 //   skinning sample
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -32,6 +32,7 @@ const HUD_ROW_OPTIONS = {
 
 let app = null;
 
+// 投影を受け取り、現在の設定と後続処理へ反映する
 const setProjection = (screen, shader, angle = 45) => {
   // bone 可視化用の副 shader も、main shader と同じ投影条件へそろえる
   const fov = screen.getRecommendedFov(angle);
@@ -41,6 +42,7 @@ const setProjection = (screen, shader, angle = 45) => {
   return projMat;
 };
 
+// `skinned`の`cylinder`を生成し、後続処理で利用できる状態にする
 const createSkinnedCylinder = (
   gpu,
   height = 3.0,
@@ -61,6 +63,7 @@ const createSkinnedCylinder = (
   const b2 = skeleton.addBone(b1, "b2");
 
   const boneLen = height / 3.0;
+  // `rest`を受け取り、現在の設定と後続処理へ反映する
   const setRest = (bone, x, y, z) => {
     const m = new Matrix();
     m.makeUnit();
@@ -74,6 +77,7 @@ const createSkinnedCylinder = (
 
   skeleton.setBoneOrder(["b0", "b1", "b2"]);
 
+  // `smooth`の`weights`を対象へ追加し、後続処理から参照できるようにする
   const addSmoothWeights = (vIndex, y) => {
     // 高さ方向に応じて weight を連続補間し、
     // 曲げ境界がなめらかにつながる典型例を作る
@@ -86,6 +90,7 @@ const createSkinnedCylinder = (
     shape.addVertexWeight(vIndex, 2, w2);
   };
 
+  // `hard`の`weights`を対象へ追加し、後続処理から参照できるようにする
   const addHardWeights = (vIndex, i) => {
     // 境界を分かりやすくするため、1 本の ring 全体を 1 bone へ固定する
     const t = i / rings;
@@ -127,6 +132,7 @@ const createSkinnedCylinder = (
   return { shape, skeleton, bones: [b0, b1, b2] };
 };
 
+// `static`の`cylinder`を生成し、後続処理で利用できる状態にする
 const createStaticCylinder = (
   gpu,
   height = 3.0,
@@ -170,6 +176,7 @@ const createStaticCylinder = (
   return shape;
 };
 
+// ボーンの形状を生成し、後続処理で利用できる状態にする
 const createBoneShape = (gpu, shader, size = 0.1) => {
   // debugBone は mesh 側より明るい色で描き、
   // 教材 sample として bone の向きと曲がる位置を追いやすくする
@@ -189,6 +196,7 @@ const createBoneShape = (gpu, shader, size = 0.1) => {
   return boneShape;
 };
 
+// 操作の`rows`を生成し、後続処理で利用できる状態にする
 const makeControlRows = (state, envReport, frameCount) => {
   const rows = [
     { line: "skinning sample" },
@@ -264,6 +272,7 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 });
 
+// このインスタンスの初期化段階で、必要な状態と資源を準備して処理を開始する
 const start = async () => {
   const params = new URLSearchParams(location.search);
   const boneSize = Number(params.get("bonesize") ?? 0.1);
@@ -363,6 +372,7 @@ const start = async () => {
   softNode.addShape(softSkinned.shape);
   hardNode.addShape(hardSkinned.shape);
 
+  // モードの状態を対象の状態または描画設定へ反映する
   const applyModeState = () => {
     // reload を使わず、3 系統の shape / skeleton を最初から持っておき、
     // 現在 mode に応じて visible な node と material だけを切り替える
@@ -413,6 +423,7 @@ const start = async () => {
   };
   applyModeState();
 
+  // 診断情報の統計情報を現在の入力と実行状態に合わせて更新する
   const refreshDiagnosticsStats = (frameCount) => {
     const activeShape = state.forceStatic
       ? staticShape
@@ -436,6 +447,7 @@ const start = async () => {
     return envReport;
   };
 
+  // 検査情報のレポートを生成し、後続処理で利用できる状態にする
   const makeProbeReport = (frameCount) => {
     const activeShape = state.forceStatic
       ? staticShape
@@ -468,6 +480,7 @@ const start = async () => {
   });
   app.configureDebugKeyInput();
 
+  // キーの操作を対象の状態または描画設定へ反映する
   const applyKeyAction = (key) => {
     if (key === "s") {
       state.forceStatic = !state.forceStatic;

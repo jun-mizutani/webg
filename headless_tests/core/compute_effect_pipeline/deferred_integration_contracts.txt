@@ -1,0 +1,33 @@
+# ComputeEffectPipeline統合Deferred Shading単体テスト
+
+## 目的
+
+ComputeEffectPipelineが旧完成色Shadow・SSAO方式を使わず、visibilityをDeferredLightingPassへ集約して線形High Dynamic Range処理を一方向に接続することを確認する。透明合成後のComputeFogPassと、Tone Map・Edge後のComputeVignettePassを含め、Pipeline全体を実GPUなしで構成し、pass実行順とresource identityを検査する
+
+## 確認項目
+
+1. 常時G-bufferを使用し、旧forward scene targetを持たない
+2. directional・spot Shadow resolveはvisibilityを生成する
+3. 非選択またはShadow無効時もdisabled resolveでvisibility 1を明示生成する
+4. SsaoPassはAmbient Occlusion visibilityを生成する
+5. Deferred Lightingへalbedo、normal、material、depth、三visibilityを渡す
+6. SSRへDeferred Lighting済みHDR scene、normal、material、depthを渡す
+7. Composer、Toon、Depth of Field、BloomをTone Map前に実行する
+8. Tone Mapを表示色変換境界とする
+9. renderSceneとencodeで同じCamera FrameとShadow設定を必須とする
+10. geometry EdgeへG-buffer normal、Camera Reverse-Z depth、同じCamera Frameを渡す
+11. 旧lit G-buffer、shadowedColor、Shadow・SSAO debug完成色optionが残っていない
+
+## 実行方法
+
+```sh
+node headless_tests/core/compute_effect_pipeline/headless_probe.js
+```
+
+## 結果
+
+2026-07-13に実行し、全項目が成功した。表示文字列は次のとおり
+
+```text
+compute_effect_pipeline_deferred_integration_contracts: all integration contracts passed
+```

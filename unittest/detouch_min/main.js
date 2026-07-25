@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// unittest/detouch_min/main.js  2026/04/10
+// unittest/detouch_min/main.js  2026/07/25
 //   detouch_min sample
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -29,6 +29,7 @@ const setProjection = (screen, shader, angle = 52) => {
 // 棒と先端ノードの距離を同じ値にそろえ、親切り替え前後の見えを読みやすくする
 const ROD_LENGTH = 40.0;
 
+// `rod`の形状を生成し、後続処理で利用できる状態にする
 const createRodShape = (gpu, length, radius, color) => {
   const shape = new Shape(gpu);
   // Primitive.prism を細い棒として使い、軸形状の確認に必要な見えだけを残す
@@ -44,6 +45,7 @@ const createRodShape = (gpu, length, radius, color) => {
   return shape;
 };
 
+// `sphere`の形状を生成し、後続処理で利用できる状態にする
 const createSphereShape = (gpu, radius, color, ambient = 0.38) => {
   const shape = new Shape(gpu);
   shape.applyPrimitiveAsset(Primitive.sphere(radius, 18, 12, shape.getPrimitiveOptions()));
@@ -62,6 +64,7 @@ const formatVec3 = (vec) => {
   return `${vec[0].toFixed(2)}, ${vec[1].toFixed(2)}, ${vec[2].toFixed(2)}`;
 };
 
+// `distance3`は座標または数値を計算し、後続処理で使う結果を返す
 const distance3 = (vecA, vecB) => {
   const dx = vecA[0] - vecB[0];
   const dy = vecA[1] - vecB[1];
@@ -69,6 +72,7 @@ const distance3 = (vecA, vecB) => {
   return Math.sqrt(dx * dx + dy * dy + dz * dz);
 };
 
+// このインスタンスの初期化段階で、必要な状態と資源を準備して処理を開始する
 const start = async ({ screen, gpu, setStatus, setViewportLayout, startLoop, document }) => {
   // Shape 全体に共通の SmoothShader を設定し、色付きの棒と球だけで状態差を見えるようにする
   const shader = new SmoothShader(gpu);
@@ -108,6 +112,7 @@ const start = async ({ screen, gpu, setStatus, setViewportLayout, startLoop, doc
   let lastAction = "idle";
   let lastDelta = 0.0;
 
+  // `captureTransition`は受け取った値を処理し、後続処理で利用する状態または結果を生成する
   const captureTransition = (label, action) => {
     // 親変更の前後で world 位置を採取し、見た目位置がどれだけ保たれたかを数値で残す
     const before = sphere.getWorldPosition();
@@ -117,6 +122,7 @@ const start = async ({ screen, gpu, setStatus, setViewportLayout, startLoop, doc
     lastDelta = distance3(before, after);
   };
 
+  // 状態を初期状態へ戻し、前回の状態を残さない
   const resetState = () => {
     // 最小 test として再現しやすいよう、右先端へ戻す初期化経路を持っておく
     captureTransition("reset-to-right", () => {
@@ -127,6 +133,7 @@ const start = async ({ screen, gpu, setStatus, setViewportLayout, startLoop, doc
     });
   };
 
+  // `exchangeParent`は受け取った値を処理し、後続処理で利用する状態または結果を生成する
   const exchangeParent = () => {
     // 左右どちらかの先端へ付け替え、attach 時の world 位置保持を確認する
     captureTransition("exchange-left-right", () => {
@@ -140,6 +147,7 @@ const start = async ({ screen, gpu, setStatus, setViewportLayout, startLoop, doc
     });
   };
 
+  // `attach`の`right`を対象から切り離し、関連する参照を整理する
   const detachAttachRight = () => {
     // 一度 parent を null 側へ外す経路も残し、単純な attach / detach の両方を確認する
     captureTransition("toggle-right", () => {

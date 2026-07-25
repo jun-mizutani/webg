@@ -180,10 +180,9 @@ async function start() {
   });
 
   app.start({
-    // terrain 自体は自動回転しないので、
-    // 毎 frame では orbit camera の更新と status 再描画だけを行う
-    onUpdate: ({ deltaSec }) => {
-      runtime.orbit.update(deltaSec);
+    // terrain 自体は自動回転しないため、毎frameではstatusだけ更新する
+    // orbit cameraはcreateOrbitEyeRig()によりWebgApp側で更新される
+    onUpdate: () => {
       runtime.updateStatus();
     }
   });

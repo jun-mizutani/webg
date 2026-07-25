@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// unittest/tween/main.js  2026/04/30
+// unittest/tween/main.js  2026/07/25
 //   tween unittest
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -23,6 +23,7 @@ const log = (line) => {
   lines.push(line);
 };
 
+// このインスタンスを検証し、後続処理が扱える共通形式へ整える
 const check = (label, condition, detail = "") => {
   if (condition) {
     passCount += 1;
@@ -34,6 +35,7 @@ const check = (label, condition, detail = "") => {
 };
 
 const approx = (value, expected, epsilon = 0.0001) => Math.abs(value - expected) <= epsilon;
+// `approxArray`は入力条件や交差状態を比較し、判定結果を返す
 const approxArray = (value, expected, epsilon = 0.0001) => {
   if (!Array.isArray(value) || !Array.isArray(expected) || value.length !== expected.length) {
     return false;

@@ -1,0 +1,33 @@
+# dof_pass_depth_contracts
+
+## 目的
+
+Compute Shader版とは別に残るrender-pass版 `DofPass` が、通常Zのnear/far復元式を持ち続けないことを確認します。第2版の通常カメラ深度は `CAMERA_REVERSE_Z` に統一されるため、このpassだけが旧式を読むと合焦距離、debug表示、背景判定がすべて逆になります。
+
+## 確認内容
+
+コア内部の`CameraFrame`から作るuniformが有限farではnear/far、無限farではnear/0になることを確認します。複数の正のview-space距離を共通参照式でReverse-Zへ投影し、DoF shaderと同じ式で元の距離へ戻ることも数値で検証します。
+
+さらに、4本のfragment shaderが同じ `DOF_REVERSE_Z_WGSL` を使用すること、背景clear値0を距離へ変換しないこと、scene用 `RenderTarget` が `CAMERA_REVERSE_Z` を明示することを確認します。公開する`beginScene`と`render`はWebgAppが渡す同一の`renderFrameToken`を要求し、旧`view`とCameraFrame直接入力を拒否します。旧`setProjectionRange`は残さず、constructorの`projectionNear` / `projectionFar`も拒否する設計です。
+
+## 予想
+
+有限farと無限farの両方で、投影前の距離と復元後の距離が浮動小数点誤差の範囲で一致するはずです。背景0を復元式へ入れないため、無限大や任意の有限距離を背景に捏造しません。通常Zobject、不正なfar、旧API、CameraFrame直接入力が受理される場合は、内部契約と公開ファサードの分離が不完全です。
+
+## 実行方法
+
+```sh
+node headless_tests/core/dof_pass/headless_probe.js
+```
+
+## 結果
+
+成功時は次を表示します。
+
+```text
+dof_pass_depth_contracts: all render-pass DoF Reverse-Z contracts passed
+```
+
+## 解釈
+
+このテストが成功すれば、render-pass版DoFの深度復元規則はCamera Reverse-Zに移行しつつ、通常sampleからCameraFrameを隠す公開ファサードが維持されています。これはshader compilationや実画面のぼけ品質までは保証しないため、sample移行後にブラウザ実機で合焦面とdebug表示を別途確認します。

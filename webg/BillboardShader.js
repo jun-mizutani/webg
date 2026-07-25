@@ -1,10 +1,11 @@
 // ---------------------------------------------
-// BillboardShader.js  2026/03/03
+// BillboardShader.js  2026/07/12
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // ---------------------------------------------
 
 import Shader from "./Shader.js";
+import { CAMERA_REVERSE_Z } from "./DepthConvention.js";
 
 export default class BillboardShader extends Shader {
   // ビルボード描画のuniform管理を初期化する
@@ -131,9 +132,9 @@ fn fsMain(input : VSOut) -> @location(0) vec4f {
         cullMode: "none"
       },
       depthStencil: {
-        format: "depth24plus",
+        format: CAMERA_REVERSE_Z.format,
         depthWriteEnabled: false,
-        depthCompare: "less"
+        depthCompare: CAMERA_REVERSE_Z.compare
       }
     });
 

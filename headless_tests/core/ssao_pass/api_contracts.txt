@@ -1,0 +1,12 @@
+SsaoPass headless contracts
+
+## 目的
+- `webg/SsaoPass.js`がG-buffer color、view-space normal、depthを明示的bindingとして受け取り、所有するStorageTargetへAO結果を出力する契約を実GPUなしで確認します
+- 生AO生成後にdepthとnormalを使うbilateral filterを実行し、2つのCompute Pass全体をtimestamp-queryの計測範囲に含める契約を確認します
+- radius、strength、bias、sample数、projection、debug viewの不正値を自動補正せず例外にすることを確認します
+- resizeとdestroyが所有resourceのライフサイクルを一つに保つことを確認します
+
+## 実行
+```sh
+node headless_tests/core/ssao_pass/headless_probe.js
+```

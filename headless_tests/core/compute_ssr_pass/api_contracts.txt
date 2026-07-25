@@ -1,0 +1,19 @@
+# ComputeSsrPass headless contracts
+
+## 目的
+
+SSR ray marching結果を1/2、1/4、1/8の共通画像ピラミッドへ渡し、material roughnessに応じて反射RGBの広がりを選ぶ処理順を確認します。
+
+## 確認内容
+
+- ray、3段downsample、roughness filterの5 dispatch
+- ray用12 float uniformとroughness filter用4 float uniform
+- Reflection表示だけがroughness filterを使い、Normal / Depth表示はraw結果を保持すること
+- resolutionScale変更でray、output、Pyramid寸法を揃えること
+- destroyで両Compute Passと全targetを破棄すること
+
+## 実行
+
+```sh
+node headless_tests/core/compute_ssr_pass/api_contracts.js
+```

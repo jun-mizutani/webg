@@ -1,0 +1,41 @@
+# geometry_buffer_pass_depth_contracts
+
+## 目的
+
+Geometry Bufferのdepth texture、pipeline、clear、深度線形化、model-view生成を通常カメラのReverse-ZとCamera Frameへ一体で移行する。
+
+## 確認内容
+
+- depth textureとpipelineが `depth32float`・`greater`を使う。
+- render passがdepth 0でclearする。
+- finite farとinfinite farのprojection parameterを区別する。
+- WGSLが背景0、finite Reverse-Z、infinite farを扱う。
+- 背景をepsilonで有限距離へ補正しない。
+- 巨大World位置のmodel-viewをCamera Frameから生成する。
+- 旧projection/view Matrix入力を拒否する。
+
+## 実行方法
+
+```sh
+node headless_tests/core/geometry_buffer_pass/headless_probe.js
+```
+
+## 結果
+
+2026-07-12 JSTにモジュールとtestの構文確認、専用headless test、`git diff --check`を実行した。すべて終了コード0となり、次を表示した。
+
+```text
+geometry_buffer_pass_depth_contracts: all G-buffer contracts passed
+```
+
+## 解釈
+
+G-buffer depth texture、render pipeline、clear valueは通常カメラReverse-Zと一致した。finite farは実際のfar値、infinite farは0 sentinelとしてGPU parameterへ渡った。
+
+共通WGSLはdepth 0を背景とし、finite farでは `near * far / (near + depth * (far - near))`、infinite farでは `near / depth`を使う。従来のepsilonによる分母補正はない。
+
+100億単位のWorld位置にあるShapeのmodel-viewはCamera Frameから生成され、Float32 uniformへ小さいview-space値として書かれた。旧projection/view Matrix形式は拒否された。
+
+## Commit
+
+`GeometryBufferPass.js` と本テストを同じコミットへ含める。

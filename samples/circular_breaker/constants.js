@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// samples/circular_breaker/constants.js  2026/03/03
+// samples/circular_breaker/constants.js  2026/07/25
 //   circular_breaker sample
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -47,12 +47,14 @@ export const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
 export const len2 = (x, z) => Math.sqrt(x * x + z * z);
 export const dot2 = (ax, az, bx, bz) => ax * bx + az * bz;
 
+// `norm2`は座標または数値を計算し、後続処理で使う結果を返す
 export const norm2 = (x, z) => {
   const d = Math.sqrt(x * x + z * z);
   if (d <= 1.0e-6) return [0.0, 0.0];
   return [x / d, z / d];
 };
 
+// `reflect2`は受け取った値を処理し、後続処理で利用する状態または結果を生成する
 export const reflect2 = (vx, vz, nx, nz) => {
   const vv = dot2(vx, vz, nx, nz);
   return [vx - 2.0 * vv * nx, vz - 2.0 * vv * nz];

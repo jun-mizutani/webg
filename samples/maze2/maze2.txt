@@ -1,0 +1,19 @@
+# maze2
+
+## このサンプルの目的
+
+`maze2` は、固定seedで生成する15 x 15 cellの迷路を、床、下部斜面、垂直壁、上部斜面、天井からなる八角形断面のSF通路として歩くサンプルです。単に迷路を表示するのではなく、論理wall boundaryをrender geometry、player collision、heading-up radarで共有し、描画上の見た目と移動可能な領域が食い違わない構成を示します。
+
+通常の直線cellでは、上部と下部の斜面が通路断面を絞り込みます。L字では直交するrail終端辺をmiter bridgeで接続し、T字・十字は無理に一本のtubeへせず、開いたjunction chamberとして扱います。これにより、角の隙間や開口側を塞ぐ装飾面を作らず、歩ける迷路を維持します。
+
+## 描画と照明
+
+描画はGeometry Buffer、Deferred Lighting、SSR、composer、geometry edge、tone mapを明示的に接続します。Shadow MapとSSAOは使いません。近傍64灯までのpoint lightを毎frame評価し、225個のcell灯は白60%、緑・オレンジ・赤を各13.3%の固定比率で分散します。
+
+天井panelとpoint lightは同じ色名を共有します。直線cellでは、上部斜面の間に左右0.20mの余白を残した幅1.48m、cellの前後に0.20mずつの余白を残した長さ3.60mの薄い長方形panelを使います。色付きpanelとSSR反射を組み合わせ、照明色が白系の内装と濃い床へ広がる様子を確認できます。
+
+## 操作と確認
+
+`maze2.html` をWebGPU対応ブラウザで開きます。左右dragで進行方向と視線を回し、上下dragで一時的に上下を見ます。`W` / `S`で前後移動、`A` / `D`で旋回、`Shift`で走行します。`5` / `6`ではSSR intensityを調整できます。
+
+直線通路で八角形断面が連続すること、曲がり角でmiter bridgeに隙間がないこと、天井panelが上部斜面へ接触しないこと、色付きfixtureとpoint lightの色が一致すること、SSRとgeometry edgeが床・斜面・壁の境界を読みやすくすることを確認してください。

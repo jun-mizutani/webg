@@ -1,0 +1,21 @@
+サンプル: compute_storage_target
+
+概要
+- `webg/StorageTargetFactory.js` のコアAPIが作るRenderTarget条件を、実GPUを使わずに確認するheadless testです
+- 単一targetと `PingPongTarget` の2枚組を同じ生成契約から作れることを検証します
+
+このテストで使う機能
+- `StorageTargetFactory.create()`: Compute Shaderの書き込み先となるRenderTargetを1個作る
+- `StorageTargetFactory.createPingPong()`: 同じ条件の異なる2個のRenderTargetを作り、`PingPongTarget`へまとめる
+
+確認ポイント
+- storage targetが `STORAGE_BINDING | TEXTURE_BINDING | COPY_SRC` のusageを持つことを確認します
+- 既定formatがWGSLのstorage texture宣言と合わせやすい `rgba8unorm` であることを確認します
+- 指定したwidth、height、labelがRenderTargetへ渡されることを確認します
+- ping-pong targetの2個が同一resourceではなく、同じformatと寸法を持つことを確認します
+- Factory生成のPingPongTargetだけが2個のtargetを所有して破棄することを確認します
+- `resizeTarget()`が同一寸法でtextureを再生成せず、不正targetと寸法を例外にすることを確認します
+- WebGPU context不足を既定値で補わず例外にすることを確認します
+
+実行方法
+- `node headless_tests/core/storage_target_factory/headless_probe.js`

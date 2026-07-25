@@ -1,0 +1,84 @@
+# depth_convention_api_contracts
+
+## 何のためのテストか
+
+webg第2版では、通常カメラを `depth32float` のReverse-Zへ変更する一方、第一実装期のShadow Mapは `depth32float` の通常Zを維持する。同じtexture formatでもnear、far、clear value、比較関数の意味が異なるため、二つの規則が部分的に混ざらないことをGPU描画より前に数値で確認する。
+
+## 対象
+
+- `webg/DepthConvention.js`
+- 通常カメラ用 `CAMERA_REVERSE_Z`
+- Shadow Map用 `SHADOW_STANDARD_Z`
+- near/far検証
+- view-space距離からdepthへの参照投影
+- depthからview-space距離への線形化
+- 背景depthの厳密な判定
+
+## 確認内容
+
+1. 通常カメラは `depth32float`、clear value 0、`greater`、near深度1、far深度0である。
+2. Shadow Mapは `depth32float`、clear value 1、`less`、near深度0、far深度1である。
+3. 二つのconventionは変更不能で、fieldが同じcloneを既知の規則として受け入れない。
+4. nearは0より大きく、有限farはnearより大きくなければならない。
+5. 無限farは明示的に許可されたReverse-Zだけで使用できる。
+6. finite farのReverse-Zは距離が増えるほどdepthが減り、複数の中間距離を投影前の値へ復元できる。
+7. infinite farのReverse-Zは非常に遠い有限距離でも正のdepthを持ち、`near / depth` で復元できる。
+8. Shadow Mapの通常Zは距離が増えるほどdepthが増え、複数の中間距離を復元できる。
+9. clearされた背景depthは線形化せず、例外として検出する。
+10. 背景付近の実数値を許容幅で背景へ吸収しない。
+
+## 実行方法
+
+```sh
+node headless_tests/core/depth_convention/headless_probe.js
+```
+
+## 予想
+
+すべてのassertionが成功し、最後に次の一行が表示されるはずである。
+
+```text
+depth_convention_api_contracts: all numeric contracts passed
+```
+
+失敗した場合、表示結果を見て符号を反転してはならない。near/farの対応、通常ZとReverse-Zの選択、背景値、有限farと無限farの式を個別に確認する。
+
+## 結果
+
+2026-07-12 JSTに次を実行した。
+
+```sh
+node --check webg/DepthConvention.js
+node --check headless_tests/core/depth_convention/headless_probe.js
+node headless_tests/core/depth_convention/headless_probe.js
+git diff --check
+```
+
+二つの構文確認は終了コード0だった。数値テストは終了コード0となり、次を表示した。
+
+```text
+depth_convention_api_contracts: all numeric contracts passed
+```
+
+`git diff --check` は出力なしで成功した。
+
+影響確認として既存の次のテストも実行した。
+
+```sh
+node headless_tests/core/geometry_buffer_pass/headless_probe.js
+node headless_tests/core/shadow_map_pass/headless_probe.js
+```
+
+Shadow Mapの既存headless testは `PASS ShadowMapPass headless contracts` で成功した。Geometry Bufferの既存headless testは、lit modeで `resources.albedo` が `undefined` であることを期待するassertionに対し、現行実装がcolor targetを返したため失敗した。今回の変更は新規 `DepthConvention.js` だけでGeometry Bufferを変更しておらず、失敗箇所もdepth conventionを参照していないため、変更前から存在する実装と既存テストの不一致として記録する。Geometry Buffer移行時に専用の `geometry_buffer_pass_depth_contracts` と既存契約を分けて再確認する。
+
+## 解釈
+
+通常カメラReverse-ZとShadow Map通常Zについて、formatだけでなくclear value、compare、near/farの対応を別の変更不能objectとして固定できた。
+
+finite farのReverse-Zはnear 0.125からfar 1,000,000まで、infinite farはnear 0.5から距離1兆まで、投影したdepthから元の距離へ指定誤差内で復元できた。Shadow Map通常Zもnear 1からfar 250まで同じ往復確認に成功した。
+
+背景値は通常カメラで0、Shadow Mapで1だけを厳密に背景と判定し、隣接する実数値を許容幅で背景へ吸収しなかった。背景depthの線形化は例外になったため、分母の自動補正で有限距離として扱う経路はない。
+
+## Commit
+
+`DepthConvention.js` と本テストを同じコミットへ含める。

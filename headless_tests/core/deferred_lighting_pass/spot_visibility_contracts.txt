@@ -1,0 +1,33 @@
+# Deferred Lightingへのspot light・visibility接続単体テスト
+
+## 目的
+
+DeferredLightingPassへspot lightを追加し、距離減衰、cone減衰、spot shadow visibilityを別の意味として一度ずつ評価することを確認する。spot用Shadow passはvisibilityだけを生成し、coneと材質照明はDeferred Lightingでdirectional・pointと同じ式へ統合する
+
+## 確認項目
+
+1. spot World位置をCamera Frameの倍精度差分後にview-spaceへ変換する
+2. spot World方向をCamera Frameのview rotationだけで変換する
+3. radiusによる距離減衰を一度だけ評価する
+4. inner cosineとouter cosineによるcone減衰を一度だけ評価する
+5. spot visibilityを直接拡散反射と鏡面反射の合計へ一度だけ掛ける
+6. spot shadow debug viewでvisibility textureを直接表示できる
+7. spot lightなしは `null` で明示し、option省略を拒否する
+8. inner cosineがouter cosine以下、zero direction、非正radiusを拒否する
+9. spot visibilityとG-bufferの寸法不一致をdispatch前に拒否する
+
+## 実行方法
+
+```sh
+node headless_tests/core/deferred_lighting_pass/headless_probe.js
+```
+
+## 結果
+
+2026-07-12に実行し、全項目が成功した。表示文字列は次のとおり
+
+```text
+deferred_lighting_pass_spot_visibility_contracts: all spot lighting contracts passed
+```
+
+次の変更ではSSAO visibilityをambient項へだけ接続する。directional・spot shadow visibilityは引き続き各直接光へ、point lightは個別shadow resourceを持たない現行契約を維持する

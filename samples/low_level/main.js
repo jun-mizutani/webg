@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// samples/low_level/main.js  2026/04/12
+// samples/low_level/main.js  2026/07/25
 //   low_level sample
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -33,6 +33,7 @@ let space = null;
 let eye = null;
 let sampleNode = null;
 
+// `showStartError`は必要な画面要素を準備し、表示状態を更新する
 const showStartError = (error) => {
   // WebgApp を使わない sample でも起動失敗理由が画面から追えるように、DOM で固定表示する
   const existing = document.getElementById("start-error");
@@ -57,6 +58,7 @@ const showStartError = (error) => {
   document.body.appendChild(panel);
 };
 
+// `viewport`の配置を対象の状態または描画設定へ反映する
 const applyViewportLayout = () => {
   // canvas size と projection matrix を同じタイミングで更新し、縦横比の崩れを避ける
   if (!screen || !shader) return;
@@ -74,6 +76,7 @@ const applyViewportLayout = () => {
   shader.setProjectionMatrix(projection);
 };
 
+// `sample`の形状を生成し、後続処理で利用できる状態にする
 const createSampleShape = (gpu) => {
   // 回転が読み取りやすいよう、README の最小例も立方体へそろえて表示する
   const shape = new Shape(gpu);
@@ -87,6 +90,7 @@ const createSampleShape = (gpu) => {
   return shape;
 };
 
+// シーンを生成し、後続処理で利用できる状態にする
 const buildScene = () => {
   // low-level では Space、視点 node、object node をすべて明示的に組み立てる
   space = new Space();
@@ -98,6 +102,7 @@ const buildScene = () => {
   sampleNode.addShape(shape);
 };
 
+// `frame`は処理周期の開始または終了に必要な状態を更新する
 const frame = () => {
   // 毎 frame 少しずつ回転させることで、静止画では分かりにくい立体感を確認しやすくする
   sampleNode.rotateY(ROTATE_Y_SPEED);
@@ -108,6 +113,7 @@ const frame = () => {
   requestAnimationFrame(frame);
 };
 
+// このインスタンスの初期化段階で、必要な状態と資源を準備して処理を開始する
 const start = async () => {
   // README の low-level 例と同じ順序で Screen、shader、projection、scene をつなぐ
   screen = new Screen(document);

@@ -1,11 +1,12 @@
 // ---------------------------------------------
-//  BloomPass.js    2026/04/21
+//  BloomPass.js    2026/07/25
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // ---------------------------------------------
 
 import RenderTarget from "./RenderTarget.js";
 import SeparableBlurPass from "./SeparableBlurPass.js";
+import { CAMERA_REVERSE_Z } from "./DepthConvention.js";
 import util from "./util.js";
 
 export default class BloomPass {
@@ -60,6 +61,7 @@ export default class BloomPass {
     this.ready = this.init();
   }
 
+  // このインスタンスの初期化段階で、必要な状態と資源を準備して処理を開始する
   async init() {
     if (this.gpu?.ready) {
       await this.gpu.ready;
@@ -81,6 +83,7 @@ export default class BloomPass {
     return this;
   }
 
+  // サンプラーを生成し、後続処理で利用できる状態にする
   createSampler() {
     this.sampler = this.device.createSampler({
       magFilter: "linear",
@@ -91,6 +94,7 @@ export default class BloomPass {
     });
   }
 
+  // 全画面四角形を生成し、後続処理で利用できる状態にする
   createQuad() {
     const vertices = new Float32Array([
       -1.0, -1.0, 0.0, 1.0,
@@ -105,6 +109,7 @@ export default class BloomPass {
     this.queue.writeBuffer(this.vertexBuffer, 0, vertices);
   }
 
+  // バッファを生成し、後続処理で利用できる状態にする
   createBuffers() {
     this.extractUniformData = new Float32Array(4);
     this.compositeUniformData = new Float32Array(4);
@@ -119,6 +124,7 @@ export default class BloomPass {
     });
   }
 
+  // `layouts`を生成し、後続処理で利用できる状態にする
   createLayouts() {
     this.extractLayout = this.device.createBindGroupLayout({
       entries: [
@@ -138,6 +144,7 @@ export default class BloomPass {
     });
   }
 
+  // 全画面の`module`を生成し、後続処理で利用できる状態にする
   makeFullscreenModule(fragmentBody) {
     const code = `
 struct VSIn {
@@ -162,6 +169,7 @@ ${fragmentBody}`;
     return this.device.createShaderModule({ code });
   }
 
+  // 処理経路を生成し、後続処理で利用できる状態にする
   createPipeline(layout, module, format) {
     const pipelineLayout = this.device.createPipelineLayout({
       bindGroupLayouts: [layout]
@@ -191,6 +199,7 @@ ${fragmentBody}`;
     });
   }
 
+  // `pipelines`を生成し、後続処理で利用できる状態にする
   createPipelines() {
     const extractModule = this.makeFullscreenModule(`
 struct ExtractUniforms {
@@ -322,13 +331,17 @@ fn fsMain(input : VSOut) -> @location(0) vec4f {
     this.compositePipeline = this.createPipeline(this.compositeLayout, compositeModule, this.canvasFormat);
   }
 
+  // 描画先を生成し、後続処理で利用できる状態にする
   async createTargets() {
+    // sceneTargetは通常カメラから見た3D sceneを描くため、Screenと同じCamera Reverse-Zを使います
+    // 深度規約をRenderTargetへ明示し、形式だけが同じ別規約や規約不明のdepthを混在させません
     this.sceneTarget = new RenderTarget(this.gpu, {
       label: "BloomPass:scene",
       width: this.width,
       height: this.height,
       format: this.sceneFormat,
-      hasDepth: true
+      hasDepth: true,
+      depthConvention: CAMERA_REVERSE_Z
     });
     this.extractTarget = new RenderTarget(this.gpu, {
       label: "BloomPass:extract",
@@ -374,11 +387,13 @@ fn fsMain(input : VSOut) -> @location(0) vec4f {
     return this.device.createBindGroup({ layout, entries });
   }
 
+  // 全画面四角形の描画段階で、必要な描画命令と表示内容を記録する
   drawQuad(passEncoder) {
     passEncoder.setVertexBuffer(0, this.vertexBuffer);
     passEncoder.draw(4, 1, 0, 0);
   }
 
+  // `extract`の`uniforms`を現在の入力と実行状態に合わせて更新する
   updateExtractUniforms() {
     this.extractUniformData[0] = this.threshold;
     this.extractUniformData[1] = this.extractIntensity;
@@ -386,6 +401,7 @@ fn fsMain(input : VSOut) -> @location(0) vec4f {
     this.queue.writeBuffer(this.extractUniformBuffer, 0, this.extractUniformData);
   }
 
+  // `composite`の`uniforms`を現在の入力と実行状態に合わせて更新する
   updateCompositeUniforms() {
     this.compositeUniformData[0] = this.bloomStrength;
     this.compositeUniformData[1] = this.enabled ? 1.0 : 0.0;
@@ -394,65 +410,83 @@ fn fsMain(input : VSOut) -> @location(0) vec4f {
     this.queue.writeBuffer(this.compositeUniformBuffer, 0, this.compositeUniformData);
   }
 
+  // 有効状態を受け取り、現在の設定と後続処理へ反映する
   setEnabled(flag) {
     this.enabled = !!flag;
     this.updateCompositeUniforms();
   }
 
+  // `threshold`を受け取り、現在の設定と後続処理へ反映する
   setThreshold(value) {
     this.threshold = Number(value);
     this.updateExtractUniforms();
   }
 
+  // `soft`の`knee`を受け取り、現在の設定と後続処理へ反映する
   setSoftKnee(value) {
     this.softKnee = Number(value);
     this.updateExtractUniforms();
   }
 
+  // `extract`の`intensity`を受け取り、現在の設定と後続処理へ反映する
   setExtractIntensity(value) {
     this.extractIntensity = Number(value);
     this.updateExtractUniforms();
   }
 
+  // ブルームの`strength`を受け取り、現在の設定と後続処理へ反映する
   setBloomStrength(value) {
     this.bloomStrength = Number(value);
     this.updateCompositeUniforms();
   }
 
+  // `exposure`を受け取り、現在の設定と後続処理へ反映する
   setExposure(value) {
     this.exposure = Number(value);
     this.updateCompositeUniforms();
   }
 
+  // `tone`のマップのモードを受け取り、現在の設定と後続処理へ反映する
   setToneMapMode(value) {
     this.toneMapMode = Number(value);
     this.updateCompositeUniforms();
   }
 
+  // `blur`の半径を受け取り、現在の設定と後続処理へ反映する
   setBlurRadius(value) {
     this.blurRadius = Number(value);
     this.blurPass?.setBlurRadius(this.blurRadius);
   }
 
+  // `blur`の倍率を受け取り、現在の設定と後続処理へ反映する
   setBlurScale(value) {
     this.blurScale = Number(value);
     this.blurPass?.setTargetScale(this.blurScale);
   }
 
+  // `blur`の`iterations`を受け取り、現在の設定と後続処理へ反映する
   setBlurIterations(value) {
     this.blurIterations = Math.floor(Number(value));
     this.blurPass?.setIterations(this.blurIterations);
   }
 
+  // `resize`は表示領域に合わせて関連する寸法と描画先を更新する
   resize(width, height) {
-    this.width = Math.floor(Number(width));
-    this.height = Math.floor(Number(height));
+    const nextWidth = Math.floor(Number(width));
+    const nextHeight = Math.floor(Number(height));
+    if (nextWidth === this.width && nextHeight === this.height && this.sceneTarget) {
+      return false;
+    }
+    this.width = nextWidth;
+    this.height = nextHeight;
     this.sceneTarget?.resize(this.width, this.height);
     this.extractTarget?.resize(this.width, this.height);
     this.extractHeatTarget?.resize(this.width, this.height);
     this.blurPass?.resize(this.width, this.height);
+    return true;
   }
 
+  // `resizeToScreen`は座標または数値を計算し、後続処理で使う結果を返す
   resizeToScreen(screen) {
     this.resize(screen.getWidth(), screen.getHeight());
     return this;
@@ -493,6 +527,7 @@ fn fsMain(input : VSOut) -> @location(0) vec4f {
     });
   }
 
+  // `extract`の処理の実行段階で、必要な処理を決められた順序で進める
   runExtractPass(screen, source) {
     const { view, sampler } = this.resolveTextureResources(source);
     screen.beginPass({
@@ -511,6 +546,7 @@ fn fsMain(input : VSOut) -> @location(0) vec4f {
     this.drawQuad(pass);
   }
 
+  // `extract`の`heat`の処理の実行段階で、必要な処理を決められた順序で進める
   runExtractHeatPass(screen, source) {
     const { view, sampler } = this.resolveTextureResources(source);
     screen.beginPass({
@@ -529,6 +565,7 @@ fn fsMain(input : VSOut) -> @location(0) vec4f {
     this.drawQuad(pass);
   }
 
+  // `composite`の処理の実行段階で、必要な処理を決められた順序で進める
   runCompositePass(screen, sceneSource, bloomSource, destination = null, clearColor = [0.0, 0.0, 0.0, 1.0]) {
     const sceneTex = this.resolveTextureResources(sceneSource);
     const bloomTex = this.resolveTextureResources(bloomSource);

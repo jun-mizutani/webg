@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>materials</title>
+  <link rel="icon" href="data:," />
+  <!-- 2026/06/19 -->
+  <style>
+
+:root {
+  color-scheme: light;
+  --bg: #eef3f8;
+  --paper: rgba(255, 255, 255, 0.94);
+  --line: #c8d5e4;
+  --ink: #17324a;
+  --muted: #5c748b;
+  --accent: #1566ab;
+  --accent-soft: #dfeefe;
+  --code-bg: #f3f7fb;
+  --shadow: rgba(29, 52, 79, 0.10);
+}
+* { box-sizing: border-box; }
+html, body {
+  margin: 0;
+  min-height: 100%;
+}
+body {
+  background:
+    radial-gradient(circle at top left, rgba(21, 102, 171, 0.12), transparent 24%),
+    radial-gradient(circle at top right, rgba(255, 191, 118, 0.10), transparent 22%),
+    linear-gradient(180deg, #f8fbfd 0%, var(--bg) 100%);
+  color: var(--ink);
+  font: 16px/1.78 "Avenir Next", "Hiragino Sans", "Yu Gothic", sans-serif;
+}
+.page {
+  width: min(1080px, calc(100% - 28px));
+  margin: 0 auto;
+  padding: 24px 0 56px;
+}
+.hero,
+.doc {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  box-shadow: 0 22px 52px var(--shadow);
+}
+.hero {
+  padding: 22px 24px;
+  margin-bottom: 18px;
+}
+.hero h1 {
+  margin: 0 0 8px;
+  font-size: clamp(2rem, 4vw, 3rem);
+  line-height: 1.08;
+}
+.hero p {
+  margin: 0;
+  color: var(--muted);
+}
+.doc {
+  padding: 28px;
+}
+.doc > :first-child {
+  margin-top: 0;
+}
+h1, h2, h3, h4, h5, h6 {
+  line-height: 1.25;
+  margin: 1.45em 0 0.55em;
+}
+h1 {
+  font-size: 2.2rem;
+}
+h2 {
+  padding-bottom: 0.28em;
+  border-bottom: 1px solid var(--line);
+  font-size: 1.48rem;
+}
+h3 {
+  font-size: 1.14rem;
+}
+p, ul, ol, table, pre, blockquote {
+  margin: 0 0 1em;
+}
+ul, ol {
+  padding-left: 1.4em;
+}
+li + li {
+  margin-top: 0.26em;
+}
+a {
+  color: var(--accent);
+  text-decoration: none;
+}
+a:hover {
+  text-decoration: underline;
+}
+img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  border-radius: 16px;
+  border: 1px solid var(--line);
+  box-shadow: 0 12px 32px rgba(29, 52, 79, 0.08);
+  margin: 1.1em 0 1.4em;
+}
+code {
+  padding: 0.12em 0.38em;
+  border-radius: 0.45em;
+  background: var(--code-bg);
+  border: 1px solid #dbe6f1;
+  font: 0.92em/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+pre {
+  padding: 14px 16px;
+  overflow-x: auto;
+  border-radius: 14px;
+  background: #0f1720;
+  color: #ecf5ff;
+}
+pre code {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #ffffff;
+}
+th, td {
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  text-align: left;
+  vertical-align: top;
+}
+th {
+  background: #f5f9fc;
+}
+hr {
+  border: 0;
+  border-top: 1px solid var(--line);
+  margin: 1.5em 0;
+}
+blockquote {
+  padding: 0.3em 0 0.3em 1em;
+  border-left: 4px solid #c9dbef;
+  color: var(--muted);
+}
+@media (max-width: 720px) {
+  .page {
+    width: min(100% - 18px, 1080px);
+    padding-top: 16px;
+  }
+  .hero,
+  .doc {
+    border-radius: 18px;
+  }
+  .doc {
+    padding: 20px;
+  }
+}
+
+  </style>
+</head>
+<body>
+  <main class="page">
+    <section class="hero">
+      <h1>materials</h1>
+    </section>
+    <article class="doc">
+<h1>materials</h1>
+<p><a href="index.en.html">English</a> | 日本語</p>
+<p><img src="./materials.jpg" alt="materials" /></p>
+<h2>概要</h2>
+<p>このサンプルは、同じ16個のイコスフィアを標準の<code>SmoothShader</code>とDeferred Lightingで切り替えて描き、材質パラメーターの意味と見え方を比較します。同じシーングラフ、カメラ、頂点法線、光源位置を使うため、形状や視点の差ではなく、Phong型とGGX型の照明モデルの差を観察できます。</p>
+<p><code>SmoothShader</code>は<code>ambient</code>、<code>specular</code>、<code>power</code>を主に使用します。Deferred LightingはG-bufferへ保存した<code>specular</code>、<code>roughness</code>、<code>metallic</code>、<code>emissive</code>をGGX反射モデルで評価します。同じ<code>specular</code>という名前でも、標準側では白いハイライトの加算強度、Deferred側では非金属F0の0から4%を指定する倍率であり、同じ数値が同じ反射率を意味するわけではありません。</p>
+<h2>表示の読み方</h2>
+<p>初期状態は4×4の比較格子です。上から下へ<code>roughness / power</code>、左から右へ<code>specular / metallic</code>が変化します。標準表示では<code>roughness</code>と<code>metallic</code>を読みません。Deferred表示では<code>power</code>を読みません。片方だけが読む値を操作することで、各パラメーターの担当範囲を確認できます。</p>
+<p>Smooth用ambientは0.18、Deferred用の線形拡散環境強度は0.035として別々に管理します。両者は照明式での意味が異なるため、一つの数値を共有しません。Deferred側の最終表示は、照明モデルの比較へReinhard圧縮を混ぜないようlinear clampを使用し、その後に正確なsRGB表示変換を行います。</p>
+<p>イコスフィアは分割数2の162共有頂点と320三角形からなり、位置を正規化した球面法線を使用します。UV継ぎ目で複製される頂点にも同じ手動法線をコピーするため、標準経路とG-buffer経路が同じ滑らかな法線を読みます。</p>
+<h2>操作方法</h2>
+<p><a href="./materials.html">materials.html</a>をWebGPU対応ブラウザで開きます。</p>
+<ul><li><code>M</code>: <code>SmoothShader</code>とDeferred Lightingを切り替える</li><li><code>G</code>: 4×4格子と全16個へ同じ値を使う均一表示を切り替える</li><li><code>R</code>: 初期値へ戻す</li><li><code>/</code>またはcanvasのダブルタップ: Command Paletteを開く</li><li>ドラッグまたは矢印キー: カメラを回転する</li></ul>
+<p>Command Paletteでは描画方式、配置、RGB、現在の描画方式に対応するambient、specular、emissive、roughness、metallic、powerを変更できます。格子表示では相対的な4段階を保ったまま入力値が反映され、均一表示では入力値が全16個へそのまま適用されます。</p>
+<h2>実装上の要点</h2>
+<p>標準経路は<code>Space.draw(cameraFrame)</code>でforward描画します。Deferred経路は、同じ<code>cameraFrame</code>を<code>ComputeEffectPipeline.renderScene()</code>と<code>encode()</code>へ渡し、G-buffer生成と後段照明が同じカメラ状態を共有するようにします。完成した表示色は<code>beginPresentPass()</code>でcanvasへ転送し、<code>clearDepthBuffer()</code>でHUD用のdepth付きpassへ戻します。</p>
+<p>材質値は、片方の描画方式が読まない場合もShapeへすべて明示します。欠落値を推測するフォールバックは使用しません。このサンプルは環境鏡面反射を使用しないため、完全金属は黒くなる場合があります。既定格子のmetallicは0.00、0.25、0.50、0.75としています。均一表示では利用者が1.0を明示して挙動を確認できます。</p>
+    </article>
+  </main>
+</body>
+</html>

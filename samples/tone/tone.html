@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>tone sample</title>
+  <link rel="icon" href="data:," />
+  <style>
+    :root {
+      --paper: #f3eadb;
+      --ink: #243026;
+      --muted: #647064;
+      --panel: #fff9ed;
+      --panel-strong: #f6d88f;
+      --accent: #2f6f61;
+      --accent-dark: #204c43;
+      --line: #d1bc8d;
+      --shadow: rgba(44, 52, 38, 0.18);
+    }
+
+    html,
+    body {
+      margin: 0;
+      min-height: 100%;
+      background:
+        radial-gradient(circle at 20% 12%, rgba(255, 221, 128, 0.52), transparent 28rem),
+        radial-gradient(circle at 84% 18%, rgba(87, 139, 120, 0.28), transparent 24rem),
+        linear-gradient(145deg, #efe1c6, var(--paper));
+      color: var(--ink);
+      font: 15px/1.58 "Avenir Next", "Hiragino Sans", "Yu Gothic", sans-serif;
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      background-image:
+        linear-gradient(rgba(36, 48, 38, 0.035) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(36, 48, 38, 0.035) 1px, transparent 1px);
+      background-size: 32px 32px;
+      mask-image: linear-gradient(to bottom, rgba(0, 0, 0, 0.5), transparent 80%);
+    }
+
+    #app {
+      width: min(1080px, calc(100% - 32px));
+      margin: 28px auto 40px;
+    }
+
+    header {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 18px;
+      align-items: end;
+      margin-bottom: 18px;
+    }
+
+    h1 {
+      margin: 0;
+      font-family: Georgia, "Hiragino Mincho ProN", serif;
+      font-size: clamp(30px, 6vw, 62px);
+      letter-spacing: -0.045em;
+      line-height: 0.96;
+    }
+
+    .lead {
+      max-width: 720px;
+      margin: 12px 0 0;
+      color: var(--muted);
+    }
+
+    .status-card {
+      min-width: 260px;
+      padding: 14px 16px;
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      background: rgba(255, 249, 237, 0.76);
+      box-shadow: 0 16px 36px var(--shadow);
+    }
+
+    #status {
+      margin: 0;
+      color: var(--accent-dark);
+      font-family: "SFMono-Regular", Menlo, Consolas, monospace;
+      white-space: pre-wrap;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.05fr) minmax(300px, 0.95fr);
+      gap: 16px;
+    }
+
+    .panel {
+      position: relative;
+      border: 1px solid var(--line);
+      border-radius: 22px;
+      padding: 18px;
+      background: rgba(255, 249, 237, 0.86);
+      box-shadow: 0 18px 42px var(--shadow);
+      overflow: hidden;
+    }
+
+    .panel::after {
+      content: "";
+      position: absolute;
+      inset: auto 18px 0;
+      height: 4px;
+      border-radius: 99px 99px 0 0;
+      background: linear-gradient(90deg, var(--accent), var(--panel-strong));
+      opacity: 0.7;
+    }
+
+    h2 {
+      margin: 0 0 14px;
+      font-size: 17px;
+      letter-spacing: 0.04em;
+    }
+
+    .row {
+      display: grid;
+      grid-template-columns: 136px 1fr auto;
+      gap: 10px;
+      align-items: center;
+      margin: 10px 0;
+    }
+
+    .button-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 14px;
+    }
+
+    label {
+      color: var(--muted);
+      font-weight: 650;
+    }
+
+    select,
+    input[type="range"] {
+      width: 100%;
+    }
+
+    select {
+      appearance: none;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 8px 34px 8px 10px;
+      background:
+        linear-gradient(45deg, transparent 50%, var(--accent-dark) 50%) calc(100% - 17px) 50% / 7px 7px no-repeat,
+        linear-gradient(135deg, var(--accent-dark) 50%, transparent 50%) calc(100% - 12px) 50% / 7px 7px no-repeat,
+        #fffdf6;
+      color: var(--ink);
+    }
+
+    input[type="range"] {
+      accent-color: var(--accent);
+    }
+
+    .value {
+      min-width: 76px;
+      color: var(--accent-dark);
+      font-family: "SFMono-Regular", Menlo, Consolas, monospace;
+      text-align: right;
+    }
+
+    button {
+      border: 1px solid var(--accent-dark);
+      border-radius: 999px;
+      padding: 9px 15px;
+      background: var(--accent);
+      color: #fffdf6;
+      font-weight: 700;
+      cursor: pointer;
+      touch-action: none;
+      user-select: none;
+      box-shadow: 0 8px 18px rgba(47, 111, 97, 0.26);
+    }
+
+    button.secondary {
+      background: #fffdf6;
+      color: var(--accent-dark);
+      box-shadow: none;
+    }
+
+    button:disabled {
+      opacity: 0.48;
+      cursor: not-allowed;
+      box-shadow: none;
+    }
+
+    .note {
+      margin: 12px 0 0;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    @media (max-width: 780px) {
+      header,
+      .grid {
+        grid-template-columns: 1fr;
+      }
+
+      .row {
+        grid-template-columns: 1fr;
+      }
+
+      .value {
+        text-align: left;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div id="app">
+    <header>
+      <div>
+        <h1>Tone Lab</h1>
+        <p class="lead">ToneSynth の最小機能だけを使い、単音または3和音で波形、envelope、reverb の違いを聞き比べるサンプルです。</p>
+      </div>
+      <div class="status-card">
+        <pre id="status">status: loading</pre>
+      </div>
+    </header>
+
+    <div class="grid">
+      <section class="panel">
+        <h2>Play</h2>
+        <div class="row">
+          <label for="masterVol">Master Vol</label>
+          <input id="masterVol" type="range" min="0" max="1" step="0.01" value="0.26" />
+          <span id="masterVal" class="value">0.26</span>
+        </div>
+        <div class="row">
+          <label for="toneVol">Tone Vol</label>
+          <input id="toneVol" type="range" min="0" max="1" step="0.01" value="0.86" />
+          <span id="toneVolVal" class="value">0.86</span>
+        </div>
+        <div class="row">
+          <label for="rootNote">Root</label>
+          <select id="rootNote"></select>
+          <span id="rootVal" class="value">C4</span>
+        </div>
+        <div class="row">
+          <label for="waveType">Wave</label>
+          <select id="waveType"></select>
+          <span id="waveVal" class="value">sine</span>
+        </div>
+        <div class="row">
+          <label for="playMode">Mode</label>
+          <select id="playMode">
+            <option value="single">single tone</option>
+            <option value="major">major triad</option>
+            <option value="minor">minor triad</option>
+          </select>
+          <span id="modeVal" class="value">single</span>
+        </div>
+        <div class="row">
+          <label for="gain">Tone Gain</label>
+          <input id="gain" type="range" min="0.01" max="0.30" step="0.01" value="0.13" />
+          <span id="gainVal" class="value">0.13</span>
+        </div>
+        <div class="button-row">
+          <button id="btnInit">Audio Start</button>
+          <button id="btnPlaySingle" disabled>Hold Single</button>
+          <button id="btnPlayTriad" disabled>Hold Triad</button>
+          <button id="btnStop" class="secondary" disabled>Stop All</button>
+        </div>
+        <p class="note">Hold Single / Hold Triad は押している間だけ sustain し、離すと選択中 envelope の release で止まります。</p>
+      </section>
+
+      <section class="panel">
+        <h2>Envelope</h2>
+        <div class="row">
+          <label for="envelopeProfile">Profile</label>
+          <select id="envelopeProfile"></select>
+          <span id="profileVal" class="value">piano</span>
+        </div>
+        <div class="row">
+          <label for="attack">Attack</label>
+          <input id="attack" type="range" min="0" max="0.25" step="0.001" value="0.002" />
+          <span id="attackVal" class="value">0.002 sec</span>
+        </div>
+        <div class="row">
+          <label for="decay">Decay</label>
+          <input id="decay" type="range" min="0" max="0.70" step="0.001" value="0.420" />
+          <span id="decayVal" class="value">0.420 sec</span>
+        </div>
+        <div class="row">
+          <label for="sustain">Sustain</label>
+          <input id="sustain" type="range" min="0" max="1" step="0.01" value="0.16" />
+          <span id="sustainVal" class="value">0.16</span>
+        </div>
+        <div class="row">
+          <label for="release">Release</label>
+          <input id="release" type="range" min="0" max="1.20" step="0.001" value="0.180" />
+          <span id="releaseVal" class="value">0.180 sec</span>
+        </div>
+      </section>
+
+      <section class="panel">
+        <h2>Reverb</h2>
+        <div class="row">
+          <label for="reverbMix">Reverb Mix</label>
+          <input id="reverbMix" type="range" min="0" max="1" step="0.01" value="0.28" />
+          <span id="reverbMixVal" class="value">0.28</span>
+        </div>
+        <div class="row">
+          <label for="reverbKind">Kind</label>
+          <select id="reverbKind"></select>
+          <span id="reverbKindVal" class="value">hall</span>
+        </div>
+        <div class="row">
+          <label for="reverbLength">Length</label>
+          <input id="reverbLength" type="range" min="0.30" max="5.00" step="0.05" value="2.60" />
+          <span id="reverbLengthVal" class="value">2.60 sec</span>
+        </div>
+        <div class="row">
+          <label for="reverbDecay">Decay</label>
+          <input id="reverbDecay" type="range" min="0.50" max="4.50" step="0.05" value="1.70" />
+          <span id="reverbDecayVal" class="value">1.70</span>
+        </div>
+        <div class="button-row">
+          <button id="btnDry" class="secondary" disabled>Dry</button>
+          <button id="btnRoom" class="secondary" disabled>Room</button>
+          <button id="btnHall" class="secondary" disabled>Hall</button>
+          <button id="btnPlate" class="secondary" disabled>Plate</button>
+        </div>
+      </section>
+
+      <section class="panel">
+        <h2>What To Listen For</h2>
+        <p class="note">sine は基音が目立ち、triangle は少し明るく、square と sawtooth は倍音が強く出ます。同じ envelope でも波形を変えると、立ち上がりや残響の印象が変わります。</p>
+        <p class="note">percussion は短く、organ は持続が長く、guitar と piano は弾いた直後の減衰を聞き取りやすい profile です。brass と woodwind は立ち上がりの遅さを比較しやすくしています。</p>
+      </section>
+    </div>
+  </div>
+  <script type="module" src="./main.js"></script>
+</body>
+</html>

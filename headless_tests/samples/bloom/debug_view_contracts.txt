@@ -1,0 +1,19 @@
+# sample_bloom_debug_view_contracts
+
+## 目的
+
+`samples/bloom`のView切り替えが、canvasと同じ色形式を持つBloomPass中間targetと低解像度blur targetを、形式検証を失わず画面全体へ診断表示できることを確認する。
+
+## 確認内容
+
+- `scene / extract / extractHeat / blurA / blurB`が対応する公開targetを選ぶ。
+- 未知のView名を別のViewへ自動補正せず例外にする。
+- BloomPassと異なる色形式を拒否する。
+- 正の寸法を持つ低解像度targetを受け入れる。
+- viewまたはsamplerが未生成のtargetを拒否する。
+
+## 実行方法
+
+```sh
+node headless_tests/samples/bloom/headless_probe.js
+```

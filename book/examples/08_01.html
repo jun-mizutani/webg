@@ -119,7 +119,6 @@ let elapsedSec = 0.0;
 app.start({
   onUpdate: ({ deltaSec }) => {
     elapsedSec += deltaSec;
-    orbit.update(deltaSec);
     flatNode.rotateY(0.5);
     smoothNode.rotateY(0.5);
 

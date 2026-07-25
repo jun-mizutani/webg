@@ -1,0 +1,211 @@
+<!doctype html>
+<!-- webg/book/examples/27_02.html 2026/06/15 -->
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>27_02 Storage Buffer Compute</title>
+  <link rel="stylesheet" href="./example.css" />
+  <style>
+    .result-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(72px, 1fr));
+      gap: 8px;
+      margin-top: 14px;
+    }
+    .result-cell {
+      padding: 12px 8px;
+      border-radius: 8px;
+      background: #e7eef9;
+      text-align: center;
+      font: 600 15px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace;
+    }
+    .compute-steps {
+      margin: 14px 0 0;
+      padding-left: 24px;
+    }
+    .compute-steps li {
+      margin: 8px 0;
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <h1>book/examples</h1>
+    <h2>27_02 Storage Bufferによる1次元計算</h2>
+    <div class="section-card">
+      <p>この例は画像を描画せず、8個の数値をGPUへ渡して並列計算し、その結果をJavaScriptへ戻すまでの処理を確認します。入力配列の各要素へ <code>value × 2 + 1</code> を適用します。</p>
+      <ol class="compute-steps">
+        <li><code>[1, 2, 3, 4, 5, 6, 7, 8]</code>を入力用Storage Bufferへ転送します</li>
+        <li>Compute Shaderの各invocationが、担当する配列要素を1個ずつ読みます</li>
+        <li>計算結果を出力用Storage Bufferへ書き込みます</li>
+        <li>出力をCPUから読み取れるreadback Bufferへコピーします</li>
+        <li>JavaScriptで期待値と比較し、入力値と出力値の対応を下に表示します</li>
+      </ol>
+      <p>要素数は8ですが、WGSLの<code>@workgroup_size(64, 1, 1)</code>により64個のinvocationが起動します。先頭8個だけが計算し、残りは<code>index &gt;= count</code>の判定で何も書かずに終了します。入力Bufferは読み取り専用、出力Bufferは書き込み可能としてbindingを分け、どのresourceが変更されるかを明示しています。</p>
+      <p class="note">readbackはGPUとCPUの同期を伴うため、ここでは計算結果を確認する目的で使用しています。毎フレームの描画では、Compute結果をGPU内の次のPassへ直接渡す構成が基本です。</p>
+      <p id="status" class="note">GPU計算を準備しています</p>
+      <div id="result" class="result-grid" aria-live="polite"></div>
+    </div>
+
+    <pre id="code"></pre>
+
+    <script type="module" id="example-source">
+import ComputePass from "../../webg/ComputePass.js";
+
+const scaleBiasWgsl = `
+struct Params {
+  values : vec4f,
+};
+
+@group(0) @binding(0)
+var<uniform> params : Params;
+
+@group(0) @binding(1)
+var<storage, read> source : array<f32>;
+
+@group(0) @binding(2)
+var<storage, read_write> destination : array<f32>;
+
+@compute @workgroup_size(64, 1, 1)
+fn main(@builtin(global_invocation_id) id : vec3<u32>) {
+  let index = id.x;
+  let count = u32(params.values.x);
+  if (index >= count) {
+    return;
+  }
+  destination[index] =
+    source[index] * params.values.y + params.values.z;
+}`;
+
+// GPUから読み戻した配列を、入力値との対応が分かるセルとしてページへ表示します
+function showResult(input, output) {
+  const result = document.getElementById("result");
+  result.replaceChildren();
+  for (let index = 0; index < output.length; index += 1) {
+    const cell = document.createElement("div");
+    cell.className = "result-cell";
+    cell.textContent = `${input[index]} → ${output[index]}`;
+    result.appendChild(cell);
+  }
+}
+
+// canvasを作らずWebGPU deviceを初期化し、Buffer Computeに必要な最小contextを返します
+async function createComputeGpu() {
+  if (!navigator.gpu) {
+    throw new Error("WebGPU is not available");
+  }
+  const adapter = await navigator.gpu.requestAdapter();
+  if (!adapter) {
+    throw new Error("WebGPU adapter is not available");
+  }
+  const device = await adapter.requestDevice();
+  return {
+    device,
+    queue: device.queue
+  };
+}
+
+// ComputePassでStorage Bufferを処理し、COPY_DST付きreadback Bufferから結果を取得します
+async function runStorageBufferCompute() {
+  const gpu = await createComputeGpu();
+  const inputValues = new Float32Array([1, 2, 3, 4, 5, 6, 7, 8]);
+  const byteLength = inputValues.byteLength;
+
+  const inputBuffer = gpu.device.createBuffer({
+    label: "27_02 input",
+    size: byteLength,
+    usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST
+  });
+  const outputBuffer = gpu.device.createBuffer({
+    label: "27_02 output",
+    size: byteLength,
+    usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC
+  });
+  const readbackBuffer = gpu.device.createBuffer({
+    label: "27_02 readback",
+    size: byteLength,
+    usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ
+  });
+  gpu.queue.writeBuffer(inputBuffer, 0, inputValues);
+
+  const computePass = new ComputePass(gpu, {
+    label: "27_02 scale bias",
+    code: scaleBiasWgsl,
+    workgroupSize: [64, 1, 1],
+    uniformFloats: 4,
+    bindings: [
+      { binding: 0, name: "params", type: "uniform-buffer" },
+      {
+        binding: 1,
+        name: "source",
+        type: "read-only-storage-buffer"
+      },
+      {
+        binding: 2,
+        name: "destination",
+        type: "storage-buffer"
+      }
+    ]
+  });
+  computePass.setUniforms(new Float32Array([
+    inputValues.length,
+    2.0,
+    1.0,
+    0.0
+  ]));
+
+  const commandEncoder = gpu.device.createCommandEncoder({
+    label: "27_02 command encoder"
+  });
+  computePass.encode(
+    commandEncoder,
+    {
+      source: inputBuffer,
+      destination: outputBuffer
+    },
+    {
+      dispatchSize: [inputValues.length, 1, 1]
+    }
+  );
+  commandEncoder.copyBufferToBuffer(
+    outputBuffer,
+    0,
+    readbackBuffer,
+    0,
+    byteLength
+  );
+  gpu.queue.submit([commandEncoder.finish()]);
+
+  await readbackBuffer.mapAsync(GPUMapMode.READ);
+  const outputValues = new Float32Array(
+    readbackBuffer.getMappedRange().slice(0)
+  );
+  readbackBuffer.unmap();
+
+  const expected = [3, 5, 7, 9, 11, 13, 15, 17];
+  if (!expected.every((value, index) => outputValues[index] === value)) {
+    throw new Error(`Unexpected GPU result: ${Array.from(outputValues)}`);
+  }
+  showResult(inputValues, outputValues);
+  document.getElementById("status").textContent =
+    "PASS: 8 elements were computed and read back from the GPU";
+
+  computePass.destroy();
+  readbackBuffer.destroy();
+  outputBuffer.destroy();
+  inputBuffer.destroy();
+}
+
+runStorageBufferCompute().catch((error) => {
+  document.getElementById("status").textContent = `Error: ${error.message}`;
+  console.error(error);
+});
+    </script>
+    <script>
+      document.getElementById("code").textContent =
+        document.getElementById("example-source").textContent.trim();
+    </script>
+  </div>
+</body>
+</html>

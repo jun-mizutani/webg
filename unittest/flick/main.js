@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// unittest/flick/main.js  2026/05/15
+// unittest/flick/main.js  2026/07/25
 //   flick / long press / double tap gesture POC
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -32,11 +32,13 @@ const state = {
 const tools = ["select", "add", "face", "move"];
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
 
+// メッセージを受け取り、現在の設定と後続処理へ反映する
 const setMessage = (message) => {
   state.message = message;
   logEl.textContent = message;
 };
 
+// `resize`は表示領域に合わせて関連する寸法と描画先を更新する
 const resize = () => {
   const rect = canvas.getBoundingClientRect();
   const dpr = window.devicePixelRatio || 1;
@@ -46,6 +48,7 @@ const resize = () => {
   draw();
 };
 
+// キャンバスの`point`を現在の入力と状態から求め、呼び出し元へ返す
 const getCanvasPoint = (clientX, clientY) => {
   const rect = canvas.getBoundingClientRect();
   return {
@@ -54,6 +57,7 @@ const getCanvasPoint = (clientX, clientY) => {
   };
 };
 
+// `toScreen`は座標または数値を計算し、後続処理で使う結果を返す
 const toScreen = (point) => {
   const rect = canvas.getBoundingClientRect();
   return {
@@ -62,6 +66,7 @@ const toScreen = (point) => {
   };
 };
 
+// `pushUndo`は重複や入力条件を確認し、対象を管理配列へ追加する
 const pushUndo = () => {
   state.undo.push({
     points: state.points.map((p) => ({ ...p })),
@@ -71,6 +76,7 @@ const pushUndo = () => {
   if (state.undo.length > 20) state.undo.shift();
 };
 
+// `restoreUndo`は受け取った値を処理し、後続処理で利用する状態または結果を生成する
 const restoreUndo = () => {
   const prev = state.undo.pop();
   if (!prev) {
@@ -85,6 +91,7 @@ const restoreUndo = () => {
   draw();
 };
 
+// `nearest`の`point`を現在の入力と状態から求め、呼び出し元へ返す
 const findNearestPoint = (x, y, maxPx = 34) => {
   const rect = canvas.getBoundingClientRect();
   let best = -1;
@@ -102,6 +109,7 @@ const findNearestPoint = (x, y, maxPx = 34) => {
   return best;
 };
 
+// `cycleTool`は現在状態から対象を選択し、結果を返すまたは選択を切り替える
 const cycleTool = (step) => {
   const index = Math.max(0, tools.indexOf(state.tool));
   state.tool = tools[(index + step + tools.length) % tools.length];
@@ -109,6 +117,7 @@ const cycleTool = (step) => {
   updateUi();
 };
 
+// `point`を現在の入力と状態から求め、呼び出し元へ返す
 const selectPoint = (index) => {
   if (index < 0 || index >= state.points.length) {
     setMessage("no vertex at tap");
@@ -119,6 +128,7 @@ const selectPoint = (index) => {
   updateUi();
 };
 
+// `point`を対象へ追加し、後続処理から参照できるようにする
 const addPoint = (x, y) => {
   pushUndo();
   state.points.push({ x: clamp(x, 0.04, 0.96), y: clamp(y, 0.04, 0.96) });
@@ -127,6 +137,7 @@ const addPoint = (x, y) => {
   updateUi();
 };
 
+// `nudgeSelected`は受け取った値を処理し、後続処理で利用する状態または結果を生成する
 const nudgeSelected = (dx, dy) => {
   if (state.selected < 0 || state.selected >= state.points.length) return;
   pushUndo();
@@ -137,6 +148,7 @@ const nudgeSelected = (dx, dy) => {
   draw();
 };
 
+// `deleteSelected`は選択対象を削除または解除し、関連状態を整理する
 const deleteSelected = () => {
   if (state.points.length <= 1) {
     setMessage("last vertex cannot be deleted");
@@ -154,6 +166,7 @@ const deleteSelected = () => {
   draw();
 };
 
+// `duplicateSelected`は元データから独立して利用できる複製または実行状態を作る
 const duplicateSelected = () => {
   const p = state.points[state.selected];
   if (!p) return;
@@ -161,12 +174,14 @@ const duplicateSelected = () => {
   setMessage(`duplicate vertex ${state.selected}`);
 };
 
+// モードの有効状態を切り替え、表示と処理へ反映する
 const toggleMode = () => {
   state.mode = state.mode === "edit" ? "object" : "edit";
   setMessage(`double tap: ${state.mode} mode`);
   updateUi();
 };
 
+// `openPalette`は必要な画面要素を準備し、表示状態を更新する
 const openPalette = (x, y) => {
   const rect = canvas.getBoundingClientRect();
   palette.style.left = `${clamp(x - rect.left, 12, rect.width - 210)}px`;
@@ -179,12 +194,14 @@ const closePalette = () => {
   palette.classList.remove("open");
 };
 
+// 操作画面を現在の入力と実行状態に合わせて更新する
 const updateUi = () => {
   modeEl.textContent = state.mode === "edit" ? "Edit" : "Object";
   toolEl.textContent = state.tool[0].toUpperCase() + state.tool.slice(1);
   selectionEl.textContent = `selected: ${state.selected}`;
 };
 
+// このインスタンスの描画段階で、必要な描画命令と表示内容を記録する
 const draw = () => {
   const rect = canvas.getBoundingClientRect();
   ctx.clearRect(0, 0, rect.width, rect.height);
@@ -231,6 +248,7 @@ const draw = () => {
   ctx.restore();
 };
 
+// `gesture`を受け取った段階で、対応する状態更新と処理を実行する
 const handleGesture = (gesture) => {
   closePalette();
   if (gesture.type === "tap") {

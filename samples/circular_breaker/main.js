@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// samples/circular_breaker/main.js  2026/05/06
+// samples/circular_breaker/main.js  2026/07/25
 //   circular_breaker sample
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -203,6 +203,7 @@ const start = async () => {
   let debugProbeState = "IDLE";
   let debugProbeFormat = "text";
 
+  // 診断情報のレポートを生成し、後続処理で利用できる状態にする
   const createDiagnosticsReport = (stage = "runtime") => {
     const aliveBlocks = blocks.filter((block) => block.active).length;
     const lockedBlocks = blocks.filter((block) => block.active && block.type === "locked").length;
@@ -251,6 +252,7 @@ const start = async () => {
   const getDiagnosticsStatusLine = (report) =>
     `diag=${report.ok ? "OK" : "ERROR"} stage=${report.stage} copy=${diagnosticsCopyState}`;
 
+  // `requestProbe`は入力またはイベントを受け取り、対応する処理へ振り分ける
   const requestProbe = (format = "text", afterFrames = 1) => {
     debugProbeFormat = format;
     const probeId = debugProbe.request({
@@ -462,6 +464,7 @@ const start = async () => {
     }
   });
 
+  // タッチ入力の操作の`visibility`を現在の入力と実行状態に合わせて更新する
   const updateTouchActionVisibility = () => {
     if (!touchRoot) return;
     const actionBtn = touchRoot.querySelector(".webg-touch-btn[data-key='reset']");

@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// Message.js     2026/04/30
+// Message.js     2026/07/25
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // ---------------------------------------------
@@ -23,6 +23,7 @@ export default class Message extends Text {
     this.autoId = 0;
   }
 
+  // このインスタンスの初期化段階で、必要な状態と資源を準備して処理を開始する
   async init(fontTextureFile, options = {}) {
     await super.init(fontTextureFile, options);
     this.clear();

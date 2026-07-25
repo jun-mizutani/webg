@@ -1,5 +1,5 @@
 // ---------------------------------------------
-//  ModelLoader.js   2026/04/27
+//  ModelLoader.js   2026/07/25
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // ---------------------------------------------
@@ -63,6 +63,7 @@ export default class ModelLoader {
     }
   }
 
+  // `yieldFrame`は処理周期の開始または終了に必要な状態を更新する
   async yieldFrame() {
     if (typeof requestAnimationFrame === "function") {
       await new Promise((resolve) => requestAnimationFrame(() => resolve()));

@@ -1,0 +1,38 @@
+# v2 G-buffer材質attachment単体テスト
+
+## 目的
+
+GeometryBufferPassが照明済みspecularをalbedoへ焼き込まず、albedo、view-space normal、材質値を別々のMRT attachmentへ保存することを確認する。材質attachmentのRGBAはspecular、roughness、metallic、emissiveの順とする
+
+## 確認項目
+
+1. fragment pipelineがalbedo、normal、materialの3 attachmentを持つ
+2. normal attachment形式が `rgba8unorm` である
+3. material attachment形式が `rgba8unorm` である
+4. fragment WGSLが固定specular照明やlit colorを生成しない
+5. material resourceを後段へ明示公開する
+6. material objectをalbedo4 floatとsurface4 floatへ詰める
+7. specular、roughness、metallic、emissiveを0から1で厳密検証する
+8. 旧単一 `materialValue` を受け付けない
+9. material8 floatとflags4 floatがuniform内で重ならない
+10. material attachmentの背景をspecular 0、roughness 1、metallic 0、emissive 0でclearする
+11. 旧lit modeを拒否する
+12. Shape colorとbase color textureを個別にsRGBから線形色へ変換してから乗算する
+13. 表示用sRGBで指定されたclearColorを線形背景値へ変換する
+14. albedo attachmentは暗部の8 bit精度を保つ `rgba8unorm-srgb` に固定する
+
+## 実行方法
+
+```sh
+node headless_tests/core/geometry_buffer_pass/headless_probe.js
+```
+
+## 結果
+
+2026-07-14に実行し、全項目が成功した。表示文字列は次のとおり
+
+```text
+geometry_buffer_pass_material_contracts: all explicit material contracts passed
+```
+
+normalとmaterialは0から1へ符号化して`rgba8unorm`へ保存する。albedoはShape colorとbase color textureをsRGBから線形色へ変換し、`rgba8unorm-srgb` attachmentへ出力する。物理的な保存値は自動的にsRGB符号化されるが、後段のtextureSampleは線形反射率を返す。背景のclearColorも同じsRGB入力契約から線形色へ変換するため、暗い指定色を8 bit量子化で失わない

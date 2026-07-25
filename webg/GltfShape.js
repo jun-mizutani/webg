@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// GltfShape.js   2026/04/21
+// GltfShape.js   2026/07/25
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // ---------------------------------------------
@@ -23,12 +23,14 @@ export default class GltfShape {
     this.runtimeTextures = new Map();
   }
 
+  // `emitStage`は入力またはイベントを受け取り、対応する処理へ振り分ける
   emitStage(handler, stage) {
     if (typeof handler === "function") {
       handler(stage);
     }
   }
 
+  // `yieldFrame`は処理周期の開始または終了に必要な状態を更新する
   async yieldFrame() {
     if (typeof requestAnimationFrame === "function") {
       await new Promise((resolve) => requestAnimationFrame(() => resolve()));
@@ -37,6 +39,7 @@ export default class GltfShape {
     await new Promise((resolve) => setTimeout(resolve, 0));
   }
 
+  // このインスタンスを読み込み、検証済みのデータとして後続処理へ渡す
   async load(url, options = {}) {
     try {
       await this.gltf.load(url, options);
@@ -74,6 +77,7 @@ export default class GltfShape {
 
     const parents = this.buildParents();
     const worlds = new Array(nodes.length);
+    // ワールドを生成し、後続処理で利用できる状態にする
     const buildWorld = (index) => {
       if (worlds[index]) return worlds[index];
       const local = locals[index];
@@ -201,6 +205,7 @@ export default class GltfShape {
   // local 行列配列から world 行列配列を作る
   buildWorldTransforms(localMatrices, parents = this.buildParents()) {
     const worlds = new Array(localMatrices.length);
+    // ワールドを生成し、後続処理で利用できる状態にする
     const buildWorld = (index) => {
       if (worlds[index]) {
         return worlds[index];
@@ -260,6 +265,7 @@ export default class GltfShape {
     return rigid;
   }
 
+  // ユニフォームの倍率の行列を生成し、後続処理で利用できる状態にする
   makeUniformScaleMatrix(scale) {
     const matrix = new Matrix();
     matrix.mat[0] = scale;
@@ -357,6 +363,7 @@ export default class GltfShape {
     return plans;
   }
 
+  // `bakeGeometryByMatrix`は座標または数値を計算し、後続処理で使う結果を返す
   bakeGeometryByMatrix(geometry, matrix, normalMatrix = matrix) {
     const positions = geometry.positions;
     for (let i = 0; i < positions.length; i += 3) {
@@ -423,6 +430,7 @@ export default class GltfShape {
     });
   }
 
+  // `toModelAssetAsync`は受け取った値を処理し、後続処理で利用する状態または結果を生成する
   async toModelAssetAsync({ includeSkins = true, onStage = null } = {}) {
     this.emitStage(onStage, "normalize-materials");
     await this.yieldFrame();
@@ -477,6 +485,7 @@ export default class GltfShape {
     return this.toModelAsset(options);
   }
 
+  // ボーンの名前を検証し、後続処理が扱える共通形式へ整える
   normalizeBoneName(name, path = "glTF bone name") {
     if (typeof name === "string" && name.length > 0) {
       return name;
@@ -488,6 +497,7 @@ export default class GltfShape {
     return typeof name === "string" && name.startsWith("DEF-");
   }
 
+  // `rigify`の`helper`のボーンの条件を判定し、結果を真偽値で返す
   isRigifyHelperBone(name) {
     if (typeof name !== "string") return false;
     return name.startsWith("ORG-") || name.startsWith("MCH-");
@@ -497,6 +507,7 @@ export default class GltfShape {
     return `${nodeIndex}:${primitiveIndex}`;
   }
 
+  // `weighted`の`joint`のローカルの`indices`を現在の入力と状態から求め、呼び出し元へ返す
   collectWeightedJointLocalIndices(jointIndices, jointWeights) {
     const used = new Set();
     for (let i = 0; i < jointIndices.length; i++) {
@@ -1026,6 +1037,7 @@ export default class GltfShape {
     const nodes = this.data.nodes ?? [];
     const boneMap = new Map();
 
+    // ボーンを生成し、後続処理で利用できる状態にする
     const buildBone = (nodeIndex) => {
       if (boneMap.has(nodeIndex)) return boneMap.get(nodeIndex);
       const parentIndex = parents[nodeIndex];

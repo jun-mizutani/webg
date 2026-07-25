@@ -1,5 +1,5 @@
 // ---------------------------------------------
-//  DebugProbe.js  2026/03/09
+//  DebugProbe.js  2026/07/25
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // ---------------------------------------------
@@ -8,6 +8,7 @@ import DebugConfig from "./DebugConfig.js";
 
 export default class DebugProbe {
 
+  // インスタンス生成時に、受け取った設定を検証して初期状態を準備する
   constructor(options = {}) {
     this.defaultAfterFrames = Number.isInteger(options.defaultAfterFrames)
       ? Math.max(1, options.defaultAfterFrames)
@@ -80,6 +81,7 @@ export default class DebugProbe {
     return this.lastResult;
   }
 
+  // このインスタンスを初期状態へ戻し、前回の状態を残さない
   clear() {
     this.pending = [];
     this.lastResult = null;

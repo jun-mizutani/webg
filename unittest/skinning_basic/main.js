@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// unittest/skinning_basic/main.js  2026/04/27
+// unittest/skinning_basic/main.js  2026/07/25
 //   skinning_basic sample
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -27,6 +27,7 @@ const OBJECT_HEAD_DEG = 45.0;
 const ROOT_YAW_DEG = 8.0;
 const CHILD_BEND_DEG = 60.0;
 
+// このインスタンスの初期化段階で、必要な状態と資源を準備して処理を開始する
 const start = async ({ screen, gpu, setStatus, setViewportLayout, startLoop, document }) => {
   const shader = new SmoothShader(gpu);
   await shader.init();
@@ -59,6 +60,7 @@ const start = async ({ screen, gpu, setStatus, setViewportLayout, startLoop, doc
   skeleton.showBone(true);
 
   let wireframe = false;
+  // ワイヤーフレームの状態を受け取り、現在の設定と後続処理へ反映する
   const setWireframeState = (enabled) => {
     // skinned mesh のまま Shape.setWireframe() を切り替え、
     // Wireframe shader が SmoothShader と同じ bone palette を受け取れることを確認する

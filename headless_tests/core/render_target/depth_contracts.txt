@@ -1,0 +1,43 @@
+# render_target_depth_contracts
+
+## 目的
+
+ScreenとRenderTargetが深度形式を個別文字列で選ばず、Depth Conventionから `depth32float` を生成することを確認する。
+
+## 確認内容
+
+- 通常カメラtargetが `depth32float` を生成する。
+- sampleDepth指定時だけtexture binding usageを追加する。
+- Shadow targetが別のDepth Convention identityを保持する。
+- depthありでconvention省略時は例外になる。
+- BloomPassの通常カメラ用scene targetが `CAMERA_REVERSE_Z` を明示する。
+- color-only targetはdepth conventionとdepth textureを持たない。
+- Screenのcanvas depthとclear valueがReverse-Z規則になる。
+
+## 実行方法
+
+```sh
+node headless_tests/core/render_target/headless_probe.js
+node headless_tests/core/screen/headless_probe.js
+```
+
+## 結果
+
+2026-07-12 JSTにScreen・RenderTargetの構文確認、専用headless test、既存Screen GPU feature test、`git diff --check` を実行した。すべて終了コード0となり、次を表示した。
+
+```text
+render_target_depth_contracts: all resource contracts passed
+PASS Screen GPU feature contracts
+```
+
+## 解釈
+
+通常カメラ用RenderTargetとcanvas depthは `depth32float` を生成し、Screenのrender passはclear value 0を使用した。Shadow用RenderTargetは同じformatでも `SHADOW_STANDARD_Z` identityを保持した。
+
+depthありでDepth Conventionを省略するとconstructorで例外になり、旧 `depth24plus` を選ぶ経路はない。color-only targetはdepth resourceを作らないためDepth Conventionを要求しない。
+
+BloomPassのscene targetは通常カメラの3D sceneを描くため、`CAMERA_REVERSE_Z`をRenderTargetへ明示する。これにより、BloomPass初期化時に規約不明のdepth targetとして停止せず、Screenと同じ深度比較およびclear値でoffscreen描画できる。
+
+## Commit
+
+`Screen.js`、`RenderTarget.js`、本テストを同じコミットへ含める。

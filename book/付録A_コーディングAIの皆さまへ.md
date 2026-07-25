@@ -1,147 +1,392 @@
-# コーディングAIの皆さまへ
+# コーディング AI の皆さまへ
 
-## `webg` 利用者を支援するためのガイドライン
+## `webg`利用者を支援するためのガイドライン
 
-この付録は、`webg` を用いて 3D アプリケーションを開発する利用者を、コーディング AI が支援する場面を想定して作成されました。ここで想定する AI は、一般的な 3D エンジンや外部ライブラリの知識をそのまま適用するのではなく、`webg` という自己完結したライブラリの設計思想に基づき、何をどの順番で参照すべきかを正しく判断する支援者としての役割を担います。
+この付録は、`webg`を用いて3Dアプリケーションを開発する利用者を、コーディングAIが支援する場面を想定して作成されました。
+ここで想定するAIは、一般的な3Dエンジンや外部ライブラリの知識をそのまま適用するのではなく、`webg`という自己完結したライブラリの設計思想に基づき、何をどの順番で参照すべきかを判断する支援者です。
 
-本書において極めて重要な点は、`webg` が外部ライブラリに依存せず、描画からシーン管理、アニメーションに至るまで、必要な実装と解説をすべて内部に完結して持っていることです。AI が技術支援を行う際は、「一般的な WebGPU の実装はこうであるはずだ」あるいは「Three.js ではこうだから同様だろう」といった推測よりも、本書の記述および `webg` 自体のソースコードを優先して参照することが、正確な回答への最短ルートとなります。
+本書の基準版は`2.0.0 beta`です。
+2026年7月20日のfeature freeze以後は、2.0の公開APIと描画手順を原則として固定しています。
 
-一般論を補助的に活用することはあっても、最終的な判断基準は `webg` の本文、サンプル、unittest、およびコア実装に置くことが推奨されます。本付録の目的は、利用者が「何をしたいか」「どこで困難に直面しているか」に応じて、AI がどの章を起点にし、どのサンプルを参照し、どの実装まで掘り下げるべきかを素早く判断するための「読書地図」を提供することにあります。
+`webg`を利用するアプリケーションでは、まず`WebgApp`が初期化、更新ループ、カメラ、入力、UI、描画タイミングを統合します。
+3D形状は`Space`、`Node`、`Shape`、`ModelAsset`によって構成され、この部分はフォワードレンダリング経路でも、コンピュート処理を利用する遅延レンダリング経路でも共通です。
+
+大きな選択は形状の作り方ではなく、照明と画面効果をどの描画経路で処理するかにあります。
+普通に頂点シェーダーとフラグメントシェーダーでシーンを描画する場合は、`SmoothShader`を使うフォワードレンダリング経路を選びます。
+高度な照明、SSAO、SSR、複数の後段効果が必要な場合は、`ComputeEffectPipeline`を使う遅延レンダリング経路を選択できます。
+どちらも`WebgApp`のフレーム処理内で構成できます。
+
+```text
+WebgApp
+  ├─ 初期化、更新ループ、カメラ、入力、UI
+  ├─ Space、Node、Shape、ModelAsset
+  └─ 照明・最終描画経路の選択
+       ├─ フォワードレンダリング経路
+       │    └─ SmoothShaderによる直接照明
+       └─ 遅延レンダリング経路
+            └─ G-buffer + ComputeEffectPipeline
+```
+
+この図の上側は、アプリケーションの共通基盤です。
+下側の分岐は、同じシーンと形状をどの照明経路で最終画面へ変換するかを示します。
+遅延レンダリング経路を選ぶために`WebgApp`、`Space`、`Shape`を捨てて、生のWebGPUアプリケーションへ作り直す必要はありません。
+反対に、コンピュートシェーダーが利用できるという理由だけで、単純な画面まで遅延レンダリング経路へ移す必要もありません。
+
+本書において重要なのは、`webg`が外部の3Dライブラリに依存せず、描画、シーン管理、モデル、アニメーション、UI、入力、物理、音声、診断、GPU計算を内部に持つことです。
+AIが技術支援を行う際は、「一般的なWebGPU実装はこうであるはずだ」あるいは「Three.jsではこうだから同様だろう」といった推測よりも、本書、`samples`、`headless_tests`、`unittest`、`webg`本体の現行実装を優先してください。
+
+一般論は概念を説明する補助として利用できますが、公開API、引数、形式、ライフサイクル、例外条件の最終判断は`webg`の資料と実装に置きます。
+本付録の目的は、利用者が何を作りたいか、どの層で問題が起きているかに応じて、AIが参照する章、サンプル、自動テスト、ブラウザPOC、コア実装を選ぶための読書地図を提供することです。
+
+## `WebgApp`を中心に考える
+
+### アプリケーションの共通基盤
+
+`WebgApp`は、単にCanvasを初期化する補助クラスではありません。
+Screen、GPUコンテキスト、シーン、標準シェーダー、カメラ、入力、Message、HUD、Overlay Panel、DebugDock、フレーム処理を一つのアプリケーション構造へまとめます。
+
+利用者がフォワードレンダリング経路を使う場合も、遅延レンダリング経路を使う場合も、次の処理は共通です。
+
+- `await app.init()`でGPUとアプリケーション機能を初期化する
+- `Space`と`Node`でシーン階層と配置を管理する
+- `Shape`、`Primitive`、`ModelAsset`で3D形状を用意する
+- `EyeRig`または標準カメラで視点を管理する
+- `onUpdate`でアプリケーション状態を更新する
+- `InputController`でキーボード、ポインター、タッチを扱う
+- HUD、Overlay Panel、CommandPaletteで情報と操作を提示する
+
+描画経路が変わっても、モデルの読み込み、Nodeの移動、アニメーションの更新、カメラの操作、UIの構築を別の体系へ置き換える必要はありません。
+AIは、照明方式の変更をアプリケーション全体の作り直しとして提案しないでください。
+
+### 3D形状と配置は共通である
+
+`Space`はシーンのNode階層を管理し、`Shape`は頂点、法線、UV、複数のmaterial slot、三角形ごとのmaterial番号などを保持します。
+`ModelAsset`から展開されたモデルも、最終的にはNodeとShapeとしてシーンへ配置されます。
+
+フォワードレンダリング経路では、これらのShapeを`SmoothShader`が直接描画します。
+遅延レンダリング経路では、同じSpaceとShapeを`GeometryBufferPass`がG-bufferへ描画し、後段で照明を計算します。
+内部で使うシェーダーと出力先は異なりますが、利用者が同じモデルを別形式で作り直す必要はありません。
+
+ただし、遅延レンダリング経路ではG-bufferへ渡す表面のマテリアル情報が必要です。
+`specular`、`roughness`、`metallic`、`emissive`をすべて指定し、欠落値を任意のフォールバックで補って問題を隠さないでください。
+
+## 照明と最終描画経路を選ぶ
+
+### フォワードレンダリング経路
+
+フォワードレンダリング経路では、形状を描くときに`SmoothShader`が照明を評価し、その結果をCanvasへ出力します。
+構成が小さく、3Dシーンを短い経路で描画できることが利点です。
+
+次の場合は、フォワードレンダリング経路を最初に検討します。
+
+- 単純な3D形状やモデルを表示する
+- 少数のライトで十分である
+- G-bufferを必要とする画面効果を使わない
+- 描画構成とリソース数を小さく保ちたい
+- `SmoothShader`のマテリアル設定で必要な見た目を作れる
+
+この経路では`WebgApp`の通常のフレーム処理を利用します。
+利用者がカメラフレームや個別のコマンドエンコーダーを管理する必要はありません。
+`Space.draw(eye)`による単純な描画へ、遅延レンダリング用のリソースやフレーム状態を追加しないでください。
+
+### 遅延レンダリング経路
+
+遅延レンダリング経路では、最初に不透明Shapeの表面情報をG-bufferへ保存し、そのテクスチャを使って照明と画面効果を計算します。
+`ComputeEffectPipeline`は、G-buffer、シャドウ、SSAO、遅延照明、SSR、半透明、Toon、DoF、Bloom、Tone Mapping、Edgeを一つの順序へ接続します。
+
+半透明はmaterialの独立した`alpha`で指定します。
+`color[3]`を透明度へ読み替えません。
+一つのShapeに不透明と半透明の三角形が混在しても、全Shape横断で透明三角形を奥から手前へ並べます。
+Pipeline利用側へ透明用Render Passを追加する提案はせず、`roughness`による背景ぼけとSpecularを内部の`TransparencyPass`へ任せます。
+
+次の場合は、遅延レンダリング経路を検討します。
+
+- G-bufferを共有する複数の効果を使う
+- SSAOで接地感を加えたい
+- SSRで画面空間反射を加えたい
+- 多数または種類の異なるライトを後段で評価したい
+- HDR区間で照明、反射、Bloom、DoFを接続したい
+- 中間テクスチャの形式と処理順序を統合APIへ任せたい
+
+遅延レンダリング経路も`WebgApp`の中で動作します。
+`onBeforeDraw`で`pipeline.renderScene()`を呼び、`onAfterDraw3d`で`pipeline.encode()`と最終表示を行います。
+両方には同じ`cameraFrame`を渡します。
+
+```text
+WebgAppの状態更新
+  -> onBeforeDraw
+       -> Shadow MapとG-bufferを描画
+  -> onAfterDraw3d
+       -> 照明と画面効果を記録
+       -> 完成したテクスチャをCanvasへ表示
+       -> HUD用の深度付きパスへ戻る
+```
+
+`ComputeEffectPipeline`は、効果を無効にしたときにフォワードレンダリング経路へ自動的に戻るクラスではありません。
+アプリケーションの入口で、フォワードレンダリング経路を使うか、遅延レンダリング経路を使うかを明示的に選びます。
+
+### GPU状態を先に更新する処理は別の応用である
+
+GPU粒子、布、物理、手続きテクスチャのように、画面を描く前にGPU上の状態を更新する処理は、照明経路の分岐とは別の応用です。
+この場合も`WebgApp`を利用できますが、`computeFrame: true`と`onComputeFrame`を使います。
+
+```text
+WebgApp computeFrame
+  -> 状態を更新するコンピュートパス
+  -> 最新状態を読むレンダーパス
+  -> コマンドバッファを送信
+```
+
+この処理を使う理由は、遅延照明を使うためではありません。
+大量の状態をGPU上で更新し、その結果をCPUへ戻さず描画へ渡すためです。
+照明経路の選択とGPUシミュレーションの選択を同じ問題として扱わないでください。
 
 ## 自己完結した設計思想の理解
 
-`webg` を支援する AI がまず理解すべきは、本ライブラリが単なる「外部ライブラリを繋ぎ合わせた薄いラッパー」ではなく、描画、シーン、モデル、アニメーション、UI、入力、診断、ポストプロセスに至るまでを自前で実装した、独立した設計思想を持つライブラリであるということです。
+`webg`は、外部ライブラリをつなぎ合わせた薄いラッパーではありません。
+描画、シーン、モデル、アニメーション、UI、入力、診断、GPU計算を一つの設計規則で接続します。
 
-一般的な Web 系の AI 支援では、「カメラ制御なら Three.js 的な手法を」「UI オーバーレイなら DOM 側で処理を」といった連想が起こりやすくなります。しかし `webg` では、独自の設計流儀が定義されています。
+カメラは`cameraRig` $\rightarrow$ `cameraRod` $\rightarrow$ `eye`、シーンと形状は`Space` $\rightarrow$ `Node` $\rightarrow$ `Shape`で構成します。
+`ModelAsset` $\rightarrow$ `build()` $\rightarrow$ `instantiate()`は共通リソースと個別インスタンスを分け、`clip` $\rightarrow$ `pattern` $\rightarrow$ `action` $\rightarrow$ `state`はアニメーションを段階化します。
 
-- `cameraRig` $\rightarrow$ `cameraRod` $\rightarrow$ `eye` という 3 段構成のカメラシステム
-- `ModelAsset` $\rightarrow$ `build()` $\rightarrow$ `instantiate()` というリソース展開の分離
-- `clip` $\rightarrow$ `pattern` $\rightarrow$ `action` $\rightarrow$ `state` というアニメーションの階層構造
-- `Scene JSON` によるシーン定義の粒度
-- `SmoothShader` を標準入口とするマテリアル管理
-
-AI は、まず `webg` 独自の定義を正しく読み取り、その後に必要に応じて一般的な 3D コンセプトと対応付けるという手順で思考することが重要です。
+AIは、最初に`webg`独自の定義と各機能が担当する処理を確認し、その後で一般的な3DやWebGPUの概念と対応付けてください。
+一般論を先に当てはめると、深度規則、色空間、カメラ状態、GPUリソースを管理する箇所を取り違えることがあります。
 
 ## 遵守すべきテクニカル・ルール
 
-AI がコードを生成する際、以下の項目を怠ると「文法的に正しくても何も表示されない」あるいは「実行時にクラッシュする」という事態を招きます。提案するコードに以下の要素が含まれているか、必ず確認してください。
+### 1. 初期化とライフサイクル
 
-### 1. 描画における必須ステップ
-- 初期化の待機: `await screen.ready`（または `await app.init()`）の完了を待たずに、描画処理やリソース生成を行ってはいけません。GPU デバイスの準備が完了していることが前提となります。
-- バッファの確定: `Shape` に頂点データを追加した後は、必ず `shape.endShape()` を呼び出してください。これを忘れると GPU バッファが確定せず、形状が描画されません。
-- 描画ループの順序: `clear` $\rightarrow$ `draw` $\rightarrow$ `present` の実行順序を厳守してください。
+- `await screen.ready`または`await app.init()`の完了前に、GPUリソースを生成しません。
+- `app.space`、`app.eye`、`app.getGPU()`は`await app.init()`完了後に使用します。
+- 毎フレームのアプリケーション状態更新は`app.start({ onUpdate: ... })`へ置きます。
+- `computeFrame: true`を使う場合は`onComputeFrame`を必ず登録します。
+- `computeFrame: true`でないアプリへ`onComputeFrame`だけを追加しません。
 
-### 2. `WebgApp` のライフサイクル
-- プロパティへのアクセス: `app.space`、`app.eye`、`app.getGPU()` などのプロパティは、必ず `await app.init()` が完了した後にアクセスしてください。
-- 更新ループの登録: 毎フレーム実行される処理は、`app.start({ onUpdate: ... })` のハンドラ内に記述してください。
+### 2. 形状とリソースの確定
 
-### 3. 座標系と回転用語の定義
-- 右手座標系: `+X=右`, `+Y=上`, `+Z=前` として定義されています。
-- 回転用語: `webg` では `yaw / pitch / roll` という用語を使用します。一般論に基づく計算式を適用せず、`CoordinateSystem` 等の `webg` 内部定義に従って回転を制御してください。
+- `Shape`へ頂点データを追加した後は、必ず`shape.endShape()`を呼びます。
+- ModelAssetは`build()`で実行時リソースを作り、必要な数だけ`instantiate()`します。
+- 同じShapeを複数配置するときは、頂点を複製せずNodeのtransformを使います。
+- リソースの生成、サイズ変更、更新、破棄をどこで行うか一つに決めます。
+- Pipelineが内部で生成・管理するリソースを、利用側から重複作成または破棄しません。
 
-## 目的別リソース・ナビゲーション
+### 3. 座標系と回転
 
-本書は `webg` の全体像を把握するための構造的なガイドラインとして機能します。AI は、ユーザーが現在どのレイヤーの話をしているかを判定し、以下の対応表に基づいて参照先を選択してください。
+- 右手座標系で`+X=右`、`+Y=上`です。
+- ワールド`+Z`と標準カメラのローカル前方`-Z`を区別します。
+- モデル前方はアセットまたはアプリケーションの規約を確認します。
+- 回転は`yaw / pitch / roll`と`CoordinateSystem`の定義に従います。
+- 大きなワールド座標をGPUのfloat32行列で相殺せず、カメラ相対のモデルビュー変換を使います。
 
-| ユーザーの目的 | 起点とする章 | 参照すべきサンプル / キーワード |
-| :--- | :--- | :--- |
-| 最初の 3D オブジェクトを表示したい | 第4, 5章 | `low_level`, `high_level` |
-| `WebgApp` でアプリの土台を構築したい | 第5, 6章 | `high_level` |
-| Orbit / Follow / First-person カメラの実装 | 第5, 6章 | `high_level`, `camera_controller` |
-| シェーダーやマテリアルを調整したい | 第7章以降 | `shapes`, `smooth_shader` |
-| glTF / GLB / Collada モデルの読み込み | 第10, 12, 13章 | `gltf_loader`, `collada_loader` |
-| Scene JSON でシーン全体を定義したい | 第5, 10, 11章 | `scene` |
-| アニメーションの状態遷移を制御したい | 第12, 13章 | `animation_state`, `janken` |
-| HUD やパネルなどの UI を実装したい | 第5, 14章以降 | 各種 UI サンプル |
-| 低レイヤーでメッシュやシェーダーの構築 | 第22章以降 | `low_level`, 各 unittest |
+### 4. 深度とカメラフレーム
 
-## API が見つからない場合の探索プロトコル
+- 通常カメラは`CAMERA_REVERSE_Z`、`depth32float`、クリア値0、比較関数`greater`です。
+- Shadow Mapは`SHADOW_STANDARD_Z`、クリア値1、比較関数`less`です。
+- 通常カメラの深度とShadow Mapの深度を同じ意味として扱いません。
+- `CameraFrame`は、一回の描画で共有するカメラ状態を確定した値です。標準の単一パスへ不要な`CameraFrame`や`renderFrameToken`を追加しません。
+- 同じ深度を読む後段パスだけが、同じ`CameraFrame`またはトークンを共有します。
+- `ComputeEffectPipeline.renderScene()`と`encode()`へ同じ`CameraFrame`を渡します。
+- 半透明はmaterialの`alpha`と三角形のmaterial slot番号から自動分類します。
+- `TransparencyPass`はSSR後、Toon / DoF / Bloom前のHDR sceneへ透明面を合成します。
+- near、far、FOV、カメラのワールド行列を個別のパスで推測しません。
 
-`webg` は API の数が多いため、AI が最初の検索で目的の関数に到達できないことがあります。その場合は、思いつきで外部ライブラリの API を代用せず、以下の順に探索してください。
+### 5. 最終表示の順序
 
-1. 付録Bからクラス名・機能名を探す:
-   `book/付録B_API一覧.md` は `webg` の API 索引です。まず `WebgApp`、`Shape`、`Texture`、`ModelAsset`、`SceneLoader` のようなクラス名、または `raycast`、`normal map`、`dialogue`、`particle` のような機能語で検索してください。
-2. 章本文で設計意図を確認する:
-   API 名だけでは使い方を判断できない場合は、上の「目的別リソース・ナビゲーション」の章へ戻り、概念、ライフサイクル、推奨パターンを確認してください。
-3. サンプルで呼び出し方を確認する:
-   実際の使い方は `samples/` 以下を優先して確認します。サンプルは `main.js` だけでなく、同じディレクトリ内の補助 `*.js` に実装が分かれている場合があります。
-4. unittest で最小動作を確認する:
-   ある API の最小条件や境界挙動を知りたい場合は `unittest/` 以下を確認してください。
-5. 最後に `webg/*.js` を仕様として読む:
-   付録Bやサンプルで分からない場合、`webg/*.js` の実装が最終的な仕様です。公開 API の有無、引数名、戻り値、例外条件をここで確認してください。
+標準の単一パスでは`clear` $\rightarrow$ `draw` $\rightarrow$ `present`を使います。
+完成したテクスチャをCanvasへ表示する統合経路では、次の順序を使います。
 
-検索コマンドを使える AI は、次のように「文書 -> サンプル -> unittest -> 実装」の順で範囲を広げると見落としを減らせます。
+```text
+beginPresentPass()
+  -> FullscreenPass.draw()
+  -> clearDepthBuffer()
+  -> Canvas上のHUDまたは後続描画
+```
+
+`clearDepthBuffer()`は最終テクスチャを消す処理ではありません。
+完成したテクスチャを表示した後、HUDが使う深度付きCanvasパスを再開します。
+
+## 目的別の参照先
+
+AIは利用者がどの層の話をしているかを判定し、目的に対応する章、サンプル、自動テストを選択してください。
+以下でディレクトリ名だけを記したものは、`samples/`以下のサンプルです。
+
+- **最初の3Dオブジェクト**: 第4、5章、`low_level`、`high_level`
+- **`WebgApp`によるアプリケーション基盤**:
+  第5、6章、`high_level`
+- **Orbit、Follow、First-personカメラ**:
+  第5、6章、`high_level`、`eye_rig`
+- **形状とマテリアル**: 第7、9、22〜24章、`shapes`、`materials`
+- **フォワードレンダリング経路の照明**:
+  第9、24章、`SmoothShader`、`shapes`、`materials`
+- **遅延照明と複数の画面効果**:
+  第27〜29章、`compute_effect`、`compute_json`
+- **glTF、GLB、Colladaモデル**:
+  第10、12、13章、`gltf_loader`、`collada_loader`
+- **Scene JSON**: 第5、10、11章、`scene`
+- **アニメーションの状態遷移**:
+  第12、13章、`animation_state`、`janken`
+- **HUDやパネルなどのUI**:
+  第5、14〜16章、`OverlayPanel`、`CommandPalette`を使うサンプル
+- **入力、レイキャスト、衝突判定**:
+  第16、17章、`unittest/raycast`、`headless_tests/core/physics_space`
+- **物理ボディ、反発、摩擦**:
+  第26章、`physics_bounce`、`headless_tests/core/physics_space`
+- **個別のコンピュート効果**: 第27〜29章。参照先は
+  `compute_bloom`、`compute_deferred_lighting`、`compute_dof`、
+  `compute_edge`、`compute_shadow_map`、`compute_ssao`、
+  `compute_ssao_gbuffer`、`compute_ssr`、`compute_vignette`
+- **GPU上で更新する粒子、布、物理、テクスチャ**:
+  第27章。参照先は
+  `compute_particles`、`compute_cloth`、`compute_physics_bounce`、
+  `compute_texture`
+- **低水準のコンピュート接続**:
+  第27章、`compute_postprocess`、`webg/ComputePass.js`
+- **コンピュート処理の性能比較**:
+  第27〜29章、`compute_benchmark`
+
+同じ題材名を持つサンプルを重複と判断しないでください。
+`bloom`と`compute_bloom`、`dof`と`compute_dof`、`physics_bounce`と`compute_physics_bounce`は、描画方式または計算場所を比較する別のサンプルです。
+コンピュート系サンプルの目的と維持理由は`samples/README.md`で確認できます。
+
+## APIが見つからない場合の調べ方
+
+APIや利用方法が見つからない場合は、外部ライブラリのAPIを代用せず、次の順に探索してください。
+
+1. `book/付録C_API一覧.md`でクラス名と機能名を探します。
+2. 章本文で背景、役割、理由、処理順序、注意点を確認します。
+3. `samples/<name>/README.md`でサンプルの目的を確認します。
+4. `main.js`と補助`*.js`で実際の接続方法を確認します。
+5. `headless_tests/core/<core_name>`で自動検証される仕様を確認します。
+6. `unittest`で人が確認するブラウザPOCを探します。
+7. 最後に`webg/*.js`で公開API、例外、リソースを管理する処理を確認します。
+
+検索コマンドを使えるAIは、次のように範囲を広げます。
 
 ```sh
-rg -n "ClassName|methodName|feature keyword" book/付録B_API一覧.md book/*.md
-rg -n "methodName|feature keyword" samples unittest webg
+rg -n "ClassName|methodName|feature keyword" book/付録C_API一覧.md book/*.md
+rg -n "methodName|feature keyword" samples headless_tests unittest webg
 rg -n "^export |export default|methodName" webg/*.js
 ```
 
-API 名が分からない場合は、まず `book/付録B_API一覧.md` の見出しだけを確認すると、どのクラスに属する機能かを素早く絞り込めます。
+API名が分からない場合は、付録Cの見出しから所属クラスを絞り込みます。
 
 ```sh
-rg -n "^(##|###|####) " book/付録B_API一覧.md
+rg -n "^(##|###|####) " book/付録C_API一覧.md
 ```
 
-よくある対応関係は以下の通りです。
+ファイル名とクラス名は、多くの場合`webg/<ClassName>.js`に対応します。
+例外として、`formatJSON()`は`webg/JsonFormat.js`、UIテーマは`webg/WebgUiTheme.js`、Helpとエラー表示の設定を作る関数は`webg/OverlayPanelPresets.js`にあります。
 
-| 探したいもの | 最初に見る場所 |
-| :--- | :--- |
-| アプリ全体、ループ、HUD、入力、カメラ、診断 | `WebgApp`、第5章、第6章、第14〜19章 |
-| 形状生成、頂点、material、wireframe、collision | `Primitive`、`Shape`、第22〜24章 |
-| texture、画像読み込み、normal map、procedural | `Texture`、第7章、第24章、`proctex` |
-| model の読み込み、保存、json.gz | `ModelLoader`、`ModelAsset`、`SceneAsset`、第10〜11章 |
-| animation clip、action、transition | `Animation`、`Action`、第12〜13章 |
-| DOM overlay、help、debug dock | `OverlayPanelPresets`、`DebugDock`、第14〜15章 |
-| raycast、picking、collision | `Space`、第17章、`unittest/raycast` |
-| 反発、摩擦、物理 body、回転付き box 接触 | `PhysicsNode`、`PhysicsSpace`、第26章、`samples/physics_bounce`、`unittest/physics_space_contracts` |
+## コンピュート処理を追加するときの判断
 
-ファイル名とクラス名は多くの場合 `webg/ClassName.js` に対応しますが、例外もあります。`formatJSON()` は `webg/JsonFormat.js`、UI theme は `webg/WebgUiTheme.js`、help / error の option builder は `webg/OverlayPanelPresets.js`、`SkinningConfig` は定数と関数の module です。迷ったら `rg -n "export default class ClassName|export class ClassName|export function functionName" webg` で確認してください。
+コンピュートシェーダーは、`WebgApp`に代わる別のアプリケーション基盤ではありません。
+標準描画の一部を置き換えるか、GPU上の状態更新を担当する処理です。
+AIは、何を管理したいかに応じて入口を選びます。
 
-## UI コンポーネントの選択指針
+### `ComputeEffectPipeline`を使う
 
-利用者が「画面に情報を表示したい」と要望した場合、AI は目的に応じて以下のコンポーネントを適切に使い分ける提案を行ってください。
+G-bufferを共有し、遅延照明と複数の画面効果を一般的な順序で接続する場合に使います。
+Pipelineが中間テクスチャを生成し、各パスの接続、サイズ変更、破棄をまとめて行います。
 
-- 操作説明やヘルプ: `app.showOverlayPanel(buildHelpPanelOptions(...))` または `app.showOverlayPanel({ collapsible: true, ... })`
-- 動的な数値や状態の表示: `app.message.setLines("status", [...], options)` または HUD (`setHudRows`)（簡潔な情報を整然と表示）
-- 会話形式の演出やチュートリアル: `OverlayPanel` の `buttons` / `choices` と、アプリ側 controller を組み合わせる
-- 詳細な情報やエラー理由の提示: `app.showOverlayPanel({ format: "pre", scrollY: true, ... })` または `buildErrorPanelOptions()`
+### 個別のコンピュートパスを使う
+
+一つの効果を比較する、中間結果を表示する、標準と異なる順序を研究する場合に使います。
+入力、出力、処理順序、サイズ変更、破棄は利用側で管理します。
+
+### `ComputePass`または`computeFrame`を使う
+
+独自WGSL、ストレージバッファ、ストレージテクスチャ、GPUシミュレーションに使います。
+`ComputePass.encode()`はコマンドエンコーダーへ処理を記録しますが、送信は行いません。
+エンコーダーの生成、レンダーパスとの順序、送信は呼び出し側で行います。
+
+### 安全確認
+
+- WGSLの`@workgroup_size`とJavaScript側の`workgroupSize`を一致させます。
+- ディスパッチ数を切り上げる場合はWGSLに範囲外ガードを置きます。
+- 前状態を読み、次状態を書く処理ではping-pongリソースを検討します。
+- バインディング番号、リソース種別、テクスチャ形式を明示します。
+- HDR区間は`rgba16float`を維持し、表示変換は最後に一度だけ行います。
+- Canvasのサイズ変更時は、画面サイズに依存するリソースもサイズを変更します。
+- `destroy()`後のパスやリソースを再利用しません。
+
+headless testが成功しても、実際のWebGPUデバイスでのWGSLコンパイル、Pipelineの検証、描画結果までは保証しません。
+実GPUでの成立はブラウザでサンプルを起動して確認し、表示品質や操作感は人が判断します。
+
+## UIコンポーネントの選択指針
+
+利用者が画面へ情報を表示したい場合は、目的に応じて次のコンポーネントを使い分けます。
+
+- 操作説明やHelp: `app.showOverlayPanel(buildHelpPanelOptions(...))`
+- 動的な数値や状態: `app.message.setLines("status", [...], options)`またはHUD
+- 会話やチュートリアル: `OverlayPanel`の`buttons` / `choices`とアプリケーション側の制御処理
+- 詳細なエラー理由: `buildErrorPanelOptions()`または`format: "pre"`のOverlay Panel
+- 低頻度の設定変更: `CommandPalette`
+- 継続的な開発診断: `DebugDock`
+
+画面効果の調整項目を増やすときも、常時表示する操作だけをHUDや固定ボタンへ置き、低頻度の設定値は`CommandPalette`へまとめます。
 
 ## リソース参照の優先順位
 
-AI は以下の優先順位で参照先を選択し、根拠に基づいた提案を行ってください。
+AIは次の用途を混同せず、必要な根拠を持つ参照先を選びます。
 
-1. `book/付録B_API一覧.md`（API 名の索引）:
-   API 名、クラス名、代表的メソッドを確認する入口です。API の数が多い場合は、まず付録Bで所属クラスを絞り込んでから本文や実装へ進んでください。
-2. `samples/`（実装意図の把握）:
-   まず対応する `*.txt`（解説）を読み、そのサンプルの「目的」を理解した上で `main.js`（実装）を参照してください。コードの断片的な模倣ではなく、設計意図を汲み取った提案を行うためです。
-3. `unittest/`（局所的な検証）:
-   特定機能の挙動確認や、最小単位での動作検証が必要な場合に参照してください。
-4. `webg/` 本体実装（最終的な仕様定義）:
-   本文やサンプルで意味が曖昧な場合、最終的な仕様を確認するための正解として参照してください。
+1. `book/付録C_API一覧.md`でAPI名と所属クラスを探します。
+2. 章本文で背景、役割、理由、使いどころ、注意点を理解します。
+3. `samples`のREADMEで目的とアプリケーションへの接続方法を確認します。
+4. `headless_tests`で人の判断を必要としない仕様を確認します。
+5. `unittest`で表示、操作、実GPU、ブラウザAPIを人が確認します。
+6. `webg`本体で公開API、例外、リソース管理の最終仕様を確認します。
 
-## API レイヤーの分離と整合性
+headless testが成功しても、実際のブラウザ表示が正しいとは限りません。
+反対に、ブラウザで一度表示されたことだけでは、境界値、例外、破棄後の状態などの仕様を保証できません。
+自動検証とブラウザ確認は代替関係ではなく、それぞれ異なる項目を確認します。
 
-AI が最も避けるべきは、高レイヤー（ハイレベル）API と低レイヤー（ローレベル）API を不用意に混在させることです。
+## APIレイヤーの分離と整合性
 
-- 原則: まず高レイヤー（ハイレベル）API (`WebgApp` 等) で解決できないかを検討してください。
-- 文脈の尊重: 利用者が `WebgApp` を使用している場合は、その構造を維持したまま追加・修正する提案を優先します。逆に、低レイヤー（ローレベル）で実験的に実装している利用者の場合は、その文脈を尊重し、最小限の差分で提案してください。
+AIが避けるべきなのは、ハイレベルAPIとローレベルAPIを、リソースを管理する箇所を確認せずに混在させることです。
 
-### `ModelAsset` と `SceneAsset` の区別
-- `ModelAsset`: 単一モデルの共通表現（メッシュ、スケルトン、アニメーション）。`runtime.instantiate()` を通じて個別のインスタンスを生成します。
-- `SceneAsset`: シーン全体の初期状態（カメラ、HUD、配置済みプリミティブ、配置済みモデル）。
-- 判断基準: 「モデルを複数配置したい」のか「シーン全体の初期状態を保存したい」のかを切り分け、参照先（第10章か第11章か）を正しく選択してください。
+- まず`WebgApp`、`SmoothShader`、`ComputeEffectPipeline`などの既存入口を検討します。
+- 利用者が`WebgApp`を使用している場合は、そのフレーム処理を維持します。
+- 生のWebGPUまたは個別パスを使う場合も、既存リソースの管理方法を維持します。
+- リソースの生成、サイズ変更、更新、破棄をどこで行うか一つに決めます。
+- 不完全な入力を別形式や既定カメラへ読み替えて問題を隠しません。
 
-### アニメーションとシェーダーの切り分け
-- アニメーション: 問題が「clip（データ）」にあるのか、「Action（区間/ポーズ）」にあるのか、「AnimationState（状態遷移）」にあるのかを最初に切り分けてください。
-- シェーダー: 通常は `SmoothShader` を標準の入口として提案してください。WGSL や bind group の低レイヤー（ローレベル）な修正は、高レイヤー（ハイレベル）なマテリアルパラメータで解決できない場合にのみ提案してください。
+`ModelAsset`はメッシュ、スケルトン、アニメーションを持つ単一モデルの共通表現です。
+`SceneAsset`はカメラ、HUD、配置済みプリミティブ、配置済みモデルなど、シーン全体の初期状態です。
+モデルを複数配置したいのか、シーン全体を保存・復元したいのかを切り分けてください。
 
-## AI が維持すべき基本姿勢
+アニメーションの問題は、clip、Action、AnimationState、スケルトン適用のどこにあるかを確認します。
+描画の問題は、フォワードレンダリング経路なら`SmoothShader`のマテリアル設定を、遅延照明ならG-bufferのマテリアルとPipeline設定を確認します。
+WGSLは、既存の設定値では解決できず、入出力や処理方式自体を変える場合に変更します。
 
-1. 最も抽象度の高い API を優先的に検討する: `WebgApp` や `loadModel()` など、最も抽象化された API で解決できないかをまず検討してください。
-2. 本書の定義を信頼する: 用語、構造、サンプルの位置づけは一貫しています。外部エンジンの流儀を無理に当てはめず、本書の定義をそのまま適用してください。
-3. 問題の層を切り分ける: 現象を一つの原因にまとめず、「どの層（描画、カメラ、モデル、アニメーション、UI）の問題か」を切り分けてから解決策を提示してください。
-4. コアライブラリの直接的な修正を回避する: アプリケーションの実装において `webg` コア機能 (`webg/*.js`) の修正が必要と感じた場合でも、クラスを継承するなどしてアプリケーション側で対応することを提案してください。もしコア機能のバグであると判断できる場合は、利用者にその旨を伝えてください。
+## 問題を診断する順序
 
-`webg` は、設計・実装・文書化が一貫して行われているライブラリです。AI は本書を「一次的な参照地図」として活用し、利用者が迷わず実装できるようガイドしてください。
+表示や動作に問題がある場合は、最初からシェーダーの計算式だけを疑わず、共通基盤から最終表示へ順番に確認します。
+
+1. `await app.init()`または`await screen.ready`が完了しているか確認します。
+2. JavaScript例外とWebGPUの検証メッセージを確認します。
+3. `WebgApp`のフレーム方式と登録したコールバックが一致しているか確認します。
+4. Space、Node、Shape、カメラの状態が期待どおりか確認します。
+5. フォワードレンダリング経路か遅延レンダリング経路かを確認します。
+6. 遅延レンダリング経路ではG-bufferの各テクスチャを確認します。
+7. `CameraFrame`、深度規則、テクスチャ形式を確認します。
+8. サイズ変更後に古いリソースを参照していないか確認します。
+9. 最終表示だけが黒い場合はTone Mapping、表示処理、Fullscreen copyを確認します。
+10. HUDが消える場合は`clearDepthBuffer()`でCanvasパスへ戻っているか確認します。
+11. GPU状態を先に更新する処理では、ディスパッチ、バインディング、範囲外ガード、送信順序を確認します。
+12. 性能問題ではCPU時間だけで判断せず、`compute_benchmark`のGPU計測を参照します。
+
+## AIが維持すべき基本姿勢
+
+1. `WebgApp`をアプリケーションの中心として考える:
+   高度な描画やGPU計算を追加しても、共通のシーン、カメラ、入力、UIを維持します。
+2. 最も抽象度の高いAPIから検討する:
+   `WebgApp`、`loadModel()`、`SmoothShader`、`ComputeEffectPipeline`で解決できるか確認します。
+3. 本書で設計意図を確認し、現行実装で照合する:
+   APIと例外はサンプル、自動テスト、ブラウザPOC、`webg/*.js`で確認します。
+4. 問題の層と描画経路を切り分ける:
+   アプリケーション、シーン、形状、カメラ、照明、UI、物理、コンピュート、最終表示を一つの原因へまとめず、使用中の描画経路も確認します。
+5. 確認方法と変更範囲を選ぶ:
+   自動テスト、ブラウザ自動撮影、人の目視確認が保証する範囲を区別します。アプリケーション側の組み合わせを優先し、コアの不具合または共通APIの不足と確認できた場合は、コア、サンプル、テスト、文書を同じ仕様で更新します。
+
+`webg`は、`WebgApp`を中心として、設計、実装、サンプル、自動テスト、文書化を一つの体系に保つライブラリです。
+AIは本書を一次的な参照地図として利用し、共通の3Dアプリケーション構造を維持したまま、目的に合う照明経路とGPU処理を選び、利用者が根拠を確認できる形で支援してください。

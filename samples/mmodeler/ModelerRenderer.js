@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// samples/mmodeler/ModelerRenderer.js  2026/05/26
+// samples/mmodeler/ModelerRenderer.js  2026/07/25
 //   WebGPU scene graph rendering helpers for mmodeler.
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -9,6 +9,7 @@ import Quat from "../../webg/Quat.js";
 import Matrix from "../../webg/Matrix.js";
 import { readFiniteNumber, readQuatXyzw, readVec3 } from "./math3d.js";
 
+// `quatFromXyzw`は座標または数値を計算し、後続処理で使う結果を返す
 function quatFromXyzw(rotation) {
   const q = readQuatXyzw(rotation, "object rotation");
   const quat = new Quat();
@@ -167,7 +168,6 @@ export default class ModelerRenderer {
     const edges = options.edges;
     const editMesh = options.editMesh;
     const object = options.object;
-    const buildVertexLookup = options.buildVertexLookup;
     const localToWorldPosition = options.localToWorldPosition;
     const getEdgeColor = options.getEdgeColor;
     if (!Array.isArray(edges)) {
@@ -175,9 +175,6 @@ export default class ModelerRenderer {
     }
     if (!editMesh || !Array.isArray(editMesh.vertices)) {
       throw new Error("rebuildEdgeOverlayBuffer requires edit mesh vertices");
-    }
-    if (typeof buildVertexLookup !== "function") {
-      throw new Error("rebuildEdgeOverlayBuffer requires buildVertexLookup");
     }
     if (typeof localToWorldPosition !== "function") {
       throw new Error("rebuildEdgeOverlayBuffer requires localToWorldPosition");
@@ -187,12 +184,11 @@ export default class ModelerRenderer {
     }
 
     edgeOverlay.clear();
-    const vertexLookup = buildVertexLookup(editMesh.vertices);
     for (const edge of edges) {
-      const va = vertexLookup.get(edge.a);
-      const vb = vertexLookup.get(edge.b);
+      const va = editMesh.vertices[edge.a];
+      const vb = editMesh.vertices[edge.b];
       if (!va || !vb) {
-        continue;
+        throw new Error(`edge overlay references missing vertex ${edge.a}-${edge.b}`);
       }
       edgeOverlay.addLine(
         localToWorldPosition(object, va.position),

@@ -1,0 +1,34 @@
+# Edge表示色・Camera Reverse-Z geometry単体テスト
+
+## 目的
+
+ComputeEdgePassをTone Map後の表示色処理として維持しながら、G-buffer normalとdepthを使うgeometry edgeをCamera Reverse-Zへ移行する。色Sobel、法線差、線形depth差の役割を分け、旧通常Z背景判定やprojection配列入力を残さない
+
+## 確認項目
+
+1. sceneはTone Map後の `rgba8unorm`、または通常描画targetの `bgra8unorm` である
+2. storage outputは `rgba8unorm` に固定する
+3. color-only Edgeはnormal・depthなしで動作する
+4. geometry Edgeはnormal、Camera Reverse-Z depth、Camera Frameを必須とする
+5. 背景はReverse-Z depth 0として共通helperで判定する
+6. geometry間のdepth差は共通Reverse-Z線形化後に比較する
+7. finite farとinfinite farのprojectionをCamera Frameから生成する
+8. 旧depth 1背景比較とprojection配列optionを持たない
+9. thicknessとmixはCPU検証済み値をshader内で再補正しない
+10. texture座標、edge補間率、表示色blend範囲のclampはalgorithmとして維持する
+11. geometry無効時にgeometry resourceを黙って無視しない
+12. 線形HDRの `rgba16float` を表示色として受け付けない
+
+## 実行方法
+
+```sh
+node headless_tests/core/compute_edge_pass/headless_probe.js
+```
+
+## 結果
+
+2026-07-14に実行し、全項目が成功した。表示文字列は次のとおり
+
+```text
+compute_edge_pass_depth_contracts: all display and geometry edge contracts passed
+```

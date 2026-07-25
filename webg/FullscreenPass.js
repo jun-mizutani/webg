@@ -1,18 +1,29 @@
 // ---------------------------------------------
-//  FullscreenPass.js  2026/03/09
+//  FullscreenPass.js  2026/07/25
+//   Final display texture presentation pass
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // ---------------------------------------------
 
 import Shader from "./Shader.js";
+import util from "./util.js";
+
+export const FULLSCREEN_SOURCE_FORMAT = "rgba8unorm";
+export const FULLSCREEN_BLEND_MODES = Object.freeze(["replace", "add", "alpha"]);
 
 export default class FullscreenPass extends Shader {
 
   // fullscreen quad で 1 枚の texture を現在 pass へ描く
   constructor(gpu, options = {}) {
     super(gpu);
-    this.targetFormat = options.targetFormat ?? gpu?.format ?? "bgra8unorm";
-    this.blendMode = options.blendMode ?? "replace";
+    this.requestedTargetFormat = options.targetFormat;
+    this.targetFormat = null;
+    this.blendMode = util.readOptionalEnum(
+      options.blendMode,
+      "FullscreenPass blendMode",
+      "replace",
+      FULLSCREEN_BLEND_MODES
+    );
     this.texture = null;
     this.vertexBuffer = null;
     this.bindGroupLayout = null;
@@ -62,8 +73,35 @@ export default class FullscreenPass extends Shader {
     return undefined;
   }
 
+  // キャンバスへ出力する派生パスも同じ形式検証を共有します
+  resolveTargetFormat() {
+    const canvasFormat = util.readOptionalString(
+      this.gpu?.format,
+      "FullscreenPass canvas format",
+      undefined,
+      { trim: true, allowEmpty: false }
+    );
+    if (!canvasFormat) {
+      throw new Error("FullscreenPass requires an initialized canvas format");
+    }
+    const requestedFormat = util.readOptionalString(
+      this.requestedTargetFormat,
+      "FullscreenPass targetFormat",
+      canvasFormat,
+      { trim: true, allowEmpty: false }
+    );
+    if (requestedFormat !== canvasFormat) {
+      throw new Error(
+        `FullscreenPass targetFormat must match canvas format ${canvasFormat}`
+      );
+    }
+    this.targetFormat = canvasFormat;
+    return this.targetFormat;
+  }
+
   // fullscreen pass 用 pipeline / quad / uniform を生成する
   createResources() {
+    this.resolveTargetFormat();
     const shaderCode = `
 struct Uniforms {
   colorScale : vec4f,
@@ -163,32 +201,101 @@ fn fsMain(input : VSOut) -> @location(0) vec4f {
   }
 
   setSource(texture) {
-    this.texture = texture;
+    this.texture = this.validateSource(texture);
   }
 
+  // 色の倍率を受け取り、現在の設定と後続処理へ反映する
   setColorScale(r, g, b, a = 1.0) {
-    this.uniformData.set([r, g, b, a], this.OFF_COLOR_SCALE);
+    this.uniformData.set([
+      util.readFiniteNumber(r, "FullscreenPass colorScale.r"),
+      util.readFiniteNumber(g, "FullscreenPass colorScale.g"),
+      util.readFiniteNumber(b, "FullscreenPass colorScale.b"),
+      util.readFiniteNumber(a, "FullscreenPass colorScale.a")
+    ], this.OFF_COLOR_SCALE);
     this.updateUniforms();
   }
 
+  // `uv`の倍率を受け取り、現在の設定と後続処理へ反映する
   setUvScale(u, v) {
-    this.uniformData.set([u, v], this.OFF_UV_SCALE);
+    this.uniformData.set([
+      util.readFiniteNumber(u, "FullscreenPass uvScale.u"),
+      util.readFiniteNumber(v, "FullscreenPass uvScale.v")
+    ], this.OFF_UV_SCALE);
     this.updateUniforms();
   }
 
+  // `uv`の`offset`を受け取り、現在の設定と後続処理へ反映する
   setUvOffset(u, v) {
-    this.uniformData.set([u, v], this.OFF_UV_OFFSET);
+    this.uniformData.set([
+      util.readFiniteNumber(u, "FullscreenPass uvOffset.u"),
+      util.readFiniteNumber(v, "FullscreenPass uvOffset.v")
+    ], this.OFF_UV_OFFSET);
     this.updateUniforms();
   }
 
-  // 現在の pass へ source texture を 1 枚描く
+  // 最終表示sourceがTone Map後の形式・canvas実pixel寸法を持つことを検証します
+  validateSource(texture) {
+    if (
+      !texture ||
+      typeof texture.getView !== "function" ||
+      typeof texture.getSampler !== "function" ||
+      typeof texture.getFormat !== "function" ||
+      typeof texture.getWidth !== "function" ||
+      typeof texture.getHeight !== "function"
+    ) {
+      throw new Error(
+        "FullscreenPass source must be a RenderTarget-compatible display texture"
+      );
+    }
+    if (texture.getFormat() !== FULLSCREEN_SOURCE_FORMAT) {
+      throw new Error(`FullscreenPass source format must be ${FULLSCREEN_SOURCE_FORMAT}`);
+    }
+    const width = util.readFiniteNumber(texture.getWidth(), "FullscreenPass source width", {
+      integer: true,
+      min: 1
+    });
+    const height = util.readFiniteNumber(texture.getHeight(), "FullscreenPass source height", {
+      integer: true,
+      min: 1
+    });
+    const canvasWidth = util.readFiniteNumber(
+      this.gpu?.canvas?.width,
+      "FullscreenPass canvas width",
+      { integer: true, min: 1 }
+    );
+    const canvasHeight = util.readFiniteNumber(
+      this.gpu?.canvas?.height,
+      "FullscreenPass canvas height",
+      { integer: true, min: 1 }
+    );
+    if (width !== canvasWidth || height !== canvasHeight) {
+      throw new Error(
+        `FullscreenPass source size ${width}x${height} does not match canvas size `
+        + `${canvasWidth}x${canvasHeight}`
+      );
+    }
+    if (!texture.getView() || !texture.getSampler()) {
+      throw new Error("FullscreenPass source view and sampler must be ready");
+    }
+    return texture;
+  }
+
+  // depthなしswapchain passへTone Map後のsource textureを1枚描く
   draw(texture = this.texture) {
     const pass = this.gpu?.passEncoder;
-    if (!pass) return;
+    if (!pass) {
+      throw new Error("FullscreenPass.draw requires an active presentation render pass");
+    }
+    if (this.gpu.passTargetsSwapChain !== true || this.gpu.passHasDepth !== false) {
+      throw new Error(
+        "FullscreenPass.draw requires Screen.beginPresentPass() with no depth attachment"
+      );
+    }
+    const checkedTexture = this.validateSource(texture);
     this.useProgram(pass);
     pass.setVertexBuffer(0, this.vertexBuffer);
     pass.setBindGroup(0, this.getOrCreateTexturedBindGroup({
-      texture,
+      texture: checkedTexture,
       cache: this.bindGroupCache,
       layout: this.bindGroupLayout
     }));

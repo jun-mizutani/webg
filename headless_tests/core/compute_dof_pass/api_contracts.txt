@@ -1,0 +1,21 @@
+# ComputeDofPass Image Pyramid API test
+
+## 目的
+
+`webg/ComputeDofPass.js` がscene全体、近景・遠景coverage、CoC metadataからそれぞれ1/2、1/4、1/8、1/16 Levelを作り、Camera Reverse-Z depthによる焦点距離と隣接Level補間でDoFを合成する契約を確認します。
+
+## 確認内容
+
+- DoF parameterの既定値と `composite / depth / focus` mode
+- Pyramid filter幅の`blurRadius`とLevel選択範囲の`cocScale`の検証
+- 互換入力`maxBlurMix`を`cocScale`として読み、両方を異なる値で指定した場合は拒否すること
+- 旧iterations、sample step、任意stage scaleを拒否すること
+- sceneとsampleable depthの形式、寸法、Reverse-Z identity
+- scene Pyramid、coverage・CoC抽出、近景・遠景・CoC Pyramidの順に生成し、4系統の固定4 Levelとdepthをcompositeへ渡す順序
+- resize時にfull-resolution output、近景・遠景・CoC target、4系統のPyramidを更新すること
+
+## 実行
+
+```sh
+node headless_tests/core/compute_dof_pass/api_contracts.js
+```

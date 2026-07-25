@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// unittest/overlay_panel/main.js  2026/04/30
+// unittest/overlay_panel/main.js  2026/07/25
 //   overlay_panel unittest
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -38,6 +38,7 @@ let actionLog = [
 ];
 let autoCheckLines = [];
 
+// `wrapPanelError`は入力またはイベントを受け取り、対応する処理へ振り分ける
 const wrapPanelError = (label, detail, fn) => {
   try {
     return fn();
@@ -277,6 +278,7 @@ const handleActions = () => {
   }
 };
 
+// このインスタンスの初期化段階で、必要な状態と資源を準備して処理を開始する
 const start = async () => {
   app = new WebgApp({
     document,
@@ -366,7 +368,6 @@ const start = async () => {
 
   app.start({
     onUpdate: ({ deltaSec }) => {
-      orbit.update(deltaSec);
       handleActions();
       const modalState = app.getOverlayPanel("overlay-modal")?.getState?.();
       if (modalState?.visible === true && modalState.pauseScene === true) {

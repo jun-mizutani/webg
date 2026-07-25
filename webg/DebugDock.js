@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// DebugDock.js    2026/04/08
+// DebugDock.js    2026/07/25
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // ---------------------------------------------
@@ -8,6 +8,7 @@ import { DEFAULT_UI_THEME } from "./WebgUiTheme.js";
 
 export default class DebugDock {
 
+  // インスタンス生成時に、受け取った設定を検証して初期状態を準備する
   constructor(options = {}) {
     this.doc = options.document ?? document;
     this.enabled = options.enabled !== false;
@@ -37,6 +38,7 @@ export default class DebugDock {
     };
   }
 
+  // `rows`を受け取り、現在の設定と後続処理へ反映する
   setRows(rows = []) {
     this.rows = Array.isArray(rows)
       ? rows.map((row) => ({ ...(row ?? {}) }))
@@ -67,6 +69,7 @@ export default class DebugDock {
     }
   }
 
+  // デバッグ表示を現在利用できるか判定する
   isActive(debugUiEnabled = true) {
     if (!this.enabled) return false;
     if (!debugUiEnabled) return false;
@@ -77,6 +80,7 @@ export default class DebugDock {
     return window.matchMedia("(pointer: fine)").matches;
   }
 
+  // `ensure`は受け取った値を処理し、後続処理で利用する状態または結果を生成する
   ensure() {
     if (!this.enabled) return null;
     if (this.refs?.root?.isConnected) {
@@ -107,6 +111,7 @@ export default class DebugDock {
     buttonArea.style.gap = "8px";
     buttonArea.style.marginBottom = "14px";
 
+    // ボタンを生成し、後続処理で利用できる状態にする
     const makeButton = (label, onClick, options = {}) => {
       const btn = this.doc.createElement("button");
       btn.type = "button";
@@ -126,6 +131,7 @@ export default class DebugDock {
     };
 
     const sections = {};
+    // `section`を生成し、後続処理で利用できる状態にする
     const makeSection = (name, label) => {
       const wrap = this.doc.createElement("section");
       wrap.style.marginBottom = "14px";
@@ -170,6 +176,7 @@ export default class DebugDock {
     return this.refs;
   }
 
+  // `visibility`を現在の入力と実行状態に合わせて更新する
   syncVisibility(active = false) {
     if (!this.enabled) return;
     const refs = this.ensure();
@@ -177,6 +184,7 @@ export default class DebugDock {
     refs.root.style.display = active ? "block" : "none";
   }
 
+  // このインスタンスを現在の入力と実行状態に合わせて更新する
   update({ active = false, diagText = "" } = {}) {
     if (!this.enabled) return;
     const refs = this.ensure();
@@ -186,6 +194,7 @@ export default class DebugDock {
     this.setTextContentIfChanged(refs.sections.diag, diagText);
   }
 
+  // `text`を現在の入力と状態から求め、呼び出し元へ返す
   formatText({ diagText = "" } = {}) {
     return [
       "[Current State]",
@@ -193,6 +202,7 @@ export default class DebugDock {
     ].join("\n");
   }
 
+  // `text`の`content`の`if`の`changed`を受け取り、現在の設定と後続処理へ反映する
   setTextContentIfChanged(node, text) {
     if (!node) return;
     const next = String(text ?? "");

@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>sound</title>
+  <link rel="icon" href="data:," />
+  <!-- 2026/06/19 -->
+  <style>
+
+:root {
+  color-scheme: light;
+  --bg: #eef3f8;
+  --paper: rgba(255, 255, 255, 0.94);
+  --line: #c8d5e4;
+  --ink: #17324a;
+  --muted: #5c748b;
+  --accent: #1566ab;
+  --accent-soft: #dfeefe;
+  --code-bg: #f3f7fb;
+  --shadow: rgba(29, 52, 79, 0.10);
+}
+* { box-sizing: border-box; }
+html, body {
+  margin: 0;
+  min-height: 100%;
+}
+body {
+  background:
+    radial-gradient(circle at top left, rgba(21, 102, 171, 0.12), transparent 24%),
+    radial-gradient(circle at top right, rgba(255, 191, 118, 0.10), transparent 22%),
+    linear-gradient(180deg, #f8fbfd 0%, var(--bg) 100%);
+  color: var(--ink);
+  font: 16px/1.78 "Avenir Next", "Hiragino Sans", "Yu Gothic", sans-serif;
+}
+.page {
+  width: min(1080px, calc(100% - 28px));
+  margin: 0 auto;
+  padding: 24px 0 56px;
+}
+.hero,
+.doc {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  box-shadow: 0 22px 52px var(--shadow);
+}
+.hero {
+  padding: 22px 24px;
+  margin-bottom: 18px;
+}
+.hero h1 {
+  margin: 0 0 8px;
+  font-size: clamp(2rem, 4vw, 3rem);
+  line-height: 1.08;
+}
+.hero p {
+  margin: 0;
+  color: var(--muted);
+}
+.doc {
+  padding: 28px;
+}
+.doc > :first-child {
+  margin-top: 0;
+}
+h1, h2, h3, h4, h5, h6 {
+  line-height: 1.25;
+  margin: 1.45em 0 0.55em;
+}
+h1 {
+  font-size: 2.2rem;
+}
+h2 {
+  padding-bottom: 0.28em;
+  border-bottom: 1px solid var(--line);
+  font-size: 1.48rem;
+}
+h3 {
+  font-size: 1.14rem;
+}
+p, ul, ol, table, pre, blockquote {
+  margin: 0 0 1em;
+}
+ul, ol {
+  padding-left: 1.4em;
+}
+li + li {
+  margin-top: 0.26em;
+}
+a {
+  color: var(--accent);
+  text-decoration: none;
+}
+a:hover {
+  text-decoration: underline;
+}
+img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  border-radius: 16px;
+  border: 1px solid var(--line);
+  box-shadow: 0 12px 32px rgba(29, 52, 79, 0.08);
+  margin: 1.1em 0 1.4em;
+}
+code {
+  padding: 0.12em 0.38em;
+  border-radius: 0.45em;
+  background: var(--code-bg);
+  border: 1px solid #dbe6f1;
+  font: 0.92em/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+pre {
+  padding: 14px 16px;
+  overflow-x: auto;
+  border-radius: 14px;
+  background: #0f1720;
+  color: #ecf5ff;
+}
+pre code {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #ffffff;
+}
+th, td {
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  text-align: left;
+  vertical-align: top;
+}
+th {
+  background: #f5f9fc;
+}
+hr {
+  border: 0;
+  border-top: 1px solid var(--line);
+  margin: 1.5em 0;
+}
+blockquote {
+  padding: 0.3em 0 0.3em 1em;
+  border-left: 4px solid #c9dbef;
+  color: var(--muted);
+}
+@media (max-width: 720px) {
+  .page {
+    width: min(100% - 18px, 1080px);
+    padding-top: 16px;
+  }
+  .hero,
+  .doc {
+    border-radius: 18px;
+  }
+  .doc {
+    padding: 20px;
+  }
+}
+
+  </style>
+</head>
+<body>
+  <main class="page">
+    <section class="hero">
+      <h1>sound</h1>
+    </section>
+    <article class="doc">
+<h1>sound</h1>
+<p>English | <a href="index.html">日本語</a></p>
+<p><img src="./sound.jpg" alt="sound" /></p>
+<h2>Overview</h2>
+<ul><li>This sample uses <code>AudioSynth</code> and <code>GameAudioSynth</code> so you can inspect sound effects and BGM while adjusting them on the same screen</li><li>After starting the <code>AudioContext</code> with <code>Audio Start</code>, you can play sound with <code>Play SE</code>, <code>Next SE</code>, <code>Audition All</code>, and <code>BGM Start</code>, then adjust volume, delay, reverb, envelope, and melody on the spot</li><li>The sample is arranged so you can go back and forth on a single screen between &quot;what to play&quot; and &quot;how to shape what it sounds like&quot;</li></ul>
+<h2>Reading the Screen</h2>
+<p>The screen is divided into <code>System</code>, <code>Sound Effects</code>, and <code>Background Music</code>. In that order, you first start the <code>AudioContext</code>, then adjust sound effects, and finally adjust melody, BPM, BGM envelope, and BGM reverb directly to refine the detailed contour of the BGM.</p>
+<p><code>System</code> contains <code>Audio Start</code> and <code>Master Vol</code>. <code>Audio Start</code> is the button that starts <code>AudioContext</code> after a user gesture, matching browser restrictions. <code>Master Vol</code> is the baseline for the overall volume. Adjusting that first makes it easier to compare the relative balance between sound effects and BGM.</p>
+<p>In <code>Sound Effects</code>, you choose the effect to play through <code>Sound Effect</code>, then play it with <code>Play SE</code>. <code>Next SE</code> advances through the catalog one item at a time, while <code>Audition All</code> plays the full catalog in sequence so you can compare the differences. <code>SE Profiles</code> shows the envelope profiles used by that effect, and <code>Editing Profile</code> shows the profile currently being edited by the sliders. <code>SE Vol</code>, <code>SE Delay</code>, <code>SE Reverb</code>, <code>SE Reverb Kind</code>, <code>SE Reverb Length</code>, <code>SE Reverb Decay</code>, <code>SE Envelope</code>, <code>SE Attack</code>, <code>SE Decay</code>, <code>SE Sustain</code>, and <code>SE Release</code> let you change the contour and spatial character of the same sound effect in considerable detail.</p>
+<p>In <code>Background Music</code>, you work with <code>BGM Start</code>, <code>BGM Stop</code>, <code>BGM Vol</code>, <code>BPM</code>, <code>Melody</code>, <code>BGM Delay</code>, <code>BGM Reverb</code>, <code>BGM Reverb Kind</code>, <code>BGM Reverb Length</code>, <code>BGM Reverb Decay</code>, <code>BGM Attack</code>, <code>BGM Decay</code>, <code>BGM Sustain</code>, and <code>BGM Release</code>. Because BGM changes its progression itself through melody and BPM, it is different from SE and is better adjusted while listening to the flow of time.</p>
+<h2>How to Run</h2>
+<ul><li>Open <a href="./sound.html">./sound.html</a></li><li>Use a browser with WebGPU support, and check the help panel and HUD together with the sample when needed</li></ul>
+<h2>webg Features Used</h2>
+<ul><li><code>GameAudioSynth</code>: handles the game-oriented sound-effect catalog and melody presets together</li><li><code>AudioSynth</code>: handles envelope, delay, reverb, and IR settings for SE and BGM</li></ul>
+<h2>Checkpoints</h2>
+<p>The first thing to do is press <code>Audio Start</code>. Once sound output is enabled, use <code>Sound Effect</code> and <code>Play SE</code> to inspect short effects, then use <code>BGM Start</code> to play a melody. If you want to inspect the contour of the sound, change <code>SE Envelope</code>. If you want to inspect spatial character, change <code>SE Reverb Kind</code>, <code>SE Reverb Length</code>, and <code>SE Reverb Decay</code>. If you want to inspect the flow of BGM, change <code>Melody</code> and <code>BPM</code>.</p>
+<p>This sample also provides comparison buttons such as <code>SE Dry / SE Reverb Max</code> and <code>BGM Dry / BGM Wet</code>. If the difference is hard to hear at middle slider values, pushing the state to an extreme and then returning makes it easier to grasp the direction of change.</p>
+<p><code>SE Reverb Kind</code> and <code>BGM Reverb Kind</code> switch between <code>room</code>, <code>hall</code>, and <code>plate</code>. These are not simply buttons for increasing reverberation; they change the character of the reverberation itself. <code>Length</code> describes the length of the IR, and <code>Decay</code> describes how quickly it fades. You can compare the full range from a short, tight room to a long, spreading hall.</p>
+<p><code>SE Envelope</code> is the place where you switch the envelope profile used by the chosen sound effect. Profile names are grouped like instrument categories such as <code>percussion</code>, <code>brass</code>, <code>woodwind</code>, <code>organ</code>, <code>piano</code>, and <code>guitar</code>, making it easy to compare time behavior such as percussive hits, wind-like sustain, held tones, and plucked or struck strings. When you change <code>SE Attack</code>, <code>SE Decay</code>, <code>SE Sustain</code>, and <code>SE Release</code>, the next playback of that profile changes. Because short sound effects can make the difference harder to hear, selecting <code>tail_probe</code> makes both the front contour and the trailing tail easier to compare.</p>
+<p><code>BGM Envelope</code> defines the attack and tail of each BGM note. When you change <code>BGM Attack</code>, <code>BGM Decay</code>, <code>BGM Sustain</code>, and <code>BGM Release</code>, the impression changes even with the same melody. <code>BPM</code> changes speed, and <code>Melody</code> changes the shape of the phrase, so BGM is easier to tune if you separate &quot;what is played&quot; from &quot;how it progresses&quot;. The BGM-side reverb is initialized a little stronger and more hall-like than the SE side, making it easier to first grasp the longer phrase tail when <code>Audition All</code> plays the melody.</p>
+<p>First, press <code>Audio Start</code> and confirm that <code>Play SE</code>, <code>Next SE</code>, <code>Audition All</code>, and <code>BGM Start</code> become active. Then switch <code>Sound Effect</code> and confirm that <code>SE Profiles</code> and <code>Editing Profile</code> change to match the selected sound. After that, move <code>SE Attack</code>, <code>SE Decay</code>, <code>SE Sustain</code>, <code>SE Release</code>, and <code>SE Reverb</code>, replay the same effect, and compare the differences.</p>
+<p>When you press <code>Audition All</code>, confirm that the entire catalog plays in sequence. If you want to stop it halfway, pressing the same button stops it. <code>Next SE</code> advances only one item at a time, which is useful when you want to hear a specific effect once again.</p>
+<p>When you switch <code>SE Reverb Kind</code> between <code>room</code>, <code>hall</code>, and <code>plate</code>, the reflection texture changes even if the wet amount stays the same. Changing <code>SE Reverb Length</code> and <code>SE Reverb Decay</code> changes both the length and the falloff of the reverberation. Selecting <code>tail_probe</code> makes differences in envelope and reverb tail easier to follow than with shorter sound effects.</p>
+<p>On the BGM side, change <code>Melody</code> while adjusting <code>BPM</code> and <code>BGM Envelope</code>, and compare how the same source can feel different. Changing <code>BGM Reverb Kind</code>, <code>BGM Reverb Length</code>, and <code>BGM Reverb Decay</code> shows how the same melody changes in spatial spread. The initial values lean toward a stronger hall sound, so it is easier to hear the difference if you first play it as-is and then return toward the dry side.</p>
+<h2>Controls</h2>
+<p>This sample is controlled not with keyboard input but with on-screen UI buttons and sliders.</p>
+<p><code>Audio Start</code> starts the <code>AudioContext</code>, <code>BGM Start / BGM Stop</code> start and stop the BGM, and <code>Play SE</code> plays the currently selected sound effect once. <code>SE Dry / SE Reverb Max</code> and <code>BGM Dry / BGM Wet</code> switch to fixed comparison states.</p>
+<h2>Common Pitfalls</h2>
+<p>If you do not press <code>Audio Start</code>, no sound will play. This follows browser restrictions. Start the <code>AudioContext</code> first, then use the other buttons.</p>
+<p><code>SE Reverb</code> and <code>SE Reverb Kind</code> are different settings. <code>SE Reverb</code> is the amount of reverberation, while <code>Kind</code> is the character of the reverberation. The same applies on the BGM side: <code>BGM Reverb</code> is the amount and <code>BGM Reverb Kind</code> is the character.</p>
+<p><code>SE Attack</code> and <code>BGM Attack</code> are in seconds, while <code>SE Sustain</code> and <code>BGM Sustain</code> are ratios. Because the units differ, it is easier to understand the behavior if you watch the displayed values while moving the sliders.</p>
+<h2>Related Documents</h2>
+<ul><li><a href="../../book/14_UI表示の設計.md">14_UI表示の設計.md</a></li><li><a href="../../book/18_サウンドの設計.md">18_サウンドの設計.md</a></li><li><a href="../../book/01_はじめに.md">01_はじめに.md</a></li><li><a href="./main.js">samples/sound/main.js</a></li><li><a href="./sound.html">samples/sound/sound.html</a></li></ul>
+<p><code>18_サウンドの設計.md</code> explains the implementation in detail, and <code>01_はじめに.md</code> is the overall project entry point. This <code>README.md</code> is easiest to read as guidance focused on how to operate the sample screen itself.</p>
+    </article>
+  </main>
+</body>
+</html>

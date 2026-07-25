@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// SmoothShader.js 2026/04/24
+// SmoothShader.js 2026/07/23
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // ---------------------------------------------
@@ -7,6 +7,7 @@
 'use strict';
 
 import Shader from './Shader.js';
+import { CAMERA_REVERSE_Z } from "./DepthConvention.js";
 import {
   DEFAULT_MAX_SKIN_BONES,
   SKIN_MATRIX_FLOATS_PER_BONE,
@@ -85,7 +86,7 @@ export default class SmoothShader extends Shader {
     this.OFF_ADD_COLOR = 60;
     this.OFF_PARAMS = 64; // ambient/specular/power/emissive
     this.OFF_FLAGS = 68; // hasBone/useTexture/weightDebug/useNormalMap
-    this.OFF_NMAP = 72; // normalStrength/unused/unused/unused
+    this.OFF_NMAP = 72; // normalStrength/alpha/roughness/unused
     this.OFF_FOG_COLOR = 76;
     this.OFF_FOG_PARAMS = 80;
     this.OFF_DEBUG_FLAGS = 84; // backfaceDebug/unused/unused/unused
@@ -97,6 +98,15 @@ export default class SmoothShader extends Shader {
     this.maxUniforms = 2048;
     this.dynamicOffsetGroup0 = true;
 
+    this.backgroundFrost = options.backgroundFrost === true;
+    // Roughness mask用shaderは透明面の色を出さず、material roughnessだけをRenderTargetへ記録する
+    // roughnessSpecularは透明forward描画でroughnessをPhong鏡面指数とピーク強度へ反映する
+    this.roughnessMask = options.roughnessMask === true;
+    this.roughnessSpecular = options.roughnessSpecular === true;
+    this.backgroundFrostBindGroupLayout = null;
+    this.backgroundFrostBindGroup = null;
+    this.backgroundFrostTextureView = null;
+
     this.default = {
       color: [0.8, 0.8, 1.0, 1.0],
       multiplyColor: [1.0, 1.0, 1.0, 1.0],
@@ -105,6 +115,11 @@ export default class SmoothShader extends Shader {
       use_texture: 0,
       use_normal_map: 0,
       normal_strength: 1.0,
+      // color[3]は既存texture混合の意味を保ち、描画透明度は独立したalphaで指定する
+      alpha: 1.0,
+      // Frost用SmoothShaderでは、roughness省略時に従来の透明表示を変えない
+      // 明示値があるmaterialだけが背景ぼかしへ参加する
+      roughness: (this.backgroundFrost || this.roughnessMask) ? 0.04 : 0.46,
       emissive: 0,
       ambient: 0.3,
       specular: 0.6,
@@ -127,6 +142,7 @@ export default class SmoothShader extends Shader {
     this.uniformData = new Float32Array(this.UNIFORM_FLOAT_COUNT);
     this.bindGroup1Cache = new WeakMap();
     this.skinBindGroupCache = new WeakMap();
+    this.skinEntryList = [];
     this.defaultNormalTexture = null;
     this.defaultNormalTextureView = null;
     this.defaultTextureBindGroup = null;
@@ -140,7 +156,9 @@ export default class SmoothShader extends Shader {
     this.cullMode = options.backfaceDebug ? "none" : (options.cullMode ?? "back");
     this.frontFace = options.frontFace ?? "ccw";
     this.depthWriteEnabled = options.depthWriteEnabled ?? true;
-    this.depthCompare = options.depthCompare ?? "less";
+    this.depthCompare = CAMERA_REVERSE_Z.compare;
+    this.colorFormat = options.colorFormat ?? this.gpu.format;
+    this.translucentPipeline = null;
 
     this.wgslSrc = `
       struct DrawUniforms {
@@ -169,6 +187,11 @@ export default class SmoothShader extends Shader {
       @group(1) @binding(1) var myTexture : texture_2d<f32>;
       @group(1) @binding(2) var myNormalTexture : texture_2d<f32>;
       @group(2) @binding(0) var<uniform> skin : SkinUniforms;
+      ${this.backgroundFrost ? `
+      // 透明合成前のHDR sceneを一度だけぼかしたtexture
+      // fragmentごとのmaterial roughnessでsurface色との混合率を決める
+      @group(3) @binding(0) var frostBackgroundTexture : texture_2d<f32>;
+      ` : ""}
 
       struct VertexInput {
         @location(0) position : vec3<f32>,
@@ -187,6 +210,7 @@ export default class SmoothShader extends Shader {
       };
 
       struct FragmentInput {
+        @builtin(position) fragPosition : vec4<f32>,
         @location(0) vPosition : vec3<f32>,
         @location(1) vNormal : vec3<f32>,
         @location(2) vTexCoord : vec2<f32>,
@@ -251,6 +275,15 @@ export default class SmoothShader extends Shader {
           return vec4<f32>(c, 1.0);
         }
 
+        ${this.roughnessMask ? `
+        // 透明面のAlphaやsurface色を混ぜず、material roughnessだけをmaskへ記録する
+        // RenderTarget側のmax blendにより透明面が重なるpixelでは最大roughnessが残る
+        let maskRoughness = clamp(u.normalMapParams.z, 0.04, 1.0);
+        return vec4<f32>(maskRoughness, maskRoughness, maskRoughness, 1.0);
+        ` : `
+
+        // roughness mask variantではこの通常照明部分をWGSLへ生成しません
+        // 無条件returnの後へ不要なコードを連結せず、compilerのunreachable警告を防ぎます
         let uAmb = u.params.x;
         let uSpec = u.params.y;
         let uSpecPower = u.params.z;
@@ -309,7 +342,30 @@ export default class SmoothShader extends Shader {
         let refVec = normalize(reflect(-litVec, nnormal));
 
         let litDiff = max(dot(nnormal, litVec), 0.0) * (1.0 - uAmb);
+        ${this.roughnessSpecular ? `
+        // powerはPhong鏡面項における反射vectorと視線vectorの内積の累乗数として扱う
+        // roughnessが増えるほど有効鏡面指数を1へ近づけ、同時にピーク強度を下げることで
+        // ハイライトを広く鈍くしつつ、広範囲が一様に白くなる状態を避ける
+        let specularRoughness = smoothstep(
+          0.04,
+          1.0,
+          clamp(u.normalMapParams.z, 0.04, 1.0)
+        );
+        // GGX側の知覚的roughnessに近い鋭さをPhong反射vector式へ移すため、
+        // roughness^4の逆数から鏡面指数を求める。上限512はsubpixel aliasを抑えつつ、
+        // opacity sampleの既定power 30より十分に狭いハイライトを作る
+        let clampedSpecularRoughness = clamp(u.normalMapParams.z, 0.04, 1.0);
+        let roughnessSquared = clampedSpecularRoughness * clampedSpecularRoughness;
+        let roughnessFourth = roughnessSquared * roughnessSquared;
+        let roughnessDerivedExponent = clamp(0.5 / roughnessFourth - 0.5, 1.0, 512.0);
+        let materialExponent = mix(max(uSpecPower, 1.0), 1.0, specularRoughness);
+        let effectiveSpecularExponent = max(roughnessDerivedExponent, materialExponent);
+        let specularPeak = mix(1.0, 0.12, specularRoughness);
+        let litSpec = uSpec * specularPeak
+          * pow(max(dot(refVec, eyeVec), 0.0), effectiveSpecularExponent);
+        ` : `
         let litSpec = uSpec * pow(max(dot(refVec, eyeVec), 0.0), uSpecPower);
+        `}
         let emissiveBlend = clamp(uEmit, 0.0, 1.0);
         let diff = mix(litDiff, 1.0 - uAmb, emissiveBlend);
         let ispec = litSpec * (1.0 - emissiveBlend);
@@ -336,7 +392,7 @@ export default class SmoothShader extends Shader {
         }
 
         let rgb = finalColor.rgb * (uAmb + diff) + vec3<f32>(1.0, 1.0, 1.0) * ispec;
-        let lit = vec4<f32>(rgb, 1.0);
+        let lit = vec4<f32>(rgb, u.normalMapParams.y);
         let fogDistance = length(input.vPosition);
         let fogNear = u.fogParams.x;
         let fogFar = u.fogParams.y;
@@ -351,7 +407,25 @@ export default class SmoothShader extends Shader {
         } else if (fogMode >= 1.5) {
           fogFactor = clamp(exp(-fogDensity * fogDistance), 0.0, 1.0);
         }
-        return vec4<f32>(mix(u.fogColor.rgb, lit.rgb, fogFactor), lit.a);
+        var outputRgb = mix(u.fogColor.rgb, lit.rgb, fogFactor);
+        ${this.backgroundFrost ? `
+        // roughness 0.04は透明surfaceの最小値としてぼかしなしに対応させ、
+        // 1.0へ近づくほどHDR背景のblur画像を強く混合する
+        let frostDimensions = vec2<i32>(textureDimensions(frostBackgroundTexture));
+        let frostPixel = clamp(
+          vec2<i32>(input.fragPosition.xy),
+          vec2<i32>(0),
+          frostDimensions - vec2<i32>(1)
+        );
+        let blurredBackground = textureLoad(frostBackgroundTexture, frostPixel, 0).rgb;
+        let roughness = clamp(u.normalMapParams.z, 0.04, 1.0);
+        let frostAmount = smoothstep(0.04, 1.0, roughness);
+        // 最大roughnessでもsurface tintとspecularを完全には消さず、
+        // Alpha Blend量と独立してトーラス等の形状を読み取れるようにする
+        outputRgb = mix(outputRgb, blurredBackground, frostAmount * 0.65);
+        ` : ""}
+        return vec4<f32>(outputRgb, lit.a);
+        `}
       }
     `;
   }
@@ -391,13 +465,30 @@ export default class SmoothShader extends Shader {
       ]
     });
 
-    const pipelineLayout = this.createPipelineLayout([
+    if (this.backgroundFrost) {
+      this.backgroundFrostBindGroupLayout = this.device.createBindGroupLayout({
+        entries: [{
+          binding: 0,
+          visibility: GPUShaderStage.FRAGMENT,
+          texture: { sampleType: "float" }
+        }]
+      });
+    }
+
+    const pipelineLayouts = [
       this.bindGroupLayout0,
       this.bindGroupLayout1,
       this.bindGroupLayout2
-    ]);
+    ];
+    if (this.backgroundFrostBindGroupLayout) {
+      pipelineLayouts.push(this.backgroundFrostBindGroupLayout);
+    }
+    const pipelineLayout = this.createPipelineLayout(pipelineLayouts);
 
-    this.pipeline = device.createRenderPipeline({
+    // OpaqueとTranslucentは同じshader/bind groupを共有し、depth writeだけをpipeline stateで分ける
+    // Alpha値でpipeline stateを動的変更できないため、二つのpipelineを生成してdraw時に選択する
+    const createPipeline = (depthWriteEnabled, label) => device.createRenderPipeline({
+      label,
       layout: pipelineLayout,
       vertex: {
         module: shaderModule,
@@ -424,11 +515,16 @@ export default class SmoothShader extends Shader {
         module: shaderModule,
         entryPoint: "fs_main",
         targets: [{
-          format: this.gpu.format,
-          blend: {
-            color: { srcFactor: "src-alpha", dstFactor: "one-minus-src-alpha", operation: "add" },
-            alpha: { srcFactor: "one", dstFactor: "one-minus-src-alpha", operation: "add" }
-          }
+          format: this.colorFormat,
+          blend: this.roughnessMask
+            ? {
+                color: { srcFactor: "one", dstFactor: "one", operation: "max" },
+                alpha: { srcFactor: "one", dstFactor: "one", operation: "max" }
+              }
+            : {
+                color: { srcFactor: "src-alpha", dstFactor: "one-minus-src-alpha", operation: "add" },
+                alpha: { srcFactor: "one", dstFactor: "one-minus-src-alpha", operation: "add" }
+              }
         }]
       },
       primitive: {
@@ -437,11 +533,13 @@ export default class SmoothShader extends Shader {
         frontFace: this.frontFace
       },
       depthStencil: {
-        depthWriteEnabled: this.depthWriteEnabled,
+        depthWriteEnabled,
         depthCompare: this.depthCompare,
-        format: "depth24plus"
+        format: CAMERA_REVERSE_Z.format
       }
     });
+    this.pipeline = createPipeline(this.depthWriteEnabled, "SmoothShader:opaque");
+    this.translucentPipeline = createPipeline(false, "SmoothShader:translucent");
 
     this.uniformBindGroup = device.createBindGroup({
       layout: this.bindGroupLayout0,
@@ -462,6 +560,8 @@ export default class SmoothShader extends Shader {
     this.useTexture(this.default.use_texture);
     this.useNormalMap(this.default.use_normal_map);
     this.setNormalStrength(this.default.normal_strength);
+    this.setAlpha(this.default.alpha);
+    this.setRoughness(this.default.roughness);
     this.setEmissive(this.default.emissive);
     this.setAmbientLight(this.default.ambient);
     this.setSpecular(this.default.specular);
@@ -644,6 +744,7 @@ export default class SmoothShader extends Shader {
       })
     };
     this.skinBindGroupCache.set(skinSource, entry);
+    this.skinEntryList.push(entry);
     return entry;
   }
 
@@ -775,6 +876,55 @@ export default class SmoothShader extends Shader {
     this.updateUniforms();
   }
 
+  // Shape materialの描画透明度を設定する
+  // 範囲外をclipするとopaque/translucent分類との不一致を隠すため、ここでも厳密に拒否する
+  setAlpha(value) {
+    if (!Number.isFinite(value) || value < 0.0 || value > 1.0) {
+      throw new Error("SmoothShader alpha must be a finite number between 0.0 and 1.0");
+    }
+    this.uniformData[this.OFF_NMAP + 1] = Number(value);
+    this.updateUniforms();
+  }
+
+  // material roughnessを透明surfaceのFrost混合率として保持する
+  // G-buffer materialと同じ0.04-1.0契約を使い、範囲外を自動補正しない
+  setRoughness(value) {
+    if (!Number.isFinite(value) || value < 0.04 || value > 1.0) {
+      throw new Error("SmoothShader roughness must be a finite number between 0.04 and 1.0");
+    }
+    this.uniformData[this.OFF_NMAP + 2] = Number(value);
+    this.updateUniforms();
+  }
+
+  // TransparencyPassが生成したblur済みHDR sceneをgroup 3へ結び付ける
+  // resizeでtexture viewが変わった場合だけbind groupを作り直す
+  setBackgroundFrostTexture(source) {
+    if (!this.backgroundFrostBindGroupLayout) {
+      throw new Error("SmoothShader background Frost support is not enabled");
+    }
+    const view = source?.getView?.() ?? source?.view ?? null;
+    if (!view) {
+      throw new Error("SmoothShader requires a background Frost texture view");
+    }
+    if (view === this.backgroundFrostTextureView && this.backgroundFrostBindGroup) {
+      return false;
+    }
+    this.backgroundFrostTextureView = view;
+    this.backgroundFrostBindGroup = this.device.createBindGroup({
+      layout: this.backgroundFrostBindGroupLayout,
+      entries: [{ binding: 0, resource: view }]
+    });
+    return true;
+  }
+
+  // Shape.draw()が任意groupを同じ処理フローでbindできるようgroup 3を公開する
+  getBindGroup3() {
+    if (this.backgroundFrost && !this.backgroundFrostBindGroup) {
+      throw new Error("SmoothShader background Frost texture has not been set");
+    }
+    return this.backgroundFrostBindGroup;
+  }
+
   // フォグ色を設定する
   setFogColor(color) {
     this.uniformData.set(color, this.OFF_FOG_COLOR);
@@ -873,6 +1023,8 @@ export default class SmoothShader extends Shader {
     this.updateParam(param, "use_texture", this.useTexture);
     this.updateParam(param, "use_normal_map", this.useNormalMap);
     this.updateParam(param, "normal_strength", this.setNormalStrength);
+    this.updateParam(param, "alpha", this.setAlpha);
+    this.updateParam(param, "roughness", this.setRoughness);
     this.updateParam(param, "ambient", this.setAmbientLight);
     this.updateParam(param, "specular", this.setSpecular);
     this.updateParam(param, "power", this.setSpecularPower);
@@ -901,6 +1053,8 @@ export default class SmoothShader extends Shader {
     else if (key === "use_texture") this.useTexture(value);
     else if (key === "use_normal_map") this.useNormalMap(value);
     else if (key === "normal_strength") this.setNormalStrength(value);
+    else if (key === "alpha") this.setAlpha(value);
+    else if (key === "roughness") this.setRoughness(value);
     else if (key === "ambient") this.setAmbientLight(value);
     else if (key === "specular") this.setSpecular(value);
     else if (key === "power") this.setSpecularPower(value);
@@ -917,5 +1071,35 @@ export default class SmoothShader extends Shader {
     else if (key === "flat_shading") this.setFlatShading(value);
     else if (key === "backface_debug") this.setBackfaceDebug(value);
     else if (key === "backface_color") this.setBackfaceColor(value);
+  }
+
+  // Shape.draw()がopaque/translucentの描画目的に応じたpipelineを選ぶ入口
+  getPipeline(_hasSkeleton = false, options = {}) {
+    return options.translucent === true ? this.translucentPipeline : this.pipeline;
+  }
+
+  // shaderが所有するBufferとTextureを破棄し、Render Pipeline参照を解放する
+  // sampler、bind group、layout、pipelineには明示destroy APIがないため参照だけを外す
+  destroy() {
+    this.uniformBuffer?.destroy();
+    this.defaultTexture?.destroy();
+    this.defaultNormalTexture?.destroy();
+    this.defaultBoneBuffer?.destroy();
+    this._dummySkinBuffer?.destroy();
+    this.backgroundFrostBindGroup = null;
+    this.backgroundFrostTextureView = null;
+    this.backgroundFrostBindGroupLayout = null;
+    for (const entry of this.skinEntryList) {
+      entry.buffer?.destroy();
+    }
+    this.skinEntryList.length = 0;
+    this.uniformBuffer = null;
+    this.defaultTexture = null;
+    this.defaultNormalTexture = null;
+    this.defaultBoneBuffer = null;
+    this._dummySkinBuffer = null;
+    this.pipeline = null;
+    this.translucentPipeline = null;
+    return true;
   }
 }

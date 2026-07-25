@@ -1,0 +1,212 @@
+<!doctype html>
+<!-- webg/book/examples/27_01.html 2026/07/13 -->
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>27_01 画像Compute処理</title>
+  <link rel="stylesheet" href="./example.css" />
+</head>
+<body>
+  <div class="page">
+    <h1>book/examples</h1>
+    <h2>27_01 ComputePassによる画像処理</h2>
+    <div class="section-card">
+      <p>CPUで作った色模様を入力Textureとし、Compute Shaderで波、ビネット、色変換を適用してStorage Textureへ出力します</p>
+      <p id="status" class="note">入力Texture → ComputePass → StorageTarget → FullscreenPassという画像Compute処理を準備しています</p>
+    </div>
+
+    <div class="canvas-block">
+      <canvas id="canvas" width="960" height="720"></canvas>
+    </div>
+
+    <pre id="code"></pre>
+
+    <script type="module" id="example-source">
+import WebgApp from "../../webg/WebgApp.js";
+import ComputePass from "../../webg/ComputePass.js";
+import FullscreenPass from "../../webg/FullscreenPass.js";
+import StorageTargetFactory from "../../webg/StorageTargetFactory.js";
+
+const CANVAS_W = 960;
+const CANVAS_H = 720;
+
+const imageComputeWgsl = `
+struct Params {
+  values : vec4f,
+};
+
+@group(0) @binding(0)
+var<uniform> params : Params;
+
+@group(0) @binding(1)
+var sourceTexture : texture_2d<f32>;
+
+@group(0) @binding(2)
+var outputTexture : texture_storage_2d<rgba8unorm, write>;
+
+@compute @workgroup_size(8, 8, 1)
+fn main(@builtin(global_invocation_id) id : vec3<u32>) {
+  let dims = textureDimensions(sourceTexture);
+  if (id.x >= dims.x || id.y >= dims.y) {
+    return;
+  }
+
+  let coord = vec2<i32>(id.xy);
+  let uv = (vec2f(id.xy) + vec2f(0.5)) / vec2f(dims);
+  let source = textureLoad(sourceTexture, coord, 0);
+  let wave = sin(uv.x * 24.0 + params.values.z * 1.8) * 0.08;
+  let distanceFromCenter = distance(uv, vec2f(0.5));
+  let vignette = 1.0 - smoothstep(0.22, 0.72, distanceFromCenter);
+  let shifted = vec3f(
+    source.r + wave,
+    source.g + sin(params.values.z + uv.y * 16.0) * 0.06,
+    source.b - wave
+  );
+  let color = shifted * (0.42 + vignette * 0.78);
+  textureStore(outputTexture, coord, vec4f(color, 1.0));
+}`;
+
+// 入力Textureへ転送するRGBA色模様をCPU側で作ります
+// Compute Shaderの効果と元画像の違いが分かるよう、格子と連続的な色勾配を重ねます
+function createSourcePixels(width, height) {
+  const pixels = new Uint8Array(width * height * 4);
+  for (let y = 0; y < height; y += 1) {
+    for (let x = 0; x < width; x += 1) {
+      const offset = (y * width + x) * 4;
+      const u = x / (width - 1);
+      const v = y / (height - 1);
+      const checker = (Math.floor(x / 48) + Math.floor(y / 48)) % 2;
+      pixels[offset] = Math.round((0.18 + u * 0.68) * 255);
+      pixels[offset + 1] = Math.round((0.16 + v * 0.62) * 255);
+      pixels[offset + 2] = checker ? 225 : 72;
+      pixels[offset + 3] = 255;
+    }
+  }
+  return pixels;
+}
+
+// sampled textureとして読む入力Textureを作り、CPUで作った色模様を1回だけ転送します
+function createSourceTexture(gpu, width, height) {
+  const texture = gpu.device.createTexture({
+    label: "27_01 source texture",
+    size: [width, height, 1],
+    format: "rgba8unorm",
+    usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST
+  });
+  gpu.queue.writeTexture(
+    { texture },
+    createSourcePixels(width, height),
+    { bytesPerRow: width * 4 },
+    { width, height, depthOrArrayLayers: 1 }
+  );
+  return texture;
+}
+
+// WebgApp、ComputePass、表示用FullscreenPassを初期化して連続描画を開始します
+async function start() {
+  const app = new WebgApp({
+    document,
+    autoDrawScene: false,
+    renderMode: "ondemand",
+    layoutMode: "embedded",
+    fixedCanvasSize: {
+      width: CANVAS_W,
+      height: CANVAS_H
+    },
+    clearColor: [0.02, 0.03, 0.05, 1.0]
+  });
+  await app.init();
+
+  const gpu = app.getGPU();
+  const width = app.screen.getWidth();
+  const height = app.screen.getHeight();
+  const sourceTexture = createSourceTexture(gpu, width, height);
+  const storageFactory = new StorageTargetFactory(gpu, {
+    label: "27_01 output"
+  });
+  const outputTarget = storageFactory.create({ width, height });
+  await outputTarget.ready;
+
+  const computePass = new ComputePass(gpu, {
+    label: "27_01 image compute",
+    code: imageComputeWgsl,
+    workgroupSize: [8, 8, 1],
+    uniformFloats: 4,
+    bindings: [
+      { binding: 0, name: "params", type: "uniform-buffer" },
+      {
+        binding: 1,
+        name: "source",
+        type: "sampled-texture",
+        dispatchSize: true
+      },
+      {
+        binding: 2,
+        name: "output",
+        type: "storage-texture",
+        format: "rgba8unorm"
+      }
+    ]
+  });
+  const copyPass = new FullscreenPass(gpu, {
+    targetFormat: gpu.format
+  });
+  await copyPass.init();
+
+  app.start({
+    onUpdate: () => {
+      document.getElementById("status").textContent =
+        "RUNNING: input Texture → ComputePass → StorageTarget → FullscreenPass";
+    },
+    onAfterDraw3d: ({ timeSec }) => {
+      // WebgAppが開始したcanvas Render Passを閉じ、同じencoderへCompute Passを追加します
+      gpu.endPass();
+      computePass.setUniforms(new Float32Array([
+        width,
+        height,
+        timeSec,
+        0.0
+      ]));
+      computePass.encode(
+        gpu.commandEncoder,
+        {
+          source: sourceTexture.createView(),
+          output: outputTarget
+        },
+        {
+          dispatchSize: [width, height, 1]
+        }
+      );
+
+      // Compute Shaderの出力Textureをcanvas全面へ描いて同じframeで表示します
+      app.screen.beginPresentPass({
+        clearColor: app.clearColor,
+        colorLoadOp: "clear"
+      });
+      copyPass.draw(outputTarget);
+      app.screen.clearDepthBuffer();
+    }
+  });
+
+  window.addEventListener("pagehide", () => {
+    app.stop();
+    computePass.destroy();
+    outputTarget.destroy();
+    sourceTexture.destroy();
+  }, { once: true });
+}
+
+start().catch((error) => {
+  document.getElementById("status").textContent =
+    `Error: ${error.message}`;
+  console.error(error);
+});
+    </script>
+    <script>
+      document.getElementById("code").textContent =
+        document.getElementById("example-source").textContent.trim();
+    </script>
+  </div>
+</body>
+</html>

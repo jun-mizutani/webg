@@ -1,0 +1,32 @@
+# Deferred LightingへのAmbient Occlusion接続単体テスト
+
+## 目的
+
+SsaoPassが生成したAmbient Occlusion visibilityをDeferred Lightingのambient項へだけ適用することを確認する。AOをpoint、directional、spotの直接光や完成色全体へ掛けず、Shadow visibilityとの照明上の意味を分離する
+
+## 確認項目
+
+1. ambient初期値が `albedo * ambient * Ambient Occlusion` である
+2. directional直接光blockでAmbient Occlusionを参照しない
+3. spot直接光blockでAmbient Occlusionを参照しない
+4. point light loopでAmbient Occlusionを参照しない
+5. AO visibility textureを明示bindingする
+6. AO debug viewでvisibilityを直接表示する
+7. AO resource省略とG-buffer寸法不一致をdispatch前に拒否する
+8. directional・spot shadow visibilityのbindingと適用先を維持する
+
+## 実行方法
+
+```sh
+node headless_tests/core/deferred_lighting_pass/headless_probe.js
+```
+
+## 結果
+
+2026-07-12に実行し、全項目が成功した。表示文字列は次のとおり
+
+```text
+deferred_lighting_pass_ambient_occlusion_contracts: all ambient-only AO contracts passed
+```
+
+これによりAmbient Occlusionと直接光shadowの適用先が分離された。次はG-bufferの材質値と共通反射モデル、および線形High Dynamic Range中間色の設計・実装へ進む

@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// unittest/embedded/main.js  2026/04/30
+// unittest/embedded/main.js  2026/07/25
 //   embedded unittest
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -46,6 +46,7 @@ const createDialogueOverlay = (app) => {
     entries: []
   };
 
+  // 行を生成し、後続処理で利用できる状態にする
   const buildLines = () => {
     const entry = state.entries[state.currentIndex] ?? null;
     if (!entry) {
@@ -62,6 +63,7 @@ const createDialogueOverlay = (app) => {
     return lines;
   };
 
+  // このインスタンスを現在の入力と実行状態に合わせて更新する
   const sync = () => {
     const entry = state.entries[state.currentIndex] ?? null;
     const options = {
@@ -465,6 +467,7 @@ const updateHud = (app, helpPanel, state) => {
   });
 };
 
+// このインスタンスの初期化段階で、必要な状態と資源を準備して処理を開始する
 const start = async () => {
   installScrollButtons();
 
@@ -525,7 +528,6 @@ const start = async () => {
 
   app.start({
     onUpdate: ({ deltaSec }) => {
-      orbit.update(deltaSec);
       handleFrameActions(app, helpPanel, orbit, state);
 
       // 左右 hold は orbit camera と別に cube の位相だけへ足し、

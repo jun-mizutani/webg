@@ -116,7 +116,6 @@ app.showOverlayPanel(buildHelpPanelOptions({
 
 app.start({
   onUpdate: ({ deltaSec }) => {
-    orbit.update(deltaSec);
     if (!state.paused) {
       torusNode.rotateY(18.0 * deltaSec);
       torusNode.rotateX(8.0 * deltaSec);

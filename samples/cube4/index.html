@@ -1,42 +1,200 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="ja">
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>webg cube4</title>
+  <title>cube4</title>
+  <link rel="icon" href="data:," />
+  <!-- 2026/06/19 -->
   <style>
-    html, body {
-      margin: 0;
-      width: 100%;
-      height: 100%;
-      overflow: hidden;
-      background:
-        radial-gradient(circle at top, #1c2840 0%, #0f1623 45%, #070b12 100%);
-      color: #e9f3ff;
-      font-family: "Hiragino Sans", "Yu Gothic", sans-serif;
-    }
-    canvas {
-      display: block;
-      width: 100vw;
-      height: 100vh;
-    }
-    #caption {
-      position: fixed;
-      right: 14px;
-      bottom: 14px;
-      padding: 10px 12px;
-      border-radius: 12px;
-      background: rgba(8, 12, 20, 0.56);
-      border: 1px solid rgba(198, 223, 255, 0.18);
-      font-size: 12px;
-      line-height: 1.45;
-      pointer-events: none;
-      backdrop-filter: blur(10px);
-    }
+
+:root {
+  color-scheme: light;
+  --bg: #eef3f8;
+  --paper: rgba(255, 255, 255, 0.94);
+  --line: #c8d5e4;
+  --ink: #17324a;
+  --muted: #5c748b;
+  --accent: #1566ab;
+  --accent-soft: #dfeefe;
+  --code-bg: #f3f7fb;
+  --shadow: rgba(29, 52, 79, 0.10);
+}
+* { box-sizing: border-box; }
+html, body {
+  margin: 0;
+  min-height: 100%;
+}
+body {
+  background:
+    radial-gradient(circle at top left, rgba(21, 102, 171, 0.12), transparent 24%),
+    radial-gradient(circle at top right, rgba(255, 191, 118, 0.10), transparent 22%),
+    linear-gradient(180deg, #f8fbfd 0%, var(--bg) 100%);
+  color: var(--ink);
+  font: 16px/1.78 "Avenir Next", "Hiragino Sans", "Yu Gothic", sans-serif;
+}
+.page {
+  width: min(1080px, calc(100% - 28px));
+  margin: 0 auto;
+  padding: 24px 0 56px;
+}
+.hero,
+.doc {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  box-shadow: 0 22px 52px var(--shadow);
+}
+.hero {
+  padding: 22px 24px;
+  margin-bottom: 18px;
+}
+.hero h1 {
+  margin: 0 0 8px;
+  font-size: clamp(2rem, 4vw, 3rem);
+  line-height: 1.08;
+}
+.hero p {
+  margin: 0;
+  color: var(--muted);
+}
+.doc {
+  padding: 28px;
+}
+.doc > :first-child {
+  margin-top: 0;
+}
+h1, h2, h3, h4, h5, h6 {
+  line-height: 1.25;
+  margin: 1.45em 0 0.55em;
+}
+h1 {
+  font-size: 2.2rem;
+}
+h2 {
+  padding-bottom: 0.28em;
+  border-bottom: 1px solid var(--line);
+  font-size: 1.48rem;
+}
+h3 {
+  font-size: 1.14rem;
+}
+p, ul, ol, table, pre, blockquote {
+  margin: 0 0 1em;
+}
+ul, ol {
+  padding-left: 1.4em;
+}
+li + li {
+  margin-top: 0.26em;
+}
+a {
+  color: var(--accent);
+  text-decoration: none;
+}
+a:hover {
+  text-decoration: underline;
+}
+img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  border-radius: 16px;
+  border: 1px solid var(--line);
+  box-shadow: 0 12px 32px rgba(29, 52, 79, 0.08);
+  margin: 1.1em 0 1.4em;
+}
+code {
+  padding: 0.12em 0.38em;
+  border-radius: 0.45em;
+  background: var(--code-bg);
+  border: 1px solid #dbe6f1;
+  font: 0.92em/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+pre {
+  padding: 14px 16px;
+  overflow-x: auto;
+  border-radius: 14px;
+  background: #0f1720;
+  color: #ecf5ff;
+}
+pre code {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #ffffff;
+}
+th, td {
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  text-align: left;
+  vertical-align: top;
+}
+th {
+  background: #f5f9fc;
+}
+hr {
+  border: 0;
+  border-top: 1px solid var(--line);
+  margin: 1.5em 0;
+}
+blockquote {
+  padding: 0.3em 0 0.3em 1em;
+  border-left: 4px solid #c9dbef;
+  color: var(--muted);
+}
+@media (max-width: 720px) {
+  .page {
+    width: min(100% - 18px, 1080px);
+    padding-top: 16px;
+  }
+  .hero,
+  .doc {
+    border-radius: 18px;
+  }
+  .doc {
+    padding: 20px;
+  }
+}
+
   </style>
 </head>
 <body>
-  <canvas id="canvas" width="1280" height="900"></canvas>
-  <script type="module" src="./main.js"></script>
+  <main class="page">
+    <section class="hero">
+      <h1>cube4</h1>
+    </section>
+    <article class="doc">
+<h1>cube4</h1>
+<p><a href="index.en.html">English</a> | 日本語</p>
+<p><img src="./cube4.jpg" alt="cube4" /></p>
+<h2>概要</h2>
+<ul><li>webg ベースで作った 3D falling-block game です</li><li>6x6x10 の立体盤面へ polycube を落とし、一定以上埋まった layer を消しながら score を伸ばします</li><li>WebgApp を入口にし、Shape / Primitive で床・ブロック・層ごとのワイヤーフレーム壁を構築しています</li><li>camera は EyeRig の orbit 構成で、移動入力は camera yaw 基準で x / z 方向へ補正しています</li><li>開始前は自動落下せず、全ブロック種の回転デモを見ながら操作を確認できます</li><li>ゲーム中は HUD を score / level / layer の 1 行へ絞り、開始前と game over 時だけ操作ガイドを表示します</li><li>ghost 表示、next piece 表示、high score 保存、スクリーンショット、効果音、BGM を含む構成です</li><li>layer clear は全面一致ではなく、1 層 36 マス中 29 マス以上で成立し、占有率に応じて得点が変わります</li></ul>
+<h2>実行方法</h2>
+<ul><li>実行ファイルは <a href="./cube4.html">./cube4.html</a> です</li><li>WebGPU に対応したブラウザで開き、必要に応じて help panel や HUD と合わせて確認してください</li></ul>
+<h2>使用している webg 機能</h2>
+<ul><li>WebgApp: Screen / Shader / Space / Input / Message / progress 保存の標準初期化</li><li>EyeRig(type=&quot;orbit&quot;): 盤面全体を見る orbit camera</li><li>Shape / Primitive: ブロック、床、台座、層ごとのワイヤーフレーム壁を生成</li><li>Shape.createInstance(): block 形状の shared resource を再利用し、slot ごとに色と材質だけを切り替える</li><li>Shape.setWireframe(true): 層壁をポリゴン辺ループの wireframe として表示</li><li>Message: status と guide の HUD 表示</li><li>GameAudioSynth: SE と BGM の再生</li><li>takeScreenshot(): 画面キャプチャ保存</li></ul>
+<h2>確認ポイント</h2>
+<ul><li>立体盤面の周囲に、各層を囲うワイヤーフレーム壁が見え、ブロックがどの高さにあるか把握しやすいことを確認します</li><li>矢印キー移動が camera yaw 基準で補正され、見ている向きに対して自然な左右前後移動になることを確認します</li><li>開始前は自動落下せず、move / rotate / drop のいずれかで game が始まることを確認します</li><li>ghost 表示が最終落下位置を示し、hard drop 後はその位置へ即座に固定されることを確認します</li><li>layer が 29 マス以上埋まると clear され、埋まり具合に応じて score が増えることを確認します</li><li>開始前デモで 8 種の polycube が個別速度で回転し、ゲーム開始後は非表示になることを確認します</li><li>score / level / layer の HUD、SE、BGM、high score 保存、スクリーンショットが連動して動くことを確認します</li></ul>
+<p>形状と描画負荷の見方</p>
+<p>このサンプルは、多数の block を表示しながら Shape.createInstance() による mesh 共有の効果も確認できる構成です。diagnostics の vertexCount、triangleCount、nodeCount、shapeCount、meshCount を見ると、同じ見た目でも shape の作り方によって GPU へ渡す頂点数や mesh 数が大きく変わることが分かります。以下は block shape 構成ごとの代表値です。</p>
+<ul><li>bevel 1段</li></ul>
+<p>vertexCount=42112<br />triangleCount=17824<br />nodeCount=429<br />shapeCount=417<br />meshCount=408</p>
+<ul><li>bevel 3段</li></ul>
+<p>vertexCount=84128<br />triangleCount=37216<br />nodeCount=429<br />shapeCount=417<br />meshCount=408</p>
+<ul><li>bevel 3段 + 共有頂点</li></ul>
+<p>vertexCount=23932<br />triangleCount=37216<br />nodeCount=429<br />shapeCount=417<br />meshCount=408</p>
+<ul><li>bevel 3段 + 共有頂点 + instance化</li></ul>
+<p>vertexCount=391<br />triangleCount=508<br />nodeCount=429<br />shapeCount=417<br />meshCount=9</p>
+<p>bevel を 1段から 3段へ増やすと triangle 数と vertex 数が増えますが、共有頂点化によって triangle 数を保ったまま vertex 数を大きく減らせます。さらに Shape.createInstance() で shared resource を再利用すると、scene にぶら下がる shapeCount や nodeCount はそのままでも、実際に build される mesh 数と頂点数を大幅に減らせます。</p>
+<h2>操作方法</h2>
+<ul><li>矢印キー: camera 向き基準で移動</li><li>A / S / D: X / Y / Z 軸回転</li><li>X: 1 step down</li><li>Space: hard drop</li><li>P: pause</li><li>R: restart</li><li>K: screenshot</li><li>B: block shape mode 切り替え</li><li>T: desktop でタッチ controls の表示 / 非表示を切り替え</li><li>タッチボタン: RX / RY / RZ / ⬇、← / → / ↑ / ↓、R</li></ul>
+    </article>
+  </main>
 </body>
 </html>

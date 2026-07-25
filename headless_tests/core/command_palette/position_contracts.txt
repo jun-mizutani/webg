@@ -1,0 +1,1 @@
+PASS command_palette_position_contracts

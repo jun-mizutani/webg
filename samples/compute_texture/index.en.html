@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>compute_texture</title>
+  <link rel="icon" href="data:," />
+  <!-- 2026/06/19 -->
+  <style>
+
+:root {
+  color-scheme: light;
+  --bg: #eef3f8;
+  --paper: rgba(255, 255, 255, 0.94);
+  --line: #c8d5e4;
+  --ink: #17324a;
+  --muted: #5c748b;
+  --accent: #1566ab;
+  --accent-soft: #dfeefe;
+  --code-bg: #f3f7fb;
+  --shadow: rgba(29, 52, 79, 0.10);
+}
+* { box-sizing: border-box; }
+html, body {
+  margin: 0;
+  min-height: 100%;
+}
+body {
+  background:
+    radial-gradient(circle at top left, rgba(21, 102, 171, 0.12), transparent 24%),
+    radial-gradient(circle at top right, rgba(255, 191, 118, 0.10), transparent 22%),
+    linear-gradient(180deg, #f8fbfd 0%, var(--bg) 100%);
+  color: var(--ink);
+  font: 16px/1.78 "Avenir Next", "Hiragino Sans", "Yu Gothic", sans-serif;
+}
+.page {
+  width: min(1080px, calc(100% - 28px));
+  margin: 0 auto;
+  padding: 24px 0 56px;
+}
+.hero,
+.doc {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  box-shadow: 0 22px 52px var(--shadow);
+}
+.hero {
+  padding: 22px 24px;
+  margin-bottom: 18px;
+}
+.hero h1 {
+  margin: 0 0 8px;
+  font-size: clamp(2rem, 4vw, 3rem);
+  line-height: 1.08;
+}
+.hero p {
+  margin: 0;
+  color: var(--muted);
+}
+.doc {
+  padding: 28px;
+}
+.doc > :first-child {
+  margin-top: 0;
+}
+h1, h2, h3, h4, h5, h6 {
+  line-height: 1.25;
+  margin: 1.45em 0 0.55em;
+}
+h1 {
+  font-size: 2.2rem;
+}
+h2 {
+  padding-bottom: 0.28em;
+  border-bottom: 1px solid var(--line);
+  font-size: 1.48rem;
+}
+h3 {
+  font-size: 1.14rem;
+}
+p, ul, ol, table, pre, blockquote {
+  margin: 0 0 1em;
+}
+ul, ol {
+  padding-left: 1.4em;
+}
+li + li {
+  margin-top: 0.26em;
+}
+a {
+  color: var(--accent);
+  text-decoration: none;
+}
+a:hover {
+  text-decoration: underline;
+}
+img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  border-radius: 16px;
+  border: 1px solid var(--line);
+  box-shadow: 0 12px 32px rgba(29, 52, 79, 0.08);
+  margin: 1.1em 0 1.4em;
+}
+code {
+  padding: 0.12em 0.38em;
+  border-radius: 0.45em;
+  background: var(--code-bg);
+  border: 1px solid #dbe6f1;
+  font: 0.92em/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+pre {
+  padding: 14px 16px;
+  overflow-x: auto;
+  border-radius: 14px;
+  background: #0f1720;
+  color: #ecf5ff;
+}
+pre code {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #ffffff;
+}
+th, td {
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  text-align: left;
+  vertical-align: top;
+}
+th {
+  background: #f5f9fc;
+}
+hr {
+  border: 0;
+  border-top: 1px solid var(--line);
+  margin: 1.5em 0;
+}
+blockquote {
+  padding: 0.3em 0 0.3em 1em;
+  border-left: 4px solid #c9dbef;
+  color: var(--muted);
+}
+@media (max-width: 720px) {
+  .page {
+    width: min(100% - 18px, 1080px);
+    padding-top: 16px;
+  }
+  .hero,
+  .doc {
+    border-radius: 18px;
+  }
+  .doc {
+    padding: 20px;
+  }
+}
+
+  </style>
+</head>
+<body>
+  <main class="page">
+    <section class="hero">
+      <h1>compute_texture</h1>
+    </section>
+    <article class="doc">
+<h1>compute_texture</h1>
+<p>English | <a href="index.html">日本語</a></p>
+<p><img src="./compute_texture.jpg" alt="compute_texture" /></p>
+<h2>Overview</h2>
+<ul><li>This sample uses a WebGPU compute shader to rewrite the contents of two textures every frame while ping-ponging between them</li><li>Rather than adding a compute-specific API to the <code>webg</code> core library, it uses the WebGPU <code>device / queue / canvas context</code> initialized by <code>WebgApp</code> directly inside the sample</li><li>The compute pass reads the previous frame's sampled texture and writes the next frame's storage texture by combining diffusion, a flow field, background patterns, pointer input, and a center burst</li><li>The render pass uses the same texture at the same time on the lower-left plane preview and on a sphere mesh created with <code>Primitive.sphere()</code>, showing the GPU-updated texture on screen without CPU readback</li><li>Dragging injects colored seeds at the pointer position, and clicking adds expanding rings of inverted color that gradually grow and fade. The lower-left plane preview makes the correspondence with input position easy to inspect, while the center sphere lets you inspect both the wrapped texture and the lighting appearance</li></ul>
+<h2>How to Run</h2>
+<ul><li>Open <a href="./compute_texture.html">./compute_texture.html</a></li><li>Use a browser with WebGPU support, and check the help panel and HUD together with the sample when needed</li></ul>
+<h2>webg Features Used</h2>
+<ul><li><code>WebgApp</code>: initializes <code>Screen</code>, diagnostics, and the input foundation together</li><li><code>WebgApp</code> compute frame: <code>computeFrame: true</code> and the <code>onComputeFrame</code> handler skip standard scene drawing and control compute/render order</li><li><code>Screen.resize()</code>: updates the actual canvas pixel size on viewport changes through the <code>Screen</code> held by <code>WebgApp</code></li><li><code>WebgApp.getGPU()</code>: entry point for building raw WebGPU textures, samplers, and pipelines on the sample side without changing the core API</li><li><code>buildHelpPanelOptions() + showOverlayPanel()</code>: displays the operation guide and current state in the <code>OverlayPanel</code> help panel</li><li><code>InputController.installTouchControls()</code>: shows touch buttons for mode switching and clearing on both desktop and smartphones</li></ul>
+<h2>WebGPU Features Used</h2>
+<ul><li><code>sampled texture</code>: used as the input that the compute shader reads from the previous frame's color distribution</li><li><code>storage texture</code>: used as the output into which the compute shader writes the next frame's color</li><li><code>ping-pong texture</code>: avoids read/write conflicts by swapping source and destination every frame instead of reading and writing the same texture</li><li><code>sampler</code>: reads neighboring pixels and UVs shifted along the flow direction with linear interpolation, generating bleed and flow</li><li><code>uniform buffer</code>: passes time, <code>deltaTime</code>, pointer position, mode, brush radius, burst state, and brush color to the shader</li><li><code>compute pipeline</code>: combines previous-frame color, neighboring color, background waves, and input injection with one invocation per pixel</li><li><code>render pipeline</code>: uses the post-compute texture on both the plane preview and the lit <code>Primitive.sphere()</code> mesh, visualizing the rewritten result in two different ways</li><li><code>timestamp query</code>: measures GPU Compute time for the texture update plus Render Pass time, then displays per-stage and total load</li></ul>
+<h2>Checkpoints</h2>
+<ul><li>Right after startup, confirm that both the lower-left plane preview and the center sphere already show colored, time-varying flow patterns before any click</li><li>When drawing with drag or one-finger drag, confirm that the plane preview receives color in the same orientation as the pointer position and that even short clicks or taps leave a little injected color before it spreads through the compute shader's flow</li><li>Right after a click or tap, confirm that a ring centered on the input position expands outward while changing color and including color inversion, then becomes thinner over time</li><li>On the sphere side, confirm that the same texture is wrapped onto the <code>Primitive.sphere()</code> UVs while rotating, and that lighting and highlights make both the roundness of the surface and the texture wrapping easy to read</li><li>When switching modes with <code>1 / 2 / 3</code>, confirm that the color tone and pattern behavior change while the same update structure remains in use</li><li>Trigger the center burst with <code>B</code> or <code>Space</code> and confirm that a ring expands from the center of the screen</li><li>Press <code>C</code> and confirm that the texture is reinitialized and any remaining color history disappears</li><li>When <code>P</code> pauses the sample, confirm that compute updates stop while the current texture display remains visible</li><li>Change brush radius with the mouse wheel or the <code>- / +</code> buttons and confirm that the injection area changes accordingly</li><li>Press <code>H</code> to fold the <code>OverlayPanel</code> help panel and confirm that <code>H</code> again or the <code>Show Help</code> button restores it</li><li>Confirm that <code>GPU compute / GPU render / GPU total / JS time</code> and their load values update in the help panel</li></ul>
+<h2>Controls</h2>
+<ul><li>Drag: paint color into the texture</li><li>One-finger drag: paint color into the texture</li><li>Mouse wheel: change brush radius</li><li><code>- / +</code>: change brush radius</li><li><code>1</code>: Aurora mode</li><li><code>2</code>: Ink mode</li><li><code>3</code>: Cells mode</li><li><code>B / Space</code>: center burst</li><li><code>C</code>: clear texture</li><li><code>P</code>: pause / resume</li><li><code>H</code>: hide / show help</li></ul>
+<h2>Implementation Details</h2>
+<ul><li>The compute shader in <code>main.js</code> separates the sampled texture as read and the storage texture as write, so the next frame is produced without destroying the previous frame's content</li><li>Because the same two textures are swapped every frame in a ping-pong configuration, dynamic texture feedback can continue entirely inside the GPU</li><li>Pointer input passes coordinates, radius, injection energy for afterimages, click-pulse progress, and center coordinates from the CPU to uniforms, while the actual injection range, color inversion, and color addition are judged per pixel in the compute shader</li><li>On the render side, the sphere is drawn by packing <code>Primitive.sphere()</code> geometry positions, UVs, and indices into raw render-pipeline buffers, reusing the existing UV layout that makes the seam less noticeable</li><li>The sphere samples the texture through those UVs and uses directional light, specular, and rim light so the face direction and the wrapping state are easy to read</li><li>The sample can be used as an entry point for dynamic texture generation such as postprocess, reactive HUDs, procedural patterns, and paintable effect maps</li></ul>
+    </article>
+  </main>
+</body>
+</html>

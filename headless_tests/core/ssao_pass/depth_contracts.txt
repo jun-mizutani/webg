@@ -1,0 +1,32 @@
+# SsaoPass Reverse-Z単体テスト
+
+## 目的
+
+SsaoPassのraw Ambient Occlusion計算とbilateral合成が、Reverse-Z Geometry Bufferの背景値0を共通規則で扱うことを確認する。旧通常Zで使っていたdepth 1付近の比較が残ると、実際のnear側geometryを背景と誤認し、背景depth 0を位置復元して除算するため、この二種類を明確に検査する
+
+projection配列を呼び出し側から直接渡さず、Geometry Bufferを生成したものと同じCamera Frameからnear、far、画角、aspectを作ることも確認する
+
+## 確認項目
+
+1. raw AOとbilateralの両WGSLが `isGBufferBackgroundDepth` を使用する
+2. 両WGSLに旧 `0.999999` 比較が残っていない
+3. center depthが背景でない場合だけ位置を復元し、sample depthも背景でない場合だけ遮蔽評価へ使う
+4. raw AOとbilateralのuniformが同一Camera Frame由来のprojectionを共有する
+5. finite farは実値、infinite farは0 sentinelとして両passへ渡る
+6. 旧projection配列だけを渡した場合はReverse-Z Camera Frame不足として例外になる
+
+## 実行方法
+
+```sh
+node headless_tests/core/ssao_pass/headless_probe.js
+```
+
+## 結果
+
+2026-07-12に実行し、全項目が成功した。表示文字列は次のとおり
+
+```text
+ssao_pass_depth_contracts: all SSAO depth contracts passed
+```
+
+このテストはSSAOの最終画像品質を判定するものではない。背景判定、projection uniform、二段pass間の共有値を検査し、Reverse-Z移行の数値契約を固定する

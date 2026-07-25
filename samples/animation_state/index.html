@@ -3,21 +3,189 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>WebGPU Animation State</title>
+  <title>animation_state</title>
   <link rel="icon" href="data:," />
-  <!-- 2026/03/12 -->
+  <!-- 2026/06/19 -->
   <style>
-    html, body {
-      margin: 0;
-      background: #293829;
-    }
-    canvas {
-      display: block;
-    }
+
+:root {
+  color-scheme: light;
+  --bg: #eef3f8;
+  --paper: rgba(255, 255, 255, 0.94);
+  --line: #c8d5e4;
+  --ink: #17324a;
+  --muted: #5c748b;
+  --accent: #1566ab;
+  --accent-soft: #dfeefe;
+  --code-bg: #f3f7fb;
+  --shadow: rgba(29, 52, 79, 0.10);
+}
+* { box-sizing: border-box; }
+html, body {
+  margin: 0;
+  min-height: 100%;
+}
+body {
+  background:
+    radial-gradient(circle at top left, rgba(21, 102, 171, 0.12), transparent 24%),
+    radial-gradient(circle at top right, rgba(255, 191, 118, 0.10), transparent 22%),
+    linear-gradient(180deg, #f8fbfd 0%, var(--bg) 100%);
+  color: var(--ink);
+  font: 16px/1.78 "Avenir Next", "Hiragino Sans", "Yu Gothic", sans-serif;
+}
+.page {
+  width: min(1080px, calc(100% - 28px));
+  margin: 0 auto;
+  padding: 24px 0 56px;
+}
+.hero,
+.doc {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  box-shadow: 0 22px 52px var(--shadow);
+}
+.hero {
+  padding: 22px 24px;
+  margin-bottom: 18px;
+}
+.hero h1 {
+  margin: 0 0 8px;
+  font-size: clamp(2rem, 4vw, 3rem);
+  line-height: 1.08;
+}
+.hero p {
+  margin: 0;
+  color: var(--muted);
+}
+.doc {
+  padding: 28px;
+}
+.doc > :first-child {
+  margin-top: 0;
+}
+h1, h2, h3, h4, h5, h6 {
+  line-height: 1.25;
+  margin: 1.45em 0 0.55em;
+}
+h1 {
+  font-size: 2.2rem;
+}
+h2 {
+  padding-bottom: 0.28em;
+  border-bottom: 1px solid var(--line);
+  font-size: 1.48rem;
+}
+h3 {
+  font-size: 1.14rem;
+}
+p, ul, ol, table, pre, blockquote {
+  margin: 0 0 1em;
+}
+ul, ol {
+  padding-left: 1.4em;
+}
+li + li {
+  margin-top: 0.26em;
+}
+a {
+  color: var(--accent);
+  text-decoration: none;
+}
+a:hover {
+  text-decoration: underline;
+}
+img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  border-radius: 16px;
+  border: 1px solid var(--line);
+  box-shadow: 0 12px 32px rgba(29, 52, 79, 0.08);
+  margin: 1.1em 0 1.4em;
+}
+code {
+  padding: 0.12em 0.38em;
+  border-radius: 0.45em;
+  background: var(--code-bg);
+  border: 1px solid #dbe6f1;
+  font: 0.92em/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+pre {
+  padding: 14px 16px;
+  overflow-x: auto;
+  border-radius: 14px;
+  background: #0f1720;
+  color: #ecf5ff;
+}
+pre code {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #ffffff;
+}
+th, td {
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  text-align: left;
+  vertical-align: top;
+}
+th {
+  background: #f5f9fc;
+}
+hr {
+  border: 0;
+  border-top: 1px solid var(--line);
+  margin: 1.5em 0;
+}
+blockquote {
+  padding: 0.3em 0 0.3em 1em;
+  border-left: 4px solid #c9dbef;
+  color: var(--muted);
+}
+@media (max-width: 720px) {
+  .page {
+    width: min(100% - 18px, 1080px);
+    padding-top: 16px;
+  }
+  .hero,
+  .doc {
+    border-radius: 18px;
+  }
+  .doc {
+    padding: 20px;
+  }
+}
+
   </style>
 </head>
 <body>
-  <canvas id="canvas" width="900" height="700"></canvas>
-  <script type="module" src="./main.js"></script>
+  <main class="page">
+    <section class="hero">
+      <h1>animation_state</h1>
+    </section>
+    <article class="doc">
+<h1>animation_state</h1>
+<p><a href="index.en.html">English</a> | 日本語</p>
+<p><img src="./animation_state.jpg" alt="animation_state" /></p>
+<h2>概要</h2>
+<ul><li>samples/gltf_loader/hand.glb の手を読み込み、各指ポーズの action 自体は Action で再生しつつ、「今どの action を選ぶか」は AnimationState が決める構成を確認できます。</li><li>1 - 6 で desired state を切り替えるだけで、対応する action が始まる構成にしてあり、状態制御と action 再生の役割分担を追いやすくしています。</li><li>操作説明は buildHelpPanelOptions() と showOverlayPanel() を使って左上の畳める help panel へ出し、現在状態は canvas HUD 側へ分けて表示します。</li></ul>
+<h2>実行方法</h2>
+<ul><li>実行ファイルは <a href="./animation_state.html">./animation_state.html</a> です</li><li>WebGPU に対応したブラウザで開き、必要に応じて help panel や HUD と合わせて確認してください</li></ul>
+<h2>使用している webg 機能</h2>
+<ul><li>WebgApp: Screen / Shader / Space / Input / Message をまとめて初期化し、loadModel(..., { format: &quot;gltf&quot; }) で hand.glb を読み込む</li><li>Skeleton / Bone: ボーン表示と回転</li><li>Action: 指ポーズの pattern / action 再生を担当</li><li>AnimationState: desired state と遷移条件から、どの action を開始するかを決める最小 state machine</li><li>各 pose の action は単発再生で扱い、state が変わるまで最後に到達した pose を表示し続けます</li><li>buildHelpPanelOptions() + showOverlayPanel(): 左上の help panel を標準形式で生成し、操作説明の表示 / 非表示を切り替える</li><li>Message: HUD と状態表示</li></ul>
+<h2>確認ポイント</h2>
+<ul><li>左上の help panel に操作説明が表示され、Hide Help を押すと Show Help ボタンだけが残り、Show Help で再表示できることを確認します。</li><li>HUD に desired state / current state / current action / current pattern / transition が表示され、状態遷移と action 再生の役割分担を画面上から追えることを確認します。</li><li>P で auto cycle を有効にすると、一定時間ごとに desired state が変わり、state machine が連続して action を切り替えることを確認します。</li><li><code>hand.glb</code>では、0:レスト, 1:グー, 2-3:1本伸ばす, 4-5:チョキ, 6-7:3本伸ばす, 8-9:4本伸ばす, 10-11:パー, 12-13:グー の保持区間に対応します。</li></ul>
+<h2>操作方法</h2>
+<ul><li>左上 help panel の Hide Help / Show Help: 操作説明本文の表示 / 非表示</li><li>W / S: モデルを X 軸回転</li><li>A / D: モデルを Y 軸回転</li><li>Z / X: モデルを Z 軸回転</li><li>J: ボーン一覧を console 出力</li><li>E / R: 選択中ボーンを X 軸回転</li><li>Y / U: 選択中ボーンを Y 軸回転</li><li>C / V: 選択中ボーンを Z 軸回転</li><li>N / M: メッシュ選択を前後切り替え</li><li>O / I: 選択メッシュの非表示 / 表示</li><li>9 / 0: ボーン表示 / 非表示</li><li>1 - 5: desired state を pose1 - pose5 に変更</li><li>6: desired state を pose0 に変更</li><li>/: 次の desired state へ進む</li><li>@: 現在 state を再始動</li><li>P: auto cycle の ON / OFF</li><li>7 / 8: 描画 ON / OFF</li><li>K: 遅延描画モード ON</li><li>Q:サンプル停止</li></ul>
+<p>補足</p>
+<ul><li>AnimationState は clip データを持たず、既存 Action を controller として受ける薄い制御層です</li><li>このサンプルでは state.action -&gt; Action.start(actionId) の接続だけを使い、cross-fade や blend は扱いません</li></ul>
+    </article>
+  </main>
 </body>
 </html>

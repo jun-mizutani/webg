@@ -1,0 +1,196 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>compute_benchmark</title>
+  <link rel="icon" href="data:,">
+  <style>
+    :root {
+      --bg: #071017;
+      --panel: rgba(8, 20, 30, 0.36);
+      --line: rgba(132, 208, 255, 0.32);
+      --ink: #eef8ff;
+      --muted: #9dc4d8;
+      --accent: #50d6b5;
+      --warn: #ffd479;
+    }
+
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    }
+
+    canvas {
+      display: block;
+      width: 100vw;
+      height: 100vh;
+      touch-action: none;
+      background: #000;
+    }
+
+    .panel {
+      position: fixed;
+      left: 14px;
+      top: 14px;
+      width: min(540px, calc(100vw - 28px));
+      max-height: calc(100vh - 28px);
+      padding: 14px;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: var(--panel);
+      box-shadow: 0 18px 48px rgba(0, 0, 0, 0.38);
+      overflow: auto;
+      backdrop-filter: blur(8px);
+    }
+
+    h1 {
+      margin: 0 0 8px;
+      font-size: 1.05rem;
+      letter-spacing: 0.04em;
+    }
+
+    p {
+      margin: 0 0 10px;
+      color: var(--muted);
+      line-height: 1.55;
+      font-size: 0.86rem;
+    }
+
+    .controls {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 8px;
+      margin: 12px 0;
+    }
+
+    label {
+      display: grid;
+      gap: 4px;
+      color: var(--muted);
+      font-size: 0.78rem;
+    }
+
+    input {
+      min-width: 0;
+      padding: 7px 8px;
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.035);
+      color: var(--ink);
+      font: inherit;
+    }
+
+    button {
+      padding: 8px 10px;
+      border: 1px solid rgba(255, 255, 255, 0.20);
+      border-radius: 10px;
+      background: rgba(80, 214, 181, 0.09);
+      color: var(--ink);
+      font: inherit;
+      cursor: pointer;
+    }
+
+    button:disabled {
+      cursor: wait;
+      opacity: 0.55;
+    }
+
+    .button-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin: 10px 0;
+    }
+
+    .status {
+      min-height: 1.2em;
+      color: var(--warn);
+      white-space: pre-wrap;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+      font-size: 0.78rem;
+    }
+
+    th,
+    td {
+      padding: 5px 6px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.10);
+      text-align: right;
+      white-space: nowrap;
+    }
+
+    th:first-child,
+    td:first-child,
+    th:nth-child(2),
+    td:nth-child(2) {
+      text-align: left;
+    }
+
+    th {
+      color: var(--accent);
+      font-weight: 700;
+    }
+
+    .note {
+      margin-top: 10px;
+      font-size: 0.76rem;
+    }
+
+    @media (max-width: 720px) {
+      .controls {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+  </style>
+</head>
+<body>
+  <canvas id="canvas"></canvas>
+  <section class="panel">
+    <h1>compute_benchmark</h1>
+    <p>
+      `ComputeEffectPipeline` と標準 compute effect API をそのまま使い、
+      render / shadow / SSAO / SSR / Transparency / Fog / Vignette などの GPU 負荷を
+      同じ scene 条件で比較する sample です
+    </p>
+    <div class="controls">
+      <label>Samples
+        <input id="samples" type="number" min="1" max="200" step="1" value="50">
+      </label>
+      <label>Warmup
+        <input id="warmup" type="number" min="0" max="50" step="1" value="4">
+      </label>
+      <label>Pyramid Radius
+        <input id="pyramidFilterRadius" type="number" min="0.25" max="3" step="0.25" value="1">
+      </label>
+    </div>
+    <p class="note">
+      blurは1/2 → 1/4 → 1/8 → 1/16へ縮小し、
+      1/16からフル解像度へ段階的に拡大する処理全体を測定します
+    </p>
+    <div class="button-row">
+      <button id="run">Run Benchmark</button>
+      <button id="downloadJson" disabled>Download JSON</button>
+      <button id="downloadCsv" disabled>Download CSV</button>
+      <button id="preview">Refresh Preview</button>
+    </div>
+    <div id="status" class="status">Loading...</div>
+    <div id="result"></div>
+    <p class="note">
+      GPU timestamp-query が必要です。結果は canvas サイズ、DPR、browser、
+      GPU driver、電源状態の影響を受けます
+    </p>
+  </section>
+  <script type="module" src="./main.js?v=20260724_pyramid_blur"></script>
+</body>
+</html>

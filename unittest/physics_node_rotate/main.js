@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// unittest/physics_node_rotate/main.js  2026/05/06
+// unittest/physics_node_rotate/main.js  2026/07/25
 //   physics_node_rotate unittest
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -106,6 +106,7 @@ const BODY_SPECS = [
 
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
 
+// 投影を受け取り、現在の設定と後続処理へ反映する
 const setProjection = (screen, shader, angle = 48.0) => {
   const proj = new Matrix();
   const fov = screen.getRecommendedFov(angle);
@@ -113,6 +114,7 @@ const setProjection = (screen, shader, angle = 48.0) => {
   shader.setProjectionMatrix(proj);
 };
 
+// `beam`の形状を生成し、後続処理で利用できる状態にする
 const createBeamShape = (gpu, size, color) => {
   const shape = new Shape(gpu);
   shape.applyPrimitiveAsset(Primitive.cuboid(size[0], size[1], size[2]));
@@ -128,6 +130,7 @@ const createBeamShape = (gpu, size, color) => {
   return shape;
 };
 
+// 床の形状を生成し、後続処理で利用できる状態にする
 const createFloorShape = (gpu) => {
   const shape = new Shape(gpu);
   shape.applyPrimitiveAsset(Primitive.cuboid(96.0, FLOOR_HEIGHT, 68.0));
@@ -143,6 +146,7 @@ const createFloorShape = (gpu) => {
   return shape;
 };
 
+// `backdrop`の形状を生成し、後続処理で利用できる状態にする
 const createBackdropShape = (gpu) => {
   const shape = new Shape(gpu);
   shape.applyPrimitiveAsset(Primitive.cuboid(112.0, 58.0, 2.0));
@@ -158,6 +162,7 @@ const createBackdropShape = (gpu) => {
   return shape;
 };
 
+// 物体の`entry`を初期状態へ戻し、前回の状態を残さない
 const resetBodyEntry = (entry) => {
   const body = entry.body;
   body.wakeUp();
@@ -193,6 +198,7 @@ const resetBodyEntry = (entry) => {
   });
 };
 
+// `torque`の`pulse`を対象の状態または描画設定へ反映する
 const applyTorquePulse = (entry) => {
   if (!Array.isArray(entry.torquePulse)) {
     return;
@@ -200,6 +206,7 @@ const applyTorquePulse = (entry) => {
   entry.body.applyTorque(entry.torquePulse);
 };
 
+// `continuous`の`torque`を対象の状態または描画設定へ反映する
 const applyContinuousTorque = (entry) => {
   if (!Array.isArray(entry.continuousTorque)) {
     return;
@@ -217,6 +224,7 @@ const cloneRestColor = (color, scale = FEATURED_COLOR_DIM_SCALE) => ([
   1.0
 ]);
 
+// `entry`の進行段階を現在の入力と状態から求め、呼び出し元へ返す
 const getEntryPhase = (entry) => {
   if (entry.name === "torque_beam") {
     return entry.elapsedSec < entry.torqueDurationSec ? "torque on" : "torque off";
@@ -237,6 +245,7 @@ const getEntryPhase = (entry) => {
   return "";
 };
 
+// 状態表示を現在の入力と状態から求め、呼び出し元へ返す
 const formatStatus = (entries, paused) => {
   const lines = [
     "unittest/physics_node_rotate",
@@ -266,6 +275,7 @@ const formatStatus = (entries, paused) => {
   return lines.join("\n");
 };
 
+// このインスタンスの初期化段階で、必要な状態と資源を準備して処理を開始する
 const start = async ({ screen, gpu, setStatus, setViewportLayout, startLoop, document }) => {
   const shader = new SmoothShader(gpu);
   await shader.init();
@@ -392,6 +402,7 @@ const start = async ({ screen, gpu, setStatus, setViewportLayout, startLoop, doc
   let paused = false;
   let previousTimeMs = null;
 
+  // すべての物体を初期状態へ戻し、前回の状態を残さない
   const resetAllBodies = () => {
     previousTimeMs = null;
     world.accumulatorMs = 0.0;

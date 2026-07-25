@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>mmodeler User Guide</title>
+  <link rel="icon" href="data:," />
+  <!-- 2026/06/19 -->
+  <style>
+
+:root {
+  color-scheme: light;
+  --bg: #eef3f8;
+  --paper: rgba(255, 255, 255, 0.94);
+  --line: #c8d5e4;
+  --ink: #17324a;
+  --muted: #5c748b;
+  --accent: #1566ab;
+  --accent-soft: #dfeefe;
+  --code-bg: #f3f7fb;
+  --shadow: rgba(29, 52, 79, 0.10);
+}
+* { box-sizing: border-box; }
+html, body {
+  margin: 0;
+  min-height: 100%;
+}
+body {
+  background:
+    radial-gradient(circle at top left, rgba(21, 102, 171, 0.12), transparent 24%),
+    radial-gradient(circle at top right, rgba(255, 191, 118, 0.10), transparent 22%),
+    linear-gradient(180deg, #f8fbfd 0%, var(--bg) 100%);
+  color: var(--ink);
+  font: 16px/1.78 "Avenir Next", "Hiragino Sans", "Yu Gothic", sans-serif;
+}
+.page {
+  width: min(1080px, calc(100% - 28px));
+  margin: 0 auto;
+  padding: 24px 0 56px;
+}
+.hero,
+.doc {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  box-shadow: 0 22px 52px var(--shadow);
+}
+.hero {
+  padding: 22px 24px;
+  margin-bottom: 18px;
+}
+.hero h1 {
+  margin: 0 0 8px;
+  font-size: clamp(2rem, 4vw, 3rem);
+  line-height: 1.08;
+}
+.hero p {
+  margin: 0;
+  color: var(--muted);
+}
+.doc {
+  padding: 28px;
+}
+.doc > :first-child {
+  margin-top: 0;
+}
+h1, h2, h3, h4, h5, h6 {
+  line-height: 1.25;
+  margin: 1.45em 0 0.55em;
+}
+h1 {
+  font-size: 2.2rem;
+}
+h2 {
+  padding-bottom: 0.28em;
+  border-bottom: 1px solid var(--line);
+  font-size: 1.48rem;
+}
+h3 {
+  font-size: 1.14rem;
+}
+p, ul, ol, table, pre, blockquote {
+  margin: 0 0 1em;
+}
+ul, ol {
+  padding-left: 1.4em;
+}
+li + li {
+  margin-top: 0.26em;
+}
+a {
+  color: var(--accent);
+  text-decoration: none;
+}
+a:hover {
+  text-decoration: underline;
+}
+img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  border-radius: 16px;
+  border: 1px solid var(--line);
+  box-shadow: 0 12px 32px rgba(29, 52, 79, 0.08);
+  margin: 1.1em 0 1.4em;
+}
+code {
+  padding: 0.12em 0.38em;
+  border-radius: 0.45em;
+  background: var(--code-bg);
+  border: 1px solid #dbe6f1;
+  font: 0.92em/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+pre {
+  padding: 14px 16px;
+  overflow-x: auto;
+  border-radius: 14px;
+  background: #0f1720;
+  color: #ecf5ff;
+}
+pre code {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #ffffff;
+}
+th, td {
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  text-align: left;
+  vertical-align: top;
+}
+th {
+  background: #f5f9fc;
+}
+hr {
+  border: 0;
+  border-top: 1px solid var(--line);
+  margin: 1.5em 0;
+}
+blockquote {
+  padding: 0.3em 0 0.3em 1em;
+  border-left: 4px solid #c9dbef;
+  color: var(--muted);
+}
+@media (max-width: 720px) {
+  .page {
+    width: min(100% - 18px, 1080px);
+    padding-top: 16px;
+  }
+  .hero,
+  .doc {
+    border-radius: 18px;
+  }
+  .doc {
+    padding: 20px;
+  }
+}
+
+  </style>
+</head>
+<body>
+  <main class="page">
+    <section class="hero">
+      <h1>mmodeler User Guide</h1>
+    </section>
+    <article class="doc">
+<h1>mmodeler User Guide</h1>
+<p>English | <a href="index.html">日本語</a></p>
+<p><img src="./mmodeler.jpg" alt="mmodeler" /></p>
+<h2>Overview</h2>
+<p>mmodeler is a Blender-inspired 3D modeling tool optimized for touch operation on smartphones and tablets. Built with WebGPU and JavaScript, it allows you to control the camera, edit meshes, add primitives, save/load files, and perform organic shaping using a dedicated Sculpt Mode—all through intuitive gesture-based controls.</p>
+<h2>How to Run</h2>
+<ul><li>Open <a href="./mmodeler.html">./mmodeler.html</a> in a browser with WebGPU support.</li></ul>
+<p>mmodeler does not depend on external libraries or servers; once launched, everything runs locally in your browser.</p>
+<p>You can access the tool here:<br /><a href="https://jun-mizutani.github.io/webg/samples/mmodeler.html">https://jun-mizutani.github.io/webg/samples/mmodeler.html</a></p>
+<h2>Mobile Control System</h2>
+<p>To address the &quot;finger occlusion&quot; problem (where your finger hides the area being edited), mmodeler utilizes a <strong>&quot;Preview then Confirm&quot;</strong> workflow.</p>
+<h3>Basic Gestures</h3>
+<p>The most important operation is the <strong>double-tap on geometry</strong>, which opens the Command Palette to execute most functions.</p>
+<ul><li><strong>One-finger Drag</strong>: Camera orbit.</li><li><strong>Two-finger Drag</strong>: Camera pan.</li><li><strong>Two-finger Rotation</strong>: View roll. Inverts the detected finger-rotation angle before rotating around the current view axis.</li><li><strong>Pinch</strong>: Camera zoom.</li><li><strong>Short Tap</strong>: <ul><li><strong>Object Mode</strong>: Select an object.</li><li><strong>Edit Mode</strong>: Select a vertex or face depending on the active tool.</li><li><strong>Add Vertex Tool</strong>: Add a vertex at the tap location.</li></ul></li></ul><ul><li><strong>Double Tap</strong>: <ul><li><strong>On Geometry</strong>: Opens the Command Palette while maintaining the current selection.</li><li><strong>On Empty Area</strong>: Prepares &quot;Box Selection&quot; (if the scene is empty, it opens the Command Palette).</li><li><strong>In Sculpt Mode (Empty Area)</strong>: Toggles between &quot;Camera Control&quot; and &quot;Brush Stroke&quot;.</li></ul></li></ul><ul><li><strong>Long Press</strong>:<ul><li><strong>On Geometry in Object/Edit Mode</strong>: Toggles between Object Mode and Edit Mode.</li><li><strong>On Empty Area in Object/Edit Mode</strong>: Opens the same object info overlay as the <code>Info</code> button.</li><li><strong>On Geometry in Sculpt Mode</strong>: Does not switch modes. It is disabled to avoid conflicts with brush operations.</li><li><strong>On Empty Area in Sculpt Mode</strong>: Opens the same brush settings overlay as <code>Brsh</code>.</li></ul></li></ul><ul><li><strong>Upward Flick</strong>: Quickly switch to &quot;Sculpt Mode&quot; by flicking up from the view dock or the bottom edge of the canvas.</li></ul>
+<h3>Special Button: Top-Left &quot;↑&quot; Button</h3>
+<p>The role of this button changes depending on the mode:</p>
+<ul><li><strong>Object/Edit Mode</strong>: <strong>&quot;Additive Selection (Shift equivalent)&quot;</strong>. While ON, tapping adds to the selection. Tapping a selected element deselects it.</li><li><strong>Sculpt Mode</strong>: <strong>&quot;Brush Armed&quot;</strong>. While ON, one-finger drags act as brush strokes. While OFF, camera orbit is prioritized.</li></ul>
+<hr />
+<h2>Command Palette</h2>
+<p>A 4x4 grid menu opened by double-tapping. In Object/Edit Mode, you can cycle through 4 pages using the <code>Next</code> button. In Sculpt Mode, it switches to a specialized single-page palette. The palette is automatically positioned based on the tap location to avoid hiding the target area.</p>
+<h3>Page 1: Basic Editing &amp; Axis Constraints</h3>
+<p>Transform operations follow the flow: <code>Select Tool</code> $\rightarrow$ <code>Drag to Preview</code> $\rightarrow$ <code>Tap to Confirm</code>.</p>
+<p><img src="./mm01.jpg" alt="Page 1: Basic Editing &amp; Axis Constraints" /></p>
+<table><thead><tr><th>Button</th><th>Description</th></tr></thead><tbody><tr><td><code>G</code></td><td><strong>Move</strong>: Move selection. Drag to position, then tap to confirm.</td></tr><tr><td><code>E</code></td><td><strong>Extrude</strong>: Extrude selected faces/vertices. Drag to adjust distance, then tap to confirm.</td></tr><tr><td><code>Vert</code></td><td><strong>Vertex Select</strong>: Switch selection mode to vertices. Used for moving, deleting, or adding vertices.</td></tr><tr><td><code>X</code></td><td><strong>X-Axis</strong>: Constrain the next transform to the world X-axis. Press again to return to Free.</td></tr><tr><td><code>R</code></td><td><strong>Rotate</strong>: Rotate selection. Drag to set angle, then tap to confirm.</td></tr><tr><td><code>GG</code></td><td><strong>Edge Slide</strong>: Slide a vertex along an edge (only for midpoint vertices).</td></tr><tr><td><code>Face</code></td><td><strong>Face Select</strong>: Switch selection mode to faces. Used for extruding, deleting, or loop cutting.</td></tr><tr><td><code>Y</code></td><td><strong>Y-Axis</strong>: Constrain the next transform to the world Y-axis. Press again to return to Free.</td></tr><tr><td><code>S</code></td><td><strong>Scale</strong>: Scale selection. Drag to set multiplier, then tap to confirm.</td></tr><tr><td><code>Cut</code></td><td><strong>Loop Cut</strong>: Split quad faces. For single faces, pick direction via preview line, then tap to confirm.</td></tr><tr><td><code>Undo</code></td><td><strong>Undo</strong>: Revert the last operation (transform, primitive addition, etc.).</td></tr><tr><td><code>Z</code></td><td><strong>Z-Axis</strong>: Constrain the next transform to the world Z-axis. Press again to return to Free.</td></tr><tr><td><code>Next</code></td><td>Switch to the next page.</td></tr><tr><td><code>Chain</code></td><td><strong>Chain Select</strong>: Select a sequence of vertices connected by quads based on the chosen direction.</td></tr><tr><td><code>Redo</code></td><td><strong>Redo</strong>: Re-apply an undone operation.</td></tr><tr><td><code>N</code></td><td><strong>Normal Axis</strong>: Constrain transform to the average normal of selected faces/vertices.</td></tr></tbody></table>
+<h3>Page 2: Selection, View &amp; Mode Switching</h3>
+<p><img src="./mm02.jpg" alt="Page 2: Selection, Subdivision &amp; View" /></p>
+<table><thead><tr><th>Button</th><th>Description</th></tr></thead><tbody><tr><td><code>Catm</code></td><td><strong>Catmull-Clark</strong>: Smoothly subdivide the entire mesh for organic shapes.</td></tr><tr><td><code>A</code></td><td><strong>Select All</strong>: Select all objects (Object Mode) or all vertices/faces (Edit Mode).</td></tr><tr><td><code>Add</code></td><td><strong>Add Vertex/Face</strong>: Create a face (if 3-4 vertices selected), otherwise switch to Add Vertex tool.</td></tr><tr><td><code>Pr</code></td><td><strong>Projection</strong>: Toggle between Perspective and Orthographic views.</td></tr><tr><td><code>Subd</code></td><td><strong>Subdivide</strong>: Subdivide quad-only meshes to increase polygon density.</td></tr><tr><td><code>Inv</code></td><td><strong>Invert</strong>: Invert the current selection.</td></tr><tr><td><code>Del</code></td><td><strong>Delete</strong>: Delete selected objects, vertices, or faces.</td></tr><tr><td><code>Wire</code></td><td><strong>Wireframe</strong>: Toggle wireframe view. Allows selecting hidden vertices when ON.</td></tr><tr><td><code>M</code></td><td><strong>X-Mirror</strong>: Enable symmetric editing across the X=0 axis.</td></tr><tr><td><code>Half</code></td><td><strong>Select X&lt;0</strong>: Select elements with a negative X coordinate.</td></tr><tr><td><code>Sclpt</code></td><td><strong>Sculpt Mode</strong>: Enter Sculpt Mode with the Draw brush (positive direction).</td></tr><tr><td><code>Smth</code></td><td><strong>Smooth Shading</strong>: Enable smooth shading (visual only; geometry is unchanged).</td></tr><tr><td><code>Lens</code></td><td><strong>Lens</strong>: Switch camera focal length presets.</td></tr><tr><td><code>Next</code></td><td>Switch to the next page.</td></tr><tr><td><code>Loop</code></td><td><strong>Loop Select</strong>: Select a loop of vertices starting from a loop-cut midpoint.</td></tr></tbody></table>
+<h3>Page 3: File &amp; Scene Management</h3>
+<p><img src="./mm03.jpg" alt="Page 3: File &amp; Scene Management" /></p>
+<table><thead><tr><th>Button</th><th>Description</th></tr></thead><tbody><tr><td><code>Load</code></td><td><strong>Load</strong>: Load a model file or saved ModelAsset JSON from local storage.</td></tr><tr><td><code>O</code></td><td><strong>Origin</strong>: Reset the active object's origin to the world origin.</td></tr><tr><td><code>Cood</code></td><td><strong>Coordinates</strong>: Show/edit vertex coords (Edit Mode) or Brush settings (Sculpt Mode).</td></tr><tr><td><code>Info</code></td><td><strong>Info</strong>: Display object size (Bounding Box), vertex count, and face count.</td></tr><tr><td><code>Json</code></td><td><strong>Save JSON</strong>: Save the scene as a compressed <code>.json.gz</code> file.</td></tr><tr><td><code>Shot</code></td><td><strong>Screenshot</strong>: Save the current canvas as an image.</td></tr><tr><td><code>Glb</code></td><td><strong>Save GLB</strong>: Export the scene as a GLB file for other tools.</td></tr><tr><td><code>Join</code></td><td><strong>Join</strong>: Combine multiple selected objects into one.</td></tr><tr><td><code>Next</code></td><td>Switch to the next page.</td></tr><tr><td><code>New</code></td><td><strong>New Scene</strong>: Clear the scene and start over.</td></tr></tbody></table>
+<h3>Sculpt Mode Specialized Page</h3>
+<p>In Sculpt Mode, a specialized single-page palette replaces the standard one.</p>
+<p><img src="./mm05.jpg" alt="Sculpt Mode Specialized Page" /></p>
+<table><thead><tr><th>Button</th><th>Description</th></tr></thead><tbody><tr><td><code>Draw</code></td><td><strong>Draw Brush</strong>: Move vertices along the normal. Inflates with <code>Sclp+</code>, deflates with <code>Sclp-</code>.</td></tr><tr><td><code>Brsh</code></td><td><strong>Brush Settings</strong>: Edit Radius, Strength, and Falloff Shape via overlay.</td></tr><tr><td><code>Pr</code></td><td><strong>Projection</strong>: Toggle between Perspective and Orthographic views.</td></tr><tr><td><code>Blur</code></td><td><strong>Blur Brush</strong>: Average vertices to smooth the surface.</td></tr><tr><td><code>M</code></td><td><strong>X-Mirror</strong>: Apply sculpt deformation symmetrically across the X=0 axis.</td></tr><tr><td><code>Wire</code></td><td><strong>Wireframe</strong>: Toggle wireframe display.</td></tr><tr><td><code>Grab</code></td><td><strong>Grab Brush</strong>: Pull vertices in the direction of cursor movement.</td></tr><tr><td><code>Sclp+</code></td><td><strong>Positive</strong>: Set brush direction to positive (e.g., inflate).</td></tr><tr><td><code>Undo</code></td><td><strong>Undo</strong>: Revert the last stroke or operation.</td></tr><tr><td><code>Smth</code></td><td><strong>Smooth Shading</strong>: Enable smooth shading (visual only).</td></tr><tr><td><code>Pinch</code></td><td><strong>Pinch Brush</strong>: Squeeze vertices toward the cursor center.</td></tr><tr><td><code>Sclp-</code></td><td><strong>Negative</strong>: Set brush direction to negative (e.g., deflate).</td></tr><tr><td><code>Redo</code></td><td><strong>Redo</strong>: Re-apply an undone operation.</td></tr><tr><td><code>Edit</code></td><td><strong>Return to Edit Mode</strong>: Leave Sculpt Mode and go back to Edit Mode.</td></tr></tbody></table>
+<h3>Page 4: Primitives</h3>
+<p><img src="./mm04.jpg" alt="Page 4: Primitives and Segments" /></p>
+<ul><li><strong>Shapes</strong>: Add <code>Cube</code>, <code>Torus</code>, <code>Ball</code>, <code>DCone</code>, <code>Cyl</code>, <code>Cone</code>, or <code>Plane</code>.</li><li><strong>Segments</strong>: Use buttons <code>3</code> to <code>32</code> to set the polygon density for the next primitive.</li></ul>
+<hr />
+<h2>Detailed Feature Specifications</h2>
+<h3>Transform Confirmation Flow</h3>
+<p>For <code>G/R/S/E/GG</code> operations:</p>
+<ol><li><strong>Drag</strong>: Real-time preview of the transformation. The preview is maintained even after releasing the finger.</li><li><strong>Adjust</strong>: Drag again to fine-tune the position from the previous point.</li><li><strong>Confirm</strong>: Short tap to finalize the transform and commit it to history.</li></ol>
+<h3>Sculpt Mode Details</h3>
+<ul><li><strong>Brush Cursor</strong>: When hitting a surface, an ellipse is displayed, rotated to match the surface normal. The size is dynamically projected from the 3D <code>brushRadius</code> to screen pixels.</li><li><strong>X-Mirror / Edit</strong>: Use <code>M</code> to toggle symmetric sculpting and <code>Edit</code> to return to Edit Mode.</li><li><strong>Falloff Shapes</strong>:<ul><li><code>Sphere</code>: Smooth, spherical attenuation.</li><li><code>Triangle</code>: Linear attenuation based on distance.</li><li><code>Peak</code>: Strong center with sharp attenuation.</li><li><code>Flat</code>: Uniform application within the radius.</li></ul></li></ul><ul><li><strong>Long Press</strong>: In Sculpt Mode, long-pressing an empty area opens the same brush settings overlay as <code>Brsh</code>, while long-pressing geometry does not switch modes. In Object/Edit Mode, long-pressing geometry toggles modes.</li></ul>
+<h3>Box Selection</h3>
+<ol><li>Double-tap an empty area to start.</li><li>Drag to define the area. Upon releasing, the box remains visible (&quot;Awaiting Confirmation&quot;).</li><li><strong>Adjust</strong>: Drag again to redraw the box if the area is incorrect.</li><li><strong>Confirm</strong>: Tap to select all elements within the box.</li></ol>
+<h3>Loop Cut</h3>
+<p>Perform a <code>Cut</code> by selecting a quad face in Edit Mode.</p>
+<ul><li><strong>Propagation</strong>: The cut spreads from the starting face to adjacent quad faces.</li><li><strong>Direction</strong>: For single faces, pick the direction via the green preview line, then tap to confirm.</li><li><strong>X-Mirror</strong>: When ON, the cut direction is mirrored to the opposite side.</li></ul>
+<h3>Loop Selection</h3>
+<p>Select a chain of midpoint vertices created by a Loop Cut.</p>
+<ul><li><strong>Start</strong>: Select a midpoint vertex in &quot;Vertex Select&quot; mode and run <code>Loop</code>.</li><li><strong>Direction</strong>: The tool identifies the midpoint and expands selection toward the opposite midpoint.</li></ul>
+<h3>Chain Selection</h3>
+<p>Select a sequence of vertices connected by quad faces.</p>
+<ul><li><strong>Start</strong>: Select a starting vertex in &quot;Vertex Select&quot; mode.</li><li><strong>Direction</strong>: Pick the edge direction via the preview line, then tap to confirm.</li><li><strong>Termination</strong>: Selection stops at corners (90°), triangles, or pentagons.</li></ul>
+<h3>Subdivision</h3>
+<ul><li><strong>Subd</strong>: Subdivide quad-only meshes by 1 level (1 quad $\rightarrow$ 4 quads).</li><li><strong>Catmull-Clark</strong>: Reconstruct the mesh using face/edge midpoints for a smooth, rounded surface.</li></ul>
+<h3>Selection &amp; Display</h3>
+<ul><li><strong>Markers</strong>: Selected vertices are marked red. Edges with both endpoints selected also appear red.</li><li><strong>Back-selection</strong>: When <code>Wire</code> is ON in Edit Mode, vertices hidden behind the mesh can be selected.</li><li><strong>Smooth Shading</strong>: <code>Smth</code> toggles visual shading without changing the vertex structure.</li><li><strong>Additive Selection</strong>: Use the <code>↑</code> button as a Shift key to add/remove elements from the selection.</li></ul>
+<h3>View Dock</h3>
+<p>Quickly switch views using buttons at the edge of the screen:</p>
+<ul><li><code>X / -X</code>: Side / Reverse Side.</li><li><code>Y / -Y</code>: Top / Bottom.</li><li><code>Z / -Z</code>: Front / Back.</li></ul>
+<p>Switching views resets the camera target distance and resets the view roll to 0.</p>
+<h2>Blender Integration</h2>
+<p>Exchange data via <code>.json</code> or <code>.json.gz</code> using the provided addon (<code>blender_modelasset_io.py</code>).</p>
+<ul><li><strong>Axis Conversion</strong>: Automatically converts between Blender (Z-up) and mmodeler (Y-up).</li><li><strong>Consistency</strong>: Handles negative scales or mirrors in Blender by flipping polygon loops during export, ensuring correct face orientation in mmodeler.</li></ul>
+    </article>
+  </main>
+</body>
+</html>

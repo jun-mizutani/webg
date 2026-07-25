@@ -3,23 +3,194 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>circular_breaker sample</title>
+  <title>circular_breaker</title>
   <link rel="icon" href="data:," />
+  <!-- 2026/06/19 -->
   <style>
-    html, body {
-      margin: 0;
-      background: #ffffff;
-    }
-    #canvas {
-      display: block;
-      width: 720px;
-      height: 540px;
-      background: #1a2a1d;
-    }
+
+:root {
+  color-scheme: light;
+  --bg: #eef3f8;
+  --paper: rgba(255, 255, 255, 0.94);
+  --line: #c8d5e4;
+  --ink: #17324a;
+  --muted: #5c748b;
+  --accent: #1566ab;
+  --accent-soft: #dfeefe;
+  --code-bg: #f3f7fb;
+  --shadow: rgba(29, 52, 79, 0.10);
+}
+* { box-sizing: border-box; }
+html, body {
+  margin: 0;
+  min-height: 100%;
+}
+body {
+  background:
+    radial-gradient(circle at top left, rgba(21, 102, 171, 0.12), transparent 24%),
+    radial-gradient(circle at top right, rgba(255, 191, 118, 0.10), transparent 22%),
+    linear-gradient(180deg, #f8fbfd 0%, var(--bg) 100%);
+  color: var(--ink);
+  font: 16px/1.78 "Avenir Next", "Hiragino Sans", "Yu Gothic", sans-serif;
+}
+.page {
+  width: min(1080px, calc(100% - 28px));
+  margin: 0 auto;
+  padding: 24px 0 56px;
+}
+.hero,
+.doc {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  box-shadow: 0 22px 52px var(--shadow);
+}
+.hero {
+  padding: 22px 24px;
+  margin-bottom: 18px;
+}
+.hero h1 {
+  margin: 0 0 8px;
+  font-size: clamp(2rem, 4vw, 3rem);
+  line-height: 1.08;
+}
+.hero p {
+  margin: 0;
+  color: var(--muted);
+}
+.doc {
+  padding: 28px;
+}
+.doc > :first-child {
+  margin-top: 0;
+}
+h1, h2, h3, h4, h5, h6 {
+  line-height: 1.25;
+  margin: 1.45em 0 0.55em;
+}
+h1 {
+  font-size: 2.2rem;
+}
+h2 {
+  padding-bottom: 0.28em;
+  border-bottom: 1px solid var(--line);
+  font-size: 1.48rem;
+}
+h3 {
+  font-size: 1.14rem;
+}
+p, ul, ol, table, pre, blockquote {
+  margin: 0 0 1em;
+}
+ul, ol {
+  padding-left: 1.4em;
+}
+li + li {
+  margin-top: 0.26em;
+}
+a {
+  color: var(--accent);
+  text-decoration: none;
+}
+a:hover {
+  text-decoration: underline;
+}
+img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  border-radius: 16px;
+  border: 1px solid var(--line);
+  box-shadow: 0 12px 32px rgba(29, 52, 79, 0.08);
+  margin: 1.1em 0 1.4em;
+}
+code {
+  padding: 0.12em 0.38em;
+  border-radius: 0.45em;
+  background: var(--code-bg);
+  border: 1px solid #dbe6f1;
+  font: 0.92em/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+pre {
+  padding: 14px 16px;
+  overflow-x: auto;
+  border-radius: 14px;
+  background: #0f1720;
+  color: #ecf5ff;
+}
+pre code {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #ffffff;
+}
+th, td {
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  text-align: left;
+  vertical-align: top;
+}
+th {
+  background: #f5f9fc;
+}
+hr {
+  border: 0;
+  border-top: 1px solid var(--line);
+  margin: 1.5em 0;
+}
+blockquote {
+  padding: 0.3em 0 0.3em 1em;
+  border-left: 4px solid #c9dbef;
+  color: var(--muted);
+}
+@media (max-width: 720px) {
+  .page {
+    width: min(100% - 18px, 1080px);
+    padding-top: 16px;
+  }
+  .hero,
+  .doc {
+    border-radius: 18px;
+  }
+  .doc {
+    padding: 20px;
+  }
+}
+
   </style>
 </head>
 <body>
-  <canvas id="canvas" width="720" height="540"></canvas>
-  <script type="module" src="./main.js"></script>
+  <main class="page">
+    <section class="hero">
+      <h1>circular_breaker</h1>
+    </section>
+    <article class="doc">
+<h1>circular_breaker</h1>
+<p><a href="index.en.html">English</a> | 日本語</p>
+<p><img src="./circular_breaker.jpg" alt="circular_breaker" /></p>
+<h2>概要</h2>
+<ul><li>webgの基本機能（シーン管理、衝突、HUD、音）をまとめて使った3Dブロック崩しの統合サンプルです。</li><li>ゲーム実装時の「複数Shape再利用」「ノード更新」「入力反映」の参考実装として使えます。</li><li>キャンバスはPC/スマホともにブラウザのviewport全体へ追従して表示されます。</li><li>縦長画面ではFOVを自動調整して視野を確保します。</li><li>gameplay 中の短い状態表示は drawHud() の canvas HUD へまとめ、画面上の情報をゲーム進行に必要な表示へ絞っています。</li></ul>
+<h2>実行方法</h2>
+<ul><li>実行ファイルは <a href="./circular_breaker.html">./circular_breaker.html</a> です</li><li>WebGPU に対応したブラウザで開き、必要に応じて help panel や HUD と合わせて確認してください</li></ul>
+<h2>使用している webg 機能</h2>
+<ul><li>app 側 GameStateManager: intro / play / pause / stage-clear / result の top-level phase 管理</li><li>Space / Node: ゲームオブジェクト管理</li><li>Shape: 床・壁・ブロック・パドル・パック生成</li><li>SmoothShader: 法線マップ付き/無しブロック描画を 1 本で扱う標準材質</li><li>ParticleEmitter: ブロック破壊時の spark effect をまとめて管理</li><li>Texture: ブロック用の手続きテクスチャ生成</li><li>Message: drawHud() から描く gameplay 専用 HUD</li><li>Touch: ← / → / A / D / R の固定ボタン</li><li>GameAudioSynth: melody preset と SE catalog を使った BGM/SE再生</li></ul>
+<h2>実装の流れ</h2>
+<p><code>main.js</code>は<code>WebgApp</code>、<code>SmoothShader</code>、<code>GameAudioSynth</code>を初期化し、arena、block、paddle、pack、particleを作成した後、入力、game runtime、scene phase、diagnosticsを接続します。毎frameの個別ルールを<code>main.js</code>へ集めず、初期化と各moduleの配線を追えるようにしています。</p>
+<p><code>gameRuntime.js</code>はscore、level、残りPACK数、paddleとpuckの位置・速度など、play中に変化する状態を保持します。paddle移動、puck反射、blockとの衝突、短時間の反動表示を更新し、stage進行に関する判断は<code>stageFlow.js</code>へ渡します。<code>stageFlow.js</code>は制限時間、目標破壊数、score計算、block再配置、game overを扱うため、物体の移動処理とstage規則を別々に確認できます。</p>
+<p><code>scenePhases.js</code>は<code>GameStateManager</code>を使い、<code>intro / play / pause / stage-clear / result</code>の最上位状態を切り替えます。stage内で起きた結果をscene phaseへ変換し、phaseごとのBGMと通知SEもここで選びます。HUDは<code>Hud.js</code>、sparkは<code>particleEffects.js</code>、high score保存は<code>highScoreStore.js</code>へ分けているため、描画、短時間演出、永続データをgameplay更新から独立して調べられます。</p>
+<p>処理順序は、入力をactionへ変換し、scene phaseを更新し、phaseに応じてgame runtimeを進め、更新後のNodeを描画し、最後にparticleとHUDを重ねる流れです。pauseでは現在の画面を保ったままgameplay更新を止め、resultでは移動と衝突を止めて終了表示とparticleの更新だけを続けます。</p>
+<h2>ファイル構成</h2>
+<ul><li><code>main.js</code>: WebgApp初期化、scene構築、入力、更新・描画loop、diagnosticsの接続</li><li><code>constants.js</code>: arena寸法、block数、速度、stage時間などの共通値と2次元計算helper</li><li><code>arenaScene.js</code>: arenaの床、壁、guide ring、照明を作る</li><li><code>shapeFactory.js</code>: bevel付きboxとcylinderなど、共通Shapeを生成する</li><li><code>blockField.js</code>: block用textureとprototype、instance、block type、stageごとの再配置を管理する</li><li><code>gameRuntime.js</code>: paddleとpuckの運動、衝突、scoreなどplay中の状態を更新する</li><li><code>stageFlow.js</code>: 制限時間、目標、stage clear、score計算、game overを判定する</li><li><code>scenePhases.js</code>: <code>GameStateManager</code>による最上位phaseとphase別audioを管理する</li><li><code>particleEffects.js</code>: block破壊時のsparkを生成・描画する</li><li><code>Hud.js</code>: gameplay状態とdiagnosticsをcanvas HUDへ整形する</li><li><code>inputConfig.js</code>: keyboard、touch、debug actionの対応を定義する</li><li><code>highScoreStore.js</code>: <code>WebgApp.saveProgress()</code>と<code>loadProgress()</code>を使って上位5件を保存する</li></ul>
+<h2>確認ポイント</h2>
+<ul><li>パドル移動と回転に対してパックの反射方向が安定して更新されるかを確認し、衝突応答ロジックの基礎品質を検証します</li><li>パックを paddleNode ローカルZ正側へ入れた瞬間に PACK 残数が1減ること、領域に留まり続けても追加減算されないことを確認します</li><li>PACK が 0 になったフレームでゲーム終了し、終了HUDにハイスコア上位5件が表示されることを確認します</li><li>緑色の補給ブロック（法線/テクスチャ無し、SmoothShader の単色経路）を破壊したときに PACK 残数が1増える演出が出ることを確認します</li><li>ブロック破壊時にスコアや進捗表示（(現数/目標数)）が即時更新されるかを確認し、drawHud() による gameplay HUD 連携が正しいことを確認します</li><li>SE/BGM がゲーム状態に応じて再生されるか（BGM preset, 通知SE, 衝突SE）が整理されているかを確認します</li></ul>
+<h2>操作方法</h2>
+<ul><li>ArrowLeft / ArrowRight: パドルを長軸方向に移動</li><li>A / D: パドルを回転</li><li>R: プレイ中はパック位置をリセット、ゲーム終了後はゲームを再スタート</li><li>K: 一時停止のON / OFF</li><li>O: ゲームオーバーを強制</li><li>P: スクリーンショット保存</li><li>Q / W: diagnostics を text / json で probe 表示</li><li>C / V: diagnostics を text / json で clipboard copy</li><li>J / L: diagnostics を text / json で console log</li><li>F / G: diagnostics を text / json で保存</li><li>M: debug / release 表示切り替え</li><li>Enter / Space / クリック: ステージ開始待機中の開始トリガ</li><li>スマホ（coarse pointer）では画面下にタッチボタン ← / → / A / D / R を表示</li><li>スマホUIに pause / debug / diagnostics 系の K / O / P / Q / W / C / V / J / L / F / G / M は表示しない</li></ul>
+    </article>
+  </main>
 </body>
 </html>

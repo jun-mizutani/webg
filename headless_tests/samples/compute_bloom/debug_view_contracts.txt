@@ -1,0 +1,7 @@
+Compute Bloomの段階別Viewが、統合パイプライン移行後も各HDR中間描画先を表示することを確認する
+
+- extract / small / medium / large / blurを同名の中間描画先へ対応させる
+- 未知のViewを別の表示へ自動補正しない
+- rgba16floatの中間値を画面解像度へ線形補間する
+- ReinhardとsRGB変換後だけrgba8unormへ書き出す
+- 入力形式、View、Samplerの不整合を例外として検出する

@@ -1,5 +1,5 @@
 // ---------------------------------------------
-//  VignettePass.js  2026/04/21
+//  VignettePass.js  2026/07/25
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // ---------------------------------------------
@@ -37,6 +37,7 @@ export default class VignettePass extends FullscreenPass {
 
   // FullscreenPass の単純 copy shader を、周辺減衰付きの shader へ差し替える
   createResources() {
+    this.resolveTargetFormat();
     const shaderCode = `
 struct Uniforms {
   colorScale : vec4f,
@@ -140,6 +141,7 @@ fn fsMain(input : VSOut) -> @location(0) vec4f {
     this.updateUniforms();
   }
 
+  // 色の倍率を受け取り、現在の設定と後続処理へ反映する
   setColorScale(r, g, b, a = 1.0) {
     const offset = Number.isFinite(this.OFF_COLOR_SCALE) ? this.OFF_COLOR_SCALE : 0;
     this.uniformData.set([
@@ -151,6 +153,7 @@ fn fsMain(input : VSOut) -> @location(0) vec4f {
     this.updateUniforms();
   }
 
+  // `uv`の倍率を受け取り、現在の設定と後続処理へ反映する
   setUvScale(u, v) {
     const offset = Number.isFinite(this.OFF_UV_SCALE_OFFSET) ? this.OFF_UV_SCALE_OFFSET : 4;
     this.uniformData[offset + 0] = util.readFiniteNumber(u, "VignettePass uvScale.u");
@@ -158,6 +161,7 @@ fn fsMain(input : VSOut) -> @location(0) vec4f {
     this.updateUniforms();
   }
 
+  // `uv`の`offset`を受け取り、現在の設定と後続処理へ反映する
   setUvOffset(u, v) {
     const offset = Number.isFinite(this.OFF_UV_SCALE_OFFSET) ? this.OFF_UV_SCALE_OFFSET : 4;
     this.uniformData[offset + 2] = util.readFiniteNumber(u, "VignettePass uvOffset.u");
@@ -211,6 +215,7 @@ fn fsMain(input : VSOut) -> @location(0) vec4f {
     this.updateUniforms();
   }
 
+  // 有効状態を受け取り、現在の設定と後続処理へ反映する
   setEnabled(flag) {
     if (typeof flag !== "boolean") {
       throw new Error("VignettePass enabled must be boolean");

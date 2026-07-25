@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// samples/demo_spheres/main.js  2026/04/28
+// samples/demo_spheres/main.js  2026/07/25
 //   demo_spheres sample
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -24,6 +24,7 @@ import InputController from "../../webg/InputController.js";
 const hud = document.getElementById("hud");
 const SPEED = 0.2;
 
+// 投影を受け取り、現在の設定と後続処理へ反映する
 const setProjection = (screen, shader, angle = 53) => {
   // 透視投影行列をシェーダへ設定
   const proj = new Matrix();
@@ -32,11 +33,13 @@ const setProjection = (screen, shader, angle = 53) => {
   shader.setProjectionMatrix(proj);
 };
 
+// `color`は受け取った値を処理し、後続処理で利用する状態または結果を生成する
 const color = (div, i, count) => {
   const d = 0.5 / div;
   return [d * i + 0.5, ((count % 2000) * 0.00025) + 0.5, 1.0 - d * i, 1.0];
 };
 
+// テクスチャのY方向の反転を読み込み、検証済みのデータとして後続処理へ渡す
 const loadTextureFlipY = async (gpu, url) => {
   // canvas は上端から画素を返すため、webg の Bottom-Left UV 基準に合わせて Y 方向だけ反転する
   const response = await fetch(url);
@@ -57,6 +60,7 @@ const loadTextureFlipY = async (gpu, url) => {
   return tex;
 };
 
+// `shapes`を生成し、後続処理で利用できる状態にする
 const makeShapes = (gpu, tex) => {
   // 9種類の基本形状を先に作って共有する
   const shapes = [];
@@ -92,6 +96,7 @@ const makeShapes = (gpu, tex) => {
   return shapes;
 };
 
+// このインスタンスの初期化段階で、必要な状態と資源を準備して処理を開始する
 const start = async () => {
   // キー入力状態フラグ
   let quit = false;
@@ -104,6 +109,7 @@ const start = async () => {
   const shader = new SmoothShader(screen.getGPU());
   await shader.init();
   Shape.prototype.shader = shader;
+  // `viewport`の配置を対象の状態または描画設定へ反映する
   const applyViewportLayout = () => {
     screen.resize(Math.max(1, Math.floor(window.innerWidth)), Math.max(1, Math.floor(window.innerHeight)));
     setProjection(screen, shader, 53);
@@ -144,6 +150,7 @@ const start = async () => {
     nodes.push({ base, obj, shape: s });
   }
 
+  // `changeShape`は受け取った値を処理し、後続処理で利用する状態または結果を生成する
   const changeShape = (shapeNo) => {
     totalVertices = 0;
     totalTriangles = 0;
@@ -224,6 +231,7 @@ const start = async () => {
     onAction: ({ key }) => handleActionKey(key)
   });
 
+  // `loop`は処理周期の開始または終了に必要な状態を更新する
   const loop = () => {
     if (quit) return;
     const count = screen.getFrameCount();

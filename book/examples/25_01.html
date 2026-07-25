@@ -287,7 +287,6 @@ let lastChildReference = [...lastRest];
 
 app.start({
   onUpdate: ({ deltaSec }) => {
-    orbit.update(deltaSec);
     if (!state.paused) {
       elapsedSec += deltaSec;
     }

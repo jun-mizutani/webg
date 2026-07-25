@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// samples/circular_breaker/Hud.js  2026/03/26
+// samples/circular_breaker/Hud.js  2026/07/25
 //   circular_breaker sample
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -16,6 +16,7 @@ const drawEntries = (msg, entries = [], scale = 1.0) => {
   msg.drawScreen();
 };
 
+// デバッグの行の描画段階で、必要な描画命令と表示内容を記録する
 const drawDebugLines = (msg, lines = []) => {
   if (!Array.isArray(lines) || lines.length === 0) return;
   const startY = Math.max(0, 25 - lines.length);

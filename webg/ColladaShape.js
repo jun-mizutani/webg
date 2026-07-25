@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// ColladaShape.js  2026/03/13
+// ColladaShape.js  2026/07/25
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // ---------------------------------------------
@@ -14,6 +14,7 @@ import ModelBuilder from "./ModelBuilder.js";
 
 export default class ColladaShape extends Collada {
 
+  // インスタンス生成時に、受け取った設定を検証して初期状態を準備する
   constructor (gl) {
     // Collada解析結果をwebg Shape/Skeletonへマッピングする
     super();

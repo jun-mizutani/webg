@@ -1,12 +1,12 @@
 // ---------------------------------------------
-// samples/mmodeler/main.js  2026/05/26
+// samples/mmodeler/main.js  2026/07/25
 //   mmodeler sample
 //   Sections:
 //   - webg app subclasses and shaders
 //   - constants and shared state
-//   - focus, projection, camera, and UI helpers
-//   - editor snapshots, selection, geometry, and scene rebuild
-//   - picking, input, transform, import/export, diagnostics, startup
+//   - focus, projection, camera, mobile UI, and status helpers
+//   - snapshots, information overlays, object transforms, and scene rebuild
+//   - object/mode command routing, picking/input, keyboard, import/export, diagnostics, startup
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // ---------------------------------------------
@@ -16,6 +16,7 @@ import ModelAsset from "../../webg/ModelAsset.js";
 import Matrix from "../../webg/Matrix.js";
 import Quat from "../../webg/Quat.js";
 import Diagnostics from "../../webg/Diagnostics.js";
+import { CAMERA_REVERSE_Z } from "../../webg/DepthConvention.js";
 import BoxSelectSession from "./BoxSelectSession.js";
 import CommandPalette, { getCommandActionLabel } from "./CommandPalette.js";
 import EditModeController from "./EditModeController.js";
@@ -27,12 +28,14 @@ import { buildPrimitiveObject as buildModelerPrimitiveObject } from "./ModelerPr
 import ModelerRenderer from "./ModelerRenderer.js";
 import ModelerScene from "./ModelerScene.js";
 import ObjectModeController from "./ObjectModeController.js";
+import SculptModeController from "./SculptModeController.js";
 import ViewController from "./ViewController.js";
 import {
   DEFAULT_CAMERA,
   DEFAULT_OBJECT_ID,
   EDITOR_MODE_EDIT,
   EDITOR_MODE_OBJECT,
+  EDITOR_MODE_SCULPT,
   EDITOR_MODES,
   INITIAL_ORBIT_BINDINGS,
   MATERIAL,
@@ -94,7 +97,7 @@ class ModelerWebgApp extends WebgApp {
   }
 
   // webg コアの WebgApp は透視投影を標準入口にしている。
-  // webgmodeler ではコアを変更せず、サンプル専用 subclass で正射影行列だけを追加する。
+  // mmodeler ではコアを変更せず、サンプル専用 subclass で正射影行列だけを追加する。
   updateOrthographicProjection(viewHeight) {
     if (!Number.isFinite(viewHeight) || viewHeight <= 0.0) {
       throw new Error(`ModelerWebgApp.updateOrthographicProjection requires positive viewHeight: ${viewHeight}`);
@@ -125,29 +128,29 @@ class SelectedFaceOverlayShader extends ModelerSmoothShader {
   // インスタンス生成時に renderer や shader が使う状態を初期化する
   constructor(gpu) {
     // 選択面は通常 mesh の後に重ねるため、depth buffer を更新しない
-    // 同一深度の面を通すため depthCompare は less-equal にする
+    // Camera Reverse-Zで同一深度の面を通すためgreater-equal比較を使用する
     // 通常 mesh は裏面確認のため両面描画するが、選択面 overlay は背面まで色を出すと
     // 反対側の face が選択されているように見えるため、overlay だけ back-face culling を有効にする
     super(gpu, {
       cullMode: "back",
       depthWriteEnabled: false,
-      depthCompare: "less-equal"
+      depthCompare: CAMERA_REVERSE_Z.compareEqual
     });
     // world 座標の頂点を動かすと選択面が剥がれて見えるため、vertex shader の
     // clip-space z だけをごく小さく手前へ寄せるw 比例にすることで透視除算後の
     // bias が距離に対して極端に変わらないようにする
     this.wgslSrc = this.wgslSrc.replace(
       "output.position = u.projMatrix * pos4;",
-      `output.position = u.projMatrix * pos4;\n        output.position.z = max(0.0, output.position.z - ${SELECTED_FACE_Z_BIAS_PERSPECTIVE.toFixed(8)} * output.position.w);`
+      `output.position = u.projMatrix * pos4;\n        output.position.z = min(output.position.w, output.position.z + ${SELECTED_FACE_Z_BIAS_PERSPECTIVE.toFixed(8)} * output.position.w);`
     );
   }
 }
 
-// webgmodeler は「編集データ」を唯一の正として扱う
-// - vertices / faces は ModelAsset よりも操作しやすい形で保持する
-// - 表示用 Shape と保存用 ModelAsset は、編集データから毎回再生成する
-// - import した複雑な asset も、選択 mesh の positions / indices / polygonLoops を編集データへ写す
-// この方針により、画面表示と JSON 出力が別々の状態へずれることを防ぐ
+// mmodeler は editable scene object を保存・表示の正本として扱う
+// - Object Mode では object list と object transform が正本になる
+// - Edit Mode では EditModeController の edit session が表示・pick・preview の正本になる
+// - 表示用 Shape と保存用 ModelAsset は、必要な境界で editable geometry から再生成する
+// この方針により、画面表示、pick 対象、保存対象がどの状態を読んでいるかを追いやすくする
 
 // ------------------------------------------------------------
 // --- constants and shared state
@@ -193,7 +196,9 @@ const ui = {
   coordinateOverlay: null,
   coordinateOverlayTitle: null,
   coordinateOverlayHint: null,
+  coordinateOverlayLabels: [],
   coordinateOverlayFields: [],
+  coordinateFalloffSelect: null,
   coordinateOverlayApply: null,
   coordinateOverlayClose: null,
   objectInfoOverlay: null,
@@ -245,6 +250,7 @@ let markerOverlayDirty = true;
 let markerOverlayCameraKey = "";
 let coordinateOverlayLastTouchAction = "";
 let coordinateOverlayLastTouchTime = 0;
+let coordinateOverlayMode = "coordinate";
 let overlayAlpha = 0.65;
 let overlayMarkerColor = [0.0, 0.0, 0.0];
 let overlayEdgeColor = [0.0, 0.0, 0.0];
@@ -261,6 +267,7 @@ let modelerImportExport = null;
 let modelerCommandDispatcher = null;
 let modelerPicking = null;
 let objectModeController = null;
+let sculptModeController = null;
 let transformController = null;
 
 const VIEW_ANGLE_PRESETS = [50.0, 40.0, 32.0, 24.0, 18.0, 12.0, 6.0];
@@ -377,6 +384,7 @@ function resetVisiblePickStats(mode = "-") {
   visiblePickStats.maxFacesPerCell = 0;
 }
 
+// `visible`の`pick`の選択状態の統計情報を受け取り、現在の設定と後続処理へ反映する
 function setVisiblePickSelectionStats(mode, candidates, selected, context = null) {
   visiblePickStats.mode = mode;
   visiblePickStats.candidates = candidates;
@@ -417,6 +425,9 @@ const editor = new ModelerScene({
 function focusModelerCanvas() {
   const canvas = app?.screen?.canvas ?? null;
   if (!canvas) {
+    return;
+  }
+  if (isTextEntryTarget(document?.activeElement)) {
     return;
   }
   // embedded 形式では DOM button / file input / select に focus が移りやすい
@@ -467,16 +478,17 @@ function getPerspectiveDepthCoefficientZBiasScale() {
   const current = getPerspectiveDepthCoefficient(PERSPECTIVE_PROJECTION_NEAR, PERSPECTIVE_PROJECTION_FAR);
   const reference = getPerspectiveDepthCoefficient(Z_BIAS_REFERENCE_PERSPECTIVE_NEAR, Z_BIAS_REFERENCE_PERSPECTIVE_FAR);
   if (!Number.isFinite(current) || current <= 0.0 || !Number.isFinite(reference) || reference <= 0.0) {
-    throw new Error(`webgmodeler zBias depth scale requires valid coefficients: current=${current} reference=${reference}`);
+    throw new Error(`mmodeler zBias depth scale requires valid coefficients: current=${current} reference=${reference}`);
   }
   return current / reference;
 }
 
+// `perspective`の深度の`coefficient`を現在の入力と状態から求め、呼び出し元へ返す
 function getPerspectiveDepthCoefficient(near, far) {
   const n = Number(near);
   const f = Number(far);
   if (!Number.isFinite(n) || !Number.isFinite(f) || n <= 0.0 || f <= n) {
-    throw new Error(`webgmodeler zBias depth coefficient requires 0 < near < far: near=${near} far=${far}`);
+    throw new Error(`mmodeler zBias depth coefficient requires 0 < near < far: near=${near} far=${far}`);
   }
   return Math.abs(f * n / (n - f));
 }
@@ -486,16 +498,17 @@ function getPerspectiveDepthCoefficient(near, far) {
 function getPerspectiveZBiasScale() {
   const viewAngle = Number(app?.viewAngle ?? VIEW_ANGLE_PRESETS[viewAnglePresetIndex]);
   if (!Number.isFinite(viewAngle) || viewAngle <= 0.0 || viewAngle >= 180.0) {
-    throw new Error(`webgmodeler zBias scale requires valid viewAngle: ${viewAngle}`);
+    throw new Error(`mmodeler zBias scale requires valid viewAngle: ${viewAngle}`);
   }
   const currentTan = Math.tan(viewAngle * 0.5 * Math.PI / 180.0);
   const referenceTan = Math.tan(Z_BIAS_REFERENCE_VIEW_ANGLE * 0.5 * Math.PI / 180.0);
   if (!Number.isFinite(currentTan) || currentTan <= 0.0 || !Number.isFinite(referenceTan) || referenceTan <= 0.0) {
-    throw new Error(`webgmodeler zBias scale produced invalid tangent: current=${currentTan} reference=${referenceTan}`);
+    throw new Error(`mmodeler zBias scale produced invalid tangent: current=${currentTan} reference=${referenceTan}`);
   }
   return (currentTan / referenceTan) * getPerspectiveDepthCoefficientZBiasScale();
 }
 
+// 輪郭の重ね合わせ表示の`z`の`bias`を現在の入力と状態から求め、呼び出し元へ返す
 function getEdgeOverlayZBias() {
   if (viewController.projectionMode === PROJECTION_MODE_ORTHOGRAPHIC) {
     return EDGE_Z_BIAS_ORTHOGRAPHIC;
@@ -503,6 +516,7 @@ function getEdgeOverlayZBias() {
   return EDGE_Z_BIAS_PERSPECTIVE * getPerspectiveZBiasScale();
 }
 
+// `marker`の重ね合わせ表示の`z`の`bias`を現在の入力と状態から求め、呼び出し元へ返す
 function getMarkerOverlayZBias() {
   if (viewController.projectionMode === PROJECTION_MODE_ORTHOGRAPHIC) {
     return MARKER_Z_BIAS_ORTHOGRAPHIC;
@@ -510,6 +524,7 @@ function getMarkerOverlayZBias() {
   return MARKER_Z_BIAS_PERSPECTIVE * getPerspectiveZBiasScale();
 }
 
+// `guide`の重ね合わせ表示の`z`の`bias`を現在の入力と状態から求め、呼び出し元へ返す
 function getGuideOverlayZBias() {
   if (viewController.projectionMode === PROJECTION_MODE_ORTHOGRAPHIC) {
     return 0.0;
@@ -540,11 +555,13 @@ function markEdgeOverlayUploadDirty() {
   overlayEdgeUploadDirty = true;
 }
 
+// `markProjectionDependentsDirty`は座標または数値を計算し、後続処理で使う結果を返す
 function markProjectionDependentsDirty() {
   selectedFaceShader?.setProjectionMatrix?.(app.projectionMatrix);
   markEditOverlayVisualDirty();
 }
 
+// `orthographic`の表示の高さを現在の入力と状態から求め、呼び出し元へ返す
 function getOrthographicViewHeight() {
   const distance = Number(orbit?.orbit?.distance);
   const viewAngle = Number(app?.viewAngle);
@@ -561,6 +578,7 @@ function getOrthographicViewHeight() {
   return 2.0 * distance * Math.tan(vfov * 0.5 * Math.PI / 180.0);
 }
 
+// `positive`の`recommended`の`fov`を読み込み、検証済みのデータとして後続処理へ渡す
 function readPositiveRecommendedFov(viewAngle, label) {
   const vfov = app.screen.getRecommendedFov(viewAngle);
   if (!Number.isFinite(vfov) || vfov <= 0.0) {
@@ -569,6 +587,7 @@ function readPositiveRecommendedFov(viewAngle, label) {
   return vfov;
 }
 
+// `adjustPerspectiveDistanceForViewAngle`は座標または数値を計算し、後続処理で使う結果を返す
 function adjustPerspectiveDistanceForViewAngle(oldViewAngle, newViewAngle) {
   if (!app || !orbit || viewController.projectionMode !== PROJECTION_MODE_PERSPECTIVE) {
     return;
@@ -609,6 +628,7 @@ function adjustOrthographicDistanceForViewAngle(oldViewAngle, newViewAngle) {
   app.syncCameraFromEyeRig(orbit);
 }
 
+// 投影の`update`のキーを生成し、後続処理で利用できる状態にする
 function makeProjectionUpdateKey() {
   if (!app) {
     throw new Error("makeProjectionUpdateKey requires initialized app");
@@ -625,6 +645,7 @@ function makeProjectionUpdateKey() {
   ].join("|");
 }
 
+// `modeler`の投影を対象の状態または描画設定へ反映する
 function applyModelerProjection(options = {}) {
   if (!app) {
     throw new Error("applyModelerProjection requires initialized app");
@@ -648,6 +669,7 @@ function applyModelerProjection(options = {}) {
   return true;
 }
 
+// 表示の`angle`の`preset`を対象の状態または描画設定へ反映する
 function applyViewAnglePreset(index, options = {}) {
   const total = VIEW_ANGLE_PRESETS.length;
   const oldViewAngle = Number(app?.viewAngle ?? VIEW_ANGLE_PRESETS[viewAnglePresetIndex]);
@@ -766,6 +788,9 @@ function installModelerKeyBridge() {
   };
   // document 全体の keydown を拾い、camera 用 key だけ InputController へ渡す
   const onKeyDown = (ev) => {
+    if (isTextEntryTarget(ev.target)) {
+      return;
+    }
     const key = normalizeModelerCameraKey(ev);
     if (!bridgedKeys.has(key)) {
       return;
@@ -783,6 +808,9 @@ function installModelerKeyBridge() {
   };
   // keyup で camera 用 key state と pan modifier の残留を解除する
   const onKeyUp = (ev) => {
+    if (isTextEntryTarget(ev.target)) {
+      return;
+    }
     const key = normalizeModelerCameraKey(ev);
     if (!bridgedKeys.has(key)) {
       return;
@@ -857,7 +885,13 @@ function cacheUi() {
   ui.coordinateOverlay = document.getElementById("coordinateOverlay");
   ui.coordinateOverlayTitle = document.getElementById("coordinateOverlayTitle");
   ui.coordinateOverlayHint = document.getElementById("coordinateOverlayHint");
+  ui.coordinateOverlayLabels = [
+    document.getElementById("coordinateLabelX"),
+    document.getElementById("coordinateLabelY"),
+    document.getElementById("coordinateLabelZ")
+  ].filter(Boolean);
   ui.coordinateOverlayFields = Array.from(document.querySelectorAll("[data-coordinate-axis]"));
+  ui.coordinateFalloffSelect = document.getElementById("coordinateFalloff");
   ui.coordinateOverlayApply = document.getElementById("coordinateOverlayApply");
   ui.coordinateOverlayClose = document.getElementById("coordinateOverlayClose");
   ui.objectInfoOverlay = document.getElementById("objectInfoOverlay");
@@ -880,11 +914,15 @@ function cacheUi() {
   }
 }
 
+// モバイル操作の`tool`の`label`を現在の入力と状態から求め、呼び出し元へ返す
 function getMobileToolLabel() {
   const mode = getRenderableEditorMode();
   const tool = getRenderableEditorTool();
   if (mode === EDITOR_MODE_OBJECT) {
     return "Object";
+  }
+  if (mode === EDITOR_MODE_SCULPT) {
+    return "Sculpt";
   }
   if (tool === TOOL_SELECT_VERTEX) {
     return "Vertex";
@@ -915,9 +953,23 @@ function hasMobileSelectionForAction(action) {
   return editMesh.selectedVertices.size > 0 || editMesh.selectedFaces.size > 0;
 }
 
+// モバイル操作の操作の有効状態の条件を判定し、結果を真偽値で返す
 function isMobileActionEnabled(action) {
   if (action === "undefined") {
     return false;
+  }
+  if (action === "mode-sculpt"
+      || action === "mode-edit"
+      || action === "sculpt-draw"
+      || action === "sculpt-blur"
+      || action === "sculpt-grab"
+      || action === "sculpt-pinch"
+      || action === "sculpt-plus"
+      || action === "sculpt-minus") {
+    return getActiveObject() !== null;
+  }
+  if (action === "tool-face" || action === "tool-vertex" || action === "tool-add") {
+    return getRenderableEditorMode() === EDITOR_MODE_EDIT;
   }
   if (String(action ?? "").startsWith("primitive-segments-")) {
     return true;
@@ -945,10 +997,10 @@ function isMobileActionEnabled(action) {
     return editor.redoStack.length > 0;
   }
   if (action === "edge-slide") {
-    return getRenderableEditorMode() === EDITOR_MODE_EDIT && getActiveVertexObjects().length > 0;
+    return getRenderableEditorMode() === EDITOR_MODE_EDIT && editModeController.getActiveVertexObjects().length > 0;
   }
   if (action === "chain-select" || action === "select-loop") {
-    return getRenderableEditorMode() === EDITOR_MODE_EDIT && getActiveVertexObjects().length > 0;
+    return getRenderableEditorMode() === EDITOR_MODE_EDIT && editModeController.getActiveVertexObjects().length > 0;
   }
   if (action === "subdivide") {
     const editMesh = getRenderableEditMeshState();
@@ -962,7 +1014,11 @@ function isMobileActionEnabled(action) {
       && editMesh.faces.length > 0;
   }
   if (action === "view-vertex") {
-    return getRenderableEditorMode() === EDITOR_MODE_EDIT && getActiveVertexObjects().length > 0;
+    return getRenderableEditorMode() === EDITOR_MODE_SCULPT
+      || (getRenderableEditorMode() === EDITOR_MODE_EDIT && editModeController.getActiveVertexObjects().length > 0);
+  }
+  if (action === "sculpt-brush") {
+    return sculptModeController !== null;
   }
   if (action === "object-info") {
     return getActiveObject() !== null;
@@ -978,7 +1034,7 @@ function isMobileActionEnabled(action) {
   }
   if (action === "loop-cut") {
     return getRenderableEditorMode() === EDITOR_MODE_EDIT
-        && getSelectedFaceObjects().some((face) => face.indices.length === 4);
+        && editModeController.getSelectedFaceObjects().some((face) => face.indices.length === 4);
   }
   return true;
 }
@@ -994,6 +1050,24 @@ function isMobileActionActive(action) {
   }
   if (action === "object-smooth-shading") {
     return viewController.objectSmoothShading;
+  }
+  if (action === "mode-sculpt") {
+    return getRenderableEditorMode() === EDITOR_MODE_SCULPT;
+  }
+  if (action === "mode-edit") {
+    return getRenderableEditorMode() === EDITOR_MODE_EDIT;
+  }
+  if (action === "sculpt-draw" || action === "sculpt-blur" || action === "sculpt-grab" || action === "sculpt-pinch") {
+    return getRenderableEditorMode() === EDITOR_MODE_SCULPT
+      && sculptModeController?.brushType === action.slice("sculpt-".length);
+  }
+  if (action === "sculpt-plus") {
+    return getRenderableEditorMode() === EDITOR_MODE_SCULPT
+      && (sculptModeController?.brushStrength ?? 0.0) >= 0.0;
+  }
+  if (action === "sculpt-minus") {
+    return getRenderableEditorMode() === EDITOR_MODE_SCULPT
+      && (sculptModeController?.brushStrength ?? 0.0) < 0.0;
   }
   if (action === "tool-vertex") {
     return getRenderableEditorMode() === EDITOR_MODE_EDIT && getRenderableEditorTool() === TOOL_SELECT_VERTEX;
@@ -1018,14 +1092,22 @@ function isMobileActionActive(action) {
   return false;
 }
 
+// モバイル操作の`ribbon`を現在の入力と実行状態に合わせて更新する
 function updateMobileRibbon() {
   if (!IS_MOBILE_PROFILE) {
     return;
   }
-  const mode = getRenderableEditorMode() === EDITOR_MODE_EDIT ? "edit" : "object";
+  const currentMode = getRenderableEditorMode();
+  const mode = currentMode === EDITOR_MODE_EDIT
+    ? "edit"
+    : currentMode === EDITOR_MODE_SCULPT
+      ? "sculpt"
+      : "object";
   const tool = getMobileToolLabel().toLowerCase();
   const box = mobileInput.boxSelectArmed ? " | box select armed" : "";
-  const shift = mobileInput.selectionShiftActive ? " | shift" : "";
+  const shift = mobileInput.selectionShiftActive
+    ? (currentMode === EDITOR_MODE_SCULPT ? " | brush armed" : " | shift")
+    : "";
   if (ui.mobileStatus) {
     ui.mobileStatus.textContent = `${mode} / ${tool} | ${editor.lastMessage || "ready"}${box}${shift}`;
   }
@@ -1059,16 +1141,38 @@ function updateMobileRibbon() {
   }
 }
 
+// モバイル操作の選択状態の`shift`の有効状態を切り替え、表示と処理へ反映する
 function toggleMobileSelectionShift() {
   mobileInput.toggleSelectionShift();
+  if (getRenderableEditorMode() === EDITOR_MODE_SCULPT) {
+    setMessage(`brush stroke ${mobileInput.selectionShiftActive ? "armed" : "orbit"}`);
+    setMobileOrbitEnabled(!mobileInput.selectionShiftActive);
+  }
 }
 
+// 空白部分のダブルタップから彫刻ブラシの入力方式を切り替える
+function toggleSculptBrushInputFromEmptyDoubleTap(ev = null) {
+  if (!isSculptMode()) {
+    return false;
+  }
+  mobileInput.selectionShiftActive = !mobileInput.selectionShiftActive;
+  setMobileOrbitEnabled(!mobileInput.selectionShiftActive);
+  updateMobileRibbon();
+  if (ev) {
+    updateSculptPreviewFromPointer(ev.clientX, ev.clientY);
+  }
+  setMessage(mobileInput.selectionShiftActive ? "sculpt brush drag" : "sculpt camera orbit");
+  return true;
+}
+
+// モバイル操作の周回視点の有効状態を受け取り、現在の設定と後続処理へ反映する
 function setMobileOrbitEnabled(enabled) {
   if (orbit) {
     orbit.enabled = enabled;
   }
 }
 
+// `signed`の`degrees`を検証し、後続処理が扱える共通形式へ整える
 function normalizeSignedDegrees(degrees, limit = NORMALIZED_ORBIT_PITCH_DEGREES) {
   const numeric = Number(degrees);
   if (!Number.isFinite(numeric)) {
@@ -1079,6 +1183,7 @@ function normalizeSignedDegrees(degrees, limit = NORMALIZED_ORBIT_PITCH_DEGREES)
   return wrapped === -limit && numeric > 0.0 ? limit : wrapped;
 }
 
+// 周回視点の`pitch`の`for`の`modeler`を検証し、後続処理が扱える共通形式へ整える
 function normalizeOrbitPitchForModeler() {
   if (!orbit?.orbit || orbit.orbit.rotationInputMode === "camera-view") {
     return false;
@@ -1103,6 +1208,7 @@ function closeCoordinateOverlay() {
   focusModelerCanvas();
 }
 
+// `closeObjectInfoOverlay`は必要な画面要素を準備し、表示状態を更新する
 function closeObjectInfoOverlay() {
   ui.objectInfoOverlay?.classList.remove("open");
   focusModelerCanvas();
@@ -1111,15 +1217,28 @@ function closeObjectInfoOverlay() {
 // iPhone Safari では touchstart / touchend の preventDefault により click が発火しない場合がある
 // coordinate overlay の操作部品だけは Safari guard の対象外にし、button は touchend / pointerup でも実行する
 function isCoordinateOverlayControl(target) {
-  return target?.closest?.(".coordinate-overlay input, .coordinate-overlay button") !== null;
+  const element = target?.closest
+    ? target
+    : target?.parentElement ?? null;
+  return element?.closest?.(".coordinate-overlay input, .coordinate-overlay select, .coordinate-overlay button") !== null;
 }
 
+// `text`の`entry`の対象の条件を判定し、結果を真偽値で返す
+function isTextEntryTarget(target) {
+  const element = target?.closest
+    ? target
+    : target?.parentElement ?? null;
+  return element?.closest?.("input, textarea, select, [contenteditable='true']") !== null;
+}
+
+// `coordinate`の重ね合わせ表示のボタンの操作の実行段階で、必要な処理を決められた順序で進める
 function runCoordinateOverlayButtonAction(action, ev = null) {
   ev?.preventDefault?.();
   ev?.stopPropagation?.();
   action();
 }
 
+// `coordinate`の重ね合わせ表示のボタンのタッチ入力の操作の実行段階で、必要な処理を決められた順序で進める
 function runCoordinateOverlayButtonTouchAction(name, action, ev) {
   const elapsed = performance.now() - coordinateOverlayLastTouchTime;
   if (coordinateOverlayLastTouchAction === name && elapsed >= 0.0 && elapsed < 120.0) {
@@ -1132,6 +1251,7 @@ function runCoordinateOverlayButtonTouchAction(name, action, ev) {
   runCoordinateOverlayButtonAction(action, ev);
 }
 
+// `suppress`の`coordinate`の重ね合わせ表示の`click`の条件を判定し、結果を真偽値で返す
 function shouldSuppressCoordinateOverlayClick(name) {
   const elapsed = performance.now() - coordinateOverlayLastTouchTime;
   if (coordinateOverlayLastTouchAction === name && elapsed >= 0.0 && elapsed < 420.0) {
@@ -1182,7 +1302,7 @@ function applyPaletteTransformAxisConstraint() {
     return;
   }
   if (axis === "x" || axis === "y" || axis === "z" || axis === "n") {
-    setTransformAxis(axis);
+    transformController.setTransformAxis(axis);
   }
 }
 
@@ -1230,6 +1350,7 @@ function shouldSuppressCanvasPointer(ev) {
   return mobileInput.shouldSuppressCanvasPointer(ev);
 }
 
+// `inspectGestureTarget`は入力条件や交差状態を比較し、判定結果を返す
 function inspectGestureTarget(clientX, clientY) {
   if (!app?.screen?.canvas) {
     return { kind: "empty" };
@@ -1261,6 +1382,7 @@ function dispatchModelerCommand(action) {
   modelerCommandDispatcher.dispatch(action);
 }
 
+// モバイル操作の重ね合わせ表示の`handlers`の初期化段階で、必要な状態と資源を準備して処理を開始する
 function installMobileOverlayHandlers() {
   if (!IS_MOBILE_PROFILE) {
     return;
@@ -1338,26 +1460,31 @@ function installMobileOverlayHandlers() {
   });
 }
 
+// モバイル操作の`gesture`の`handlers`の初期化段階で、必要な状態と資源を準備して処理を開始する
 function installMobileGestureHandlers() {
   mobileInput.installSurfaceGestures(app?.screen?.canvas, {
     setEditorMode,
-    isEditMode,
+    getEditorMode: getRenderableEditorMode,
     editModeName: EDITOR_MODE_EDIT,
     objectModeName: EDITOR_MODE_OBJECT,
+    sculptModeName: EDITOR_MODE_SCULPT,
     editModeController
   });
 }
 
+// `safari`の`callout`の`guards`の初期化段階で、必要な状態と資源を準備して処理を開始する
 function installSafariCalloutGuards() {
   if (!IS_MOBILE_PROFILE || !app?.screen?.canvas) {
     return;
   }
+  // `preventDefault`は入力またはイベントを受け取り、対応する処理へ振り分ける
   const preventDefault = (ev) => {
     if (isCoordinateOverlayControl(ev.target)) {
       return;
     }
     ev.preventDefault();
   };
+  // `preventDefaultCapture`は入力またはイベントを受け取り、対応する処理へ振り分ける
   const preventDefaultCapture = (ev) => {
     if (isCoordinateOverlayControl(ev.target)) {
       return;
@@ -1378,15 +1505,9 @@ function installSafariCalloutGuards() {
     ui.mobileRibbonHint,
     ui.mobilePalette,
     ui.mobilePaletteTitle,
-    ui.coordinateOverlay,
-    ui.coordinateOverlayTitle,
-    ui.coordinateOverlayHint,
-    ui.coordinateOverlayApply,
-    ui.coordinateOverlayClose,
     ui.mobileSelectionShift,
     ...ui.mobileViewButtons,
     ...ui.mobilePaletteButtons,
-    ...ui.coordinateOverlayFields,
     ...ui.mobileRibbonButtons
   ].filter(Boolean);
   for (const target of guardTargets) {
@@ -1411,6 +1532,9 @@ function installSafariCalloutGuards() {
     target.addEventListener("gestureend", preventDefaultCapture, { passive: false, capture: true });
   }
   document.addEventListener("selectionchange", () => {
+    if (isTextEntryTarget(document.activeElement)) {
+      return;
+    }
     const selection = document.getSelection?.();
     if (selection && selection.rangeCount > 0) {
       selection.removeAllRanges();
@@ -1446,10 +1570,17 @@ function updateStatus() {
   const orbitTarget = orbit?.orbit?.target ?? [NaN, NaN, NaN];
   const pointerDebug = getPointerDebugSnapshot();
   const rawInput = getRawInputDebugSnapshot();
-  const editMesh = getRenderableEditMeshState();
+  const mode = getRenderableEditorMode();
+  const editMesh = mode === EDITOR_MODE_SCULPT && activeObject
+    ? {
+        vertices: activeObject.vertices ?? [],
+        faces: activeObject.faces ?? [],
+        selectedVertices: new Set(),
+        selectedFaces: new Set()
+      }
+    : getRenderableEditMeshState();
   const faceIds = Array.from(editMesh.selectedFaces).join(", ") || "-";
   const vertexIds = Array.from(editMesh.selectedVertices).join(", ") || "-";
-  const mode = getRenderableEditorMode();
   const tool = getRenderableEditorTool();
   const lines = [
     SAMPLE_NAME,
@@ -1463,7 +1594,7 @@ function updateStatus() {
     `vertices=${editMesh.vertices.length} faces=${editMesh.faces.length}`,
     `selectedVertices=${editMesh.selectedVertices.size} [${vertexIds}]`,
     `selectedFaces=${editMesh.selectedFaces.size} [${faceIds}]`,
-    `lastVertex=${getLastSelectedVertexLabel()}`,
+    `lastVertex=${editModeController.getLastSelectedVertexLabel()}`,
     `meshSelect=${meshName}`,
     `undo=${editor.undoStack.length} redo=${editor.redoStack.length}`,
     `xMirror=${xMirrorEdit ? "on" : "off"}`,
@@ -1494,7 +1625,7 @@ function updateStatus() {
       { label: "Lens", value: getFocalLengthLabel() },
       { label: "V/F", value: `${editMesh.vertices.length}/${editMesh.faces.length}` },
       { label: "Selected", value: `o${editor.selectedObjectIds.size} v${editMesh.selectedVertices.size} f${editMesh.selectedFaces.size}` },
-      { label: "Vertex", value: getLastSelectedVertexLabel() },
+      { label: "Vertex", value: editModeController.getLastSelectedVertexLabel() },
       { label: "Msg", value: editor.lastMessage }
     ], {
       x: 0,
@@ -1546,7 +1677,7 @@ function updateCommandAvailability() {
   // DOM control の disabled 状態を null 安全に切り替える
   setDisabled(ui.flipFaces, !editMode || selectedFaceCount === 0);
   // DOM control の disabled 状態を null 安全に切り替える
-  setDisabled(ui.loopCutFaces, !editMode || !getSelectedFaceObjects().some((face) => face.indices.length === 4));
+  setDisabled(ui.loopCutFaces, !editMode || !editModeController.getSelectedFaceObjects().some((face) => face.indices.length === 4));
   // DOM control の disabled 状態を null 安全に切り替える
   setDisabled(ui.undo, editor.undoStack.length === 0);
   // DOM control の disabled 状態を null 安全に切り替える
@@ -1619,7 +1750,7 @@ function makeSnapshot() {
         id: face.id,
         indices: [...face.indices]
       })),
-      nextVertexId: object.nextVertexId,
+      nextVertexId: object.nextVertexId ?? object.vertices.length,
       nextFaceId: object.nextFaceId
     })),
     selectedObjectIds: Array.from(editor.selectedObjectIds),
@@ -1651,7 +1782,7 @@ function restoreSnapshot(snapshot) {
         id: face.id,
         indices: [...face.indices]
       })),
-      nextVertexId: object.nextVertexId,
+      nextVertexId: object.nextVertexId ?? object.vertices.length,
       nextFaceId: object.nextFaceId
     }));
     const activeObjectId = objects.some((object) => object.id === snapshot.activeObjectId)
@@ -1678,7 +1809,7 @@ function restoreSnapshot(snapshot) {
       selectedVertices: snapshot.selectedVertices ?? [],
       selectedFaces: snapshot.selectedFaces ?? [],
       lastSelectedVertexId: snapshot.lastSelectedVertexId ?? null,
-      nextVertexId: active?.nextVertexId ?? 1,
+      nextVertexId: active?.nextVertexId ?? 0,
       nextFaceId: active?.nextFaceId ?? 1,
       explicitXMirrorVertexPairs: snapshot.explicitXMirrorVertexPairs ?? []
     });
@@ -1699,7 +1830,7 @@ function restoreSnapshot(snapshot) {
       scale: 1.0,
       vertices,
       faces,
-      nextVertexId: snapshot.nextVertexId,
+      nextVertexId: snapshot.nextVertexId ?? vertices.length,
       nextFaceId: snapshot.nextFaceId
     };
     editor.replaceObjectsAndActivate([object], object.id, {
@@ -1712,7 +1843,7 @@ function restoreSnapshot(snapshot) {
       selectedVertices: snapshot.selectedVertices ?? [],
       selectedFaces: snapshot.selectedFaces ?? [],
       lastSelectedVertexId: snapshot.lastSelectedVertexId ?? null,
-      nextVertexId: snapshot.nextVertexId,
+      nextVertexId: snapshot.nextVertexId ?? vertices.length,
       nextFaceId: snapshot.nextFaceId,
       explicitXMirrorVertexPairs: snapshot.explicitXMirrorVertexPairs ?? []
     });
@@ -1793,91 +1924,14 @@ function redo() {
 }
 
 // ------------------------------------------------------------
-// --- selection and transform targets
+// --- information overlays and object geometry helpers
 // ------------------------------------------------------------
-
-// vertex id から vertex object を引く
-// 見つからない id は参照整合性の破損なので、呼び出し側が先に検証する
-function getVertexById(id) {
-  const editMesh = getRenderableEditMeshState();
-  return editMesh.vertices.find((vertex) => vertex.id === id) ?? null;
-}
-
-// active object の face id から face を取得する
-function getFaceById(id) {
-  const editMesh = getRenderableEditMeshState();
-  return editMesh.faces.find((face) => face.id === id) ?? null;
-}
-
-// 選択 vertex id を実際の vertex object 配列へ変換する
-function getSelectedVertexObjects() {
-  const editMesh = getRenderableEditMeshState();
-  return Array.from(editMesh.selectedVertices)
-    .map((id) => getVertexById(id))
-    .filter((vertex) => vertex !== null);
-}
-
-// 選択 face id を実際の face object 配列へ変換する
-function getSelectedFaceObjects() {
-  const editMesh = getRenderableEditMeshState();
-  return Array.from(editMesh.selectedFaces)
-    .map((id) => getFaceById(id))
-    .filter((face) => face !== null);
-}
-
-// 選択頂点が無い場合は選択 face の構成頂点を対象にする
-// face 選択後に Move / Scale / Extrude を自然に使うための「操作対象」決定であり、
-// データの欠落を補う処理ではない
-function getActiveVertexIds() {
-  const editMesh = getRenderableEditMeshState();
-  if (editMesh.selectedVertices.size > 0) {
-    return Array.from(editMesh.selectedVertices);
-  }
-  const ids = new Set();
-  for (const face of getSelectedFaceObjects()) {
-    for (const id of face.indices) {
-      ids.add(id);
-    }
-  }
-  return Array.from(ids);
-}
-
-// 表示上強調する vertex id を明示選択と選択 face から求める
-function getHighlightedVertexIds() {
-  const editMesh = getRenderableEditMeshState();
-  const ids = new Set(editMesh.selectedVertices);
-  for (const face of getSelectedFaceObjects()) {
-    for (const id of face.indices) {
-      ids.add(id);
-    }
-  }
-  return ids;
-}
-
-// HUD へ表示する最後の直接選択 vertex を取得する
-// 選択解除や Shift で選択から外れた場合は古い座標を出さない
-function getLastSelectedVertex() {
-  const editMesh = getRenderableEditMeshState();
-  if (editMesh.lastSelectedVertexId === null || !editMesh.selectedVertices.has(editMesh.lastSelectedVertexId)) {
-    return null;
-  }
-  return getVertexById(editMesh.lastSelectedVertexId);
-}
-
-// HUD へ収めやすい短い vertex 座標表示を作る
-function getLastSelectedVertexLabel() {
-  const vertex = getLastSelectedVertex();
-  if (!vertex) {
-    return "-";
-  }
-  const coords = vertex.position.map((value) => Number(value).toFixed(3)).join(", ");
-  return `v${vertex.id} (${coords})`;
-}
 
 function formatInfoVec3(values) {
   return values.map((value) => Number(value).toFixed(3)).join(", ");
 }
 
+// `info`の距離を現在の入力と状態から求め、呼び出し元へ返す
 function formatInfoDistance(value) {
   const numeric = Number(value);
   if (!Number.isFinite(numeric)) {
@@ -1912,6 +1966,20 @@ function getCameraInfoForOverlay() {
 // 座標 overlay の input へ現在の vertex position を反映する
 // 表示用の丸めは使わず、入力欄には編集対象の実数値をそのまま入れる
 function setCoordinateOverlayValues(vertex) {
+  coordinateOverlayMode = "coordinate";
+  const labels = ["X", "Y", "Z"];
+  for (let i = 0; i < ui.coordinateOverlayLabels.length; i++) {
+    ui.coordinateOverlayLabels[i].textContent = labels[i] ?? "";
+  }
+  for (const field of ui.coordinateOverlayFields) {
+    field.type = "number";
+    field.inputMode = "decimal";
+    field.step = "any";
+    field.hidden = false;
+  }
+  if (ui.coordinateFalloffSelect) {
+    ui.coordinateFalloffSelect.hidden = true;
+  }
   const axes = ["x", "y", "z"];
   for (let i = 0; i < axes.length; i++) {
     const field = ui.coordinateOverlayFields.find((input) => input.dataset.coordinateAxis === axes[i]);
@@ -1919,6 +1987,43 @@ function setCoordinateOverlayValues(vertex) {
       field.value = String(vertex.position[i]);
       field.disabled = false;
     }
+  }
+}
+
+// `brush`の重ね合わせ表示の`values`を受け取り、現在の設定と後続処理へ反映する
+function setBrushOverlayValues() {
+  coordinateOverlayMode = "brush";
+  const labels = ["Rad", "Str", "Shape"];
+  for (let i = 0; i < ui.coordinateOverlayLabels.length; i++) {
+    ui.coordinateOverlayLabels[i].textContent = labels[i] ?? "";
+  }
+  for (const field of ui.coordinateOverlayFields) {
+    field.type = "text";
+    field.inputMode = "decimal";
+    field.step = "any";
+    field.hidden = false;
+  }
+  const options = sculptModeController?.getBrushOptions?.() ?? { radius: 0.1, strength: 0.25, falloff: "sphere" };
+  const fields = ui.coordinateOverlayFields;
+  const radiusField = fields.find((input) => input.dataset.coordinateAxis === "x");
+  const strengthField = fields.find((input) => input.dataset.coordinateAxis === "y");
+  const directionField = fields.find((input) => input.dataset.coordinateAxis === "z");
+  if (radiusField) {
+    radiusField.value = String(options.radius);
+    radiusField.disabled = false;
+  }
+  if (strengthField) {
+    strengthField.value = String(Math.abs(options.strength));
+    strengthField.disabled = false;
+  }
+  if (directionField) {
+    directionField.hidden = true;
+    directionField.disabled = true;
+  }
+  if (ui.coordinateFalloffSelect) {
+    ui.coordinateFalloffSelect.hidden = false;
+    ui.coordinateFalloffSelect.disabled = false;
+    ui.coordinateFalloffSelect.value = String(options.falloff ?? "sphere");
   }
 }
 
@@ -1934,7 +2039,11 @@ function disableCoordinateOverlayFields() {
 // coordinate overlay の入力値を単一選択 vertex へ反映する
 // 不正な数値は readFiniteNumber() が例外にし、message に理由を出して geometry は変更しない
 function applyCoordinateOverlayInput() {
-  const vertices = getActiveVertexObjects();
+  if (coordinateOverlayMode === "brush") {
+    applyBrushOverlayInput();
+    return;
+  }
+  const vertices = editModeController.getActiveVertexObjects();
   if (vertices.length !== 1) {
     setMessage("select one vertex before editing coordinates");
     return;
@@ -1961,6 +2070,36 @@ function applyCoordinateOverlayInput() {
   }
 }
 
+// `brush`の重ね合わせ表示の入力を対象の状態または描画設定へ反映する
+function applyBrushOverlayInput() {
+  if (!sculptModeController) {
+    setMessage("sculpt brush is not ready");
+    return;
+  }
+  try {
+    const radius = readFiniteNumber(ui.coordinateOverlayFields.find((input) => input.dataset.coordinateAxis === "x")?.value, "brush radius");
+    const rawStrength = readFiniteNumber(ui.coordinateOverlayFields.find((input) => input.dataset.coordinateAxis === "y")?.value, "brush strength");
+    const falloff = ui.coordinateFalloffSelect?.value ?? sculptModeController.falloffType;
+    if (radius <= 0.0) {
+      throw new Error("brush radius must be positive");
+    }
+    const currentSign = sculptModeController.brushStrength < 0.0 ? -1.0 : 1.0;
+    const strength = rawStrength < 0.0 ? rawStrength : Math.abs(rawStrength) * currentSign;
+    sculptModeController.setBrushOptions({
+      radius,
+      strength,
+      falloff
+    });
+    setBrushOverlayValues();
+    setMessage(`brush radius ${radius} strength ${strength} falloff ${falloff}`);
+    updateMobileRibbon();
+  } catch (err) {
+    console.error(err);
+    setMessage(`brush edit failed: ${err?.message ?? err}`);
+  }
+}
+
+// `bounds`の`info`の`for`の`positions`を入力値から計算し、後続処理で使える結果を返す
 function computeBoundsInfoForPositions(positions) {
   if (!Array.isArray(positions) || positions.length === 0) {
     return {
@@ -1989,6 +2128,7 @@ function computeBoundsInfoForPositions(positions) {
   };
 }
 
+// 現在操作中のオブジェクト情報を返す
 function getActiveObjectInfo() {
   const object = getActiveObject();
   if (!object) {
@@ -2009,6 +2149,7 @@ function getActiveObjectInfo() {
   };
 }
 
+// `showActiveObjectInfo`は必要な画面要素を準備し、表示状態を更新する
 function showActiveObjectInfo() {
   const info = getActiveObjectInfo();
   if (!info) {
@@ -2049,11 +2190,15 @@ function showActiveObjectInfo() {
 // command palette の Vcood から、表示と入力を兼ねた座標 overlay を開く
 // 最初の実装では単一 vertex の直接編集に限定し、複数選択は情報表示だけにする
 function showSelectedVertexCoordinates() {
+  if (isSculptMode()) {
+    showSculptBrushSettings();
+    return;
+  }
   if (!isEditMode()) {
     setMessage("switch to edit mode before viewing vertices");
     return;
   }
-  const vertices = getActiveVertexObjects();
+  const vertices = editModeController.getActiveVertexObjects();
   if (vertices.length === 0) {
     setMessage("select vertices before viewing coordinates");
     return;
@@ -2085,41 +2230,26 @@ function showSelectedVertexCoordinates() {
   }
 }
 
-// transform 対象 vertex id を vertex object 配列へ変換する
-function getActiveVertexObjects() {
-  return getActiveVertexIds()
-    .map((id) => getVertexById(id))
-    .filter((vertex) => vertex !== null);
-}
-
-// Object Mode で選択中 object 群の全 vertex object を集める
-function getSelectedObjectVertexObjects() {
-  // Edit Mode session が残っている場合は、Object Mode 対象を読む前に active object へ反映する
-  commitActiveObject();
-  const vertices = [];
-  for (const object of editor.objects) {
-    if (editor.selectedObjectIds.has(object.id)) {
-      vertices.push(...object.vertices);
-    }
+// `showSculptBrushSettings`は必要な画面要素を準備し、表示状態を更新する
+function showSculptBrushSettings() {
+  if (!sculptModeController) {
+    setMessage("sculpt brush is not ready");
+    return;
   }
-  return vertices;
-}
-
-// Object Mode transform が対象にする object 群を返す
-function getTransformTargetObjects() {
-  commitActiveObject();
-  const selectedIds = editor.selectedObjectIds.size > 0
-    ? editor.selectedObjectIds
-    : new Set(editor.activeObjectId !== null ? [editor.activeObjectId] : []);
-  return editor.objects.filter((object) => selectedIds.has(object.id));
-}
-
-// mode と transform 種類に応じて操作対象 vertex object を決める
-function getTransformTargetVertexObjects(mode) {
-  if (getRenderableEditorMode() === EDITOR_MODE_OBJECT) {
-    return mode === "extrude" ? [] : getSelectedObjectVertexObjects();
+  closeMobilePalette();
+  closeObjectInfoOverlay();
+  setEditorMode(EDITOR_MODE_SCULPT);
+  if (ui.coordinateOverlayTitle) {
+    ui.coordinateOverlayTitle.textContent = "Sculpt brush";
   }
-  return getActiveVertexObjects();
+  if (ui.coordinateOverlayHint) {
+    ui.coordinateOverlayHint.textContent = "Edit radius, strength, and falloff shape, then Apply.";
+  }
+  setBrushOverlayValues();
+  ui.coordinateOverlay?.classList.add("open");
+  setMessage("editing sculpt brush");
+  ui.coordinateOverlayFields[0]?.focus();
+  ui.coordinateOverlayFields[0]?.select();
 }
 
 // vertex 群の平均位置を選択中心として計算する
@@ -2142,6 +2272,7 @@ function getObjectOrigin(object) {
   return readVec3(object?.origin ?? [0.0, 0.0, 0.0], `object ${object?.id ?? "-"} origin`);
 }
 
+// オブジェクトの回転を現在の入力と状態から求め、呼び出し元へ返す
 function getObjectRotation(object) {
   const rotation = readQuatXyzw(object?.rotation ?? [0.0, 0.0, 0.0, 1.0], `object ${object?.id ?? "-"} rotation`);
   const len = Math.hypot(rotation[0], rotation[1], rotation[2], rotation[3]);
@@ -2156,6 +2287,7 @@ function getObjectRotation(object) {
   ];
 }
 
+// オブジェクトの倍率を現在の入力と状態から求め、呼び出し元へ返す
 function getObjectScale(object) {
   const scale = readFiniteNumber(object?.scale ?? 1.0, `object ${object?.id ?? "-"} scale`);
   if (Math.abs(scale) <= 1.0e-8) {
@@ -2164,6 +2296,7 @@ function getObjectScale(object) {
   return scale;
 }
 
+// `quatFromObjectRotation`は座標または数値を計算し、後続処理で使う結果を返す
 function quatFromObjectRotation(object) {
   const rotation = getObjectRotation(object);
   const quat = new Quat();
@@ -2172,18 +2305,21 @@ function quatFromObjectRotation(object) {
   return quat;
 }
 
+// `matrixFromObjectRotation`は座標または数値を計算し、後続処理で使う結果を返す
 function matrixFromObjectRotation(object) {
   const matrix = new Matrix();
   matrix.setByQuat(quatFromObjectRotation(object));
   return matrix;
 }
 
+// `localToWorldPosition`は座標または数値を計算し、後続処理で使う結果を返す
 function localToWorldPosition(object, position) {
   const scale = getObjectScale(object);
   const rotated = matrixFromObjectRotation(object).mul3x3Vector(mul3(readVec3(position, "local position"), scale));
   return add3(rotated, getObjectOrigin(object));
 }
 
+// `worldToLocalPosition`は座標または数値を計算し、後続処理で使う結果を返す
 function worldToLocalPosition(object, position) {
   const scale = getObjectScale(object);
   const rel = sub3(readVec3(position, "world position"), getObjectOrigin(object));
@@ -2194,6 +2330,7 @@ function worldToLocalPosition(object, position) {
   return mul3(matrix.mul3x3Vector(rel), 1.0 / scale);
 }
 
+// `worldToLocalDirection`は座標または数値を計算し、後続処理で使う結果を返す
 function worldToLocalDirection(object, direction) {
   const scale = getObjectScale(object);
   const inverse = quatFromObjectRotation(object);
@@ -2203,6 +2340,14 @@ function worldToLocalDirection(object, direction) {
   return mul3(matrix.mul3x3Vector(readVec3(direction, "world direction")), 1.0 / scale);
 }
 
+// `localToWorldDirection`は座標または数値を計算し、後続処理で使う結果を返す
+function localToWorldDirection(object, direction) {
+  const scale = getObjectScale(object);
+  const matrix = matrixFromObjectRotation(object);
+  return matrix.mul3x3Vector(mul3(readVec3(direction, "local direction"), scale));
+}
+
+// オブジェクトのワールドの`vertices`を現在の入力と状態から求め、呼び出し元へ返す
 function getObjectWorldVertices(object) {
   return (object?.vertices ?? []).map((vertex) => ({
     id: vertex.id,
@@ -2210,6 +2355,7 @@ function getObjectWorldVertices(object) {
   }));
 }
 
+// オブジェクトのローカルの`ray`を生成し、後続処理で利用できる状態にする
 function makeObjectLocalRay(ray, object) {
   if (!object) {
     return ray;
@@ -2221,196 +2367,6 @@ function makeObjectLocalRay(ray, object) {
     near: ray.near ? worldToLocalPosition(object, ray.near) : ray.near,
     far: ray.far ? worldToLocalPosition(object, ray.far) : ray.far
   };
-}
-
-// ------------------------------------------------------------
-// --- X mirror editing
-// ------------------------------------------------------------
-
-// ------------------------------------------------------------
-// --- geometry topology and winding
-// ------------------------------------------------------------
-
-// face の法線は頂点順に従って計算する
-// 三角形と四角形だけを扱うため、先頭3頂点で面の向きを決める
-function computeFaceNormal(face) {
-  if (!face || face.indices.length < 3) {
-    return [0.0, 1.0, 0.0];
-  }
-  const v0 = getVertexById(face.indices[0]);
-  const v1 = getVertexById(face.indices[1]);
-  const v2 = getVertexById(face.indices[2]);
-  if (!v0 || !v1 || !v2) {
-    return [0.0, 1.0, 0.0];
-  }
-  const normal = cross3(
-    // 2 つの vec3 の差分を成分ごとに求める
-    sub3(v1.position, v0.position),
-    // 2 つの vec3 の差分を成分ごとに求める
-    sub3(v2.position, v0.position)
-  );
-  const len = length3(normal);
-  if (len <= 1.0e-9) {
-    return [0.0, 1.0, 0.0];
-  }
-  return [normal[0] / len, normal[1] / len, normal[2] / len];
-}
-
-// 指定 vertex loop の法線を頂点 id から計算する
-function computeNormalForVertexIds(vertexIds) {
-  if (!Array.isArray(vertexIds) || vertexIds.length < 3) {
-    return [0.0, 1.0, 0.0];
-  }
-  const v0 = getVertexById(vertexIds[0]);
-  const v1 = getVertexById(vertexIds[1]);
-  const v2 = getVertexById(vertexIds[2]);
-  if (!v0 || !v1 || !v2) {
-    return [0.0, 1.0, 0.0];
-  }
-  const normal = cross3(
-    // 2 つの vec3 の差分を成分ごとに求める
-    sub3(v1.position, v0.position),
-    // 2 つの vec3 の差分を成分ごとに求める
-    sub3(v2.position, v0.position)
-  );
-  const len = length3(normal);
-  if (len <= 1.0e-9) {
-    return [0.0, 1.0, 0.0];
-  }
-  return [normal[0] / len, normal[1] / len, normal[2] / len];
-}
-
-// face loop の頂点順を反転して表裏を入れ替える
-function reverseVertexLoop(vertexIds) {
-  return [...vertexIds].reverse();
-}
-
-// loop 内で edge がどちら向きに並んでいるかを調べる
-function getLoopEdgeDirection(loop, a, b) {
-  for (let i = 0; i < loop.length; i++) {
-    const current = loop[i];
-    const next = loop[(i + 1) % loop.length];
-    if (current === a && next === b) {
-      return 1;
-    }
-    if (current === b && next === a) {
-      return -1;
-    }
-  }
-  return 0;
-}
-
-// 孤立 face の法線が原点側を表にしないよう反転要否を判定する
-function shouldFlipLoopAwayFromOrigin(vertexIds) {
-  const vertices = vertexIds
-    .map((id) => getVertexById(id))
-    .filter((vertex) => vertex !== null);
-  if (vertices.length < 3) {
-    return false;
-  }
-  const center = computeCenter(vertices);
-  const toOrigin = mul3(center, -1.0);
-  if (length3(toOrigin) <= 1.0e-8) {
-    return false;
-  }
-  const normal = computeNormalForVertexIds(vertexIds);
-  // 法線が原点方向を向く面は「原点側が裏」として反転し、孤立面でも外向きを初期表面にする
-  return dot3(normal, toOrigin) > 0.0;
-}
-
-// 隣接 face の共有辺と逆向きになるよう新規 loop の向きを調整する
-function orientLoopByAdjacentFaces(vertexIds) {
-  let score = 0;
-  const editMesh = getRenderableEditMeshState();
-  for (const face of editMesh.faces) {
-    for (let i = 0; i < vertexIds.length; i++) {
-      const a = vertexIds[i];
-      const b = vertexIds[(i + 1) % vertexIds.length];
-      const existingDirection = getLoopEdgeDirection(face.indices, a, b);
-      if (existingDirection === 0) {
-        continue;
-      }
-      // 隣り合う面は共有辺を逆向きに持つと winding が連続する
-      score += existingDirection === 1 ? -1 : 1;
-    }
-  }
-  if (score < 0) {
-    return reverseVertexLoop(vertexIds);
-  }
-  if (score > 0) {
-    return [...vertexIds];
-  }
-  return shouldFlipLoopAwayFromOrigin(vertexIds)
-    ? reverseVertexLoop(vertexIds)
-    : [...vertexIds];
-}
-
-// 全 face の winding を connected component ごとにできるだけ一貫させる
-function orientAllFacesConsistently() {
-  const editMesh = getRenderableEditMeshState();
-  const edgeMap = new Map();
-  // 共有辺を向きに依存しない key として扱い、隣接 face を探索しやすくする
-  const edgeKey = (a, b) => a < b ? `${a}:${b}` : `${b}:${a}`;
-  for (const face of editMesh.faces) {
-    for (let i = 0; i < face.indices.length; i++) {
-      const a = face.indices[i];
-      const b = face.indices[(i + 1) % face.indices.length];
-      const key = edgeKey(a, b);
-      const entries = edgeMap.get(key) ?? [];
-      entries.push({ face, a, b });
-      edgeMap.set(key, entries);
-    }
-  }
-
-  const visited = new Set();
-  for (const seed of editMesh.faces) {
-    if (visited.has(seed.id)) {
-      continue;
-    }
-    if (shouldFlipLoopAwayFromOrigin(seed.indices)) {
-      seed.indices = reverseVertexLoop(seed.indices);
-    }
-    visited.add(seed.id);
-    const queue = [seed];
-    while (queue.length > 0) {
-      const face = queue.shift();
-      for (let i = 0; i < face.indices.length; i++) {
-        const a = face.indices[i];
-        const b = face.indices[(i + 1) % face.indices.length];
-        const entries = edgeMap.get(edgeKey(a, b)) ?? [];
-        for (const entry of entries) {
-          const other = entry.face;
-          if (other.id === face.id || visited.has(other.id)) {
-            continue;
-          }
-          if (getLoopEdgeDirection(other.indices, a, b) === 1) {
-            other.indices = reverseVertexLoop(other.indices);
-          }
-          visited.add(other.id);
-          queue.push(other);
-        }
-      }
-    }
-  }
-}
-
-// 選択 face または選択 vertex 周辺から transform 用の代表法線を求める
-function computeSelectionNormal() {
-  const selectedFaces = getSelectedFaceObjects();
-  if (selectedFaces.length > 0) {
-    const sum = [0.0, 0.0, 0.0];
-    for (const face of selectedFaces) {
-      const normal = computeFaceNormal(face);
-      sum[0] += normal[0];
-      sum[1] += normal[1];
-      sum[2] += normal[2];
-    }
-    const len = length3(sum);
-    if (len > 1.0e-9) {
-      return [sum[0] / len, sum[1] / len, sum[2] / len];
-    }
-  }
-  return [0.0, 1.0, 0.0];
 }
 
 // ------------------------------------------------------------
@@ -2429,6 +2385,7 @@ function getActiveGeometryForSave() {
   };
 }
 
+// 保存できる形状が現在の編集対象に存在するかを返す
 function hasActiveGeometryForSave({ requireFaces = false } = {}) {
   const editMesh = getRenderableEditorMode() === EDITOR_MODE_EDIT
     ? getRenderableEditMeshState()
@@ -2456,7 +2413,7 @@ function buildModelAssetFromEditor() {
 // 選択 face だけの overlay geometry を作る
 // 選択状態が mesh material 全体へ混ざらないよう、選択面は別 Shape として重ねる
 function buildSelectedFaceAsset() {
-  const selectedFaces = getSelectedFaceObjects();
+  const selectedFaces = editModeController.getSelectedFaceObjects();
   if (selectedFaces.length === 0) {
     return null;
   }
@@ -2466,7 +2423,7 @@ function buildSelectedFaceAsset() {
   for (const face of selectedFaces) {
     const localLoop = [];
     for (const vertexId of face.indices) {
-      const vertex = getVertexById(vertexId);
+      const vertex = editModeController.getVertexById(vertexId);
       if (!vertex) {
         throw new Error(`selected face ${face.id} references missing vertex ${vertexId}`);
       }
@@ -2484,7 +2441,7 @@ function buildSelectedFaceAsset() {
   return ModelAsset.fromData({
     version: "1.0",
     type: "webg-model-asset",
-    meta: { name: "webgmodeler_selection" },
+    meta: { name: "mmodeler_selection" },
     materials: [],
     meshes: [
       {
@@ -2563,13 +2520,14 @@ function refreshSelectionVisuals() {
 // --- edit overlays and viewport projection
 // ------------------------------------------------------------
 
-// vertex id から vertex object を引く Map を作る
+// vertex index から vertex object を直接引ける dense 配列を検証して返す
 function buildVertexLookup(vertices = getRenderableEditMeshState().vertices) {
-  const lookup = new Map();
-  for (const vertex of vertices) {
-    lookup.set(vertex.id, vertex);
+  for (let index = 0; index < vertices.length; index++) {
+    if (vertices[index]?.id !== index) {
+      throw new Error(`dense vertex invariant broken: vertices[${index}].id is ${vertices[index]?.id}`);
+    }
   }
-  return lookup;
+  return vertices;
 }
 
 // Edit Mode の overlay / hit test / status が読む mesh state を取得する
@@ -2628,7 +2586,7 @@ function rebuildEdgeOverlayBuffer() {
 // active object や edit mesh は renderer へ渡さず、screen-space marker の配列に変換して境界を小さく保つ
 function makeMarkerOverlayRenderData(viewProjection, markerRadiusX, markerRadiusY) {
   const markers = [];
-  const highlightedVertexIds = getHighlightedVertexIds();
+  const highlightedVertexIds = editModeController.getHighlightedVertexIds();
   const xMirrorVertexIds = editModeController.getXMirrorSelectedVertexIds();
   const object = getActiveObject();
   const editMesh = getRenderableEditMeshState();
@@ -2692,6 +2650,115 @@ function drawEditOverlayPass() {
     markerOverlayCameraKey = cameraKey;
     markerOverlayDirty = false;
   }
+}
+
+// `sculpt`の`preview`の重ね合わせ表示の処理の描画段階で、必要な描画命令と表示内容を記録する
+function drawSculptPreviewOverlayPass() {
+  if (!overlay2d || !isSculptMode() || !sculptModeController) {
+    return;
+  }
+  const hit = sculptModeController.cursorHit;
+  if (!hit?.screenCenter) {
+    return;
+  }
+  const viewState = modelerRenderer.makeOverlayViewProjection();
+  const canvas = viewState?.canvas;
+  if (!canvas) {
+    return;
+  }
+  const activeObject = getActiveObject();
+  const screenRadius = activeObject && hit.hit === true
+    ? computeSculptPreviewRadiusNdc(activeObject, hit, viewState.viewProjectionMatrix, canvas)
+    : null;
+  const fallbackRadiusPx = 18.0;
+  const radiusNdc = screenRadius ?? fallbackRadiusPx * 2.0 / Math.max(1, canvas.width);
+  const viewDirection = activeObject
+    ? worldToLocalDirection(activeObject, getCameraScreenBasis().forward)
+    : [0.0, 0.0, 1.0];
+  const rotation = activeObject
+    ? computeSculptPreviewRotation(activeObject, hit.normal)
+    : 0.0;
+  const preview = sculptModeController.getBrushPreview({
+    center: hit.screenCenter,
+    screenRadius: radiusNdc,
+    hit: hit.hit === true,
+    normal: hit.normal,
+    viewDirection,
+    rotation
+  });
+  if (!preview) {
+    return;
+  }
+  const color = preview.hit
+    ? (mobileInput.selectionShiftActive ? [0.0, 0.95, 0.55, 0.28] : [0.1, 0.72, 1.0, 0.22])
+    : [0.85, 0.85, 0.85, 0.16];
+  overlay2d.clear();
+  overlay2d.addMarker(
+    preview.center[0],
+    preview.center[1],
+    0.0,
+    preview.majorRadius,
+    preview.minorRadius,
+    color,
+    preview.rotation
+  );
+  overlay2d.draw();
+}
+
+// `sculpt`の`preview`の回転を入力値から計算し、後続処理で使える結果を返す
+function computeSculptPreviewRotation(object, localNormal) {
+  const basis = getCameraScreenBasis();
+  const worldNormal = normalize3(localToWorldDirection(object, localNormal), "sculpt preview normal");
+  const projectedX = dot3(worldNormal, basis.right);
+  const projectedY = dot3(worldNormal, basis.up);
+  if (Math.hypot(projectedX, projectedY) <= 1.0e-5) {
+    return 0.0;
+  }
+  return Math.atan2(projectedY, projectedX) + Math.PI * 0.5;
+}
+
+// `sculpt`の`preview`の半径の`ndc`を入力値から計算し、後続処理で使える結果を返す
+function computeSculptPreviewRadiusNdc(object, hit, viewProjection, canvas) {
+  if (!hit?.center || !hit?.normal || !viewProjection || !canvas) {
+    return null;
+  }
+  const radius = Number(sculptModeController?.brushRadius);
+  if (!Number.isFinite(radius) || radius <= 0.0) {
+    return null;
+  }
+  const basis = getCameraScreenBasis();
+  const worldNormal = normalize3(localToWorldDirection(object, hit.normal), "sculpt preview normal");
+  const normalScreenX = dot3(worldNormal, basis.right);
+  const normalScreenY = dot3(worldNormal, basis.up);
+  let screenMajorX = -normalScreenY;
+  let screenMajorY = normalScreenX;
+  if (Math.hypot(screenMajorX, screenMajorY) <= 1.0e-5) {
+    screenMajorX = 1.0;
+    screenMajorY = 0.0;
+  }
+  const screenWorldDirection = add3(mul3(basis.right, screenMajorX), mul3(basis.up, screenMajorY));
+  let tangent = sub3(screenWorldDirection, mul3(worldNormal, dot3(screenWorldDirection, worldNormal)));
+  if (length3(tangent) <= 1.0e-5) {
+    tangent = cross3(worldNormal, basis.forward);
+  }
+  if (length3(tangent) <= 1.0e-5) {
+    tangent = cross3(worldNormal, basis.right);
+  }
+  tangent = normalize3(tangent, "sculpt preview tangent");
+  const centerWorld = localToWorldPosition(object, hit.center);
+  const edgeWorld = add3(centerWorld, mul3(tangent, Math.abs(getObjectScale(object)) * radius));
+  const centerNdc = projectWorldToNdc(viewProjection, centerWorld, 0.0);
+  const edgeNdc = projectWorldToNdc(viewProjection, edgeWorld, 0.0);
+  if (!centerNdc || !edgeNdc) {
+    return null;
+  }
+  const dxPx = (edgeNdc[0] - centerNdc[0]) * canvas.width * 0.5;
+  const dyPx = (edgeNdc[1] - centerNdc[1]) * canvas.height * 0.5;
+  const radiusPx = Math.hypot(dxPx, dyPx);
+  if (!Number.isFinite(radiusPx) || radiusPx <= 0.0) {
+    return null;
+  }
+  return Math.max(6.0, radiusPx) * 2.0 / Math.max(1, canvas.width);
 }
 
 // 床 grid とワールド軸、または編集 preview を line-list overlay として描く
@@ -2907,7 +2974,8 @@ function projectWorldToNdc(viewProjection, point, zBias = 0.00035) {
   if (x < -1.2 || x > 1.2 || y < -1.2 || y > 1.2 || z < -0.02 || z > 1.02) {
     return null;
   }
-  return [x, y, Math.max(0.0, Math.min(1.0, z - zBias))];
+  // Camera Reverse-Zでは大きいdepthが手前なので、marker biasはNDC depthへ加算する
+  return [x, y, Math.max(0.0, Math.min(1.0, z + zBias))];
 }
 
 // 現在 camera の viewProjection 行列を作る
@@ -3064,6 +3132,9 @@ function getActiveObject() {
 // Edit Mode session の mesh を active object へ反映する
 // session が無い起動初期や Object Mode では、ModelerScene の互換 edit buffer を commit する
 function commitActiveObject() {
+  if (getRenderableEditorMode() === EDITOR_MODE_SCULPT) {
+    return true;
+  }
   if (editModeController) {
     editModeController.commitEditMeshState();
     return;
@@ -3120,11 +3191,41 @@ function isEditMode() {
   return getRenderableEditorMode() === EDITOR_MODE_EDIT;
 }
 
-// 現在の編集配列から単一 object 状態を作り直す
-function resetObjectState(name = "Cube") {
-  editor.resetObjectState(name, DEFAULT_OBJECT_ID);
+// 現在 mode が Sculpt Mode か判定する
+function isSculptMode() {
+  return getRenderableEditorMode() === EDITOR_MODE_SCULPT;
 }
 
+// `sculpt`の`brush`の方向を受け取り、現在の設定と後続処理へ反映する
+function setSculptBrushDirection(direction) {
+  if (!sculptModeController) {
+    throw new Error("SculptModeController is not initialized");
+  }
+  const sign = Number(direction) < 0 ? -1 : 1;
+  const current = Number(sculptModeController.brushStrength);
+  const magnitude = Number.isFinite(current) && Math.abs(current) > 0.0
+    ? Math.abs(current)
+    : 0.25;
+  sculptModeController.setBrushOptions({
+    strength: magnitude * sign
+  });
+  setEditorMode(EDITOR_MODE_SCULPT);
+  setMessage(sign > 0 ? "sculpt brush normal +" : "sculpt brush normal -");
+  renderMobilePalette();
+}
+
+// `sculpt`の`brush`の`type`を受け取り、現在の設定と後続処理へ反映する
+function setSculptBrushType(type) {
+  if (!sculptModeController) {
+    throw new Error("SculptModeController is not initialized");
+  }
+  sculptModeController.setBrushOptions({ type });
+  setEditorMode(EDITOR_MODE_SCULPT);
+  setMessage(`sculpt brush ${type}`);
+  renderMobilePalette();
+}
+
+// `primitive`のオブジェクトを生成し、後続処理で利用できる状態にする
 function buildPrimitiveObject(kind, objectId) {
   return buildModelerPrimitiveObject(kind, objectId, {
     segments: mobileInput.primitiveSegments
@@ -3164,15 +3265,22 @@ function setEditorMode(mode) {
     setMessage("confirm or cancel Chain Select before switching mode");
     return;
   }
-  // transformController の cancel を UI へ中継する
-  cancelTransformMode();
+  transformController.cancelTransformMode();
   closeCoordinateOverlay();
+  if (sculptModeController?.hasActiveStroke?.()) {
+    sculptModeController.cancelStroke();
+  }
+  if (getRenderableEditorMode() === EDITOR_MODE_SCULPT && normalized !== EDITOR_MODE_SCULPT) {
+    mobileInput.selectionShiftActive = false;
+    setMobileOrbitEnabled(true);
+  }
   if (normalized === EDITOR_MODE_OBJECT) {
     editModeController.exitEditMode();
     // edit selection の vertex / face を空にする
-    clearSelection();
+    editModeController.clearSelection();
     editor.selectActiveObjectOnly();
-  } else {
+    setMobileOrbitEnabled(true);
+  } else if (normalized === EDITOR_MODE_EDIT) {
     // Edit Mode では vertex marker / edge overlay / selected face overlay が主役になる
     // Object Wireframe を残すと通常 mesh が line-list 化され、overlay の見え方と役割が混ざるため解除する
     viewController.disableObjectWireframe();
@@ -3184,6 +3292,17 @@ function setEditorMode(mode) {
       object: getActiveObject(),
       tool: TOOL_SELECT_FACE
     });
+    setMobileOrbitEnabled(true);
+  } else if (normalized === EDITOR_MODE_SCULPT) {
+    editModeController.exitEditMode();
+    editModeController.clearSelection();
+    viewController.disableObjectWireframe();
+    if (!getActiveObject() && editor.objects.length > 0) {
+      selectObject(editor.objects[0].id, false);
+    }
+    editor.mode = EDITOR_MODE_SCULPT;
+    mobileInput.selectionShiftActive = false;
+    setMobileOrbitEnabled(true);
   }
   // mesh / selected face / marker の表示をまとめて再構築する
   rebuildScene();
@@ -3203,30 +3322,6 @@ function normalizeToolName(tool) {
   return normalized;
 }
 
-// Edit Mode の選択 / 追加 tool を切り替える
-function setTool(tool) {
-  if (!editModeController) {
-    throw new Error("EditModeController is not initialized");
-  }
-  editModeController.setTool(tool);
-}
-
-// 編集データへ新しい vertex を追加して id を返す
-function addVertex(position) {
-  if (!editModeController) {
-    throw new Error("EditModeController is not initialized");
-  }
-  return editModeController.addVertex(position);
-}
-
-// 編集データへ新しい face を追加して id を返す
-function addFace(vertexIds) {
-  if (!editModeController) {
-    throw new Error("EditModeController is not initialized");
-  }
-  return editModeController.addFace(vertexIds);
-}
-
 // 選択頂点から新しい face を作るときは、現在の視点から見た画面上の並びを使う
 // 単に選択順で面を張ると、クリック順しだいで三角形が裏返ったり、
 // 四角形の対角線が交差したりするため、selection center を基準に screen right/up へ投影して角度順へ並べる
@@ -3235,7 +3330,7 @@ function orderVertexIdsForFaceFromView(vertexIds) {
     throw new Error("orderVertexIdsForFaceFromView requires 3 or 4 vertex ids");
   }
   const vertices = vertexIds.map((id) => {
-    const vertex = getVertexById(id);
+    const vertex = editModeController.getVertexById(id);
     if (!vertex) {
       throw new Error(`face references missing vertex ${id}`);
     }
@@ -3254,9 +3349,9 @@ function orderVertexIdsForFaceFromView(vertexIds) {
     .sort((left, right) => left.angle - right.angle)
     .map((entry) => entry.id);
 
-  const p0 = getVertexById(ordered[0]).position;
-  const p1 = getVertexById(ordered[1]).position;
-  const p2 = getVertexById(ordered[2]).position;
+  const p0 = editModeController.getVertexById(ordered[0]).position;
+  const p1 = editModeController.getVertexById(ordered[1]).position;
+  const p2 = editModeController.getVertexById(ordered[2]).position;
   const normal = cross3(sub3(p1, p0), sub3(p2, p0));
   const eyeDir = sub3(app.eye.getWorldPosition(), center);
   // 新規作成 face は「いま見ている側」を表にする
@@ -3269,39 +3364,12 @@ function orderVertexIdsForFaceFromView(vertexIds) {
 
 // 起動時の初期 cube object を作り scene と camera を初期化する
 function createInitialModel() {
-  editModeController?.discardEditSession(EDITOR_MODE_OBJECT);
-  editor.clearEditableMesh();
+  const object = buildModelerPrimitiveObject("cube", DEFAULT_OBJECT_ID);
+  replaceObjectsAndActivate([object], object.id, {
+    selectedObjectIds: [object.id],
+    mode: EDITOR_MODE_OBJECT
+  });
   editor.resetHistory();
-  // 編集データへ新しい vertex を追加して id を返す
-  addVertex([-1.0, 0.0, -1.0]);
-  // 編集データへ新しい vertex を追加して id を返す
-  addVertex([1.0, 0.0, -1.0]);
-  // 編集データへ新しい vertex を追加して id を返す
-  addVertex([1.0, 0.0, 1.0]);
-  // 編集データへ新しい vertex を追加して id を返す
-  addVertex([-1.0, 0.0, 1.0]);
-  // 編集データへ新しい vertex を追加して id を返す
-  addVertex([-1.0, 2.0, -1.0]);
-  // 編集データへ新しい vertex を追加して id を返す
-  addVertex([1.0, 2.0, -1.0]);
-  // 編集データへ新しい vertex を追加して id を返す
-  addVertex([1.0, 2.0, 1.0]);
-  // 編集データへ新しい vertex を追加して id を返す
-  addVertex([-1.0, 2.0, 1.0]);
-  // 編集データへ新しい face を追加して id を返す
-  addFace([1, 2, 3, 4]);
-  // 編集データへ新しい face を追加して id を返す
-  addFace([5, 8, 7, 6]);
-  // 編集データへ新しい face を追加して id を返す
-  addFace([1, 5, 6, 2]);
-  // 編集データへ新しい face を追加して id を返す
-  addFace([2, 6, 7, 3]);
-  // 編集データへ新しい face を追加して id を返す
-  addFace([3, 7, 8, 4]);
-  // 編集データへ新しい face を追加して id を返す
-  addFace([4, 8, 5, 1]);
-  // 現在の編集配列から単一 object 状態を作り直す
-  resetObjectState("Cube");
   editor.markClean();
   editor.setMessage("new model");
   // mesh / selected face / marker の表示をまとめて再構築する
@@ -3310,15 +3378,9 @@ function createInitialModel() {
   fitCameraToEditor();
 }
 
-// edit selection の vertex / face を空にする
-function clearSelection() {
-  editModeController.clearSelection();
-}
-
 // Object Mode / Edit Mode に応じた全選択を行う
 function selectAllForCurrentMode() {
-  // transformController の cancel を UI へ中継する
-  cancelTransformMode();
+  transformController.cancelTransformMode();
   cancelLoopCutPreview();
   cancelChainSelectPreview();
   if (getRenderableEditorMode() === EDITOR_MODE_OBJECT) {
@@ -3331,7 +3393,7 @@ function selectAllForCurrentMode() {
 // 現在 mode / tool の単位で選択状態を反転する
 // vertex tool では vertex、face tool では face、Object Mode では object を対象にして混在選択を避ける
 function invertSelectionForCurrentMode() {
-  cancelTransformMode();
+  transformController.cancelTransformMode();
   cancelLoopCutPreview();
   cancelChainSelectPreview();
   if (getRenderableEditorMode() === EDITOR_MODE_OBJECT) {
@@ -3344,7 +3406,7 @@ function invertSelectionForCurrentMode() {
 // X<0 側の要素を現在 mode / tool に合わせて選択する
 // X mirror 編集で左側だけをまとめて選びたい場面を想定し、自動補正せず X 座標の符号だけで判定する
 function selectXNegativeForCurrentMode() {
-  cancelTransformMode();
+  transformController.cancelTransformMode();
   cancelLoopCutPreview();
   cancelChainSelectPreview();
   if (getRenderableEditorMode() === EDITOR_MODE_OBJECT) {
@@ -3354,57 +3416,13 @@ function selectXNegativeForCurrentMode() {
   editModeController.selectXNegative();
 }
 
-// Edit Mode の削除処理を controller から呼び出す薄い wrapper
+// 現在 mode に応じて object または edit selection を削除する
 function deleteSelected() {
   if (getRenderableEditorMode() === EDITOR_MODE_OBJECT) {
     objectModeController.deleteSelectedObjects();
     return;
   }
   editModeController.deleteSelected();
-}
-
-// 複数 object の geometry を world 原点 origin の単一 object へ詰め替える
-// ObjectModeController は操作手順を担当し、この helper は頂点 ID / face ID の再採番だけを担当する
-function buildJoinedObject(selectedObjects, joinedId) {
-  const vertices = [];
-  const faces = [];
-  let nextVertexId = 1;
-  let nextFaceId = 1;
-  for (const object of selectedObjects) {
-    const idMap = new Map();
-    for (const vertex of object.vertices) {
-      const id = nextVertexId++;
-      idMap.set(vertex.id, id);
-      vertices.push({
-        id,
-        position: localToWorldPosition(object, vertex.position)
-      });
-    }
-    for (const face of object.faces) {
-      const indices = face.indices.map((vertexId) => {
-        const mappedId = idMap.get(vertexId);
-        if (!mappedId) {
-          throw new Error(`join objects missing vertex ${vertexId} in object ${object.id}`);
-        }
-        return mappedId;
-      });
-      faces.push({
-        id: nextFaceId++,
-        indices
-      });
-    }
-  }
-  return {
-    id: joinedId,
-    name: "Joined",
-    origin: [0.0, 0.0, 0.0],
-    rotation: [0.0, 0.0, 0.0, 1.0],
-    scale: 1.0,
-    vertices,
-    faces,
-    nextVertexId,
-    nextFaceId
-  };
 }
 
 // mesh 本体を Wireframe shader に切り替える
@@ -3432,8 +3450,6 @@ function toggleVisiblePickOnly() {
   viewController.runToggleVisiblePickOnlyCommand();
 }
 
-// X=0 平面を境にした対称編集を切り替える
-// 既存の対称頂点へ位置を反映するだけで、新しい頂点や face は自動生成しない
 // loop cut の方向選択 preview を終了する
 // 確定時だけでなく、選択変更や Esc でも表示を消せるよう状態を 1 箇所で戻す
 function cancelLoopCutPreview(message = "") {
@@ -3476,12 +3492,6 @@ function updateLoopCutPreviewFromPointer(clientX, clientY) {
     screenEdges.push({ edgeIndex: i, a: pa, b: pb });
   }
   return editModeController.updateLoopCutPreviewEdgeFromScreenEdges(clientX, clientY, screenEdges);
-}
-
-// preview で選ばれている辺を使って loop cut を確定する
-// 確定時は通常の edit operation と同じ undo / rebuild / message の流れへ渡す
-function confirmLoopCutPreview() {
-  return editModeController.confirmLoopCutPreview();
 }
 
 // Chain Select preview を終了する
@@ -3534,11 +3544,6 @@ function updateChainSelectPreviewFromPointer(clientX, clientY) {
   return editModeController.updateChainSelectPreviewFromScreenDirections(clientX, clientY, directions);
 }
 
-// preview で選ばれている方向の vertex 列を選択として確定する
-function confirmChainSelectPreview() {
-  return editModeController.confirmChainSelectPreview();
-}
-
 // ------------------------------------------------------------
 // --- picking and rectangle selection
 // ------------------------------------------------------------
@@ -3578,9 +3583,180 @@ function isPlainLeftDragSelectionEvent(ev) {
     && !app.input.has("cmd");
 }
 
+// `clientToNdc`は座標または数値を計算し、後続処理で使う結果を返す
+function clientToNdc(clientX, clientY) {
+  const rect = app.screen.canvas.getBoundingClientRect();
+  return {
+    x: ((clientX - rect.left) / Math.max(1, rect.width)) * 2.0 - 1.0,
+    y: 1.0 - ((clientY - rect.top) / Math.max(1, rect.height)) * 2.0
+  };
+}
+
+function getObjectFaceById(object, faceId) {
+  return object?.faces?.find((face) => face.id === faceId) ?? null;
+}
+
+// オブジェクトの`face`の法線を入力値から計算し、後続処理で使える結果を返す
+function computeObjectFaceNormal(object, faceId, fallback = [0.0, 0.0, 1.0]) {
+  const face = getObjectFaceById(object, faceId);
+  const lookup = buildVertexLookup(object?.vertices ?? []);
+  const ids = face?.indices ?? [];
+  if (ids.length < 3) {
+    return [...fallback];
+  }
+  const a = lookup[ids[0]]?.position;
+  for (let i = 1; i + 1 < ids.length; i += 1) {
+    const b = lookup[ids[i]]?.position;
+    const c = lookup[ids[i + 1]]?.position;
+    if (!a || !b || !c) {
+      continue;
+    }
+    const n = cross3(sub3(b, a), sub3(c, a));
+    if (length3(n) > 1.0e-9) {
+      return normalize3(n);
+    }
+  }
+  return [...fallback];
+}
+
+// `pickSculptSurfaceAtClient`は現在状態から対象を選択し、結果を返すまたは選択を切り替える
+function pickSculptSurfaceAtClient(clientX, clientY) {
+  const object = getActiveObject();
+  if (!object || !modelerPicking) {
+    return null;
+  }
+  const pick = modelerPicking.pickAtClientPoint(clientX, clientY, {
+    includeActiveFace: true
+  });
+  const hit = pick.activeFaceHit;
+  if (!hit) {
+    return null;
+  }
+  return {
+    object,
+    point: hit.point,
+    normal: computeObjectFaceNormal(object, hit.faceId),
+    faceId: hit.faceId
+  };
+}
+
+// ローカルのカメラの`basis`の`for`のオブジェクトを現在の入力と状態から求め、呼び出し元へ返す
+function getLocalCameraBasisForObject(object) {
+  const basis = getCameraScreenBasis();
+  return {
+    right: worldToLocalDirection(object, basis.right),
+    up: worldToLocalDirection(object, basis.up),
+    forward: worldToLocalDirection(object, basis.forward)
+  };
+}
+
+// ポインターの位置から彫刻ブラシのプレビューを更新する
+function updateSculptPreviewFromPointer(clientX, clientY) {
+  if (!isSculptMode() || !sculptModeController) {
+    return false;
+  }
+  const hit = pickSculptSurfaceAtClient(clientX, clientY);
+  const ndc = clientToNdc(clientX, clientY);
+  if (!hit) {
+    sculptModeController.cursorHit = {
+      center: null,
+      normal: [0.0, 0.0, 1.0],
+      hit: false,
+      screenCenter: [ndc.x, ndc.y]
+    };
+    return false;
+  }
+  sculptModeController.cursorHit = {
+    center: [...hit.point],
+    normal: [...hit.normal],
+    hit: true,
+    screenCenter: [ndc.x, ndc.y]
+  };
+  return true;
+}
+
+// `beginSculptStrokeFromPointer`は処理周期の開始または終了に必要な状態を更新する
+function beginSculptStrokeFromPointer(ev) {
+  if (!isSculptMode() || !mobileInput.selectionShiftActive || !sculptModeController) {
+    return false;
+  }
+  const hit = pickSculptSurfaceAtClient(ev.clientX, ev.clientY);
+  updateSculptPreviewFromPointer(ev.clientX, ev.clientY);
+  if (!hit) {
+    setMessage("sculpt: no surface");
+    return false;
+  }
+  const ndc = clientToNdc(ev.clientX, ev.clientY);
+  pushUndo("sculpt stroke");
+  const started = sculptModeController.beginStroke({
+    object: hit.object,
+    center: hit.point,
+    normal: hit.normal,
+    hit: true,
+    xMirror: xMirrorEdit,
+    screenCenter: [ndc.x, ndc.y],
+    viewBasis: getLocalCameraBasisForObject(hit.object)
+  });
+  if (started) {
+    setMobileOrbitEnabled(false);
+    canvasClick.active = false;
+  }
+  return started;
+}
+
+// ポインターの入力を彫刻の一筆へ反映する
+function applySculptStrokeFromPointer(ev) {
+  if (!sculptModeController?.hasActiveStroke?.()) {
+    return false;
+  }
+  const hit = pickSculptSurfaceAtClient(ev.clientX, ev.clientY);
+  updateSculptPreviewFromPointer(ev.clientX, ev.clientY);
+  const brushType = sculptModeController.getBrushOptions?.().type ?? "draw";
+  if (!hit) {
+    if (brushType !== "grab") {
+      return false;
+    }
+    const ndc = clientToNdc(ev.clientX, ev.clientY);
+    sculptModeController.applyStrokeSample({
+      hit: false,
+      xMirror: xMirrorEdit,
+      screenCenter: [ndc.x, ndc.y]
+    });
+    return true;
+  }
+  const ndc = clientToNdc(ev.clientX, ev.clientY);
+  sculptModeController.applyStrokeSample({
+    object: hit.object,
+    center: hit.point,
+    normal: hit.normal,
+    hit: true,
+    xMirror: xMirrorEdit,
+    screenCenter: [ndc.x, ndc.y],
+    viewBasis: getLocalCameraBasisForObject(hit.object)
+  });
+  return true;
+}
+
+// `endSculptStrokeFromPointer`は処理周期の開始または終了に必要な状態を更新する
+function endSculptStrokeFromPointer() {
+  if (!sculptModeController?.hasActiveStroke?.()) {
+    return false;
+  }
+  sculptModeController.endStroke();
+  if (isSculptMode()) {
+    setMobileOrbitEnabled(!mobileInput.selectionShiftActive);
+  }
+  rebuildScene();
+  return true;
+}
+
 // 左クリックを mode / tool に応じた選択または頂点追加として処理する
 function handleCanvasClick(ev) {
   const mode = getRenderableEditorMode();
+  if (mode === EDITOR_MODE_SCULPT) {
+    updateSculptPreviewFromPointer(ev.clientX, ev.clientY);
+    return;
+  }
   const tool = getRenderableEditorTool();
   const pick = modelerPicking.pickAtClientPoint(ev.clientX, ev.clientY, {
     includeObjectFace: mode === EDITOR_MODE_OBJECT,
@@ -3674,6 +3850,9 @@ function shouldShowSelectionRect() {
   if (getRenderableEditorMode() === EDITOR_MODE_EDIT && getRenderableEditorTool() === TOOL_ADD_VERTEX) {
     return false;
   }
+  if (getRenderableEditorMode() === EDITOR_MODE_SCULPT) {
+    return false;
+  }
   const distance = Math.hypot(canvasClick.lastX - canvasClick.startX, canvasClick.lastY - canvasClick.startY);
   return distance > 4.0;
 }
@@ -3698,14 +3877,14 @@ function selectByClientRect(rect, additive = false) {
   }
 
   if (tool === TOOL_SELECT_VERTEX) {
-    const { candidateCount, selectedIds, context } = modelerPicking.collectVertexRectCandidates(rect, viewProjection);
-    setVisiblePickSelectionStats("box-vertex", candidateCount, selectedIds.length, context);
+    const { candidateCount, selectedIds, context, mode: pickMode } = modelerPicking.collectVertexRectCandidates(rect, viewProjection);
+    setVisiblePickSelectionStats(pickMode ?? "box-vertex", candidateCount, selectedIds.length, context);
     return editModeController.selectVerticesByIdsFromBox(selectedIds, additive);
   }
 
   if (tool === TOOL_SELECT_FACE) {
-    const { candidateCount, selectedIds, context } = modelerPicking.collectFaceRectCandidates(rect, viewProjection);
-    setVisiblePickSelectionStats("box-face", candidateCount, selectedIds.length, context);
+    const { candidateCount, selectedIds, context, mode: pickMode } = modelerPicking.collectFaceRectCandidates(rect, viewProjection);
+    setVisiblePickSelectionStats(pickMode ?? "box-face", candidateCount, selectedIds.length, context);
     return editModeController.selectFacesByIdsFromBox(selectedIds, additive);
   }
   return 0;
@@ -3834,6 +4013,13 @@ function handleCanvasPointerDown(ev) {
     resetCanvasClick();
     return;
   }
+  if (beginSculptStrokeFromPointer(ev)) {
+    ev.preventDefault();
+    return;
+  }
+  if (isSculptMode()) {
+    updateSculptPreviewFromPointer(ev.clientX, ev.clientY);
+  }
   if (isMobileCanvasDoubleTapCandidate(ev)) {
     // empty/object の判定が重い場合でも、1 回目 tap の選択 timer が先に走らないよう先に破棄する
     cancelPendingMobileCanvasTap();
@@ -3859,6 +4045,13 @@ function handleCanvasPointerDown(ev) {
 function handleCanvasPointerMove(ev) {
   // DebugDock 用に直近の raw pointer / mouse event 情報を記録する
   updateRawInputDebug("canvas", ev);
+  if (applySculptStrokeFromPointer(ev)) {
+    ev.preventDefault();
+    return;
+  }
+  if (isSculptMode()) {
+    updateSculptPreviewFromPointer(ev.clientX, ev.clientY);
+  }
   updateLoopCutPreviewFromPointer(ev.clientX, ev.clientY);
   updateChainSelectPreviewFromPointer(ev.clientX, ev.clientY);
   if (!canvasClick.active) {
@@ -3886,6 +4079,11 @@ function handleCanvasPointerUp(ev) {
     ev.preventDefault();
     resetCanvasClick();
     mobileInput.clearCanvasSuppression();
+    return;
+  }
+  if (endSculptStrokeFromPointer()) {
+    ev.preventDefault();
+    resetCanvasClick();
     return;
   }
   if (!canvasClick.active) {
@@ -3926,11 +4124,11 @@ function handleCanvasPointerUp(ev) {
     ev.preventDefault();
     return;
   }
-  if (confirmLoopCutPreview()) {
+  if (editModeController.confirmLoopCutPreview()) {
     ev.preventDefault();
     return;
   }
-  if (confirmChainSelectPreview()) {
+  if (editModeController.confirmChainSelectPreview()) {
     ev.preventDefault();
     return;
   }
@@ -3984,15 +4182,10 @@ function installPointerHandlers() {
 }
 
 // ------------------------------------------------------------
-// --- transform and keyboard command bridges
+// --- keyboard handlers
 // ------------------------------------------------------------
 
-// transformController の mode 表示名を UI へ中継する
-function getTransformModeLabel(mode) {
-  return transformController.getTransformModeLabel(mode);
-}
-
-// transformController の mode 開始を UI へ中継する
+// transform を開始し、palette で事前選択した軸制限と mobile palette 表示を同期する
 function setTransformMode(mode) {
   const started = transformController.setTransformMode(mode);
   if (started) {
@@ -4000,51 +4193,6 @@ function setTransformMode(mode) {
     closeMobilePalette();
   }
   return started;
-}
-
-// transformController の軸制限を UI へ中継する
-function setTransformAxis(axis) {
-  return transformController.setTransformAxis(axis);
-}
-
-// transformController の cancel を UI へ中継する
-function cancelTransformMode() {
-  return transformController.cancelTransformMode();
-}
-
-// transformController の confirm を UI へ中継する
-function confirmTransformMode() {
-  return transformController.confirmTransformMode();
-}
-
-// transformController の preview 更新を UI へ中継する
-function applyTransformDrag(clientX, clientY) {
-  return transformController.applyTransformDrag(clientX, clientY);
-}
-
-// transformController の pointer bridge を登録する
-function installTransformPointerBridge(canvas) {
-  return transformController.installTransformPointerBridge(canvas);
-}
-
-// keyboard 補助移動を EditModeController へ中継する
-function moveActiveVerticesBy(delta, label) {
-  return editModeController.moveActiveVerticesBy(delta, label);
-}
-
-// screen 平面 keyboard 移動を EditModeController へ中継する
-function moveSelectionByScreenKeys(stepX, stepY) {
-  return editModeController.moveSelectionByScreenKeys(stepX, stepY);
-}
-
-// 法線方向 keyboard 移動を EditModeController へ中継する
-function moveSelectionByNormalKey(direction) {
-  return editModeController.moveSelectionByNormalKey(direction);
-}
-
-// keyboard scale を EditModeController へ中継する
-function scaleSelectionByKeyboard(factor) {
-  return editModeController.scaleSelectionByKeyboard(factor);
 }
 
 // mode / tool / transform / camera / edit 操作用 keyboard handler を登録する
@@ -4063,24 +4211,24 @@ function installKeyboardHandlers() {
       return;
     }
     if (key === "tab") setEditorMode(isEditMode() ? EDITOR_MODE_OBJECT : EDITOR_MODE_EDIT);
-    else if (plainKey && key === "4") setTool(TOOL_SELECT_VERTEX);
-    else if (plainKey && key === "2") setTool(TOOL_SELECT_FACE);
-    else if (plainKey && key === "5") setTool(TOOL_ADD_VERTEX);
+    else if (plainKey && key === "4") editModeController.setTool(TOOL_SELECT_VERTEX);
+    else if (plainKey && key === "2") editModeController.setTool(TOOL_SELECT_FACE);
+    else if (plainKey && key === "5") editModeController.setTool(TOOL_ADD_VERTEX);
     else if (plainKey && key === "a") selectAllForCurrentMode();
     else if (plainKey && key === "g") setTransformMode("move");
     else if (plainKey && key === "r") setTransformMode("rotate");
     else if (plainKey && key === "s") setTransformMode("scale");
     else if (plainKey && key === "e") setTransformMode("extrude");
-    else if (plainKey && transformController?.state?.active && (key === "x" || key === "y" || key === "z")) setTransformAxis(key);
+    else if (plainKey && transformController?.state?.active && (key === "x" || key === "y" || key === "z")) transformController.setTransformAxis(key);
     else if (plainKey && key === "c") editModeController.runLoopCutCommand();
-    else if (plainKey && key === "j") moveSelectionByScreenKeys(-1.0, 0.0);
-    else if (plainKey && key === "l") moveSelectionByScreenKeys(1.0, 0.0);
-    else if (plainKey && key === "i") moveSelectionByScreenKeys(0.0, 1.0);
-    else if (plainKey && key === "k") moveSelectionByScreenKeys(0.0, -1.0);
-    else if (plainKey && key === "u") moveSelectionByNormalKey(-1.0);
-    else if (plainKey && key === "o") moveSelectionByNormalKey(1.0);
-    else if (plainKey && key === "n") scaleSelectionByKeyboard(0.92);
-    else if (plainKey && key === "m") scaleSelectionByKeyboard(1.08);
+    else if (plainKey && key === "j") editModeController.moveSelectionByScreenKeys(-1.0, 0.0);
+    else if (plainKey && key === "l") editModeController.moveSelectionByScreenKeys(1.0, 0.0);
+    else if (plainKey && key === "i") editModeController.moveSelectionByScreenKeys(0.0, 1.0);
+    else if (plainKey && key === "k") editModeController.moveSelectionByScreenKeys(0.0, -1.0);
+    else if (plainKey && key === "u") editModeController.moveSelectionByNormalKey(-1.0);
+    else if (plainKey && key === "o") editModeController.moveSelectionByNormalKey(1.0);
+    else if (plainKey && key === "n") editModeController.scaleSelectionByKeyboard(0.92);
+    else if (plainKey && key === "m") editModeController.scaleSelectionByKeyboard(1.08);
     else if (plainKey && key === "f") editModeController.makeFaceFromSelection();
     else if (plainKey && key === "p") toggleProjectionMode();
     else if (plainKey && key === "v") cycleViewAnglePreset(ev.shiftKey ? -1 : 1);
@@ -4089,7 +4237,7 @@ function installKeyboardHandlers() {
     else if (key === "delete" || key === "backspace") deleteSelected();
     else if (key === "z" && (ev.metaKey || ev.ctrlKey)) undo();
     else if ((key === "y" && (ev.metaKey || ev.ctrlKey)) || (key === "z" && ev.shiftKey && (ev.metaKey || ev.ctrlKey))) redo();
-    else if (key === "escape" && cancelTransformMode()) {
+    else if (key === "escape" && transformController.cancelTransformMode()) {
       // transform cancel handled above
     }
     else if (key === "escape" && cancelLoopCutPreview("loop cut preview canceled")) {
@@ -4100,7 +4248,7 @@ function installKeyboardHandlers() {
     }
     else if (key === "escape") {
       // edit selection の vertex / face を空にする
-      clearSelection();
+      editModeController.clearSelection();
       // 選択だけの変更なので mesh 本体は再生成せず overlay だけ更新する
       refreshSelectionVisuals();
       // 最後のユーザー向け message を保存し status を更新する
@@ -4348,7 +4496,7 @@ function installDomHandlers() {
     button.addEventListener("click", () => setEditorMode(button.dataset.mode));
   }
   for (const button of ui.toolButtons) {
-    button.addEventListener("click", () => setTool(button.dataset.tool));
+    button.addEventListener("click", () => editModeController.setTool(button.dataset.tool));
   }
   ui.fileInput.addEventListener("change", () => {
     runAsyncFileOperation("load", loadSelectedModelFile);
@@ -4433,6 +4581,24 @@ function installDomHandlers() {
   ui.coordinateOverlay?.addEventListener("pointerdown", (ev) => ev.stopPropagation());
   ui.coordinateOverlay?.addEventListener("pointerup", (ev) => ev.stopPropagation());
   ui.coordinateOverlay?.addEventListener("click", (ev) => ev.stopPropagation());
+  for (const field of ui.coordinateOverlayFields) {
+    field.addEventListener("pointerdown", (ev) => ev.stopPropagation());
+    field.addEventListener("pointerup", (ev) => ev.stopPropagation());
+    field.addEventListener("click", (ev) => ev.stopPropagation());
+    field.addEventListener("focus", (ev) => ev.stopPropagation());
+    field.addEventListener("focusin", (ev) => ev.stopPropagation());
+    field.addEventListener("focusout", (ev) => ev.stopPropagation());
+    field.addEventListener("touchstart", (ev) => ev.stopPropagation(), { passive: true });
+    field.addEventListener("touchend", (ev) => ev.stopPropagation(), { passive: true });
+    field.addEventListener("beforeinput", (ev) => ev.stopPropagation());
+    field.addEventListener("input", (ev) => ev.stopPropagation());
+  }
+  ui.coordinateFalloffSelect?.addEventListener("pointerdown", (ev) => ev.stopPropagation());
+  ui.coordinateFalloffSelect?.addEventListener("pointerup", (ev) => ev.stopPropagation());
+  ui.coordinateFalloffSelect?.addEventListener("click", (ev) => ev.stopPropagation());
+  ui.coordinateFalloffSelect?.addEventListener("touchstart", (ev) => ev.stopPropagation(), { passive: true });
+  ui.coordinateFalloffSelect?.addEventListener("touchend", (ev) => ev.stopPropagation(), { passive: true });
+  ui.coordinateFalloffSelect?.addEventListener("change", (ev) => ev.stopPropagation());
   ui.coordinateOverlay?.addEventListener("keydown", (ev) => {
     ev.stopPropagation();
     if (ev.key === "Enter") {
@@ -4707,7 +4873,12 @@ async function start() {
     isBoxSelectAwaitingConfirm: () => boxSelectSession?.isAwaitingConfirm === true,
     confirmBoxSelectSession: () => boxSelectSession?.confirm() === true,
     isTransformActive: () => transformController?.state?.active === true,
+    isSculptStrokeActive: () => sculptModeController?.hasActiveStroke?.() === true,
     isCommandPaletteOpen: () => commandPalette?.isOpen === true,
+    enterSculptModeFromFlick: () => setEditorMode(EDITOR_MODE_SCULPT),
+    handleSculptEmptyDoubleTap: (ev) => toggleSculptBrushInputFromEmptyDoubleTap(ev),
+    showSculptBrushSettings,
+    showActiveObjectInfo,
     inspectGestureTarget,
     hasAnyModelerVertices,
     openMobilePalette,
@@ -4723,7 +4894,8 @@ async function start() {
     getActionLabel: getMobileRibbonActionLabel,
     isActionEnabled: isMobileActionEnabled,
     isActionActive: isMobileActionActive,
-    cancelPendingTap: cancelPendingMobileCanvasTap
+    cancelPendingTap: cancelPendingMobileCanvasTap,
+    isSculptPalette: () => getRenderableEditorMode() === EDITOR_MODE_SCULPT
   });
   viewController.setEffects({
     applyProjection: applyModelerProjection,
@@ -4744,9 +4916,8 @@ async function start() {
     getObjectOrigin,
     getObjectRotation,
     getObjectScale,
-    buildJoinedObject,
-    buildPrimitiveObject,
-    orientAllFacesConsistently
+    localToWorldPosition,
+    buildPrimitiveObject
   });
   editModeController = new EditModeController({
     scene: editor,
@@ -4766,6 +4937,13 @@ async function start() {
     },
     orderVertexIdsForFaceFromView,
     getCameraScreenBasis
+  });
+  sculptModeController = new SculptModeController({
+    scene: editor,
+    sculptModeName: EDITOR_MODE_SCULPT,
+    setMessage,
+    rebuildScene,
+    markDirty: () => editor.markDirty()
   });
   modelerPicking = new ModelerPicking({
     getCanvas: () => app.screen.canvas,
@@ -4806,6 +4984,7 @@ async function start() {
     editModeController,
     viewController,
     showSelectedVertexCoordinates,
+    showSculptBrushSettings,
     showActiveObjectInfo,
     cycleViewAnglePreset,
     undo,
@@ -4816,6 +4995,8 @@ async function start() {
     invertSelectionForCurrentMode,
     selectXNegativeForCurrentMode,
     setEditorMode,
+    setSculptBrushType,
+    setSculptBrushDirection,
     selectAllForCurrentMode,
     setPrimitiveSegments: (segments) => {
       mobileInput.setPrimitiveSegments(segments);
@@ -4824,6 +5005,8 @@ async function start() {
     renderPalette: renderMobilePalette,
     closePalette: closeMobilePalette,
     objectModeName: EDITOR_MODE_OBJECT,
+    editModeName: EDITOR_MODE_EDIT,
+    sculptModeName: EDITOR_MODE_SCULPT,
     faceToolName: TOOL_SELECT_FACE,
     vertexToolName: TOOL_SELECT_VERTEX,
     addVertexToolName: TOOL_ADD_VERTEX
@@ -4878,6 +5061,7 @@ async function start() {
     focusModelerCanvas,
     getCanvas: () => app.screen.canvas,
     setMessage,
+    setMobileOrbitEnabled,
     // camera / geometry helpers
     getCameraScreenBasis,
     getEditorBounds,
@@ -4890,12 +5074,12 @@ async function start() {
     hasEditTransformSegmentChanged: () => editModeController.hasEditTransformSegmentChanged(),
     startEditTransformSession: (mode) => editModeController.startEditTransformSession(mode),
     toggleEditTransformAxisConstraint: (axis) => editModeController.toggleEditTransformAxisConstraint(axis),
-    getTransformTargetObjects,
+    getTransformTargetObjects: () => objectModeController.getTransformTargetObjects(),
     isEditMode
   };
   transformController = createTransformController(transformServices);
   detachTransformPointerBridge?.();
-  detachTransformPointerBridge = installTransformPointerBridge(app.screen.canvas);
+  detachTransformPointerBridge = transformController.installTransformPointerBridge(app.screen.canvas);
   // 床 grid を共有頂点の wireframe plane として作る
   buildGrid();
   // 起動時の初期 cube object を作り scene と camera を初期化する
@@ -4957,6 +5141,7 @@ async function start() {
       // Edit Mode の edge と marker overlay を scene 描画後に重ねる
       drawEditOverlayPass();
       drawEditPreviewOverlayPass();
+      drawSculptPreviewOverlayPass();
     }
   });
 }

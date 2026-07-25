@@ -1,0 +1,11 @@
+DeferredLightingPass headless contracts
+
+## 目的
+- `webg/DeferredLightingPass.js` が G-buffer の albedo、view-space normal、depth と point light 配列を受け取り、所有する StorageTarget へ deferred lighting 結果を書き出す契約を実GPUなしで確認する
+- world-space light を view-space へ変換して storage buffer へ詰める流れと、debug view を含む uniform 更新順を確認する
+- resize と destroy が内部 resource の責務に収まっていることを確認する
+
+## 実行
+```sh
+node headless_tests/core/deferred_lighting_pass/headless_probe.js
+```

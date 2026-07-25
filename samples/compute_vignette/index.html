@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>compute_vignette</title>
+  <link rel="icon" href="data:," />
+  <!-- 2026/06/19 -->
+  <style>
+
+:root {
+  color-scheme: light;
+  --bg: #eef3f8;
+  --paper: rgba(255, 255, 255, 0.94);
+  --line: #c8d5e4;
+  --ink: #17324a;
+  --muted: #5c748b;
+  --accent: #1566ab;
+  --accent-soft: #dfeefe;
+  --code-bg: #f3f7fb;
+  --shadow: rgba(29, 52, 79, 0.10);
+}
+* { box-sizing: border-box; }
+html, body {
+  margin: 0;
+  min-height: 100%;
+}
+body {
+  background:
+    radial-gradient(circle at top left, rgba(21, 102, 171, 0.12), transparent 24%),
+    radial-gradient(circle at top right, rgba(255, 191, 118, 0.10), transparent 22%),
+    linear-gradient(180deg, #f8fbfd 0%, var(--bg) 100%);
+  color: var(--ink);
+  font: 16px/1.78 "Avenir Next", "Hiragino Sans", "Yu Gothic", sans-serif;
+}
+.page {
+  width: min(1080px, calc(100% - 28px));
+  margin: 0 auto;
+  padding: 24px 0 56px;
+}
+.hero,
+.doc {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  box-shadow: 0 22px 52px var(--shadow);
+}
+.hero {
+  padding: 22px 24px;
+  margin-bottom: 18px;
+}
+.hero h1 {
+  margin: 0 0 8px;
+  font-size: clamp(2rem, 4vw, 3rem);
+  line-height: 1.08;
+}
+.hero p {
+  margin: 0;
+  color: var(--muted);
+}
+.doc {
+  padding: 28px;
+}
+.doc > :first-child {
+  margin-top: 0;
+}
+h1, h2, h3, h4, h5, h6 {
+  line-height: 1.25;
+  margin: 1.45em 0 0.55em;
+}
+h1 {
+  font-size: 2.2rem;
+}
+h2 {
+  padding-bottom: 0.28em;
+  border-bottom: 1px solid var(--line);
+  font-size: 1.48rem;
+}
+h3 {
+  font-size: 1.14rem;
+}
+p, ul, ol, table, pre, blockquote {
+  margin: 0 0 1em;
+}
+ul, ol {
+  padding-left: 1.4em;
+}
+li + li {
+  margin-top: 0.26em;
+}
+a {
+  color: var(--accent);
+  text-decoration: none;
+}
+a:hover {
+  text-decoration: underline;
+}
+img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  border-radius: 16px;
+  border: 1px solid var(--line);
+  box-shadow: 0 12px 32px rgba(29, 52, 79, 0.08);
+  margin: 1.1em 0 1.4em;
+}
+code {
+  padding: 0.12em 0.38em;
+  border-radius: 0.45em;
+  background: var(--code-bg);
+  border: 1px solid #dbe6f1;
+  font: 0.92em/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+pre {
+  padding: 14px 16px;
+  overflow-x: auto;
+  border-radius: 14px;
+  background: #0f1720;
+  color: #ecf5ff;
+}
+pre code {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #ffffff;
+}
+th, td {
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  text-align: left;
+  vertical-align: top;
+}
+th {
+  background: #f5f9fc;
+}
+hr {
+  border: 0;
+  border-top: 1px solid var(--line);
+  margin: 1.5em 0;
+}
+blockquote {
+  padding: 0.3em 0 0.3em 1em;
+  border-left: 4px solid #c9dbef;
+  color: var(--muted);
+}
+@media (max-width: 720px) {
+  .page {
+    width: min(100% - 18px, 1080px);
+    padding-top: 16px;
+  }
+  .hero,
+  .doc {
+    border-radius: 18px;
+  }
+  .doc {
+    padding: 20px;
+  }
+}
+
+  </style>
+</head>
+<body>
+  <main class="page">
+    <section class="hero">
+      <h1>compute_vignette</h1>
+    </section>
+    <article class="doc">
+<h1>compute_vignette</h1>
+<p><a href="index.en.html">English</a> | 日本語</p>
+<p><img src="./compute_vignette.jpg" alt="compute_vignette" /></p>
+<h2>概要</h2>
+<p>Vignette は、画面中心を明るく残し、外周へ向かって少しずつ暗くすることで視線を中央へ集める基本的なポストプロセスです。このサンプルは、既存の <code>VignettePass</code> と同じ種類の効果を Fragment Shader ではなく Compute Shader の 1 dispatch で実行し、画面処理を「描画後の画像を読む処理」として分解して確認できるようにしています。</p>
+<p>処理の流れは、まず通常の 3D scene を offscreen の <code>RenderTarget</code> へ描画し、その color texture を Compute Shader から読みます。Compute Shader は 1 invocation で 1 pixel を担当し、中心からの距離、半径、softness、strength を使って減衰係数を計算して <code>rgba8unorm</code> の storage texture へ書き込みます。最後に <code>FullscreenPass</code> が storage texture を通常の texture として読み、canvas へ表示します。</p>
+<p>この構成を使う理由は、Compute Shader の最小形を安全に確認できるためです。入力 texture、uniform buffer、出力 storage texture、dispatch size の対応が画面全体の 1 段処理だけに絞られているので、Bloom や DoF のような複数 pass へ進む前の入口として使いやすくなります。実験用の接続処理はサンプル側に置き、<code>webg</code> コアの <code>VignettePass</code> は変更していません。</p>
+<h2>実行方法</h2>
+<ul><li>実行ファイルは <a href="./compute_vignette.html">./compute_vignette.html</a> です</li><li>WebGPU に対応したブラウザで開き、必要に応じて help panel や HUD と合わせて確認してください</li></ul>
+<h2>確認ポイント</h2>
+<p>まず <code>C</code> で Compute Vignette の ON/OFF を切り替え、同じ scene に対して後処理だけが変わることを確認します。<code>V</code> では元の scene と compute 出力を切り替えられるため、offscreen 描画結果と storage texture へ書き込んだ結果を直接比較できます。</p>
+<p><code>radius</code> は暗くなり始める外周半径、<code>softness</code> は減衰が広がる幅、<code>strength</code> は外周をどれだけ暗くするかです。横長の画面でも円形の印象が崩れにくいよう、shader 内では aspect 比で距離を補正しています。viewport を変更したときに出力 texture が画面サイズへ追従することも合わせて確認してください。</p>
+<p>このサンプルは単独の画質改善というより、Compute Shader で画面全体を処理するときの最小データフローを読むためのものです。<code>samples/compute_edge</code> と同じ共通 runtime を使っているため、WGSL と uniform packing だけを差し替えると別の 1 dispatch effect へ展開できます。</p>
+    </article>
+  </main>
+</body>
+</html>

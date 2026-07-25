@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>webg compute_cloth sample</title>
+  <link rel="icon" href="data:," />
+  <!-- 2026/06/14 -->
+  <style>
+    html, body {
+      margin: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background:
+        radial-gradient(circle at 18% 12%, rgba(255, 230, 150, 0.13), transparent 24%),
+        radial-gradient(circle at 82% 82%, rgba(111, 205, 186, 0.16), transparent 30%),
+        linear-gradient(160deg, #101820 0%, #172128 44%, #211912 100%);
+      color: #f1ead7;
+      font: 12px/1.5 "Avenir Next", "Hiragino Sans", "Yu Gothic", sans-serif;
+    }
+    #canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+      touch-action: none;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="canvas" width="1280" height="720"></canvas>
+  <script type="module" src="./main.js?v=20260614_compute_frame1"></script>
+</body>
+</html>

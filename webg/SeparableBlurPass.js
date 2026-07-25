@@ -1,5 +1,5 @@
 // ---------------------------------------------
-//  SeparableBlurPass.js  2026/05/04
+//  SeparableBlurPass.js  2026/07/25
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // ---------------------------------------------
@@ -37,6 +37,7 @@ export default class SeparableBlurPass {
     this.ready = this.init();
   }
 
+  // このインスタンスの初期化段階で、必要な状態と資源を準備して処理を開始する
   async init() {
     if (this.gpu?.ready) {
       await this.gpu.ready;
@@ -57,6 +58,7 @@ export default class SeparableBlurPass {
     return this;
   }
 
+  // サンプラーを生成し、後続処理で利用できる状態にする
   createSampler() {
     this.sampler = this.device.createSampler({
       magFilter: "linear",
@@ -67,6 +69,7 @@ export default class SeparableBlurPass {
     });
   }
 
+  // 全画面四角形を生成し、後続処理で利用できる状態にする
   createQuad() {
     const vertices = new Float32Array([
       -1.0, -1.0, 0.0, 1.0,
@@ -81,6 +84,7 @@ export default class SeparableBlurPass {
     this.queue.writeBuffer(this.vertexBuffer, 0, vertices);
   }
 
+  // バッファを生成し、後続処理で利用できる状態にする
   createBuffers() {
     this.uniformDataH = new Float32Array(4);
     this.uniformDataV = new Float32Array(4);
@@ -94,6 +98,7 @@ export default class SeparableBlurPass {
     });
   }
 
+  // 配置を生成し、後続処理で利用できる状態にする
   createLayout() {
     this.bindGroupLayout = this.device.createBindGroupLayout({
       entries: [
@@ -104,6 +109,7 @@ export default class SeparableBlurPass {
     });
   }
 
+  // 処理経路を生成し、後続処理で利用できる状態にする
   createPipeline() {
     const module = this.device.createShaderModule({
       code: `
@@ -177,6 +183,7 @@ fn fsMain(input : VSOut) -> @location(0) vec4f {
     });
   }
 
+  // 描画先を生成し、後続処理で利用できる状態にする
   async createTargets() {
     const targetWidth = this.getScaledWidth();
     const targetHeight = this.getScaledHeight();
@@ -200,6 +207,7 @@ fn fsMain(input : VSOut) -> @location(0) vec4f {
     ]);
   }
 
+  // テクスチャの資源を現在の入力と状態から求め、呼び出し元へ返す
   resolveTextureResources(source) {
     const view = source?.getColorView?.()
       ?? source?.getView?.()
@@ -217,6 +225,7 @@ fn fsMain(input : VSOut) -> @location(0) vec4f {
     return { view, sampler };
   }
 
+  // `bind`のグループを生成し、後続処理で利用できる状態にする
   createBindGroup(entries) {
     return this.device.createBindGroup({
       layout: this.bindGroupLayout,
@@ -224,11 +233,13 @@ fn fsMain(input : VSOut) -> @location(0) vec4f {
     });
   }
 
+  // 全画面四角形の描画段階で、必要な描画命令と表示内容を記録する
   drawQuad(passEncoder) {
     passEncoder.setVertexBuffer(0, this.vertexBuffer);
     passEncoder.draw(4, 1, 0, 0);
   }
 
+  // `uniforms`を現在の入力と実行状態に合わせて更新する
   updateUniforms() {
     const texelX = (1.0 / this.getScaledWidth()) * this.blurRadius;
     const texelY = (1.0 / this.getScaledHeight()) * this.blurRadius;
@@ -246,6 +257,7 @@ fn fsMain(input : VSOut) -> @location(0) vec4f {
     this.queue.writeBuffer(this.uniformBufferV, 0, this.uniformDataV);
   }
 
+  // `blur`の半径を受け取り、現在の設定と後続処理へ反映する
   setBlurRadius(value) {
     this.blurRadius = util.readOptionalFiniteNumber(value, "SeparableBlurPass blurRadius", this.blurRadius, { min: 0 });
     if (this.queue) {
@@ -257,6 +269,7 @@ fn fsMain(input : VSOut) -> @location(0) vec4f {
     this.iterations = util.readOptionalInteger(value, "SeparableBlurPass iterations", this.iterations, { min: 1 });
   }
 
+  // 対象の倍率を受け取り、現在の設定と後続処理へ反映する
   setTargetScale(value) {
     const nextScale = util.readOptionalFiniteNumber(value, "SeparableBlurPass targetScale", this.targetScale, { minExclusive: 0 });
     if (Math.abs(nextScale - this.targetScale) < 0.0001) {
@@ -270,16 +283,24 @@ fn fsMain(input : VSOut) -> @location(0) vec4f {
     }
   }
 
+  // `resize`は表示領域に合わせて関連する寸法と描画先を更新する
   resize(width, height) {
-    this.width = util.readOptionalInteger(width, "SeparableBlurPass width", this.width, { min: 1 });
-    this.height = util.readOptionalInteger(height, "SeparableBlurPass height", this.height, { min: 1 });
+    const nextWidth = util.readOptionalInteger(width, "SeparableBlurPass width", this.width, { min: 1 });
+    const nextHeight = util.readOptionalInteger(height, "SeparableBlurPass height", this.height, { min: 1 });
+    if (nextWidth === this.width && nextHeight === this.height && this.targetA && this.targetB) {
+      return false;
+    }
+    this.width = nextWidth;
+    this.height = nextHeight;
     this.targetA?.resize(this.getScaledWidth(), this.getScaledHeight());
     this.targetB?.resize(this.getScaledWidth(), this.getScaledHeight());
     if (this.queue) {
       this.updateUniforms();
     }
+    return true;
   }
 
+  // `resizeToScreen`は座標または数値を計算し、後続処理で使う結果を返す
   resizeToScreen(screen) {
     this.resize(screen.getWidth(), screen.getHeight());
     return this;
@@ -301,18 +322,21 @@ fn fsMain(input : VSOut) -> @location(0) vec4f {
     return this.targetScale;
   }
 
+  // `scaled`の幅を現在の入力と状態から求め、呼び出し元へ返す
   getScaledWidth() {
     // 初期化直後は width=1, targetScale=0.5 のような組み合わせがあり得る
     // その場合でも offscreen target 幅を 0 に落とさず、最低 1px を維持する
     return Math.max(1, Math.floor(this.width * this.targetScale));
   }
 
+  // `scaled`の高さを現在の入力と状態から求め、呼び出し元へ返す
   getScaledHeight() {
     // blur 用 render target は GPU texture として生成するため、
     // 縮小後も高さ 1 未満にはできない
     return Math.max(1, Math.floor(this.height * this.targetScale));
   }
 
+  // 処理の実行段階で、必要な処理を決められた順序で進める
   runPass(screen, source, target, uniformBuffer) {
     const { view, sampler } = this.resolveTextureResources(source);
     screen.beginPass({

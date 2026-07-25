@@ -1,0 +1,1 @@
+PASS sample_compute_dof_api_usage_contracts

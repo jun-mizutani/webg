@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>maze</title>
+  <link rel="icon" href="data:," />
+  <!-- 2026/06/19 -->
+  <style>
+
+:root {
+  color-scheme: light;
+  --bg: #eef3f8;
+  --paper: rgba(255, 255, 255, 0.94);
+  --line: #c8d5e4;
+  --ink: #17324a;
+  --muted: #5c748b;
+  --accent: #1566ab;
+  --accent-soft: #dfeefe;
+  --code-bg: #f3f7fb;
+  --shadow: rgba(29, 52, 79, 0.10);
+}
+* { box-sizing: border-box; }
+html, body {
+  margin: 0;
+  min-height: 100%;
+}
+body {
+  background:
+    radial-gradient(circle at top left, rgba(21, 102, 171, 0.12), transparent 24%),
+    radial-gradient(circle at top right, rgba(255, 191, 118, 0.10), transparent 22%),
+    linear-gradient(180deg, #f8fbfd 0%, var(--bg) 100%);
+  color: var(--ink);
+  font: 16px/1.78 "Avenir Next", "Hiragino Sans", "Yu Gothic", sans-serif;
+}
+.page {
+  width: min(1080px, calc(100% - 28px));
+  margin: 0 auto;
+  padding: 24px 0 56px;
+}
+.hero,
+.doc {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  box-shadow: 0 22px 52px var(--shadow);
+}
+.hero {
+  padding: 22px 24px;
+  margin-bottom: 18px;
+}
+.hero h1 {
+  margin: 0 0 8px;
+  font-size: clamp(2rem, 4vw, 3rem);
+  line-height: 1.08;
+}
+.hero p {
+  margin: 0;
+  color: var(--muted);
+}
+.doc {
+  padding: 28px;
+}
+.doc > :first-child {
+  margin-top: 0;
+}
+h1, h2, h3, h4, h5, h6 {
+  line-height: 1.25;
+  margin: 1.45em 0 0.55em;
+}
+h1 {
+  font-size: 2.2rem;
+}
+h2 {
+  padding-bottom: 0.28em;
+  border-bottom: 1px solid var(--line);
+  font-size: 1.48rem;
+}
+h3 {
+  font-size: 1.14rem;
+}
+p, ul, ol, table, pre, blockquote {
+  margin: 0 0 1em;
+}
+ul, ol {
+  padding-left: 1.4em;
+}
+li + li {
+  margin-top: 0.26em;
+}
+a {
+  color: var(--accent);
+  text-decoration: none;
+}
+a:hover {
+  text-decoration: underline;
+}
+img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  border-radius: 16px;
+  border: 1px solid var(--line);
+  box-shadow: 0 12px 32px rgba(29, 52, 79, 0.08);
+  margin: 1.1em 0 1.4em;
+}
+code {
+  padding: 0.12em 0.38em;
+  border-radius: 0.45em;
+  background: var(--code-bg);
+  border: 1px solid #dbe6f1;
+  font: 0.92em/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+pre {
+  padding: 14px 16px;
+  overflow-x: auto;
+  border-radius: 14px;
+  background: #0f1720;
+  color: #ecf5ff;
+}
+pre code {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #ffffff;
+}
+th, td {
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  text-align: left;
+  vertical-align: top;
+}
+th {
+  background: #f5f9fc;
+}
+hr {
+  border: 0;
+  border-top: 1px solid var(--line);
+  margin: 1.5em 0;
+}
+blockquote {
+  padding: 0.3em 0 0.3em 1em;
+  border-left: 4px solid #c9dbef;
+  color: var(--muted);
+}
+@media (max-width: 720px) {
+  .page {
+    width: min(100% - 18px, 1080px);
+    padding-top: 16px;
+  }
+  .hero,
+  .doc {
+    border-radius: 18px;
+  }
+  .doc {
+    padding: 20px;
+  }
+}
+
+  </style>
+</head>
+<body>
+  <main class="page">
+    <section class="hero">
+      <h1>maze</h1>
+    </section>
+    <article class="doc">
+<h1>maze</h1>
+<p>English | <a href="index.html">日本語</a></p>
+<p><img src="./maze.jpg" alt="maze" /></p>
+<p><code>maze</code> is a walk-through sample with first-person movement, collision resolution, a view-locked spot light, Compute Effects, and a radar display. The maze is generated at runtime.</p>
+<p><code>main.js</code> builds a seeded 15×15-cell DFS maze and assembles floors, walls, the ceiling, doorway side jambs, and top lintels from <code>Primitive.cuboid()</code>. It does not load a fixed ModelAsset.</p>
+<p>The maze has one floor. The corridor grid width is <code>2.5m</code>, wall thickness and ceiling thickness are <code>0.1m</code>, the ceiling underside is <code>3.0m</code> above the floor, the player base is at <code>y = 0.0</code>, and <code>EyeRig.eyeHeight = 1.6m</code>. Because wall thickness is counted inside the corridor module, the clear walking width is about <code>2.4m</code>.</p>
+<p>Floor colors are split into normal corridor, room, start area, and goal area. After the maze is carved, several <code>2 x 2</code> cell or larger rooms are stamped over it, their inner walls are removed, and room entrances are created with width <code>2.0m</code> and height <code>2.4m</code>. The top lintel height is <code>0.55m</code>, leaving a <code>0.05m</code> gap below the <code>3.0m</code> ceiling underside.</p>
+<p>The radar uses the same heading-up method as <code>walk_around</code> and draws nearby collision segments on a 2D canvas in the top-right corner. The doorway lintel stays above the player collision cylinder, so it does not appear as a blocking segment and it does not show up on the radar. The side jambs remain collision targets.</p>
+<p>Detailed rules for maze generation, rooms, doors, collision handling, and radar display are documented in <a href="./maze_spec.md">maze_spec.md</a>.</p>
+<h2>How to run</h2>
+<ul><li>Open <code>./maze.html</code></li><li>Use a WebGPU-capable browser</li><li>On desktop, use drag and keyboard input. On smartphones, use drag and the on-screen <code>W</code> / <code>A</code> / <code>S</code> / <code>D</code> buttons</li><li>Double tap / double click the canvas, or press <code>/</code>, to open the command palette</li></ul>
+<h2>webg features used</h2>
+<ul><li><code>WebgApp</code>: initialization, draw loop, HelpPanel, HUD, FrameTimer</li><li><code>Shape</code> / <code>Primitive.cuboid()</code>: procedural construction of floors, walls, ceiling, doorway jambs, and lintels</li><li><code>EyeRig</code>: <code>first-person</code> movement, view rotation, and run input</li><li><code>CommandPalette</code>: compact controls for Compute Effects and spot light settings</li><li><code>ComputeEffectPipeline</code>: SSAO, Shadow, SSR, Toon, DoF, Bloom, and Edge rendering</li><li><code>FullscreenPass</code>: copies the final effect result to the canvas</li><li><code>CollisionWorld</code> / <code>WalkCollisionBuilder</code>: extracts collision segments from procedural wall cuboids and resolves player movement</li><li>DOM <code>canvas</code>: overlays the heading-up radar from the current collision segments</li></ul>
+<h2>Controls</h2>
+<ul><li>Horizontal drag: rotate heading and view together</li><li>Vertical drag: look up or down only while dragging, then return to level</li><li><code>W</code> / <code>S</code>: move forward / backward</li><li><code>A</code> / <code>D</code>: turn left / right</li><li><code>Shift</code>: run</li><li><code>5</code> / <code>6</code>: decrease / increase Toon levels in the range 2 to 8</li><li><code>0</code>: reset to the initial view</li><li><code>K</code>: save a screenshot</li><li>Double tap / double click the canvas, or <code>/</code>: open or close the command palette</li></ul>
+<h2>What to verify</h2>
+<ul><li>Reset returns to the start cell and faces into the maze again</li><li>Horizontal drag rotates heading and view together, while vertical drag only affects temporary look pitch</li><li><code>W</code> / <code>A</code> / <code>S</code> / <code>D</code> behave as first-person controls, not orbit camera controls</li><li>Walls and doorway side jambs block movement, while doorway openings remain passable</li><li>The top-right <code>MAP</code> shows the current forward direction upward and nearby collision segments as white lines</li><li>Floor color changes between corridor, room, start, and goal areas</li><li>Reloading the page regenerates the same maze shape because the seed is fixed</li><li>Edge is enabled and Toon is disabled at startup, and Compute Effects can be changed from the palette</li></ul>
+<h2>Files</h2>
+<ul><li><code>maze.html</code>: demo page</li><li><code>main.js</code>: maze generation, first-person movement, Compute Effects, and radar</li><li><code>CollisionWorld.js</code>: XZ-plane collision world for the player cylinder</li><li><code>WalkCollisionBuilder.js</code>: helper that extracts collision segments from wall shapes</li><li><code>maze_spec.md</code>: detailed specification for maze generation, rooms, doors, collision handling, and radar</li><li><code>README.md</code>: Japanese guide</li><li><code>README.en.md</code>: English guide</li></ul>
+    </article>
+  </main>
+</body>
+</html>

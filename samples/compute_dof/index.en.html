@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>compute_dof</title>
+  <link rel="icon" href="data:," />
+  <!-- 2026/06/19 -->
+  <style>
+
+:root {
+  color-scheme: light;
+  --bg: #eef3f8;
+  --paper: rgba(255, 255, 255, 0.94);
+  --line: #c8d5e4;
+  --ink: #17324a;
+  --muted: #5c748b;
+  --accent: #1566ab;
+  --accent-soft: #dfeefe;
+  --code-bg: #f3f7fb;
+  --shadow: rgba(29, 52, 79, 0.10);
+}
+* { box-sizing: border-box; }
+html, body {
+  margin: 0;
+  min-height: 100%;
+}
+body {
+  background:
+    radial-gradient(circle at top left, rgba(21, 102, 171, 0.12), transparent 24%),
+    radial-gradient(circle at top right, rgba(255, 191, 118, 0.10), transparent 22%),
+    linear-gradient(180deg, #f8fbfd 0%, var(--bg) 100%);
+  color: var(--ink);
+  font: 16px/1.78 "Avenir Next", "Hiragino Sans", "Yu Gothic", sans-serif;
+}
+.page {
+  width: min(1080px, calc(100% - 28px));
+  margin: 0 auto;
+  padding: 24px 0 56px;
+}
+.hero,
+.doc {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  box-shadow: 0 22px 52px var(--shadow);
+}
+.hero {
+  padding: 22px 24px;
+  margin-bottom: 18px;
+}
+.hero h1 {
+  margin: 0 0 8px;
+  font-size: clamp(2rem, 4vw, 3rem);
+  line-height: 1.08;
+}
+.hero p {
+  margin: 0;
+  color: var(--muted);
+}
+.doc {
+  padding: 28px;
+}
+.doc > :first-child {
+  margin-top: 0;
+}
+h1, h2, h3, h4, h5, h6 {
+  line-height: 1.25;
+  margin: 1.45em 0 0.55em;
+}
+h1 {
+  font-size: 2.2rem;
+}
+h2 {
+  padding-bottom: 0.28em;
+  border-bottom: 1px solid var(--line);
+  font-size: 1.48rem;
+}
+h3 {
+  font-size: 1.14rem;
+}
+p, ul, ol, table, pre, blockquote {
+  margin: 0 0 1em;
+}
+ul, ol {
+  padding-left: 1.4em;
+}
+li + li {
+  margin-top: 0.26em;
+}
+a {
+  color: var(--accent);
+  text-decoration: none;
+}
+a:hover {
+  text-decoration: underline;
+}
+img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  border-radius: 16px;
+  border: 1px solid var(--line);
+  box-shadow: 0 12px 32px rgba(29, 52, 79, 0.08);
+  margin: 1.1em 0 1.4em;
+}
+code {
+  padding: 0.12em 0.38em;
+  border-radius: 0.45em;
+  background: var(--code-bg);
+  border: 1px solid #dbe6f1;
+  font: 0.92em/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+pre {
+  padding: 14px 16px;
+  overflow-x: auto;
+  border-radius: 14px;
+  background: #0f1720;
+  color: #ecf5ff;
+}
+pre code {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #ffffff;
+}
+th, td {
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  text-align: left;
+  vertical-align: top;
+}
+th {
+  background: #f5f9fc;
+}
+hr {
+  border: 0;
+  border-top: 1px solid var(--line);
+  margin: 1.5em 0;
+}
+blockquote {
+  padding: 0.3em 0 0.3em 1em;
+  border-left: 4px solid #c9dbef;
+  color: var(--muted);
+}
+@media (max-width: 720px) {
+  .page {
+    width: min(100% - 18px, 1080px);
+    padding-top: 16px;
+  }
+  .hero,
+  .doc {
+    border-radius: 18px;
+  }
+  .doc {
+    padding: 20px;
+  }
+}
+
+  </style>
+</head>
+<body>
+  <main class="page">
+    <section class="hero">
+      <h1>compute_dof</h1>
+    </section>
+    <article class="doc">
+<h1>compute_dof</h1>
+<p>English | <a href="index.html">日本語</a></p>
+<p><img src="./compute_dof.jpg" alt="compute_dof" /></p>
+<h2>Overview</h2>
+<p>Depth of field keeps surfaces near the focus distance sharp and blurs geometry in front of and behind that plane. This sample demonstrates the image pyramids, geometric coverage, CoC metadata, and near/far composition order of <code>ComputeDofPass</code> integrated into <code>ComputeEffectPipeline</code>.</p>
+<p>Using one value for both pixel coverage and distance from focus leaves sharp scene color at the center of out-of-focus geometry. <code>ComputeDofPass</code> stores geometric coverage separately from CoC, using coverage for silhouette composition and CoC only for selecting blur levels.</p>
+<h2>Running the sample</h2>
+<ul><li>Open <a href="./compute_dof.html">./compute_dof.html</a> in a WebGPU-capable browser</li><li>Use the Help Panel together with CommandPalette</li><li>Open CommandPalette by double-tapping the canvas or pressing <code>/</code></li><li>Press <code>V</code> to cycle through the composite, coverage, CoC, and pyramid views</li></ul>
+<h2>Image pyramid and CoC</h2>
+<p>Scene color remains linear HDR in <code>rgba16float</code>. The pass successively creates low-frequency images at 1/2, 1/4, 1/8, and 1/16 resolution. Every level applies a 13-tap low-pass filter to the preceding level, producing a smoother and wider blur as resolution decreases.</p>
+<p>CoC converts view-space distance from focus into a level position:</p>
+<pre><code class="language-text">stage = clamp(
+  abs(viewDepth - focusDistance) / focusRange * cocScale,
+  0,
+  4
+)</code></pre>
+<p>A stage above 0 and up to 1 selects 1/2. Stages from 1 to 2 interpolate 1/2 and 1/4, 2 to 3 interpolate 1/4 and 1/8, and 3 to 4 interpolate 1/8 and 1/16. Increasing <code>CoC Scale</code> reaches wider levels over a shorter depth difference. It is not a ratio for retaining sharp scene color.</p>
+<p><code>Blur Radius</code> changes the sampling distance of each low-pass filter from 0.25 through 3.0. <code>Blur Radius</code> controls the spatial spread of the levels, while <code>CoC Scale</code> controls which level is selected.</p>
+<h2>Separating geometric coverage and CoC</h2>
+<p>The CoC extraction pass writes three full-resolution <code>rgba16float</code> targets: near color plus coverage, far color plus coverage, and near/far CoC metadata. A geometry pixel writes <code>vec4f(scene.rgb, 1.0)</code> to either the near or far target. Alpha is pure geometric coverage and is never multiplied by CoC. The clear background, focus band, and opposite layer have coverage 0.</p>
+<p>CoC metadata stores the near stage in R and the far stage in G. Color, coverage, and CoC metadata each receive levels from 1/2 through 1/16. Filtered metadata is the average of <code>stage * coverage</code>, so the source stage is recovered as <code>moment / coverage</code> outside a silhouette. The selected blur level therefore remains independent of decreasing edge coverage.</p>
+<h2>Inside and outside the original silhouette</h2>
+<p>Inside the original silhouette of out-of-focus geometry, the complete-scene low-frequency image selected by CoC fully replaces sharp scene color. A scene level already contains object and surrounding colors in their filtered proportions. Missing coverage on the inner side is therefore filled by surrounding color instead of reconstructing a sharp object image.</p>
+<p>The near and far layers spread object color outside the original silhouette. Composition recovers their premultiplied color with <code>blurred.rgb / blurred.a</code> and uses only <code>blurred.a</code> to mix it with the background or the layer behind it.</p>
+<p>For a constant-color object, the inner scene low-frequency image is:</p>
+<pre><code class="language-text">objectColor * coverage + surroundingColor * (1 - coverage)</code></pre>
+<p>The outer coverage composition evaluates to the same expression, so the result does not jump at the original geometry boundary. Dividing a near or far layer by coverage inside the silhouette would reconstruct the object color and leave a sharp core, so the implementation does not do that.</p>
+<h2>Near and far composition order</h2>
+<p>Far blur remains behind the focus plane and near geometry. Near blur is composited over far geometry, the focus plane, and the clear background. Out-of-focus foreground geometry can therefore spread beyond its original silhouette.</p>
+<p>The clear background has neither view-space distance nor CoC. The pass does not replace the entire background with the 1/16 image. It composites only where filtered near or far coverage arrives.</p>
+<h2>Diagnostic views</h2>
+<p><code>far coverage</code> and <code>near coverage</code> display each geometry layer's alpha in grayscale. Target geometry should be white while the focus band, clear background, and opposite layer remain black.</p>
+<p><code>CoC metadata</code> displays near geometry in red and far geometry in blue, with stage 4 at full intensity. Changing <code>CoC Scale</code> changes CoC intensity without changing either coverage view.</p>
+<p><code>depth</code> displays Reverse-Z depth, <code>focus</code> displays the focus band and four near/far stages, <code>half / quarter / eighth / sixteenth</code> display the scene low-frequency levels, and <code>composite</code> shows the final result.</p>
+<h2>GPU cost</h2>
+<p>DoF uses four full-resolution targets and four four-level image pyramids. Levels from 1/2 through 1/16 contain <code>85 / 256</code> as many pixels as full resolution. At 8 bytes/pixel for <code>rgba16float</code>, the DoF targets use 42.625 bytes per full-resolution pixel:</p>
+<pre><code class="language-text">4 * 8 bytes
+  + 4 * 8 bytes * 85 / 256
+  = 42.625 bytes / full-resolution pixel</code></pre>
+<p>This is approximately 149.9 MiB at 2560×1440 and 337.1 MiB at 3840×2160, excluding implementation-specific row alignment and resource bookkeeping.</p>
+<p>The pass uses 18 compute dispatches: four levels each for scene, near, far, and CoC, followed by CoC extraction and final composition. Lower levels process progressively fewer pixels, so dispatch count alone does not determine GPU time.</p>
+<h2>Limitations</h2>
+<p>Geometry immediately outside the focus band starts at the 1/2 level instead of crossfading from sharp scene color. This removes the sharp core but can make blur width change visibly at the focus boundary.</p>
+<p>The complete-scene low-frequency image contains colors from different depths, so strong blur can mix colors across depth relationships. This design does not reproduce exact circular bokeh or fully depth-aware occlusion. It prioritizes removing the sharp core and spreading near and far silhouettes continuously for real-time rendering.</p>
+    </article>
+  </main>
+</body>
+</html>

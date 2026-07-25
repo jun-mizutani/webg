@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>shapes</title>
+  <link rel="icon" href="data:," />
+  <!-- 2026/06/19 -->
+  <style>
+
+:root {
+  color-scheme: light;
+  --bg: #eef3f8;
+  --paper: rgba(255, 255, 255, 0.94);
+  --line: #c8d5e4;
+  --ink: #17324a;
+  --muted: #5c748b;
+  --accent: #1566ab;
+  --accent-soft: #dfeefe;
+  --code-bg: #f3f7fb;
+  --shadow: rgba(29, 52, 79, 0.10);
+}
+* { box-sizing: border-box; }
+html, body {
+  margin: 0;
+  min-height: 100%;
+}
+body {
+  background:
+    radial-gradient(circle at top left, rgba(21, 102, 171, 0.12), transparent 24%),
+    radial-gradient(circle at top right, rgba(255, 191, 118, 0.10), transparent 22%),
+    linear-gradient(180deg, #f8fbfd 0%, var(--bg) 100%);
+  color: var(--ink);
+  font: 16px/1.78 "Avenir Next", "Hiragino Sans", "Yu Gothic", sans-serif;
+}
+.page {
+  width: min(1080px, calc(100% - 28px));
+  margin: 0 auto;
+  padding: 24px 0 56px;
+}
+.hero,
+.doc {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  box-shadow: 0 22px 52px var(--shadow);
+}
+.hero {
+  padding: 22px 24px;
+  margin-bottom: 18px;
+}
+.hero h1 {
+  margin: 0 0 8px;
+  font-size: clamp(2rem, 4vw, 3rem);
+  line-height: 1.08;
+}
+.hero p {
+  margin: 0;
+  color: var(--muted);
+}
+.doc {
+  padding: 28px;
+}
+.doc > :first-child {
+  margin-top: 0;
+}
+h1, h2, h3, h4, h5, h6 {
+  line-height: 1.25;
+  margin: 1.45em 0 0.55em;
+}
+h1 {
+  font-size: 2.2rem;
+}
+h2 {
+  padding-bottom: 0.28em;
+  border-bottom: 1px solid var(--line);
+  font-size: 1.48rem;
+}
+h3 {
+  font-size: 1.14rem;
+}
+p, ul, ol, table, pre, blockquote {
+  margin: 0 0 1em;
+}
+ul, ol {
+  padding-left: 1.4em;
+}
+li + li {
+  margin-top: 0.26em;
+}
+a {
+  color: var(--accent);
+  text-decoration: none;
+}
+a:hover {
+  text-decoration: underline;
+}
+img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  border-radius: 16px;
+  border: 1px solid var(--line);
+  box-shadow: 0 12px 32px rgba(29, 52, 79, 0.08);
+  margin: 1.1em 0 1.4em;
+}
+code {
+  padding: 0.12em 0.38em;
+  border-radius: 0.45em;
+  background: var(--code-bg);
+  border: 1px solid #dbe6f1;
+  font: 0.92em/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+pre {
+  padding: 14px 16px;
+  overflow-x: auto;
+  border-radius: 14px;
+  background: #0f1720;
+  color: #ecf5ff;
+}
+pre code {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #ffffff;
+}
+th, td {
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  text-align: left;
+  vertical-align: top;
+}
+th {
+  background: #f5f9fc;
+}
+hr {
+  border: 0;
+  border-top: 1px solid var(--line);
+  margin: 1.5em 0;
+}
+blockquote {
+  padding: 0.3em 0 0.3em 1em;
+  border-left: 4px solid #c9dbef;
+  color: var(--muted);
+}
+@media (max-width: 720px) {
+  .page {
+    width: min(100% - 18px, 1080px);
+    padding-top: 16px;
+  }
+  .hero,
+  .doc {
+    border-radius: 18px;
+  }
+  .doc {
+    padding: 20px;
+  }
+}
+
+  </style>
+</head>
+<body>
+  <main class="page">
+    <section class="hero">
+      <h1>shapes</h1>
+    </section>
+    <article class="doc">
+<h1>shapes</h1>
+<p>English | <a href="index.html">日本語</a></p>
+<p><img src="./shapes.jpg" alt="shapes" /></p>
+<h2>Overview</h2>
+<ul><li>Among the primitive-oriented samples, this is the main entry point for comparing the appearance of textures, image-based normals, and procedural normals in one place</li><li>You can compare &quot;textured appearance&quot;, &quot;normal-map differences&quot;, and <code>wireframe</code> while keeping the same composition</li><li><code>Message</code> is used only for the numbered labels in the <code>3x3</code> layout, while operation guidance and status display are handled by the standard HUD on the <code>WebgApp</code> side</li></ul>
+<h2>How to Run</h2>
+<ul><li>Open <a href="./shapes.html">./shapes.html</a></li><li>Use a browser with WebGPU support, and check the help panel and HUD together with the sample when needed</li></ul>
+<h2>webg Features Used</h2>
+<ul><li><code>Primitive</code>: generates basic shapes such as sphere / cone / donut / cube</li><li><code>Shape.setWireframe</code>: toggles wireframe display</li><li><code>Texture</code>: loads <code>num256.png</code></li><li><code>Texture.buildNormalMapFromProceduralHeight</code>: generates noise / dots normal maps</li><li><code>SmoothShader</code>: handles <code>texture + normal map</code> and <code>wireframe</code> through the same entry point. Flat shading can also be toggled as a function on the shader side</li><li><code>Message</code>: overlays only the primitive number labels in the <code>3x3</code> arrangement</li></ul>
+<h2>Checkpoints</h2>
+<ul><li>When switching the surface mode with <code>C / T / I / N / D</code>, confirm that only the differences between texture / image normal / procedural normal change while the geometry stays the same</li><li>Confirm that texture comparison with <code>T</code>, image-normal comparison with <code>I</code>, and procedural-normal comparison with <code>N / D</code> can all be read within the same sample</li><li>Confirm with the <code>1 - 9</code> wireframe toggles that the topology is as expected, and that line display does not break even when the surface mode changes</li><li>Confirm that across the nine shapes, including <code>cube / cuboid / mapCube</code>, both texture and normal comparison remain usable without severe breakage</li></ul>
+<h2>Controls</h2>
+<ul><li><code>C</code>: solid-color display</li><li><code>T</code>: texture display</li><li><code>I</code>: image-normal display</li><li><code>N</code>: noise-normal display</li><li><code>D</code>: dots-normal display</li><li><code>1 - 9</code>: toggle wireframe for the corresponding shape on or off</li><li><code>Space</code>: pause or resume rotation</li><li>Touch buttons: <code>C / T / I / N / D</code>, <code>1 - 9</code>, and <code>Pause</code> use the same key names as the keyboard controls</li></ul>
+    </article>
+  </main>
+</body>
+</html>

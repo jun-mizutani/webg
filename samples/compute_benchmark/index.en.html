@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>compute_benchmark</title>
+  <link rel="icon" href="data:," />
+  <!-- 2026/06/19 -->
+  <style>
+
+:root {
+  color-scheme: light;
+  --bg: #eef3f8;
+  --paper: rgba(255, 255, 255, 0.94);
+  --line: #c8d5e4;
+  --ink: #17324a;
+  --muted: #5c748b;
+  --accent: #1566ab;
+  --accent-soft: #dfeefe;
+  --code-bg: #f3f7fb;
+  --shadow: rgba(29, 52, 79, 0.10);
+}
+* { box-sizing: border-box; }
+html, body {
+  margin: 0;
+  min-height: 100%;
+}
+body {
+  background:
+    radial-gradient(circle at top left, rgba(21, 102, 171, 0.12), transparent 24%),
+    radial-gradient(circle at top right, rgba(255, 191, 118, 0.10), transparent 22%),
+    linear-gradient(180deg, #f8fbfd 0%, var(--bg) 100%);
+  color: var(--ink);
+  font: 16px/1.78 "Avenir Next", "Hiragino Sans", "Yu Gothic", sans-serif;
+}
+.page {
+  width: min(1080px, calc(100% - 28px));
+  margin: 0 auto;
+  padding: 24px 0 56px;
+}
+.hero,
+.doc {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  box-shadow: 0 22px 52px var(--shadow);
+}
+.hero {
+  padding: 22px 24px;
+  margin-bottom: 18px;
+}
+.hero h1 {
+  margin: 0 0 8px;
+  font-size: clamp(2rem, 4vw, 3rem);
+  line-height: 1.08;
+}
+.hero p {
+  margin: 0;
+  color: var(--muted);
+}
+.doc {
+  padding: 28px;
+}
+.doc > :first-child {
+  margin-top: 0;
+}
+h1, h2, h3, h4, h5, h6 {
+  line-height: 1.25;
+  margin: 1.45em 0 0.55em;
+}
+h1 {
+  font-size: 2.2rem;
+}
+h2 {
+  padding-bottom: 0.28em;
+  border-bottom: 1px solid var(--line);
+  font-size: 1.48rem;
+}
+h3 {
+  font-size: 1.14rem;
+}
+p, ul, ol, table, pre, blockquote {
+  margin: 0 0 1em;
+}
+ul, ol {
+  padding-left: 1.4em;
+}
+li + li {
+  margin-top: 0.26em;
+}
+a {
+  color: var(--accent);
+  text-decoration: none;
+}
+a:hover {
+  text-decoration: underline;
+}
+img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  border-radius: 16px;
+  border: 1px solid var(--line);
+  box-shadow: 0 12px 32px rgba(29, 52, 79, 0.08);
+  margin: 1.1em 0 1.4em;
+}
+code {
+  padding: 0.12em 0.38em;
+  border-radius: 0.45em;
+  background: var(--code-bg);
+  border: 1px solid #dbe6f1;
+  font: 0.92em/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+pre {
+  padding: 14px 16px;
+  overflow-x: auto;
+  border-radius: 14px;
+  background: #0f1720;
+  color: #ecf5ff;
+}
+pre code {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #ffffff;
+}
+th, td {
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  text-align: left;
+  vertical-align: top;
+}
+th {
+  background: #f5f9fc;
+}
+hr {
+  border: 0;
+  border-top: 1px solid var(--line);
+  margin: 1.5em 0;
+}
+blockquote {
+  padding: 0.3em 0 0.3em 1em;
+  border-left: 4px solid #c9dbef;
+  color: var(--muted);
+}
+@media (max-width: 720px) {
+  .page {
+    width: min(100% - 18px, 1080px);
+    padding-top: 16px;
+  }
+  .hero,
+  .doc {
+    border-radius: 18px;
+  }
+  .doc {
+    padding: 20px;
+  }
+}
+
+  </style>
+</head>
+<body>
+  <main class="page">
+    <section class="hero">
+      <h1>compute_benchmark</h1>
+    </section>
+    <article class="doc">
+<h1>compute_benchmark</h1>
+<p>English | <a href="index.html">日本語</a></p>
+<p><img src="./compute_benchmark.jpg" alt="compute_benchmark" /></p>
+<h2>Overview</h2>
+<p><code>compute_benchmark</code> is a sample for comparing how much GPU time each standard compute-effect API costs when used from <code>ComputeEffectPipeline</code>. While <code>samples/compute_effect</code> focuses on the look and interaction of a 3D application that combines multiple effects, this sample focuses on measurement: it helps application developers decide which effects are affordable for a target device under one shared scene condition.</p>
+<p>This sample measures the standard-resolution behavior of <code>ComputeEffectPipeline</code>, <code>ComputePyramidBlurPass</code>, <code>ComputeBloomPass</code>, <code>ComputeDofPass</code>, <code>SsaoPass</code>, <code>ComputeSsrPass</code>, and related passes directly. The fixed benchmark scene includes a floor, walls, multiple opaque objects, a translucent object, and varied reflectivity so that the G-buffer, shadow map, transparency composition, screen-space reflection, Fog, and post effects all receive meaningful input.</p>
+<h2>Measured Cases</h2>
+<p><code>gbuffer-render</code> measures G-buffer creation, <code>shadow-map</code> measures shadow-map rendering, and <code>shadow-visibility</code> measures the compute stage that derives direct-light visibility from the G-buffer and shadow map. These cases provide the baseline cost that later effects depend on.</p>
+<p><code>blur</code>, <code>toon</code>, <code>dof</code>, <code>bloom</code>, <code>ssao</code>, <code>ssr-ray</code>, <code>ssr-composer</code>, <code>transparency</code>, <code>fog</code>, <code>tone-map</code>, <code>edge</code>, and <code>vignette</code> measure individual stages. <code>transparency</code> includes the two Frost blur levels, roughness mask, and translucent-triangle draw performed by <code>TransparencyPass</code>. <code>fog</code> consumes the transparency-composited HDR scene and opaque G-buffer depth. <code>vignette</code> consumes the display-color result after Tone Map and Edge.</p>
+<p><code>blur</code> measures the complete <code>ComputePyramidBlurPass</code>. It reduces the linear HDR scene continuously to 1/2, 1/4, 1/8, and 1/16 through <code>ComputeImagePyramid</code>, then enlarges the 1/16 image progressively through 1/8, 1/4, 1/2, and full resolution. Each downsample uses a 13-tap low-pass filter, and each upsample uses a 9-tap tent filter. Only the lowest-frequency image is enlarged, so intermediate Levels do not add extra color energy.</p>
+<p>The final <code>full-pipeline</code> case enables shadow, SSAO, SSR, automatic transparency composition, Fog, Toon, DoF, Bloom, Tone Map, Edge, and Vignette in the current <code>ComputeEffectPipeline</code> order. The translucent material in the fixed scene ensures that transparency composition actually runs. This lets you compare both individual adoption cost and a representative combined stack inside one tool.</p>
+<h2>How to Run</h2>
+<ul><li>Open <a href="./compute_benchmark.html">./compute_benchmark.html</a></li><li>Use a browser and GPU that support WebGPU and <code>timestamp-query</code></li><li><code>Samples</code> controls the number of recorded measurements, while <code>Warmup</code> controls the number of pre-runs excluded from statistics</li><li><code>Pyramid Radius</code> controls the sample spacing during downsampling and upsampling; its default is <code>1.0</code>, with a range from <code>0.25</code> through <code>3.0</code></li><li><code>Pyramid Radius</code> applies only to the standalone <code>blur</code> measurement</li><li><code>dof</code>, <code>bloom</code>, and <code>full-pipeline</code> use fixed conditions based on each effect's defaults</li></ul>
+<p>Press <code>Run Benchmark</code> to measure each case after its warmup passes, then inspect the average, standard deviation, min, and max in the table. Use <code>Download JSON</code> or <code>Download CSV</code> to save the results. The JSON output also stores raw samples together with canvas size, DPR, browser metadata, <code>pyramidFilterRadius</code>, and <code>pyramidLevels</code> so that later cross-device comparisons remain traceable.</p>
+<p>The preview and measured cases that include tone mapping use a fixed Reinhard exposure of <code>2.0</code>, making the dark regions readable without changing the benchmark lighting inputs. This value is also recorded as <code>toneMapExposure</code> in the JSON metadata.</p>
+<h2>How to Read the Results</h2>
+<p>The reported time is meant to compare the GPU cost of each pass itself. The shared input preparation step is rebuilt before every case so the conditions stay consistent, but that preparation time is not folded into the pass result. This makes it easier to compare questions like “how expensive is DoF itself” or “how much extra cost does Bloom add.” When you want a broader frame-level estimate, check <code>full-pipeline</code> together with the Help Panel in <code>samples/compute_effect</code>.</p>
+<p>Some cases internally execute multiple passes, and single-pass timestamps can become unstable depending on the browser and GPU driver. For those cases, this sample measures queue completion time instead. The <code>timer</code> column shows only <code>gpu</code> or <code>queue</code>: <code>gpu</code> means a <code>timestamp-query</code> GPU timestamp measurement, and <code>queue</code> means elapsed time from command submit to queue completion.</p>
+<p><code>avg ms</code> is the average of the recorded runs after warmup. This is the first value to compare when you want to judge the relative cost of an effect or compare devices. <code>stddev</code> shows how much the measurement fluctuated across runs. A larger value means the result was less stable. <code>min/max</code> shows the smallest and largest observed times, which helps you see the spread caused by driver state, queue timing, or other runtime variation. <code>n</code> is the number of recorded runs used for the statistics, which matches <code>Samples</code>.</p>
+<p><code>full-pipeline</code> is not a simple sum of the individual cases. It measures the end-to-end cost of running shadow, SSAO, SSR, transparency composition, Fog, Toon, DoF, Bloom, Tone Map, Edge, and Vignette together through <code>ComputeEffectPipeline</code> in one frame. That includes the real handoff between intermediate textures, the actual encode order, and the dependency chain where later stages read the output of earlier stages. Because of that, the sum of separately measured <code>transparency</code>, <code>fog</code>, <code>dof</code>, <code>bloom</code>, <code>edge</code>, and <code>vignette</code> does not necessarily match <code>full-pipeline</code>.</p>
+<p>There are two main reasons why separate measurements and simultaneous execution can differ. First, an individual case isolates one pass, while <code>full-pipeline</code> executes the real chained workflow where earlier outputs feed later stages. Second, GPU cache behavior, resource reuse, command grouping, and queue-completion timing can differ between isolated and combined execution. As a result, <code>full-pipeline</code> can be a little smaller than the sum of individual cases in some environments, and a little larger in others.</p>
+<p>In this sample, <code>gbuffer-render</code> is often relatively small, so it can look as if the shared baseline is small enough that <code>full-pipeline</code> stays close to the sum of the effect-specific cases. That is one factor, but it does not fully explain the meaning of <code>full-pipeline</code>. A practical way to read the results is to use the individual cases to identify which effects are expensive, then use <code>full-pipeline</code> to estimate how much the whole frame increases when those effects are enabled together.</p>
+<h2>Checkpoints</h2>
+<ul><li><code>main.js</code> uses the published <code>webg/ComputeEffectPipeline.js</code> and related passes directly instead of keeping a sample-local duplicate pipeline</li><li>The same fixed scene can be used to compare cost differences among <code>render</code>, <code>shadow</code>, <code>SSAO</code>, <code>SSR</code>, transparency composition, <code>Fog</code>, <code>DoF</code>, <code>Bloom</code>, and <code>Vignette</code></li><li><code>fog</code> uses the HDR scene after transparency composition, while <code>vignette</code> uses display color after Tone Map and Edge</li><li><code>blur</code> measures continuous reduction from 1/2 through 1/16 followed by progressive enlargement from 1/16 to full resolution</li><li>Changing <code>Pyramid Radius</code> changes only the sample spacing of <code>blur</code>; the conditions for <code>dof</code>, <code>bloom</code>, and <code>full-pipeline</code> remain unchanged</li><li>The JSON output stores canvas size, DPR, samples, warmup, and browser metadata so the measurement can be reused for device comparisons</li></ul>
+    </article>
+  </main>
+</body>
+</html>

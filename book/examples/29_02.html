@@ -1,0 +1,237 @@
+<!doctype html>
+<!-- webg/book/examples/29_02.html 2026/07/13 -->
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>29_02 v2統合パイプライン</title>
+  <link rel="stylesheet" href="./example.css" />
+</head>
+<body>
+  <div class="page">
+    <h1>book/examples</h1>
+    <h2>29_02 v2統合パイプライン</h2>
+    <div class="section-card">
+      <p>29_01と同じsceneを共有G-buffer、Deferred Lighting、Shadow Map、SSAO、SSR、Tone Mapの順に処理します</p>
+      <p id="status" class="note">ドラッグまたは矢印キーで視点を回転できます。AキーでSSAO、RキーでSSR、Pキーでanimationを切り替えます</p>
+    </div>
+
+    <div class="canvas-block">
+      <canvas id="canvas" width="960" height="720"></canvas>
+    </div>
+
+    <pre id="code"></pre>
+
+    <script type="module" id="example-source">
+import WebgApp from "../../webg/WebgApp.js";
+import ComputeEffectPipeline from "../../webg/ComputeEffectPipeline.js";
+import FullscreenPass from "../../webg/FullscreenPass.js";
+import Primitive from "../../webg/Primitive.js";
+import Shape from "../../webg/Shape.js";
+
+const CANVAS_W = 960;
+const CANVAS_H = 720;
+
+// G-bufferのsurface attachmentへ必要な物性値をすべて与えます。
+// color alphaへ反射率を詰めず、specular、roughness、metallicを別の意味として保持します。
+function createPrimitiveShape(gpu, primitiveFactory, material) {
+  const shape = new Shape(gpu);
+  shape.applyPrimitiveAsset(primitiveFactory(shape.getPrimitiveOptions()));
+  shape.endShape();
+  shape.setMaterial("smooth-shader", {
+    has_bone: 0,
+    use_texture: 0,
+    ambient: 0.0,
+    emissive: 0.0,
+    ...material
+  });
+  return shape;
+}
+
+function addShapeNode(app, name, shape, position, attitude = [0, 0, 0]) {
+  const node = app.space.addNode(null, name);
+  node.setPosition(...position);
+  node.setAttitude(...attitude);
+  node.addShape(shape);
+  return node;
+}
+
+// 29_01とgeometry配置を揃え、比較する対象を描画方式だけに限定します。
+function createScene(app) {
+  const gpu = app.getGPU();
+  const floor = createPrimitiveShape(
+    gpu,
+    (options) => Primitive.cuboid(28, 0.8, 24, options),
+    { color: [0.34, 0.38, 0.44, 1], specular: 0.68, roughness: 0.24, metallic: 0.16, power: 64 }
+  );
+  const backWall = createPrimitiveShape(
+    gpu,
+    (options) => Primitive.cuboid(28, 11, 0.8, options),
+    { color: [0.48, 0.52, 0.58, 1], specular: 0.18, roughness: 0.72, metallic: 0.0, power: 20 }
+  );
+  const cube = createPrimitiveShape(
+    gpu,
+    (options) => Primitive.cube(4.0, options),
+    { color: [0.94, 0.38, 0.12, 1], specular: 0.34, roughness: 0.36, metallic: 0.04, power: 42 }
+  );
+  const sphere = createPrimitiveShape(
+    gpu,
+    (options) => Primitive.sphere(2.2, 32, 22, options),
+    { color: [0.12, 0.62, 0.88, 1], specular: 0.72, roughness: 0.20, metallic: 0.12, power: 58 }
+  );
+  const pillar = createPrimitiveShape(
+    gpu,
+    (options) => Primitive.cuboid(3.2, 6.0, 3.2, options),
+    { color: [0.22, 0.76, 0.40, 1], specular: 0.28, roughness: 0.44, metallic: 0.0, power: 34 }
+  );
+  const smallCube = createPrimitiveShape(
+    gpu,
+    (options) => Primitive.cube(2.5, options),
+    { color: [0.96, 0.78, 0.20, 1], specular: 0.42, roughness: 0.30, metallic: 0.08, power: 46 }
+  );
+
+  addShapeNode(app, "floor", floor, [0, -3.4, -2]);
+  addShapeNode(app, "back-wall", backWall, [0, 1.7, -13.6]);
+  return [
+    addShapeNode(app, "orange-cube", cube, [-4.4, -1.0, -4.8], [0, 24, 0]),
+    addShapeNode(app, "blue-sphere", sphere, [0.4, -0.8, -3.6]),
+    addShapeNode(app, "green-pillar", pillar, [5.0, 0.0, -7.0], [0, -18, 0]),
+    addShapeNode(app, "yellow-cube", smallCube, [4.4, -2.15, 1.7], [0, 30, 0])
+  ];
+}
+
+async function start() {
+  const app = new WebgApp({
+    document,
+    autoDrawScene: false,
+    renderMode: "ondemand",
+    layoutMode: "embedded",
+    fixedCanvasSize: {
+      width: CANVAS_W,
+      height: CANVAS_H,
+      useDevicePixelRatio: false
+    },
+    clearColor: [0.045, 0.065, 0.09, 1],
+    viewAngle: 52,
+    projectionFar: 120,
+    camera: {
+      target: [0, -0.7, -4.0],
+      distance: 27,
+      yaw: 24,
+      pitch: -13
+    }
+  });
+  await app.init();
+
+  app.createOrbitEyeRig({
+    target: [0, -0.7, -4.0],
+    distance: 27,
+    yaw: 24,
+    pitch: -13,
+    minDistance: 15,
+    maxDistance: 48,
+    wheelZoomStep: 1
+  });
+  const movingNodes = createScene(app);
+  const gpu = app.getGPU();
+  const pipeline = new ComputeEffectPipeline(gpu, {
+    width: app.screen.getWidth(),
+    height: app.screen.getHeight(),
+    lighting: {
+      ambient: 0.10,
+      directionalIntensity: 1.0
+    },
+    composer: { mode: "mix" },
+    toneMap: {
+      mode: "reinhard",
+      exposure: 1.0,
+      saturation: 1.0,
+      gamma: 2.2
+    }
+  });
+  const copyPass = new FullscreenPass(gpu);
+  await Promise.all([pipeline.ready, copyPass.init()]);
+
+  const state = {
+    ssaoEnabled: true,
+    ssrEnabled: true,
+    paused: false
+  };
+
+  app.attachInput({
+    onKeyDown: (key, event) => {
+      if (event.repeat) return;
+      if (key === "a") state.ssaoEnabled = !state.ssaoEnabled;
+      else if (key === "r") state.ssrEnabled = !state.ssrEnabled;
+      else if (key === "p" || key === " ") state.paused = !state.paused;
+      app.requestRender();
+    }
+  });
+
+  app.start({
+    onUpdate: ({ deltaSec, screen }) => {
+      if (!state.paused) {
+        movingNodes[0].rotateY(18 * deltaSec);
+        movingNodes[1].rotateY(-12 * deltaSec);
+        movingNodes[2].rotateY(10 * deltaSec);
+        movingNodes[3].rotateX(15 * deltaSec);
+        movingNodes[3].rotateY(22 * deltaSec);
+      }
+      // 画面寸法に依存するattachmentは統合pipelineにまとめて追従させます。
+      pipeline.resize(screen.getWidth(), screen.getHeight());
+      document.getElementById("status").textContent =
+        `SSAO ${state.ssaoEnabled ? "ON" : "OFF"} / Shadow Map ON / ` +
+        `SSR ${state.ssrEnabled ? "ON" : "OFF"} / ` +
+        `Animation ${state.paused ? "PAUSED" : "RUNNING"}`;
+    },
+
+    // WebgAppが確定したCamera FrameをG-bufferと後段処理で共有します。
+    onBeforeDraw: ({ cameraFrame }) => {
+      pipeline.renderScene(app.space, cameraFrame, app.clearColor, {
+        shadowEnabled: true
+      });
+    },
+
+    onAfterDraw3d: ({ cameraFrame }) => {
+      gpu.endPass();
+      const finalColor = pipeline.encode(gpu.commandEncoder, {
+        cameraFrame,
+        ssaoEnabled: state.ssaoEnabled,
+        shadowEnabled: true,
+        ssrEnabled: state.ssrEnabled,
+        toonEnabled: false,
+        dofEnabled: false,
+        bloomEnabled: false,
+        edgeEnabled: false
+      });
+
+      // Tone Map済みの表示textureはdepthなしpresentation passでcanvasへ転送します。
+      app.screen.beginPresentPass({
+        clearColor: app.clearColor,
+        colorLoadOp: "clear"
+      });
+      copyPass.draw(finalColor);
+      // 後続のFont/HUD用にcolorを保ったままReverse-Z depth付きpassを再開します。
+      app.screen.clearDepthBuffer();
+    }
+  });
+
+  window.addEventListener("pagehide", () => {
+    app.stop();
+    copyPass.destroy?.();
+    pipeline.destroy();
+  }, { once: true });
+}
+
+start().catch((error) => {
+  document.getElementById("status").textContent = `Error: ${error.message}`;
+  console.error(error);
+});
+    </script>
+    <script>
+      document.getElementById("code").textContent =
+        document.getElementById("example-source").textContent.trim();
+    </script>
+  </div>
+</body>
+</html>

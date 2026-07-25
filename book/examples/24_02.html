@@ -152,7 +152,6 @@ app.showOverlayPanel(buildHelpPanelOptions({
 
 app.start({
   onUpdate: ({ deltaSec }) => {
-    orbit.update(deltaSec);
     node.rotateY(0.8);
     node.rotateZ(0.4);
     app.message.setLines("status", [

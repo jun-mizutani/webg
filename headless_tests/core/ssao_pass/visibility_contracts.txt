@@ -1,0 +1,32 @@
+# SsaoPassのAmbient Occlusion visibility責務単体テスト
+
+## 目的
+
+SsaoPassがscene colorへAmbient Occlusionを合成せず、0を強い環境遮蔽、1を遮蔽なしとするフル解像度visibilityだけを出力することを確認する。完成色への適用先はDeferred Lightingのambient項へ限定する
+
+## 確認項目
+
+1. raw AOとbilateral passがscene colorをbindingしない
+2. raw AOは低解像度visibilityだけを出力する
+3. bilateral passはnormalとdepthで境界を保ちながらフル解像度visibilityへ復元する
+4. camera背景とdisabled時は環境遮蔽なしを表す1を返す
+5. debug normalやcolor compositeを出力しない
+6. camera depthは `CAMERA_REVERSE_Z` identityを必須とする
+7. normal・depthと出力の寸法不一致を拒否する
+8. 旧view optionを黙って無視せず例外にする
+
+## 実行方法
+
+```sh
+node headless_tests/core/ssao_pass/headless_probe.js
+```
+
+## 結果
+
+2026-07-12に実行し、全項目が成功した。表示文字列は次のとおり
+
+```text
+ssao_pass_visibility_contracts: all AO visibility contracts passed
+```
+
+次の変更ではこのvisibilityをDeferred Lightingのambient項へだけ掛ける。directional、spot、pointの直接光へAmbient Occlusionを掛けないことを別テストで確認する

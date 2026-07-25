@@ -1,0 +1,76 @@
+# eye_rig
+
+## このサンプルの目的
+
+`eye_rig` は、`webg/EyeRig.js` が扱う `base -> rod -> eye` の3段構成を、Orbit、First Person、Followの三つの用途で比較するサンプルです。特定のゲーム向けカメラを完成品として提示するのではなく、EyeRigが設定するローカル変換と、アプリケーションが構成する親子階層を組み合わせることで、カメラの動きをどのように選べるかを確認します。
+
+このサンプルで先行確認した仕様は、2026年6月12日に `webg/EyeRig.js` へ取り込まれました。Followはcamera baseを移動させず、独立して動くtargetをeyeの姿勢で滑らかに追跡します。回転した親の下でOrbitのPANと視点基準回転を正しいローカル座標へ変換する処理、およびFirst Personの水平dragをbodyYawではなくlookYawへ反映する処理もコア実装を直接使用します。
+
+## シーンの構成
+
+青いcamera vehicleはカメラを載せる乗り物です。オレンジ色のtarget vehicleはFollowで見る対象です。両者は同じ形の3次元trackを位相差付きで移動します。trackには水平カーブだけでなく、高低差とbankを含めています。
+
+camera vehicleとtarget vehicleの位置は、同じパラメトリック曲線から求めます。姿勢は曲線上の前後2点から接線を求め、local `+Z` が進行方向を向くyawとpitchへ変換します。rollには周期的なbank角を加えます。
+
+```text
+camera vehicle
+└─ cameraRig (base)
+   └─ cameraRod (rod)
+      └─ eye
+
+target vehicle
+```
+
+Followではcamera rigとtarget vehicleは親子関係を持ちません。target vehicleのworld位置は視線方向の計算にだけ使い、base位置にはコピーしません。
+
+## Orbitの確認
+
+Orbitでは、baseが注視中心、rodが周回角度、eyeが距離を担当します。camera rigをcamera vehicleの子にすると、vehicleの位置、yaw、pitch、rollをすべて継承します。
+
+`H`を押すとcamera rigの親をindependent camera anchorへ変更します。このanchorはcamera vehicleのworld位置だけを受け取り、姿勢はidentityを保ちます。そのためcamera vehicleと同じ場所を移動しても、vehicleの回転はcameraへ継承されません。
+
+この切り替えはEyeRigのOrbit stateを変更するものではありません。同じOrbitを、アプリケーション側の異なる親子階層で使用しています。
+
+PANではeyeのworld right/upから画面平面上の移動量を求めた後、baseの親world matrixの逆変換を使ってlocal移動量へ戻します。視点基準回転も同様に、eyeのworld軸をbase local軸へ変換してからrodのlocal quaternionへ加えます。これにより、camera vehicleが回転している場合でも画面上の操作方向とlocal stateが一致します。
+
+## First Personの確認
+
+First Personではbaseが取り付け位置とbody姿勢、rodがeye height、eyeが独立視線を担当します。camera bodyの前方はlocal `-Z`ですが、camera vehicleはlocal `+Z`を前方としているため、初期状態ではbodyYawを180度にして両方の前方軸を一致させます。baseはcamera vehicleの後方、上方、右側に配置します。
+
+標準pointer処理は水平dragをlookYawへ、垂直dragをlookPitchへ反映します。lookYawはeyeの独立視線だけを変え、bodyYawを基準とする移動方向には影響しません。これにより、vehicleの進行方向とは独立して左右や上下を見る仕様を検証します。
+
+`W`はbodyYawで回転したbodyのlocal `-Z`、`D`はlocal `+X`へbaseを移動します。`S / A`はそれぞれの反対方向、`Q / E`は親座標系内の上下方向です。通常の利用では初期取り付け位置へ固定できますが、base自体が親座標系内で自由に移動できることも同じmodeで確認できます。
+
+## Followの確認
+
+Followではbaseをcamera vehicleの子として固定します。rodにはアプリケーションが決める比較的安定した基準構図を設定し、eye位置はOrbitと同じくrodのlocal `+Z`へdistanceだけ離します。
+
+target vehicleの `targetOffset` はtarget nodeのローカル座標です。targetのworld matrixで変換するため、targetが回転しても車体上の同じ位置を追跡します。
+
+追跡処理は最初にtarget world位置をrod local座標へ変換します。eye local位置からtarget local位置への方向をforwardとし、選択されたupReferenceからrightとcameraUpを作ります。right、cameraUp、backの三軸を回転行列へ格納し、目標eye quaternionへ変換します。
+
+現在のtracking quaternionから目標quaternionへはslerpで補間します。補間率は次の式で求めます。
+
+```text
+t = 1 - exp(-response * deltaSec)
+```
+
+さらに `maxAngularSpeed * deltaSec` を1frameの最大回転角とし、responseによる回転量が上限を超えないよう補間率を制限します。
+
+初回は有効な初期姿勢を確定するため、目標姿勢へ即時設定します。2frame目以降は直前姿勢から連続的に追跡します。
+
+## 上方向が追跡方向と平行になる場合
+
+rightは `cross(forward, up)` で求めます。forwardとupが平行なら外積がゼロになり、対象を見る方向は決まっていてもロールを決められません。これはオイラー角のジンバルロックではなく、Look-at基底を作る段階の特異条件です。
+
+初期化時にこの条件が発生した場合、サンプルは例外として検出します。初期化後の連続追跡中に発生した場合は、直前のtracking quaternionからright軸を取り出し、新しいforwardへ直交投影します。これにより直前のロールを維持し、補助upを急に切り替えて90度回転する不連続を避けます。
+
+## Help Panelの読み方
+
+`baseLocal` は現在の親を基準とするbase位置です。`baseWorld` と `eyeWorld` はシーングラフの変換を合成した結果です。
+
+Followの `follow dot` はeyeのworld前方と、eyeからtargetへの方向の内積です。1に近いほどtargetを正確に見ています。`error` は現在のtracking quaternionと、そのframeの目標quaternionの角度差です。急カーブ直後に増え、追跡が収束すると減少します。
+
+## コア実装とテスト
+
+`webg/EyeRig.js`、第6章「カメラ制御とEyeRig」、書籍検証用 `book/examples/06_02.html`、API一覧は、このサンプルで確認した仕様へ揃えています。GPUを使わない数値契約は `unittest/eye_rig/headless_probe.js` で確認できます。

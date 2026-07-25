@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// samples/janken/main.js  2026/04/12
+// samples/janken/main.js  2026/07/25
 //   Janken game using hand.glb and AnimationState
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -73,6 +73,7 @@ let resultState = {
   cpuChoiceId: "rock"
 };
 
+// シーンの進行段階を現在の入力と実行状態に合わせて更新する
 function syncScenePhase(phase = gameStateManager?.currentStateId ?? null) {
   if (!app || !phase) {
     return null;
@@ -83,6 +84,7 @@ function syncScenePhase(phase = gameStateManager?.currentStateId ?? null) {
   return phase;
 }
 
+// シーンの進行段階を受け取り、現在の設定と後続処理へ反映する
 function setScenePhase(phase, options = {}) {
   if (!gameStateManager) {
     return null;
@@ -147,6 +149,7 @@ function getAllShapes() {
   ];
 }
 
+// 操作の制御処理を生成し、後続処理で利用できる状態にする
 function buildActionController(animation) {
   const action = new Action(animation);
   // hand sample の key 区間をそのまま action 化し、
@@ -160,6 +163,7 @@ function buildActionController(animation) {
   return action;
 }
 
+// `hand`の状態の`machine`を生成し、後続処理で利用できる状態にする
 function buildHandStateMachine(hand) {
   // janken では入力を高レベル command と見なし、
   // その場で AnimationState.setState() を呼んで action を開始する
@@ -187,6 +191,7 @@ function buildHandStateMachine(hand) {
   });
 }
 
+// 実行状態の`root`のノードの`info`を現在の入力と状態から求め、呼び出し元へ返す
 function getRuntimeRootNodeInfo(runtime) {
   // runtime.nodes は build 結果の node 定義なので、
   // instantiate ごとに同じ root id を使って scene 上の root node を引ける
@@ -195,6 +200,7 @@ function getRuntimeRootNodeInfo(runtime) {
     ?? null;
 }
 
+// `shared`の`hand`のモデルを読み込み、検証済みのデータとして後続処理へ渡す
 async function loadSharedHandModel() {
   // hand.glb の build は 1 回だけ行い、
   // player / cpu は runtime.instantiate() で fresh runtime を複数作る
@@ -209,6 +215,7 @@ async function loadSharedHandModel() {
   return sharedHandModel;
 }
 
+// `instantiateHandModel`は元データから独立して利用できる複製または実行状態を作る
 function instantiateHandModel() {
   // 1 回 build した runtime から fresh な node / shape / animation 状態を起こし、
   // 2 つの hand が同じ resource を共有しつつ pose は独立するようにする
@@ -220,6 +227,7 @@ function instantiateHandModel() {
   });
 }
 
+// `hand`の制御処理を生成し、後続処理で利用できる状態にする
 async function createHandController(options) {
   const runtime = sharedHandModel?.runtime ?? null;
   const instantiated = instantiateHandModel();
@@ -299,6 +307,7 @@ function updateDiagnosticsStats() {
   return envReport;
 }
 
+// 検査情報のレポートを生成し、後続処理で利用できる状態にする
 function makeProbeReport(frameCount) {
   // one-shot probe では、その瞬間の勝敗結果と 2 つの手の state を固定する
   // round のあとで「何を出していたか」をテキストや JSON へ残しやすくする
@@ -336,6 +345,7 @@ function getResultColor(kind) {
   return RESULT_COLORS[kind] ?? RESULT_COLORS.ready;
 }
 
+// `guide`の行を生成し、後続処理で利用できる状態にする
 function buildGuideLines() {
   // ゲーム側の guide は必要最小限に絞り、
   // diagnostics key は WebgApp 側の共通仕様へ任せる
@@ -348,6 +358,7 @@ function buildGuideLines() {
   ];
 }
 
+// 状態表示の行を生成し、後続処理で利用できる状態にする
 function buildStatusLines(envReport) {
   // HUD では「入力」「現在の手」「AnimationState が選んでいる action」「勝敗」を
   // 1 画面で追えるようにする
@@ -364,6 +375,7 @@ function buildStatusLines(envReport) {
   ];
 }
 
+// 結果のメッセージを現在の入力と実行状態に合わせて更新する
 function updateResultMessage() {
   if (!resultMessage) return;
   resultMessage.clear();
@@ -383,6 +395,7 @@ function updateResultMessage() {
   });
 }
 
+// `judgeResult`は入力条件や交差状態を比較し、判定結果を返す
 function judgeResult(playerChoiceId, cpuChoiceId) {
   // 判定は resultState に入る最終文字列までここで返し、
   // 呼び出し側が if を重ねずに済むようにする
@@ -412,6 +425,7 @@ function judgeResult(playerChoiceId, cpuChoiceId) {
   };
 }
 
+// 選択した手を手の形状と動作へ反映する
 function applyChoiceToHand(hand, choiceId) {
   // janken は入力が来た瞬間に同じ state でも出し直したいので、
   // 高レベル API として AnimationState.setState(..., force:true) を使う
@@ -423,6 +437,7 @@ function applyChoiceToHand(hand, choiceId) {
   });
 }
 
+// `round`の初期化段階で、必要な状態と資源を準備して処理を開始する
 function startRound(playerChoiceId) {
   // 1 回の入力で player / cpu の手決定、AnimationState 更新、
   // 勝敗表示更新までをまとめて進める
@@ -440,6 +455,7 @@ function startRound(playerChoiceId) {
   updateResultMessage();
 }
 
+// ゲームを初期状態へ戻し、前回の状態を残さない
 function resetGame() {
   // reset は round 数だけでなく、2 つの hand pose と Message 表示も
   // 起動直後と同じ状態へ戻す
@@ -456,6 +472,7 @@ function resetGame() {
   updateResultMessage();
 }
 
+// キーを受け取った段階で、対応する状態更新と処理を実行する
 function handleKey(key) {
   // 入力解釈はここに集約し、
   // attachInput 側は key を受けて振り分けるだけに保つ
@@ -501,6 +518,7 @@ function handleKey(key) {
   }
 }
 
+// このインスタンスの初期化段階で、必要な状態と資源を準備して処理を開始する
 async function start() {
   // WebgApp は camera / diagnostics / message font まで含めて初期化し、
   // sample 側は janken 固有の scene 構築へ集中する

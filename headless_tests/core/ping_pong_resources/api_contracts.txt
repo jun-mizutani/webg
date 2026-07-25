@@ -1,0 +1,22 @@
+単体テスト: ping_pong_resources
+
+概要
+- `webg/PingPongBuffer.js`、`webg/PingPongTexture.js`、`webg/PingPongTarget.js`の契約をDOMや実GPUを使わずに確認するheadless testです
+- 三つの型は共通の交換APIを持ちますが、resource固有の生成、View、resize、所有権を一つの汎用クラスへ混在させません
+
+このテストで使う機能
+- `PingPongBuffer`: 2本のGPUBufferに相当するresourceと現在indexを管理する
+- `PingPongTexture`: 2枚のraw GPUTextureに相当するresourceと現在indexを管理する
+- `PingPongTarget`: 2個のRenderTargetの交換、同時resize、明示的な所有権を管理する
+
+確認ポイント
+- `getCurrent()`、`getNext()`、`swap()`、`reset(index)`が0-basedの2-resource構成を維持することを確認します
+- `swap()`と`reset()`がGPU resourceの内容を移動せず、現在indexだけを変更する契約を確認します
+- resource不足、同一resourceの重複、不正index、空labelを自動補正せず例外にすることを確認します
+- RenderTarget互換でないresourceを拒否し、2個のtargetを同じ寸法へresizeすることを確認します
+- 外部RenderTargetを包む組はresourceを所有せず、`destroy()`してもtargetを破棄しないことを確認します
+- `ownsResources: true`を明示した組だけが2個のtargetを破棄することを確認します
+- 破棄済みのPingPongTarget操作と二重破棄の戻り値を確認します
+
+実行方法
+- `node headless_tests/core/ping_pong_resources/headless_probe.js`

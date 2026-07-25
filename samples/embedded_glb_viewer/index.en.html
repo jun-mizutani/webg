@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>embedded_glb_viewer</title>
+  <link rel="icon" href="data:," />
+  <!-- 2026/06/19 -->
+  <style>
+
+:root {
+  color-scheme: light;
+  --bg: #eef3f8;
+  --paper: rgba(255, 255, 255, 0.94);
+  --line: #c8d5e4;
+  --ink: #17324a;
+  --muted: #5c748b;
+  --accent: #1566ab;
+  --accent-soft: #dfeefe;
+  --code-bg: #f3f7fb;
+  --shadow: rgba(29, 52, 79, 0.10);
+}
+* { box-sizing: border-box; }
+html, body {
+  margin: 0;
+  min-height: 100%;
+}
+body {
+  background:
+    radial-gradient(circle at top left, rgba(21, 102, 171, 0.12), transparent 24%),
+    radial-gradient(circle at top right, rgba(255, 191, 118, 0.10), transparent 22%),
+    linear-gradient(180deg, #f8fbfd 0%, var(--bg) 100%);
+  color: var(--ink);
+  font: 16px/1.78 "Avenir Next", "Hiragino Sans", "Yu Gothic", sans-serif;
+}
+.page {
+  width: min(1080px, calc(100% - 28px));
+  margin: 0 auto;
+  padding: 24px 0 56px;
+}
+.hero,
+.doc {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  box-shadow: 0 22px 52px var(--shadow);
+}
+.hero {
+  padding: 22px 24px;
+  margin-bottom: 18px;
+}
+.hero h1 {
+  margin: 0 0 8px;
+  font-size: clamp(2rem, 4vw, 3rem);
+  line-height: 1.08;
+}
+.hero p {
+  margin: 0;
+  color: var(--muted);
+}
+.doc {
+  padding: 28px;
+}
+.doc > :first-child {
+  margin-top: 0;
+}
+h1, h2, h3, h4, h5, h6 {
+  line-height: 1.25;
+  margin: 1.45em 0 0.55em;
+}
+h1 {
+  font-size: 2.2rem;
+}
+h2 {
+  padding-bottom: 0.28em;
+  border-bottom: 1px solid var(--line);
+  font-size: 1.48rem;
+}
+h3 {
+  font-size: 1.14rem;
+}
+p, ul, ol, table, pre, blockquote {
+  margin: 0 0 1em;
+}
+ul, ol {
+  padding-left: 1.4em;
+}
+li + li {
+  margin-top: 0.26em;
+}
+a {
+  color: var(--accent);
+  text-decoration: none;
+}
+a:hover {
+  text-decoration: underline;
+}
+img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  border-radius: 16px;
+  border: 1px solid var(--line);
+  box-shadow: 0 12px 32px rgba(29, 52, 79, 0.08);
+  margin: 1.1em 0 1.4em;
+}
+code {
+  padding: 0.12em 0.38em;
+  border-radius: 0.45em;
+  background: var(--code-bg);
+  border: 1px solid #dbe6f1;
+  font: 0.92em/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+pre {
+  padding: 14px 16px;
+  overflow-x: auto;
+  border-radius: 14px;
+  background: #0f1720;
+  color: #ecf5ff;
+}
+pre code {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #ffffff;
+}
+th, td {
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  text-align: left;
+  vertical-align: top;
+}
+th {
+  background: #f5f9fc;
+}
+hr {
+  border: 0;
+  border-top: 1px solid var(--line);
+  margin: 1.5em 0;
+}
+blockquote {
+  padding: 0.3em 0 0.3em 1em;
+  border-left: 4px solid #c9dbef;
+  color: var(--muted);
+}
+@media (max-width: 720px) {
+  .page {
+    width: min(100% - 18px, 1080px);
+    padding-top: 16px;
+  }
+  .hero,
+  .doc {
+    border-radius: 18px;
+  }
+  .doc {
+    padding: 20px;
+  }
+}
+
+  </style>
+</head>
+<body>
+  <main class="page">
+    <section class="hero">
+      <h1>embedded_glb_viewer</h1>
+    </section>
+    <article class="doc">
+<h1>embedded_glb_viewer</h1>
+<p>English | <a href="index.html">日本語</a></p>
+<p><img src="./embedded_glb_viewer.jpg" alt="embedded_glb_viewer" /></p>
+<h2>Overview</h2>
+<ul><li>This sample runs a <code>.glb</code> viewer inside a canvas embedded in the middle of the page by using <code>WebgApp</code> with <code>layoutMode: &quot;embedded&quot;</code> and <code>fixedCanvasSize</code></li><li>A single <code>.glb</code> selected through <code>input[type=file]</code> is loaded through <code>WebgApp.loadModel()</code>, and can then be inspected with <code>EyeRig(type=&quot;orbit&quot;)</code> through drag / pinch / keyboard control, the viewer's touch orbit / zoom buttons, and CommandPalette viewer actions</li><li>The loaded model is positioned so the center of its bounding box comes to the world origin, and the camera target also starts from the origin</li><li>Pressing <code>Load bundled sample</code> shows the included <code>samples/gltf_loader/hand.glb</code> directly, so you can confirm the behavior of the embedded viewer immediately even when you do not have a model at hand</li><li>Touch controls are added through <code>InputController.installTouchControls()</code>, wiring <code>← / → / ↑ / ↓ / + / -</code> as orbit / zoom step actions and <code>R / || / W / S</code> as viewer actions</li><li><code>W</code>, the DOM <code>W</code> button, touch <code>W</code>, and the CommandPalette Wire toggle all switch wireframe for every displayed shape at once</li><li>Pan follows the standard <code>EyeRig</code> interaction, and <code>Shift + Drag</code>, <code>Shift + Arrow</code>, and two-finger drag move the target along screen directions</li><li>During loading, <code>showOverlayPanel({ format: &quot;pre&quot;, ... })</code> displays the current stage and elapsed time on the canvas, while the Help Panel and right-side status show the file name, triangle count, clip count, camera state, and errors</li></ul>
+<h2>How to Run</h2>
+<ul><li>Open <a href="./embedded_glb_viewer.html">./embedded_glb_viewer.html</a></li><li>Use a browser with WebGPU support, and check the Help Panel and CommandPalette together with the sample when needed</li></ul>
+<h2>webg Features Used</h2>
+<ul><li><code>WebgApp</code>: standard initialization for <code>Screen / Shader / Space / Input / Message / overlay</code></li><li><code>EyeRig(type=&quot;orbit&quot;)</code>: orbit camera driven by drag / wheel / pinch / keyboard</li><li><code>WebgApp.loadModel(..., { format: &quot;gltf&quot; })</code>: the glTF / GLB loader path</li><li><code>InputController.installTouchControls()</code>: touch buttons for coarse-pointer devices</li><li><code>CommandPalette</code>: groups load sample / clear / reset / pause / wireframe / screenshot in a canvas palette</li><li><code>WebgApp.showOverlayPanel()</code>: stage display during loading</li><li><code>WebgApp.takeScreenshot()</code>: saves the current canvas</li></ul>
+<h2>Checkpoints</h2>
+<ul><li>When choosing a <code>.glb</code> from <code>Choose GLB</code>, confirm that loading starts immediately and the model appears after loading finishes</li><li>With <code>Load bundled sample</code>, confirm that <code>hand.glb</code> is displayed and that for animated models <code>Space</code> or touch <code>||</code> can pause / resume playback</li><li>Right after loading, confirm that the model center is moved to the world origin and that the Help Panel target starts at <code>0, 0, 0</code></li><li>Confirm that drag, pinch, arrows, <code>[ ]</code>, and touch <code>← / → / ↑ / ↓ / + / -</code> all operate the same orbit camera, and that each tap on the touch buttons responds reliably</li><li>Confirm that <code>Shift + Drag</code>, <code>Shift + Arrow</code>, and two-finger drag move the view target naturally in screen directions</li><li>Confirm that toggling <code>W</code> switches the whole displayed model between solid and wireframe</li><li>Confirm that <code>R</code> or <code>Reset view</code> returns the camera to the initial framing</li><li>Confirm that <code>S</code> or touch <code>S</code> saves the current canvas</li><li>Confirm that <code>/</code> or double tapping the canvas opens the CommandPalette and can run Load / Clear / Reset / Pause / Wire / Shot</li></ul>
+<h2>Controls</h2>
+<ul><li><code>Choose GLB</code>: choose a local <code>.glb</code> file</li><li><code>Load bundled sample</code>: load the bundled <code>hand.glb</code></li><li>Drag: orbit camera</li><li>Two-finger drag: pan the camera</li><li>Pinch / mouse wheel / <code>[ ]</code> / touch <code>+ -</code>: zoom</li><li>Arrow / touch <code>← → ↑ ↓</code>: orbit camera</li><li><code>Shift + Drag / Shift + Arrow</code>: pan the camera</li><li><code>W / DOM W / touch W</code>: toggle wireframe</li><li><code>R / touch R</code>: reset the camera</li><li><code>Space / touch ||</code>: pause / resume animation</li><li><code>S / DOM S / touch S</code>: save a screenshot</li><li><code>Clear</code>: hide the current model and return to the placeholder display</li><li><code>/</code> or double tap the canvas: open the CommandPalette</li></ul>
+    </article>
+  </main>
+</body>
+</html>

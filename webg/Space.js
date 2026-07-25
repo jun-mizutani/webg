@@ -1,13 +1,28 @@
 // ---------------------------------------------
-//  Space.js      2026/05/06
+//  Space.js      2026/07/25
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // ---------------------------------------------
 
 import util from "./util.js";
+import {
+  createCameraTransformFrameFromEye,
+  isRenderFrameToken,
+  resolveRenderFrameTokenCameraFrame
+} from "./CameraFrame.js";
 import Node from "./Node.js";
 import PhysicsNode from "./PhysicsNode.js";
-import Matrix from "./Matrix.js";
+
+// WebgAppや複数pass処理が渡すrender frameは、そのframeで確定済みの変換を共有します
+// 単純な低レベル利用者が渡すeye Nodeとは、公開class名ではなく必要な操作で区別します
+function isCameraTransformFrame(value) {
+  return Boolean(
+    value
+    && typeof value.worldPointToView === "function"
+    && typeof value.createModelViewMatrix === "function"
+    && value.viewRotationMatrix
+  );
+}
 
 export default class Space {
 
@@ -20,9 +35,16 @@ export default class Space {
     this.skeletons = [];
     this.light = null;
     this.lightType = 1.0;
+    this.eye = null;
     this.time = 0;
     this.elapsedTime = 0;
     this.drawCount = 0;
+    // 透明triangleのglobal sort結果を1回のQueue writeで渡すframe動的Index Buffer
+    // 容量拡張前のBufferは、記録済みCommand Bufferから参照される可能性があるため保持する
+    this.sortedTranslucentIndexBuffer = null;
+    this.sortedTranslucentIndexCapacity = 0;
+    this.sortedTranslucentIndexDevice = null;
+    this.sortedTranslucentIndexBuffers = [];
     this.startTime = util.now();
     this._collisionPrevMap = new Map();
     this._collisionBodyPrevMap = new Map();
@@ -230,59 +252,263 @@ export default class Space {
 
   // ライト種別を設定する
   setLightType(type) {
-    // type = 0:spot, 1:parallel
+    // SmoothShaderのlightPos.w規則に合わせ、type=1はpoint、type=0はdirectionalとします
     this.lightType = type;
   }
 
   // ライト種別を返す
   getLightType() {
-    // type = 0:spot, 1:parallel
+    // type=1はpoint、type=0はdirectionalを返します
     return this.lightType;
   }
 
-  // 視点ノードを設定する
-  setEye(node) {
-    // 既定のカメラNodeを設定する
-    // draw引数省略時に使用する
-    this.eye = node;
+  // webg 1.0互換経路でdraw()が使う既定の視点ノードを設定する
+  setEye(eye) {
+    if (!eye || typeof eye.setWorldMatrix !== "function" || !eye.worldMatrix) {
+      throw new Error("Space.setEye requires an eye Node");
+    }
+    this.eye = eye;
+    return this;
   }
 
-  // 描画段階: 指定カメラから scene graph をたどり、描画対象 Shape を GPU pass へ送る
+  // 可視Shapeにalpha 1未満のmaterialを使うtriangleがあるか、GPU描画を始めずに判定する
+  // ComputeEffectPipelineはfalseならHDR copyと透明Render Pass自体を省略できる
+  hasTranslucentTriangles() {
+    for (const node of this.nodes) {
+      if (!node || !Array.isArray(node.shapes)) {
+        continue;
+      }
+      for (const shape of node.shapes) {
+        if (!shape || shape.isHidden || typeof shape.getMaterialCount !== "function") {
+          continue;
+        }
+        // Wireframeはmaterial alphaによらずopaque phaseでShape全体を一度だけ描く。
+        // 透明triangle用の後段パスを要求しない。
+        if (typeof shape.isWireframe === "function" && shape.isWireframe()) {
+          continue;
+        }
+        for (let materialIndex = 0; materialIndex < shape.getMaterialCount(); materialIndex++) {
+          if (shape.getMaterialAlpha(materialIndex) >= 1.0) {
+            continue;
+          }
+          const drawInfo = shape.getMaterialDrawInfo(materialIndex);
+          if (drawInfo.count > 0) {
+            return true;
+          }
+        }
+      }
+    }
+    return false;
+  }
+
+  // sort済みtriangle数を収めるuint32 Index Bufferを確保し、同じ容量ならframe間で再利用する
+  ensureSortedTranslucentIndexBuffer(gpu, indexCount) {
+    if (!gpu?.device || !gpu?.queue) {
+      throw new Error("Space sorted translucent drawing requires a ready WebGPU context");
+    }
+    const requiredCount = util.readFiniteNumber(
+      indexCount,
+      "Space sorted translucent index count",
+      { integer: true, min: 1 }
+    );
+    if (this.sortedTranslucentIndexDevice !== null
+        && this.sortedTranslucentIndexDevice !== gpu.device) {
+      this.sortedTranslucentIndexBuffer = null;
+      this.sortedTranslucentIndexCapacity = 0;
+    }
+    if (this.sortedTranslucentIndexBuffer
+        && this.sortedTranslucentIndexCapacity >= requiredCount) {
+      return this.sortedTranslucentIndexBuffer;
+    }
+    let capacity = 1;
+    while (capacity < requiredCount) {
+      capacity *= 2;
+    }
+    const buffer = gpu.device.createBuffer({
+      label: "space:sorted-translucent-indices",
+      size: capacity * Uint32Array.BYTES_PER_ELEMENT,
+      usage: GPUBufferUsage.INDEX | GPUBufferUsage.COPY_DST
+    });
+    this.sortedTranslucentIndexBuffer = buffer;
+    this.sortedTranslucentIndexCapacity = capacity;
+    this.sortedTranslucentIndexDevice = gpu.device;
+    this.sortedTranslucentIndexBuffers.push(buffer);
+    return buffer;
+  }
+
+  // global sort順を維持したIndex列を作り、連続する同一Shape・Material・変換を一括描画する
+  drawSortedTranslucentBatches(translucentQueue, options = {}) {
+    if (!Array.isArray(translucentQueue)) {
+      throw new Error("Space.drawSortedTranslucentBatches requires an array queue");
+    }
+    if (translucentQueue.length === 0) {
+      return 0;
+    }
+    const gpu = translucentQueue[0].shape?.gpu;
+    if (!gpu?.device || !gpu?.queue) {
+      throw new Error("Space sorted translucent entry requires a Shape with WebGPU context");
+    }
+    const sortedIndices = new Uint32Array(translucentQueue.length * 3);
+    const batches = [];
+    let batch = null;
+    for (let entryIndex = 0; entryIndex < translucentQueue.length; entryIndex++) {
+      const entry = translucentQueue[entryIndex];
+      if (entry.shape?.gpu?.device !== gpu.device) {
+        throw new Error("Space sorted translucent entries must use the same GPUDevice");
+      }
+      const index0 = entry.index0;
+      const index1 = entry.index1;
+      const index2 = entry.index2;
+      if (!Number.isInteger(index0) || index0 < 0 || index0 > 0xFFFFFFFF
+          || !Number.isInteger(index1) || index1 < 0 || index1 > 0xFFFFFFFF
+          || !Number.isInteger(index2) || index2 < 0 || index2 > 0xFFFFFFFF) {
+        throw new Error(
+          `Space sorted translucent triangle ${entry.triangleIndex} `
+          + `indices must be unsigned 32-bit integers: ${index0}, ${index1}, ${index2}`
+        );
+      }
+      const indexOffset = entryIndex * 3;
+      sortedIndices[indexOffset] = index0;
+      sortedIndices[indexOffset + 1] = index1;
+      sortedIndices[indexOffset + 2] = index2;
+      const continuesBatch = batch
+        && batch.shape === entry.shape
+        && batch.materialIndex === entry.materialIndex
+        && batch.modelview === entry.modelview
+        && batch.normal === entry.normal;
+      if (continuesBatch) {
+        batch.indexCount += 3;
+        continue;
+      }
+      batch = {
+        shape: entry.shape,
+        materialIndex: entry.materialIndex,
+        modelview: entry.modelview,
+        normal: entry.normal,
+        firstIndex: indexOffset,
+        indexCount: 3
+      };
+      batches.push(batch);
+    }
+    const indexBuffer = this.ensureSortedTranslucentIndexBuffer(gpu, sortedIndices.length);
+    gpu.queue.writeBuffer(indexBuffer, 0, sortedIndices);
+    for (const current of batches) {
+      current.shape.drawMaterial(
+        current.modelview,
+        current.normal,
+        current.materialIndex,
+        {
+          indexBuffer,
+          indexFormat: "uint32",
+          indexCount: current.indexCount,
+          firstIndex: current.firstIndex,
+          translucent: true,
+          shaderOverride: options.shaderOverride
+        }
+      );
+    }
+    return batches.length;
+  }
+
+  // 描画段階: render frame、renderFrameToken、eye Nodeのいずれかでscene graphをview-spaceへ移します
   // options.filter を渡すと、半透明や mask 用 Shape などを pass ごとに選別できる
-  draw(eye_node, options = {}) {
+  draw(cameraOrFrame, options = {}) {
     // 描画手順:
-    // 1) カメラの world matrix を確定する
-    // 2) camera world matrix から view matrix を作る
-    // 3) root Node から再帰描画し、options を Node.draw() へ渡す
+    // 1) 完全なframeは共有し、tokenは内部frameへ解決し、eyeなら変換snapshotを一度だけ作る
+    // 2) lightを同じCamera Frameのview-spaceへ変換する
+    // 3) root Nodeから再帰描画し、同じCamera FrameをNode.draw()へ渡す
     let node;
     let oldTime = this.time;
     this.time = this.now();
     this.elapsedTime = this.time - oldTime;
 
-    if ((eye_node === undefined) && (this.eye !== undefined)) {
-      eye_node = this.eye;
-    }
-    eye_node.setWorldMatrix();
-    let view_matrix = new Matrix();
-    view_matrix.makeView(eye_node.worldMatrix);
-    
+    const cameraSource = cameraOrFrame === undefined ? this.eye : cameraOrFrame;
+    const cameraFrame = isCameraTransformFrame(cameraSource)
+      ? cameraSource
+      : isRenderFrameToken(cameraSource)
+        ? resolveRenderFrameTokenCameraFrame(cameraSource, "Space.draw")
+        : createCameraTransformFrameFromEye(cameraSource, "Space.draw");
+
     let lightVec;
     if (this.light !== null) {
       if (this.lightType === 1.0) {  // point light
-        lightVec = view_matrix.mul3x3Vector(this.light.getWorldPosition());
-      } else {                       // parallel light
-        let lightInEye = view_matrix.clone();
-        lightInEye.mul(this.light.worldMatrix);
-        lightVec = lightInEye.mul3x3Vector( [0.0, 0.0, 1.0] );
+        // positionは方向vectorではないため、camera World位置の減算を含むpoint変換を使います
+        lightVec = cameraFrame.worldPointToView(this.light.getWorldPosition());
+      } else {                       // directional light
+        this.light.setWorldMatrix?.();
+        const worldDirection = this.light.worldMatrix.mul3x3Vector([0.0, 0.0, 1.0]);
+        // directional lightは平行移動を持たないため、Camera Frameの逆回転だけを適用します
+        lightVec = cameraFrame.viewRotationMatrix.mul3x3Vector(worldDirection);
       }
       lightVec.push(this.lightType);
     }
+    if (options.lightOverride !== undefined) {
+      // Deferred pipelineが使った主要lightを透明forward描画へそろえる場合だけ、
+      // Space自身のlightより優先するview-space `[x, y, z, type]` を明示的に受け取る
+      lightVec = util.readColor(
+        options.lightOverride,
+        "Space.draw lightOverride",
+        undefined,
+        4
+      );
+    }
 
-    for (let i=0; i<this.nodes.length; i++) {
-      node = this.nodes[i];
-      if (node.parent === null) {
-        node.draw(view_matrix, lightVec, this.drawCount, options);
+    // root走査をphaseごとに再利用し、利用者側へRender Pass追加を要求せず
+    // opaque描画と全Shape横断のtransparent収集を同じSpace.draw()にまとめる
+    const drawRoots = (drawContext) => {
+      for (let i = 0; i < this.nodes.length; i++) {
+        node = this.nodes[i];
+        if (node.parent === null) {
+          // SpaceへNode互換の独自rootを登録する従来の低レベル利用では、1 frameに1回だけ
+          // draw()が呼ばれる契約を保つ。透明triangle収集はShape構造を知るNode系だけが担当する
+          if ((drawContext.phase === "collect-translucent"
+              || drawContext.phase === "translucent-materials")
+              && !(node instanceof Node)) {
+            continue;
+          }
+          node.draw(cameraFrame, lightVec, this.drawCount, drawContext);
+        }
       }
+    };
+
+    if (options.onlyTranslucent !== true) {
+      drawRoots({
+        ...options,
+        phase: "opaque"
+      });
+    }
+
+    if (options.onlyOpaque !== true) {
+      // Max Blendのように順序を入れ替えても結果が変わらないpassだけは、
+      // material別index bufferを直接描き、triangle収集・sort・1枚ごとのdrawを省く
+      if (options.orderIndependentTranslucent === true) {
+        drawRoots({
+          ...options,
+          phase: "translucent-materials"
+        });
+        this.drawCount++;
+        return;
+      }
+      const translucentQueue = [];
+      let traversalOrder = 0;
+      drawRoots({
+        ...options,
+        phase: "collect-translucent",
+        translucentQueue,
+        nextTraversalOrder() {
+          const current = traversalOrder;
+          traversalOrder += 1;
+          return current;
+        }
+      });
+      // cameraはlocal -Z方向を見るため、より負のview-space Zを持つ遠方triangleから描く
+      // 同じdepthではscene走査順と元triangle番号を使い、frame間で順序が揺れないようにする
+      translucentQueue.sort((a, b) =>
+        (a.viewDepth - b.viewDepth)
+        || (a.traversalOrder - b.traversalOrder)
+        || (a.triangleIndex - b.triangleIndex)
+      );
+      this.drawSortedTranslucentBatches(translucentQueue, options);
     }
     this.drawCount++;
   }
@@ -766,6 +992,7 @@ export default class Space {
     return this._overlapCollisionWorldShapes(worldA, worldB) !== null;
   }
 
+  // `_normalizeVec3`は座標または数値を計算し、後続処理で使う結果を返す
   _normalizeVec3(vec) {
     // 任意ベクトルを正規化し、無効値ならnullを返す
     const x = Number(vec[0]);
@@ -779,6 +1006,7 @@ export default class Space {
     return [x / len, y / len, z / len];
   }
 
+  // `_copyVec3`は元データから独立して利用できる複製または実行状態を作る
   _copyVec3(vec) {
     const x = Number(vec[0]);
     const y = Number(vec[1]);
@@ -789,6 +1017,7 @@ export default class Space {
     return [x, y, z];
   }
 
+  // `_resolveCollisionNode`は衝突状態を評価し、位置、速度、接触情報を更新する
   _resolveCollisionNode(target) {
     if (typeof target === "string") {
       return this.findNode(target);
@@ -796,6 +1025,7 @@ export default class Space {
     return target ?? null;
   }
 
+  // `_resolveCollisionShapeRef`は衝突状態を評価し、位置、速度、接触情報を更新する
   _resolveCollisionShapeRef(node, options = {}) {
     if (options.shapeRef) return options.shapeRef;
     if (Number.isInteger(options.shapeIndex) && node?.shapes?.[options.shapeIndex]) {
@@ -813,6 +1043,7 @@ export default class Space {
     return node?.shapes?.[0] ?? null;
   }
 
+  // `_normalizeCollisionBodyShape`は座標または数値を計算し、後続処理で使う結果を返す
   _normalizeCollisionBodyShape(options = {}, shapeRef = null) {
     const raw = options.shape ?? options.collisionShape ?? shapeRef?.getCollisionShape?.() ?? null;
     const shape = raw ? { ...raw } : {};
@@ -874,6 +1105,7 @@ export default class Space {
     return shape;
   }
 
+  // `_cloneCollisionBody`は元データから独立して利用できる複製または実行状態を作る
   _cloneCollisionBody(body) {
     const shape = body.shape ? { ...body.shape } : null;
     if (shape?.box) {
@@ -897,6 +1129,7 @@ export default class Space {
     };
   }
 
+  // `_resolveCollisionBody`は衝突状態を評価し、位置、速度、接触情報を更新する
   _resolveCollisionBody(idOrTarget) {
     if (!idOrTarget) return null;
     if (typeof idOrTarget === "string") {
@@ -914,6 +1147,7 @@ export default class Space {
     return null;
   }
 
+  // `_getCollisionBodyWorldShape`は衝突状態を評価し、位置、速度、接触情報を更新する
   _getCollisionBodyWorldShape(body, includeHidden = false) {
     const node = body?.node ?? null;
     if (!node || !node.worldMatrix?.mulVector) {
@@ -952,6 +1186,7 @@ export default class Space {
     };
   }
 
+  // `_resolveCollisionLocalBox`は衝突状態を評価し、位置、速度、接触情報を更新する
   _resolveCollisionLocalBox(shape, shapeRef, offset = [0, 0, 0]) {
     if (shape?.box) {
       return this._offsetAabb(shape.box, offset);
@@ -969,6 +1204,7 @@ export default class Space {
     }, offset);
   }
 
+  // `_offsetAabb`は座標または数値を計算し、後続処理で使う結果を返す
   _offsetAabb(box, offset = [0, 0, 0]) {
     if (!box) return null;
     return {
@@ -981,6 +1217,7 @@ export default class Space {
     };
   }
 
+  // `_getWorldScaleFactor`は受け取った値を処理し、後続処理で利用する状態または結果を生成する
   _getWorldScaleFactor(worldMatrix) {
     if (!worldMatrix?.mat) return 1.0;
     const m = worldMatrix.mat;
@@ -990,6 +1227,7 @@ export default class Space {
     return Math.max(sx, sy, sz, 1.0);
   }
 
+  // `_overlapCollisionWorldShapes`は入力条件や交差状態を比較し、判定結果を返す
   _overlapCollisionWorldShapes(shapeA, shapeB) {
     if (!shapeA || !shapeB) return null;
     if (shapeA.kind === "sphere" && shapeB.kind === "sphere") {
@@ -1022,6 +1260,7 @@ export default class Space {
     return null;
   }
 
+  // `_sphereAabbOverlap`は入力条件や交差状態を比較し、判定結果を返す
   _sphereAabbOverlap(sphereShape, aabb) {
     const c = sphereShape.center;
     const r = sphereShape.radius;
@@ -1034,6 +1273,7 @@ export default class Space {
     return (dx * dx + dy * dy + dz * dz) <= r * r;
   }
 
+  // `_makeCollisionBodyKey`は衝突状態を評価し、位置、速度、接触情報を更新する
   _makeCollisionBodyKey(bodyA, bodyB) {
     const idA = this._getObjectId(bodyA);
     const idB = this._getObjectId(bodyB);
@@ -1041,6 +1281,7 @@ export default class Space {
     return `${idB}:${idA}`;
   }
 
+  // `_getWorldAabbFromLocalBox`は座標または数値を計算し、後続処理で使う結果を返す
   _getWorldAabbFromLocalBox(localBox, worldMatrix) {
     // ローカルAABBの8頂点をワールド座標へ変換し、
     // それらを包含するワールドAABBを再構築する
@@ -1081,6 +1322,7 @@ export default class Space {
     return out;
   }
 
+  // `_intersectRayAabb`は入力条件や交差状態を比較し、判定結果を返す
   _intersectRayAabb(origin, dir, box) {
     // Slab法でレイとAABBの交差区間 [tNear, tFar] を求める
     let tMin = Number.NEGATIVE_INFINITY;
@@ -1119,6 +1361,7 @@ export default class Space {
     return { tNear: tMin, tFar: tMax };
   }
 
+  // `_overlapAabb`は入力条件や交差状態を比較し、判定結果を返す
   _overlapAabb(aabbA, aabbB) {
     // 2つのAABBが各軸で重なっているかを判定する
     // x/y/z のいずれか1軸でも分離していれば非衝突とみなす
@@ -1128,6 +1371,7 @@ export default class Space {
     return true;
   }
 
+  // `_getShapeTriangleIndices`は受け取った値を処理し、後続処理で利用する状態または結果を生成する
   _getShapeTriangleIndices(shape) {
     // Shapeから三角形インデックス列を取得し、
     // 無ければ連番で補完する
@@ -1145,6 +1389,7 @@ export default class Space {
     return out;
   }
 
+  // `_getWorldVertices`は受け取った値を処理し、後続処理で利用する状態または結果を生成する
   _getWorldVertices(shape, worldMatrix) {
     // Shape頂点配列をワールド座標へ一括変換して返す
     const src = shape.positionArray ?? [];
@@ -1158,6 +1403,7 @@ export default class Space {
     return out;
   }
 
+  // `_getTri`は受け取った値を処理し、後続処理で利用する状態または結果を生成する
   _getTri(worldVerts, triIndices, triNo) {
     // triNo番目の三角形を [v0, v1, v2] 形式で取り出す
     const i0 = triIndices[triNo * 3] * 3;
@@ -1170,6 +1416,7 @@ export default class Space {
     ];
   }
 
+  // `_intersectShapeTriangles`は入力条件や交差状態を比較し、判定結果を返す
   _intersectShapeTriangles(shapeAData, shapeBData) {
     // 2つのShape三角形集合の交差を総当たりで探索する
     const triCountA = Math.floor(shapeAData.triIndices.length / 3);
@@ -1191,6 +1438,7 @@ export default class Space {
     return { hit: false };
   }
 
+  // `_triangleAabbOverlap`は入力条件や交差状態を比較し、判定結果を返す
   _triangleAabbOverlap(triangleA, triangleB) {
     // 三角形ごとのAABBを作って粗い重なり判定を行う
     // ここで不一致なら厳密な三角形交差計算を省略できる
@@ -1199,6 +1447,7 @@ export default class Space {
     return this._overlapAabb(boundsA, boundsB);
   }
 
+  // `_triangleBounds`は座標または数値を計算し、後続処理で使う結果を返す
   _triangleBounds(triangle) {
     // 三角形3頂点から最小包含AABBを作る
     return {
@@ -1211,6 +1460,7 @@ export default class Space {
     };
   }
 
+  // `_triangleTriangleIntersect3D`は入力条件や交差状態を比較し、判定結果を返す
   _triangleTriangleIntersect3D(triangleA, triangleB) {
     // 3D三角形同士の交差判定
     // 共面時は2D投影判定へ分岐する
@@ -1246,6 +1496,7 @@ export default class Space {
     return false;
   }
 
+  // `_segmentTriangleIntersect`は入力条件や交差状態を比較し、判定結果を返す
   _segmentTriangleIntersect(segmentStart, segmentEnd, triV0, triV1, triV2) {
     // 線分と三角形の交差をMoller-Trumbore系の式で判定する
     const dir = this._sub(segmentEnd, segmentStart);
@@ -1267,6 +1518,7 @@ export default class Space {
     return true;
   }
 
+  // `_coplanarTriIntersect`は入力条件や交差状態を比較し、判定結果を返す
   _coplanarTriIntersect(triangleA, triangleB, planeNormal) {
     // 共面三角形を2Dへ射影して包含/辺交差で判定する
     const axis = this._dominantAxis(planeNormal);
@@ -1310,6 +1562,7 @@ export default class Space {
     return false;
   }
 
+  // `_dominantAxis`は受け取った値を処理し、後続処理で利用する状態または結果を生成する
   _dominantAxis(normal) {
     // 法線の絶対値最大成分軸を返す
     // 投影先の平面選択に使う
@@ -1321,6 +1574,7 @@ export default class Space {
     return 2;
   }
 
+  // `_project2`は座標または数値を計算し、後続処理で使う結果を返す
   _project2(point3, axis) {
     // 3D点を指定軸に応じて2D座標へ射影する
     if (axis === 0) return [point3[1], point3[2]];
@@ -1328,6 +1582,7 @@ export default class Space {
     return [point3[0], point3[1]];
   }
 
+  // `_pointInTri2D`は受け取った値を処理し、後続処理で利用する状態または結果を生成する
   _pointInTri2D(point, triA2D, triB2D, triC2D) {
     // 2D点が三角形内（境界含む）にあるかを、
     // 向き符号で判定する
@@ -1339,12 +1594,14 @@ export default class Space {
     return !(hasNeg && hasPos);
   }
 
+  // `_orient2D`は座標または数値を計算し、後続処理で使う結果を返す
   _orient2D(pointA, pointB, pointC) {
     // 2D3点の外積符号（向き）を返す
     return (pointB[0] - pointA[0]) * (pointC[1] - pointA[1])
       - (pointB[1] - pointA[1]) * (pointC[0] - pointA[0]);
   }
 
+  // `_segmentIntersect2D`は入力条件や交差状態を比較し、判定結果を返す
   _segmentIntersect2D(segAStart, segAEnd, segBStart, segBEnd) {
     // 2D線分同士の交差を一般形/共線上判定で求める
     const o1 = this._orient2D(segAStart, segAEnd, segBStart);
@@ -1366,6 +1623,7 @@ export default class Space {
       && ((o3 > 0 && o4 < 0) || (o3 < 0 && o4 > 0));
   }
 
+  // `_onSegment2D`は受け取った値を処理し、後続処理で利用する状態または結果を生成する
   _onSegment2D(segStart, point, segEnd) {
     // 点が線分の軸平行バウンディング内にあるかを
     // 調べる
@@ -1375,16 +1633,19 @@ export default class Space {
       && point[1] >= Math.min(segStart[1], segEnd[1]);
   }
 
+  // `_sub`は受け取った値を処理し、後続処理で利用する状態または結果を生成する
   _sub(vecA, vecB) {
     // 3Dベクトル差 vecA - vecB を返す
     return [vecA[0] - vecB[0], vecA[1] - vecB[1], vecA[2] - vecB[2]];
   }
 
+  // `_dot`は座標または数値を計算し、後続処理で使う結果を返す
   _dot(vecA, vecB) {
     // 3Dベクトルの内積を返す
     return vecA[0] * vecB[0] + vecA[1] * vecB[1] + vecA[2] * vecB[2];
   }
 
+  // `_cross`は座標または数値を計算し、後続処理で使う結果を返す
   _cross(vecA, vecB) {
     // 3Dベクトルの外積を返す
     return [
@@ -1394,11 +1655,13 @@ export default class Space {
     ];
   }
 
+  // `_length`は座標または数値を計算し、後続処理で使う結果を返す
   _length(vec) {
     // ベクトル長を返す
     return Math.sqrt(this._dot(vec, vec));
   }
 
+  // `_getObjectId`は受け取った値を処理し、後続処理で利用する状態または結果を生成する
   _getObjectId(obj) {
     // オブジェクトへ一意IDを遅延付与して返す
     const key = "__webgCollisionId";
@@ -1408,6 +1671,7 @@ export default class Space {
     return obj[key];
   }
 
+  // `_makeCollisionKey`は衝突状態を評価し、位置、速度、接触情報を更新する
   _makeCollisionKey(shapeA, shapeB) {
     // Shapeペアを順序非依存な文字列キーへ正規化する
     const idA = this._getObjectId(shapeA);

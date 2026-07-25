@@ -1,0 +1,159 @@
+<!doctype html>
+<!-- webg/book/examples/29_01.html 2026/06/27 -->
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>29_01 標準WebgAppの基準scene</title>
+  <link rel="stylesheet" href="./example.css" />
+</head>
+<body>
+  <div class="page">
+    <h1>book/examples</h1>
+    <h2>29_01 標準WebgAppの基準scene</h2>
+    <div class="section-card">
+      <p>床、壁、立方体、球、柱を標準の`Shape`と`Primitive`だけで構成し、`WebgApp`の通常描画で表示します</p>
+      <p class="note">第29章ではこのsceneを変更せず、SSAO、Shadow Map、SSRを追加した結果と比較します。ドラッグまたは矢印キーで視点を回転できます</p>
+    </div>
+
+    <div class="canvas-block">
+      <canvas id="canvas" width="960" height="720"></canvas>
+    </div>
+
+    <pre id="code"></pre>
+
+    <script type="module" id="example-source">
+import WebgApp from "../../webg/WebgApp.js";
+import Primitive from "../../webg/Primitive.js";
+import Shape from "../../webg/Shape.js";
+
+const CANVAS_W = 960;
+const CANVAS_H = 720;
+
+// Primitiveが返すgeometryを標準Shapeへ取り込み、通常のSmoothShaderで描画できる状態へ確定します
+function createPrimitiveShape(gpu, primitiveFactory, material) {
+  const shape = new Shape(gpu);
+  shape.applyPrimitiveAsset(
+    primitiveFactory(shape.getPrimitiveOptions())
+  );
+  shape.endShape();
+  shape.setMaterial("smooth-shader", {
+    has_bone: 0,
+    use_texture: 0,
+    ...material
+  });
+  return shape;
+}
+
+// Shapeをscene graphへ追加し、位置と任意の初期回転をまとめて設定します
+function addShapeNode(app, name, shape, position, attitude = [0, 0, 0]) {
+  const node = app.space.addNode(null, name);
+  node.setPosition(...position);
+  node.setAttitude(...attitude);
+  node.addShape(shape);
+  return node;
+}
+
+// 後のeffect版と同じ比較条件になる床、壁、標準primitiveを構成します
+function createScene(app) {
+  const gpu = app.getGPU();
+  const floor = createPrimitiveShape(
+    gpu,
+    (options) => Primitive.cuboid(28, 0.8, 24, options),
+    { color: [0.34, 0.38, 0.44, 1], ambient: 0.22, specular: 0.30, power: 28 }
+  );
+  const backWall = createPrimitiveShape(
+    gpu,
+    (options) => Primitive.cuboid(28, 11, 0.8, options),
+    { color: [0.48, 0.52, 0.58, 1], ambient: 0.26, specular: 0.18, power: 20 }
+  );
+  const cube = createPrimitiveShape(
+    gpu,
+    (options) => Primitive.cube(4.0, options),
+    { color: [0.94, 0.38, 0.12, 1], ambient: 0.16, specular: 0.58, power: 42 }
+  );
+  const sphere = createPrimitiveShape(
+    gpu,
+    (options) => Primitive.sphere(2.2, 32, 22, options),
+    { color: [0.12, 0.62, 0.88, 1], ambient: 0.16, specular: 0.90, power: 58 }
+  );
+  const pillar = createPrimitiveShape(
+    gpu,
+    (options) => Primitive.cuboid(3.2, 6.0, 3.2, options),
+    { color: [0.22, 0.76, 0.40, 1], ambient: 0.16, specular: 0.48, power: 34 }
+  );
+  const smallCube = createPrimitiveShape(
+    gpu,
+    (options) => Primitive.cube(2.5, options),
+    { color: [0.96, 0.78, 0.20, 1], ambient: 0.18, specular: 0.66, power: 46 }
+  );
+
+  addShapeNode(app, "floor", floor, [0, -3.4, -2]);
+  addShapeNode(app, "back-wall", backWall, [0, 1.7, -13.6]);
+  const movingCube = addShapeNode(app, "orange-cube", cube, [-4.4, -1.0, -4.8], [0, 24, 0]);
+  const movingSphere = addShapeNode(app, "blue-sphere", sphere, [0.4, -0.8, -3.6]);
+  const movingPillar = addShapeNode(app, "green-pillar", pillar, [5.0, 0.0, -7.0], [0, -18, 0]);
+  const movingSmallCube = addShapeNode(app, "yellow-cube", smallCube, [4.4, -2.15, 1.7], [0, 30, 0]);
+  return [movingCube, movingSphere, movingPillar, movingSmallCube];
+}
+
+// WebgAppの標準描画を開始し、scene graphへ登録したShapeを自動描画します
+async function start() {
+  const app = new WebgApp({
+    document,
+    renderMode: "ondemand",
+    layoutMode: "embedded",
+    fixedCanvasSize: {
+      width: CANVAS_W,
+      height: CANVAS_H,
+      useDevicePixelRatio: false
+    },
+    clearColor: [0.045, 0.065, 0.09, 1],
+    viewAngle: 52,
+    projectionFar: 120,
+    camera: {
+      target: [0, -0.7, -4.0],
+      distance: 27,
+      yaw: 24,
+      pitch: -13
+    }
+  });
+  await app.init();
+
+  const orbit = app.createOrbitEyeRig({
+    target: [0, -0.7, -4.0],
+    distance: 27,
+    yaw: 24,
+    pitch: -13,
+    minDistance: 15,
+    maxDistance: 48,
+    wheelZoomStep: 1
+  });
+  const movingNodes = createScene(app);
+
+  app.start({
+    onUpdate: ({ deltaSec }) => {
+      movingNodes[0].rotateY(18 * deltaSec);
+      movingNodes[1].rotateY(-12 * deltaSec);
+      movingNodes[2].rotateY(10 * deltaSec);
+      movingNodes[3].rotateX(15 * deltaSec);
+      movingNodes[3].rotateY(22 * deltaSec);
+    }
+  });
+
+  window.addEventListener("pagehide", () => {
+    app.stop();
+  }, { once: true });
+}
+
+start().catch((error) => {
+  console.error(error);
+});
+    </script>
+    <script>
+      document.getElementById("code").textContent =
+        document.getElementById("example-source").textContent.trim();
+    </script>
+  </div>
+</body>
+</html>

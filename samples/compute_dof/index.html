@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>compute_dof</title>
+  <link rel="icon" href="data:," />
+  <!-- 2026/06/19 -->
+  <style>
+
+:root {
+  color-scheme: light;
+  --bg: #eef3f8;
+  --paper: rgba(255, 255, 255, 0.94);
+  --line: #c8d5e4;
+  --ink: #17324a;
+  --muted: #5c748b;
+  --accent: #1566ab;
+  --accent-soft: #dfeefe;
+  --code-bg: #f3f7fb;
+  --shadow: rgba(29, 52, 79, 0.10);
+}
+* { box-sizing: border-box; }
+html, body {
+  margin: 0;
+  min-height: 100%;
+}
+body {
+  background:
+    radial-gradient(circle at top left, rgba(21, 102, 171, 0.12), transparent 24%),
+    radial-gradient(circle at top right, rgba(255, 191, 118, 0.10), transparent 22%),
+    linear-gradient(180deg, #f8fbfd 0%, var(--bg) 100%);
+  color: var(--ink);
+  font: 16px/1.78 "Avenir Next", "Hiragino Sans", "Yu Gothic", sans-serif;
+}
+.page {
+  width: min(1080px, calc(100% - 28px));
+  margin: 0 auto;
+  padding: 24px 0 56px;
+}
+.hero,
+.doc {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  box-shadow: 0 22px 52px var(--shadow);
+}
+.hero {
+  padding: 22px 24px;
+  margin-bottom: 18px;
+}
+.hero h1 {
+  margin: 0 0 8px;
+  font-size: clamp(2rem, 4vw, 3rem);
+  line-height: 1.08;
+}
+.hero p {
+  margin: 0;
+  color: var(--muted);
+}
+.doc {
+  padding: 28px;
+}
+.doc > :first-child {
+  margin-top: 0;
+}
+h1, h2, h3, h4, h5, h6 {
+  line-height: 1.25;
+  margin: 1.45em 0 0.55em;
+}
+h1 {
+  font-size: 2.2rem;
+}
+h2 {
+  padding-bottom: 0.28em;
+  border-bottom: 1px solid var(--line);
+  font-size: 1.48rem;
+}
+h3 {
+  font-size: 1.14rem;
+}
+p, ul, ol, table, pre, blockquote {
+  margin: 0 0 1em;
+}
+ul, ol {
+  padding-left: 1.4em;
+}
+li + li {
+  margin-top: 0.26em;
+}
+a {
+  color: var(--accent);
+  text-decoration: none;
+}
+a:hover {
+  text-decoration: underline;
+}
+img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  border-radius: 16px;
+  border: 1px solid var(--line);
+  box-shadow: 0 12px 32px rgba(29, 52, 79, 0.08);
+  margin: 1.1em 0 1.4em;
+}
+code {
+  padding: 0.12em 0.38em;
+  border-radius: 0.45em;
+  background: var(--code-bg);
+  border: 1px solid #dbe6f1;
+  font: 0.92em/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+pre {
+  padding: 14px 16px;
+  overflow-x: auto;
+  border-radius: 14px;
+  background: #0f1720;
+  color: #ecf5ff;
+}
+pre code {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #ffffff;
+}
+th, td {
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  text-align: left;
+  vertical-align: top;
+}
+th {
+  background: #f5f9fc;
+}
+hr {
+  border: 0;
+  border-top: 1px solid var(--line);
+  margin: 1.5em 0;
+}
+blockquote {
+  padding: 0.3em 0 0.3em 1em;
+  border-left: 4px solid #c9dbef;
+  color: var(--muted);
+}
+@media (max-width: 720px) {
+  .page {
+    width: min(100% - 18px, 1080px);
+    padding-top: 16px;
+  }
+  .hero,
+  .doc {
+    border-radius: 18px;
+  }
+  .doc {
+    padding: 20px;
+  }
+}
+
+  </style>
+</head>
+<body>
+  <main class="page">
+    <section class="hero">
+      <h1>compute_dof</h1>
+    </section>
+    <article class="doc">
+<h1>compute_dof</h1>
+<p><a href="index.en.html">English</a> | 日本語</p>
+<p><img src="./compute_dof.jpg" alt="compute_dof" /></p>
+<h2>概要</h2>
+<p>DoFは、焦点距離に近い面を鮮明に残し、手前と奥をぼかすことでレンズの被写界深度を表現するポストプロセスです。このサンプルは、<code>ComputeEffectPipeline</code>に統合された<code>ComputeDofPass</code>の画像ピラミッド、geometry coverage、CoC metadata、近景・遠景の合成順を確認します。</p>
+<p>DoFでは、「物体がその画素を覆う割合」と「焦点からどれだけ離れているか」を同じ値にすると、焦点外物体の中心へ鮮明なsceneが残ります。<code>ComputeDofPass</code>はgeometry coverageとCoCを別targetへ保存し、coverageを輪郭合成、CoCをぼかしLevelの選択だけに使います。</p>
+<h2>実行方法</h2>
+<ul><li>実行ファイルは<a href="./compute_dof.html">./compute_dof.html</a>です</li><li>WebGPU対応ブラウザで開き、Help PanelとCommandPaletteを合わせて確認してください</li><li>CommandPaletteはcanvasのダブルタップ、または<code>/</code>キーで開きます</li><li><code>V</code>キーで最終合成、coverage、CoC、画像ピラミッドなどの表示を切り替えます</li></ul>
+<h2>画像ピラミッドとCoC</h2>
+<p>scene colorはlinear HDRの<code>rgba16float</code>で保持し、1/2、1/4、1/8、1/16解像度の低周波画像を順番に作ります。各Levelは一つ前のLevelを13 tap low-pass filterで縮小するため、解像度が下がるほど滑らかで広いぼかしになります。</p>
+<p>CoCは焦点からのview-space距離差をLevel位置へ変換した値です。</p>
+<pre><code class="language-text">stage = clamp(
+  abs(viewDepth - focusDistance) / focusRange * cocScale,
+  0,
+  4
+)</code></pre>
+<p><code>stage</code>が0より大きく1以下なら1/2、1から2なら1/2と1/4、2から3なら1/4と1/8、3から4なら1/8と1/16を補間します。<code>CoC Scale</code>を大きくすると、同じ距離差でも広いLevelへ早く進みます。これは鮮明なsceneを残す混合率ではありません。</p>
+<p><code>Blur Radius</code>は各Levelを作るlow-pass filterのsample間隔を0.25から3.0の範囲で調整します。<code>Blur Radius</code>はLevel自体の空間的な広さ、<code>CoC Scale</code>はどのLevelを選ぶかを決めます。</p>
+<h2>geometry coverageとCoCの分離</h2>
+<p>CoC抽出Passは、近景色とcoverage、遠景色とcoverage、近景・遠景のCoC metadataを3枚のfull-resolution <code>rgba16float</code> targetへ出力します。geometryがある画素ではnearまたはfar targetへ<code>vec4f(scene.rgb, 1.0)</code>を書きます。Alphaは純粋なgeometry coverageであり、CoC stageを掛けません。clear background、合焦帯、反対側のlayerはcoverage 0です。</p>
+<p>CoC metadataは近景stageをR、遠景stageをGへ保存します。色・coverageとCoC metadataにはそれぞれ1/2から1/16までの画像ピラミッドを作ります。縮小後のmetadataは<code>stage * coverage</code>の平均値になるため、輪郭外では<code>moment / coverage</code>として元のstageを復元します。これによりcoverageが薄くなっても、ぼかしLevelがcoverageへ引きずられません。</p>
+<h2>元geometry輪郭の内側と外側</h2>
+<p>焦点外geometryの元輪郭内部では、CoC stageが選んだscene全体の低周波画像が鮮明なscene colorを完全に置き換えます。scene Levelには物体色と周囲色がfilter済みの比率で含まれるため、元輪郭の内側でも不足coverageへ周囲色が入り、元の物体像を鮮明なまま復元しません。</p>
+<p>near・far layerは元輪郭の外側へ物体色を広げるために使います。輪郭外ではpremultiplied色を<code>blurred.rgb / blurred.a</code>で復元し、<code>blurred.a</code>だけを背景または背後layerとの合成率にします。</p>
+<p>一定色の物体なら、輪郭内側のscene低周波画像は次の式です。</p>
+<pre><code class="language-text">objectColor * coverage + surroundingColor * (1 - coverage)</code></pre>
+<p>輪郭外のcoverage合成も同じ式になるため、元geometry輪郭を境に結果が飛びません。元輪郭内部でnear・far layerをcoverage除算すると物体色を復元して鮮明な芯が残るため、その処理は行いません。</p>
+<h2>近景と遠景の合成順</h2>
+<p>遠景blurは焦点面や近景の後ろへ留めます。近景blurは遠景、焦点面、clear backgroundの手前へ重ねます。これにより焦点外の近景も元輪郭を越えて背景側へ広がります。</p>
+<p>clear background自身にはview-space距離もCoCもありません。背景全体を無条件に1/16画像へ置き換えず、nearまたはfarのfiltered coverageが届いた範囲だけを合成します。</p>
+<h2>診断表示</h2>
+<p><code>far coverage</code>と<code>near coverage</code>は各geometry layerのAlphaを白黒表示します。対象geometry内部が白、合焦帯、clear background、反対側layerが黒であれば、coverageへCoCを掛けていないことを確認できます。</p>
+<p><code>CoC metadata</code>は近景を赤、遠景を青で表示し、stage 4を最大輝度とします。<code>CoC Scale</code>を変えるとCoC表示の強度は変化しますが、coverage表示は変わりません。</p>
+<p><code>depth</code>はReverse-Z depth、<code>focus</code>は合焦帯と手前・奥の4段階、<code>half / quarter / eighth / sixteenth</code>はsceneの各低周波Level、<code>composite</code>は最終結果を表示します。</p>
+<h2>計算負荷</h2>
+<p>DoFはfull-resolution targetを4枚、4 Levelの画像ピラミッドを4組使います。1/2から1/16までの総画素数は元画像の<code>85 / 256</code>です。<code>rgba16float</code>を8 bytes/pixelとして、DoF target本体は42.625 bytes/full-resolution pixelです。</p>
+<pre><code class="language-text">4 * 8 bytes
+  + 4 * 8 bytes * 85 / 256
+  = 42.625 bytes / full-resolution pixel</code></pre>
+<p>2560×1440では約149.9 MiB、3840×2160では約337.1 MiBです。WebGPU実装側のrow alignmentやresource管理領域は含みません。</p>
+<p>Compute dispatchは、scene、near、far、CoCの各4 Level、CoC抽出、最終合成の合計18回です。低解像度Levelほど処理画素が少ないため、dispatch数だけからGPU時間を判断することはできません。</p>
+<h2>制限</h2>
+<p>合焦帯を外れたgeometryは、鮮明sceneと1/2画像を混ぜず、最小でも1/2 Levelへ置き換えます。これにより鮮明な芯は残りませんが、合焦帯との境界でぼけ幅が変わって見える場合があります。</p>
+<p>scene全体の低周波画像には異なるdepthの色も含まれるため、強いぼかしでは前後関係を越えた色が混ざることがあります。この方式は円形の玉ボケや完全なdepth-aware occlusionを再現するものではありません。リアルタイム用途で、鮮明な芯を残さず、近景・遠景の輪郭を連続して広げることを優先した構成です。</p>
+    </article>
+  </main>
+</body>
+</html>

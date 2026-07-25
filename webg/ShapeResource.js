@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// ShapeResource.js  2026/04/20
+// ShapeResource.js  2026/07/21
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // ---------------------------------------------
@@ -24,6 +24,14 @@ export default class ShapeResource {
     this.positionArray = [];
     this.normalArray = [];
     this.indicesArray = [];
+    // material slot番号は頂点ではなく三角形へ対応させる
+    // 共有頂点を異なるmaterialの面が利用しても、頂点複製を要求しないためである
+    this.triangleMaterialIndices = [];
+    // 透明三角形の毎frame sortでは生の頂点配列を再走査せず、確定済みlocal重心を使う
+    this.triangleCenters = [];
+    // sort後の動的Index Bufferを組み立てるため、三角形ごとの頂点indexも確定後の型で保持する
+    // releaseCpuObjects()後も透明描画に必要なので、builder用のindicesArrayとは別にする
+    this.triangleVertexIndices = new Uint32Array(0);
     this.polygonLoops = [];
     this.texCoordsArray = [];
     this.altVertices = [];
@@ -35,6 +43,11 @@ export default class ShapeResource {
     this.indexBuffer = null;
     this.indexCount = 0;
     this.indexFormat = "uint16";
+    // materialごとのopaque描画では、元の頂点bufferを共有したままindexだけを切り替える
+    // 配列indexはShape.materialsのslot番号と一致する
+    this.materialIndexBuffers = [];
+    this.materialIndexCounts = [];
+    this.materialIndexFormats = [];
     this.wireIndexBuffer = null;
     this.wireIndexCount = 0;
     this.wireIndexFormat = "uint16";
@@ -104,6 +117,9 @@ export default class ShapeResource {
   // WebGPU は不要 GPUBuffer を destroy() で手放せるので、
   // runtime 差し替え時にブラウザ任せへせず明示的に寿命を切る
   destroyGpuBuffers() {
+    // material index bufferはslot 0が主indexBufferをそのまま参照する場合があるため、
+    // 同じGPUBufferを二重destroyしないよう参照を記録してから破棄する
+    const destroyedBuffers = new Set();
     const bufferFields = [
       "vertexBuffer",
       "vertexBuffer0",
@@ -116,9 +132,19 @@ export default class ShapeResource {
       const buffer = this[field];
       if (buffer && typeof buffer.destroy === "function") {
         buffer.destroy();
+        destroyedBuffers.add(buffer);
       }
       this[field] = null;
     }
+    for (const buffer of this.materialIndexBuffers) {
+      if (buffer && !destroyedBuffers.has(buffer) && typeof buffer.destroy === "function") {
+        buffer.destroy();
+        destroyedBuffers.add(buffer);
+      }
+    }
+    this.materialIndexBuffers = [];
+    this.materialIndexCounts = [];
+    this.materialIndexFormats = [];
     this.indexCount = 0;
     this.wireIndexCount = 0;
   }
@@ -141,6 +167,9 @@ export default class ShapeResource {
     this.releaseCpuObjects();
     this.vertexCount = 0;
     this.primitiveCount = 0;
+    this.triangleMaterialIndices = [];
+    this.triangleCenters = [];
+    this.triangleVertexIndices = new Uint32Array(0);
     this.vertexStride = 8 * Float32Array.BYTES_PER_ELEMENT;
     this.box = {
       minx: 1.0E10, maxx: -1.0E10,

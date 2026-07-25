@@ -1,10 +1,11 @@
 // ---------------------------------------------
-// Phong.js       2026/04/18
+// Phong.js       2026/07/13
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // ---------------------------------------------
 
 import Shader from "../../webg/Shader.js";
+import { CAMERA_REVERSE_Z } from "../../webg/DepthConvention.js";
 import { alignTo } from "../../webg/SkinningConfig.js";
 
 export default class Phong extends Shader {
@@ -48,10 +49,10 @@ export default class Phong extends Shader {
     this.dynamicOffsetGroup0 = true;
     this.cullMode = options.backfaceDebug ? "none" : (options.cullMode ?? "back");
     this.frontFace = options.frontFace ?? "ccw";
-    // 骨オーバーレイなどで depth 比較だけ変えたい用途のため、
-    // 既存既定値は維持したまま constructor option で上書きできるようにする
+    // 同一面へ重ねる補助描画だけは greater-equal を選べるようにし、
+    // 通常描画の既定値は Screen と同じ Camera Reverse-Z に固定する
     this.depthWriteEnabled = options.depthWriteEnabled ?? true;
-    this.depthCompare = options.depthCompare ?? "less";
+    this.depthCompare = options.depthCompare ?? CAMERA_REVERSE_Z.compare;
   }
 
   // WGSL・BindGroupLayout・Pipeline・Uniformを生成する
@@ -281,7 +282,7 @@ fn fsMain(input : FSIn) -> @location(0) vec4f {
         frontFace: this.frontFace
       },
       depthStencil: {
-        format: "depth24plus",
+        format: CAMERA_REVERSE_Z.format,
         depthWriteEnabled: this.depthWriteEnabled,
         depthCompare: this.depthCompare
       }

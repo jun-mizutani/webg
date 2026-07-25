@@ -1,5 +1,5 @@
 // -------------------------------------------------
-// proceduralSampleRuntime.js      2026/04/30
+// proceduralSampleRuntime.js      2026/07/21
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // -------------------------------------------------
@@ -100,6 +100,7 @@ export async function setupProceduralSampleApp(options = {}) {
 
   app.showOverlayPanel(buildHelpPanelOptions({
     id: `${sampleId}HelpOverlay`,
+    collapsed: true,
     lines: helpLines
   }));
 

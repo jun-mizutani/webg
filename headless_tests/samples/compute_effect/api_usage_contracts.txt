@@ -1,0 +1,35 @@
+# sample_compute_effect_api_usage_contracts
+
+## 目的
+
+`samples/compute_effect` が第2版の代表統合sampleとして、旧lit G-buffer、個別projection parameter、eye World Matrix clone、depth付きFullscreen copyへ戻らず、現在の `ComputeEffectPipeline` APIを使用することを確認します。
+
+## 確認内容
+
+WebgAppがhandler contextへ渡す同一camera frameを `renderScene()` と `encode()` の両方へ渡すことを確認します。各Shapeはalbedo color、specular、roughness、metallic、emissiveを明示し、color alphaへ反射率を詰めません。
+
+Tone Mapping後の表示textureは `beginPresentPass()` でdepthなしcanvas passへcopyし、その後WebgAppのFont/HUD用に `clearDepthBuffer()` でcolor load・Camera Reverse-Z depth付きpassを開く順序を検査します。
+
+日本語・英語のREADMEとHTML版が、Deferred Lighting、surface material、同一frame、High Dynamic Range、presentation/HUD境界を説明し、廃止した `litMaterial` を記載しないことも確認します。samples全体の目次説明も第2版の内容へ更新されていることを検査します。
+
+## 予想
+
+旧API名や旧resource作成が残る場合、同じframeが両Pipeline APIへ渡らない場合、材質値が不足する場合、presentationとHUDのpass順序が逆の場合、日英文書が旧lit G-bufferを説明する場合はassertionで停止するはずです。
+
+## 実行方法
+
+```sh
+node headless_tests/samples/compute_effect/headless_probe.js
+```
+
+## 結果
+
+成功時は次を表示します。
+
+```text
+sample_compute_effect_api_usage_contracts: all integrated sample contracts passed
+```
+
+## 解釈
+
+このtestはsample sourceと文書の静的契約を確認します。shader compilation、WebGPU attachment validation、表示された色・影・反射、optional effectの実行はブラウザ実機確認で補います。

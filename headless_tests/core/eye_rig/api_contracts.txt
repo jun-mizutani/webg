@@ -1,0 +1,23 @@
+# eye_rig headless contracts
+
+## 目的
+
+`webg/EyeRig.js` のOrbit、First Person、Followについて、描画結果ではなく座標と姿勢の契約をGPUなしで確認します。実行入口は `node headless_tests/core/eye_rig/headless_probe.js` です。
+
+## 確認内容
+
+Followでは、`basePosition` がtarget位置へ上書きされず、`targetOffset` がtargetNodeのローカル座標としてworld変換されることを確認します。初回にtargetを正確に向き、target移動後はresponseと最大角速度に従って追跡姿勢が収束することも内積で確認します。
+
+First Personでは、pointerの水平dragが `bodyYaw` を変えず、`lookYaw` だけを変更することを確認します。また、`bodyYaw` が0度、45度、90度、180度、-90度の場合について、Wの前進がbodyのlocal `-Z`、Dの右移動がbodyのlocal `+X`を姿勢行列で回転した方向と一致することを確認します。
+
+Orbitでは、回転した親の下でPANしたとき、画面上のworld移動量がbase親のローカル座標へ変換され、有限の `orbit.target` として反映されることを確認します。
+
+Followの初期姿勢で追跡方向と上方向が平行な場合は、rollを一意に決められないため例外になることを確認します。直前姿勢が存在しない初期状態を暗黙の軸で補正しない契約です。
+
+## 期待結果
+
+すべての契約を満たすと、標準出力へ次の1行を表示します。
+
+```text
+PASS EyeRig headless contracts
+```

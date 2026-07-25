@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// unittest/destroy_lifecycle/main.js  2026/04/20
+// unittest/destroy_lifecycle/main.js  2026/07/25
 //   destroy_lifecycle unittest
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -29,6 +29,7 @@ const formatBool = (value) => value ? "yes" : "no";
 
 const formatCount = (value) => Number(value ?? 0).toString();
 
+// nullでない要素を現在の入力と状態から求め、呼び出し元へ返す
 const countNonNull = (list) => {
   if (!Array.isArray(list)) {
     return 0;
@@ -42,6 +43,7 @@ const countNonNull = (list) => {
   return count;
 };
 
+// 投影を受け取り、現在の設定と後続処理へ反映する
 const setProjection = (screen, shader, angle = 48) => {
   // 2 レーンを横に並べて見せるため、やや引いた固定視点向けの投影を使う
   const proj = new Matrix();
@@ -50,6 +52,7 @@ const setProjection = (screen, shader, angle = 48) => {
   shader.setProjectionMatrix(proj);
 };
 
+// 材質の形状を生成し、後続処理で利用できる状態にする
 const createMaterialShape = (gpu, primitiveAsset, color, options = {}) => {
   // Primitive 由来 asset を Shape へ流し込み、
   // destroy 確認に必要な shared resource を必ず GPU 上へ確定させる
@@ -67,6 +70,7 @@ const createMaterialShape = (gpu, primitiveAsset, color, options = {}) => {
   return shape;
 };
 
+// 基本形状から作る実行状態を生成し、後続処理で利用できる状態にする
 const createRuntimeFromPrimitive = (gpu, color) => {
   // runtime.destroy() を確認するには、ModelBuilder 経路を通した build 結果が必要になる
   // Primitive.cuboid() は ModelAsset を返すため、この unittest では最小の runtime source として扱う
@@ -89,6 +93,7 @@ const createRuntimeFromPrimitive = (gpu, color) => {
   return runtime;
 };
 
+// 複製したルートノードを対象へ追加し、後続処理から参照できるようにする
 const attachInstantiatedRoots = (runtime, instantiated, mountNode) => {
   // instantiate() が作る root node を mount node 配下へ集めておくと、
   // destroy 前後のレーン位置を固定しやすい
@@ -101,6 +106,7 @@ const attachInstantiatedRoots = (runtime, instantiated, mountNode) => {
   }
 };
 
+// 床の形状を生成し、後続処理で利用できる状態にする
 const createFloorShape = (gpu) => {
   // レーン位置の比較がしやすいよう、薄い床を置いて消え方を見やすくする
   return createMaterialShape(
@@ -118,6 +124,7 @@ const createFloorShape = (gpu) => {
   );
 };
 
+// `axis`の`marker`の形状を生成し、後続処理で利用できる状態にする
 const createAxisMarkerShape = (gpu, color) => {
   // destroy の対象ではない固定 marker を置き、
   // 「消えたのは対象 shape だけか」を見分けやすくする
@@ -133,6 +140,7 @@ const createAxisMarkerShape = (gpu, color) => {
   );
 };
 
+// 自動処理の`checks`の実行段階で、必要な処理を決められた順序で進める
 const runAutoChecks = (gpu) => {
   // 自動確認の結果は visual test の status 上でも読めるように文字列で返す
   const lines = [];
@@ -143,6 +151,7 @@ const runAutoChecks = (gpu) => {
     lines.push(line);
   };
 
+  // このインスタンスを検証し、後続処理が扱える共通形式へ整える
   const check = (label, condition, detail = "") => {
     if (condition) {
       passCount += 1;
@@ -204,6 +213,7 @@ const runAutoChecks = (gpu) => {
   };
 };
 
+// 形状の`lane`を生成し、後続処理で利用できる状態にする
 const createShapeLane = (space, gpu) => {
   // 左レーンは Shape / ShapeResource の destroy を見る専用の場にする
   const mount = space.addNode(null, "shapeLaneMount");
@@ -242,6 +252,7 @@ const createShapeLane = (space, gpu) => {
   };
 };
 
+// 実行状態の`lane`を生成し、後続処理で利用できる状態にする
 const createRuntimeLane = (space, gpu) => {
   // 右レーンは runtime / instantiation destroy の確認に集中する
   const mount = space.addNode(null, "runtimeLaneMount");
@@ -258,6 +269,7 @@ const createRuntimeLane = (space, gpu) => {
   };
 };
 
+// このインスタンスの初期化段階で、必要な状態と資源を準備して処理を開始する
 const start = async ({ screen, gpu, setStatus, setViewportLayout, startLoop, document }) => {
   const shader = new SmoothShader(gpu);
   await shader.init();
@@ -293,6 +305,7 @@ const start = async ({ screen, gpu, setStatus, setViewportLayout, startLoop, doc
     lastAction: "idle"
   };
 
+  // 形状の`lane`を現在の入力と実行状態に合わせて更新する
   const rebuildShapeLane = () => {
     // destroy 後も同じ手順で何度でも確認できるよう、
     // レーンごと作り直せる入口を用意する
@@ -305,6 +318,7 @@ const start = async ({ screen, gpu, setStatus, setViewportLayout, startLoop, doc
     state.lastAction = "rebuild-shape-lane";
   };
 
+  // 実行状態の`lane`を現在の入力と実行状態に合わせて更新する
   const rebuildRuntimeLane = () => {
     // runtime.destroy() 後は再利用できないので、新しい runtime source を作り直す
     if (state.runtimeLane?.runtime && !state.runtimeLane.runtime.isDestroyed) {
@@ -319,6 +333,7 @@ const start = async ({ screen, gpu, setStatus, setViewportLayout, startLoop, doc
     state.lastAction = "rebuild-runtime-lane";
   };
 
+  // 形状の`clone`が保持する資源と参照を安全に解放する
   const destroyShapeClone = () => {
     if (state.shapeLane?.cloneShape && !state.shapeLane.cloneShape.isDestroyed) {
       state.shapeLane.cloneShape.destroy();
@@ -326,6 +341,7 @@ const start = async ({ screen, gpu, setStatus, setViewportLayout, startLoop, doc
     }
   };
 
+  // 形状の生成元と共有資源をまとめて破棄する
   const destroyShapeSourceAndResource = () => {
     if (state.shapeLane?.sourceShape && !state.shapeLane.sourceShape.isDestroyed) {
       state.shapeLane.sourceShape.destroy({
@@ -335,6 +351,7 @@ const start = async ({ screen, gpu, setStatus, setViewportLayout, startLoop, doc
     }
   };
 
+  // `instantiation`の`only`が保持する資源と参照を安全に解放する
   const destroyInstantiationOnly = () => {
     if (state.runtimeLane?.instantiated && !state.runtimeLane.instantiated.isDestroyed) {
       state.runtimeLane.instantiated.destroy();
@@ -342,6 +359,7 @@ const start = async ({ screen, gpu, setStatus, setViewportLayout, startLoop, doc
     }
   };
 
+  // `recreateInstantiation`は元データから独立して利用できる複製または実行状態を作る
   const recreateInstantiation = () => {
     // runtime が生きている間だけ、scene 上の実体を作り直せる
     const lane = state.runtimeLane;
@@ -356,6 +374,7 @@ const start = async ({ screen, gpu, setStatus, setViewportLayout, startLoop, doc
     state.lastAction = "instantiated-recreate";
   };
 
+  // 実行状態と共有資源をまとめて破棄する
   const destroyRuntimeAndResource = () => {
     if (state.runtimeLane?.runtime && !state.runtimeLane.runtime.isDestroyed) {
       state.runtimeLane.runtime.destroy();

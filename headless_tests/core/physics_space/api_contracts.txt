@@ -1,0 +1,42 @@
+サンプル: physics_space_contracts
+
+概要
+- `PhysicsSpace` が、固定タイムステップ、gravity、角速度積分、body 登録、各 collider の接触解決、反発、摩擦、sleep、trigger、query を処理できるか確認する headless test です。
+- `PhysicsNode` 単体 API の規約は `headless_tests/core/physics_node` が担当し、このテストは複数 body の関係を解く world 側の規約を確認します。
+- 見た目の落下シーンは `unittest/physics_node_fall` が担当し、このテストは PASS / FAIL による切り分けを優先します。
+
+このサンプルで使うwebg機能
+- `PhysicsSpace`: gravity、fixed timestep、angular velocity / torque の姿勢反映、solver、contact 記録、listener、trigger、raycast、raycastAll、queryAabb、overlapSphere、反発、摩擦、sleep 判定
+- `PhysicsNode`: dynamic / static body、box / plane / sphere / capsule collider、物理材質、sleep 状態
+- `Space.addPhysicsNode()`: world へ登録する body を scene graph 上に作る入口
+
+確認ポイント
+- `PhysicsSpace` の constructor option と getter / setter が整合することを確認します。
+- sleep step / angular threshold の getter / setter と、連続低速 contact による sleep 安定化を確認します。
+- sleeping dynamic body が active body との contact で wake することを確認します。
+- `addBody()` と `removeBody()` が所属 world 参照と body 一覧を整合させることを確認します。
+- plane floor と box の最小シーンで、重力落下後に box が床上面で sleep へ入ることを確認します。
+- 同質量 2 体の head-on collision で、反発係数に応じて速度が反転することを確認します。
+- AABB broadphase が、離れた有限 collider を narrowphase 前に除外し、重なった有限 collider は narrowphase へ渡すことを確認します。
+- `sweepAabb` broadphase と `bruteForce` broadphase が同じ finite contact pair を返すことを確認します。
+- 回転した `BoxCollider` が外接 AABB、raycast normal、queryAabb、overlapSphere、sphere / box / capsule contact の dispatch に乗ることを確認します。
+- collision layer / mask が contact 候補を制御し、query 系の `layerMask` が対象 body を絞ることを確認します。
+- query 系の `triggerOnly` が trigger body だけを対象にすることを確認します。
+- `angularVelocity` と `torque` が `PhysicsNode` の姿勢へ反映され、`fixedRotation` が角更新を止めることを確認します。
+- 中心から外れた contact が contact point と inertia を使って角速度を生み、`fixedRotation` では角 impulse が入らないことを確認します。
+- plane contact で摩擦により接線方向速度が減ることを確認します。
+- `SphereCollider` が broadphase / narrowphase / query / raycast の既存 dispatch に参加できることを確認します。
+- `CapsuleCollider` が broadphase / narrowphase / query / raycast の既存 dispatch に参加できることを確認します。
+- `getLastContacts()` が直近解決 contact の body、normal、penetration を返すことを確認します。
+- `raycast()` と `raycastAll()` が plane / box / sphere / capsule collider に対して hit を返し、`includeTriggers`、`filter`、`maxDistance`、距離順整列を扱えることを確認します。
+- `queryAabb()` が AABB 対応 collider に対する重なり問い合わせを返し、`includeTriggers`、`filter`、境界一致を扱えることを確認します。
+- `overlapSphere()` が collider に対する球範囲問い合わせを返し、`includeTriggers`、`filter`、球中心が collider 内にあるケースを扱えることを確認します。
+
+実行方法
+- `node --experimental-default-type=module headless_tests/core/physics_space/headless_probe.js` を実行します。
+- 終了コードと標準出力で PASS / FAIL を確認します。
+- 現行実装と一致しない2件は XFAIL として表示し、`headless_tests/COVERAGE.md` で管理します。
+
+実装確認の見方
+- `webg/PhysicsSpace.js` の挙動を見るときは、まずこのテストで固定タイムステップ、contact、query、raycast の規約を確認できます。
+- collider 種別や query API の関係を見る場合も、ここで最小の自動確認を押さえてから、見た目を確認するサンプルへ進むと切り分けやすくなります。

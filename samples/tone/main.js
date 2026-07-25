@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// samples/tone/main.js  2026/05/14
+// samples/tone/main.js  2026/07/25
 //   ToneSynth sample
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -287,6 +287,7 @@ const bindHoldButton = (button, modeFactory) => {
       console.error(err);
     }
   });
+  // このインスタンスが保持する資源と参照を安全に解放する
   const release = (event) => {
     if (button.hasPointerCapture?.(event.pointerId)) {
       button.releasePointerCapture(event.pointerId);

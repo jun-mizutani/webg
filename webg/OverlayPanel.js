@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// OverlayPanel.js 2026/04/30
+// OverlayPanel.js 2026/07/25
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // ---------------------------------------------
@@ -20,6 +20,7 @@ const ANCHORS = [
   "bottom-right"
 ];
 
+// サイズの設定値を読み込み、検証済みのデータとして後続処理へ渡す
 const readSizeOption = (value, name, fallback = undefined) => {
   if (value === undefined) {
     return fallback;
@@ -33,6 +34,7 @@ const readSizeOption = (value, name, fallback = undefined) => {
   return `${util.readFiniteNumber(value, name)}px`;
 };
 
+// `text`の行を検証し、後続処理が扱える共通形式へ整える
 const normalizeTextLines = (options = {}, path = "OverlayPanel options") => {
   if (options.text !== undefined && options.lines !== undefined) {
     throw new Error(`${path} must not specify both text and lines`);
@@ -50,6 +52,7 @@ const normalizeTextLines = (options = {}, path = "OverlayPanel options") => {
   return util.readOptionalString(options.text, `${path}.text`, "", { allowEmpty: true });
 };
 
+// `text`の入力を現在の入力と状態から求め、呼び出し元へ返す
 const resolveTextInput = (safeOptions = {}, base = {}) => {
   // lines で更新する場合は、以前の text を持ち越すと
   // 「text と lines の同時指定」になってしまうため、明示的に切り替える
@@ -71,6 +74,7 @@ const resolveTextInput = (safeOptions = {}, base = {}) => {
   };
 };
 
+// 操作の`items`を検証し、後続処理が扱える共通形式へ整える
 const normalizeActionItems = (items = undefined, name = "OverlayPanel items") => {
   if (items === undefined) {
     return [];
@@ -138,6 +142,7 @@ export default class OverlayPanel {
     this.applyOptions(safeOptions);
   }
 
+  // `ensureStyle`は必要な画面要素を準備し、表示状態を更新する
   ensureStyle() {
     if (!this.doc || this.doc.getElementById(PANEL_STYLE_ID)) {
       return;
@@ -222,6 +227,7 @@ export default class OverlayPanel {
     this.doc.head.appendChild(style);
   }
 
+  // `theme`を受け取り、現在の設定と後続処理へ反映する
   setTheme(theme = {}) {
     this.theme = {
       ...DEFAULT_UI_THEME.uiPanel,
@@ -242,6 +248,7 @@ export default class OverlayPanel {
     return this;
   }
 
+  // 設定値を検証し、後続処理が扱える共通形式へ整える
   normalizeOptions(options = {}, previous = null) {
     const path = "OverlayPanel options";
     const safeOptions = util.readPlainObject(options, path);
@@ -283,6 +290,19 @@ export default class OverlayPanel {
       borderRadius: util.readOptionalString(safeOptions.borderRadius, `${path}.borderRadius`, base.borderRadius ?? "", { allowEmpty: true }),
       boxShadow: util.readOptionalString(safeOptions.boxShadow, `${path}.boxShadow`, base.boxShadow ?? "", { allowEmpty: true }),
       padding: readSizeOption(safeOptions.padding, `${path}.padding`, base.padding),
+      bodyBackground: util.readOptionalString(
+        safeOptions.bodyBackground,
+        `${path}.bodyBackground`,
+        base.bodyBackground ?? "",
+        { allowEmpty: true }
+      ),
+      bodyBorderRadius: util.readOptionalString(
+        safeOptions.bodyBorderRadius,
+        `${path}.bodyBorderRadius`,
+        base.bodyBorderRadius ?? "",
+        { allowEmpty: true }
+      ),
+      bodyPadding: readSizeOption(safeOptions.bodyPadding, `${path}.bodyPadding`, base.bodyPadding),
       positioningMode: util.readOptionalPositioningMode(
         safeOptions.positioningMode,
         `${path}.positioningMode`,
@@ -377,6 +397,7 @@ export default class OverlayPanel {
     return normalized;
   }
 
+  // `ensureDom`は必要な画面要素を準備し、表示状態を更新する
   ensureDom() {
     if (this.root) {
       return;
@@ -416,6 +437,7 @@ export default class OverlayPanel {
     this.root.addEventListener("keydown", (event) => this.handleKeyDown(event));
   }
 
+  // 設定値を対象の状態または描画設定へ反映する
   applyOptions(options = {}) {
     const previousVisible = this.options?.visible ?? false;
     this.options = this.normalizeOptions(options, this.options);
@@ -428,6 +450,7 @@ export default class OverlayPanel {
     return this;
   }
 
+  // `mount`は必要な画面要素を準備し、表示状態を更新する
   mount() {
     const container = this.options.containerElement ?? this.doc?.body ?? null;
     if (!container) {
@@ -439,6 +462,7 @@ export default class OverlayPanel {
     }
   }
 
+  // このインスタンスの描画段階で、必要な描画命令と表示内容を記録する
   render() {
     this.root.hidden = this.options.visible !== true;
     this.root.classList.toggle("is-modal", this.options.modal === true);
@@ -464,9 +488,9 @@ export default class OverlayPanel {
     this.panel.style.color = this.options.color || this.theme.textMain;
     this.bodyEl.style.whiteSpace = this.options.whiteSpace;
     this.bodyEl.style.font = this.options.font || (this.options.format === "pre" ? "14px/1.5 monospace" : "");
-    this.bodyEl.style.background = this.theme.textBlockBackground;
-    this.bodyEl.style.borderRadius = this.theme.fieldRadius;
-    this.bodyEl.style.padding = "10px 12px";
+    this.bodyEl.style.background = this.options.bodyBackground || this.theme.textBlockBackground;
+    this.bodyEl.style.borderRadius = this.options.bodyBorderRadius || this.theme.fieldRadius;
+    this.bodyEl.style.padding = this.options.bodyPadding || "10px 12px";
     this.titleEl.textContent = this.options.title ?? "";
     this.titleEl.style.color = this.theme.accentText;
     this.titleEl.style.fontSize = "16px";
@@ -481,6 +505,7 @@ export default class OverlayPanel {
     this.syncLayout();
   }
 
+  // `header`の`buttons`の描画段階で、必要な描画命令と表示内容を記録する
   renderHeaderButtons() {
     this.headerButtons.textContent = "";
     this.closeButton = null;
@@ -510,6 +535,7 @@ export default class OverlayPanel {
     this.header.style.display = (this.options.title || this.headerButtons.childElementCount > 0) ? "" : "none";
   }
 
+  // 操作の`buttons`の描画段階で、必要な描画命令と表示内容を記録する
   renderActionButtons(container, items, prefix, hidden) {
     container.textContent = "";
     container.classList.toggle("is-hidden", hidden || items.length <= 0);
@@ -525,6 +551,7 @@ export default class OverlayPanel {
     });
   }
 
+  // ボタンを生成し、後続処理で利用できる状態にする
   createButton(label, kind, key, onClick) {
     const button = this.doc.createElement("button");
     button.type = "button";
@@ -544,6 +571,7 @@ export default class OverlayPanel {
     return button;
   }
 
+  // キーの`down`を受け取った段階で、対応する状態更新と処理を実行する
   handleKeyDown(event) {
     if (this.options.closeOnEsc && event.key === "Escape" && this.options.visible === true) {
       event.preventDefault();
@@ -559,6 +587,7 @@ export default class OverlayPanel {
     }
   }
 
+  // 配置を現在の入力と実行状態に合わせて更新する
   syncLayout() {
     if (!this.root || !this.options) {
       return;
@@ -655,6 +684,7 @@ export default class OverlayPanel {
     }
   }
 
+  // `visible`を受け取り、現在の設定と後続処理へ反映する
   setVisible(visible = true) {
     const nextVisible = visible === true;
     const previousVisible = this.options.visible === true;
@@ -670,17 +700,20 @@ export default class OverlayPanel {
     return nextVisible;
   }
 
+  // `show`は必要な画面要素を準備し、表示状態を更新する
   show() {
     this.setVisible(true);
     this.root?.focus?.();
     return this;
   }
 
+  // `hide`は必要な画面要素を準備し、表示状態を更新する
   hide() {
     this.setVisible(false);
     return this;
   }
 
+  // `collapsed`を受け取り、現在の設定と後続処理へ反映する
   setCollapsed(collapsed = false) {
     if (!this.options.collapsible) {
       return false;
@@ -694,6 +727,7 @@ export default class OverlayPanel {
     return this.options.collapsed;
   }
 
+  // このインスタンスを現在の入力と実行状態に合わせて更新する
   update(patch = {}) {
     return this.applyOptions({
       ...this.options,
@@ -701,11 +735,13 @@ export default class OverlayPanel {
     });
   }
 
+  // このインスタンスを対象から切り離し、関連する参照を整理する
   remove() {
     this.root?.remove();
     return true;
   }
 
+  // `visible`は入力条件や交差状態を比較し、判定結果を返す
   get visible() {
     if (this.options?.collapsible === true) {
       return this.options?.collapsed !== true;
@@ -717,6 +753,7 @@ export default class OverlayPanel {
     return this.options?.collapsed === true;
   }
 
+  // 状態を現在の入力と状態から求め、呼び出し元へ返す
   getState() {
     return {
       id: this.options.id,

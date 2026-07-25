@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// EyeRig.js      2026/04/28
+// EyeRig.js      2026/07/25
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // ---------------------------------------------
@@ -8,13 +8,14 @@
 // - `base -> rod -> eye` の3段構成だけを扱う視点 helper
 // - `type` により orbit / first-person / follow を切り替える
 // - `setAngles()` は base/rod 側の向き、`setLookAngles()` は eye の独立視線を表す
-// - pointer 入力は mouse / pen / touch を同じ入口で扱い、
-//   orbit / follow では 1本指回転、2本指平行移動、pinch zoom を使えるようにする
+// - pointer 入力は mouse / pen / touch を同じ入口で扱う
+// - Follow は camera の基準位置を target から独立させ、eye の姿勢だけで滑らかに注視追跡する
 import Matrix from "./Matrix.js";
 import Quat from "./Quat.js";
 import util from "./util.js";
 
 export default class EyeRig {
+  // インスタンス生成時に、受け取った設定を検証して初期状態を準備する
   constructor(baseNode, rodNode, eyeNode, options = {}) {
     this.baseNode = baseNode ?? null;
     this.rodNode = rodNode ?? null;
@@ -361,7 +362,16 @@ export default class EyeRig {
         "follow.targetOffset",
         [0.0, 0.0, 0.0]
       ),
-      currentTarget: [0.0, 0.0, 0.0],
+      basePosition: util.readVec3Option(
+        [{ value: options.follow?.basePosition, label: "options.follow.basePosition" }],
+        "follow.basePosition",
+        [0.0, 0.0, 0.0]
+      ),
+      baseAttitude: util.readVec3Option(
+        [{ value: options.follow?.baseAttitude, label: "options.follow.baseAttitude" }],
+        "follow.baseAttitude",
+        [0.0, 0.0, 0.0]
+      ),
       yaw: util.readFiniteOption(
         [
           { value: options.follow?.yaw, label: "options.follow.yaw" },
@@ -442,42 +452,29 @@ export default class EyeRig {
         0.28,
         { min: 0.0 }
       ),
-      dragPanSpeed: util.readFiniteOption(
-        [{ value: options.follow?.dragPanSpeed, label: "options.follow.dragPanSpeed" }],
-        "follow.dragPanSpeed",
-        1.8,
-        { min: 0.0 }
-      ),
       pinchZoomSpeed: util.readFiniteOption(
         [{ value: options.follow?.pinchZoomSpeed, label: "options.follow.pinchZoomSpeed" }],
         "follow.pinchZoomSpeed",
         2.0,
         { min: 0.0 }
       ),
-      followLerp: util.readFiniteOption(
-        [{ value: options.follow?.followLerp, label: "options.follow.followLerp" }],
-        "follow.followLerp",
-        1.0,
+      response: util.readFiniteOption(
+        [{ value: options.follow?.response, label: "options.follow.response" }],
+        "follow.response",
+        6.0,
         { min: 0.0 }
       ),
-      panModifierKey: util.readKeyOption(
-        [{ value: options.follow?.panModifierKey, label: "options.follow.panModifierKey" }],
-        "follow.panModifierKey",
-        "shift"
+      maxAngularSpeed: util.readFiniteOption(
+        [{ value: options.follow?.maxAngularSpeed, label: "options.follow.maxAngularSpeed" }],
+        "follow.maxAngularSpeed",
+        240.0,
+        { minExclusive: 0.0 }
       ),
-      inheritTargetYaw: util.readBooleanOption(
-        [
-          { value: options.follow?.inheritTargetYaw, label: "options.follow.inheritTargetYaw" }
-        ],
-        "follow.inheritTargetYaw",
-        false
-      ),
-      targetYawOffset: util.readFiniteOption(
-        [
-          { value: options.follow?.targetYawOffset, label: "options.follow.targetYawOffset" }
-        ],
-        "follow.targetYawOffset",
-        0.0
+      upReference: util.readEnumOption(
+        [{ value: options.follow?.upReference, label: "options.follow.upReference" }],
+        "follow.upReference",
+        "base",
+        ["base", "rod", "world"]
       ),
       pitchMin: util.readFiniteOption(
         [{ value: options.follow?.pitchMin, label: "options.follow.pitchMin" }],
@@ -522,6 +519,21 @@ export default class EyeRig {
         )
       }
     };
+    this.follow.trackingQuat = this.eyeNode?.getQuat?.() ?? new Quat();
+    this.follow.lookQuat = this.createQuatFromEuler(
+      this.follow.lookYaw,
+      this.follow.lookPitch,
+      this.follow.lookRoll
+    );
+    this.follow.initialized = false;
+    this.follow.lastAngularErrorDeg = 0.0;
+    this.follow.lastViewDot = 0.0;
+    if (
+      this.follow.targetNode !== null
+      && typeof this.follow.targetNode?.getWorldMatrix !== "function"
+    ) {
+      throw new Error("EyeRig follow targetNode must provide getWorldMatrix()");
+    }
 
     if (this.orbit.minDistance > this.orbit.maxDistance) {
       throw new Error("EyeRig orbit.minDistance must be <= orbit.maxDistance");
@@ -557,10 +569,10 @@ export default class EyeRig {
     this._boundWheel = (ev) => this.onWheel(ev);
     this._boundAuxClick = (ev) => this.onAuxClick(ev);
     this._boundBlur = () => this.cancelDrag();
-    this.syncTarget(true);
     this.apply(true);
   }
 
+  // オイラー角から四元数を生成する
   createQuatFromEuler(yaw, pitch, roll) {
     const quat = new Quat();
     quat.eulerToQuat(yaw, pitch, roll);
@@ -568,6 +580,7 @@ export default class EyeRig {
     return quat;
   }
 
+  // 回転軸と角度から四元数を生成する
   createQuatFromAxisAngle(axis, degree) {
     const unit = this.normalizeVector(axis);
     const quat = new Quat();
@@ -581,18 +594,21 @@ export default class EyeRig {
     return quat;
   }
 
+  // `eulerFromQuat`は座標または数値を計算し、後続処理で使う結果を返す
   eulerFromQuat(quat) {
     const matrix = new Matrix();
     matrix.setByQuat(quat);
     return matrix.matToEuler();
   }
 
+  // 周回視点の`quaternion`の状態の初期化段階で、必要な状態と資源を準備して処理を開始する
   setupOrbitQuaternionState() {
     const state = this.orbit;
     state._syncingEulerMirror = false;
     state._attitudeDirty = false;
     state._lookDirty = false;
 
+    // `defineTrackedAngle`は受け取った値を処理し、後続処理で利用する状態または結果を生成する
     const defineTrackedAngle = (key, dirtyKey) => {
       const hiddenKey = `_${key}`;
       state[hiddenKey] = util.readFiniteNumber(state[key], `orbit.${key}`);
@@ -622,6 +638,7 @@ export default class EyeRig {
     state.lookQuat = this.createQuatFromEuler(state.lookYaw, state.lookPitch, state.lookRoll);
   }
 
+  // オイラー角から周回視点の四元数を更新する
   syncOrbitQuatsFromEuler() {
     const state = this.orbit;
     if (state._attitudeDirty) {
@@ -634,6 +651,7 @@ export default class EyeRig {
     }
   }
 
+  // 四元数から周回視点のオイラー角を更新する
   syncOrbitEulerFromQuats() {
     const state = this.orbit;
     const [yaw, pitch, roll] = this.eulerFromQuat(state.attitudeQuat);
@@ -650,6 +668,7 @@ export default class EyeRig {
     state._lookDirty = false;
   }
 
+  // 表示座標系を基準に周回視点の回転を適用する
   applyOrbitRotationByViewAxes(yawDegree, pitchDegree, rollDegree = 0.0) {
     const state = this.orbit;
     this.syncOrbitQuatsFromEuler();
@@ -660,20 +679,26 @@ export default class EyeRig {
     ) {
       return false;
     }
-    const eyeMatrix = this.eyeNode?.getWorldMatrix?.() ?? null;
-    if (!eyeMatrix) {
+    const eyeWorld = this.eyeNode?.getWorldMatrix?.() ?? null;
+    if (!eyeWorld) {
       return false;
     }
-    const upAxis = this.normalizeVector(eyeMatrix.mul3x3Vector([0.0, 1.0, 0.0]));
-    const rightAxis = this.normalizeVector(eyeMatrix.mul3x3Vector([1.0, 0.0, 0.0]));
-    const forwardAxis = this.normalizeVector(eyeMatrix.mul3x3Vector([0.0, 0.0, -1.0]));
-    if (
-      Math.hypot(upAxis[0], upAxis[1], upAxis[2]) <= 1.0e-8
-      || Math.hypot(rightAxis[0], rightAxis[1], rightAxis[2]) <= 1.0e-8
-      || Math.hypot(forwardAxis[0], forwardAxis[1], forwardAxis[2]) <= 1.0e-8
-    ) {
-      return false;
-    }
+    const toBaseLocal = (axis, label) => this.normalizeStrict(
+      this.worldDirectionToNodeLocal(this.baseNode, axis, label),
+      label
+    );
+    const upAxis = toBaseLocal(
+      eyeWorld.mul3x3Vector([0.0, 1.0, 0.0]),
+      "orbit view up"
+    );
+    const rightAxis = toBaseLocal(
+      eyeWorld.mul3x3Vector([1.0, 0.0, 0.0]),
+      "orbit view right"
+    );
+    const forwardAxis = toBaseLocal(
+      eyeWorld.mul3x3Vector([0.0, 0.0, -1.0]),
+      "orbit view forward"
+    );
     const next = state.attitudeQuat.clone();
     if (Math.abs(yawDegree) > 1.0e-9) {
       next.lmulQuat(this.createQuatFromAxisAngle(upAxis, yawDegree));
@@ -690,6 +715,7 @@ export default class EyeRig {
     return true;
   }
 
+  // `fromNodes`は元データから独立して利用できる複製または実行状態を作る
   static fromNodes(baseNode, eyeNode, options = {}) {
     let rodNode = options.rodNode ?? null;
     if (!rodNode && eyeNode?.getParent) {
@@ -709,6 +735,51 @@ export default class EyeRig {
     return from + (to - from) * t;
   }
 
+  // 3要素vectorの長さを返す
+  // Followの方向vectorと、姿勢を構成する外積軸を同じ基準で検証する
+  vectorLength(vector) {
+    return Math.hypot(vector[0], vector[1], vector[2]);
+  }
+
+  // 3要素vectorを正規化し、方向を決められない入力は例外にする
+  // 単位vectorの代用品を返すとcamera姿勢の不具合が隠れるためfallbackは行わない
+  normalizeStrict(vector, label) {
+    const length = this.vectorLength(vector);
+    if (!Number.isFinite(length) || length <= 1.0e-8) {
+      throw new Error(`EyeRig ${label} has zero length`);
+    }
+    return [vector[0] / length, vector[1] / length, vector[2] / length];
+  }
+
+  // 2つの3要素vectorの外積を返す
+  // Followのright / up / back直交基底を構築するときに使用する
+  cross(a, b) {
+    return [
+      a[1] * b[2] - a[2] * b[1],
+      a[2] * b[0] - a[0] * b[2],
+      a[0] * b[1] - a[1] * b[0]
+    ];
+  }
+
+  // 2つの3要素vectorの内積を返す
+  // 直前right軸の直交投影と、実際の注視方向を数値確認するときに使用する
+  dot(a, b) {
+    return a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+  }
+
+  // world方向vectorを指定Nodeのlocal方向へ変換する
+  // position成分を含めず、逆world行列の3x3部分だけで方向をそろえる
+  worldDirectionToNodeLocal(node, worldDirection, label) {
+    if (!node?.getWorldMatrix) {
+      throw new Error(`EyeRig ${label} requires a node with getWorldMatrix()`);
+    }
+    const inverseWorld = node.getWorldMatrix();
+    if (!inverseWorld.inverse_strict()) {
+      throw new Error(`EyeRig ${label} requires an invertible world matrix`);
+    }
+    return inverseWorld.mul3x3Vector(worldDirection);
+  }
+
   getBaseNode() {
     return this.baseNode;
   }
@@ -725,6 +796,7 @@ export default class EyeRig {
     return this.type;
   }
 
+  // モードの状態を現在の入力と状態から求め、呼び出し元へ返す
   getModeState(type = this.type) {
     if (type === "orbit") return this.orbit;
     if (type === "first-person") return this.firstPerson;
@@ -732,26 +804,33 @@ export default class EyeRig {
     return null;
   }
 
+  // `type`を受け取り、現在の設定と後続処理へ反映する
   setType(type) {
     if (type !== "orbit" && type !== "first-person" && type !== "follow") {
       throw new Error(`Unknown EyeRig type: ${type}`);
     }
     this.type = type;
+    if (type === "follow") {
+      this.resetFollowTracking();
+    }
     this.apply();
     return this;
   }
 
+  // 入力を受け取り、現在の設定と後続処理へ反映する
   setInput(inputController) {
     this.input = inputController;
     return this;
   }
 
+  // 要素を受け取り、現在の設定と後続処理へ反映する
   setElement(element) {
     this.detachPointer();
     this.element = element;
     return this;
   }
 
+  // 対象を受け取り、現在の設定と後続処理へ反映する
   setTarget(x, y, z) {
     this.orbit.target[0] = util.readFiniteNumber(x, "target.x");
     this.orbit.target[1] = util.readFiniteNumber(y, "target.y");
@@ -760,6 +839,7 @@ export default class EyeRig {
     return this;
   }
 
+  // 位置を受け取り、現在の設定と後続処理へ反映する
   setPosition(x, y, z) {
     this.firstPerson.position[0] = util.readFiniteNumber(x, "position.x");
     this.firstPerson.position[1] = util.readFiniteNumber(y, "position.y");
@@ -768,22 +848,26 @@ export default class EyeRig {
     return this;
   }
 
+  // 対象のノードを受け取り、現在の設定と後続処理へ反映する
   setTargetNode(targetNode) {
+    if (targetNode !== null && typeof targetNode?.getWorldMatrix !== "function") {
+      throw new Error("EyeRig follow targetNode must provide getWorldMatrix()");
+    }
     this.follow.targetNode = targetNode;
-    this.syncTarget(true);
-    if (this.type === "follow") this.apply();
+    this.resetFollowTracking();
     return this;
   }
 
+  // 対象の`offset`を受け取り、現在の設定と後続処理へ反映する
   setTargetOffset(x, y, z) {
     this.follow.targetOffset[0] = util.readFiniteNumber(x, "targetOffset.x");
     this.follow.targetOffset[1] = util.readFiniteNumber(y, "targetOffset.y");
     this.follow.targetOffset[2] = util.readFiniteNumber(z, "targetOffset.z");
-    this.syncTarget(true);
-    if (this.type === "follow") this.apply();
+    this.resetFollowTracking();
     return this;
   }
 
+  // 距離を受け取り、現在の設定と後続処理へ反映する
   setDistance(distance) {
     const numeric = util.readFiniteNumber(distance, "distance");
     if (this.type === "follow") {
@@ -849,11 +933,13 @@ export default class EyeRig {
       this.follow.lookYaw = nextYaw;
       this.follow.lookPitch = nextPitch;
       this.follow.lookRoll = nextRoll;
+      this.follow.lookQuat = this.createQuatFromEuler(nextYaw, nextPitch, nextRoll);
     }
     this.apply();
     return this;
   }
 
+  // 表示上の移動量に合わせて周回視点を回転する
   rotateOrbitByViewDelta(yawDegree, pitchDegree) {
     if (this.type !== "orbit") {
       return this;
@@ -867,6 +953,7 @@ export default class EyeRig {
     return this;
   }
 
+  // 表示座標系を基準に周回視点をロール回転する
   rotateOrbitByViewRoll(rollDegree) {
     if (this.type !== "orbit") {
       return this;
@@ -880,12 +967,14 @@ export default class EyeRig {
     return this;
   }
 
+  // 視点の高さを受け取り、現在の設定と後続処理へ反映する
   setEyeHeight(height) {
     this.firstPerson.eyeHeight = util.readFiniteNumber(height, "eyeHeight");
     if (this.type === "first-person") this.apply();
     return this;
   }
 
+  // `rod`の`length`を受け取り、現在の設定と後続処理へ反映する
   setRodLength(length) {
     const numeric = util.readFiniteNumber(length, "rodLength");
     if (this.type === "follow") {
@@ -903,28 +992,122 @@ export default class EyeRig {
     return this;
   }
 
-  syncTarget(force = false, deltaSec = 0.0) {
-    const state = this.follow;
-    if (!state.targetNode?.getWorldPosition) return this;
-    const world = state.targetNode.getWorldPosition();
-    const targetX = world[0] + state.targetOffset[0];
-    const targetY = world[1] + state.targetOffset[1];
-    const targetZ = world[2] + state.targetOffset[2];
-    const t = force ? 1.0 : this.clamp(state.followLerp * Math.max(0.0, deltaSec), 0.0, 1.0);
-    state.currentTarget[0] = this.lerp(state.currentTarget[0], targetX, t);
-    state.currentTarget[1] = this.lerp(state.currentTarget[1], targetY, t);
-    state.currentTarget[2] = this.lerp(state.currentTarget[2], targetZ, t);
-    return this;
-  }
-
-  resolveFollowBaseYaw() {
-    const state = this.follow;
-    if (!state.inheritTargetYaw || !state.targetNode?.getWorldAttitude) {
-      return 0.0;
+  // targetOffsetをtargetNodeのlocal座標としてworld位置へ変換する
+  // targetNodeが回転しても座席や頭部など同じlocal位置を追跡できる
+  getFollowTargetWorldPosition() {
+    const targetNode = this.follow.targetNode;
+    if (!targetNode?.getWorldMatrix) {
+      throw new Error("EyeRig follow requires targetNode");
     }
-    return state.targetNode.getWorldAttitude()[0] + state.targetYawOffset;
+    return targetNode.getWorldMatrix().mulVector(this.follow.targetOffset);
   }
 
+  // upReferenceで選んだworld上方向をrod local座標へ変換する
+  // 目標eye姿勢をrod local quaternionとして設定するため、方向vectorも同じ空間へそろえる
+  getFollowUpInRodLocal(inverseRodWorld) {
+    let upWorld = [0.0, 1.0, 0.0];
+    if (this.follow.upReference === "base") {
+      upWorld = this.baseNode.getWorldMatrix().mul3x3Vector([0.0, 1.0, 0.0]);
+    } else if (this.follow.upReference === "rod") {
+      upWorld = this.rodNode.getWorldMatrix().mul3x3Vector([0.0, 1.0, 0.0]);
+    }
+    return this.normalizeStrict(
+      inverseRodWorld.mul3x3Vector(upWorld),
+      "follow up direction"
+    );
+  }
+
+  // forwardとupから、local -Zが対象を向くeye quaternionを構築する
+  // 追跡方向とupがほぼ平行な継続frameでは、直前right軸を投影してrollの連続性を保つ
+  createFollowTargetQuat(forwardLocal, upLocal) {
+    const forward = this.normalizeStrict(forwardLocal, "follow target direction");
+    const back = [-forward[0], -forward[1], -forward[2]];
+    let right = this.cross(forward, upLocal);
+
+    if (this.vectorLength(right) <= 1.0e-6) {
+      if (!this.follow.initialized) {
+        throw new Error(
+          "EyeRig follow initial target direction is parallel to upReference"
+        );
+      }
+      const previousMatrix = new Matrix();
+      previousMatrix.setByQuat(this.follow.trackingQuat);
+      const previousRight = previousMatrix.mul3x3Vector([1.0, 0.0, 0.0]);
+      const parallel = this.dot(previousRight, forward);
+      right = [
+        previousRight[0] - forward[0] * parallel,
+        previousRight[1] - forward[1] * parallel,
+        previousRight[2] - forward[2] * parallel
+      ];
+    }
+
+    right = this.normalizeStrict(right, "follow right direction");
+    const cameraUp = this.normalizeStrict(
+      this.cross(back, right),
+      "follow camera up direction"
+    );
+    const rotation = new Matrix();
+    rotation.setBulk([
+      right[0], right[1], right[2], 0.0,
+      cameraUp[0], cameraUp[1], cameraUp[2], 0.0,
+      back[0], back[1], back[2], 0.0,
+      0.0, 0.0, 0.0, 1.0
+    ]);
+    const targetQuat = new Quat();
+    targetQuat.matrixToQuat(rotation);
+    return targetQuat;
+  }
+
+  // 現在のrod座標系からtargetを向くeye local quaternionを求める
+  // baseやrodのworld姿勢を逆変換し、eyeへ設定できるlocal姿勢として返す
+  resolveFollowTargetQuat() {
+    const rodWorld = this.rodNode.getWorldMatrix();
+    const inverseRodWorld = rodWorld.clone();
+    if (!inverseRodWorld.inverse_strict()) {
+      throw new Error("EyeRig follow rod world matrix is not invertible");
+    }
+    const targetLocal = inverseRodWorld.mulVector(this.getFollowTargetWorldPosition());
+    const eyeLocal = this.eyeNode.getPosition();
+    const forwardLocal = [
+      targetLocal[0] - eyeLocal[0],
+      targetLocal[1] - eyeLocal[1],
+      targetLocal[2] - eyeLocal[2]
+    ];
+    return this.createFollowTargetQuat(
+      forwardLocal,
+      this.getFollowUpInRodLocal(inverseRodWorld)
+    );
+  }
+
+  // quaternion間の最短回転角をdegreeで返す
+  // response補間と最大角速度制限のうち、厳しい方を選ぶ比率計算に使用する
+  quaternionAngleDeg(a, b) {
+    const absoluteDot = Math.min(1.0, Math.abs(a.dotProduct(b)));
+    return 2.0 * Math.acos(absoluteDot) * 180.0 / Math.PI;
+  }
+
+  // 自動追跡姿勢へ利用者指定のlook角をlocal補正として後置合成する
+  // look角はtarget追跡を止めず、注視方向から意図的に視線をずらす用途に使用する
+  composeFollowEyeQuat() {
+    const composed = this.follow.trackingQuat.clone();
+    composed.mulQuat(this.follow.lookQuat);
+    composed.normalize();
+    return composed;
+  }
+
+  // Followの基準位置、rod角度、eye距離と追跡姿勢を各Nodeへ反映する
+  // target位置はbaseへコピーせず、camera anchorと追跡対象を独立させる
+  applyFollowNodes() {
+    const state = this.follow;
+    this.baseNode.setPosition(...state.basePosition);
+    this.baseNode.setAttitude(...state.baseAttitude);
+    this.rodNode.setPosition(0.0, 0.0, 0.0);
+    this.rodNode.setAttitude(state.yaw, state.pitch, state.roll);
+    this.eyeNode.setPosition(0.0, 0.0, state.distance);
+    this.eyeNode.setQuat(this.composeFollowEyeQuat());
+  }
+
+  // このインスタンスを対象の状態または描画設定へ反映する
   apply(force = false) {
     if (!this.enabled && !force) return this;
     if (!this.baseNode || !this.rodNode || !this.eyeNode) return this;
@@ -952,17 +1135,11 @@ export default class EyeRig {
       return this;
     }
 
-    const state = this.follow;
-    const baseYaw = this.resolveFollowBaseYaw();
-    this.baseNode.setPosition(state.currentTarget[0], state.currentTarget[1], state.currentTarget[2]);
-    this.baseNode.setAttitude(baseYaw, 0.0, 0.0);
-    this.rodNode.setPosition(0.0, 0.0, 0.0);
-    this.rodNode.setAttitude(state.yaw, state.pitch, state.roll);
-    this.eyeNode.setPosition(0.0, 0.0, state.distance);
-    this.eyeNode.setAttitude(state.lookYaw, state.lookPitch, state.lookRoll);
+    this.applyFollowNodes();
     return this;
   }
 
+  // このインスタンスを現在の入力と実行状態に合わせて更新する
   update(deltaSec) {
     util.readFiniteNumber(deltaSec, "deltaSec");
     if (!this.enabled) return this;
@@ -978,6 +1155,7 @@ export default class EyeRig {
     return this;
   }
 
+  // 周回視点を現在の入力と実行状態に合わせて更新する
   updateOrbit(deltaSec) {
     if (!this.input) return;
     const state = this.orbit;
@@ -1045,16 +1223,21 @@ export default class EyeRig {
     if (changed) this.apply();
   }
 
+  // `first`の`person`を現在の入力と実行状態に合わせて更新する
   updateFirstPerson(deltaSec) {
     if (!this.input) return;
     const state = this.firstPerson;
     const dt = Number.isFinite(deltaSec) ? deltaSec : 0.0;
     const speed = state.moveSpeed * (this.input.has(state.keyMap.run) ? state.runMultiplier : 1.0);
+
+    // bodyYaw は base の local Y 軸回転であり、移動方向は独立視線の lookYaw ではなく body の姿勢に従う
+    // camera の前方は local -Z、右方は local +X なので、同じ Y 回転を適用した親 local 成分を使用する
+    // bodyPitch / bodyRoll は移動へ混ぜず、WASD を水平面上の移動として保つ
     const yawRad = state.bodyYaw * Math.PI / 180.0;
     const forwardX = -Math.sin(yawRad);
-    const forwardZ = Math.cos(yawRad);
+    const forwardZ = -Math.cos(yawRad);
     const rightX = Math.cos(yawRad);
-    const rightZ = Math.sin(yawRad);
+    const rightZ = -Math.sin(yawRad);
     let moveX = 0.0;
     let moveY = 0.0;
     let moveZ = 0.0;
@@ -1086,43 +1269,30 @@ export default class EyeRig {
     }
   }
 
+  // `follow`を現在の入力と実行状態に合わせて更新する
   updateFollow(deltaSec) {
     const state = this.follow;
-    const dt = Number.isFinite(deltaSec) ? deltaSec : 0.0;
-    const shiftPan = this.isModifierKeyActive(state.panModifierKey);
+    const dt = util.readFiniteNumber(deltaSec, "deltaSec");
+    if (dt < 0.0) {
+      throw new Error("EyeRig follow deltaSec must be >= 0");
+    }
     let changed = false;
     if (this.input) {
-      if (shiftPan) {
-        let panX = 0.0;
-        let panY = 0.0;
-        if (this.input.has(state.keyMap.left)) panX -= 1.0;
-        if (this.input.has(state.keyMap.right)) panX += 1.0;
-        if (this.input.has(state.keyMap.up)) panY += 1.0;
-        if (this.input.has(state.keyMap.down)) panY -= 1.0;
-        if (panX !== 0.0 || panY !== 0.0) {
-          this.panViewByScreenDelta(
-            panX * state.keyRotateSpeed * dt,
-            panY * state.keyRotateSpeed * dt
-          );
-          changed = true;
-        }
-      } else {
-        if (this.input.has(state.keyMap.left)) {
-          state.yaw -= state.keyRotateSpeed * dt;
-          changed = true;
-        }
-        if (this.input.has(state.keyMap.right)) {
-          state.yaw += state.keyRotateSpeed * dt;
-          changed = true;
-        }
-        if (this.input.has(state.keyMap.up)) {
-          state.pitch = this.clamp(state.pitch + state.keyRotateSpeed * dt, state.pitchMin, state.pitchMax);
-          changed = true;
-        }
-        if (this.input.has(state.keyMap.down)) {
-          state.pitch = this.clamp(state.pitch - state.keyRotateSpeed * dt, state.pitchMin, state.pitchMax);
-          changed = true;
-        }
+      if (this.input.has(state.keyMap.left)) {
+        state.yaw -= state.keyRotateSpeed * dt;
+        changed = true;
+      }
+      if (this.input.has(state.keyMap.right)) {
+        state.yaw += state.keyRotateSpeed * dt;
+        changed = true;
+      }
+      if (this.input.has(state.keyMap.up)) {
+        state.pitch = this.clamp(state.pitch + state.keyRotateSpeed * dt, state.pitchMin, state.pitchMax);
+        changed = true;
+      }
+      if (this.input.has(state.keyMap.down)) {
+        state.pitch = this.clamp(state.pitch - state.keyRotateSpeed * dt, state.pitchMin, state.pitchMax);
+        changed = true;
       }
       if (this.input.has(state.keyMap.zoomIn)) {
         state.distance = this.clamp(state.distance - state.keyZoomSpeed * dt, state.minDistance, state.maxDistance);
@@ -1133,10 +1303,63 @@ export default class EyeRig {
         changed = true;
       }
     }
-    this.syncTarget(false, dt);
-    if (changed || state.targetNode) this.apply();
+
+    this.applyFollowNodes();
+    if (!state.targetNode) {
+      if (changed) this.applyFollowNodes();
+      return;
+    }
+
+    const targetQuat = this.resolveFollowTargetQuat();
+    if (!state.initialized) {
+      state.trackingQuat.copyFrom(targetQuat);
+      state.initialized = true;
+    }
+
+    const angularErrorDeg = this.quaternionAngleDeg(state.trackingQuat, targetQuat);
+    let ratio = 1.0 - Math.exp(-state.response * dt);
+    const maxStepDeg = state.maxAngularSpeed * dt;
+    if (angularErrorDeg > 1.0e-8) {
+      ratio = Math.min(ratio, maxStepDeg / angularErrorDeg);
+    }
+    ratio = this.clamp(ratio, 0.0, 1.0);
+
+    const nextQuat = new Quat();
+    nextQuat.slerp(state.trackingQuat, targetQuat, ratio);
+    state.trackingQuat.copyFrom(nextQuat);
+    state.lastAngularErrorDeg = angularErrorDeg;
+    this.applyFollowNodes();
+    this.updateFollowDiagnostics();
   }
 
+  // eyeのworld前方とtarget方向の内積を計算し、追跡結果を検証できる値として保存する
+  // 1.0に近いほど自動追跡姿勢とtarget方向が一致している
+  updateFollowDiagnostics() {
+    const eyeWorld = this.eyeNode.getWorldPosition();
+    const targetWorld = this.getFollowTargetWorldPosition();
+    const forwardWorld = this.normalizeStrict(
+      this.eyeNode.getWorldMatrix().mul3x3Vector([0.0, 0.0, -1.0]),
+      "eye world forward"
+    );
+    const toTarget = this.normalizeStrict([
+      targetWorld[0] - eyeWorld[0],
+      targetWorld[1] - eyeWorld[1],
+      targetWorld[2] - eyeWorld[2]
+    ], "eye to target");
+    this.follow.lastViewDot = this.dot(forwardWorld, toTarget);
+  }
+
+  // 次のupdateFollow()を初回追跡として扱うため、追跡quaternionと診断値を初期化する
+  // target変更やmode reset後に、対象を向く初期姿勢を再計算するときに使用する
+  resetFollowTracking() {
+    this.follow.trackingQuat = new Quat();
+    this.follow.initialized = false;
+    this.follow.lastAngularErrorDeg = 0.0;
+    this.follow.lastViewDot = 0.0;
+    return this;
+  }
+
+  // ポインターを対象へ追加し、後続処理から参照できるようにする
   attachPointer(element = this.element) {
     this.detachPointer();
     this.element = element;
@@ -1158,6 +1381,7 @@ export default class EyeRig {
     return this;
   }
 
+  // ポインターを対象から切り離し、関連する参照を整理する
   detachPointer() {
     if (!this.element) return this;
     this.element.removeEventListener("pointerdown", this._boundPointerDown);
@@ -1178,6 +1402,7 @@ export default class EyeRig {
     return this;
   }
 
+  // `cancel`の`drag`の条件を判定し、結果を真偽値で返す
   cancelDrag() {
     if (this.element?.releasePointerCapture) {
       for (const pointerId of this.pointerRecords.keys()) {
@@ -1194,6 +1419,7 @@ export default class EyeRig {
     this.resetTouchGesture();
   }
 
+  // `drag`の`rotate`の`speed`を現在の入力と状態から求め、呼び出し元へ返す
   getDragRotateSpeed() {
     return this.type === "first-person"
       ? this.firstPerson.dragRotateSpeed
@@ -1202,11 +1428,10 @@ export default class EyeRig {
         : this.orbit.dragRotateSpeed;
   }
 
-  // orbit / follow は回転と別に平行移動も持てるため、画面上の移動量へ専用係数を持つ
+  // Orbitの画面平面PANへ適用する移動係数を返す
+  // Followはtargetとcamera anchorを独立させるためPANを持たない
   getDragPanSpeed() {
-    return this.type === "follow"
-      ? this.follow.dragPanSpeed
-      : this.orbit.dragPanSpeed;
+    return this.orbit.dragPanSpeed;
   }
 
   // pinch zoom は wheel とは発火頻度が違うため、別係数で調整できるようにする
@@ -1241,7 +1466,8 @@ export default class EyeRig {
     return String(ev?.pointerType ?? "") === "touch";
   }
 
-  // first-person は視線回転と移動キーを分ける設計なので、2本指 pan / zoom は orbit / follow だけにする
+  // first-personは視線回転と移動キーを分けるため、2本指gestureはOrbit / Followだけにする
+  // OrbitはPANとzoom、FollowはPANを無視してzoomだけを反映する
   canTouchPanOrZoom() {
     return this.type === "orbit" || this.type === "follow";
   }
@@ -1301,6 +1527,7 @@ export default class EyeRig {
     this.touchGesture.distance = metrics.distance;
   }
 
+  // タッチ入力の`gesture`を初期状態へ戻し、前回の状態を残さない
   resetTouchGesture() {
     this.touchGesture.active = false;
     this.touchGesture.centerX = 0.0;
@@ -1308,23 +1535,27 @@ export default class EyeRig {
     this.touchGesture.distance = 0.0;
   }
 
-  // eye の world 行列から screen 平面に対応する right / up を作るため、まず単位化する
+  // eyeのworld行列からscreen平面に対応するright / upを作るため、まず単位化する
+  // pointer入力用の既存helperだが、ゼロ長を返して不具合を隠さない
   normalizeVector(v) {
-    const len = Math.hypot(v?.[0] ?? 0.0, v?.[1] ?? 0.0, v?.[2] ?? 0.0);
-    if (len <= 1.0e-8) {
-      return [0.0, 0.0, 0.0];
-    }
-    return [v[0] / len, v[1] / len, v[2] / len];
+    return this.normalizeStrict(v, "direction");
   }
 
-  // 2本指の中心移動は、視線 right / up に沿った平行移動として target 側へ反映する
+  // 2本指の中心移動は、Orbitの視線right / upに沿ったworld移動量へ変換する
+  // base親が回転している場合は、そのworld移動量を親localへ戻してorbit.targetへ加える
   panViewByScreenDelta(dx, dy) {
-    if (!this.canTouchPanOrZoom() || !this.eyeNode?.getWorldMatrix) {
+    if (this.type !== "orbit" || !this.eyeNode?.getWorldMatrix) {
       return;
     }
     const matrix = this.eyeNode.getWorldMatrix();
-    const right = this.normalizeVector(matrix.mul3x3Vector([1.0, 0.0, 0.0]));
-    const up = this.normalizeVector(matrix.mul3x3Vector([0.0, 1.0, 0.0]));
+    const right = this.normalizeStrict(
+      matrix.mul3x3Vector([1.0, 0.0, 0.0]),
+      "orbit screen right"
+    );
+    const up = this.normalizeStrict(
+      matrix.mul3x3Vector([0.0, 1.0, 0.0]),
+      "orbit screen up"
+    );
     const size = Math.max(
       1.0,
       Math.min(
@@ -1332,25 +1563,19 @@ export default class EyeRig {
         Number(this.element?.clientHeight ?? 0) || 0
       )
     );
-    const currentDistance = this.type === "follow" ? this.follow.distance : this.orbit.distance;
-    const scale = currentDistance * this.getDragPanSpeed() / size;
-    const moveX = right[0] * (-dx * scale) + up[0] * (dy * scale);
-    const moveY = right[1] * (-dx * scale) + up[1] * (dy * scale);
-    const moveZ = right[2] * (-dx * scale) + up[2] * (dy * scale);
-
-    if (this.type === "follow") {
-      this.follow.targetOffset[0] += moveX;
-      this.follow.targetOffset[1] += moveY;
-      this.follow.targetOffset[2] += moveZ;
-      this.follow.currentTarget[0] += moveX;
-      this.follow.currentTarget[1] += moveY;
-      this.follow.currentTarget[2] += moveZ;
-      return;
-    }
-
-    this.orbit.target[0] += moveX;
-    this.orbit.target[1] += moveY;
-    this.orbit.target[2] += moveZ;
+    const scale = this.orbit.distance * this.getDragPanSpeed() / size;
+    const moveWorld = [
+      right[0] * (-dx * scale) + up[0] * (dy * scale),
+      right[1] * (-dx * scale) + up[1] * (dy * scale),
+      right[2] * (-dx * scale) + up[2] * (dy * scale)
+    ];
+    const parent = this.baseNode.getParent?.() ?? null;
+    const moveLocal = parent
+      ? this.worldDirectionToNodeLocal(parent, moveWorld, "orbit PAN parent")
+      : moveWorld;
+    this.orbit.target[0] += moveLocal[0];
+    this.orbit.target[1] += moveLocal[1];
+    this.orbit.target[2] += moveLocal[2];
   }
 
   // pinch の開閉量は現在距離へ比例させ、近距離で細かく遠距離で大きく変わるようにする
@@ -1410,6 +1635,7 @@ export default class EyeRig {
     );
   }
 
+  // ポインターの`down`を受け取った段階で、対応する状態更新と処理を実行する
   onPointerDown(ev) {
     if (!this.enabled) return;
     if (this.isTouchPointerEvent(ev)) {
@@ -1463,6 +1689,7 @@ export default class EyeRig {
     return this.isModifierKeyActive(this.alternateDragModifierKey, ev);
   }
 
+  // ポインターの`move`を受け取った段階で、対応する状態更新と処理を実行する
   onPointerMove(ev) {
     if (!this.enabled) return;
     if (this.isTouchPointerEvent(ev)) {
@@ -1498,21 +1725,20 @@ export default class EyeRig {
     this.lastClientX = ev.clientX;
     this.lastClientY = ev.clientY;
 
-    // orbit / follow では pan modifier を押しながら drag したときに
-    // 視線の screen 平面に沿った pan として扱う
-    // これにより、rotation と pan を同じ pointer 経路の中で切り替えられる
-    const panModifierKey = this.type === "follow"
-      ? this.follow.panModifierKey
-      : this.orbit.panModifierKey;
-    if (!this.isTouchPointerEvent(ev) && this.type !== "first-person" && this.isModifierKeyActive(panModifierKey, ev)) {
+    // Orbitではpan modifierを押しながらdragしたときにscreen平面PANとして扱う
+    // Followはcamera anchorとtargetを独立させるためpointer PANを行わない
+    if (
+      !this.isTouchPointerEvent(ev)
+      && this.type === "orbit"
+      && this.isModifierKeyActive(this.orbit.panModifierKey, ev)
+    ) {
       this.panViewByScreenDelta(dx, dy);
       this.apply();
       ev.preventDefault();
       return;
     }
 
-    // orbit / follow では dragZoomModifierKey を押しながら drag したときに
-    // Blender の Ctrl+中ボタンドラッグに相当する camera zoom として扱う
+    // OrbitではdragZoomModifierKeyを押しながらdragしたときにcamera zoomとして扱う
     const dragZoomModifierKey = this.type === "follow"
       ? null
       : this.orbit.dragZoomModifierKey;
@@ -1524,7 +1750,7 @@ export default class EyeRig {
     }
 
     if (this.type === "first-person") {
-      this.firstPerson.bodyYaw += dx * dragRotateSpeed;
+      this.firstPerson.lookYaw += dx * dragRotateSpeed;
       this.firstPerson.lookPitch = this.clamp(
         this.firstPerson.lookPitch + dy * dragRotateSpeed,
         this.firstPerson.lookPitchMin,
@@ -1553,6 +1779,7 @@ export default class EyeRig {
     ev.preventDefault();
   }
 
+  // ポインターの`up`を受け取った段階で、対応する状態更新と処理を実行する
   onPointerUp(ev) {
     if (this.isTouchPointerEvent(ev)) {
       this.forgetPointer(ev.pointerId);
@@ -1594,12 +1821,14 @@ export default class EyeRig {
     ev.preventDefault();
   }
 
+  // `aux`の`click`を受け取った段階で、対応する状態更新と処理を実行する
   onAuxClick(ev) {
     if (ev.button === this.dragButton) {
       ev.preventDefault();
     }
   }
 
+  // `wheel`を受け取った段階で、対応する状態更新と処理を実行する
   onWheel(ev) {
     if (!this.enabled) return;
     if (this.type === "first-person") return;

@@ -15,9 +15,11 @@ export const TOOLS = new Set([
 
 export const EDITOR_MODE_OBJECT = "object";
 export const EDITOR_MODE_EDIT = "edit";
+export const EDITOR_MODE_SCULPT = "sculpt";
 export const EDITOR_MODES = new Set([
   EDITOR_MODE_OBJECT,
-  EDITOR_MODE_EDIT
+  EDITOR_MODE_EDIT,
+  EDITOR_MODE_SCULPT
 ]);
 
 export const DEFAULT_OBJECT_ID = 1;

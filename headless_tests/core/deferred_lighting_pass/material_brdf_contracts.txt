@@ -1,0 +1,34 @@
+# Deferred Lighting共通材質反射モデル単体テスト
+
+## 目的
+
+DeferredLightingPassが固定shininessと固定specular係数を使わず、G-bufferのspecular、roughness、metallic、emissiveを読むことを確認する。point、directional、spotは同じGGX系の直接反射関数を共有する
+
+## 確認項目
+
+1. GGX normal distributionをroughnessから計算する
+2. Schlick-GGX geometry項を使用する
+3. Schlick Fresnelをspecular・metallic・albedoから計算する
+4. metallicに応じてdielectric diffuseを減らす
+5. point、directional、spotが同じ反射関数を呼ぶ
+6. 固定shininess 32と固定specular係数0.18が残っていない
+7. roughnessをshader内で自動補正せず、CPU側で0.04以上に検証する
+8. material textureを明示bindingし、G-bufferと同寸法を必須とする
+9. specular、roughness、metallic、emissiveのdebug viewを持つ
+10. emissiveはライトごとに加算せず、ambient初期項と同じ一回だけ加える
+
+## 実行方法
+
+```sh
+node headless_tests/core/deferred_lighting_pass/headless_probe.js
+```
+
+## 結果
+
+2026-07-12に実行し、全項目が成功した。表示文字列は次のとおり
+
+```text
+deferred_lighting_pass_material_brdf_contracts: all shared material BRDF contracts passed
+```
+
+次は照明出力をgamma変換済み `rgba8unorm` から線形High Dynamic Range targetへ変更し、tone mappingと表示gammaを最終段へ一度だけ移す

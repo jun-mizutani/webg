@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>opacity</title>
+  <link rel="icon" href="data:," />
+  <!-- 2026/06/19 -->
+  <style>
+
+:root {
+  color-scheme: light;
+  --bg: #eef3f8;
+  --paper: rgba(255, 255, 255, 0.94);
+  --line: #c8d5e4;
+  --ink: #17324a;
+  --muted: #5c748b;
+  --accent: #1566ab;
+  --accent-soft: #dfeefe;
+  --code-bg: #f3f7fb;
+  --shadow: rgba(29, 52, 79, 0.10);
+}
+* { box-sizing: border-box; }
+html, body {
+  margin: 0;
+  min-height: 100%;
+}
+body {
+  background:
+    radial-gradient(circle at top left, rgba(21, 102, 171, 0.12), transparent 24%),
+    radial-gradient(circle at top right, rgba(255, 191, 118, 0.10), transparent 22%),
+    linear-gradient(180deg, #f8fbfd 0%, var(--bg) 100%);
+  color: var(--ink);
+  font: 16px/1.78 "Avenir Next", "Hiragino Sans", "Yu Gothic", sans-serif;
+}
+.page {
+  width: min(1080px, calc(100% - 28px));
+  margin: 0 auto;
+  padding: 24px 0 56px;
+}
+.hero,
+.doc {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  box-shadow: 0 22px 52px var(--shadow);
+}
+.hero {
+  padding: 22px 24px;
+  margin-bottom: 18px;
+}
+.hero h1 {
+  margin: 0 0 8px;
+  font-size: clamp(2rem, 4vw, 3rem);
+  line-height: 1.08;
+}
+.hero p {
+  margin: 0;
+  color: var(--muted);
+}
+.doc {
+  padding: 28px;
+}
+.doc > :first-child {
+  margin-top: 0;
+}
+h1, h2, h3, h4, h5, h6 {
+  line-height: 1.25;
+  margin: 1.45em 0 0.55em;
+}
+h1 {
+  font-size: 2.2rem;
+}
+h2 {
+  padding-bottom: 0.28em;
+  border-bottom: 1px solid var(--line);
+  font-size: 1.48rem;
+}
+h3 {
+  font-size: 1.14rem;
+}
+p, ul, ol, table, pre, blockquote {
+  margin: 0 0 1em;
+}
+ul, ol {
+  padding-left: 1.4em;
+}
+li + li {
+  margin-top: 0.26em;
+}
+a {
+  color: var(--accent);
+  text-decoration: none;
+}
+a:hover {
+  text-decoration: underline;
+}
+img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  border-radius: 16px;
+  border: 1px solid var(--line);
+  box-shadow: 0 12px 32px rgba(29, 52, 79, 0.08);
+  margin: 1.1em 0 1.4em;
+}
+code {
+  padding: 0.12em 0.38em;
+  border-radius: 0.45em;
+  background: var(--code-bg);
+  border: 1px solid #dbe6f1;
+  font: 0.92em/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+pre {
+  padding: 14px 16px;
+  overflow-x: auto;
+  border-radius: 14px;
+  background: #0f1720;
+  color: #ecf5ff;
+}
+pre code {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #ffffff;
+}
+th, td {
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  text-align: left;
+  vertical-align: top;
+}
+th {
+  background: #f5f9fc;
+}
+hr {
+  border: 0;
+  border-top: 1px solid var(--line);
+  margin: 1.5em 0;
+}
+blockquote {
+  padding: 0.3em 0 0.3em 1em;
+  border-left: 4px solid #c9dbef;
+  color: var(--muted);
+}
+@media (max-width: 720px) {
+  .page {
+    width: min(100% - 18px, 1080px);
+    padding-top: 16px;
+  }
+  .hero,
+  .doc {
+    border-radius: 18px;
+  }
+  .doc {
+    padding: 20px;
+  }
+}
+
+  </style>
+</head>
+<body>
+  <main class="page">
+    <section class="hero">
+      <h1>opacity</h1>
+    </section>
+    <article class="doc">
+<h1>opacity</h1>
+<p><a href="index.en.html">English</a> | 日本語</p>
+<p><img src="./opacity.jpg" alt="opacity" /></p>
+<h2>概要</h2>
+<p><code>opacity</code> は、1つの <code>Shape</code> に不透明マテリアルと半透明マテリアルを持たせ、三角形ごとにマテリアル番号を割り当てるサンプルです。3枚の市松状パネルはそれぞれ1つの <code>Shape</code> ですが、橙色などの区画は material slot 0、青色などの区画は material slot 1を使います。隣り合う三角形は頂点を共有しており、マテリアルを分けるために頂点を複製していません。</p>
+<p><code>Shape.setMaterial()</code>、<code>Shape.getMaterial()</code>、<code>Shape.updateMaterial()</code>はmaterial slot 0を操作します。追加マテリアルには<code>setMaterialAt(index, id, params)</code>、<code>getMaterialAt(index)</code>、<code>updateMaterialAt(index, params)</code>を使います。三角形を追加するときは<code>addTriangle(a, b, c, materialIndex)</code>の第4引数でmaterial slotを指定します。省略時は0です。</p>
+<h2>描画処理</h2>
+<p>materialの <code>alpha</code> が1.0なら不透明、1.0未満なら半透明として自動分類されます。不透明三角形は先にdepth書き込みありで描画されます。半透明三角形はすべての <code>Shape</code> から収集され、各三角形の重心をCamera Frameのview-spaceへ移したZ値で奥から手前へ並べた後、depth testあり、depth書き込みなし、source-over Alpha Blendで描画されます。</p>
+<p>このサンプルは <code>WebgApp</code> と <code>ComputeEffectPipeline</code> を組み合わせています。利用側が透明用Render Passを追加する必要はありません。<code>renderScene()</code>は不透明三角形だけをG-bufferへ記録し、<code>encode()</code>がDeferred LightingとSSRの後で半透明三角形をHDR scene colorへ合成します。その後にToon、DoF、Bloom、Tone Map、Edgeを処理するため、透明部分も最終的なcolor effectの対象になります。透明三角形が1枚もなければ、透明用HDR copyとRender Passは自動的に省略されます。</p>
+<h2>実行方法</h2>
+<ul><li>実行ファイルは <a href="./opacity.html">./opacity.html</a> です</li><li>マウスまたはタッチのドラッグでCameraを回転できます</li><li><code>SSAO</code>、<code>Shadow</code>、<code>SSR</code>、<code>Toon</code>、<code>DoF</code>、<code>Bloom</code>、<code>Edge</code>を個別に切り替えられます</li><li><code>Transparent alpha</code>を0.0から1.0まで変更できます。市松パネルのmaterial slot 1と黄色いトーラスのmaterial slot 0へ同じ値が設定され、1.0では両方が次のframeから不透明側へ移ります</li><li><code>Translucent roughness</code>を0.04から1.0まで変更すると、市松パネルと黄色いトーラスの全半透明materialへroughness値が設定されます</li><li><code>Pause</code>でパネルの回転を止めると、特定のCamera位置で合成結果を比較できます</li></ul>
+<h2>確認ポイント</h2>
+<p>手前の半透明区画を通して、奥の不透明区画や別の半透明区画が見えることを確認してください。Cameraを回したりパネルを動かしたりしても、Shape単位ではなく三角形単位で全Shape横断の並び替えが行われます。<code>alpha=1.0</code>では同じmaterial slot 1の三角形がG-bufferとdepthへ移り、半透明合成が不要になることも確認できます。</p>
+<p>画面中央のCamera寄りには、独立したShapeで作った外径3.0の黄色い半透明トーラスがあります。このトーラスと市松パネルが重なる位置では、異なるShapeの透明三角形も奥から手前へ合成されます。<code>Transparent alpha</code>はトーラスと市松パネルの透明materialを同時に変更するため、同じAlphaでShapeをまたぐ合成結果を比較できます。Alphaを1.0にすると、トーラスを含む操作対象の全三角形が不透明描画へ自動分類されます。</p>
+<p><code>Translucent roughness</code>は、市松パネルのmaterial slot 1とトーラスのmaterial slot 0へ同じ値を設定します。0.04では背景がほぼ鮮明で、Specularは狭く鋭くなります。値を1.0へ近づけるほど、Specularは広く弱くなり、透明surface越しの背景は強くぼけます。トーラス表面のハイライト、トーラスの穴の周囲、市松パネル越しに見える球や境界を比較すると、Alphaとは独立したRoughnessの変化を確認できます。</p>
+<p><code>TransparencyPass</code>は、透明合成前のHDR scene colorから中間と強の二段階のCompute blur画像を作ります。続いて全Shapeの透明三角形からRoughness maskを作り、鮮明な背景と二段階のblur背景をmaterial roughnessだけで合成します。この背景合成にはmaterial Alphaを使用しません。その後、奥から手前へソートした透明三角形のsurface色とSpecularを通常のAlpha Blendで重ねます。この処理は<code>ComputeEffectPipeline</code>の内部で自動実行されるため、利用側が<code>FrostedGlassPass</code>や追加Render Passを挿入する必要はありません。</p>
+<p>Bloomを有効にすると左側の発光球と半透明部分を含む合成済みsceneへ光のにじみが掛かります。DoF、Toon、Edgeも透明合成後に処理されます。ただし、G-bufferを参照するSSAO、Shadow、SSRは不透明surfaceを基準に計算し、その結果へ透明surfaceを後から重ねます。半透明surface自身はG-buffer、opaque depth、shadow mapへ書き込みません。</p>
+<h2>制限</h2>
+<p>透明三角形の順序は重心のview-space depthによる近似です。半透明三角形同士が交差する場合、相互に入り組む場合、AがBより奥、BがCより奥、CがAより奥になる循環順序では、三角形全体に対する一意の正しい順序を作れません。この処理では三角形の分割やWeighted Blended OITを行わず、その種の交差と循環は対象外です。</p>
+<p>透明三角形は原則として1枚ごとにdraw callを発行するため、広い範囲を細かく分割した透明meshには向きません。単純なシーンでは<code>WebgApp</code>の通常描画を使い、Deferred Lightingや各種Compute効果を必要とするシーンでは<code>WebgApp + ComputeEffectPipeline</code>を使用します。どちらの描画方式でも同じ透明material APIを利用できます。</p>
+<p>Frost用のblur sourceは、透明triangleを合成する直前の不透明HDR sceneから作られます。手前の透明面が、すでに合成した背後の透明面だけを再度ぼかす処理は行いません。透明面同士の複雑な交差や循環と同様に、多層透明surfaceの厳密な屈折・再ぼかしは対象外です。</p>
+<h2>API例</h2>
+<pre><code class="language-js">const shape = new Shape(gpu);
+shape.setMaterial(&quot;smooth-shader&quot;, {
+  color: [1.0, 0.5, 0.1, 1.0],
+  alpha: 1.0
+});
+shape.setMaterialAt(1, &quot;smooth-shader&quot;, {
+  color: [0.1, 0.7, 1.0, 1.0],
+  alpha: 0.42
+});
+
+const a = shape.addVertex(-1, -1, 0) - 1;
+const b = shape.addVertex( 1, -1, 0) - 1;
+const c = shape.addVertex( 1,  1, 0) - 1;
+const d = shape.addVertex(-1,  1, 0) - 1;
+shape.addTriangle(a, b, c, 0);
+shape.addTriangle(a, c, d, 1);
+shape.endShape();</code></pre>
+<p><code>alpha</code>は0.0以上1.0以下の有限値でなければ例外になります。存在しないmaterial slot番号や、slotを飛ばした登録もslot 0へ補正されず例外になるため、設定ミスを描画結果だけから探す必要はありません。</p>
+    </article>
+  </main>
+</body>
+</html>

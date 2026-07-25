@@ -243,7 +243,6 @@ applyPalette();
 
 app.start({
   onUpdate: ({ deltaSec, screen }) => {
-    orbit.update(deltaSec);
     if (!state.paused) {
       cubeNode.rotateX(18.0 * deltaSec);
       cubeNode.rotateY(26.0 * deltaSec);

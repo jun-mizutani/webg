@@ -3,244 +3,208 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>sound sample</title>
+  <title>sound</title>
   <link rel="icon" href="data:," />
+  <!-- 2026/06/19 -->
   <style>
-    html, body {
-      margin: 0;
-      background: #1a261a;
-      color: #dfe9ff;
-      font: 14px/1.5 ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
-    }
-    #app {
-      max-width: 860px;
-      margin: 28px auto;
-      padding: 0 16px 24px;
-    }
-    h1 {
-      margin: 0 0 12px;
-      font-size: 22px;
-      letter-spacing: 0.02em;
-    }
-    p {
-      margin: 6px 0 14px;
-      color: #b8c9ef;
-    }
-    .panel {
-      background: #243624;
-      border: 1px solid #2a3550;
-      border-radius: 10px;
-      padding: 12px;
-      margin: 10px 0;
-    }
-    .panel h2 {
-      margin: 0 0 10px;
-      font-size: 16px;
-      color: #f6f8ff;
-      letter-spacing: 0.02em;
-    }
-    .row {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-      align-items: center;
-      margin: 8px 0;
-    }
-    button {
-      border: 1px solid #3a4d7a;
-      background: #355035;
-      color: #f2f6ff;
-      border-radius: 8px;
-      padding: 8px 12px;
-      cursor: pointer;
-    }
-    button:hover {
-      background: #406240;
-    }
-    button:disabled {
-      opacity: 0.5;
-      cursor: not-allowed;
-    }
-    label {
-      min-width: 110px;
-      color: #b8c9ef;
-    }
-    input[type="range"] {
-      width: 220px;
-    }
-    #status {
-      margin-top: 8px;
-      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-      color: #ffd688;
-      white-space: pre;
-    }
+
+:root {
+  color-scheme: light;
+  --bg: #eef3f8;
+  --paper: rgba(255, 255, 255, 0.94);
+  --line: #c8d5e4;
+  --ink: #17324a;
+  --muted: #5c748b;
+  --accent: #1566ab;
+  --accent-soft: #dfeefe;
+  --code-bg: #f3f7fb;
+  --shadow: rgba(29, 52, 79, 0.10);
+}
+* { box-sizing: border-box; }
+html, body {
+  margin: 0;
+  min-height: 100%;
+}
+body {
+  background:
+    radial-gradient(circle at top left, rgba(21, 102, 171, 0.12), transparent 24%),
+    radial-gradient(circle at top right, rgba(255, 191, 118, 0.10), transparent 22%),
+    linear-gradient(180deg, #f8fbfd 0%, var(--bg) 100%);
+  color: var(--ink);
+  font: 16px/1.78 "Avenir Next", "Hiragino Sans", "Yu Gothic", sans-serif;
+}
+.page {
+  width: min(1080px, calc(100% - 28px));
+  margin: 0 auto;
+  padding: 24px 0 56px;
+}
+.hero,
+.doc {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  box-shadow: 0 22px 52px var(--shadow);
+}
+.hero {
+  padding: 22px 24px;
+  margin-bottom: 18px;
+}
+.hero h1 {
+  margin: 0 0 8px;
+  font-size: clamp(2rem, 4vw, 3rem);
+  line-height: 1.08;
+}
+.hero p {
+  margin: 0;
+  color: var(--muted);
+}
+.doc {
+  padding: 28px;
+}
+.doc > :first-child {
+  margin-top: 0;
+}
+h1, h2, h3, h4, h5, h6 {
+  line-height: 1.25;
+  margin: 1.45em 0 0.55em;
+}
+h1 {
+  font-size: 2.2rem;
+}
+h2 {
+  padding-bottom: 0.28em;
+  border-bottom: 1px solid var(--line);
+  font-size: 1.48rem;
+}
+h3 {
+  font-size: 1.14rem;
+}
+p, ul, ol, table, pre, blockquote {
+  margin: 0 0 1em;
+}
+ul, ol {
+  padding-left: 1.4em;
+}
+li + li {
+  margin-top: 0.26em;
+}
+a {
+  color: var(--accent);
+  text-decoration: none;
+}
+a:hover {
+  text-decoration: underline;
+}
+img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  border-radius: 16px;
+  border: 1px solid var(--line);
+  box-shadow: 0 12px 32px rgba(29, 52, 79, 0.08);
+  margin: 1.1em 0 1.4em;
+}
+code {
+  padding: 0.12em 0.38em;
+  border-radius: 0.45em;
+  background: var(--code-bg);
+  border: 1px solid #dbe6f1;
+  font: 0.92em/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+pre {
+  padding: 14px 16px;
+  overflow-x: auto;
+  border-radius: 14px;
+  background: #0f1720;
+  color: #ecf5ff;
+}
+pre code {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #ffffff;
+}
+th, td {
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  text-align: left;
+  vertical-align: top;
+}
+th {
+  background: #f5f9fc;
+}
+hr {
+  border: 0;
+  border-top: 1px solid var(--line);
+  margin: 1.5em 0;
+}
+blockquote {
+  padding: 0.3em 0 0.3em 1em;
+  border-left: 4px solid #c9dbef;
+  color: var(--muted);
+}
+@media (max-width: 720px) {
+  .page {
+    width: min(100% - 18px, 1080px);
+    padding-top: 16px;
+  }
+  .hero,
+  .doc {
+    border-radius: 18px;
+  }
+  .doc {
+    padding: 20px;
+  }
+}
+
   </style>
 </head>
 <body>
-  <div id="app">
-    <h1>AudioSynth Sample</h1>
-    <p>AudioContext と OscillatorNode だけで、SE/BGM を試しながら、短い SE を `Next SE` と `Audition All` で連続比較できるサンプルです。</p>
-
-    <div class="panel">
-      <h2>System</h2>
-      <div class="row">
-        <button id="btnInit">Audio Start</button>
-        <label for="masterVol">Master Vol</label>
-        <input id="masterVol" type="range" min="0" max="1" step="0.01" value="0.25" />
-        <span id="masterVal">0.25</span>
-      </div>
-    </div>
-
-    <div class="panel">
-      <h2>Sound Effects</h2>
-      <div class="row">
-        <label for="soundEffect">Sound Effect</label>
-        <select id="soundEffect"></select>
-        <button id="btnPlaySe" disabled>Play SE</button>
-        <button id="btnNextSe" disabled>Next SE</button>
-        <button id="btnAuditionSe" disabled>Audition All</button>
-      </div>
-      <div class="row">
-        <label>SE Profiles</label>
-        <span id="seProfiles">-</span>
-      </div>
-      <div class="row">
-        <label>Editing Profile</label>
-        <span id="seEditingProfile">-</span>
-      </div>
-      <div class="row">
-        <label for="seVol">SE Vol</label>
-        <input id="seVol" type="range" min="0" max="1" step="0.01" value="0.90" />
-        <span id="seVal">0.90</span>
-      </div>
-      <div class="row">
-        <label for="seDelay">SE Delay</label>
-        <input id="seDelay" type="range" min="0" max="0.4" step="0.01" value="0.14" />
-        <span id="seDelayVal">0.14</span>
-      </div>
-      <div class="row">
-        <label for="seReverb">SE Reverb</label>
-        <input id="seReverb" type="range" min="0" max="1" step="0.01" value="0.32" />
-        <span id="seReverbVal">0.32</span>
-      </div>
-      <div class="row">
-        <label for="seReverbKind">SE Reverb Kind</label>
-        <select id="seReverbKind"></select>
-      </div>
-      <div class="row">
-        <label for="seReverbDuration">SE Reverb Length</label>
-        <input id="seReverbDuration" type="range" min="0.30" max="5.00" step="0.05" value="3.20" />
-        <span id="seReverbDurationVal">3.20 sec</span>
-      </div>
-      <div class="row">
-        <label for="seReverbDecay">SE Reverb Decay</label>
-        <input id="seReverbDecay" type="range" min="0.50" max="4.50" step="0.05" value="1.80" />
-        <span id="seReverbDecayVal">1.80</span>
-      </div>
-      <div class="row">
-        <label for="seEnvelopeProfile">SE Envelope</label>
-        <select id="seEnvelopeProfile"></select>
-      </div>
-      <div class="row">
-        <label for="seAttack">SE Attack</label>
-        <input id="seAttack" type="range" min="0" max="0.20" step="0.001" value="0.005" />
-        <span id="seAttackVal">0.005 sec</span>
-      </div>
-      <div class="row">
-        <label for="seDecay">SE Decay</label>
-        <input id="seDecay" type="range" min="0" max="0.30" step="0.001" value="0.050" />
-        <span id="seDecayVal">0.050 sec</span>
-      </div>
-      <div class="row">
-        <label for="seSustain">SE Sustain</label>
-        <input id="seSustain" type="range" min="0" max="1" step="0.01" value="0.55" />
-        <span id="seSustainVal">0.55 ratio</span>
-      </div>
-      <div class="row">
-        <label for="seRelease">SE Release</label>
-        <input id="seRelease" type="range" min="0" max="0.40" step="0.001" value="0.080" />
-        <span id="seReleaseVal">0.080 sec</span>
-      </div>
-      <div class="row">
-        <label>SE Reverb A/B</label>
-        <button id="btnSeDry" disabled>SE Dry</button>
-        <button id="btnSeWet" disabled>SE Reverb Max</button>
-      </div>
-    </div>
-
-    <div class="panel">
-      <h2>Background Music</h2>
-      <div class="row">
-        <button id="btnBgmOn" disabled>BGM Start</button>
-        <button id="btnBgmOff" disabled>BGM Stop</button>
-      </div>
-      <div class="row">
-        <label for="bgmVol">BGM Vol</label>
-        <input id="bgmVol" type="range" min="0" max="1" step="0.01" value="0.75" />
-        <span id="bgmVal">0.75</span>
-      </div>
-      <div class="row">
-        <label for="bpm">BPM</label>
-        <input id="bpm" type="range" min="70" max="200" step="1" value="124" />
-        <span id="bpmVal">124</span>
-      </div>
-      <div class="row">
-        <label for="melody">Melody</label>
-        <select id="melody"></select>
-      </div>
-      <div class="row">
-        <label for="bgmDelay">BGM Delay</label>
-        <input id="bgmDelay" type="range" min="0" max="0.6" step="0.01" value="0.18" />
-        <span id="bgmDelayVal">0.18</span>
-      </div>
-      <div class="row">
-        <label for="bgmReverb">BGM Reverb</label>
-        <input id="bgmReverb" type="range" min="0" max="1" step="0.01" value="0.24" />
-        <span id="bgmReverbVal">0.24</span>
-      </div>
-      <div class="row">
-        <label for="bgmReverbKind">BGM Reverb Kind</label>
-        <select id="bgmReverbKind"></select>
-      </div>
-      <div class="row">
-        <label for="bgmReverbDuration">BGM Reverb Length</label>
-        <input id="bgmReverbDuration" type="range" min="0.30" max="6.00" step="0.05" value="4.00" />
-        <span id="bgmReverbDurationVal">4.00 sec</span>
-      </div>
-      <div class="row">
-        <label for="bgmReverbDecay">BGM Reverb Decay</label>
-        <input id="bgmReverbDecay" type="range" min="0.50" max="4.50" step="0.05" value="1.90" />
-        <span id="bgmReverbDecayVal">1.90</span>
-      </div>
-      <div class="row">
-        <label for="bgmAttack">BGM Attack</label>
-        <input id="bgmAttack" type="range" min="0" max="0.40" step="0.005" value="0.03" />
-        <span id="bgmAttackVal">0.030 sec</span>
-      </div>
-      <div class="row">
-        <label for="bgmDecay">BGM Decay</label>
-        <input id="bgmDecay" type="range" min="0" max="0.60" step="0.005" value="0.20" />
-        <span id="bgmDecayVal">0.200 sec</span>
-      </div>
-      <div class="row">
-        <label for="bgmSustain">BGM Sustain</label>
-        <input id="bgmSustain" type="range" min="0" max="1" step="0.01" value="0.60" />
-        <span id="bgmSustainVal">0.60 ratio</span>
-      </div>
-      <div class="row">
-        <label for="bgmRelease">BGM Release</label>
-        <input id="bgmRelease" type="range" min="0" max="0.80" step="0.005" value="0.40" />
-        <span id="bgmReleaseVal">0.400 sec</span>
-      </div>
-      <div class="row">
-        <label>BGM Reverb A/B</label>
-        <button id="btnBgmDry" disabled>BGM Dry</button>
-        <button id="btnBgmWet" disabled>BGM Reverb Max</button>
-      </div>
-    </div>
-
-    <div id="status">status: waiting for Audio Start</div>
-  </div>
-  <script type="module" src="./main.js"></script>
+  <main class="page">
+    <section class="hero">
+      <h1>sound</h1>
+    </section>
+    <article class="doc">
+<h1>sound</h1>
+<p><a href="index.en.html">English</a> | 日本語</p>
+<p><img src="./sound.jpg" alt="sound" /></p>
+<h2>概要</h2>
+<ul><li>AudioSynth と GameAudioSynth を使い、SE と BGM を同じ画面で調整しながら確認するサンプルです。</li><li>Audio Start で AudioContext を開始し、Play SE、Next SE、Audition All、BGM Start を使って音を鳴らし、その場で volume、delay、reverb、envelope、melody を調整できます。</li><li>「何を鳴らすか」と「どう聞こえるように整えるか」を 1 画面で往復しながら確認できる構成です。</li></ul>
+<p>画面の見方</p>
+<p>画面は System、Sound Effects、Background Music の 3 つに分かれています。順番に見ると、まず AudioContext を起こし、そのあと SE を調整し、最後に melody、BPM、BGM envelope、BGM reverb を直接動かして BGM の細かな輪郭を整える流れになっています。</p>
+<p>System では Audio Start と Master Vol を扱います。Audio Start は browser の制約に合わせて user gesture の後に AudioContext を開始するためのボタンです。Master Vol は全体音量の基準です。ここを最初に整えると、SE と BGM の相対バランスを見やすくなります。</p>
+<p>Sound Effects では、Sound Effect で鳴らす効果音を選び、Play SE で再生します。Next SE は catalog を 1 件ずつ進めて、Audition All は全件を順番に鳴らして差を聞き比べるためのボタンです。SE Profiles はその効果音が使う envelope profile の一覧、Editing Profile は今 slider で編集している profile 名です。SE Vol、SE Delay、SE Reverb、SE Reverb Kind、SE Reverb Length、SE Reverb Decay、SE Envelope、SE Attack、SE Decay、SE Sustain、SE Release を使うと、同じ効果音でも輪郭や空間感をかなり細かく変えられます。</p>
+<p>Background Music では、BGM Start と BGM Stop、BGM Vol、BPM、Melody、BGM Delay、BGM Reverb、BGM Reverb Kind、BGM Reverb Length、BGM Reverb Decay、BGM Attack、BGM Decay、BGM Sustain、BGM Release を扱います。BGM は melody と BPM で進行そのものが変わるので、SE とは少し違って、時間の流れを聞きながら調整するのが向いています。</p>
+<h2>実行方法</h2>
+<ul><li>実行ファイルは <a href="./sound.html">./sound.html</a> です</li><li>WebGPU に対応したブラウザで開き、必要に応じて help panel や HUD と合わせて確認してください</li></ul>
+<h2>使用している webg 機能</h2>
+<ul><li>GameAudioSynth: ゲーム向けの効果音 catalog と melody preset をまとめて扱う</li><li>AudioSynth: SE/BGM の envelope、delay、reverb、IR 設定を担当する</li></ul>
+<h2>確認ポイント</h2>
+<p>最初にやることは Audio Start です。これで音を出せる状態にしてから、Sound Effect と Play SE で短い効果音を確認し、BGM Start でメロディを流します。音の輪郭を見たいときは SE Envelope、空間感を見たいときは SE Reverb Kind と SE Reverb Length と SE Reverb Decay、BGM の流れを見たいときは Melody と BPM を動かします。</p>
+<p>このサンプルでは、SE Dry / SE Reverb Max と BGM Dry / BGM Wet という比較用の固定ボタンも用意しています。slider の中間値だけだと違いが分かりにくいときは、いったん極端な状態に振ってから戻すと、変化の方向がつかみやすくなります。</p>
+<p>SE Reverb Kind と BGM Reverb Kind は room、hall、plate を切り替えます。これは単に残響を増やすボタンではなく、残響の性格そのものを変える設定です。Length は IR の長さ、Decay は減衰の早さを表します。短めで締まった room から、長く広がる hall まで、連続的に聞き比べることができます。</p>
+<p>SE Envelope は、選んだ効果音が使う envelope profile を切り替える場所です。profile 名は percussion、brass、woodwind、organ、piano、guitar のような楽器カテゴリになっており、打撃音、吹奏感、持続音、弦を弾いた音のような時間変化を比較できます。SE Attack、SE Decay、SE Sustain、SE Release を動かすと、次に鳴るその profile の音が変わります。短い効果音は差が分かりにくいことがあるので、tail_probe を選ぶと、前半の輪郭音と後半の余韻の両方で違いを聞き取りやすくなります。</p>
+<p>BGM Envelope は、BGM の一音一音の立ち上がりと余韻を決めます。BGM Attack、BGM Decay、BGM Sustain、BGM Release を動かすと、同じ melody でも印象が変わります。BPM は進む速さ、Melody は旋律の形を変えるので、BGM は「何を鳴らすか」と「どう進むか」を別々に見ると調整しやすいです。BGM 側の reverb は SE より少し強めの hall 既定にしてあるので、Audition All で melody を流したときに、フレーズの尾が長めに残る感触を先に掴みやすくしています。</p>
+<p>まず Audio Start を押して、Play SE、Next SE、Audition All、BGM Start が有効になることを確認します。次に Sound Effect を切り替え、SE Profiles と Editing Profile が選んだ音に合わせて変わることを確認します。そのうえで SE Attack、SE Decay、SE Sustain、SE Release と SE Reverb を動かし、同じ効果音を鳴らし直して差を聞き比べます。</p>
+<p>Audition All を押したときは、catalog 全体が順番に鳴ることを確認します。途中で止めたくなったら同じボタンを押して止められます。Next SE は 1 件ずつ進むので、気になった効果音をもう 1 度鳴らしたいときに便利です。</p>
+<p>SE Reverb Kind を room、hall、plate で切り替えると、同じ wet 量でも反射の質感が変わります。SE Reverb Length と SE Reverb Decay を変えると、残響の長さと落ち方が変わります。tail_probe を選ぶと、短い効果音よりも envelope と reverb tail の違いが追いやすくなります。</p>
+<p>BGM 側では Melody を変えながら BPM と BGM Envelope を調整し、同じ音源でも印象がどう変わるかを確認します。BGM Reverb Kind、BGM Reverb Length、BGM Reverb Decay を動かすと、同じ旋律でも空間の広がり方が変わることが分かります。初期値は hall 寄りで少し強めにしてあるので、まずはそのまま鳴らしてから dry 側へ戻すと差が分かりやすいです。</p>
+<h2>操作方法</h2>
+<p>このサンプルはキーボード入力ではなく、画面上の UI ボタンと slider で操作します。</p>
+<p>Audio Start は AudioContext の開始、BGM Start / BGM Stop は BGM の開始と停止、Play SE は選択中の効果音を 1 回鳴らすボタンです。SE Dry / SE Reverb Max と BGM Dry / BGM Wet は比較用の固定状態へ切り替えるボタンです。</p>
+<p>つまずきやすい点</p>
+<p>Audio Start を押していないと、音は鳴りません。これは browser の制約に合わせた動きです。まず AudioContext を開始してから、他のボタンを押してください。</p>
+<p>SE Reverb と SE Reverb Kind は別の設定です。SE Reverb は残響の量、Kind は残響の性格です。BGM 側も同じで、BGM Reverb は量、BGM Reverb Kind は性格です。</p>
+<p>SE Attack や BGM Attack は秒、SE Sustain や BGM Sustain は比率です。単位が違うので、slider を動かすときは表示値も一緒に見ると分かりやすいです。</p>
+<p>関連文書</p>
+<ul><li><a href="../../book/14_UI表示の設計.md">14_UI表示の設計.md</a></li><li><a href="../../book/18_サウンドの設計.md">18_サウンドの設計.md</a></li><li><a href="../../book/01_はじめに.md">01_はじめに.md</a></li><li><a href="./main.js">samples/sound/main.js</a></li><li><a href="./sound.html">samples/sound/sound.html</a></li></ul>
+<p>18_サウンドの設計.md は実装の詳しい説明、01_はじめに.md はプロジェクト全体の入口です。この README.md は、サンプルの画面をどう触るかに集中した案内として読むと分かりやすくなります。</p>
+    </article>
+  </main>
 </body>
 </html>

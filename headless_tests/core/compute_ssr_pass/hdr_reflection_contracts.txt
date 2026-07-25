@@ -1,0 +1,26 @@
+# Screen Space Reflection線形HDR・roughness filter単体テスト
+
+## 目的
+
+Ray hitの線形HDR反射色とweightを分けて生成し、反射RGBだけをmaterial roughnessに応じた画像ピラミッドLevelから選ぶことを確認します。
+
+## 確認項目
+
+1. scene、ray結果、filtered SSR出力は `rgba16float`
+2. material入力は `rgba8unorm`
+3. ray shaderはroughnessで反射強度を減衰させない
+4. roughness 0から1をraw、1/2、1/4、1/8の位置0から3へ対応付ける
+5. RGBは隣接Level間で補間し、alpha weightは現在pixelのraw値を保持する
+6. SSR内部でgamma変換やbase scene合成を行わない
+7. resource形式・寸法・Camera Reverse-Z depthを検証する
+
+## 実行方法
+
+```sh
+node headless_tests/core/compute_ssr_pass/hdr_reflection_contracts.js
+node headless_tests/core/compute_ssr_pass/depth_contracts.js
+```
+
+## 結果
+
+2026-07-23に実行し、HDR反射、roughness filter、Reverse-Z ray交差の全項目が成功しました。

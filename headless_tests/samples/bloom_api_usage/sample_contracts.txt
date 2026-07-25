@@ -1,0 +1,24 @@
+# sample_bloom_api_usage_contracts
+
+## 目的
+
+`samples`、`unittest`、`book/examples`のCompute Bloom設定に、
+削除済みの旧3段階parameterが再び混入しないことを確認します。
+
+## 確認内容
+
+JavaScriptとHTMLのinline moduleから`bloom: { ... }` block、
+および`new ComputeBloomPass(..., { ... })`のoptionを抽出し、
+`small`、`medium`、`large`別のscale、sample step、threshold、strength、
+および旧blur parameterなどを使用していないことを検査します。
+DoF、SSR、汎用Compute Blurにある同名parameterは対象にしません。
+
+`samples/opacity` は `COMPUTE_BLOOM_DEFAULTS` を基準にし、
+サンプル固有の `strength: 0.78` だけを上書きすることも確認します。
+
+## 実行方法
+
+```sh
+node --experimental-default-type=module \
+  headless_tests/samples/bloom_api_usage/headless_probe.js
+```

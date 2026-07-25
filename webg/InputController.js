@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// InputController.js  2026/04/09
+// InputController.js  2026/07/25
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // ---------------------------------------------
@@ -44,6 +44,7 @@ export default class InputController {
     return normalized;
   }
 
+  // このインスタンスを初期状態へ戻し、前回の状態を残さない
   clear() {
     this.keyState.clear();
     this.actionState.clear();
@@ -56,6 +57,7 @@ export default class InputController {
     return this.keyState.has(this.normalizeKey(key));
   }
 
+  // `press`は入力またはイベントを受け取り、対応する処理へ振り分ける
   press(key) {
     const normalized = this.normalizeKey(key);
     if (!normalized) return false;
@@ -65,6 +67,7 @@ export default class InputController {
     return !wasDown;
   }
 
+  // このインスタンスが保持する資源と参照を安全に解放する
   release(key) {
     const normalized = this.normalizeKey(key);
     if (!normalized) return false;
@@ -346,6 +349,7 @@ export default class InputController {
     this._attached = false;
   }
 
+  // このインスタンスを対象へ追加し、後続処理から参照できるようにする
   attach({
     onKeyDown,
     onKeyUp,
@@ -388,6 +392,7 @@ export default class InputController {
     this._attached = true;
   }
 
+  // `_normalizeActionBinding`は座標または数値を計算し、後続処理で使う結果を返す
   _normalizeActionBinding(binding) {
     const keys = Array.isArray(binding) ? binding : [binding];
     const out = new Set();
@@ -398,12 +403,14 @@ export default class InputController {
     return out;
   }
 
+  // `_resolveActionKeys`は受け取った値を処理し、後続処理で利用する状態または結果を生成する
   _resolveActionKeys(action) {
     const keys = this.actionMap.get(action);
     if (keys) return [...keys];
     return [action];
   }
 
+  // `_isActionActive`は入力条件や交差状態を比較し、判定結果を返す
   _isActionActive(keys) {
     for (const key of keys) {
       if (this.keyState.has(key)) return true;
@@ -411,6 +418,7 @@ export default class InputController {
     return false;
   }
 
+  // `_syncActionStateFromKey`は受け取った値を処理し、後続処理で利用する状態または結果を生成する
   _syncActionStateFromKey(key, isDown, changed) {
     if (!changed || !key) {
       return;

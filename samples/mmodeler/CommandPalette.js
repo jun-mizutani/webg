@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// samples/mmodeler/CommandPalette.js  2026/05/26
+// samples/mmodeler/CommandPalette.js  2026/07/25
 //   mobile command palette controller for mmodeler
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -29,6 +29,15 @@ const ACTION_LABELS = {
   "delete": { label: "Del", detail: "delete" },
   "origin-world": { label: "O", detail: "origin" },
   "mode-object": { label: "1", detail: "object" },
+  "mode-edit": { label: "Edit", detail: "mode" },
+  "mode-sculpt": { label: "Scpt", detail: "sculpt" },
+  "sculpt-draw": { label: "Draw", detail: "normal" },
+  "sculpt-blur": { label: "Blur", detail: "average" },
+  "sculpt-grab": { label: "Grab", detail: "drag" },
+  "sculpt-pinch": { label: "Pinch", detail: "center" },
+  "sculpt-plus": { label: "Sclpt", detail: "normal +" },
+  "sculpt-minus": { label: "Sclp-", detail: "normal -" },
+  "sculpt-brush": { label: "Brsh", detail: "brush" },
   "tool-face": { label: "Face", detail: "face" },
   "tool-vertex": { label: "Vert", detail: "vertex" },
   "tool-add": { label: "Add", detail: "vertex" },
@@ -70,7 +79,7 @@ const ACTION_LABELS = {
   "view-z-reverse": { label: "-Z", detail: "view" }
 };
 
-// ユーザー指定の command palette は 4x4 の表示行をそのまま配列化する
+// ユーザー指定の command palette は行ごとの表示順をそのまま配列化する
 // CSS grid は row-major で button を配置するため、ここでは画面上の行順を直接保持する
 function paletteRows(rows) {
   return rows.flatMap((row) => row);
@@ -86,7 +95,7 @@ const COMMAND_PAGES = [
   paletteRows([
     ["catmull-clark", "select-all", "tool-add", "toggle-projection"],
     ["subdivide", "invert-selection", "delete", "object-wireframe"],
-    ["toggle-x-mirror", "select-x-negative", "undefined", "object-smooth-shading"],
+    ["toggle-x-mirror", "select-x-negative", "sculpt-plus", "object-smooth-shading"],
     ["palette-next", "select-loop", "undefined", "cycle-lens"]
   ]),
   paletteRows([
@@ -103,12 +112,30 @@ const COMMAND_PAGES = [
   ])
 ];
 
+const SCULPT_COMMAND_PAGES = [
+  paletteRows([
+    ["sculpt-draw", "undefined", "sculpt-brush", "toggle-projection"],
+    ["sculpt-blur", "undefined", "toggle-x-mirror", "object-wireframe"],
+    ["sculpt-grab", "sculpt-plus", "undo", "object-smooth-shading"],
+    ["sculpt-pinch", "sculpt-minus", "redo", "mode-edit"]
+  ])
+];
+
 // action id から表示 label と補助 detail を返す
 // 未登録 action は開発中の command でも画面に出せるよう、action id をそのまま label にする
-export function getCommandActionLabel(action) {
+export function getCommandActionLabel(action, context = {}) {
+  if (context?.sculptPalette === true) {
+    if (action === "sculpt-plus") {
+      return { label: "Sclp+", detail: "normal +" };
+    }
+    if (action === "sculpt-minus") {
+      return { label: "Sclp-", detail: "normal -" };
+    }
+  }
   return ACTION_LABELS[action] ?? { label: action, detail: "" };
 }
 
+// `axis`の`class`を現在の入力と状態から求め、呼び出し元へ返す
 function getAxisClass(action) {
   if (action === "axis-x") {
     return "axis-x";
@@ -137,7 +164,8 @@ export default class CommandPalette {
     getActionLabel = getCommandActionLabel,
     isActionEnabled,
     isActionActive,
-    cancelPendingTap
+    cancelPendingTap,
+    isSculptPalette = null
   }) {
     this.isMobileProfile = isMobileProfile === true;
     this.root = root ?? null;
@@ -147,6 +175,7 @@ export default class CommandPalette {
     this.isActionEnabled = isActionEnabled;
     this.isActionActive = isActionActive;
     this.cancelPendingTap = cancelPendingTap;
+    this.isSculptPalette = isSculptPalette;
     this.opened = false;
     this.kind = "selection";
     this.page = 0;
@@ -174,15 +203,21 @@ export default class CommandPalette {
   // 次の command page へ進め、button 表示を更新する
   // 最終 page の次は 1 枚目へ戻し、狭い mobile UI でも全 command を循環して使えるようにする
   nextPage() {
-    this.page = (this.page + 1) % COMMAND_PAGES.length;
+    const pages = this.getPageSet();
+    this.page = (this.page + 1) % pages.length;
     this.render();
     return this.page;
+  }
+
+  getPageSet() {
+    return this.isSculptPalette?.() === true ? SCULPT_COMMAND_PAGES : COMMAND_PAGES;
   }
 
   // 現在表示中の page に対応する action 配列を返す
   // page が不正値になった場合は 1 枚目を返し、空 palette を出さない
   getActions() {
-    return COMMAND_PAGES[this.page] ?? COMMAND_PAGES[0];
+    const pages = this.getPageSet();
+    return pages[this.page] ?? pages[0];
   }
 
   // command palette を開く
@@ -210,7 +245,7 @@ export default class CommandPalette {
     this.render();
   }
 
-  // command palette の 4x4 button 表示を現在 page の action に合わせて更新する
+  // command palette の button 表示を現在 page の action に合わせて更新する
   // 各 button には実行 action、表示 label、active 表示、page switch 表示、disabled 状態をまとめて反映する
   // 未割り当て slot は `undefined` action として表示し、空 action は button 自体を隠す
   render() {
@@ -218,19 +253,28 @@ export default class CommandPalette {
       return;
     }
     const actions = this.getActions();
+    const sculptPalette = this.isSculptPalette?.() === true;
+    this.root?.classList?.toggle("sculpt-palette", sculptPalette);
     for (let i = 0; i < this.buttons.length; i++) {
       const button = this.buttons[i];
       const action = actions[i] ?? "";
-      const label = this.getActionLabel(action);
+      const label = this.getActionLabel(action, {
+        sculptPalette,
+        page: this.page
+      });
       const active = this.isActionActive?.(action) === true;
       const enabled = this.isActionEnabled?.(action) === true;
       const pageSwitch = action === "palette-next";
+      const modeSwitch = action === "mode-edit"
+        || action === "mode-sculpt"
+        || (action === "sculpt-plus" && sculptPalette !== true);
       const axisClass = getAxisClass(action);
       button.dataset.action = action;
       button.innerHTML = action ? `${label.label}<small>${label.detail}</small>` : "";
       button.disabled = !action || !enabled;
       button.classList.toggle("active", active);
       button.classList.toggle("page-switch", pageSwitch);
+      button.classList.toggle("mode-switch", modeSwitch);
       button.classList.toggle("axis-x", axisClass === "axis-x");
       button.classList.toggle("axis-y", axisClass === "axis-y");
       button.classList.toggle("axis-z", axisClass === "axis-z");

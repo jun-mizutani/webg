@@ -1,10 +1,11 @@
 // ---------------------------------------------
-// Font.js        2026/03/10
+// Font.js        2026/07/12
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // ---------------------------------------------
 
 import Shader from "./Shader.js";
+import { CAMERA_REVERSE_Z } from "./DepthConvention.js";
 
 export default class Font extends Shader {
   // フォント描画用Uniform管理を初期化する
@@ -128,7 +129,7 @@ fn fsMain(input : VSOut) -> @location(0) vec4f {
         cullMode: "none"
       },
       depthStencil: {
-        format: "depth24plus",
+        format: CAMERA_REVERSE_Z.format,
         depthWriteEnabled: false,
         depthCompare: "always"
       }

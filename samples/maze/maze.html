@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>WebGPU Maze Walk-through</title>
+  <link rel="icon" href="data:," />
+  <style>
+    html, body {
+      margin: 0;
+      height: 100%;
+      background: #111820;
+      overflow: hidden;
+      touch-action: none;
+    }
+
+    canvas {
+      display: block;
+    }
+
+    /*
+     * HelpPanelは透明でもpanel全体がpointer入力を受け取るため、その矩形上から
+     * 始めたcamera dragがcanvasへ届かない。mazeの説明本文は入力を透過し、
+     * 開閉buttonだけを操作対象として残す
+     */
+    [data-webg-overlay-panel-id="mazeHelp"] .webg-overlay-panel {
+      pointer-events: none;
+    }
+
+    [data-webg-overlay-panel-id="mazeHelp"] button {
+      pointer-events: auto;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="canvas" width="900" height="700"></canvas>
+  <script type="module" src="./main.js?v=20260707_maze1"></script>
+</body>
+</html>

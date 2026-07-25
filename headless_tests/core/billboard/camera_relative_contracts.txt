@@ -1,0 +1,33 @@
+# billboard_camera_relative_contracts
+
+## 目的
+
+`Billboard` がparticleやspriteのWorld位置をGPU用 `Float32Array` へ早期変換せず、描画直前にカメラWorld位置との差をJavaScript倍精度で求めることを確認します。旧実装は巨大World位置をinstance bufferへ直接書き、shader内のview行列で大きな平行移動を相殺していたため、小さい相対差を保持できませんでした。
+
+## 確認内容
+
+100億単位のカメラ位置に対して0.25m、-0.5m、-20m離れたbillboardを追加します。World位置が通常のJavaScript配列にそのまま保持され、draw時にinstance bufferへ `[0.25, -0.5, -20]` として書かれることを確認します。view matrixは平行移動を持たないカメラ逆回転だけで、カメラの右軸・上軸とdraw instance数も検査します。
+
+`setPosition()` でも1兆単位のWorld位置をfloat32化せず、不正な非有限位置はGPU書き込みまで進めず追加時点で例外になることを確認します。
+
+## 予想
+
+巨大World座標そのものはinstance bufferへ入らず、小さいcamera-relative値だけがfloat32になります。eye World行列は一描画につき一度だけ確定し、旧view行列の巨大平行移動はshaderへ渡りません。
+
+## 実行方法
+
+```sh
+node headless_tests/core/billboard/headless_probe.js
+```
+
+## 結果
+
+成功時は次を表示します。
+
+```text
+billboard_camera_relative_contracts: all instance coordinate contracts passed
+```
+
+## 解釈
+
+このテストが成功すれば、Billboardとそれを利用するCPU版 `ParticleEmitter` の描画位置はcamera-relative精度基盤へ接続されています。実texture、blend、depth表示はBillboard sampleのブラウザ確認項目として残します。

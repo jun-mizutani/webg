@@ -252,7 +252,6 @@ app.showOverlayPanel(buildHelpPanelOptions({
 
 app.start({
   onUpdate: ({ deltaSec }) => {
-    orbit.update(deltaSec);
     if (!state.paused) {
       timeSec += deltaSec;
       mover.node.setPosition(

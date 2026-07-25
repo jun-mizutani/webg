@@ -1,17 +1,21 @@
 // ---------------------------------------------
-// samples/bloom/main.js  2026/04/21
+// samples/bloom/main.js  2026/07/25
 //   bloom sample
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // ---------------------------------------------
 import WebgApp from "../../webg/WebgApp.js";
 import { buildErrorPanelOptions, buildHelpPanelOptions } from "../../webg/OverlayPanelPresets.js";
+import CommandPalette, {
+  getDefaultCommandPaletteCss
+} from "../../webg/CommandPalette.js";
 import Primitive from "../../webg/Primitive.js";
 import Shape from "../../webg/Shape.js";
 import BloomPass from "../../webg/BloomPass.js";
-import FullscreenPass from "../../webg/FullscreenPass.js";
 import Diagnostics from "../../webg/Diagnostics.js";
-import DebugConfig from "../../webg/DebugConfig.js";
+import BloomDebugFullscreenPass, {
+  resolveBloomDebugPreview
+} from "./BloomDebugFullscreenPass.js";
 
 // bloom sample の役割:
 // - offscreen `RenderTarget` に 3D scene を描き、その結果へ `BloomPass` を掛けてから
@@ -20,21 +24,10 @@ import DebugConfig from "../../webg/DebugConfig.js";
 // - `WebgApp` の起動補助を使いつつ、描画本体だけを custom pass へ差し替える例にする
 
 const GUIDE_LINES = [
+  "CommandPalette: double tap canvas or press /",
   "Drag or Arrow keys: orbit camera",
   "[ / ] or wheel: zoom",
-  "[b] bloom on/off",
-  "[1]/[2] threshold -/+",
-  "[3]/[4] strength -/+",
-  "[5]/[6] blur iter -/+",
-  "[7]/[8] blur radius -/+",
-  "[q]/[w] soft knee -/+",
-  "[a]/[s] extract -/+",
-  "[t]/[y] exposure -/+",
-  "[g] tone map off/reinhard/aces",
-  "[u] quality full/half",
-  "[v] view composite/scene/extract/extractHeat/blurA/blurB",
-  "[space] pause",
-  "[r] reset bloom params"
+  "Use palette controls to compare bloom extraction, blur and tone mapping"
 ];
 
 const BLOOM_DEFAULT = {
@@ -49,15 +42,9 @@ const BLOOM_DEFAULT = {
   blurRadius: 2.20
 };
 
-const HUD_ROW_OPTIONS = {
-  anchor: "top-left",
-  x: 0,
-  y: 0,
-  color: [0.90, 0.95, 1.0],
-  minScale: 0.80
-};
-
 let app = null;
+let palette = null;
+let lastHelpText = "";
 
 document.addEventListener("DOMContentLoaded", () => {
   start().catch((err) => {
@@ -77,6 +64,7 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 });
 
+// 材質を生成し、後続処理で利用できる状態にする
 function makeMaterial(color, ambient, specular, power) {
   return {
     use_texture: 0,
@@ -87,6 +75,7 @@ function makeMaterial(color, ambient, specular, power) {
   };
 }
 
+// `tone`のマップの`label`を現在の入力と状態から求め、呼び出し元へ返す
 function getToneMapLabel(mode) {
   if (mode < 0.5) return "off";
   if (mode < 1.5) return "reinhard";
@@ -97,63 +86,7 @@ function getBlurQualityLabel(scale) {
   return scale < 0.75 ? "half" : "full";
 }
 
-function getBloomDebugPreview(state, bloom) {
-  if (state.bloomView === "scene") {
-    return {
-      source: bloom.getSceneTarget(),
-      colorScale: [1.0, 1.0, 1.0, 1.0]
-    };
-  }
-  if (state.bloomView === "extract") {
-    return {
-      source: bloom.getExtractTarget(),
-      // extract / blur target は最終 composite 前の生の光量なので、
-      // そのまま swapchain へ出すと暗く見えやすい
-      // debug view では少し持ち上げて、どこに bloom 候補が残っているかを読み取りやすくする
-      colorScale: [6.0, 6.0, 6.0, 1.0]
-    };
-  }
-  if (state.bloomView === "extractHeat") {
-    return {
-      source: bloom.getExtractHeatTarget(),
-      colorScale: [1.0, 1.0, 1.0, 1.0]
-    };
-  }
-  if (state.bloomView === "blurA") {
-    return {
-      source: bloom.getBlurTargetA(),
-      colorScale: [8.0, 8.0, 8.0, 1.0]
-    };
-  }
-  return {
-    source: bloom.getBlurTargetB(),
-    colorScale: [8.0, 8.0, 8.0, 1.0]
-  };
-}
-
-// bloom sample の現在値は canvas HUD へ 1 行 1 parameter 形式で流し、
-// glow の見え方を比べながら値を直接追えるようにする
-function makeHudRows(bloom, state) {
-  return [
-    { label: "Camera", value: "orbit", note: "drag / arrow" },
-    { label: "Zoom", value: "camera", note: "[ / ] / wheel" },
-    { label: "Bloom", toggleKey: "B", value: bloom.enabled ? "ON" : "OFF" },
-    { label: "Threshold", decKey: "1", incKey: "2", value: bloom.threshold.toFixed(2) },
-    { label: "Strength", decKey: "3", incKey: "4", value: bloom.bloomStrength.toFixed(2) },
-    { label: "Blur Iter", decKey: "5", incKey: "6", value: String(bloom.blurIterations) },
-    { label: "Blur Radius", decKey: "7", incKey: "8", value: bloom.blurRadius.toFixed(2) },
-    { label: "Quality", cycleKey: "U", value: getBlurQualityLabel(bloom.getBlurScale()) },
-    { label: "Soft Knee", decKey: "Q", incKey: "W", value: bloom.softKnee.toFixed(2) },
-    { label: "Extract", decKey: "A", incKey: "S", value: bloom.extractIntensity.toFixed(2) },
-    { label: "Exposure", decKey: "T", incKey: "Y", value: bloom.exposure.toFixed(2) },
-    { label: "Tone Map", cycleKey: "G", value: getToneMapLabel(bloom.toneMapMode) },
-    { label: "View", cycleKey: "V", value: state.bloomView },
-    { label: "Pause", toggleKey: "Space", value: state.paused ? "ON" : "OFF" },
-    { label: "Reset", key: "R", action: "reset", value: "ready" },
-    { label: "Debug", value: DebugConfig.mode, keys: [{ key: "F9" }, { key: "M", action: "mode" }] }
-  ];
-}
-
+// 床を生成し、後続処理で利用できる状態にする
 function createFloor(app) {
   // 暗めの floor を置き、bloom 対象の明るい object と対比しやすくする
   const shape = new Shape(app.getGPU());
@@ -170,6 +103,7 @@ function createFloor(app) {
   return node;
 }
 
+// `center`の`sphere`を生成し、後続処理で利用できる状態にする
 function createCenterSphere(app) {
   // 中央の白球は bloom の見え方を最も分かりやすくする主役として置く
   const shape = new Shape(app.getGPU());
@@ -186,6 +120,7 @@ function createCenterSphere(app) {
   return node;
 }
 
+// `emission`の検査情報を生成し、後続処理で利用できる状態にする
 function createEmissionProbe(app, name, options) {
   // bloom の抽出が specular 由来の細い highlight だけに偏っていないかを見るため、
   // emissive を高めにした小球を複数色で追加する
@@ -210,6 +145,7 @@ function createEmissionProbe(app, name, options) {
   return node;
 }
 
+// `glow`の`orb`を生成し、後続処理で利用できる状態にする
 function createGlowOrb(app, name, color, angleDeg, radius, height, size) {
   // bloom は発光オブジェクト専用ではないが、明るい球を周回させると
   // threshold / strength / blur の変化が追いやすい
@@ -228,6 +164,7 @@ function createGlowOrb(app, name, color, angleDeg, radius, height, size) {
   return node;
 }
 
+// このインスタンスの初期化段階で、必要な状態と資源を準備して処理を開始する
 async function start() {
   app = new WebgApp({
     document,
@@ -260,6 +197,7 @@ async function start() {
   // bloom 固有 code は行配列を渡すだけにして再利用しやすくする
   app.showOverlayPanel(buildHelpPanelOptions({
     id: "bloomHelpOverlay",
+    collapsed: true,
     lines: GUIDE_LINES
   }));
 
@@ -287,8 +225,9 @@ async function start() {
     blurRadius: BLOOM_DEFAULT.blurRadius
   });
   await bloom.ready;
-  const debugPass = new FullscreenPass(app.getGPU(), {
-    targetFormat: app.getGPU().format
+  const debugPass = new BloomDebugFullscreenPass(app.getGPU(), {
+    targetFormat: app.getGPU().format,
+    sourceFormat: bloom.sceneFormat
   });
   await debugPass.init();
   app.setDiagnosticsStage("runtime");
@@ -325,6 +264,32 @@ async function start() {
     bloomView: "composite"
   };
 
+  // ヘルプの行を生成し、後続処理で利用できる状態にする
+  function buildHelpLines() {
+    return [
+      ...GUIDE_LINES,
+      "",
+      `Bloom: ${bloom.enabled ? "ON" : "OFF"} / view: ${state.bloomView}`,
+      `Threshold: ${bloom.threshold.toFixed(2)} / strength: ${bloom.bloomStrength.toFixed(2)}`,
+      `Blur: radius ${bloom.blurRadius.toFixed(2)} / iter ${bloom.blurIterations} / quality ${getBlurQualityLabel(bloom.getBlurScale())}`,
+      `Extract: ${bloom.extractIntensity.toFixed(2)} / soft knee: ${bloom.softKnee.toFixed(2)}`,
+      `Exposure: ${bloom.exposure.toFixed(2)} / tone map: ${getToneMapLabel(bloom.toneMapMode)}`,
+      `Pause: ${state.paused ? "ON" : "OFF"}`
+    ];
+  }
+
+  // ヘルプのパネルを現在の入力と実行状態に合わせて更新する
+  function updateHelpPanel() {
+    const panel = app.getOverlayPanel("bloomHelpOverlay");
+    if (!panel) return;
+    const lines = buildHelpLines();
+    const text = lines.join("\n");
+    if (text === lastHelpText) return;
+    app.updateOverlayPanel("bloomHelpOverlay", { lines });
+    lastHelpText = text;
+  }
+
+  // 診断情報の統計情報を現在の入力と実行状態に合わせて更新する
   function refreshDiagnosticsStats() {
     app.mergeDiagnosticsStats({
       bloomEnabled: bloom.enabled ? "yes" : "no",
@@ -348,13 +313,7 @@ async function start() {
     });
   }
 
-  // bloom の parameter 一覧は canvas HUD だけへ流し、
-  // 操作説明そのものは OverlayPanel で表示 / 非表示を切り替える
-  function refreshHudRows() {
-    const rows = makeHudRows(bloom, state);
-    app.setHudRows(app.isDebugUiEnabled() ? rows : [], HUD_ROW_OPTIONS);
-  }
-
+  // 検査情報のレポートを生成し、後続処理で利用できる状態にする
   function makeProbeReport(frameCount) {
     const report = app.createProbeReport("runtime-probe");
     Diagnostics.addDetail(report, `view=${state.bloomView}`);
@@ -381,6 +340,7 @@ async function start() {
     return report;
   }
 
+  // ブルームを初期状態へ戻し、前回の状態を残さない
   const resetBloom = () => {
     bloom.setEnabled(true);
     bloom.setThreshold(BLOOM_DEFAULT.threshold);
@@ -393,6 +353,99 @@ async function start() {
     bloom.setBlurIterations(BLOOM_DEFAULT.blurIterations);
     bloom.setBlurRadius(BLOOM_DEFAULT.blurRadius);
   };
+
+  // 操作変更後の表示と状態を現在の入力と実行状態に合わせて更新する
+  const refreshAfterControlChange = () => {
+    palette?.render();
+    updateHelpPanel();
+    app.requestRender();
+  };
+
+  // 操作パレットを生成し、後続処理で利用できる状態にする
+  const createPalette = () => {
+    palette = new CommandPalette({
+      document,
+      container: document.body,
+      viewport: app.screen.canvas,
+      title: "Bloom",
+      pageRows: 5,
+      pageRowsByPage: [5, 5, 5],
+      closeOnCommand: false,
+      onChange: (id, value) => {
+        if (id === "enabled") bloom.setEnabled(value);
+        else if (id === "threshold") bloom.setThreshold(value);
+        else if (id === "strength") bloom.setBloomStrength(value);
+        else if (id === "blur-radius") bloom.setBlurRadius(value);
+        else if (id === "blur-iter") bloom.setBlurIterations(value);
+        else if (id === "soft-knee") bloom.setSoftKnee(value);
+        else if (id === "extract") bloom.setExtractIntensity(value);
+        else if (id === "exposure") bloom.setExposure(value);
+        else if (id === "tone-map") bloom.setToneMapMode(value);
+        else if (id === "quality") bloom.setBlurScale(value === "half" ? 0.5 : 1.0);
+        else if (id === "view") state.bloomView = value;
+        else if (id === "paused") state.paused = value;
+        refreshAfterControlChange();
+      },
+      onCommand: (id) => {
+        if (id === "reset") resetBloom();
+        refreshAfterControlChange();
+      },
+      commands: [
+        // 1ページ目
+        { type: "toggle", id: "enabled", label: "Bloom", detail: "on/off", value: () => bloom.enabled },
+        { type: "toggle", id: "paused", label: "Pause", detail: "anim", value: () => state.paused },
+        null,
+        { id: "palette-next", label: "Next", detail: "page", pageSwitch: true },
+        { type: "select", id: "view", label: "View", value: () => state.bloomView, options: [
+          { value: "composite", label: "composite" },
+          { value: "scene", label: "scene" },
+          { value: "extract", label: "extract" },
+          { value: "extractHeat", label: "heat" },
+          { value: "blurA", label: "blurA" },
+          { value: "blurB", label: "blurB" }
+        ] },
+        { type: "stepper", id: "threshold", label: "Threshold", value: () => bloom.threshold, min: 0.1, max: 0.95, step: 0.08, decimals: 2, input: true },
+        { type: "stepper", id: "strength", label: "Strength", value: () => bloom.bloomStrength, min: 0.0, max: 4.0, step: 0.30, decimals: 2, input: true },
+        { type: "stepper", id: "blur-radius", label: "Blur Radius", value: () => bloom.blurRadius, min: 0.2, max: 4.5, step: 0.35, decimals: 2, input: true },
+        // 2ページ目
+        null,
+        null,
+        null,
+        { id: "palette-next", label: "Next", detail: "page", pageSwitch: true },
+        { type: "stepper", id: "blur-iter", label: "Blur Iter", value: () => bloom.blurIterations, min: 1, max: 6, step: 1, decimals: 0, input: true },
+        { type: "stepper", id: "soft-knee", label: "Soft Knee", value: () => bloom.softKnee, min: 0.0, max: 0.95, step: 0.05, decimals: 2, input: true },
+        { id: "reset", label: "Reset", detail: "params" },
+        null,
+        null,
+        null,
+        { type: "stepper", id: "extract", label: "Extract", value: () => bloom.extractIntensity, min: 0.2, max: 3.0, step: 0.10, decimals: 2, input: true },
+        // 3ページ目
+        null,
+        null,
+        null,
+        { id: "palette-next", label: "Next", detail: "page", pageSwitch: true },
+        { type: "stepper", id: "exposure", label: "Exposure", value: () => bloom.exposure, min: 0.25, max: 3.0, step: 0.10, decimals: 2, input: true },
+        { type: "select", id: "tone-map", label: "Tone Map", value: () => Math.floor(bloom.toneMapMode), options: [
+          { value: 0, label: "off" },
+          { value: 1, label: "reinhard" },
+          { value: 2, label: "aces" }
+        ] },
+        { type: "select", id: "quality", label: "Quality", value: () => getBlurQualityLabel(bloom.getBlurScale()), options: [
+          { value: "full", label: "full" },
+          { value: "half", label: "half" }
+        ] },
+        null,
+        null,
+        null,
+        null,
+      ]
+    });
+    palette.attachToCanvas(app.screen.canvas, { key: "/" });
+    palette.setStyle(getDefaultCommandPaletteCss());
+  };
+
+  createPalette();
+  refreshAfterControlChange();
   app.configureDiagnosticsCapture({
     labelPrefix: "bloom",
     collect: () => makeProbeReport(app.screen.getFrameCount())
@@ -450,9 +503,6 @@ async function start() {
 
   app.start({
     onUpdate: ({ deltaSec, screen }) => {
-      orbit.update(deltaSec);
-      bloom.resizeToScreen(screen);
-
       if (!state.paused) {
         orbitRoot.rotateY(18.0 * deltaSec);
         centerSphere.rotateY(10.0 * deltaSec);
@@ -467,11 +517,12 @@ async function start() {
       }
 
       refreshDiagnosticsStats();
-      refreshHudRows();
+      updateHelpPanel();
       app.updateDebugProbe();
     },
     onBeforeDraw: () => {
       // 3D scene 本体は canvas ではなく sceneTarget に描く
+      // beginScene() はコア側で寸法変化を判定し、必要な場合だけtargetを再生成する
       bloom.beginScene(app.screen, app.clearColor);
       app.space.draw(app.eye);
     },
@@ -479,18 +530,17 @@ async function start() {
       // bloom 合成自体は depth なし fullscreen pass で行う
       // そのまま Font/Message 系の depth 付き pipeline を使うと
       // attachment state 不一致になるため、合成後に color を保持したまま
-      // 深度付きの canvas pass を開き直して HUD 描画へ渡す
+      // 深度付きの canvas pass を開き直して overlay表示へ渡す
       bloom.render(app.screen, {
         source: bloom.getSceneTarget(),
         clearColor: app.clearColor
       });
 
       if (state.bloomView !== "composite") {
-        const preview = getBloomDebugPreview(state, bloom);
-        app.screen.beginPass({
+        const preview = resolveBloomDebugPreview(state.bloomView, bloom);
+        app.screen.beginPresentPass({
           clearColor: app.clearColor,
-          colorLoadOp: "clear",
-          depthView: null
+          colorLoadOp: "clear"
         });
         debugPass.setColorScale(...preview.colorScale);
         debugPass.draw(preview.source);

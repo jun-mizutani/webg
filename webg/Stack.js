@@ -1,11 +1,12 @@
 // ---------------------------------------------
-// Stack.js       2026/03/07
+// Stack.js       2026/07/25
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // ---------------------------------------------
 
 export default class Stack {
 
+  // インスタンス生成時に、受け取った設定を検証して初期状態を準備する
   constructor () {
     // COLLADA解析などで入れ子構造を辿る際に使うLIFOスタック
     // push/pop/top/count だけを持つ最小APIとして保守する

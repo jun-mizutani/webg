@@ -1,0 +1,45 @@
+# rendering_depth_pipelines_contracts
+
+## 目的
+
+通常sceneを描くshader群のGPU pipelineが、Screenの `depth32float` Reverse-Z attachmentと一致することをdescriptorで確認する。
+
+## 対象
+
+- `SmoothShader.js`
+- `GlassMaskShader.js`
+- `BillboardShader.js`
+- `Background.js`
+- `Wireframe.js`
+- `Font.js`
+
+## 確認内容
+
+- 通常面、mask、billboard、backgroundは `depth32float` と `greater` を使う。
+- 旧 `depthCompare: less` optionで規則を上書きできない。
+- Wireframeは `greater-equal` とdepth writeを使う。
+- Fontはoverlay用 `always` を維持しつつformatを `depth32float` にする。
+
+## 実行方法
+
+```sh
+node headless_tests/integration/rendering_depth_pipelines/headless_probe.js
+```
+
+## 結果
+
+2026-07-12 JSTに6モジュールとtestの構文確認、専用headless test、`git diff --check` を実行した。すべて終了コード0となり、次を表示した。
+
+```text
+rendering_depth_pipelines_contracts: all pipeline contracts passed
+```
+
+## 解釈
+
+SmoothShader、GlassMaskShader、BillboardShader、Backgroundは `depth32float` と `greater` を使用した。SmoothShaderとGlassMaskShaderへ旧 `depthCompare: "less"` を指定しても、Reverse-Z規則は上書きされなかった。
+
+Wireframeは同一面の線を許す `greater-equal` とdepth writeを使用した。Fontはoverlayとして `always` とdepth write無効を維持し、attachment formatだけを `depth32float` に一致させた。
+
+## Commit
+
+6モジュールと本テストを同じコミットへ含める。

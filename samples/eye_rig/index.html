@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>eye_rig</title>
+  <link rel="icon" href="data:," />
+  <!-- 2026/06/19 -->
+  <style>
+
+:root {
+  color-scheme: light;
+  --bg: #eef3f8;
+  --paper: rgba(255, 255, 255, 0.94);
+  --line: #c8d5e4;
+  --ink: #17324a;
+  --muted: #5c748b;
+  --accent: #1566ab;
+  --accent-soft: #dfeefe;
+  --code-bg: #f3f7fb;
+  --shadow: rgba(29, 52, 79, 0.10);
+}
+* { box-sizing: border-box; }
+html, body {
+  margin: 0;
+  min-height: 100%;
+}
+body {
+  background:
+    radial-gradient(circle at top left, rgba(21, 102, 171, 0.12), transparent 24%),
+    radial-gradient(circle at top right, rgba(255, 191, 118, 0.10), transparent 22%),
+    linear-gradient(180deg, #f8fbfd 0%, var(--bg) 100%);
+  color: var(--ink);
+  font: 16px/1.78 "Avenir Next", "Hiragino Sans", "Yu Gothic", sans-serif;
+}
+.page {
+  width: min(1080px, calc(100% - 28px));
+  margin: 0 auto;
+  padding: 24px 0 56px;
+}
+.hero,
+.doc {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  box-shadow: 0 22px 52px var(--shadow);
+}
+.hero {
+  padding: 22px 24px;
+  margin-bottom: 18px;
+}
+.hero h1 {
+  margin: 0 0 8px;
+  font-size: clamp(2rem, 4vw, 3rem);
+  line-height: 1.08;
+}
+.hero p {
+  margin: 0;
+  color: var(--muted);
+}
+.doc {
+  padding: 28px;
+}
+.doc > :first-child {
+  margin-top: 0;
+}
+h1, h2, h3, h4, h5, h6 {
+  line-height: 1.25;
+  margin: 1.45em 0 0.55em;
+}
+h1 {
+  font-size: 2.2rem;
+}
+h2 {
+  padding-bottom: 0.28em;
+  border-bottom: 1px solid var(--line);
+  font-size: 1.48rem;
+}
+h3 {
+  font-size: 1.14rem;
+}
+p, ul, ol, table, pre, blockquote {
+  margin: 0 0 1em;
+}
+ul, ol {
+  padding-left: 1.4em;
+}
+li + li {
+  margin-top: 0.26em;
+}
+a {
+  color: var(--accent);
+  text-decoration: none;
+}
+a:hover {
+  text-decoration: underline;
+}
+img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  border-radius: 16px;
+  border: 1px solid var(--line);
+  box-shadow: 0 12px 32px rgba(29, 52, 79, 0.08);
+  margin: 1.1em 0 1.4em;
+}
+code {
+  padding: 0.12em 0.38em;
+  border-radius: 0.45em;
+  background: var(--code-bg);
+  border: 1px solid #dbe6f1;
+  font: 0.92em/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+pre {
+  padding: 14px 16px;
+  overflow-x: auto;
+  border-radius: 14px;
+  background: #0f1720;
+  color: #ecf5ff;
+}
+pre code {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #ffffff;
+}
+th, td {
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  text-align: left;
+  vertical-align: top;
+}
+th {
+  background: #f5f9fc;
+}
+hr {
+  border: 0;
+  border-top: 1px solid var(--line);
+  margin: 1.5em 0;
+}
+blockquote {
+  padding: 0.3em 0 0.3em 1em;
+  border-left: 4px solid #c9dbef;
+  color: var(--muted);
+}
+@media (max-width: 720px) {
+  .page {
+    width: min(100% - 18px, 1080px);
+    padding-top: 16px;
+  }
+  .hero,
+  .doc {
+    border-radius: 18px;
+  }
+  .doc {
+    padding: 20px;
+  }
+}
+
+  </style>
+</head>
+<body>
+  <main class="page">
+    <section class="hero">
+      <h1>eye_rig</h1>
+    </section>
+    <article class="doc">
+<h1>eye_rig</h1>
+<p><a href="index.en.html">English</a> | 日本語</p>
+<p><img src="./eye_rig.jpg" alt="eye_rig" /></p>
+<h2>概要</h2>
+<p>このサンプルは、<code>base -&gt; rod -&gt; eye</code> の3段構成を使うEyeRigについて、Orbit、First Person、Followの役割と、アプリケーションが作る親子階層の違いを同じシーンで確認するものです。</p>
+<p>青いcamera vehicleとオレンジ色のtarget vehicleは、カーブ、上り下り、bankを含む同じtrackを位相をずらして走ります。OrbitとFirst Personではcamera vehicleを基準としたカメラ配置を確認し、Followではcamera vehicleに取り付けたカメラが、別に動くtarget vehicleへ視線だけを滑らかに向け続けることを確認します。</p>
+<p>このサンプルで確認した仕様は <code>webg/EyeRig.js</code> へ取り込まれています。サンプルはコアの <code>EyeRig</code> を直接使い、Follow、回転した親の下でのOrbit座標変換、First Personの独立lookYaw入力をまとめて確認します。</p>
+<h2>実行方法</h2>
+<ul><li>実行ファイルは <a href="./eye_rig.html">./eye_rig.html</a> です</li><li>WebGPU対応ブラウザで開き、左上のHelp panelで操作説明と現在値を確認します</li><li><code>/</code> またはcanvasのダブルタップでCommandPaletteを開き、modeや設定を変更します</li></ul>
+<h2>使用しているwebg機能</h2>
+<ul><li><code>WebgApp</code>: Screen、Space、camera rig、InputController、Message、OverlayPanel、diagnosticsを初期化する</li><li><code>EyeRig</code>: 三つのmode state、入力、world-to-local変換、Followの姿勢追跡を担当する</li><li><code>CoordinateSystem</code>: camera vehicleとcamera baseの親子変換、および独立camera anchorを構成する</li><li><code>Shape / Primitive</code>: track markerと2台のvehicleを描画する</li><li><code>buildHelpPanelOptions()</code>: 仕様と操作方法を折りたたみ可能なHelp panelへ表示する</li><li><code>CommandPalette</code>: mode切り替え、pause、reset、Orbit階層、Follow上方向基準の操作をまとめる</li></ul>
+<h2>確認ポイント</h2>
+<p>Orbitでは、camera rigをcamera vehicleの子にした場合、vehicleの移動、pitch、rollがbaseへ継承されます。<code>H</code>で独立camera anchorへ付け替えると、vehicleと同じ位置を移動しながら回転は継承しません。この違いがEyeRigのmodeではなく、アプリケーションが作る階層構造によることを確認します。</p>
+<p>First Personでは、baseをcamera vehicleの後方、上方、右側へ置きます。camera bodyの前方はlocal <code>-Z</code>、camera vehicleの前方はlocal <code>+Z</code>なので、<code>bodyYaw: 180</code>によって両方の前方軸を一致させています。<code>W</code>はbodyYawで回転したbodyのlocal <code>-Z</code>、<code>D</code>はlocal <code>+X</code>へ進み、反対方向を<code>S / A</code>で確認できます。ドラッグの水平差分はbodyYawではなくeyeのlookYawへ反映され、lookYawは移動方向を変えないため、vehicleの進行方向を維持したまま周囲を見られます。<code>Q / E</code>ではbaseを親座標系内で上下へ移動できます。</p>
+<p>Followでは、baseはcamera vehicleの子として固定され、target vehicleの位置へ移動しません。rodはアプリケーションが決める比較的安定した基準角度を保持し、eyeはtarget vehicleを見るための動的なローカル姿勢だけを担当します。Help panelの <code>follow dot</code> が1に近いほど、eyeのworld前方がtarget方向へ一致しています。</p>
+<p><code>U</code>で <code>base / rod / world</code> の上方向基準を切り替えると、camera vehicleがbankしたときのロール基準が変化します。追跡方向と上方向がほぼ平行な場合は、直前のright軸を対象方向へ直交投影し、直前姿勢のロール連続性を維持します。</p>
+<p>Followの姿勢補間にはフレームレート非依存のresponse係数と最大角速度を使用します。target位置そのものを遅らせず、実際のtarget位置から求めた目標姿勢へクォータニオンで徐々に近づきます。</p>
+<h2>操作方法</h2>
+<ul><li><code>1</code>: Orbitへ切り替える</li><li><code>2</code>: First Personへ切り替える</li><li><code>3</code>: Followへ切り替える</li><li><code>R</code>: 現在のmodeを初期状態へ戻す</li><li><code>P</code>: 2台のvehicleを一時停止または再開する</li><li><code>H</code>: Orbit中の親階層をvehicle回転継承と回転非継承で切り替える</li><li><code>U</code>: Follow中の上方向基準を <code>base / rod / world</code> で切り替える</li><li>ドラッグ: Orbitの周回、First Personの独立視線、Followのrod基準角度を変更する</li><li><code>Shift + ドラッグ</code> または2本指ドラッグ: OrbitのPAN</li><li>ホイールまたはpinch: OrbitとFollowの基準距離を変更する</li><li><code>W / A / S / D</code>: First Personのbaseを親座標系内で移動する</li><li><code>Q / E</code>: First Personのbaseを下降または上昇する</li><li><code>Shift</code>: First Personの移動速度を上げる</li><li><code>/</code> またはcanvasダブルタップ: CommandPaletteを開く</li></ul>
+<h2>実装ファイル</h2>
+<ul><li><code>main.js</code>: scene、vehicle軌道、mode切り替え、UI、diagnosticsを構成する</li><li><code>eye_rig.txt</code>: 利用者とAI向けに、目的、処理フロー、実装判断を詳しく説明する</li><li><code>book/06_カメラ制御とEyeRig.md</code>: コア実装とカメラ操作の基準となる第6章</li></ul>
+    </article>
+  </main>
+</body>
+</html>

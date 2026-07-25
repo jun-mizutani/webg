@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// unittest/primitive_normal_map/main.js  2026/04/12
+// unittest/primitive_normal_map/main.js  2026/07/25
 //   primitive_normal_map sample
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -42,6 +42,7 @@ const PALETTE = [
   [0.82, 0.66, 0.94, 1.0]
 ];
 
+// 投影を受け取り、現在の設定と後続処理へ反映する
 const setProjection = (screen, shader, angle = 50) => {
   // 3x3 の比較が窮屈にならない固定投影へそろえる
   const proj = new Matrix();
@@ -50,6 +51,7 @@ const setProjection = (screen, shader, angle = 50) => {
   shader.setProjectionMatrix(proj);
 };
 
+// テクスチャのX方向の反転を読み込み、検証済みのデータとして後続処理へ渡す
 const loadTextureFlipX = async (gpu, url) => {
   // 既存 sample と同じ向きで比較できるよう、`num256.png` は X 反転して取り込む
   const response = await fetch(url);
@@ -76,6 +78,7 @@ const loadTextureFlipX = async (gpu, url) => {
   };
 };
 
+// 画像の法線を生成し、後続処理で利用できる状態にする
 const createImageNormal = async (gpu, rgba, width, height) => {
   // ベース texture と同じ画素から normal map を作ると、
   // 「元画像由来の凹凸」がどれだけ陰影へ反映されたかを見比べやすい
@@ -95,6 +98,7 @@ const createImageNormal = async (gpu, rgba, width, height) => {
   return tex;
 };
 
+// `procedural`の法線を生成し、後続処理で利用できる状態にする
 const createProceduralNormal = async (gpu) => {
   // procedural 側は `shapes` で使っていた noise 系の条件を少し控えめにして、
   // image 由来 normal と見分けやすいが強すぎない陰影にする
@@ -117,6 +121,7 @@ const createProceduralNormal = async (gpu) => {
   return tex;
 };
 
+// 形状を生成し、後続処理で利用できる状態にする
 const createShape = (gpu, rowEntry, colEntry, colorTex, imageNormalTex, proceduralNormalTex, color) => {
   // 行は primitive 差、列は normal source 差だけを表す
   // それ以外の material 条件を固定し、比較対象を絞る
@@ -148,6 +153,7 @@ const createShape = (gpu, rowEntry, colEntry, colorTex, imageNormalTex, procedur
   return shape;
 };
 
+// このインスタンスの初期化段階で、必要な状態と資源を準備して処理を開始する
 const start = async ({ screen, gpu, setStatus, setViewportLayout, startLoop, document }) => {
   const shader = new SmoothShader(gpu);
   await shader.init();

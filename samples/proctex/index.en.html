@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>proctex</title>
+  <link rel="icon" href="data:," />
+  <!-- 2026/06/19 -->
+  <style>
+
+:root {
+  color-scheme: light;
+  --bg: #eef3f8;
+  --paper: rgba(255, 255, 255, 0.94);
+  --line: #c8d5e4;
+  --ink: #17324a;
+  --muted: #5c748b;
+  --accent: #1566ab;
+  --accent-soft: #dfeefe;
+  --code-bg: #f3f7fb;
+  --shadow: rgba(29, 52, 79, 0.10);
+}
+* { box-sizing: border-box; }
+html, body {
+  margin: 0;
+  min-height: 100%;
+}
+body {
+  background:
+    radial-gradient(circle at top left, rgba(21, 102, 171, 0.12), transparent 24%),
+    radial-gradient(circle at top right, rgba(255, 191, 118, 0.10), transparent 22%),
+    linear-gradient(180deg, #f8fbfd 0%, var(--bg) 100%);
+  color: var(--ink);
+  font: 16px/1.78 "Avenir Next", "Hiragino Sans", "Yu Gothic", sans-serif;
+}
+.page {
+  width: min(1080px, calc(100% - 28px));
+  margin: 0 auto;
+  padding: 24px 0 56px;
+}
+.hero,
+.doc {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  box-shadow: 0 22px 52px var(--shadow);
+}
+.hero {
+  padding: 22px 24px;
+  margin-bottom: 18px;
+}
+.hero h1 {
+  margin: 0 0 8px;
+  font-size: clamp(2rem, 4vw, 3rem);
+  line-height: 1.08;
+}
+.hero p {
+  margin: 0;
+  color: var(--muted);
+}
+.doc {
+  padding: 28px;
+}
+.doc > :first-child {
+  margin-top: 0;
+}
+h1, h2, h3, h4, h5, h6 {
+  line-height: 1.25;
+  margin: 1.45em 0 0.55em;
+}
+h1 {
+  font-size: 2.2rem;
+}
+h2 {
+  padding-bottom: 0.28em;
+  border-bottom: 1px solid var(--line);
+  font-size: 1.48rem;
+}
+h3 {
+  font-size: 1.14rem;
+}
+p, ul, ol, table, pre, blockquote {
+  margin: 0 0 1em;
+}
+ul, ol {
+  padding-left: 1.4em;
+}
+li + li {
+  margin-top: 0.26em;
+}
+a {
+  color: var(--accent);
+  text-decoration: none;
+}
+a:hover {
+  text-decoration: underline;
+}
+img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  border-radius: 16px;
+  border: 1px solid var(--line);
+  box-shadow: 0 12px 32px rgba(29, 52, 79, 0.08);
+  margin: 1.1em 0 1.4em;
+}
+code {
+  padding: 0.12em 0.38em;
+  border-radius: 0.45em;
+  background: var(--code-bg);
+  border: 1px solid #dbe6f1;
+  font: 0.92em/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+pre {
+  padding: 14px 16px;
+  overflow-x: auto;
+  border-radius: 14px;
+  background: #0f1720;
+  color: #ecf5ff;
+}
+pre code {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #ffffff;
+}
+th, td {
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  text-align: left;
+  vertical-align: top;
+}
+th {
+  background: #f5f9fc;
+}
+hr {
+  border: 0;
+  border-top: 1px solid var(--line);
+  margin: 1.5em 0;
+}
+blockquote {
+  padding: 0.3em 0 0.3em 1em;
+  border-left: 4px solid #c9dbef;
+  color: var(--muted);
+}
+@media (max-width: 720px) {
+  .page {
+    width: min(100% - 18px, 1080px);
+    padding-top: 16px;
+  }
+  .hero,
+  .doc {
+    border-radius: 18px;
+  }
+  .doc {
+    padding: 20px;
+  }
+}
+
+  </style>
+</head>
+<body>
+  <main class="page">
+    <section class="hero">
+      <h1>proctex</h1>
+    </section>
+    <article class="doc">
+<h1>proctex</h1>
+<p>English | <a href="index.html">日本語</a></p>
+<p><img src="./proctex.jpg" alt="proctex" /></p>
+<h2>Overview</h2>
+<ul><li>Built on <code>WebgApp</code>, this sample lets you inspect procedural height-map generation and normal-map generation from <code>Texture.js</code> at the same time</li><li>It uses the same height map both as a color texture and as a normal map, then displays a slowly rotating cube created with <code>Shape.mapCube</code> in the center of the screen</li><li>By using <code>WebgApp</code> input and HUD, the sample keeps the key-operation guide and the current parameters visible in the same screen</li></ul>
+<h2>How to Run</h2>
+<ul><li>Open <a href="./proctex.html">./proctex.html</a></li><li>Use a browser with WebGPU support, and check the help panel and HUD together with the sample when needed</li></ul>
+<h2>webg Features Used</h2>
+<ul><li><code>Texture.makeProceduralHeightMapPixels</code>: procedural height-map generation</li><li><code>Texture.buildNormalMapFromHeightMap</code>: normal-map generation from the height map</li><li><code>Shape.mapCube</code>: UV-unwrapped cube</li><li><code>SmoothShader</code>: texture + normal-map rendering</li><li><code>InputController / Touch</code>: unifies keyboard input and touch-button input</li><li><code>WebgApp</code> HUD: displays the operation guide and current parameters</li></ul>
+<h2>Checkpoints</h2>
+<ul><li>Confirm that the appearance changes immediately when texture on/off and normal-map on/off are toggled</li><li>Change <code>pattern / scale / contrast / bias / seed</code> and confirm that the generated pattern is rebuilt</li><li>Confirm that changing <code>normal strength</code> changes how strongly the surface relief is emphasized</li><li>Confirm that touch buttons are shown even on desktop and that the same key operations can be pressed there directly</li></ul>
+<h2>Controls</h2>
+<ul><li><code>T</code>: toggle texture on or off</li><li><code>N</code>: toggle the normal map on or off</li><li><code>P</code>: switch the pattern (<code>noise / dots</code>)</li><li><code>C</code>: switch the shader color preset</li><li><code>[ / ]</code>: decrease / increase scale</li><li><code>, / .</code>: decrease / increase bias</li><li><code>; / '</code>: decrease / increase contrast</li><li><code>K / L</code>: decrease / increase seed</li><li><code>U / J</code>: increase / decrease normal strength</li><li><code>I</code>: toggle <code>invertHeight</code> on or off</li><li><code>Y</code>: toggle <code>invertY</code> on or off</li><li><code>R</code>: force regeneration with the current parameters, although regeneration normally happens automatically</li><li>The touch buttons are shown with the same key assignments and can be inspected directly even on desktop</li></ul>
+<h2>Regeneration Behavior</h2>
+<ul><li><code>P / [ / ] / , / . / ; / ' / K / L / I / Y</code> trigger automatic regeneration when changed</li><li><code>R</code> is used when you want to explicitly rerun regeneration while keeping the same parameters</li></ul>
+    </article>
+  </main>
+</body>
+</html>

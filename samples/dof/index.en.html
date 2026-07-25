@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>dof</title>
+  <link rel="icon" href="data:," />
+  <!-- 2026/06/19 -->
+  <style>
+
+:root {
+  color-scheme: light;
+  --bg: #eef3f8;
+  --paper: rgba(255, 255, 255, 0.94);
+  --line: #c8d5e4;
+  --ink: #17324a;
+  --muted: #5c748b;
+  --accent: #1566ab;
+  --accent-soft: #dfeefe;
+  --code-bg: #f3f7fb;
+  --shadow: rgba(29, 52, 79, 0.10);
+}
+* { box-sizing: border-box; }
+html, body {
+  margin: 0;
+  min-height: 100%;
+}
+body {
+  background:
+    radial-gradient(circle at top left, rgba(21, 102, 171, 0.12), transparent 24%),
+    radial-gradient(circle at top right, rgba(255, 191, 118, 0.10), transparent 22%),
+    linear-gradient(180deg, #f8fbfd 0%, var(--bg) 100%);
+  color: var(--ink);
+  font: 16px/1.78 "Avenir Next", "Hiragino Sans", "Yu Gothic", sans-serif;
+}
+.page {
+  width: min(1080px, calc(100% - 28px));
+  margin: 0 auto;
+  padding: 24px 0 56px;
+}
+.hero,
+.doc {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  box-shadow: 0 22px 52px var(--shadow);
+}
+.hero {
+  padding: 22px 24px;
+  margin-bottom: 18px;
+}
+.hero h1 {
+  margin: 0 0 8px;
+  font-size: clamp(2rem, 4vw, 3rem);
+  line-height: 1.08;
+}
+.hero p {
+  margin: 0;
+  color: var(--muted);
+}
+.doc {
+  padding: 28px;
+}
+.doc > :first-child {
+  margin-top: 0;
+}
+h1, h2, h3, h4, h5, h6 {
+  line-height: 1.25;
+  margin: 1.45em 0 0.55em;
+}
+h1 {
+  font-size: 2.2rem;
+}
+h2 {
+  padding-bottom: 0.28em;
+  border-bottom: 1px solid var(--line);
+  font-size: 1.48rem;
+}
+h3 {
+  font-size: 1.14rem;
+}
+p, ul, ol, table, pre, blockquote {
+  margin: 0 0 1em;
+}
+ul, ol {
+  padding-left: 1.4em;
+}
+li + li {
+  margin-top: 0.26em;
+}
+a {
+  color: var(--accent);
+  text-decoration: none;
+}
+a:hover {
+  text-decoration: underline;
+}
+img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  border-radius: 16px;
+  border: 1px solid var(--line);
+  box-shadow: 0 12px 32px rgba(29, 52, 79, 0.08);
+  margin: 1.1em 0 1.4em;
+}
+code {
+  padding: 0.12em 0.38em;
+  border-radius: 0.45em;
+  background: var(--code-bg);
+  border: 1px solid #dbe6f1;
+  font: 0.92em/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+pre {
+  padding: 14px 16px;
+  overflow-x: auto;
+  border-radius: 14px;
+  background: #0f1720;
+  color: #ecf5ff;
+}
+pre code {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #ffffff;
+}
+th, td {
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  text-align: left;
+  vertical-align: top;
+}
+th {
+  background: #f5f9fc;
+}
+hr {
+  border: 0;
+  border-top: 1px solid var(--line);
+  margin: 1.5em 0;
+}
+blockquote {
+  padding: 0.3em 0 0.3em 1em;
+  border-left: 4px solid #c9dbef;
+  color: var(--muted);
+}
+@media (max-width: 720px) {
+  .page {
+    width: min(100% - 18px, 1080px);
+    padding-top: 16px;
+  }
+  .hero,
+  .doc {
+    border-radius: 18px;
+  }
+  .doc {
+    padding: 20px;
+  }
+}
+
+  </style>
+</head>
+<body>
+  <main class="page">
+    <section class="hero">
+      <h1>dof</h1>
+    </section>
+    <article class="doc">
+<h1>dof</h1>
+<p>English | <a href="index.html">日本語</a></p>
+<p><img src="./dof.jpg" alt="dof" /></p>
+<h2>Overview</h2>
+<ul><li>This is a minimal depth-of-field sample that uses <code>DofPass</code> to render the 3D scene once into an offscreen <code>RenderTarget</code>, then reads depth and keeps only the focus plane sharp</li><li>It is also a sample for confirming that <code>SeparableBlurPass</code> can be reused for purposes other than bloom</li><li><code>WebgApp</code> is used for startup and overlay display, while the main 3D scene switches to postprocess-based drawing with <code>autoDrawScene: false</code></li><li>The sceneTarget used as the blur source keeps the normal forward-rendered scene color, including direct-light diffuse and specular. This avoids the unnatural case where only the specular highlight disappears as soon as the result switches to a blurred image.</li><li>Instead of a floor, many small spheres are placed at near, focus-adjacent, and far distances so the movement of the focus plane can be recognized more easily</li><li>A small cross-shaped guide is placed inside the 3D scene at the current <code>focusDistance</code>, making it easier to track the focus-plane position without opening a debug view</li><li>In the CommandPalette, Focus Range follows the same meaning as <code>compute_dof</code>: it is the distance width of one blur stage. <code>DofPass</code> uses this stage-width rule and moves from scene color to small / medium / large blur in order, so it is less likely to jump to a strong blur immediately after leaving the focus plane</li><li>By default, the sample uses Staged mode, where small / medium / large staged blur textures are selected gradually from the depth difference. This is the sample's standard path</li><li>The three staged blur textures are not generated at the same resolution. <code>small</code> uses the base blur scale, <code>medium</code> uses about 0.7x of that target size, and <code>large</code> uses about 0.5x. This reduces fill cost where large blur would dominate while keeping the appearance stable</li><li>The default blur iterations for small / medium / large are <code>1 / 2 / 4</code>. Smaller blur stages gain little visible quality from extra iterations, so each stage uses only the amount of repetition it needs</li><li>The benchmark page in the CommandPalette can run an automatic sequence for <code>DOF Off / Staged S1 / Staged S2 / Staged Full / Staged Half</code>, then download the averaged values and per-frame samples as JSON. <code>Staged S1</code> uses only the small blur stage, and <code>Staged S2</code> uses small + medium. During measurement, the view is fixed to <code>composite</code> so the comparison stays on the same output flow</li><li>Use CommandPalette Background to switch the clear color and compare bloom-like leakage that stands out on black backgrounds with edge appearance on brighter backgrounds</li><li>The default values are tuned for a practical light blur that is easy to compare with <code>compute_dof</code>: the CommandPalette shows <code>focusRange=7.0</code>, <code>Focus Hold=0.35</code>, <code>maxBlurMix=1.0</code>, full quality, stage blur iterations <code>1 / 2 / 4</code>, and <code>blurRadius=2.0</code></li><li>The sphere geometry is built from a unit sphere only once, and each node expresses radius differences through a <code>Shape</code> instance and uniform scale, avoiding duplicated mesh builds while changing only color</li><li>The operation guide and load display are shown in a collapsible help panel at the upper left with <code>buildHelpPanelOptions()</code> and <code>showOverlayPanel()</code>, while current DoF settings are shown directly on CommandPalette toggles, steppers, and selectors</li></ul>
+<h2>How to Run</h2>
+<ul><li>Open <a href="./dof.html">./dof.html</a></li><li>Use a browser with WebGPU support, and check the help panel and CommandPalette together with the sample when needed</li><li>Open the CommandPalette by double tapping the canvas or pressing <code>/</code>. You can change background, focus distance, focus range, blur radius, and per-stage iterations while seeing their current values. The help panel also shows frame timing, so the appearance and load can be compared on the same screen.</li></ul>
+<h2>webg Features Used</h2>
+<ul><li><code>WebgApp</code>: initialization of <code>Screen / Shader / Space / Input / Message</code> and overlay display</li><li><code>buildHelpPanelOptions() + showOverlayPanel()</code>: builds the standard help panel at the upper left and toggles the visibility of the operation guide</li><li><code>CommandPalette</code>: provides a settings panel opened by double tapping the canvas or pressing <code>/</code>, and lets the sample show and edit current DoF values in place</li><li><code>Shape.createInstance()</code>: reuses the shared resource of the unit sphere and places spheres of different colors with individual material and node scale</li><li><code>RenderTarget(sampleDepth=true)</code>: offscreen render target whose color and depth can be read by later passes</li><li><code>EyeRig(type=&quot;orbit&quot;)</code>: orbit viewpoint for inspecting the depth layout</li></ul>
+<h2>Instancing Measurements</h2>
+<ul><li>Before instancing</li><li><code>vertexCount=12252</code></li><li><code>triangleCount=22436</code></li><li><code>boneCount=0</code></li><li><code>nodeCount=27</code></li><li><code>shapeCount=23</code></li><li><code>meshCount=23</code></li><li>After instancing</li><li><code>vertexCount=681</code></li><li><code>triangleCount=1156</code></li><li><code>boneCount=0</code></li><li><code>nodeCount=27</code></li><li><code>shapeCount=23</code></li><li><code>meshCount=4</code></li><li><code>shapeCount</code> does not change because the number of spheres placed in the scene itself is the same</li><li><code>meshCount</code>, <code>vertexCount</code>, and <code>triangleCount</code> decrease greatly because the unit-sphere geometry is built only once and its shared resource is reused by multiple <code>Shape</code> instances</li></ul>
+<h2>Checkpoints</h2>
+<ul><li>Toggle DOF on and off with the CommandPalette DOF toggle and confirm that spheres farther from the focus plane become more blurred</li><li>Confirm that even when the camera rotates, the view is not blocked by a floor and multiple small spheres remain visible as front-to-back layers</li><li>When changing <code>Focus Dist</code> with the CommandPalette, confirm that the depth band that appears sharp moves forward and backward</li><li>When changing <code>Focus Dist</code> with the CommandPalette, confirm that the cross guide inside the 3D scene also moves forward and backward to the same distance</li><li>Confirm that the help panel appears at the upper left, that pressing <code>Hide Help</code> leaves only the <code>Show Help</code> button, and that <code>Show Help</code> restores it</li><li>When changing <code>Focus Range</code> with the CommandPalette, confirm that the distance width of one blur stage becomes narrower or wider</li><li>When changing <code>Blur Radius</code> or per-stage iterations with the CommandPalette, confirm how the bleed outside the focus area and GPU load change</li><li>When changing <code>Max Blur</code> with the CommandPalette, confirm how strongly blur is mixed back into the scene</li><li>When switching blur quality between full and half with CommandPalette <code>Quality</code>, confirm how the small / medium / large blur target sizes all change together and how that affects final appearance and GPU load</li><li>When switching <code>Stage Cnt</code> between <code>1 / 2 / 3</code>, confirm how the number of staged blur levels changes both the appearance and the GPU load</li><li>On the benchmark page in the CommandPalette, adjust <code>Warmup</code> and <code>Samples</code>, run <code>Bench</code>, and confirm that the result can be saved from <code>JSON</code></li><li>Use CommandPalette <code>View</code> to switch between <code>composite / scene / depth / focusMask / stageMask / blurSmall / blurMedium / blurLarge</code> and confirm that the depth distribution, focus-plane mask, selected blur stage, and each blur texture can be inspected directly</li><li><code>focusMask</code> uses the same color coding as <code>compute_dof</code>: focus is 0, foreground stages are -1 / -2 / -3, and background stages are 1 / 2 / 3</li><li>In <code>stageMask</code>, scene / small / medium / large are shown in distinct colors so the selected blur stage can be recognized directly</li><li>Switch CommandPalette <code>Background</code> and confirm how the clear color changes blur leakage and focus-edge appearance</li></ul>
+<h2>Controls</h2>
+<ul><li><code>Hide Help / Show Help</code> in the upper-left help panel: show or hide the operation-guide body text</li><li>Double tap the canvas or press <code>/</code>: show or hide the CommandPalette</li><li>Drag / arrow keys: orbit camera rotation</li><li>Mouse wheel / <code>[ / ]</code>: zoom</li><li>CommandPalette page 1: DOF on/off, Staged, Focus Dist, Focus Range, Focus Hold. Focus Range is the distance width of one blur stage</li><li>CommandPalette page 2: Blur Radius, Max Blur</li><li>CommandPalette page 3: View, Background, Quality, Small Iter, Medium Iter, Large Iter, Stage Cnt, Curve, Reset</li><li>CommandPalette page 4: Bench, JSON, Warmup, Samples</li></ul>
+    </article>
+  </main>
+</body>
+</html>

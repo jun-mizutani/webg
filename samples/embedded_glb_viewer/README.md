@@ -1,0 +1,54 @@
+# embedded_glb_viewer
+
+[English](README.en.md) | 日本語
+
+![embedded_glb_viewer](./embedded_glb_viewer.jpg)
+
+## 概要
+- WebgApp の layoutMode: "embedded" と fixedCanvasSize を使い、本文の途中へ埋め込んだ canvas の中で .glb ビューアを動かすサンプルです
+- input[type=file] で選んだ単体 .glb を WebgApp.loadModel() から読み込み、EyeRig(type="orbit") のドラッグ / pinch / キーボード操作、viewer 側のタッチ orbit / zoom ボタン、CommandPalette の viewer action で確認できるようにしています
+- 読み込んだモデルは、バウンディングボックス中心がワールド原点へ来るように配置し、camera の target も原点から始めます
+- Load bundled sample を押すと同梱の samples/gltf_loader/hand.glb をそのまま表示できるため、手元のモデルが無い状態でも embedded viewer の挙動をすぐ確認できます
+- タッチ controls は InputController.installTouchControls() で追加し、← / → / ↑ / ↓ / + / - を orbit / zoom の step action として、R / || / W / S を viewer action として接続しています
+- W キー、DOM の W ボタン、タッチの W、CommandPalette の Wire で、表示中 shape 全体を wireframe 表示へ一括切り替えできます
+- PAN は EyeRig の標準操作にそろえ、Shift + Drag、Shift + Arrow、2 本指ドラッグで target を screen 方向へ移動できます
+- 読み込み中は showOverlayPanel({ format: "pre", ... }) で stage と経過時間を canvas 上へ出し、Help Panel と右側 status には file 名、triangle 数、clip 数、camera 状態、error をまとめて表示します
+
+## 実行方法
+- 実行ファイルは [./embedded_glb_viewer.html](./embedded_glb_viewer.html) です
+- WebGPU に対応したブラウザで開き、必要に応じて Help Panel と CommandPalette を合わせて確認してください
+
+## 使用している webg 機能
+- WebgApp: Screen / Shader / Space / Input / Message / overlay の標準初期化
+- EyeRig(type="orbit"): ドラッグ / ホイール / pinch / キーボードによるオービットカメラ
+- WebgApp.loadModel(..., { format: "gltf" }): glTF / GLB ローダー経路
+- InputController.installTouchControls(): coarse pointer 向けのタッチボタン
+- CommandPalette: load sample / clear / reset / pause / wireframe / screenshot を canvas 上のパレットにまとめる
+- WebgApp.showOverlayPanel(): 読み込み中 stage 表示
+- WebgApp.takeScreenshot(): 現在の canvas の保存
+
+## 確認ポイント
+- Choose GLB から .glb を選ぶと、その場で読み込みが始まり、読み込み完了後にモデルが表示されることを確認します
+- Load bundled sample で hand.glb が表示され、animation を持つモデルでは Space またはタッチの || で pause / resume できることを確認します
+- 読み込み直後にモデルの中心がワールド原点へ来て、Help Panel の target が 0, 0, 0 から始まることを確認します
+- ドラッグ、pinch、Arrow、[ ]、タッチの ← / → / ↑ / ↓ / + / - が同じ orbit camera を操作し、タッチボタンは 1 tap ごとに確実に反応することを確認します
+- Shift + Drag、Shift + Arrow、2 本指ドラッグで、view の target が screen 方向へ自然に平行移動することを確認します
+- W を切り替えると、表示中モデル全体が solid / wireframe で切り替わることを確認します
+- R または Reset view で camera がフレーミング初期値へ戻ることを確認します
+- S またはタッチの S で現在の canvas が保存されることを確認します
+- / または canvas ダブルタップで CommandPalette が開き、Load / Clear / Reset / Pause / Wire / Shot を実行できることを確認します
+
+## 操作方法
+- Choose GLB: ローカルの .glb ファイルを選択
+- Load bundled sample: 同梱 hand.glb を読み込む
+- ドラッグ: orbit camera
+- 2 本指ドラッグ: camera 平行移動
+- pinch / ホイール / [ ] / タッチ + -: zoom
+- Arrow / タッチ ← → ↑ ↓: orbit camera
+- Shift + Drag / Shift + Arrow: camera 平行移動
+- W / DOM W / タッチ W: wireframe 切り替え
+- R / タッチ R: camera reset
+- Space / タッチ ||: animation pause / resume
+- S / DOM S / タッチ S: screenshot 保存
+- Clear: 現在モデルを隠して placeholder 表示へ戻す
+- / または canvas ダブルタップ: CommandPalette を開く

@@ -1,0 +1,39 @@
+# node_camera_relative_contracts
+
+## 目的
+
+Node階層のrootだけをCamera Frameでcamera-relative化し、childは小さいlocal行列を親model-viewへ合成する契約を確認する。子孫ごとにカメラ位置を引く二重変換や、旧view Matrix経路への暗黙復帰を防ぐ。
+
+## 確認内容
+
+- 原点付近と巨大World位置でrootのmodel-viewが一致する。
+- 同じ二階層でchildのmodel-viewも一致する。
+- normal matrixから平行移動が除かれる。
+- rootへ旧view Matrixを渡すと例外になる。
+
+## 実行方法
+
+```sh
+node headless_tests/core/node/headless_probe.js
+```
+
+## 結果
+
+2026-07-12 JSTにNodeとtestの構文確認、Node階層test、Camera Frame回帰test、`git diff --check` を実行した。最初の実行ではtest側がchildを親のchildrenへ登録しておらず、rootだけが描画されることを検出して停止した。`root.addChild(child)` を明示し、実際のNode階層として修正した。
+
+修正後は終了コード0となり、次を表示した。
+
+```text
+node_camera_relative_contracts: all hierarchy contracts passed
+camera_frame_api_contracts: all camera-relative contracts passed
+```
+
+## 解釈
+
+rootだけがCamera Frameで大域平行移動をcamera-relative化し、childは親model-viewへlocal変換を合成することで、原点付近と巨大World位置の二階層が同じmodel-viewになった。childへカメラ位置を二重適用する処理はない。
+
+旧view Matrixを渡すと例外になり、従来経路へ暗黙に戻らない。normal matrixの平行移動もrootとchildの両方で0だった。
+
+## Commit
+
+`Node.js` と本テストを同じコミットへ含める。

@@ -1,0 +1,228 @@
+<!doctype html>
+<!-- webg/book/examples/28_01.html 2026/07/13 -->
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>28_01 G-buffer・SSAO・Deferred Lighting</title>
+  <link rel="stylesheet" href="./example.css" />
+</head>
+<body>
+  <div class="page">
+    <h1>book/examples</h1>
+    <h2>28_01 G-bufferからSSAOを適用した照明結果まで</h2>
+    <div class="section-card">
+      <p>標準ShapeをG-bufferへ描き、法線と深度から求めたAO visibilityをDeferred Lightingの環境光へ適用します</p>
+      <p id="status" class="note">ドラッグまたは矢印キーで視点を回転できます。AキーでSSAO、Vキーで完成画像とAO単体表示を切り替えます</p>
+    </div>
+
+    <div class="canvas-block">
+      <canvas id="canvas" width="960" height="720"></canvas>
+    </div>
+
+    <pre id="code"></pre>
+
+    <script type="module" id="example-source">
+import WebgApp from "../../webg/WebgApp.js";
+import ComputeEffectPipeline from "../../webg/ComputeEffectPipeline.js";
+import Primitive from "../../webg/Primitive.js";
+import Shape from "../../webg/Shape.js";
+import FullscreenPass from "../../webg/FullscreenPass.js";
+
+const CANVAS_W = 960;
+const CANVAS_H = 720;
+
+// Primitiveが返すgeometryを標準Shapeへ取り込み、G-bufferから描画できる状態へ確定します
+function createPrimitiveShape(gpu, primitiveFactory, material) {
+  const shape = new Shape(gpu);
+  shape.applyPrimitiveAsset(
+    primitiveFactory(shape.getPrimitiveOptions())
+  );
+  shape.endShape();
+  shape.setMaterial("smooth-shader", material);
+  return shape;
+}
+
+// ShapeをSpaceへ追加し、接地部、隅、物体間の狭い空間が見える位置へ配置します
+function addShapeNode(app, name, shape, position) {
+  const node = app.space.addNode(null, name);
+  node.setPosition(...position);
+  node.addShape(shape);
+  return node;
+}
+
+// SSAOの有無を比較しやすい床、壁、箱、球からなる小さなsceneを構成します
+function createScene(app) {
+  const gpu = app.getGPU();
+  const floor = createPrimitiveShape(
+    gpu,
+    (options) => Primitive.cuboid(22, 0.8, 18, options),
+    { color: [0.72, 0.76, 0.82, 1.0], ambient: 0.22, specular: 0.25, roughness: 0.72, metallic: 0.0, power: 24, emissive: 0.0 }
+  );
+  const wall = createPrimitiveShape(
+    gpu,
+    (options) => Primitive.cuboid(22, 11, 0.8, options),
+    { color: [0.76, 0.80, 0.86, 1.0], ambient: 0.38, specular: 0.20, roughness: 0.78, metallic: 0.0, power: 20, emissive: 0.0 }
+  );
+  const rightWall = createPrimitiveShape(
+    gpu,
+    (options) => Primitive.cuboid(0.8, 11, 18, options),
+    { color: [0.76, 0.80, 0.86, 1.0], ambient: 0.38, specular: 0.20, roughness: 0.78, metallic: 0.0, power: 20, emissive: 0.0 }
+  );
+  const box = createPrimitiveShape(
+    gpu,
+    (options) => Primitive.cube(3.6, options),
+    { color: [0.92, 0.54, 0.20, 1.0], ambient: 0.16, specular: 0.48, roughness: 0.36, metallic: 0.05, power: 36, emissive: 0.0 }
+  );
+  const sphere = createPrimitiveShape(
+    gpu,
+    (options) => Primitive.sphere(2.0, 28, 20, options),
+    { color: [0.22, 0.72, 0.62, 1.0], ambient: 0.16, specular: 0.72, roughness: 0.24, metallic: 0.08, power: 48, emissive: 0.0 }
+  );
+
+  addShapeNode(app, "floor", floor, [0, -3.4, -2]);
+  addShapeNode(app, "back-wall", wall, [0, 1.7, -10.6]);
+  addShapeNode(app, "right-wall", rightWall, [10.6, 1.7, -2]);
+  // 球と箱の表面間隔を小さくし、物体同士が作るAOを見やすくします
+  addShapeNode(app, "box-left", box, [-3.8, -1.2, -3.5]);
+  addShapeNode(app, "box-right", box.createInstance(), [3.8, -1.2, -3.5]);
+  addShapeNode(app, "sphere", sphere, [0, -1.0, -3.5]);
+}
+
+// G-buffer、SSAO、Deferred Lighting、Tone Mapping、canvas転送を1フレームの順序どおりに実行します
+async function start() {
+  const app = new WebgApp({
+    document,
+    autoDrawScene: false,
+    renderMode: "ondemand",
+    layoutMode: "embedded",
+    fixedCanvasSize: {
+      width: CANVAS_W,
+      height: CANVAS_H,
+      useDevicePixelRatio: false
+    },
+    clearColor: [0.08, 0.10, 0.14, 1.0],
+    viewAngle: 52.0,
+    projectionFar: 100.0,
+    camera: {
+      target: [0.0, -0.8, -4.5],
+      distance: 24.0,
+      yaw: 20.0,
+      pitch: -10.0
+    }
+  });
+  await app.init();
+  createScene(app);
+
+  const orbit = app.createOrbitEyeRig({
+    target: [0.0, -0.8, -4.5],
+    distance: 24.0,
+    yaw: 20.0,
+    pitch: -10.0,
+    minDistance: 14.0,
+    maxDistance: 42.0,
+    wheelZoomStep: 1.0
+  });
+  const gpu = app.getGPU();
+  // 統合pipelineにはSSAO以外の効果もありますが、この例ではShadow、SSR、DoF、
+  // Bloomなどを無効にし、G-buffer、AO visibility、Deferred Lightingの関係へ焦点を絞ります。
+  const pipeline = new ComputeEffectPipeline(gpu, {
+    label: "28_01 gbuffer-ssao-lighting",
+    width: app.screen.getWidth(),
+    height: app.screen.getHeight(),
+    ssao: {
+      radius: 28,
+      strength: 2.0,
+      bias: 0.05,
+      samples: 12
+    },
+    lighting: {
+      ambient: 0.14,
+      directionalIntensity: 1.0
+    },
+    toneMap: {
+      mode: "reinhard",
+      exposure: 1.0,
+      saturation: 1.0,
+      gamma: 2.2
+    }
+  });
+  const copyPass = new FullscreenPass(gpu);
+  await Promise.all([pipeline.ready, copyPass.init()]);
+
+  const state = {
+    ssaoEnabled: true,
+    showAoVisibility: false
+  };
+  app.attachInput({
+    onKeyDown: (key, event) => {
+      if (event.repeat) return;
+      if (key === "a") state.ssaoEnabled = !state.ssaoEnabled;
+      else if (key === "v") state.showAoVisibility = !state.showAoVisibility;
+      app.requestRender();
+    }
+  });
+
+  app.start({
+    onUpdate: ({ screen }) => {
+      pipeline.resize(screen.getWidth(), screen.getHeight());
+      document.getElementById("status").textContent =
+        `RUNNING: SSAO ${state.ssaoEnabled ? "ON" : "OFF"} / ` +
+        `VIEW ${state.showAoVisibility ? "AO VISIBILITY" : "LIGHTING"} / ` +
+        "A: SSAO / V: VIEW";
+    },
+
+    onBeforeDraw: ({ cameraFrame }) => {
+      // 第1段階でalbedo、surface、view-space normal、Reverse-Z depthを同じpixel座標へ出力します。
+      // shadowEnabledはfalseですが、方向光によるDeferred Lighting自体は有効です。
+      pipeline.renderScene(app.space, cameraFrame, app.clearColor, {
+        shadowEnabled: false
+      });
+    },
+
+    onAfterDraw3d: ({ cameraFrame }) => {
+      // 第2段階でGeometry Render Passを閉じ、SSAO、Deferred Lighting、Tone Mappingを記録します。
+      // Vキーの診断表示もDeferred Lightingのview modeを使うため、SSAOへ色合成の責務を戻しません。
+      gpu.endPass();
+      const output = pipeline.encode(gpu.commandEncoder, {
+        cameraFrame,
+        ssaoEnabled: state.ssaoEnabled,
+        shadowEnabled: false,
+        ssrEnabled: false,
+        toonEnabled: false,
+        dofEnabled: false,
+        bloomEnabled: false,
+        edgeEnabled: false,
+        lightingView: state.showAoVisibility ? "ao" : "lighting"
+      });
+
+      // 第3段階でTone Map済みの完成画像、または選択したAO診断画像をcanvasへ転送します。
+      app.screen.beginPresentPass({
+        clearColor: app.clearColor,
+        colorLoadOp: "clear"
+      });
+      copyPass.draw(output);
+      app.screen.clearDepthBuffer();
+    }
+  });
+
+  window.addEventListener("pagehide", () => {
+    app.stop();
+    copyPass.destroy?.();
+    pipeline.destroy();
+  }, { once: true });
+}
+
+start().catch((error) => {
+  document.getElementById("status").textContent =
+    `Error: ${error.message}`;
+  console.error(error);
+});
+    </script>
+    <script>
+      document.getElementById("code").textContent =
+        document.getElementById("example-source").textContent.trim();
+    </script>
+  </div>
+</body>
+</html>

@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// Collada.js     2026/03/08
+// Collada.js     2026/07/25
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // ---------------------------------------------
@@ -253,6 +253,7 @@ export default class Collada {
     };
   }
 
+  // `elementName`は入力データを解析し、後続処理で参照する構造へ変換する
   static get elementName()  { return {
     COLLADA : Collada.ID.COLLADA,
     IDREF_array : Collada.ID.IDREF_array,
@@ -493,6 +494,7 @@ export default class Collada {
     };
   }
 
+  // インスタンス生成時に、受け取った設定を検証して初期状態を準備する
   constructor() {
     this.start_pos = 0;
     this.collada_text = "";
@@ -511,6 +513,7 @@ export default class Collada {
     this.materialEffects = {};
   }
 
+  // `printf`は現在値を読みやすい診断文字列へ整形する
   printf(fmt, ...arg) {
     if (this.printflag) {
       util.printf(fmt, ...arg);
@@ -525,11 +528,13 @@ export default class Collada {
     return this.mesh_count;
   }
 
+  // `meshes`が保持する資源と参照を安全に解放する
   releaseMeshes() {
     this.meshes = [];
     this.mesh_count = 0;
   }
 
+  // 材質の色を現在の入力と状態から求め、呼び出し元へ返す
   getMaterialColor(materialId) {
     if (!materialId) return null;
     const effectId = this.materialEffects[materialId];
@@ -537,6 +542,7 @@ export default class Collada {
     return this.effectColors[effectId] ?? null;
   }
 
+  // 材質の`params`を現在の入力と状態から求め、呼び出し元へ返す
   getMaterialParams(materialId) {
     if (!materialId) return null;
     const effectId = this.materialEffects[materialId];
@@ -654,6 +660,7 @@ export default class Collada {
     } while ((t.element !== tag.element) || (t.type !== this.CLOSE));
   }
 
+  // `skipToClosingTag`は受け取った値を処理し、後続処理で利用する状態または結果を生成する
   skipToClosingTag(element) {
     let tag;
     let stack = new Stack();
@@ -805,6 +812,7 @@ export default class Collada {
     return data_list;
   }
 
+  // 一覧を現在の入力と状態から求め、呼び出し元へ返す
   getList(tag_id) {
     let data_list;
     let t = this.getNextTag();
@@ -814,6 +822,7 @@ export default class Collada {
     return data_list;
   }
 
+  // `source`は入力データを解析し、後続処理で参照する構造へ変換する
   source() {
     let t;
     let data_list = [];
@@ -856,6 +865,7 @@ export default class Collada {
     return data_list;
   }
 
+  // `polygon`のデータを現在の入力と状態から求め、呼び出し元へ返す
   getPolygonData(p, pointer, data_count) {
     let position, normal, tex_uv1, tex_uv2, tex_uv3, color;
     if (data_count === 6) {
@@ -1305,6 +1315,7 @@ export default class Collada {
     }
   }
 
+  // アニメーションの`type`を検証し、後続処理が扱える共通形式へ整える
   checkAnimationType(id) {
     let found, axis;
     let type = 0; // 0:position, 1:rotation, 2:matrix, 3:scale
@@ -1347,6 +1358,7 @@ export default class Collada {
     return bone_name;
   }
 
+  // `animation`は入力データを解析し、後続処理で参照する構造へ変換する
   animation(tag, parent) {
     let t;
     let found;

@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// ParticleEmitter.js 2026/03/30
+// ParticleEmitter.js 2026/07/25
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // ---------------------------------------------
@@ -29,6 +29,7 @@ const cloneObject = (value, label = "object") => {
   return { ...util.readPlainObject(value, `ParticleEmitter ${label}`, {}) };
 };
 
+// `seeded`の`random`を生成し、後続処理で利用できる状態にする
 const createSeededRandom = (seed = 1) => {
   let state = util.readFiniteNumber(seed, "ParticleEmitter seed", { integer: true }) >>> 0;
   if (state === 0) {

@@ -1,0 +1,26 @@
+# ComputeEffectPipelineからDepth of Fieldへの接続単体テスト
+
+## 目的
+
+移行途中のComputeEffectPipelineについて、Depth of Fieldへの接続部分だけを限定して確認する。High Dynamic Range sceneとCamera Reverse-Z depthを別resourceとして渡し、Geometry Bufferと同じCamera Frameを共有することを保証する
+
+## 確認項目
+
+1. DoFへ `{ scene, depth }` を明示して渡す
+2. Camera Frameを同じencode optionから渡す
+3. colorとdepthを旧API互換objectへまとめる `withDepth` wrapperがない
+4. projectionNear、projectionFarを個別に渡さない
+
+## 実行方法
+
+```sh
+node headless_tests/core/compute_effect_pipeline/headless_probe.js
+```
+
+## 結果
+
+2026-07-13に実行し、DoF接続部分の全項目が成功した。これはComputeEffectPipeline全体の移行完了を意味しない
+
+```text
+compute_effect_pipeline_dof_integration_contracts: DoF connection contract passed
+```

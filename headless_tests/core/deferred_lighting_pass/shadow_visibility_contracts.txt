@@ -1,0 +1,33 @@
+# Deferred Lightingへの方向光visibility接続単体テスト
+
+## 目的
+
+DeferredLightingPassへ主要方向光と合成済みshadow visibilityを接続し、shadowを直接光の拡散反射・鏡面反射だけへ適用することを確認する。ambient項にはshadow visibilityを掛けず、後続のScreen Space Ambient Occlusion接続先として分離したままにする
+
+## 確認項目
+
+1. Deferred Lightingがshadow visibility textureを明示bindingする
+2. 方向光の拡散反射と鏡面反射の合計へvisibilityを掛ける
+3. ambient項へshadow visibilityを掛けない
+4. directional World方向をCamera Frameのview-spaceへ回転する
+5. directional color、intensity、ambientを別のuniform値として保持する
+6. debug shadow viewで合成済みvisibilityを直接表示できる
+7. directional lightなしは `null` で明示し、option省略を旧呼び出しとして拒否する
+8. camera depthは `CAMERA_REVERSE_Z` identityを必須とする
+9. shadow visibilityとG-bufferの寸法不一致をdispatch前に拒否する
+
+## 実行方法
+
+```sh
+node headless_tests/core/deferred_lighting_pass/headless_probe.js
+```
+
+## 結果
+
+2026-07-12に実行し、全項目が成功した。表示文字列は次のとおり
+
+```text
+deferred_lighting_pass_shadow_visibility_contracts: all directional visibility contracts passed
+```
+
+この段階ではpoint lightは従来どおり個別shadowなし、spot lightは未接続である。次の変更でspot coneとspot用visibilityを同じ照明passへ追加し、その後Ambient Occlusionをambient項へだけ接続する

@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>collada_loader</title>
+  <link rel="icon" href="data:," />
+  <!-- 2026/06/19 -->
+  <style>
+
+:root {
+  color-scheme: light;
+  --bg: #eef3f8;
+  --paper: rgba(255, 255, 255, 0.94);
+  --line: #c8d5e4;
+  --ink: #17324a;
+  --muted: #5c748b;
+  --accent: #1566ab;
+  --accent-soft: #dfeefe;
+  --code-bg: #f3f7fb;
+  --shadow: rgba(29, 52, 79, 0.10);
+}
+* { box-sizing: border-box; }
+html, body {
+  margin: 0;
+  min-height: 100%;
+}
+body {
+  background:
+    radial-gradient(circle at top left, rgba(21, 102, 171, 0.12), transparent 24%),
+    radial-gradient(circle at top right, rgba(255, 191, 118, 0.10), transparent 22%),
+    linear-gradient(180deg, #f8fbfd 0%, var(--bg) 100%);
+  color: var(--ink);
+  font: 16px/1.78 "Avenir Next", "Hiragino Sans", "Yu Gothic", sans-serif;
+}
+.page {
+  width: min(1080px, calc(100% - 28px));
+  margin: 0 auto;
+  padding: 24px 0 56px;
+}
+.hero,
+.doc {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  box-shadow: 0 22px 52px var(--shadow);
+}
+.hero {
+  padding: 22px 24px;
+  margin-bottom: 18px;
+}
+.hero h1 {
+  margin: 0 0 8px;
+  font-size: clamp(2rem, 4vw, 3rem);
+  line-height: 1.08;
+}
+.hero p {
+  margin: 0;
+  color: var(--muted);
+}
+.doc {
+  padding: 28px;
+}
+.doc > :first-child {
+  margin-top: 0;
+}
+h1, h2, h3, h4, h5, h6 {
+  line-height: 1.25;
+  margin: 1.45em 0 0.55em;
+}
+h1 {
+  font-size: 2.2rem;
+}
+h2 {
+  padding-bottom: 0.28em;
+  border-bottom: 1px solid var(--line);
+  font-size: 1.48rem;
+}
+h3 {
+  font-size: 1.14rem;
+}
+p, ul, ol, table, pre, blockquote {
+  margin: 0 0 1em;
+}
+ul, ol {
+  padding-left: 1.4em;
+}
+li + li {
+  margin-top: 0.26em;
+}
+a {
+  color: var(--accent);
+  text-decoration: none;
+}
+a:hover {
+  text-decoration: underline;
+}
+img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  border-radius: 16px;
+  border: 1px solid var(--line);
+  box-shadow: 0 12px 32px rgba(29, 52, 79, 0.08);
+  margin: 1.1em 0 1.4em;
+}
+code {
+  padding: 0.12em 0.38em;
+  border-radius: 0.45em;
+  background: var(--code-bg);
+  border: 1px solid #dbe6f1;
+  font: 0.92em/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+pre {
+  padding: 14px 16px;
+  overflow-x: auto;
+  border-radius: 14px;
+  background: #0f1720;
+  color: #ecf5ff;
+}
+pre code {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #ffffff;
+}
+th, td {
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  text-align: left;
+  vertical-align: top;
+}
+th {
+  background: #f5f9fc;
+}
+hr {
+  border: 0;
+  border-top: 1px solid var(--line);
+  margin: 1.5em 0;
+}
+blockquote {
+  padding: 0.3em 0 0.3em 1em;
+  border-left: 4px solid #c9dbef;
+  color: var(--muted);
+}
+@media (max-width: 720px) {
+  .page {
+    width: min(100% - 18px, 1080px);
+    padding-top: 16px;
+  }
+  .hero,
+  .doc {
+    border-radius: 18px;
+  }
+  .doc {
+    padding: 20px;
+  }
+}
+
+  </style>
+</head>
+<body>
+  <main class="page">
+    <section class="hero">
+      <h1>collada_loader</h1>
+    </section>
+    <article class="doc">
+<h1>collada_loader</h1>
+<p>English | <a href="index.html">日本語</a></p>
+<p><img src="./collada_loader.jpg" alt="collada_loader" /></p>
+<h2>Overview</h2>
+<ul><li>This sample loads the Collada (<code>.dae</code>) file specified in <code>main.js</code>, normalizes it into <code>ModelAsset</code>, and then displays it</li><li>It calls the Collada facade from <code>WebgApp.loadModel()</code> and demonstrates the shared entry point that covers everything from parsing to generating <code>ModelAsset</code> and runtime objects</li><li>The loaded <code>ModelAsset</code> can be downloaded as a JSON file with the <code>D</code> key</li><li>When exporting Collada (<code>.dae</code>) from Blender, the loader assumes files are exported in <code>Y-up</code></li><li>The loader's model-origin policy uses the skeleton root as the origin for skinned models and the mesh node as the origin for non-skinned models</li></ul>
+<h2>How to Run</h2>
+<ul><li>Open <a href="./collada_loader.html">./collada_loader.html</a></li><li>Use a browser with WebGPU support, and check the Help Panel and CommandPalette together with the sample when needed</li></ul>
+<h2>webg Features Used</h2>
+<ul><li><code>WebgApp</code>: standard initialization, render loop, and Help Panel display</li><li><code>CommandPalette</code>: groups animation control, wireframe, screenshot, JSON export, and camera reset</li><li><code>WebgApp.loadModel</code>: high-level entry point for the Collada facade</li><li><code>ModelLoader</code>: bundles DAE text load / parse / <code>ModelAsset</code> conversion / build / instantiate</li><li><code>ModelAsset</code>: holds the data representation and supports JSON download</li><li><code>ModelAsset.getClipNames</code>: inspects the clip list before build</li><li><code>ModelBuilder</code>: builds shapes, skeletons, and animations from <code>ModelAsset</code></li><li><code>ModelBuilder.animationMap</code>: accesses runtime animations from clip IDs</li><li><code>build()</code> result helpers: <code>instantiate() / createNodeTree() / bindAnimationBindings() / getAnimation() / getAnimationNames() / startAllAnimations() / playAllAnimations() / setAnimationsPaused()</code></li><li><code>EyeRig(type=&quot;orbit&quot;)</code>: orbit viewpoint based on the bounding box</li></ul>
+<h2>Processing Flow</h2>
+<ul><li>The sample calls <code>WebgApp.loadModel(COLLADA_FILE, { format: &quot;collada&quot; ... })</code> and enters the Collada facade through the shared loader entry point</li><li><code>ModelLoader</code> reads the DAE text and hands parsing and normalization to <code>ColladaShape</code></li><li><code>ColladaShape</code> gathers mesh / skeleton / animation / node data into <code>ModelAsset</code> format</li><li>After that, <code>ModelBuilder</code> assembles <code>Shape / Skeleton / Animation / Node</code>, and the sample uses the build result as the runtime</li><li>Unlike glTF, the Collada loader side does not have a static-bake plan, but the final runtime helpers still go through the shared <code>ModelBuilder</code></li></ul>
+<h2>How to Read the Downloaded JSON</h2>
+<ul><li><code>meta.source</code> is expected to be <code>Collada</code>, and <code>meta.upAxis</code> is expected to be <code>Y</code></li><li><code>meshes[]</code> shows the result of converting Collada meshes into shared <code>ModelAsset</code> geometry</li><li>By looking at <code>nodes[].animationBindings</code> and <code>animations[].targetSkeleton</code>, you can confirm which clip is connected to which skeleton</li><li><code>skeletons[].jointOrder</code> stores the joint order referenced by skin weights and is also used when reconstructing through the builder</li><li>Comparing <code>animations[].tracks[].joint</code> with <code>skeletons[].joints[].name</code> lets you confirm whether track names match the restored bone names</li></ul>
+<h2>Checkpoints</h2>
+<ul><li>Confirm that the DAE specified by <code>COLLADA_FILE</code> is converted correctly into shapes, skeletons, and animations</li><li>Confirm that the Help Panel shows <code>file / model / orbit / target / anim / clip0 / wireframe</code> state so the necessary viewer state can be followed on screen</li><li>Confirm that the sample uses the runtime returned by the facade and checks connections through <code>getAnimation()</code> / <code>getAnimationNames()</code> instead of direct <code>animationMap</code> access</li><li>Confirm that the first clip can be restarted by name with <code>restartAnimation(clipId)</code> using the <code>1</code> key</li><li>Confirm that <code>2 / 3</code> can pause and resume the first clip individually with <code>pauseAnimation(clipId)</code> / <code>resumeAnimation(clipId)</code></li><li>Confirm that the camera distance is set automatically from the model bounding box so the whole model is not clipped out in the initial framing</li><li>Confirm that the JSON exported with the <code>D</code> key can still be reloaded and displayed by <code>json_loader</code></li><li>Confirm that <code>Shift + Arrow</code> and <code>Shift + Drag</code> move the camera target in parallel so fine details can be brought to the center</li><li>Confirm that <code>W</code> toggles wireframe, <code>S</code> saves a screenshot, and <code>R</code> returns to the initial framing</li><li>Confirm that the CommandPalette can run animation replay / pause / resume, wireframe, screenshot, JSON export, and camera reset</li><li>Confirm that the Help Panel is used for current values and operation hints, while the CommandPalette is used for changing settings and running commands</li><li>Treat DAE files exported from Blender with an up-axis other than <code>Y-up</code> as outside the loader's assumptions; in that case, orientation mismatch is handled as an asset-side issue</li></ul>
+<h2>Reading Points for AI / Users</h2>
+<ul><li>If &quot;loading succeeds but the clip is not visible&quot;, first inspect <code>animations[]</code> and <code>nodes[].animationBindings</code></li><li>If &quot;a skeleton exists but does not move&quot;, inspect the correspondence between <code>skeletons[].jointOrder</code> and <code>animations[].tracks[].joint</code></li><li>If &quot;you cannot tell which node corresponds to which mesh in the original DAE&quot;, use <code>nodes[].colladaMeshIndex</code></li><li>If &quot;only the displayed position looks suspicious&quot;, suspect the loader's model-origin policy and the initial camera placement, and compare bbox-based framing with the pan behavior</li></ul>
+<h2>Controls</h2>
+<ul><li>Drag / arrow keys: orbit camera rotation</li><li><code>Shift + Drag / arrow keys</code>: pan the camera target</li><li>Mouse wheel / <code>[ / ]</code>: zoom</li><li><code>Space</code>: pause animation</li><li><code>1</code>: replay the first clip</li><li><code>2</code>: pause the first clip</li><li><code>3</code>: resume the first clip</li><li><code>W</code>: toggle wireframe</li><li><code>S</code>: save a screenshot</li><li><code>D</code>: download the <code>ModelAsset</code> JSON</li><li><code>R</code>: return the camera to the initial position based on the bounding box</li><li><code>/</code> or double tap the canvas: open the CommandPalette</li></ul>
+    </article>
+  </main>
+</body>
+</html>

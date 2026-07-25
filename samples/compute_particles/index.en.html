@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>compute_particles</title>
+  <link rel="icon" href="data:," />
+  <!-- 2026/06/19 -->
+  <style>
+
+:root {
+  color-scheme: light;
+  --bg: #eef3f8;
+  --paper: rgba(255, 255, 255, 0.94);
+  --line: #c8d5e4;
+  --ink: #17324a;
+  --muted: #5c748b;
+  --accent: #1566ab;
+  --accent-soft: #dfeefe;
+  --code-bg: #f3f7fb;
+  --shadow: rgba(29, 52, 79, 0.10);
+}
+* { box-sizing: border-box; }
+html, body {
+  margin: 0;
+  min-height: 100%;
+}
+body {
+  background:
+    radial-gradient(circle at top left, rgba(21, 102, 171, 0.12), transparent 24%),
+    radial-gradient(circle at top right, rgba(255, 191, 118, 0.10), transparent 22%),
+    linear-gradient(180deg, #f8fbfd 0%, var(--bg) 100%);
+  color: var(--ink);
+  font: 16px/1.78 "Avenir Next", "Hiragino Sans", "Yu Gothic", sans-serif;
+}
+.page {
+  width: min(1080px, calc(100% - 28px));
+  margin: 0 auto;
+  padding: 24px 0 56px;
+}
+.hero,
+.doc {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  box-shadow: 0 22px 52px var(--shadow);
+}
+.hero {
+  padding: 22px 24px;
+  margin-bottom: 18px;
+}
+.hero h1 {
+  margin: 0 0 8px;
+  font-size: clamp(2rem, 4vw, 3rem);
+  line-height: 1.08;
+}
+.hero p {
+  margin: 0;
+  color: var(--muted);
+}
+.doc {
+  padding: 28px;
+}
+.doc > :first-child {
+  margin-top: 0;
+}
+h1, h2, h3, h4, h5, h6 {
+  line-height: 1.25;
+  margin: 1.45em 0 0.55em;
+}
+h1 {
+  font-size: 2.2rem;
+}
+h2 {
+  padding-bottom: 0.28em;
+  border-bottom: 1px solid var(--line);
+  font-size: 1.48rem;
+}
+h3 {
+  font-size: 1.14rem;
+}
+p, ul, ol, table, pre, blockquote {
+  margin: 0 0 1em;
+}
+ul, ol {
+  padding-left: 1.4em;
+}
+li + li {
+  margin-top: 0.26em;
+}
+a {
+  color: var(--accent);
+  text-decoration: none;
+}
+a:hover {
+  text-decoration: underline;
+}
+img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  border-radius: 16px;
+  border: 1px solid var(--line);
+  box-shadow: 0 12px 32px rgba(29, 52, 79, 0.08);
+  margin: 1.1em 0 1.4em;
+}
+code {
+  padding: 0.12em 0.38em;
+  border-radius: 0.45em;
+  background: var(--code-bg);
+  border: 1px solid #dbe6f1;
+  font: 0.92em/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+pre {
+  padding: 14px 16px;
+  overflow-x: auto;
+  border-radius: 14px;
+  background: #0f1720;
+  color: #ecf5ff;
+}
+pre code {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #ffffff;
+}
+th, td {
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  text-align: left;
+  vertical-align: top;
+}
+th {
+  background: #f5f9fc;
+}
+hr {
+  border: 0;
+  border-top: 1px solid var(--line);
+  margin: 1.5em 0;
+}
+blockquote {
+  padding: 0.3em 0 0.3em 1em;
+  border-left: 4px solid #c9dbef;
+  color: var(--muted);
+}
+@media (max-width: 720px) {
+  .page {
+    width: min(100% - 18px, 1080px);
+    padding-top: 16px;
+  }
+  .hero,
+  .doc {
+    border-radius: 18px;
+  }
+  .doc {
+    padding: 20px;
+  }
+}
+
+  </style>
+</head>
+<body>
+  <main class="page">
+    <section class="hero">
+      <h1>compute_particles</h1>
+    </section>
+    <article class="doc">
+<h1>compute_particles</h1>
+<p>English | <a href="index.html">日本語</a></p>
+<p><img src="./compute_particles.jpg" alt="compute_particles" /></p>
+<h2>Overview</h2>
+<ul><li>This sample uses WebGPU compute shaders to update and render a large number of particles entirely on the GPU</li><li>It uses the core <code>GpuParticleEmitter</code> to share particle GPU resources and Compute/Render Pass encoding</li><li>Particle position, velocity, lifetime, color, and size are stored in a storage buffer and updated every frame by the compute pass</li><li>The render pass reads the same storage buffer in the vertex shader and draws each particle as an instanced billboard quad made of two triangles</li><li><code>GpuParticleEmitter</code> owns the particle buffer, uniforms, Compute/Render pipelines, and command encoding</li><li>Because particle positions are not read back from the GPU to the CPU, the CPU side does not run per-particle movement calculations</li><li>Drag, <code>Shift + Drag</code>, and the mouse wheel move the orbit camera so the GPU particle group can be inspected from different angles and positions</li></ul>
+<h2>How to Run</h2>
+<ul><li>Open <a href="./compute_particles.html">./compute_particles.html</a></li><li>Use a browser with WebGPU support, and check the help panel and HUD together with the sample when needed</li></ul>
+<h2>webg Features Used</h2>
+<ul><li><code>WebgApp</code>: initializes <code>Screen</code>, diagnostics, and the input foundation together</li><li><code>WebgApp</code> compute frame: <code>computeFrame: true</code> and the <code>onComputeFrame</code> handler skip standard scene drawing and control compute/render order</li><li><code>GpuParticleEmitter</code>: manages the particle storage buffer, billboard quad, uniforms, Compute/Render pipelines, pass encoding, and resource destruction</li><li><code>Screen.resize()</code>: updates the actual canvas pixel size on viewport changes through the <code>Screen</code> held by <code>WebgApp</code></li><li><code>WebgApp.getGPU()</code>: passes the WebGPU context to <code>GpuParticleEmitter</code> and the sample-specific frame code</li><li><code>buildHelpPanelOptions() + showOverlayPanel()</code>: displays the operation guide and current state in the <code>OverlayPanel</code> help panel</li></ul>
+<h2>WebGPU Features Used</h2>
+<ul><li><code>storage buffer</code>: stores the particle array as GPU-readable and GPU-writable data</li><li><code>uniform buffer</code>: passes <code>deltaTime</code>, frame count, screen size, and emitter mode to the shader</li><li><code>orbit camera uniform</code>: passes <code>yaw</code>, <code>pitch</code>, <code>distance</code>, <code>targetY</code>, and pan offset to the render shader so the particle group can be transformed into view space</li><li><code>compute pipeline</code>: updates position, velocity, and lifetime with one invocation per particle</li><li><code>render pipeline</code>: reads the storage buffer in the vertex shader and draws billboard instances</li><li><code>alpha blending</code>: uses standard alpha compositing so overlapping particles keep visible outlines instead of washing out to white too quickly</li><li><code>timestamp query</code>: measures Compute Pass and Render Pass GPU time and displays per-stage and total load</li></ul>
+<h2>Checkpoints</h2>
+<ul><li>Confirm that 49,152 particles appear in a fountain-like pattern right after startup</li><li>Press <code>Space</code> and confirm that some particles are regenerated and a momentary burst becomes visible</li><li>Confirm that <code>1 / 2</code> switches the emitter mode between <code>fountain</code> and <code>ring</code></li><li>Confirm that drag performs orbit, <code>Shift + Drag</code> performs pan, and the mouse wheel performs zoom</li><li>When <code>P</code> pauses the sample, confirm that particle updates stop while rendering continues</li><li>Press <code>H</code> to fold the <code>OverlayPanel</code> help panel and confirm that <code>H</code> again or the <code>Show Help</code> button restores it</li><li>Confirm that <code>GPU compute / GPU render / GPU total / JS time</code> and their load values update in the help panel. On systems without <code>timestamp-query</code>, GPU timing is shown as unavailable</li><li>If you inspect browser devtools, confirm that the CPU is not running a per-particle position-update loop every frame</li></ul>
+<h2>Controls</h2>
+<ul><li><code>Space</code>: burst</li><li>Drag: camera orbit</li><li><code>Shift + Drag</code>: camera pan</li><li>Mouse wheel: zoom</li><li><code>1</code>: fountain emitter</li><li><code>2</code>: ring emitter</li><li><code>P</code>: pause / resume</li><li><code>H</code>: hide / show help</li></ul>
+<h2>Implementation Details</h2>
+<ul><li>The compute shader in <code>main.js</code> rewrites only the same index in the storage buffer, avoiding write conflicts between particles</li><li>Particle spawning, gravity, swirl, floor response, color, and lifetime remain in sample-specific WGSL, so <code>GpuParticleEmitter</code> does not fix one simulation algorithm</li><li><code>GpuParticleEmitter</code> does not own the command encoder or submission; the <code>WebgApp</code> compute-frame handler decides the order of Compute, Render, and timestamp queries</li><li>The render shader uses instanced billboard quads instead of point lists, so particle size, outlines, and alpha falloff can be controlled in the shader</li><li>Camera control is handled only by the view transform in the render shader, while pan is passed as a post-projection offset through uniforms, preserving a design that never returns particle positions from GPU to CPU</li><li>The operation guide and state display are collected in the standard foldable <code>OverlayPanel</code> help panel instead of a custom DOM HUD</li><li>The sample can be used as a compute-shader example for large-scale visual effects and background-effect generation</li></ul>
+    </article>
+  </main>
+</body>
+</html>

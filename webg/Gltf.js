@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// Gltf.js        2026/04/20
+// Gltf.js        2026/07/25
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // ---------------------------------------------
@@ -13,12 +13,14 @@ export default class Gltf {
     this.baseUrl = "";
   }
 
+  // `emitStage`は入力またはイベントを受け取り、対応する処理へ振り分ける
   emitStage(handler, stage) {
     if (typeof handler === "function") {
       handler(stage);
     }
   }
 
+  // `yieldFrame`は処理周期の開始または終了に必要な状態を更新する
   async yieldFrame() {
     if (typeof requestAnimationFrame === "function") {
       await new Promise((resolve) => requestAnimationFrame(() => resolve()));
@@ -27,6 +29,7 @@ export default class Gltf {
     await new Promise((resolve) => setTimeout(resolve, 0));
   }
 
+  // このインスタンスを読み込み、検証済みのデータとして後続処理へ渡す
   async load(url, options = {}) {
     const onStage = options.onStage ?? null;
     this.baseUrl = url.substring(0, url.lastIndexOf("/") + 1);
@@ -52,6 +55,7 @@ export default class Gltf {
     return this;
   }
 
+  // `gltf`を読み込み、検証済みのデータとして後続処理へ渡す
   async loadGltf(url, onStage = null) {
     this.emitStage(onStage, "fetch-gltf-json");
     const response = await fetch(url);
@@ -62,6 +66,7 @@ export default class Gltf {
     await this.loadGltfFromArrayBuffer(arrayBuffer, onStage);
   }
 
+  // `glb`を読み込み、検証済みのデータとして後続処理へ渡す
   async loadGlb(url, onStage = null) {
     this.emitStage(onStage, "fetch-glb-binary");
     const response = await fetch(url);
@@ -72,6 +77,7 @@ export default class Gltf {
     await this.loadGlbFromArrayBuffer(arrayBuffer, onStage);
   }
 
+  // `glb`の`binary`の条件を判定し、結果を真偽値で返す
   isGlbBinary(arrayBuffer) {
     if (!(arrayBuffer instanceof ArrayBuffer) || arrayBuffer.byteLength < 4) {
       return false;
@@ -79,6 +85,7 @@ export default class Gltf {
     return new DataView(arrayBuffer).getUint32(0, true) === 0x46546c67;
   }
 
+  // JSONの`text`を読み込み、検証済みのデータとして後続処理へ渡す
   parseJsonText(text, label = "glTF JSON") {
     try {
       const sanitized = String(text ?? "").replace(/^\uFEFF/, "");
@@ -88,6 +95,7 @@ export default class Gltf {
     }
   }
 
+  // 配列バッファからglTFのJSONデータを読み込む
   async loadGltfFromArrayBuffer(arrayBuffer, onStage = null) {
     this.emitStage(onStage, "parse-gltf-json");
     const text = new TextDecoder().decode(arrayBuffer);
@@ -96,6 +104,7 @@ export default class Gltf {
     await this.loadBuffersFromGltf(false, onStage);
   }
 
+  // 配列バッファからGLBデータを読み込む
   async loadGlbFromArrayBuffer(arrayBuffer, onStage = null) {
     this.emitStage(onStage, "decode-glb");
     await this.yieldFrame();
@@ -129,6 +138,7 @@ export default class Gltf {
     await this.loadBuffersFromGltf(true, onStage);
   }
 
+  // glTFの記述に従って参照先のバッファを読み込む
   async loadBuffersFromGltf(alreadyHasBinary = false, onStage = null) {
     if (!this.gltf?.buffers) return;
     if (alreadyHasBinary && this.buffers.length > 0) {
@@ -147,6 +157,7 @@ export default class Gltf {
     }
   }
 
+  // バッファを読み込み、検証済みのデータとして後続処理へ渡す
   async fetchBuffer(bufferDef) {
     if (!bufferDef.uri) {
       return new ArrayBuffer(0);

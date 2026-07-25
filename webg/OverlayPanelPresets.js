@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// OverlayPanelPresets.js 2026/04/30
+// OverlayPanelPresets.js 2026/07/25
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // ---------------------------------------------
@@ -25,6 +25,13 @@ export function buildHelpPanelOptions(options = {}) {
     minWidth: safeOptions.minWidth,
     maxWidth: safeOptions.maxWidth ?? "340px",
     maxHeight: safeOptions.maxHeight ?? "40vh",
+    background: safeOptions.background ?? "transparent",
+    border: safeOptions.border ?? "none",
+    boxShadow: safeOptions.boxShadow ?? "none",
+    padding: safeOptions.padding ?? "0",
+    bodyBackground: safeOptions.bodyBackground ?? "transparent",
+    bodyBorderRadius: safeOptions.bodyBorderRadius ?? "0",
+    bodyPadding: safeOptions.bodyPadding ?? "0",
     format: safeOptions.format ?? (safeOptions.code === true ? "pre" : "plain"),
     scrollY: safeOptions.scrollY === true,
     closable: safeOptions.closable === true,
@@ -38,6 +45,7 @@ export function buildHelpPanelOptions(options = {}) {
   };
 }
 
+// エラーのパネルの設定値を生成し、後続処理で利用できる状態にする
 export function buildErrorPanelOptions(error, options = {}) {
   const safeOptions = util.readPlainObject(options, "buildErrorPanelOptions options");
   const fixedTheme = {

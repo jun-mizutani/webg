@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// samples/scene/main.js  2026/05/16
+// samples/scene/main.js  2026/07/25
 //   scene sample
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -33,6 +33,7 @@ let floorEntry = null;
 let totalTriangles = 0;
 let uiStatusText = "loading scene sample";
 let actionHandlers = null;
+// シーンの重ね合わせ表示を生成し、後続処理で利用できる状態にする
 function buildSceneOverlay() {
   app.showOverlayPanel({
     id: "scene-controls",
@@ -81,6 +82,7 @@ function buildSceneOverlay() {
   };
 }
 
+// シーンの`entry`の`types`を現在の入力と状態から求め、呼び出し元へ返す
 function countSceneEntryTypes(entries = []) {
   let primitiveCount = 0;
   let modelCount = 0;
@@ -92,6 +94,7 @@ function countSceneEntryTypes(entries = []) {
   return { primitiveCount, modelCount };
 }
 
+// すべての`shapes`を現在の入力と状態から求め、呼び出し元へ返す
 function getAllShapes(entries) {
   const shapes = [];
   for (let i = 0; i < entries.length; i++) {
@@ -103,6 +106,7 @@ function getAllShapes(entries) {
   return shapes;
 }
 
+// 明示的なテクスチャ設定を形状へ反映する
 function applyExplicitTextureFlagsToShapes(shapes = []) {
   for (let i = 0; i < shapes.length; i++) {
     const shape = shapes[i];
@@ -118,6 +122,7 @@ function applyExplicitTextureFlagsToShapes(shapes = []) {
   }
 }
 
+// `triangles`を現在の入力と状態から求め、呼び出し元へ返す
 function countTriangles(entries) {
   let total = 0;
   for (let i = 0; i < entries.length; i++) {
@@ -129,23 +134,27 @@ function countTriangles(entries) {
   return total;
 }
 
+// シーンの操作の一覧を現在の入力と状態から求め、呼び出し元へ返す
 function getSceneActionList() {
   return [...(sceneRuntime?.inputMap?.values?.() ?? [])]
     .map((item) => item.action)
     .join(",") || "-";
 }
 
+// `binding`の`definitions`を現在の入力と状態から求め、呼び出し元へ返す
 function getBindingDefinitions() {
   return sceneRuntime?.scene?.input?.bindings
     ?? sceneAsset?.getData?.()?.input?.bindings
     ?? [];
 }
 
+// 操作画面の状態表示を受け取り、現在の設定と後続処理へ反映する
 function setUiStatus(text) {
   uiStatusText = String(text ?? "");
   renderUiPanels();
 }
 
+// `overview`の行を生成し、後続処理で利用できる状態にする
 function buildOverviewLines() {
   if (!sceneRuntime) {
     return [
@@ -168,6 +177,7 @@ function buildOverviewLines() {
   ];
 }
 
+// `binding`の行を生成し、後続処理で利用できる状態にする
 function buildBindingLines() {
   const lines = [
     "Drag / Arrow  orbit camera",
@@ -185,6 +195,7 @@ function buildBindingLines() {
   return lines;
 }
 
+// 操作画面の状態表示の行を生成し、後続処理で利用できる状態にする
 function buildUiStatusLines() {
   if (!app) {
     return [
@@ -206,6 +217,7 @@ function buildUiStatusLines() {
   ];
 }
 
+// 操作のボタンの`labels`を現在の入力と実行状態に合わせて更新する
 function updateActionButtonLabels() {
   if (!ui) return;
   app.updateOverlayPanel(ui.controlsId, {
@@ -221,6 +233,7 @@ function updateActionButtonLabels() {
   });
 }
 
+// 操作画面の`panels`の描画段階で、必要な描画命令と表示内容を記録する
 function renderUiPanels() {
   if (!ui) return;
   updateActionButtonLabels();
@@ -246,6 +259,7 @@ function renderUiPanels() {
   });
 }
 
+// 診断情報の統計情報を現在の入力と実行状態に合わせて更新する
 function refreshDiagnosticsStats() {
   const shapeList = sceneRuntime?.entries ? getAllShapes(sceneRuntime.entries) : [];
   const counts = countSceneEntryTypes(sceneRuntime?.entries ?? []);
@@ -267,6 +281,7 @@ function refreshDiagnosticsStats() {
   });
 }
 
+// 検査情報のレポートを生成し、後続処理で利用できる状態にする
 function makeProbeReport(frameCount) {
   const shapeList = sceneRuntime?.entries ? getAllShapes(sceneRuntime.entries) : [];
   const counts = countSceneEntryTypes(sceneRuntime?.entries ?? []);
@@ -324,6 +339,7 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 });
 
+// シーン全体の範囲から周回視点を初期化する
 function configureOrbitFromScene(entries) {
   // scene 全体の bbox を集め、primitive と model を一度に見渡せる距離を決める
   const shapes = getAllShapes(entries);
@@ -339,6 +355,7 @@ function configureOrbitFromScene(entries) {
   orbit.setDistance(distance);
 }
 
+// `replayModelAnimations`は選択中の音声またはアニメーションの再生状態を更新する
 function replayModelAnimations() {
   if (!modelEntry?.runtime) {
     return false;
@@ -349,6 +366,7 @@ function replayModelAnimations() {
   return true;
 }
 
+// 床のワイヤーフレームの有効状態を切り替え、表示と処理へ反映する
 function toggleFloorWireframe() {
   if (!floorEntry?.runtime?.shapes?.length) {
     return false;
@@ -361,6 +379,7 @@ function toggleFloorWireframe() {
   return true;
 }
 
+// シーンの`pause`の有効状態を切り替え、表示と処理へ反映する
 function toggleScenePause() {
   if (!modelEntry?.runtime) {
     return false;
@@ -370,6 +389,7 @@ function toggleScenePause() {
   return true;
 }
 
+// カメラを初期状態へ戻し、前回の状態を残さない
 function resetCamera() {
   if (!sceneRuntime?.entries?.length) {
     return false;
@@ -379,6 +399,7 @@ function resetCamera() {
   return true;
 }
 
+// 操作の`handlers`を生成し、後続処理で利用できる状態にする
 function buildActionHandlers() {
   // Scene JSON の input は action 名までしか持たないため、
   // 実際の操作意味は sample 側でこの map に割り当てる
@@ -424,6 +445,7 @@ function buildActionHandlers() {
   };
 }
 
+// シーンの操作の実行段階で、必要な処理を決められた順序で進める
 function runSceneAction(actionName) {
   const handler = actionHandlers?.[actionName];
   if (typeof handler !== "function") {
@@ -433,6 +455,7 @@ function runSceneAction(actionName) {
   return handler({ action: actionName });
 }
 
+// このインスタンスの初期化段階で、必要な状態と資源を準備して処理を開始する
 async function start() {
   // Scene JSON の結果を 3D 上へ出すため、スキニング付き model も扱える SmoothShader を使う
   app = new WebgApp({
@@ -521,9 +544,7 @@ async function start() {
   setUiStatus("scene ready");
 
   app.start({
-    onUpdate: ({ deltaSec }) => {
-      orbit.update(deltaSec);
-
+    onUpdate: () => {
       if (!paused) {
         sceneRuntime.update();
       }

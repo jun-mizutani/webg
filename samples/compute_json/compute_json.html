@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>WebGPU Compute JSON Effects</title>
+  <link rel="icon" href="data:," />
+  <style>
+    html, body {
+      margin: 0;
+      height: 100%;
+      background: #111820;
+      overflow: hidden;
+      touch-action: none;
+    }
+
+    canvas {
+      display: block;
+    }
+
+    .compute-json-command-palette {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      width: min(276px, calc(100vw - 24px));
+      padding: 12px;
+      box-sizing: border-box;
+      display: none;
+      transform: translate(-50%, -50%);
+      border: 1px solid rgba(150, 208, 255, 0.22);
+      border-radius: 16px;
+      background: rgba(10, 18, 26, 0.86);
+      box-shadow: 0 18px 32px rgba(0, 0, 0, 0.28);
+      backdrop-filter: blur(14px);
+      z-index: 25;
+      pointer-events: auto;
+    }
+
+    .compute-json-command-palette.open {
+      display: block;
+    }
+
+    .compute-json-command-palette-title {
+      margin-bottom: 10px;
+      color: rgba(234, 243, 255, 0.92);
+      font: 700 12px/1.3 "Hiragino Sans", "Yu Gothic", sans-serif;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .compute-json-command-palette-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 8px;
+    }
+
+    .compute-json-command-button,
+    .compute-json-command-footer-button {
+      border: 1px solid rgba(140, 196, 245, 0.22);
+      border-radius: 10px;
+      background: rgba(20, 34, 48, 0.88);
+      color: rgba(244, 248, 255, 0.96);
+      font: 700 13px/1.2 "Hiragino Sans", "Yu Gothic", sans-serif;
+      box-shadow: 0 8px 14px rgba(0, 0, 0, 0.16);
+      touch-action: manipulation;
+    }
+
+    .compute-json-command-button {
+      min-width: 0;
+      height: 48px;
+    }
+
+    .compute-json-command-button small {
+      display: block;
+      margin-top: 2px;
+      color: rgba(179, 200, 222, 0.92);
+      font-size: 9px;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+    }
+
+    .compute-json-command-button.active {
+      border-color: rgba(255, 223, 133, 0.64);
+      background: rgba(105, 79, 28, 0.94);
+      color: #fff5d7;
+    }
+
+    .compute-json-command-button:disabled {
+      visibility: hidden;
+    }
+
+    .compute-json-command-palette-footer {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px;
+      margin-top: 10px;
+    }
+
+    .compute-json-command-footer-button {
+      height: 38px;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="canvas" width="900" height="700"></canvas>
+  <script type="module" src="./main.js"></script>
+</body>
+</html>

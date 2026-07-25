@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// samples/sound/main.js  2026/05/14
+// samples/sound/main.js  2026/07/25
 //   sound sample
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -81,6 +81,7 @@ let selectedSoundEffectIndex = 0;
 let seAuditionToken = 0;
 let seAuditionRunning = false;
 
+// 状態表示を受け取り、現在の設定と後続処理へ反映する
 const setStatus = (text) => {
   // 操作結果をステータス行へ表示する
   statusText = text;
@@ -98,6 +99,7 @@ const renderStatus = () => {
   ui.status.textContent = `status: ${statusText}`;
 };
 
+// 効果音の音量包絡設定を操作画面へ反映する
 const applySeEnvelopeToUi = (profileName) => {
   const env = synth.getSeEnvelopePreset(profileName);
   ui.seAttack.value = String(env.attack ?? 0.005);
@@ -111,6 +113,7 @@ const applySeEnvelopeToUi = (profileName) => {
   ui.seEditingProfile.textContent = profileName;
 };
 
+// 選択中の`se`の`envelope`を現在の入力と実行状態に合わせて更新する
 const updateSelectedSeEnvelope = (partial) => {
   // setSeEnvelopePreset() は preset 全体を置き換える API なので、
   // sample 側で現在値を読み直してから部分更新を合成する
@@ -121,6 +124,7 @@ const updateSelectedSeEnvelope = (partial) => {
   });
 };
 
+// `populateReverbKinds`は現在の進行状態に必要な要素を生成または配置する
 const populateReverbKinds = (select) => {
   const kinds = synth.getImpulseKindList();
   select.replaceChildren();
@@ -133,6 +137,7 @@ const populateReverbKinds = (select) => {
   }
 };
 
+// 効果音の残響設定を操作画面へ反映する
 const applySeReverbImpulseToUi = (config) => {
   ui.seReverbKind.value = config.kind;
   ui.seReverbDuration.value = String(config.durationSec);
@@ -141,6 +146,7 @@ const applySeReverbImpulseToUi = (config) => {
   ui.seReverbDecayVal.textContent = formatPlain(config.decay);
 };
 
+// BGMの残響設定を操作画面へ反映する
 const applyBgmReverbImpulseToUi = (config) => {
   ui.bgmReverbKind.value = config.kind;
   ui.bgmReverbDuration.value = String(config.durationSec);
@@ -149,6 +155,7 @@ const applyBgmReverbImpulseToUi = (config) => {
   ui.bgmReverbDecayVal.textContent = formatPlain(config.decay);
 };
 
+// BGMの音量包絡設定を操作画面へ反映する
 const applyBgmEnvelopeToUi = (envelope) => {
   ui.bgmAttack.value = String(envelope.attack ?? 0.03);
   ui.bgmDecay.value = String(envelope.decay ?? 0.2);
@@ -160,6 +167,7 @@ const applyBgmEnvelopeToUi = (envelope) => {
   ui.bgmReleaseVal.textContent = formatSeconds(ui.bgmRelease.value);
 };
 
+// 操作画面の入力から効果音の残響設定を更新する
 const updateSeReverbImpulseFromUi = (partial = {}) => {
   const next = synth.setSeReverbImpulse({
     ...synth.getSeReverbImpulseConfig(),
@@ -169,6 +177,7 @@ const updateSeReverbImpulseFromUi = (partial = {}) => {
   return next;
 };
 
+// 操作画面の入力からBGMの残響設定を更新する
 const updateBgmReverbImpulseFromUi = (partial = {}) => {
   const next = synth.setBgmReverbImpulse({
     ...synth.getBgmReverbImpulseConfig(),
@@ -178,6 +187,7 @@ const updateBgmReverbImpulseFromUi = (partial = {}) => {
   return next;
 };
 
+// 音の`effect`の`info`を対象の状態または描画設定へ反映する
 const applySoundEffectInfo = (name) => {
   const info = synth.getSoundEffectInfo(name);
   selectedSoundEffect = name;
@@ -200,6 +210,7 @@ const applySoundEffectInfo = (name) => {
   applySeEnvelopeToUi(selectedSeEnvelopeProfile);
 };
 
+// `playSelectedSoundEffect`は選択中の音声またはアニメーションの再生状態を更新する
 const playSelectedSoundEffect = (name = selectedSoundEffect) => {
   // 選択中の SE を 1 回だけ鳴らし、比較の起点をそろえる
   if (!name) return;
@@ -207,6 +218,7 @@ const playSelectedSoundEffect = (name = selectedSoundEffect) => {
   setStatus(`sound effect=${name}`);
 };
 
+// 音の`effect`の選択状態を入力値に従って変更し、関連する状態を同期する
 const moveSoundEffectSelection = (step = 1, play = true) => {
   // catalog を巡回しながら、現在選択をひとつずつ進める
   if (soundEffectList.length === 0) return;
@@ -220,6 +232,7 @@ const moveSoundEffectSelection = (step = 1, play = true) => {
   }
 };
 
+// `auditionAllSoundEffects`は選択中の音声またはアニメーションの再生状態を更新する
 const auditionAllSoundEffects = async () => {
   // catalog を順番に鳴らし、短時間で新しい SE 群の差をつかめるようにする
   if (soundEffectList.length === 0) return;
@@ -256,6 +269,7 @@ const auditionAllSoundEffects = async () => {
   }
 };
 
+// 有効状態の`after`の`init`を受け取り、現在の設定と後続処理へ反映する
 const setEnabledAfterInit = (enabled) => {
   // オーディオ初期化後に操作ボタン群を有効化する
   ui.btnBgmOn.disabled = !enabled;
@@ -269,6 +283,7 @@ const setEnabledAfterInit = (enabled) => {
   ui.btnBgmWet.disabled = !enabled;
 };
 
+// `bindRange`は入力要素と状態更新処理を接続する
 const bindRange = (slider, valueLabel, fn) => {
   // スライダ値表示とオーディオパラメータ更新を同期する
   const apply = () => {
@@ -279,6 +294,7 @@ const bindRange = (slider, valueLabel, fn) => {
   apply();
 };
 
+// このインスタンスの初期化段階で、必要な状態と資源を準備して処理を開始する
 const start = async () => {
   ui = getUiRefs();
   renderStatus();

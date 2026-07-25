@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// Shader.js       2026/04/30
+// Shader.js       2026/07/25
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // ---------------------------------------------
@@ -28,6 +28,7 @@ export default class Shader {
     this.activeUniformIndex = 0;
   }
 
+  // このインスタンスの初期化段階で、必要な状態と資源を準備して処理を開始する
   async init() {
     // GPU準備完了を待ってから、派生クラスのリソース生成へ進む
     if (this.gpu?.ready) {
@@ -64,6 +65,7 @@ export default class Shader {
     return this.device.createPipelineLayout({ bindGroupLayouts });
   }
 
+  // ユニフォームの`bind`のグループの配置を生成し、後続処理で利用できる状態にする
   createUniformBindGroupLayout({
     hasDynamicOffset = false,
     visibility = GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT,
@@ -80,6 +82,7 @@ export default class Shader {
     });
   }
 
+  // テクスチャの`bind`のグループの配置を生成し、後続処理で利用できる状態にする
   createTextureBindGroupLayout({
     samplerBinding = 0,
     textureBinding = 1,
@@ -96,6 +99,7 @@ export default class Shader {
     });
   }
 
+  // ユニフォームのテクスチャの`bind`のグループの配置を生成し、後続処理で利用できる状態にする
   createUniformTextureBindGroupLayout({
     hasDynamicOffset = false,
     uniformBinding = 0,
@@ -120,6 +124,7 @@ export default class Shader {
     });
   }
 
+  // 材質値が未指定の場合に使う既定テクスチャを生成する
   createDefaultTexture({
     width = 1,
     height = 1,
@@ -169,6 +174,7 @@ export default class Shader {
     return this.defaultTextureResource;
   }
 
+  // テクスチャの資源を現在の入力と状態から求め、呼び出し元へ返す
   resolveTextureResources(texture) {
     const view = texture?.getView?.()
       ?? texture?.view
@@ -178,6 +184,7 @@ export default class Shader {
     return { view, sampler };
   }
 
+  // `or`の`create`の`textured`の`bind`のグループを現在の入力と状態から求め、呼び出し元へ返す
   getOrCreateTexturedBindGroup({
     texture = null,
     cache = this.bindGroupCache,

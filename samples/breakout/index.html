@@ -3,40 +3,193 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>breakout sample</title>
+  <title>breakout</title>
   <link rel="icon" href="data:," />
+  <!-- 2026/06/19 -->
   <style>
-    html, body {
-      margin: 0;
-      background: #16221a;
-      color: #d7e6ff;
-      font-family: "Courier New", monospace;
-      overflow: hidden;
-    }
-    #canvas {
-      display: block;
-      width: 100vw;
-      height: 100vh;
-      background: #16221a;
-    }
-    #status {
-      position: fixed;
-      right: 10px;
-      bottom: 10px;
-      padding: 6px 8px;
-      background: rgba(12, 20, 12, 0.54);
-      border: 1px solid rgba(120, 164, 224, 0.26);
-      border-radius: 6px;
-      white-space: pre-wrap;
-      pointer-events: none;
-      max-width: calc(100vw - 20px);
-      text-align: right;
-    }
+
+:root {
+  color-scheme: light;
+  --bg: #eef3f8;
+  --paper: rgba(255, 255, 255, 0.94);
+  --line: #c8d5e4;
+  --ink: #17324a;
+  --muted: #5c748b;
+  --accent: #1566ab;
+  --accent-soft: #dfeefe;
+  --code-bg: #f3f7fb;
+  --shadow: rgba(29, 52, 79, 0.10);
+}
+* { box-sizing: border-box; }
+html, body {
+  margin: 0;
+  min-height: 100%;
+}
+body {
+  background:
+    radial-gradient(circle at top left, rgba(21, 102, 171, 0.12), transparent 24%),
+    radial-gradient(circle at top right, rgba(255, 191, 118, 0.10), transparent 22%),
+    linear-gradient(180deg, #f8fbfd 0%, var(--bg) 100%);
+  color: var(--ink);
+  font: 16px/1.78 "Avenir Next", "Hiragino Sans", "Yu Gothic", sans-serif;
+}
+.page {
+  width: min(1080px, calc(100% - 28px));
+  margin: 0 auto;
+  padding: 24px 0 56px;
+}
+.hero,
+.doc {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  box-shadow: 0 22px 52px var(--shadow);
+}
+.hero {
+  padding: 22px 24px;
+  margin-bottom: 18px;
+}
+.hero h1 {
+  margin: 0 0 8px;
+  font-size: clamp(2rem, 4vw, 3rem);
+  line-height: 1.08;
+}
+.hero p {
+  margin: 0;
+  color: var(--muted);
+}
+.doc {
+  padding: 28px;
+}
+.doc > :first-child {
+  margin-top: 0;
+}
+h1, h2, h3, h4, h5, h6 {
+  line-height: 1.25;
+  margin: 1.45em 0 0.55em;
+}
+h1 {
+  font-size: 2.2rem;
+}
+h2 {
+  padding-bottom: 0.28em;
+  border-bottom: 1px solid var(--line);
+  font-size: 1.48rem;
+}
+h3 {
+  font-size: 1.14rem;
+}
+p, ul, ol, table, pre, blockquote {
+  margin: 0 0 1em;
+}
+ul, ol {
+  padding-left: 1.4em;
+}
+li + li {
+  margin-top: 0.26em;
+}
+a {
+  color: var(--accent);
+  text-decoration: none;
+}
+a:hover {
+  text-decoration: underline;
+}
+img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  border-radius: 16px;
+  border: 1px solid var(--line);
+  box-shadow: 0 12px 32px rgba(29, 52, 79, 0.08);
+  margin: 1.1em 0 1.4em;
+}
+code {
+  padding: 0.12em 0.38em;
+  border-radius: 0.45em;
+  background: var(--code-bg);
+  border: 1px solid #dbe6f1;
+  font: 0.92em/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+pre {
+  padding: 14px 16px;
+  overflow-x: auto;
+  border-radius: 14px;
+  background: #0f1720;
+  color: #ecf5ff;
+}
+pre code {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #ffffff;
+}
+th, td {
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  text-align: left;
+  vertical-align: top;
+}
+th {
+  background: #f5f9fc;
+}
+hr {
+  border: 0;
+  border-top: 1px solid var(--line);
+  margin: 1.5em 0;
+}
+blockquote {
+  padding: 0.3em 0 0.3em 1em;
+  border-left: 4px solid #c9dbef;
+  color: var(--muted);
+}
+@media (max-width: 720px) {
+  .page {
+    width: min(100% - 18px, 1080px);
+    padding-top: 16px;
+  }
+  .hero,
+  .doc {
+    border-radius: 18px;
+  }
+  .doc {
+    padding: 20px;
+  }
+}
+
   </style>
 </head>
 <body>
-  <canvas id="canvas" width="960" height="720"></canvas>
-  <div id="status">initializing...</div>
-  <script type="module" src="./main.js"></script>
+  <main class="page">
+    <section class="hero">
+      <h1>breakout</h1>
+    </section>
+    <article class="doc">
+<h1>breakout</h1>
+<p><a href="index.en.html">English</a> | 日本語</p>
+<p><img src="./breakout.jpg" alt="breakout" /></p>
+<h2>概要</h2>
+<ul><li>webg のゲーム向け基礎機能を使って、3D 表現を取り入れたシンプルなブロック崩しを作るサンプルです。</li><li>WebgApp を入口にして、入力、HUD、scene phase、ゲーム状態管理、表示メッセージを 1 本の処理フローへまとめています。</li><li>盤面は title / play / pause / result の 4 状態で進み、入力の押下、残りブロック数、残り時間、残りライフによって自然に切り替わります。</li><li>見た目は 2D に近いですが、Paddle / Ball / Brick / Wall を 3D shape として生成し、2D 的な座標管理と組み合わせてゲームを構成しています。</li><li>Message 系 HUD で score / combo / time / lives / phase / ball 状態を表示し、画面上の情報だけでゲーム進行を追えるようにしています。</li><li>Touch による左右移動ボタンと Start / Pause / R ボタンを用意し、キーボード入力とタッチ入力の両方で同じゲーム操作を行えるようにしています。</li></ul>
+<h2>実行方法</h2>
+<ul><li>実行ファイルは <a href="./breakout.html">./breakout.html</a> です</li><li>WebGPU に対応したブラウザで開き、必要に応じて help panel や HUD と合わせて確認してください</li></ul>
+<h2>使用している webg 機能</h2>
+<ul><li>WebgApp: Screen / Shader / Space / Input / Message / HUD / debug tools をまとめて初期化する</li><li>app 側 GameStateManager: title / play / pause / result の状態遷移を整理する</li><li>InputController: キーボードやタッチ入力から得た正規化済みキー名を action 名へ束ねる</li><li>Touch: 左右移動と launch / pause / restart をタッチボタンで入力する</li><li>Shape: Paddle / Brick / Wall / Backdrop などの任意サイズの box 形状を作る</li><li>Primitive: Ball の球メッシュを生成する</li><li>Space: 各 shape を node として配置し、表示用の 3D シーンを構成する</li><li>Message: guide / control rows / game HUD / status 表示を画面に出す</li><li>Toast: serve / pause / miss / result などの一時的な状態通知を表示する</li></ul>
+<p>実装上の特徴</p>
+<ul><li>入力は app.registerActionMap() で left / right / launch / pause / restart にまとめています。</li><li>left は ArrowLeft / A、right は ArrowRight / D に対応します。</li><li>launch は Enter / Space、pause は P / Esc、restart は R に対応します。</li><li>タッチボタンの ← / → は hold 入力として扱い、Paddle の左右移動に使います。</li><li>タッチボタンの Start / Pause / R は action 入力として扱い、それぞれ launch / pause / restart に対応します。</li><li>Ball / Paddle / Brick / Wall には collision shape も設定していますが、このサンプルのゲーム判定自体は、makeBox() と circleIntersectsBox() を使ったサンプル側の 2D 判定で行っています。</li><li>Ball の移動は 1 フレームを複数の小ステップに分割して進め、速い移動でも壁やブロックをすり抜けにくいようにしています。</li><li>Paddle 反射では、Ball が Paddle のどの位置に当たったかに応じて反射方向を変えています。</li><li>Brick に当たると 1 個だけ消え、score と combo が更新されます。</li><li>床側へ Ball が落ちると lives が減り、残り lives があれば Paddle 上に Ball を戻します。</li><li>bricks が全消しになると clear、lives が 0 になると game over、time が 0 になると time up として result に入ります。</li></ul>
+<h2>確認ポイント</h2>
+<ul><li>Enter / Space で title から play に入り、Ball が Paddle から打ち出されることを確認します。</li><li>ArrowLeft / ArrowRight / A / D で Paddle が即時に動き、タッチボタンの ← / → でも同じ動きになることを確認します。</li><li>P / Esc で pause に入り、Enter / Space または P / Esc で play に戻れることを確認します。</li><li>play 中に Ball が Paddle に当たると、当たった位置に応じて反射方向が変わることを確認します。</li><li>Brick に Ball が当たると 1 個だけ消え、score と combo が更新されることを確認します。</li><li>左右壁と天井で Ball が反射することを確認します。</li><li>Ball が床側へ落ちると lives が減り、残り lives がある場合は Ball が Paddle 上へ戻ることを確認します。</li><li>bricks が全消し、lives が 0、または time が 0 になると result に入り、R で title へ戻れることを確認します。</li><li>タッチボタンの Start / Pause / R でも、キーボードと同じように開始、停止、再開、リスタートができることを確認します。</li><li>HUD に score / combo / time / lives / phase / ball 状態が表示され、ゲームの進行状態を追えることを確認します。</li></ul>
+<h2>操作方法</h2>
+<ul><li>ArrowLeft / A: Paddle を左へ動かす</li><li>ArrowRight / D: Paddle を右へ動かす</li><li>Enter / Space: title から開始、pause から再開、play 中のサーブ待機状態から Ball を打ち出す</li><li>P / Esc: pause、または pause から再開</li><li>R: result から title へ戻る</li><li>タッチボタン ←: Paddle を左へ動かす</li><li>タッチボタン →: Paddle を右へ動かす</li><li>タッチボタン Start: launch action を発生させる</li><li>タッチボタン Pause: pause action を発生させる</li><li>タッチボタン R: restart action を発生させる</li></ul>
+<p>状態遷移</p>
+<ul><li>title: 初期状態です。レベルを初期化し、開始入力を待ちます。</li><li>play: 実際にゲームが進行する状態です。Paddle 移動、Ball 移動、反射、Brick 破壊、残り時間の更新を行います。</li><li>pause: 一時停止状態です。ゲーム進行は止まりますが、Paddle の移動入力は確認できるようにしています。</li><li>result: 終了状態です。clear / game over / time up の結果を表示し、restart 入力を待ちます。</li></ul>
+<p>補足</p>
+<ul><li>このサンプルは、ゲーム向け API の最小確認として、見た目の派手さよりも state / input / HUD / collision 判定の流れを追いやすいことを優先しています。</li><li>Ball は Primitive.sphere() で作成し、Paddle / Brick / Wall / Backdrop はサンプル内の createBoxShape() で任意サイズの box mesh として作成しています。</li><li>Ball には sphere、Paddle / Brick / Wall には aabb の collision shape を設定しています。</li><li>ただし、ゲーム進行に使う衝突判定は Space.stepCollisions() の enter 結果ではなく、サンプル側の circleIntersectsBox() による 2D 的な簡易判定です。</li><li>Space には node と collision body を登録していますが、このサンプルでは主に「3D シーン上にゲーム要素を配置する基盤」として使っています。</li><li>result 画面は clear / game over / time up を同じ phase へまとめ、終了理由だけを文言で切り替える構成にしています。</li><li>入力処理では、生の event.key を直接扱うのではなく、WebgApp / InputController 側で正規化されたキー名と action 名を使う前提にしています。</li></ul>
+    </article>
+  </main>
 </body>
 </html>

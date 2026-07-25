@@ -1,0 +1,35 @@
+# rendering_conventions_module_classification_contracts
+
+## 目的
+
+第2版の座標・深度基盤について、`webg/*.js` の全コアmoduleを「OK」「変更不要」「意図的通常Z」のいずれかへ一度だけ分類します。新しいmoduleや監査漏れを未分類のまま作業完了としないため、文書上の一覧だけでなくファイル集合との一致をheadless testで固定します。
+
+## 分類の意味
+
+「OK」はCamera Reverse-Z、camera-relative rendering、Deferred Shading、High Dynamic Range、最終表示境界の変更対象となり、対応するコア別 headless suite が成功したmoduleです。「変更不要」はlocal geometry、asset、UI、audio、physics、入力、汎用GPU資源などを担当し、通常カメラdepthやWorld位置のGPU変換を所有しないmoduleです。
+
+「意図的通常Z」は `ShadowMapPass` と `SpotShadowMapPass` です。通常カメラとは別のLight View depthを生成し、第一実装期では `SHADOW_STANDARD_Z`、`depth32float`、clear 1、less比較を維持します。通常Zの定義、行列生成、resolve側検証を担当する `DepthConvention`、`Matrix`、`ComputeShadowPass` は通常カメラ契約も扱い、個別test済みなので「OK」に分類します。
+
+## 確認内容
+
+`webg` 直下の全 `.js` と三分類をsortして完全一致させ、重複分類も拒否します。コア全体に `depth24plus` が残らないこと、二つのShadow Map生成moduleが `SHADOW_STANDARD_Z` を所有することも確認します。
+
+以前「調査中」だった `CoordinateSystem` と `EyeRig` はJavaScript NumberのMatrix・配列だけを扱い、Float32Array、GPU buffer、depth pipelineを所有しないため「変更不要」としました。`ParticleEmitter` はparticle World位置をJavaScript Numberで更新し、GPU転送を `Billboard` へ委譲します。Billboardをcamera-relative化したため、ParticleEmitter自身は「変更不要」です。
+
+## 実行方法
+
+```sh
+node headless_tests/integration/rendering_conventions/headless_probe.js
+```
+
+## 予想と結果
+
+分類漏れ、重複、新規未分類module、`depth24plus` 再導入、Shadow Map通常Z所有者の不一致があればassertionで停止します。成功時は次を表示します。
+
+```text
+rendering_conventions_module_classification_contracts: all core modules classified exactly once
+```
+
+## 解釈
+
+このテストは責務分類と静的契約を確認します。各OK moduleの数値・GPU descriptor・resource identityは個別のコア別 headless suite が担当し、sampleの実表示とGPU負荷は別途ブラウザ確認・benchmarkで記録します。

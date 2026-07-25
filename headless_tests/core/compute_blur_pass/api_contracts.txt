@@ -1,0 +1,22 @@
+サンプル: compute_blur_pass
+
+概要
+- `webg/ComputeBlurPass.js` のparameter、source、encode順序、resource契約を実GPUなしで確認するheadless testです
+- BloomとDoFが共有する水平・垂直の分離可能blurを、effect固有の合成処理から分離して検証します
+
+このテストで使う機能
+- `validateEncodeOptions()`: radiusとiterationsを整数および範囲付きで検証する
+- `validateSource()`: 入力RenderTargetのViewと寸法を検証する
+- `encode()`: 水平Passと垂直Passを反復し、最終output targetを返す
+
+確認ポイント
+- radiusの既定値が3、iterationsの既定値が1であることを確認します
+- radiusが1から8の整数、iterationsが1以上の整数でなければ例外になることを確認します
+- 小数iterationsをfloorせず、範囲外radiusをclampしないことを確認します
+- sourceと内部Storage RenderTargetの寸法不一致を例外にすることを確認します
+- source Viewが未初期化の場合にencodeへ進まないことを確認します
+- 2反復時にhorizontal、vertical、horizontal、verticalの順で処理することを確認します
+- 最終結果が常に専用output targetから返ることを確認します
+
+実行方法
+- `node headless_tests/core/compute_blur_pass/headless_probe.js`

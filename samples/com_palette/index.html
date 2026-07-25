@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>com_palette</title>
+  <link rel="icon" href="data:," />
+  <!-- 2026/06/19 -->
+  <style>
+
+:root {
+  color-scheme: light;
+  --bg: #eef3f8;
+  --paper: rgba(255, 255, 255, 0.94);
+  --line: #c8d5e4;
+  --ink: #17324a;
+  --muted: #5c748b;
+  --accent: #1566ab;
+  --accent-soft: #dfeefe;
+  --code-bg: #f3f7fb;
+  --shadow: rgba(29, 52, 79, 0.10);
+}
+* { box-sizing: border-box; }
+html, body {
+  margin: 0;
+  min-height: 100%;
+}
+body {
+  background:
+    radial-gradient(circle at top left, rgba(21, 102, 171, 0.12), transparent 24%),
+    radial-gradient(circle at top right, rgba(255, 191, 118, 0.10), transparent 22%),
+    linear-gradient(180deg, #f8fbfd 0%, var(--bg) 100%);
+  color: var(--ink);
+  font: 16px/1.78 "Avenir Next", "Hiragino Sans", "Yu Gothic", sans-serif;
+}
+.page {
+  width: min(1080px, calc(100% - 28px));
+  margin: 0 auto;
+  padding: 24px 0 56px;
+}
+.hero,
+.doc {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  box-shadow: 0 22px 52px var(--shadow);
+}
+.hero {
+  padding: 22px 24px;
+  margin-bottom: 18px;
+}
+.hero h1 {
+  margin: 0 0 8px;
+  font-size: clamp(2rem, 4vw, 3rem);
+  line-height: 1.08;
+}
+.hero p {
+  margin: 0;
+  color: var(--muted);
+}
+.doc {
+  padding: 28px;
+}
+.doc > :first-child {
+  margin-top: 0;
+}
+h1, h2, h3, h4, h5, h6 {
+  line-height: 1.25;
+  margin: 1.45em 0 0.55em;
+}
+h1 {
+  font-size: 2.2rem;
+}
+h2 {
+  padding-bottom: 0.28em;
+  border-bottom: 1px solid var(--line);
+  font-size: 1.48rem;
+}
+h3 {
+  font-size: 1.14rem;
+}
+p, ul, ol, table, pre, blockquote {
+  margin: 0 0 1em;
+}
+ul, ol {
+  padding-left: 1.4em;
+}
+li + li {
+  margin-top: 0.26em;
+}
+a {
+  color: var(--accent);
+  text-decoration: none;
+}
+a:hover {
+  text-decoration: underline;
+}
+img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  border-radius: 16px;
+  border: 1px solid var(--line);
+  box-shadow: 0 12px 32px rgba(29, 52, 79, 0.08);
+  margin: 1.1em 0 1.4em;
+}
+code {
+  padding: 0.12em 0.38em;
+  border-radius: 0.45em;
+  background: var(--code-bg);
+  border: 1px solid #dbe6f1;
+  font: 0.92em/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+pre {
+  padding: 14px 16px;
+  overflow-x: auto;
+  border-radius: 14px;
+  background: #0f1720;
+  color: #ecf5ff;
+}
+pre code {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #ffffff;
+}
+th, td {
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  text-align: left;
+  vertical-align: top;
+}
+th {
+  background: #f5f9fc;
+}
+hr {
+  border: 0;
+  border-top: 1px solid var(--line);
+  margin: 1.5em 0;
+}
+blockquote {
+  padding: 0.3em 0 0.3em 1em;
+  border-left: 4px solid #c9dbef;
+  color: var(--muted);
+}
+@media (max-width: 720px) {
+  .page {
+    width: min(100% - 18px, 1080px);
+    padding-top: 16px;
+  }
+  .hero,
+  .doc {
+    border-radius: 18px;
+  }
+  .doc {
+    padding: 20px;
+  }
+}
+
+  </style>
+</head>
+<body>
+  <main class="page">
+    <section class="hero">
+      <h1>com_palette</h1>
+    </section>
+    <article class="doc">
+<h1>com_palette</h1>
+<p><a href="index.en.html">English</a> | 日本語</p>
+<p><img src="./com_palette.jpg" alt="com_palette" /></p>
+<h2>概要</h2>
+<p><code>com_palette</code>は、コアの<code>webg/CommandPalette.js</code>をWebgAppから独立したUI部品として使うサンプルです。button、toggle、stepper、select、排他的なmode switchを一つのpaletteへ配置し、command定義とapplication stateをどのように接続するかを確認します。</p>
+<p>画面中央の2D previewとHUDは、paletteが更新する同じ<code>state</code>を読みます。<code>Obj / Edit / Scpt</code>を切り替えると選択中buttonのactive表示とpreviewが同時に変わり、toggleやstepperを操作すると次のframeから背景や図形へ反映されます。これにより、CommandPalette自身へapplication固有の状態を持たせず、利用側の状態を表示・更新する基本構成を確認できます。</p>
+<h2>実行方法</h2>
+<ul><li><a href="./com_palette.html">./com_palette.html</a> を開きます</li><li>WebGPUは使用しないため、通常のCanvas 2DとDOMを利用できるbrowserで動作します</li></ul>
+<h2>使用しているwebg機能</h2>
+<ul><li><code>CommandPalette</code>: command定義からpaletteのDOMを生成し、開閉、ページ切り替え、値の表示を行う</li><li><code>getDefaultCommandPaletteCss()</code>: default CSSを取得し、部分的なstyle変更後に標準styleへ戻す</li><li><code>setStyle()</code>: paletteへ適用するCSS全体を差し替える</li><li><code>setTheme()</code>: 色などのCSS custom propertiesだけを変更する</li><li><code>attachToCanvas()</code>: double click、double tap、<code>/</code> keyをpaletteの開閉へ接続する</li></ul>
+<h2>実装の流れ</h2>
+<p><code>state</code>にはpause、grid、glow、wire、mode、brush、radius、strength、themeを保持します。<code>commands</code>配列の<code>value</code>関数と<code>getCommandState</code>は、この状態を読んでtoggle、stepper、select、mode switchの現在値を表示します。</p>
+<p>buttonは<code>onCommand</code>で処理し、値を持つtoggle、stepper、selectは<code>onChange</code>で<code>state</code>を更新します。更新後に<code>palette.render()</code>とHUD更新を行うことで、palette、preview、HUDが同じ値を表示します。<code>pageRows: 4</code>を全体の基準とし、<code>pageRowsByPage: [4, 3]</code>で2ページ目だけ3行へ変更します。buttonは1 cell、stepperとselectは1行として数えるため、小さい画面でもcommandが重ならず次ページへ分割されます。</p>
+<h2>確認ポイント</h2>
+<ul><li>double click、double tap、<code>/</code> keyのどれから開いても同じpaletteが表示されること</li><li><code>Obj / Edit / Scpt</code>では一つだけがactiveになり、中央previewも同じmodeへ切り替わること</li><li>toggle、stepper、selectの変更がHUDとpreviewへ反映され、paletteを開き直しても現在値が保たれること</li><li><code>Next</code>で行数を基準に分割された次pageへ進み、stepperとselectが途中で分断されないこと</li><li><code>CSS</code>で全体styleが変わり、<code>Def</code>でdefault CSSと既定themeへ戻ること</li></ul>
+<h2>操作方法</h2>
+<ul><li>Double click / double tap: command palette</li><li><code>/</code>: command palette</li><li>Palette button: command 実行</li><li>Obj / Edit / Scpt: Mode Switch。選択中modeをactive色で示し、中央の図形も切り替える</li><li>Next: 行数を基準に分割された次pageへ進む</li><li>Radius / Strength: stepper</li><li>Brush / Theme: select row</li><li>CSS: <code>setStyle()</code> の実験</li><li>Def: default style へ戻す</li></ul>
+    </article>
+  </main>
+</body>
+</html>

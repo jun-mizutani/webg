@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// Touch.js       2026/05/16
+// Touch.js       2026/07/25
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // ---------------------------------------------
@@ -45,6 +45,7 @@ export default class Touch {
     window.addEventListener("orientationchange", this._boundApplyLayoutMode);
   }
 
+  // グループを検証し、後続処理が扱える共通形式へ整える
   normalizeGroup(group, index) {
     if (!group || typeof group !== "object" || Array.isArray(group)) {
       throw new Error(`Touch group[${index}] must be an object`);
@@ -59,6 +60,7 @@ export default class Touch {
     };
   }
 
+  // ボタンを検証し、後続処理が扱える共通形式へ整える
   normalizeButton(button, groupIndex, buttonIndex) {
     if (!button || typeof button !== "object" || Array.isArray(button)) {
       throw new Error(`Touch group[${groupIndex}] button[${buttonIndex}] must be an object`);
@@ -78,17 +80,20 @@ export default class Touch {
     };
   }
 
+  // `coarse`のポインターの条件を判定し、結果を真偽値で返す
   isCoarsePointer() {
     if (this.options.force) return true;
     if (!window.matchMedia) return false;
     return window.matchMedia("(pointer: coarse)").matches;
   }
 
+  // 有効状態の条件を判定し、結果を真偽値で返す
   isEnabled() {
     if (!this.options.touchDeviceOnly) return true;
     return this.isCoarsePointer();
   }
 
+  // `injectDefaultStyle`は必要な画面要素を準備し、表示状態を更新する
   injectDefaultStyle() {
     if (this.doc.getElementById(this.options.styleId)) return;
     const style = this.doc.createElement("style");
@@ -153,6 +158,7 @@ export default class Touch {
     this.doc.head.appendChild(style);
   }
 
+  // このインスタンスを生成し、後続処理で利用できる状態にする
   create({
     groups = [],
     autoSpread = true,
@@ -228,6 +234,7 @@ export default class Touch {
 
         const infoFromEvent = (ev) => ({ key, kind, button: b, element: el, event: ev, touch: this });
 
+        // `down`を受け取った段階で、対応する状態更新と処理を実行する
         const onDown = (ev) => {
           ev.preventDefault();
           if (this.onAnyPress) this.onAnyPress(infoFromEvent(ev));
@@ -241,6 +248,7 @@ export default class Touch {
           if (this.onPress) this.onPress(infoFromEvent(ev));
         };
 
+        // `up`を受け取った段階で、対応する状態更新と処理を実行する
         const onUp = (ev) => {
           ev.preventDefault();
           if (kind === "action") {
@@ -290,6 +298,7 @@ export default class Touch {
     });
   }
 
+  // `surface`の設定値を検証し、後続処理が扱える共通形式へ整える
   normalizeSurfaceOptions(options = {}) {
     const out = {
       touchDeviceOnly: this.options.touchDeviceOnly,
@@ -321,6 +330,7 @@ export default class Touch {
     return out;
   }
 
+  // `surface`のポインターの`allowed`の条件を判定し、結果を真偽値で返す
   isSurfacePointerAllowed(ev, options) {
     if (options.touchOnly && String(ev?.pointerType ?? "") !== "touch") {
       return false;
@@ -328,6 +338,7 @@ export default class Touch {
     return true;
   }
 
+  // `surface`の`gesture`の`info`を生成し、後続処理で利用できる状態にする
   makeSurfaceGestureInfo(type, extra = {}, event = null) {
     const surface = this.surface;
     const state = surface?.state ?? {};
@@ -355,6 +366,7 @@ export default class Touch {
     };
   }
 
+  // `emitSurfaceGesture`は入力またはイベントを受け取り、対応する処理へ振り分ける
   emitSurfaceGesture(type, extra = {}, event = null) {
     const options = this.surface?.options;
     if (!options) return null;
@@ -367,6 +379,7 @@ export default class Touch {
     return info;
   }
 
+  // `surface`の`long`の`press`の`timer`を初期状態へ戻し、前回の状態を残さない
   clearSurfaceLongPressTimer() {
     const state = this.surface?.state;
     if (!state?.longPressTimer) return;
@@ -374,6 +387,7 @@ export default class Touch {
     state.longPressTimer = null;
   }
 
+  // `cancel`の`surface`の`gesture`の条件を判定し、結果を真偽値で返す
   cancelSurfaceGesture(reason = "cancel") {
     const surface = this.surface;
     if (!surface) return false;
@@ -394,6 +408,7 @@ export default class Touch {
     return wasActive;
   }
 
+  // `surface`の方向を現在の入力と状態から求め、呼び出し元へ返す
   getSurfaceDirection(dx, dy, minDistance) {
     const absX = Math.abs(dx);
     const absY = Math.abs(dy);
@@ -405,6 +420,7 @@ export default class Touch {
     return dy >= 0 ? "down" : "up";
   }
 
+  // `emit`の`surface`の`double`の`tap`の条件を判定し、結果を真偽値で返す
   shouldEmitSurfaceDoubleTap(x, y, now, options, pointerType) {
     const state = this.surface?.state;
     if (!state || options.doubleTapTime <= 0) return false;
@@ -414,6 +430,7 @@ export default class Touch {
     return Math.hypot(x - state.lastTapX, y - state.lastTapY) <= options.doubleTapDistance;
   }
 
+  // `rememberSurfaceTap`は受け取った値を処理し、後続処理で利用する状態または結果を生成する
   rememberSurfaceTap(x, y, now, pointerType) {
     const state = this.surface?.state;
     if (!state) return;
@@ -423,6 +440,7 @@ export default class Touch {
     state.lastTapPointerType = String(pointerType ?? "");
   }
 
+  // `surface`のイベントの既定のを受け取った段階で、対応する状態更新と処理を実行する
   handleSurfaceEventDefault(ev, options) {
     if (options.preventDefault && ev?.cancelable !== false) {
       ev.preventDefault();
@@ -432,6 +450,7 @@ export default class Touch {
     }
   }
 
+  // `surface`を対象へ追加し、後続処理から参照できるようにする
   attachSurface(element, options = {}) {
     if (!element || typeof element.addEventListener !== "function") {
       throw new Error("Touch.attachSurface requires an event target element");
@@ -462,6 +481,7 @@ export default class Touch {
     };
     const previousTouchAction = element?.style ? element.style.touchAction : null;
 
+    // ポインターの`down`を受け取った段階で、対応する状態更新と処理を実行する
     const onPointerDown = (ev) => {
       if (!this.isSurfacePointerAllowed(ev, normalized)) return;
       this.handleSurfaceEventDefault(ev, normalized);
@@ -497,6 +517,7 @@ export default class Touch {
       element.setPointerCapture?.(ev.pointerId);
     };
 
+    // ポインターの`move`を受け取った段階で、対応する状態更新と処理を実行する
     const onPointerMove = (ev) => {
       if (!state.active || ev.pointerId !== state.pointerId) return;
       this.handleSurfaceEventDefault(ev, normalized);
@@ -511,6 +532,7 @@ export default class Touch {
       }
     };
 
+    // ポインターの`up`を受け取った段階で、対応する状態更新と処理を実行する
     const onPointerUp = (ev) => {
       if (!state.active || ev.pointerId !== state.pointerId) return;
       this.handleSurfaceEventDefault(ev, normalized);
@@ -554,6 +576,7 @@ export default class Touch {
       }
     };
 
+    // ポインターの`cancel`を受け取った段階で、対応する状態更新と処理を実行する
     const onPointerCancel = (ev) => {
       if (!state.active || ev.pointerId !== state.pointerId) return;
       this.handleSurfaceEventDefault(ev, normalized);
@@ -597,6 +620,7 @@ export default class Touch {
     return this.attachSurface(element, options);
   }
 
+  // `surface`を対象から切り離し、関連する参照を整理する
   detachSurface() {
     const surface = this.surface;
     if (!surface) return false;
@@ -620,6 +644,7 @@ export default class Touch {
     return this.detachSurface();
   }
 
+  // `density`のサイズを対象の状態または描画設定へ反映する
   applyDensitySize() {
     if (!this.root) return;
     const btns = this.root.querySelectorAll(".webg-touch-btn");
@@ -640,6 +665,7 @@ export default class Touch {
     this.root.style.setProperty("--webg-touch-action-size", `${size}px`);
   }
 
+  // 配置のモードを対象の状態または描画設定へ反映する
   applyLayoutMode() {
     if (!this.root) return;
     const rawViewportWidth = this.options.viewportElement?.clientWidth
@@ -704,6 +730,7 @@ export default class Touch {
     }
   }
 
+  // グループの`inline`の配置を初期状態へ戻し、前回の状態を残さない
   resetGroupInlineLayout(groupItems = null) {
     const items = groupItems ?? Array.from(this.root?.querySelectorAll(".webg-touch-group") ?? []).map((el) => ({ element: el }));
     for (let i = 0; i < items.length; i++) {
@@ -717,6 +744,7 @@ export default class Touch {
     }
   }
 
+  // 複数行に分かれた項目を行ごとの幅に合わせて配置する
   applyMultilineSpreadByRows(groupItems, groupGap, availableWidth) {
     this.resetGroupInlineLayout(groupItems);
     const rows = [];
@@ -761,6 +789,7 @@ export default class Touch {
     }
   }
 
+  // `all`が保持する資源と参照を安全に解放する
   releaseAll() {
     const entries = Array.from(this.pointerToButton.entries());
     this.pointerToButton.clear();
@@ -780,6 +809,7 @@ export default class Touch {
     }
   }
 
+  // このインスタンスが保持する資源と参照を安全に解放する
   destroy() {
     this.detachSurface();
     this.releaseAll();

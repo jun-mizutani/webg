@@ -1,0 +1,20 @@
+# ComputeVignettePass表示色単体テスト
+
+## 目的
+
+Tone MapとEdgeを終えた`rgba8unorm`表示色へ、PresentationとHUDより前に全画面Vignetteを
+適用する契約を確認します。深度やHDR sceneは受け取らず、完成画像全体の周辺を減光します。
+
+## 確認項目
+
+1. sceneとoutputは`rgba8unorm`である。
+2. 横長画面ではX方向へaspect補正する。
+3. center、radius、softness、strength、tintをCPU側で検証する。
+4. tintは既存`VignettePass`と同じ乗算方式で適用する。
+5. 深度textureを要求しない。
+
+## 実行方法
+
+```sh
+node --experimental-default-type=module headless_tests/core/compute_vignette_pass/headless_probe.js
+```

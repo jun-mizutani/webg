@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>tone</title>
+  <link rel="icon" href="data:," />
+  <!-- 2026/06/19 -->
+  <style>
+
+:root {
+  color-scheme: light;
+  --bg: #eef3f8;
+  --paper: rgba(255, 255, 255, 0.94);
+  --line: #c8d5e4;
+  --ink: #17324a;
+  --muted: #5c748b;
+  --accent: #1566ab;
+  --accent-soft: #dfeefe;
+  --code-bg: #f3f7fb;
+  --shadow: rgba(29, 52, 79, 0.10);
+}
+* { box-sizing: border-box; }
+html, body {
+  margin: 0;
+  min-height: 100%;
+}
+body {
+  background:
+    radial-gradient(circle at top left, rgba(21, 102, 171, 0.12), transparent 24%),
+    radial-gradient(circle at top right, rgba(255, 191, 118, 0.10), transparent 22%),
+    linear-gradient(180deg, #f8fbfd 0%, var(--bg) 100%);
+  color: var(--ink);
+  font: 16px/1.78 "Avenir Next", "Hiragino Sans", "Yu Gothic", sans-serif;
+}
+.page {
+  width: min(1080px, calc(100% - 28px));
+  margin: 0 auto;
+  padding: 24px 0 56px;
+}
+.hero,
+.doc {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  box-shadow: 0 22px 52px var(--shadow);
+}
+.hero {
+  padding: 22px 24px;
+  margin-bottom: 18px;
+}
+.hero h1 {
+  margin: 0 0 8px;
+  font-size: clamp(2rem, 4vw, 3rem);
+  line-height: 1.08;
+}
+.hero p {
+  margin: 0;
+  color: var(--muted);
+}
+.doc {
+  padding: 28px;
+}
+.doc > :first-child {
+  margin-top: 0;
+}
+h1, h2, h3, h4, h5, h6 {
+  line-height: 1.25;
+  margin: 1.45em 0 0.55em;
+}
+h1 {
+  font-size: 2.2rem;
+}
+h2 {
+  padding-bottom: 0.28em;
+  border-bottom: 1px solid var(--line);
+  font-size: 1.48rem;
+}
+h3 {
+  font-size: 1.14rem;
+}
+p, ul, ol, table, pre, blockquote {
+  margin: 0 0 1em;
+}
+ul, ol {
+  padding-left: 1.4em;
+}
+li + li {
+  margin-top: 0.26em;
+}
+a {
+  color: var(--accent);
+  text-decoration: none;
+}
+a:hover {
+  text-decoration: underline;
+}
+img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  border-radius: 16px;
+  border: 1px solid var(--line);
+  box-shadow: 0 12px 32px rgba(29, 52, 79, 0.08);
+  margin: 1.1em 0 1.4em;
+}
+code {
+  padding: 0.12em 0.38em;
+  border-radius: 0.45em;
+  background: var(--code-bg);
+  border: 1px solid #dbe6f1;
+  font: 0.92em/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+pre {
+  padding: 14px 16px;
+  overflow-x: auto;
+  border-radius: 14px;
+  background: #0f1720;
+  color: #ecf5ff;
+}
+pre code {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #ffffff;
+}
+th, td {
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  text-align: left;
+  vertical-align: top;
+}
+th {
+  background: #f5f9fc;
+}
+hr {
+  border: 0;
+  border-top: 1px solid var(--line);
+  margin: 1.5em 0;
+}
+blockquote {
+  padding: 0.3em 0 0.3em 1em;
+  border-left: 4px solid #c9dbef;
+  color: var(--muted);
+}
+@media (max-width: 720px) {
+  .page {
+    width: min(100% - 18px, 1080px);
+    padding-top: 16px;
+  }
+  .hero,
+  .doc {
+    border-radius: 18px;
+  }
+  .doc {
+    padding: 20px;
+  }
+}
+
+  </style>
+</head>
+<body>
+  <main class="page">
+    <section class="hero">
+      <h1>tone</h1>
+    </section>
+    <article class="doc">
+<h1>tone</h1>
+<p>English | <a href="index.html">日本語</a></p>
+<p><img src="./tone.jpg" alt="tone" /></p>
+<h2>Overview</h2>
+<ul><li>This sample uses only <code>ToneSynth</code> to inspect differences in waveform, envelope, and reverb with either a single note or a triad</li><li>Instead of going through the SE catalog / BGM features of <code>AudioSynth</code> or <code>GameAudioSynth</code>, it directly manipulates the minimal audio parameters accepted by <code>ToneSynth.playTone()</code></li><li>You can switch between the <code>sine</code>, <code>triangle</code>, <code>square</code>, and <code>sawtooth</code> waveforms, the <code>percussion</code>, <code>brass</code>, <code>woodwind</code>, <code>organ</code>, <code>piano</code>, and <code>guitar</code> envelope profiles, and the <code>room</code>, <code>hall</code>, and <code>plate</code> reverb impulses from the same screen</li></ul>
+<h2>Reading the Screen</h2>
+<p>The screen is divided into <code>Play</code>, <code>Envelope</code>, <code>Reverb</code>, and <code>What To Listen For</code>. Start by pressing <code>Audio Start</code> to start the <code>AudioContext</code>, then choose <code>root</code>, <code>wave</code>, <code>mode</code>, and <code>gain</code> in <code>Play</code>. In <code>Envelope</code>, adjust the attack and decay shape of the sound. In <code>Reverb</code>, adjust the amount of reverberation and the type of acoustic space.</p>
+<p><code>Hold Single</code> plays only the current root while the button is held down. <code>Hold Triad</code> plays <code>root</code>, <code>3rd</code>, and <code>5th</code> together while the button is held down. When the button is released, the sound stops according to the release of the selected envelope. When <code>Mode</code> is <code>minor</code>, it plays a minor triad; otherwise it plays a major triad, so you can compare how the same waveform and envelope sound different as a single note and as a chord.</p>
+<h2>How to Run</h2>
+<ul><li>Open <a href="./tone.html">./tone.html</a></li><li>Use a browser with WebGPU support, and check the help panel and HUD together with the sample when needed</li></ul>
+<h2>webg Features Used</h2>
+<ul><li><code>ToneSynth</code>: handles single-note playback, stopping, envelope presets, reverb impulses, and volume adjustment</li><li><code>ToneSynth.playTone()</code>: plays one voice by specifying frequency, wave type, profile, gain, and pan. By setting <code>duration</code> to <code>null</code>, the voice sustains until the button is released</li><li><code>ToneSynth.setSeEnvelopePreset()</code>: updates the currently selected envelope profile from the slider values</li><li><code>ToneSynth.setSeReverb()</code> and <code>ToneSynth.setSeReverbImpulse()</code>: switch both the amount of reverb and the character of the impulse response</li></ul>
+<h2>Checkpoints</h2>
+<p>First, press <code>Audio Start</code> and confirm that a single note sounds only while <code>Hold Single</code> is pressed, then stops with the release phase when the button is released. Next, switch <code>Wave</code> from <code>sine</code> to <code>triangle</code>, <code>square</code>, and <code>sawtooth</code> and confirm that even with the same envelope, the brightness and hardness change according to harmonic content.</p>
+<p>When you switch the <code>Envelope</code> profile, the time behavior changes even with the same root and waveform. <code>percussion</code> is a short struck sound with almost no sustain, <code>organ</code> continues almost steadily, <code>piano</code> and <code>guitar</code> decay quickly even if held, and <code>brass</code> and <code>woodwind</code> rise more slowly and are easy to compare as sounds with sustained breath-like behavior. When you move <code>Attack</code>, <code>Decay</code>, <code>Sustain</code>, and <code>Release</code>, the changes apply from the next note triggered with the selected profile.</p>
+<p>In <code>Reverb</code>, switch between <code>Dry</code>, <code>Room</code>, <code>Hall</code>, and <code>Plate</code> and confirm how reverberation changes the outline of the sound. With short envelopes, the reverb tail becomes especially noticeable; with long envelopes, the way the dry signal and reverb overlap changes.</p>
+<p>When you press <code>Hold Triad</code>, it becomes easier to hear reverb smear and the density of harmonics in <code>square / sawtooth</code>, which can be hard to judge with a single note. In chords, the voices are also given slightly different pan positions, so the left-right spread can be heard as well.</p>
+<h2>Controls</h2>
+<ul><li><code>Audio Start</code>: starts the <code>AudioContext</code></li><li><code>Hold Single</code>: plays the root as a single note only while pressed</li><li><code>Hold Triad</code>: plays a major or minor triad only while pressed</li><li><code>Stop All</code>: stops all currently sounding tones with a short release</li><li><code>Root</code>: selects the base note</li><li><code>Wave</code>: selects the <code>OscillatorNode</code> waveform</li><li><code>Mode</code>: selects single note, major triad, or minor triad</li><li><code>Tone Gain</code>: adjusts the voice gain passed to <code>playTone()</code></li><li><code>Profile</code>: selects the envelope preset</li><li><code>Attack / Decay / Sustain / Release</code>: adjusts the ADSR of the selected profile</li><li><code>Reverb Mix</code>: adjusts the send and return amount to the convolver together</li><li><code>Kind / Length / Decay</code>: adjusts the character, length, and falloff of the reverb impulse</li><li><code>Dry / Room / Hall / Plate</code>: switches to representative reverb presets</li></ul>
+<h2>Common Pitfalls</h2>
+<p>If you do not press <code>Audio Start</code>, no sound will play. This follows browser autoplay restrictions.</p>
+<p><code>Tone Gain</code> is the loudness baseline per voice. In a triad, several notes sound together, so the sample lowers each voice slightly to avoid too large a level difference from the single-note case.</p>
+<p>If <code>Reverb Mix</code> is high and <code>Release</code> is long, the direct sound and reverberation overlap and the outline becomes easier to blur. It is easier to hear the differences if you first inspect the envelope in <code>Dry</code>, then switch between <code>Room</code>, <code>Hall</code>, and <code>Plate</code>.</p>
+<h2>Related Documents</h2>
+<ul><li><a href="../../book/18_サウンドの設計.md">18_サウンドの設計.md</a></li><li><a href="../../book/付録C_API一覧.md">付録C_API一覧.md</a></li><li><a href="./main.js">samples/tone/main.js</a></li><li><a href="./tone.html">samples/tone/tone.html</a></li></ul>
+    </article>
+  </main>
+</body>
+</html>

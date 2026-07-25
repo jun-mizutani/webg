@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// unittest/scene_loader_contracts/main.js  2026/05/06
+// unittest/scene_loader_contracts/main.js  2026/07/25
 //   scene_loader_contracts unittest
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -121,6 +121,7 @@ const log = (line) => {
   lines.push(line);
 };
 
+// 値を現在の入力と状態から求め、呼び出し元へ返す
 const formatValue = (value) => {
   try {
     return JSON.stringify(value);
@@ -129,6 +130,7 @@ const formatValue = (value) => {
   }
 };
 
+// このインスタンスを検証し、後続処理が扱える共通形式へ整える
 const check = (label, condition, detail = "") => {
   if (condition) {
     passCount += 1;
@@ -139,6 +141,7 @@ const check = (label, condition, detail = "") => {
   }
 };
 
+// 投影を受け取り、現在の設定と後続処理へ反映する
 const setProjection = (screen, shader, angle = 48.0) => {
   const proj = new Matrix();
   const fov = screen.getRecommendedFov(angle);
@@ -148,6 +151,7 @@ const setProjection = (screen, shader, angle = 48.0) => {
 
 const cloneSceneData = () => JSON.parse(JSON.stringify(SCENE_DATA));
 
+// 状態表示を生成し、後続処理で利用できる状態にする
 const buildStatus = ({ runtime, paused, beforePos, afterPos }) => {
   const crateEntry = runtime.getEntry("crate");
   const floorEntry = runtime.getEntry("floor");
@@ -184,6 +188,7 @@ const buildStatus = ({ runtime, paused, beforePos, afterPos }) => {
   return linesOut.join("\n");
 };
 
+// このインスタンスの初期化段階で、必要な状態と資源を準備して処理を開始する
 const start = async ({ screen, gpu, setStatus, setViewportLayout, startLoop, document }) => {
   const shader = new SmoothShader(gpu);
   await shader.init();
@@ -223,6 +228,7 @@ const start = async ({ screen, gpu, setStatus, setViewportLayout, startLoop, doc
   eye.setPosition(0.0, -6.0, 80.0);
   eye.setAttitude(0.0, 0.0, 0.0);
 
+  // `crate`を初期状態へ戻し、前回の状態を残さない
   const resetCrate = () => {
     const body = crateEntry.physicsNode;
     body.wakeUp();

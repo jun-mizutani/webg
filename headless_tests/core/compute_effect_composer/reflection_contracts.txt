@@ -1,0 +1,31 @@
+# High Dynamic Range反射合成単体テスト
+
+## 目的
+
+ComputeEffectComposerがDeferred Lightingのbase sceneとScreen Space Reflectionの反射をTone Map前の線形High Dynamic Range領域で合成することを確認する。合成後の1.0超の輝度を保持し、通常Z背景比較や8 bit出力へ戻らないようにする
+
+## 確認項目
+
+1. base、reflection、outputは `rgba16float` である
+2. depthはCamera Reverse-Zを必須とする
+3. Reverse-Z背景depth 0ではbaseをそのまま保持する
+4. geometry上ではreflection alphaをweightとしてaddまたはmixする
+5. 合成後の線形色を0から1へclampしない
+6. baseとdepthはoutputと同寸法を必須とする
+7. SSR reflectionは正の整数寸法であれば低解像度を許可する
+8. 旧 `rgba8unorm` 入出力を拒否する
+9. 不正なresize値を自動補正しない
+
+## 実行方法
+
+```sh
+node headless_tests/core/compute_effect_composer/headless_probe.js
+```
+
+## 結果
+
+2026-07-12に実行し、全項目が成功した。表示文字列は次のとおり
+
+```text
+compute_effect_composer_reflection_contracts: all linear composition contracts passed
+```

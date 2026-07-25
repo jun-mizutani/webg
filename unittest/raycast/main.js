@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// unittest/raycast/main.js  2026/04/10
+// unittest/raycast/main.js  2026/07/25
 //   raycast unittest
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -25,6 +25,7 @@ import SmoothShader from "../../webg/SmoothShader.js";
 
 const hud = document.getElementById("hud");
 
+// 投影を受け取り、現在の設定と後続処理へ反映する
 const setProjection = (screen, shader, fov = 53) => {
   // 透視投影行列を作り、シェーダへ設定する
   const proj = new Matrix();
@@ -34,6 +35,7 @@ const setProjection = (screen, shader, fov = 53) => {
   return proj;
 };
 
+// `cssToNdc`は座標または数値を計算し、後続処理で使う結果を返す
 const cssToNdc = (canvas, clientX, clientY) => {
   // CSS座標のマウス位置をNDCへ変換する
   const rect = canvas.getBoundingClientRect();
@@ -42,6 +44,7 @@ const cssToNdc = (canvas, clientX, clientY) => {
   return [x, y];
 };
 
+// マウスの座標からワールド空間のレイを生成する
 const makeRayFromMouse = (canvas, clientX, clientY, eyeNode, proj, view) => {
   // クリック位置からワールド空間レイ（origin, dir）を生成する
   const [nx, ny] = cssToNdc(canvas, clientX, clientY);
@@ -68,6 +71,7 @@ const makeRayFromMouse = (canvas, clientX, clientY, eyeNode, proj, view) => {
   };
 };
 
+// 形状を生成し、後続処理で利用できる状態にする
 const createShape = (gpu, kind, color) => {
   // kindに応じて形状を生成し、単色SmoothShader材質を設定する
   const s = new Shape(gpu);
@@ -84,6 +88,7 @@ const createShape = (gpu, kind, color) => {
   return s;
 };
 
+// このインスタンスの初期化段階で、必要な状態と資源を準備して処理を開始する
 const start = async () => {
   // Screen/Shader/Spaceを初期化する
   const screen = new Screen(document);
@@ -94,6 +99,7 @@ const start = async () => {
   await shader.init();
   Shape.prototype.shader = shader;
   let proj = null;
+  // `viewport`の配置を対象の状態または描画設定へ反映する
   const applyViewportLayout = () => {
     screen.resize(Math.max(1, Math.floor(window.innerWidth)), Math.max(1, Math.floor(window.innerHeight)));
     proj = setProjection(screen, shader, 52);
@@ -128,6 +134,7 @@ const start = async () => {
   let selected = null;
   let lastRayInfo = "";
 
+  // 選択状態を対象の状態または描画設定へ反映する
   const applySelection = (hit) => {
     // ヒットしたshapeだけ赤で強調し、他は元色へ戻す
     selected = hit;
@@ -162,6 +169,7 @@ const start = async () => {
     lastRayInfo = `ndc=(${ray.ndc[0].toFixed(3)}, ${ray.ndc[1].toFixed(3)})`;
   });
 
+  // `loop`は処理周期の開始または終了に必要な状態を更新する
   const loop = () => {
     // オブジェクトを回転しながら描画し、HUDへ判定結果を表示する
     entries[0].node.rotateY(0.35);

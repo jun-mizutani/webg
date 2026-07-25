@@ -1,0 +1,32 @@
+# Fullscreen最終表示境界単体テスト
+
+## 目的
+
+ComputeEffectPipelineのTone MapまたはEdge出力を、追加の色変換やdepth依存なしにcanvas swapchainへ表示する最終境界を確定する。FullscreenPassのsource形式・寸法、canvas format、Screenのpresentation render passを明示的に検証する
+
+## 確認項目
+
+1. sourceはTone Map後の `rgba8unorm` である
+2. source実pixel寸法はcanvas実pixel寸法と一致する
+3. render pipeline target formatはWebGPU canvas formatと一致する
+4. `Screen.beginPresentPass()` はswapchain color attachmentだけを持つ
+5. presentation passはCamera Reverse-Z depth attachmentを持たない
+6. 通常の `Screen.clear()` passではFullscreen copyを拒否する
+7. render pass未開始時にsilent returnせず例外にする
+8. presentation後はswapchain・depth状態をresetする
+9. source viewとsamplerを必須とする
+10. color scale、UV scale、UV offsetは有限値だけを受け付ける
+
+## 実行方法
+
+```sh
+node headless_tests/integration/presentation/headless_probe.js
+```
+
+## 結果
+
+2026-07-13に実行し、全項目が成功した。表示文字列は次のとおり
+
+```text
+presentation_fullscreen_contracts: all final presentation contracts passed
+```

@@ -1,0 +1,3 @@
+# ShadowMapPass headless test
+
+`webg/ShadowMapPass.js`のdirectional light matrix、depth texture、depth-only Render Pass、Space走査、static/skinned Shapeのvertex binding、Skeleton palette転送、resize、destroyを実GPUなしで確認します。

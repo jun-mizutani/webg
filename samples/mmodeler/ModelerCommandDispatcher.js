@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// samples/mmodeler/ModelerCommandDispatcher.js  2026/05/26
+// samples/mmodeler/ModelerCommandDispatcher.js  2026/07/25
 //   command dispatcher for mmodeler
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -7,6 +7,7 @@
 
 const PRIMITIVE_SEGMENTS = new Set([3, 4, 8, 12, 16, 24, 32]);
 
+// `function`を検証し、後続処理が扱える共通形式へ整える
 function requireFunction(value, name) {
   if (typeof value !== "function") {
     throw new Error(`ModelerCommandDispatcher requires ${name}`);
@@ -18,6 +19,7 @@ function isAxisCommand(action) {
   return action === "axis-x" || action === "axis-y" || action === "axis-z" || action === "axis-normal";
 }
 
+// `axis`のコマンドの値を読み込み、検証済みのデータとして後続処理へ渡す
 function readAxisCommandValue(action) {
   if (action === "axis-normal") {
     return "n";
@@ -25,17 +27,20 @@ function readAxisCommandValue(action) {
   return String(action ?? "").slice(-1);
 }
 
+// `primitive`の`add`のコマンドの条件を判定し、結果を真偽値で返す
 function isPrimitiveAddCommand(action) {
   return action === "add-cube" || action === "add-plane" || action === "add-sphere"
     || action === "add-cylinder" || action === "add-cone"
     || action === "add-torus" || action === "add-double-cone";
 }
 
+// 表示のコマンドの条件を判定し、結果を真偽値で返す
 function isViewCommand(action) {
   return action === "view-x" || action === "view-y" || action === "view-z"
     || action === "view-x-reverse" || action === "view-y-reverse" || action === "view-z-reverse";
 }
 
+// `primitive`の`segments`を読み込み、検証済みのデータとして後続処理へ渡す
 function readPrimitiveSegments(action) {
   const segments = Number(String(action).slice("primitive-segments-".length));
   if (!PRIMITIVE_SEGMENTS.has(segments)) {
@@ -59,6 +64,7 @@ export default class ModelerCommandDispatcher {
     editModeController,
     viewController,
     showSelectedVertexCoordinates,
+    showSculptBrushSettings,
     showActiveObjectInfo,
     cycleViewAnglePreset,
     undo,
@@ -69,12 +75,16 @@ export default class ModelerCommandDispatcher {
     invertSelectionForCurrentMode,
     selectXNegativeForCurrentMode,
     setEditorMode,
+    setSculptBrushType,
+    setSculptBrushDirection,
     selectAllForCurrentMode,
     setPrimitiveSegments,
     setPaletteTransformAxis,
     renderPalette,
     closePalette,
     objectModeName,
+    editModeName,
+    sculptModeName,
     faceToolName,
     vertexToolName,
     addVertexToolName,
@@ -100,6 +110,7 @@ export default class ModelerCommandDispatcher {
     }
     this.viewController = viewController;
     this.showSelectedVertexCoordinates = requireFunction(showSelectedVertexCoordinates, "showSelectedVertexCoordinates");
+    this.showSculptBrushSettings = requireFunction(showSculptBrushSettings, "showSculptBrushSettings");
     this.showActiveObjectInfo = requireFunction(showActiveObjectInfo, "showActiveObjectInfo");
     this.cycleViewAnglePreset = requireFunction(cycleViewAnglePreset, "cycleViewAnglePreset");
     this.undo = requireFunction(undo, "undo");
@@ -110,6 +121,8 @@ export default class ModelerCommandDispatcher {
     this.invertSelectionForCurrentMode = requireFunction(invertSelectionForCurrentMode, "invertSelectionForCurrentMode");
     this.selectXNegativeForCurrentMode = requireFunction(selectXNegativeForCurrentMode, "selectXNegativeForCurrentMode");
     this.setEditorMode = requireFunction(setEditorMode, "setEditorMode");
+    this.setSculptBrushType = requireFunction(setSculptBrushType, "setSculptBrushType");
+    this.setSculptBrushDirection = requireFunction(setSculptBrushDirection, "setSculptBrushDirection");
     this.selectAllForCurrentMode = requireFunction(selectAllForCurrentMode, "selectAllForCurrentMode");
     this.setPrimitiveSegments = requireFunction(setPrimitiveSegments, "setPrimitiveSegments");
     this.setPaletteTransformAxis = requireFunction(setPaletteTransformAxis, "setPaletteTransformAxis");
@@ -117,6 +130,8 @@ export default class ModelerCommandDispatcher {
     this.closePalette = requireFunction(closePalette, "closePalette");
     this.now = requireFunction(now, "now");
     this.objectModeName = objectModeName;
+    this.editModeName = editModeName;
+    this.sculptModeName = sculptModeName;
     this.faceToolName = faceToolName;
     this.vertexToolName = vertexToolName;
     this.addVertexToolName = addVertexToolName;
@@ -172,6 +187,7 @@ export default class ModelerCommandDispatcher {
     this.dispatchEnabledAction(action);
   }
 
+  // `dispatchEnabledAction`は入力またはイベントを受け取り、対応する処理へ振り分ける
   dispatchEnabledAction(action) {
     if (this.dispatchFileAction(action)) {
       return;
@@ -193,6 +209,7 @@ export default class ModelerCommandDispatcher {
     }
   }
 
+  // `dispatchFileAction`は入力またはイベントを受け取り、対応する処理へ振り分ける
   dispatchFileAction(action) {
     if (action === "load") {
       this.openFilePicker();
@@ -222,6 +239,7 @@ export default class ModelerCommandDispatcher {
     return false;
   }
 
+  // `dispatchSceneAction`は入力またはイベントを受け取り、対応する処理へ振り分ける
   dispatchSceneAction(action) {
     if (action === "new-scene") {
       this.createInitialModel();
@@ -243,6 +261,7 @@ export default class ModelerCommandDispatcher {
     return false;
   }
 
+  // `dispatchViewAction`は入力またはイベントを受け取り、対応する処理へ振り分ける
   dispatchViewAction(action) {
     if (action === "toggle-projection") {
       this.viewController.runToggleProjectionCommand();
@@ -250,6 +269,10 @@ export default class ModelerCommandDispatcher {
     }
     if (action === "view-vertex") {
       this.showSelectedVertexCoordinates();
+      return true;
+    }
+    if (action === "sculpt-brush") {
+      this.showSculptBrushSettings();
       return true;
     }
     if (action === "object-info") {
@@ -277,6 +300,7 @@ export default class ModelerCommandDispatcher {
     return false;
   }
 
+  // `dispatchHistoryAction`は入力またはイベントを受け取り、対応する処理へ振り分ける
   dispatchHistoryAction(action) {
     if (action === "undo") {
       this.undo();
@@ -289,6 +313,7 @@ export default class ModelerCommandDispatcher {
     return false;
   }
 
+  // `dispatchEditAction`は入力またはイベントを受け取り、対応する処理へ振り分ける
   dispatchEditAction(action) {
     if (action === "toggle-x-mirror") {
       this.editModeController.toggleXMirrorEdit();
@@ -336,6 +361,38 @@ export default class ModelerCommandDispatcher {
     }
     if (action === "mode-object") {
       this.setEditorMode(this.objectModeName);
+      return true;
+    }
+    if (action === "mode-edit") {
+      this.setEditorMode(this.editModeName);
+      return true;
+    }
+    if (action === "mode-sculpt") {
+      this.setEditorMode(this.sculptModeName);
+      return true;
+    }
+    if (action === "sculpt-draw") {
+      this.setSculptBrushType("draw");
+      return true;
+    }
+    if (action === "sculpt-blur") {
+      this.setSculptBrushType("blur");
+      return true;
+    }
+    if (action === "sculpt-grab") {
+      this.setSculptBrushType("grab");
+      return true;
+    }
+    if (action === "sculpt-pinch") {
+      this.setSculptBrushType("pinch");
+      return true;
+    }
+    if (action === "sculpt-plus") {
+      this.setSculptBrushDirection(1);
+      return true;
+    }
+    if (action === "sculpt-minus") {
+      this.setSculptBrushDirection(-1);
       return true;
     }
     if (action === "tool-face") {

@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// unittest/camera_follow/main.js  2026/04/10
+// unittest/camera_follow/main.js  2026/07/25
 //   camera_follow unittest
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -281,6 +281,7 @@ const updateVisualFrame = (ctx) => {
   targetRoot.setPosition(x, y, z);
   targetRoot.setAttitude(yaw, 0.0, 0.0);
 
+  // 輪郭の実行段階で、必要な処理を決められた順序で進める
   const runEdge = (name, callback) => {
     // action の押下は 1 frame だけ拾う
     // keyboard と touch を同じ flow で扱えるようにする

@@ -90,7 +90,7 @@ const right = app.space.addNode(null, "right");
 right.setPosition(3.0, 0.6, 2.0);
 right.addShape(rightShape);
 
-const orbit = app.createOrbitEyeRig({
+app.createOrbitEyeRig({
     target: [0.0, 0.0, 0.0],
     distance: 8.0,
     yaw: 24.0,
@@ -120,8 +120,7 @@ app.message.setLines("status", [
 });
 
 app.start({
-  onUpdate: ({ deltaSec }) => {
-    orbit.update(deltaSec);
+  onUpdate: () => {
     center.rotateY(0.9);
     left.rotateX(0.6);
     right.rotateZ(0.5);

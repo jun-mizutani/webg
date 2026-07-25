@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>compute_cloth</title>
+  <link rel="icon" href="data:," />
+  <!-- 2026/06/19 -->
+  <style>
+
+:root {
+  color-scheme: light;
+  --bg: #eef3f8;
+  --paper: rgba(255, 255, 255, 0.94);
+  --line: #c8d5e4;
+  --ink: #17324a;
+  --muted: #5c748b;
+  --accent: #1566ab;
+  --accent-soft: #dfeefe;
+  --code-bg: #f3f7fb;
+  --shadow: rgba(29, 52, 79, 0.10);
+}
+* { box-sizing: border-box; }
+html, body {
+  margin: 0;
+  min-height: 100%;
+}
+body {
+  background:
+    radial-gradient(circle at top left, rgba(21, 102, 171, 0.12), transparent 24%),
+    radial-gradient(circle at top right, rgba(255, 191, 118, 0.10), transparent 22%),
+    linear-gradient(180deg, #f8fbfd 0%, var(--bg) 100%);
+  color: var(--ink);
+  font: 16px/1.78 "Avenir Next", "Hiragino Sans", "Yu Gothic", sans-serif;
+}
+.page {
+  width: min(1080px, calc(100% - 28px));
+  margin: 0 auto;
+  padding: 24px 0 56px;
+}
+.hero,
+.doc {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  box-shadow: 0 22px 52px var(--shadow);
+}
+.hero {
+  padding: 22px 24px;
+  margin-bottom: 18px;
+}
+.hero h1 {
+  margin: 0 0 8px;
+  font-size: clamp(2rem, 4vw, 3rem);
+  line-height: 1.08;
+}
+.hero p {
+  margin: 0;
+  color: var(--muted);
+}
+.doc {
+  padding: 28px;
+}
+.doc > :first-child {
+  margin-top: 0;
+}
+h1, h2, h3, h4, h5, h6 {
+  line-height: 1.25;
+  margin: 1.45em 0 0.55em;
+}
+h1 {
+  font-size: 2.2rem;
+}
+h2 {
+  padding-bottom: 0.28em;
+  border-bottom: 1px solid var(--line);
+  font-size: 1.48rem;
+}
+h3 {
+  font-size: 1.14rem;
+}
+p, ul, ol, table, pre, blockquote {
+  margin: 0 0 1em;
+}
+ul, ol {
+  padding-left: 1.4em;
+}
+li + li {
+  margin-top: 0.26em;
+}
+a {
+  color: var(--accent);
+  text-decoration: none;
+}
+a:hover {
+  text-decoration: underline;
+}
+img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  border-radius: 16px;
+  border: 1px solid var(--line);
+  box-shadow: 0 12px 32px rgba(29, 52, 79, 0.08);
+  margin: 1.1em 0 1.4em;
+}
+code {
+  padding: 0.12em 0.38em;
+  border-radius: 0.45em;
+  background: var(--code-bg);
+  border: 1px solid #dbe6f1;
+  font: 0.92em/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+pre {
+  padding: 14px 16px;
+  overflow-x: auto;
+  border-radius: 14px;
+  background: #0f1720;
+  color: #ecf5ff;
+}
+pre code {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #ffffff;
+}
+th, td {
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  text-align: left;
+  vertical-align: top;
+}
+th {
+  background: #f5f9fc;
+}
+hr {
+  border: 0;
+  border-top: 1px solid var(--line);
+  margin: 1.5em 0;
+}
+blockquote {
+  padding: 0.3em 0 0.3em 1em;
+  border-left: 4px solid #c9dbef;
+  color: var(--muted);
+}
+@media (max-width: 720px) {
+  .page {
+    width: min(100% - 18px, 1080px);
+    padding-top: 16px;
+  }
+  .hero,
+  .doc {
+    border-radius: 18px;
+  }
+  .doc {
+    padding: 20px;
+  }
+}
+
+  </style>
+</head>
+<body>
+  <main class="page">
+    <section class="hero">
+      <h1>compute_cloth</h1>
+    </section>
+    <article class="doc">
+<h1>compute_cloth</h1>
+<p>English | <a href="index.html">日本語</a></p>
+<p><img src="./compute_cloth.jpg" alt="compute_cloth" /></p>
+<h2>Overview</h2>
+<ul><li>This sample uses a WebGPU compute shader to update a grid-shaped cloth with a mass-spring model</li><li>Rather than adding a compute-specific API to the <code>webg</code> core library, it uses the WebGPU <code>device / queue / canvas context</code> initialized by <code>WebgApp</code> directly inside the sample</li><li>Cloth vertices are stored in a storage buffer, and the compute pass reads the previous frame's vertex positions and neighboring vertices, then writes the next frame's positions and velocities</li><li>Because the sample uses a ping-pong structure with separate <code>src</code> and <code>dst</code> buffers, it avoids conflicts where one invocation might overwrite a neighbor value while another vertex is still reading it</li><li>Structural spring forces alone allow the cloth to stretch too much, so a strain limit is added that pulls vertices back slightly when the distance to the up / down / left / right neighbors exceeds the allowed length</li><li>The masses of movable vertices are set to match the cumulative load of a 96-row curtain, so gravity stays constant as acceleration while the springs can still support the curtain length</li><li>The collision floor is placed lower than the bottom edge at maximum permitted stretch, so a normally sagging curtain does not intersect the floor</li><li>One frame is divided into 3 substeps, and velocity is recalculated from the actual movement after position constraints, preventing downward velocity from remaining after correction</li><li>Bend springs are added between vertices two steps apart to suppress sharp folding and self-crossing near the lower area</li><li>The wind reverses periodically in the same front-back direction across the whole curtain, while only the amplitude varies by position, preventing both a central fold-back and one-way flow escape</li><li>The fixed top edge is shaped as a gentle arc with the center lowered by 0.18, so the cloth looks suspended rather than like a perfectly straight board</li><li>The render pass reads the post-compute storage buffer in the vertex shader and draws it as either a <code>line-list</code> or <code>triangle-list</code> depending on <code>Wire / Flat / Smooth</code> mode</li></ul>
+<h2>How to Run</h2>
+<ul><li>Open <a href="./compute_cloth.html">./compute_cloth.html</a></li><li>Use a browser with WebGPU support, and check the help panel and HUD together with the sample when needed</li></ul>
+<h2>webg Features Used</h2>
+<ul><li><code>WebgApp</code>: initializes <code>Screen</code>, diagnostics, and the input foundation together</li><li><code>WebgApp</code> compute frame: <code>computeFrame: true</code> and the <code>onComputeFrame</code> handler skip standard scene drawing and control compute/render order</li><li><code>Screen.resize()</code>: updates the actual canvas pixel size on viewport changes through the <code>Screen</code> held by <code>WebgApp</code></li><li><code>WebgApp.getGPU()</code>: entry point for building raw WebGPU pipelines on the sample side without changing the core API</li><li><code>buildHelpPanelOptions() + showOverlayPanel()</code>: displays the operation guide and current state as a collapsible help panel</li><li><code>InputController.installTouchControls()</code>: shows <code>1 / 2 / 3 / R / P / W</code> control buttons on both desktop and smartphones</li></ul>
+<h2>WebGPU Features Used</h2>
+<ul><li><code>storage buffer</code>: keeps cloth vertex positions, fixed flags, and velocities on the GPU</li><li><code>vertex mass</code>: stores the mass of each movable vertex and converts spring force, wind force, and velocity damping into acceleration by dividing by mass</li><li><code>ping-pong buffer</code>: alternates a read-only source buffer and a writable destination buffer every frame</li><li><code>compute pipeline</code>: calculates neighboring springs, gravity, wind, and damping with one invocation per cloth vertex</li><li><code>bend spring</code>: connects vertices two steps apart horizontally and vertically with weak springs, helping support the cloth length while reducing local sharp folds</li><li><code>coherent gust</code>: reverses wind direction across the whole curtain with the same time wave, while varying only amplitude by horizontal position and height to create natural swaying</li><li><code>strain limit</code>: returns adjacent structural-spring distances to within 1.06 times their initial length, suppressing overstretch while keeping motion light</li><li><code>simulation substeps</code>: repeats integration and position limiting three times per frame, stabilizing the accumulated load of the long curtain</li><li><code>line vertex index stream</code>: draws horizontal and vertical grid lines in <code>Wire</code> mode</li><li><code>triangle vertex index stream</code>: splits each grid cell into 2 triangles so <code>Flat / Smooth</code> can share the same high-resolution surface</li><li><code>render pipeline</code>: reads the storage buffer in the vertex shader and displays the deformed cloth without CPU readback</li><li><code>fixed cloth color</code>: keeps the same fixed orange color for <code>Wire / Flat / Smooth</code> instead of changing vertex color according to wind speed</li><li><code>view-space lighting</code>: uses light from the upper-right of the view, with weak ambient, diffuse-dominant shading, and specular highlights to show surface direction</li><li><code>camera-following light</code>: transforms world-space normals into view space by camera rotation and computes lighting in the same coordinate system as the light fixed to the upper right of the screen</li><li><code>timestamp query</code>: measures GPU Compute time across all three substeps plus Render Pass time, then displays per-stage and total load</li></ul>
+<h2>Checkpoints</h2>
+<ul><li>Right after startup, confirm that a vertically long <code>64 x 96</code> cloth grid is fixed at the top and sways under gravity and wind</li><li>Confirm that when you rotate the camera by drag, or pan by <code>Shift + Drag</code>, right-drag, or middle-drag, the cloth simulation still continues entirely on the GPU</li><li>On smartphones, confirm that one-finger drag performs orbit, two-finger drag performs pan, and pinch performs zoom</li><li>Confirm that the <code>1 / 2 / 3 / R / P / W</code> buttons shown at the bottom of the screen on both desktop and smartphones can control display mode, reset, pause, and wind</li><li>Confirm that <code>H</code> or the help-panel button folds the explanation and that <code>Show Help</code> restores it</li><li>Switch <code>Wire / Flat / Smooth</code> with <code>1 / 2 / 3</code> and confirm that line and polygon display can be switched from the same storage buffer</li><li>Toggle wind with <code>W</code> and confirm that the front-back waving becomes weaker or returns</li><li>When <code>P</code> pauses the sample, confirm that the compute pass stops and the current storage-buffer state is rendered as-is</li><li>Confirm that <code>R</code> restores the cloth to its initial state</li><li>Confirm that <code>GPU compute / GPU render / GPU total / JS time</code> and their load values update in the help panel and that render time while paused is not included in GPU Compute time</li></ul>
+<h2>Controls</h2>
+<ul><li>Drag: camera orbit</li><li><code>Shift + Drag / right-drag / middle-drag</code>: camera pan</li><li>Mouse wheel: zoom</li><li>One-finger drag: camera orbit</li><li>Two-finger drag: camera pan</li><li>Pinch: zoom</li><li><code>1</code>: wire display</li><li><code>2</code>: flat polygon display</li><li><code>3</code>: smooth polygon display</li><li><code>W</code>: wind on / off</li><li><code>P</code>: pause / resume</li><li><code>R</code>: reset cloth</li><li><code>H</code>: hide / show help</li></ul>
+<h2>Implementation Details</h2>
+<ul><li>The compute shader in <code>main.js</code> separates <code>srcState</code> as read-only and <code>dstState</code> as read-write</li><li>Spring calculations read up / down / left / right and diagonal neighbors, and if the distance becomes extremely short they contribute zero instead of being normalized</li><li>Gravity is added as acceleration independent of mass, while spring force, wind force, and velocity drag are divided by vertex mass to obtain acceleration</li><li>After correcting positions with the strain limit and the floor, velocity is recalculated from the difference between the corrected position and the previous substep position, so downward velocity from before the correction is not retained</li><li>The render shader uses a cloth-vertex index passed as a vertex attribute and directly references vertex positions inside the storage buffer</li><li><code>Flat / Smooth</code> share the same triangle stream. <code>Flat</code> sends the face normal created from the three deformed vertices as a constant value over the triangle with WGSL <code>@interpolate(flat)</code>, while <code>Smooth</code> interpolates vertex normals created from grid neighbors</li><li>The cloth color is fixed, and the motion and surface direction are read from the diffuse and specular highlights produced by the light at the upper right of the view</li><li>Operation guidance and state display are collected in the <code>OverlayPanel</code> help panel instead of a custom HUD, while smartphone single-tap actions are separated into touch buttons</li><li>Because vertex coordinates are never returned to the CPU, this sample can be used as an example of keeping rendering-oriented simulations such as cloth or hair entirely on the GPU</li></ul>
+    </article>
+  </main>
+</body>
+</html>

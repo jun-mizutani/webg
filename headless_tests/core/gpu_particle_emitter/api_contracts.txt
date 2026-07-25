@@ -1,0 +1,20 @@
+# GpuParticleEmitter headless test
+
+## 目的
+- `webg/GpuParticleEmitter.js` が管理する粒子配列、uniform、Compute/Render encodeの契約を実GPUなしで確認する
+- 粒子固有WGSLを外部へ残したまま、同じStorage Bufferをsimulationとinstance描画で共有する基盤を検証する
+- 不正な配列長、View不足、uniform layout不一致を自動補正せず検出する
+
+## 確認内容
+- particleCountとfloatsPerParticleに一致する初期配列長
+- billboard quadがvec2 triangle-listを構成すること
+- uniform配列長がWGSL layoutと一致すること
+- Compute dispatch数が`ceil(particleCount / workgroupSize)`になること
+- Render Passがquad頂点数とparticleCountでinstance drawすること
+- color View、depth View、clear colorが明示的に必要であり、通常カメラReverse-Zのclear値0を使うこと
+- destroyが所有Bufferを一度だけ破棄し、破棄後の利用を拒否すること
+
+## 実行
+```sh
+node --experimental-default-type=module headless_tests/core/gpu_particle_emitter/headless_probe.js
+```

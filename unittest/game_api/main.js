@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// unittest/game_api/main.js  2026/04/30
+// unittest/game_api/main.js  2026/07/25
 //   game_api unittest
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -18,6 +18,7 @@ import GameStateManager from "../../samples/GameStateManager.js";
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
 const randRange = (min, max) => min + Math.random() * (max - min);
 
+// `cube`の形状を生成し、後続処理で利用できる状態にする
 const createCubeShape = (gpu, size, color, collisionShape) => {
   const shape = new Shape(gpu);
   shape.applyPrimitiveAsset(Primitive.cube(size, shape.getPrimitiveOptions()));
@@ -34,6 +35,7 @@ const createCubeShape = (gpu, size, color, collisionShape) => {
   return shape;
 };
 
+// 床の形状を生成し、後続処理で利用できる状態にする
 const createFloorShape = (gpu, color) => {
   const shape = new Shape(gpu);
   shape.addVertex(-12.0, 0.0, -8.0);
@@ -64,6 +66,7 @@ const createFloorShape = (gpu, color) => {
   return shape;
 };
 
+// このインスタンスの初期化段階で、必要な状態と資源を準備して処理を開始する
 const start = async () => {
   const app = new WebgApp({
     document,
@@ -90,6 +93,7 @@ const start = async () => {
   const gpu = app.screen.getGPU();
   const space = app.space;
   const statusEl = document.getElementById("status");
+  // 状態表示を指定された形式または保存先へ出力する
   const writeStatus = (lines) => {
     if (statusEl) {
       statusEl.textContent = lines.join("\n");
@@ -109,6 +113,7 @@ const start = async () => {
     initialState: "play"
   });
 
+  // シーンの進行段階を現在の入力と実行状態に合わせて更新する
   const syncScenePhase = (phase = gsm.currentStateId ?? gsm.initialState ?? state.phaseHint) => {
     app.setScenePhase(phase, {
       force: true
@@ -116,6 +121,7 @@ const start = async () => {
     return phase;
   };
 
+  // ゲームの進行段階を受け取り、現在の設定と後続処理へ反映する
   const setGamePhase = (phase, options = {}) => {
     const result = gsm.setState(phase, options);
     syncScenePhase();
@@ -153,6 +159,7 @@ const start = async () => {
     enabled: false
   });
 
+  // `placeTarget`は現在の進行状態に必要な要素を生成または配置する
   const placeTarget = (avoidX = 0.0) => {
     let nextX = randRange(-9.0, 9.0);
     while (Math.abs(nextX - avoidX) < 4.0) {
@@ -162,6 +169,7 @@ const start = async () => {
     targetNode.setPosition(state.targetX, 0.0, 0.0);
   };
 
+  // `round`を初期状態へ戻し、前回の状態を残さない
   const resetRound = () => {
     state.playerX = -8.0;
     state.timeLeft = 30.0;
@@ -268,6 +276,7 @@ const start = async () => {
     minScale: 0.76
   });
 
+  // HUDの`numbers`の描画段階で、必要な描画命令と表示内容を記録する
   const renderHudNumbers = () => {
     app.message.setLines("gamehud-left", [
       `score: ${state.score}`,
@@ -366,6 +375,7 @@ const start = async () => {
     color: [1.0, 0.88, 0.72]
   });
 
+  // 状態表示を現在の入力と実行状態に合わせて更新する
   const updateStatus = () => {
     const phase = gsm.currentStateId ?? state.phaseHint;
     writeStatus([

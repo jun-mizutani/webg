@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// Matrix.js       2026/04/02
+// Matrix.js       2026/07/13
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // ---------------------------------------------
@@ -21,6 +21,11 @@ Matrix { mat: [ 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1 ] }
 ----------------------------------------------- */
 
 import util from "./util.js";
+import {
+  CAMERA_REVERSE_Z,
+  requireDepthConvention,
+  readDepthRange
+} from "./DepthConvention.js";
 
 function RAD(degree) {
   return degree * Math.PI / 180.0;
@@ -379,41 +384,129 @@ export default class Matrix {
     return this;
   }
 
-  // 透視射影行列を作る
-  makeProjectionMatrix(near, far, vfov, ratio) {
-    let h = 1.0 / Math.tan(vfov * 0.5 * Math.PI / 180);
-    let w = h / ratio;
-    let q = 1.0 / (near - far);
+  // 垂直画角とaspectから透視投影行列を作る
+  // 公開4引数形式は通常カメラ用Camera Reverse-Zとして意味を固定します
+  // コア内部のShadow Mapだけが第5引数へSHADOW_STANDARD_Zを明示します
+  makeProjectionMatrix(near, far, vfov, ratio, depthConvention) {
+    const convention = depthConvention === undefined
+      ? CAMERA_REVERSE_Z
+      : requireDepthConvention(
+        depthConvention,
+        "Matrix.makeProjectionMatrix depthConvention"
+      );
+    const range = readDepthRange(
+      near,
+      far,
+      "Matrix.makeProjectionMatrix",
+      { allowInfiniteFar: convention === CAMERA_REVERSE_Z }
+    );
+    const checkedVfov = util.readFiniteNumber(
+      vfov,
+      "Matrix.makeProjectionMatrix vfov",
+      { minExclusive: 0.0, maxExclusive: 180.0 }
+    );
+    const checkedRatio = util.readFiniteNumber(
+      ratio,
+      "Matrix.makeProjectionMatrix ratio",
+      { minExclusive: 0.0 }
+    );
+    const heightScale = 1.0 / Math.tan(checkedVfov * 0.5 * Math.PI / 180.0);
+    const widthScale = heightScale / checkedRatio;
 
-    this.makeUnit();
-    this.mat[0] = w;
-    this.mat[5] = h;
-    this.mat[10]= far * q;
-    this.mat[11]= -1.0;
-    this.mat[14]= far * near * q;
-    this.mat[15]= 0.0;
+    this.setPerspectiveDepthCoefficients(range, convention);
+    this.mat[0] = widthScale;
+    this.mat[5] = heightScale;
+    return this;
   }
 
-  // 幅高指定の射影行列を作る
-  makeProjectionMatrixWH(near, far, width, height) {
-    let q = 1.0 / (near - far);
-    this.makeUnit();
-    this.mat[0] = 2 * near / width;
-    this.mat[5] = 2 * near / height;
-    this.mat[10]= far * q;
-    this.mat[11]= -1.0;
-    this.mat[14]= far * near * q;
-    this.mat[15]= 0.0;
+  // near plane上の幅と高さから透視投影行列を作る
+  // 公開4引数形式はCamera Reverse-Zで、Shadow Mapだけが第5引数を明示します
+  makeProjectionMatrixWH(near, far, width, height, depthConvention) {
+    const convention = depthConvention === undefined
+      ? CAMERA_REVERSE_Z
+      : requireDepthConvention(
+        depthConvention,
+        "Matrix.makeProjectionMatrixWH depthConvention"
+      );
+    const range = readDepthRange(
+      near,
+      far,
+      "Matrix.makeProjectionMatrixWH",
+      { allowInfiniteFar: convention === CAMERA_REVERSE_Z }
+    );
+    const checkedWidth = util.readFiniteNumber(
+      width,
+      "Matrix.makeProjectionMatrixWH width",
+      { minExclusive: 0.0 }
+    );
+    const checkedHeight = util.readFiniteNumber(
+      height,
+      "Matrix.makeProjectionMatrixWH height",
+      { minExclusive: 0.0 }
+    );
+
+    this.setPerspectiveDepthCoefficients(range, convention);
+    this.mat[0] = 2.0 * range.near / checkedWidth;
+    this.mat[5] = 2.0 * range.near / checkedHeight;
+    return this;
   }
 
   // 正射影行列を作る
-  makeProjectionMatrixOrtho(near, far, width, height) {
-    let q = 1.0 / (near - far);
+  // 公開4引数形式はCamera Reverse-Zとし、正射影のfarは常に有限値を要求します
+  makeProjectionMatrixOrtho(near, far, width, height, depthConvention) {
+    const convention = depthConvention === undefined
+      ? CAMERA_REVERSE_Z
+      : requireDepthConvention(
+        depthConvention,
+        "Matrix.makeProjectionMatrixOrtho depthConvention"
+      );
+    const range = readDepthRange(
+      near,
+      far,
+      "Matrix.makeProjectionMatrixOrtho"
+    );
+    const checkedWidth = util.readFiniteNumber(
+      width,
+      "Matrix.makeProjectionMatrixOrtho width",
+      { minExclusive: 0.0 }
+    );
+    const checkedHeight = util.readFiniteNumber(
+      height,
+      "Matrix.makeProjectionMatrixOrtho height",
+      { minExclusive: 0.0 }
+    );
+
     this.makeUnit();
-    this.mat[0] = 2.0 / (width*2);
-    this.mat[5] = 2.0 / (height*2);
-    this.mat[10]= 1.0 * q;
-    this.mat[14]= near * q;
+    this.mat[0] = 1.0 / checkedWidth;
+    this.mat[5] = 1.0 / checkedHeight;
+    if (convention.reversed) {
+      this.mat[10] = 1.0 / (range.far - range.near);
+      this.mat[14] = range.far / (range.far - range.near);
+    } else {
+      this.mat[10] = 1.0 / (range.near - range.far);
+      this.mat[14] = range.near / (range.near - range.far);
+    }
+    return this;
+  }
+
+  // 透視投影に共通するZ/W係数をDepth Conventionから設定します
+  // view-space前方は負のZで、clip.w=-view.zとなる列優先行列をwebg全体で維持します
+  setPerspectiveDepthCoefficients(range, convention) {
+    this.makeUnit();
+    this.mat[11] = -1.0;
+    this.mat[15] = 0.0;
+    if (convention.reversed) {
+      if (range.infiniteFar) {
+        this.mat[10] = 0.0;
+        this.mat[14] = range.near;
+      } else {
+        this.mat[10] = range.near / (range.far - range.near);
+        this.mat[14] = range.far * range.near / (range.far - range.near);
+      }
+    } else {
+      this.mat[10] = range.far / (range.near - range.far);
+      this.mat[14] = range.far * range.near / (range.near - range.far);
+    }
   }
 
   // 逆行列を計算する（簡易）

@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// samples/high_level/main.js  2026/04/30
+// samples/high_level/main.js  2026/07/25
 //   high_level sample
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -32,6 +32,7 @@ let app = null;
 let orbit = null;
 let sampleNode = null;
 
+// `showStartError`は必要な画面要素を準備し、表示状態を更新する
 const showStartError = (error) => {
   // WebgApp 初期化前に失敗した場合でも、画面上へ失敗理由を残して原因を追いやすくする
   const existing = document.getElementById("start-error");
@@ -56,6 +57,7 @@ const showStartError = (error) => {
   document.body.appendChild(panel);
 };
 
+// `sample`の形状を生成し、後続処理で利用できる状態にする
 const createSampleShape = (gpu) => {
   // 回転方向が読み取りやすいよう、README の WebgApp 例も立方体へそろえる
   const shape = new Shape(gpu);
@@ -69,6 +71,7 @@ const createSampleShape = (gpu) => {
   return shape;
 };
 
+// シーンを生成し、後続処理で利用できる状態にする
 const buildScene = () => {
   // WebgApp が用意した Space をそのまま使い、sample 側は object 追加だけに集中する
   const shape = createSampleShape(app.getGPU());
@@ -76,6 +79,7 @@ const buildScene = () => {
   sampleNode.addShape(shape);
 };
 
+// 周回視点のカメラの初期化段階で、必要な状態と資源を準備して処理を開始する
 const setupOrbitCamera = () => {
   // README の最小例へそのまま mouse / touch の視点操作確認を足せるように、標準 orbit helper を使う
   orbit = app.createOrbitEyeRig({
@@ -89,6 +93,7 @@ const setupOrbitCamera = () => {
   });
 };
 
+// `sample`の入力を対象へ追加し、後続処理から参照できるようにする
 const attachSampleInput = () => {
   // WebgApp が初期化した InputController に sample 固有の one-shot action を足し、
   // orbit camera の連続入力と、保存系の単発入力を同じ app 入口で扱えるようにする
@@ -105,6 +110,7 @@ const attachSampleInput = () => {
   });
 };
 
+// このインスタンスの初期化段階で、必要な状態と資源を準備して処理を開始する
 const start = async () => {
   // WebgApp を入口にすると、README low-level 例で手でつないだ初期化をまとめて省略できる
   app = new WebgApp({
@@ -145,8 +151,7 @@ const start = async () => {
   });
 
   app.start({
-    onUpdate: ({ deltaSec }) => {
-      orbit.update(deltaSec);
+    onUpdate: () => {
       sampleNode.rotateY(ROTATE_Y_SPEED);
       sampleNode.rotateX(ROTATE_X_SPEED);
     }

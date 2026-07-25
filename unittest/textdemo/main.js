@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// unittest/textdemo/main.js  2026/03/14
+// unittest/textdemo/main.js  2026/07/25
 //   textdemo sample
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -30,6 +30,7 @@ const start = async () => {
   text.shader.setScale(1.5);
   screen.setClearColor([0.05, 0.06, 0.07, 1.0]);
 
+  // このインスタンスの描画段階で、必要な描画命令と表示内容を記録する
   const draw = () => {
     // 80x25領域へ連番ASCIIを埋め、毎フレーム再描画する
     screen.clear();

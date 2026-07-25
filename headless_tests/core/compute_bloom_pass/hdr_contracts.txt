@@ -1,0 +1,26 @@
+# Pyramid Bloom線形HDR単体テスト
+
+## 目的
+
+Extract、連続low-pass downsample、tent upsample、scene合成をすべてTone Map前の線形HDR領域で行い、広い光芒と近傍の強いBloomを滑らかに再構成することを確認します。
+
+## 確認項目
+
+1. 全targetとstorage shaderが `rgba16float` を使う
+2. thresholdとsoft kneeをfull-resolutionで一度だけ適用する
+3. 1/2から1/32を前段Levelから連続的に生成する
+4. 1/32からfull resolutionへ9 tap tent filterで再構成する
+5. Level Weightを自動正規化しない
+6. compositeは `scene + bloom * strength` の線形加算だけを行う
+7. Bloom固有exposureと0から1へのclampを持たない
+8. 旧staged Bloom設定と `rgba8unorm` sceneを拒否する
+
+## 実行方法
+
+```sh
+node headless_tests/core/compute_bloom_pass/hdr_contracts.js
+```
+
+## 結果
+
+2026-07-23に実行し、全項目が成功しました。

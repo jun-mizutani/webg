@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// unittest/phong_debug/main.js  2026/04/10
+// unittest/phong_debug/main.js  2026/07/25
 //   phong_debug sample
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -25,6 +25,7 @@ import {
 
 const MOTION_SPEED = 0.00055;
 
+// `folded`のパネルを生成し、後続処理で利用できる状態にする
 const makeFoldedPanel = (gpu, shader, texture) => {
   const shape = new Shape(gpu);
   shape.setShader(shader);
@@ -60,6 +61,7 @@ const makeFoldedPanel = (gpu, shader, texture) => {
   return shape;
 };
 
+// 法線のマップの`tube`を生成し、後続処理で利用できる状態にする
 const makeNormalMapTube = (gpu, shader, texture, normalTexture) => {
   const shape = new Shape(gpu);
   shape.setShader(shader);
@@ -89,6 +91,7 @@ const makeNormalMapTube = (gpu, shader, texture, normalTexture) => {
   return shape;
 };
 
+// `skinned`の`tube`を生成し、後続処理で利用できる状態にする
 const makeSkinnedTube = (gpu, shader, texture, normalTexture, weightDebug, useNormalMap) => {
   const { shape, skeleton, j0, j1 } = createTwoBoneSkinnedTube(gpu, { flipV: true });
   shape.setShader(shader);
@@ -110,6 +113,7 @@ const makeSkinnedTube = (gpu, shader, texture, normalTexture, weightDebug, useNo
   return { shape, skeleton, j0, j1 };
 };
 
+// このインスタンスの初期化段階で、必要な状態と資源を準備して処理を開始する
 const start = async ({ screen, gpu, setStatus, setViewportLayout, startLoop }) => {
   const foldedShader = new SmoothShader(gpu, { backfaceDebug: true });
   await foldedShader.init();

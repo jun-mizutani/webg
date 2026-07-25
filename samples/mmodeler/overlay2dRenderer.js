@@ -1,9 +1,11 @@
 // ---------------------------------------------
-// samples/webgmodeler/overlay2dRenderer.js  2026/04/29
+// samples/webgmodeler/overlay2dRenderer.js  2026/07/13
 //   webgmodeler clip-space 2D overlay renderer
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // ---------------------------------------------
+import { CAMERA_REVERSE_Z } from "../../webg/DepthConvention.js";
+
 export default class Overlay2DRenderer {
   // インスタンス生成時に renderer や shader が使う状態を初期化する
   constructor(gpu, {
@@ -74,9 +76,10 @@ export default class Overlay2DRenderer {
       cullMode: "none"
     };
     const depthStencil = {
-      format: "depth24plus",
+      // markerもScreenの通常カメラpassへ追加するためCamera Reverse-Zへ統一する
+      format: CAMERA_REVERSE_Z.format,
       depthWriteEnabled: false,
-      depthCompare: "less-equal"
+      depthCompare: CAMERA_REVERSE_Z.compareEqual
     };
 
     const markerModule = this.device.createShaderModule({
@@ -139,19 +142,28 @@ fn fsMain(input : VSOut) -> @location(0) vec4f {
     this.bufferDirty = true;
   }
 
-  // screen-space の円 marker を 2 枚の三角形として追加する
-  addMarker(x, y, z, radiusNdcX, radiusNdcY, color) {
-    const left = x - radiusNdcX;
-    const right = x + radiusNdcX;
-    const bottom = y - radiusNdcY;
-    const top = y + radiusNdcY;
+  // screen-space の円 / 楕円 marker を 2 枚の三角形として追加する
+  addMarker(x, y, z, radiusNdcX, radiusNdcY, color, rotation = 0.0) {
+    const angle = Number(rotation);
+    const cos = Number.isFinite(angle) ? Math.cos(angle) : 1.0;
+    const sin = Number.isFinite(angle) ? Math.sin(angle) : 0.0;
+    const axisX = [cos * radiusNdcX, sin * radiusNdcX];
+    const axisY = [-sin * radiusNdcY, cos * radiusNdcY];
+    const makeCorner = (sx, sy) => [
+      x + axisX[0] * sx + axisY[0] * sy,
+      y + axisX[1] * sx + axisY[1] * sy
+    ];
+    const leftBottom = makeCorner(-1.0, -1.0);
+    const rightBottom = makeCorner(1.0, -1.0);
+    const rightTop = makeCorner(1.0, 1.0);
+    const leftTop = makeCorner(-1.0, 1.0);
     const v = this.markerVertices;
-    this.pushVertex(v, left, bottom, z, -1, -1, color);
-    this.pushVertex(v, right, bottom, z, 1, -1, color);
-    this.pushVertex(v, right, top, z, 1, 1, color);
-    this.pushVertex(v, left, bottom, z, -1, -1, color);
-    this.pushVertex(v, right, top, z, 1, 1, color);
-    this.pushVertex(v, left, top, z, -1, 1, color);
+    this.pushVertex(v, leftBottom[0], leftBottom[1], z, -1, -1, color);
+    this.pushVertex(v, rightBottom[0], rightBottom[1], z, 1, -1, color);
+    this.pushVertex(v, rightTop[0], rightTop[1], z, 1, 1, color);
+    this.pushVertex(v, leftBottom[0], leftBottom[1], z, -1, -1, color);
+    this.pushVertex(v, rightTop[0], rightTop[1], z, 1, 1, color);
+    this.pushVertex(v, leftTop[0], leftTop[1], z, -1, 1, color);
   }
 
   // 現在の頂点数を収められるよう GPU buffer 容量を必要に応じて拡張する

@@ -1,0 +1,37 @@
+# sample_mmodeler_depth_overlay_contracts
+
+## 目的
+
+`samples/mmodeler` の編集用edge、guide、vertex marker、選択面overlayが、第2版ScreenのCamera Reverse-Z depth attachmentと同じ形式・比較方向・bias方向を使用することを確認します。
+
+## 確認内容
+
+`EdgeWireframeOverlayRenderer` と `Overlay2DRenderer` を偽GPU deviceで初期化し、生成されたRenderPipelineが `depth32float`、`greater-equal`、depth write無効であることをdescriptorから検査します。edge WGSLはclip-space depthへ正のbiasを加え、near=1方向へ線を寄せることも確認します。
+
+`main.js` 内の選択面SmoothShaderも `CAMERA_REVERSE_Z.compareEqual` を使用し、選択面のclip-space biasとCPU投影markerのNDC biasが加算であることを確認します。旧`depth24plus`、`less-equal`、通常Z方向のbiasがsampleへ残る場合は停止します。
+
+## 予想
+
+修正前のpipelineは`depth24plus`なので、Screenの`depth32float` RenderPassへ設定するとattachment state不一致でCommandBuffer全体が無効になるはずです。formatだけを変えて`less-equal`とdepth減算を残すと、Reverse-Zでは隠れたoverlayが通り、同一面上のoverlayが消える可能性があります。
+
+全overlayをCamera Reverse-Zへ揃えるとpipeline設定が受理され、同一深度を含む手前側だけが通り、正のbiasで選択線・marker・選択面が元meshよりわずかに手前へ表示されるはずです。
+
+## 実行方法
+
+```sh
+node headless_tests/samples/mmodeler/headless_probe.js
+```
+
+## 結果
+
+2026-07-13に実行し、次を表示して終了コード0で成功しました。
+
+```text
+sample_mmodeler_depth_overlay_contracts: all Reverse-Z overlay contracts passed
+```
+
+当時のheadless test一式も終了コード0で成功しました。現在は `headless_tests/run_all.js` から実行します。実WebGPUブラウザではmmodelerを起動し、通常表示の立方体、grid、座標軸に続いてEdit Modeのedge overlayが表示されることを確認しました。起動時とEdit Mode移行後のconsole error、warningはともに0件で、修正前に反復していたattachment state不一致は発生しませんでした。
+
+## 解釈
+
+このtestはpipeline attachment、depth compare、bias方向の数値契約を確認します。実ブラウザ確認により、少なくとも通常meshとEdit Mode edgeの重ね描画、およびWebGPU validationが同じ契約で動作することを確認しました。vertex marker、guide、選択面については同じpipeline descriptorとbias式を個別に静的検査しており、今後の操作確認でもconsole validationと前後関係を継続して確認します。

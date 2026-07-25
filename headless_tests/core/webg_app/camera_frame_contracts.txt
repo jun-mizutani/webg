@@ -1,0 +1,31 @@
+# webg_app_camera_frame_contracts
+
+## 目的
+
+WebgAppが一描画frameのCamera Frameを所有し、eye、viewport、near/farから一度生成したsnapshotをSpace、Compute処理、projection参照へ共有できることを確認します。同時に、通常のRender Shader sampleへ内部Camera Frameを直接要求せず、renderFrameTokenを渡す公開境界も確認します。
+
+## 確認内容
+
+eye World matrixを一回だけ確定し、`cameraFrame.projectionMatrix`、`app.projectionMatrix`、shaderへ設定するprojectionが同じobjectになることを検査します。screen推奨画角、aspect、infinite farもCamera Frameへ保持し、eye未設定は既定値で補わず例外にします。
+
+renderFrameTokenはfreezeされ、列挙propertyを持たず、near、far、projection、Depth Conventionを公開しないことを確認します。内部resolverは登録済みtokenから同じCamera Frameを取得し、任意objectを拒否します。Camera Frameを更新すると新しいtoken identityになり、`onUpdate`へ前frameのtokenを渡さず、camera確定後の通常描画とCompute描画callbackだけへ設定します。
+
+## 実行方法
+
+```sh
+node --experimental-default-type=module headless_tests/core/webg_app/headless_probe.js
+```
+
+## 結果
+
+2026-07-13 JSTに当時の専用test一式を実行し、終了コード0を確認しました。現在は `headless_tests/run_all.js` から実行します。
+
+```text
+webg_app_camera_frame_contracts: all ownership contracts passed
+```
+
+## 解釈
+
+WebgAppはeye World matrixを一回だけ確定し、同一Camera Frame projectionをapp fieldとshaderへ共有します。Compute処理は完全なCamera Frameを維持し、通常のdepth共有sampleは内部値を読めないrenderFrameTokenだけを使用できます。
+
+通常frameではcamera target、EyeRig同期、camera effectの更新後にCamera FrameとrenderFrameTokenを作ります。Compute-first frameでもhandler実行前にCamera Frame、renderFrameToken、projectionを設定します。前frameのtokenを現在の`onUpdate`へ渡す経路、任意objectからframeを推測するfallback、旧`Space.setEye()`経路はありません。

@@ -5,20 +5,185 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>shapes</title>
   <link rel="icon" href="data:," />
+  <!-- 2026/06/19 -->
   <style>
-    html, body {
-      margin: 0;
-      background: #1a261a;
-    }
-    #canvas {
-      display: block;
-      width: 900px;
-      height: 700px;
-    }
+
+:root {
+  color-scheme: light;
+  --bg: #eef3f8;
+  --paper: rgba(255, 255, 255, 0.94);
+  --line: #c8d5e4;
+  --ink: #17324a;
+  --muted: #5c748b;
+  --accent: #1566ab;
+  --accent-soft: #dfeefe;
+  --code-bg: #f3f7fb;
+  --shadow: rgba(29, 52, 79, 0.10);
+}
+* { box-sizing: border-box; }
+html, body {
+  margin: 0;
+  min-height: 100%;
+}
+body {
+  background:
+    radial-gradient(circle at top left, rgba(21, 102, 171, 0.12), transparent 24%),
+    radial-gradient(circle at top right, rgba(255, 191, 118, 0.10), transparent 22%),
+    linear-gradient(180deg, #f8fbfd 0%, var(--bg) 100%);
+  color: var(--ink);
+  font: 16px/1.78 "Avenir Next", "Hiragino Sans", "Yu Gothic", sans-serif;
+}
+.page {
+  width: min(1080px, calc(100% - 28px));
+  margin: 0 auto;
+  padding: 24px 0 56px;
+}
+.hero,
+.doc {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  box-shadow: 0 22px 52px var(--shadow);
+}
+.hero {
+  padding: 22px 24px;
+  margin-bottom: 18px;
+}
+.hero h1 {
+  margin: 0 0 8px;
+  font-size: clamp(2rem, 4vw, 3rem);
+  line-height: 1.08;
+}
+.hero p {
+  margin: 0;
+  color: var(--muted);
+}
+.doc {
+  padding: 28px;
+}
+.doc > :first-child {
+  margin-top: 0;
+}
+h1, h2, h3, h4, h5, h6 {
+  line-height: 1.25;
+  margin: 1.45em 0 0.55em;
+}
+h1 {
+  font-size: 2.2rem;
+}
+h2 {
+  padding-bottom: 0.28em;
+  border-bottom: 1px solid var(--line);
+  font-size: 1.48rem;
+}
+h3 {
+  font-size: 1.14rem;
+}
+p, ul, ol, table, pre, blockquote {
+  margin: 0 0 1em;
+}
+ul, ol {
+  padding-left: 1.4em;
+}
+li + li {
+  margin-top: 0.26em;
+}
+a {
+  color: var(--accent);
+  text-decoration: none;
+}
+a:hover {
+  text-decoration: underline;
+}
+img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  border-radius: 16px;
+  border: 1px solid var(--line);
+  box-shadow: 0 12px 32px rgba(29, 52, 79, 0.08);
+  margin: 1.1em 0 1.4em;
+}
+code {
+  padding: 0.12em 0.38em;
+  border-radius: 0.45em;
+  background: var(--code-bg);
+  border: 1px solid #dbe6f1;
+  font: 0.92em/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+pre {
+  padding: 14px 16px;
+  overflow-x: auto;
+  border-radius: 14px;
+  background: #0f1720;
+  color: #ecf5ff;
+}
+pre code {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #ffffff;
+}
+th, td {
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  text-align: left;
+  vertical-align: top;
+}
+th {
+  background: #f5f9fc;
+}
+hr {
+  border: 0;
+  border-top: 1px solid var(--line);
+  margin: 1.5em 0;
+}
+blockquote {
+  padding: 0.3em 0 0.3em 1em;
+  border-left: 4px solid #c9dbef;
+  color: var(--muted);
+}
+@media (max-width: 720px) {
+  .page {
+    width: min(100% - 18px, 1080px);
+    padding-top: 16px;
+  }
+  .hero,
+  .doc {
+    border-radius: 18px;
+  }
+  .doc {
+    padding: 20px;
+  }
+}
+
   </style>
 </head>
 <body>
-  <canvas id="canvas" width="900" height="700"></canvas>
-  <script type="module" src="./main.js"></script>
+  <main class="page">
+    <section class="hero">
+      <h1>shapes</h1>
+    </section>
+    <article class="doc">
+<h1>shapes</h1>
+<p><a href="index.en.html">English</a> | 日本語</p>
+<p><img src="./shapes.jpg" alt="shapes" /></p>
+<h2>概要</h2>
+<ul><li>primitive 系サンプル群の中では、texture / image normal / procedural normal の見え方比較を 1 本へ寄せる主入口です。</li><li>「texture を貼った見え」「法線マップの差」「wireframe」を同じ構図のまま切り替えて比較できます。</li><li>Message は 3x3 配置の番号ラベルだけに使い、操作説明と状態表示は WebgApp 側の標準 HUD に寄せています。</li></ul>
+<h2>実行方法</h2>
+<ul><li>実行ファイルは <a href="./shapes.html">./shapes.html</a> です</li><li>WebGPU に対応したブラウザで開き、必要に応じて help panel や HUD と合わせて確認してください</li></ul>
+<h2>使用している webg 機能</h2>
+<ul><li>Primitive: sphere / cone / donut / cube などの基本形状生成</li><li>Shape.setWireframe: ワイヤーフレーム表示切り替え</li><li>Texture: num256.png の読み込み</li><li>Texture.buildNormalMapFromProceduralHeight: noise/dots 法線生成</li><li>SmoothShader: texture + normal map と wireframe を同じ入口で扱う描画。flat shading も同じ shader 側の機能として切り替えられる</li><li>Message: 3x3 配置の primitive 番号ラベルだけを重ねる</li></ul>
+<h2>確認ポイント</h2>
+<ul><li>C / T / I / N / D で surface mode を切り替えたとき、同じ geometry のまま texture / image normal / procedural normal の差だけが変わることを確認します</li><li>T で texture 比較、I で image normal 比較、N / D で procedural normal 比較が同じサンプル内で読めることを確認します</li><li>1 - 9 のワイヤーフレーム切り替えでトポロジが想定どおりかを確認し、surface mode を変えても線表示が破綻しないことを確認します</li><li>cube / cuboid / mapCube を含む 9 形状で、texture と normal の両方が極端に破綻せず比較できることを確認します</li></ul>
+<h2>操作方法</h2>
+<ul><li>C: solid color 表示</li><li>T: texture 表示</li><li>I: image normal 表示</li><li>N: noise normal 表示</li><li>D: dots normal 表示</li><li>1 - 9: 対応シェイプのワイヤーフレームON / OFF</li><li>Space: 回転の一時停止 / 再開</li><li>タッチボタン: C/T/I/N/D と 1-9、Pause をキーボードと同じ key 名で扱う</li></ul>
+    </article>
+  </main>
 </body>
 </html>

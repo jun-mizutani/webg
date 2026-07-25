@@ -1,11 +1,25 @@
 // ---------------------------------------------
-// Billboard.js    2026/03/30
+// Billboard.js    2026/07/13
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // ---------------------------------------------
 
-import Matrix from "./Matrix.js";
 import BillboardShader from "./BillboardShader.js";
+import { createCameraTransformFrameFromEye } from "./CameraFrame.js";
+import util from "./util.js";
+
+// 完全なrender frameはそのまま共有し、低レベルAPIのeye Nodeだけ内部snapshotへ変換します
+function resolveCameraTransform(cameraOrFrame, label) {
+  if (
+    cameraOrFrame
+    && typeof cameraOrFrame.worldPointToCameraRelative === "function"
+    && cameraOrFrame.viewRotationMatrix
+    && cameraOrFrame.cameraWorldMatrix
+  ) {
+    return cameraOrFrame;
+  }
+  return createCameraTransformFrameFromEye(cameraOrFrame, label);
+}
 
 export default class Billboard {
   // ビルボード群を管理する
@@ -17,6 +31,9 @@ export default class Billboard {
 
     this.instanceStrideFloats = 9;
     this.instanceData = new Float32Array(this.maxCount * this.instanceStrideFloats);
+    // World位置はJavaScript Numberのまま保持し、draw直前にカメラ位置との差を計算します
+    // 巨大World値を先にfloat32 instanceDataへ書くと、小さい相対差が失われるため分離します
+    this.worldPositionData = new Array(this.maxCount * 3).fill(0.0);
     this.instanceBuffer = null;
     this.vertexBuffer = null;
     this.count = 0;
@@ -69,9 +86,10 @@ export default class Billboard {
     if (this.count >= this.maxCount) return -1;
     const i = this.count;
     const o = i * this.instanceStrideFloats;
-    this.instanceData[o] = x;
-    this.instanceData[o + 1] = y;
-    this.instanceData[o + 2] = z;
+    const p = i * 3;
+    this.worldPositionData[p] = util.readFiniteNumber(x, "Billboard x");
+    this.worldPositionData[p + 1] = util.readFiniteNumber(y, "Billboard y");
+    this.worldPositionData[p + 2] = util.readFiniteNumber(z, "Billboard z");
     this.instanceData[o + 3] = sx;
     this.instanceData[o + 4] = sy;
     this.instanceData[o + 5] = color[0];
@@ -85,10 +103,10 @@ export default class Billboard {
   // 既存インスタンスの位置を更新する
   setPosition(index, x, y, z) {
     if (index < 0 || index >= this.count) return;
-    const o = index * this.instanceStrideFloats;
-    this.instanceData[o] = x;
-    this.instanceData[o + 1] = y;
-    this.instanceData[o + 2] = z;
+    const p = index * 3;
+    this.worldPositionData[p] = util.readFiniteNumber(x, "Billboard x");
+    this.worldPositionData[p + 1] = util.readFiniteNumber(y, "Billboard y");
+    this.worldPositionData[p + 2] = util.readFiniteNumber(z, "Billboard z");
   }
 
   // 既存インスタンスのサイズを更新する
@@ -110,17 +128,15 @@ export default class Billboard {
   }
 
   // カメラ姿勢をシェーダへ設定する
-  setCamera(eyeNode, projectionMatrix) {
-    eyeNode.setWorldMatrix();
-    const view = new Matrix();
-    view.makeView(eyeNode.worldMatrix);
-    this.shader.setViewMatrix(view);
+  setCamera(cameraOrFrame, projectionMatrix) {
+    const cameraFrame = resolveCameraTransform(cameraOrFrame, "Billboard.setCamera");
+    this.shader.setViewMatrix(cameraFrame.viewRotationMatrix);
 
     if (projectionMatrix) {
       this.shader.setProjectionMatrix(projectionMatrix);
     }
 
-    const m = eyeNode.worldMatrix.mat;
+    const m = cameraFrame.cameraWorldMatrix.mat;
     const right = [m[0], m[1], m[2]];
     const up = [m[4], m[5], m[6]];
     this.shader.setCameraAxes(right, up);
@@ -128,19 +144,36 @@ export default class Billboard {
 
   // 共通描画処理
   // view/projと軸ベクトルを渡してビルボードを描画する
-  drawWithAxes(eyeNode, projectionMatrix, right, up) {
+  drawWithAxes(cameraOrFrame, projectionMatrix, right, up) {
+    const cameraFrame = resolveCameraTransform(cameraOrFrame, "Billboard.drawWithAxes");
+    return this.drawResolved(cameraFrame, projectionMatrix, right, up);
+  }
+
+  // camera-relative化済みframeを使い、World位置を小さいfloat32 instance座標へ変換して描画します
+  drawResolved(cameraFrame, projectionMatrix, right, up) {
     if (!this.initialized || this.count <= 0) return;
     const pass = this.gpu.passEncoder;
     if (!pass) return;
 
-    eyeNode.setWorldMatrix();
-    const viewMatrix = new Matrix();
-    viewMatrix.makeView(eyeNode.worldMatrix);
-    this.shader.setViewMatrix(viewMatrix);
+    this.shader.setViewMatrix(cameraFrame.viewRotationMatrix);
     if (projectionMatrix) {
       this.shader.setProjectionMatrix(projectionMatrix);
     }
     this.shader.setCameraAxes(right, up);
+
+    // 倍精度World位置からカメラWorld位置を先に減算し、小さくなった値だけをfloat32へ書きます
+    for (let i = 0; i < this.count; i += 1) {
+      const p = i * 3;
+      const o = i * this.instanceStrideFloats;
+      const relative = cameraFrame.worldPointToCameraRelative([
+        this.worldPositionData[p],
+        this.worldPositionData[p + 1],
+        this.worldPositionData[p + 2]
+      ]);
+      this.instanceData[o] = relative[0];
+      this.instanceData[o + 1] = relative[1];
+      this.instanceData[o + 2] = relative[2];
+    }
 
     const view = this.instanceData.subarray(0, this.count * this.instanceStrideFloats);
     this.gpu.queue.writeBuffer(this.instanceBuffer, 0, view.buffer, view.byteOffset, view.byteLength);
@@ -154,17 +187,18 @@ export default class Billboard {
   }
 
   // 現在のpassに描画する（カメラ向き）
-  draw(eyeNode, projectionMatrix) {
-    eyeNode.setWorldMatrix();
-    const m = eyeNode.worldMatrix.mat;
+  draw(cameraOrFrame, projectionMatrix) {
+    const cameraFrame = resolveCameraTransform(cameraOrFrame, "Billboard.draw");
+    const m = cameraFrame.cameraWorldMatrix.mat;
     const right = [m[0], m[1], m[2]];
     const up = [m[4], m[5], m[6]];
-    this.drawWithAxes(eyeNode, projectionMatrix, right, up);
+    this.drawResolved(cameraFrame, projectionMatrix, right, up);
   }
 
   // 現在のpassに描画する（地面向き）
   // right=[1,0,0], up=[0,0,1] に固定してXZ平面へ寝かせる
-  drawGround(eyeNode, projectionMatrix) {
-    this.drawWithAxes(eyeNode, projectionMatrix, [1.0, 0.0, 0.0], [0.0, 0.0, 1.0]);
+  drawGround(cameraOrFrame, projectionMatrix) {
+    const cameraFrame = resolveCameraTransform(cameraOrFrame, "Billboard.drawGround");
+    this.drawResolved(cameraFrame, projectionMatrix, [1.0, 0.0, 0.0], [0.0, 0.0, 1.0]);
   }
 }

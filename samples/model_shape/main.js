@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// samples/model_shape/main.js  2026/04/28
+// samples/model_shape/main.js  2026/07/25
 //   model_shape sample
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -24,6 +24,7 @@ import Diagnostics from "../../webg/Diagnostics.js";
 const SPEED = 0.6;
 let app = null;
 
+// 基本テクスチャと法線テクスチャを読み込む
 const loadBaseAndNormalTexture = async (gpu, url) => {
   // canvas の画素列は上端から並ぶため、webg の Bottom-Left UV 基準に合わせて Y 方向だけ反転する
   // 同じ補正後画素からカラー用テクスチャと法線マップを構築する
@@ -60,6 +61,7 @@ const loadBaseAndNormalTexture = async (gpu, url) => {
   return { colorTex, normalTex };
 };
 
+// 基本形状のアセット群を生成し、後続処理で利用できる状態にする
 const buildPrimitiveAssets = () => {
   // Primitive が返す ModelAsset を一覧化する
   // 最後の mapCube は、ModelAsset.fromData() を明示的に通した例として残す
@@ -96,6 +98,7 @@ const buildPrimitiveAssets = () => {
   return list;
 };
 
+// 材質を対象の状態または描画設定へ反映する
 const applyMaterial = (shape, colorTex, normalTex, useNormalMap, wireframe, color) => {
   // ModelBuilder が返した Shape は geometry だけを持つため、
   // サンプル側で shaderParameter と material を与えて見え方を整える
@@ -133,6 +136,7 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 });
 
+// このインスタンスの初期化段階で、必要な状態と資源を準備して処理を開始する
 const start = async () => {
   app = new WebgApp({
     document,
@@ -195,6 +199,7 @@ const start = async () => {
     wireframe: false
   };
   const getSceneShapes = () => nodes.map((node) => node.shapes[0]).filter(Boolean);
+  // 診断情報の統計情報を現在の入力と実行状態に合わせて更新する
   const refreshDiagnosticsStats = (frameCount = app.screen.getFrameCount()) => {
     const envReport = app.checkEnvironment({
       stage: "runtime-check",
@@ -213,6 +218,7 @@ const start = async () => {
     });
     return envReport;
   };
+  // 検査情報のレポートを生成し、後続処理で利用できる状態にする
   const makeProbeReport = (frameCount) => {
     const envReport = app.checkEnvironment({
       stage: "runtime-probe",
@@ -290,8 +296,6 @@ const start = async () => {
 
   app.start({
     onUpdate: ({ deltaSec, screen }) => {
-      orbit.update(deltaSec);
-
       for (let i = 0; i < nodes.length; i++) {
         applyMaterial(nodes[i].shapes[0], colorTex, normalTex, state.useNormalMap, state.wireframe, palette[i]);
         if (!state.paused) {

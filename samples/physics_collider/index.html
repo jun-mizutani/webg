@@ -3,31 +3,189 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>webg physics_collider sample</title>
+  <title>physics_collider</title>
   <link rel="icon" href="data:," />
-  <!-- 2026/05/12 -->
+  <!-- 2026/06/19 -->
   <style>
-    html, body {
-      margin: 0;
-      width: 100%;
-      height: 100%;
-      overflow: hidden;
-      background:
-        radial-gradient(circle at top left, rgba(66, 110, 180, 0.18), transparent 30%),
-        radial-gradient(circle at bottom right, rgba(255, 196, 118, 0.10), transparent 28%),
-        #0b1118;
-      color: #dbe7f2;
-      font: 12px/1.5 "Avenir Next", "Hiragino Sans", "Yu Gothic", sans-serif;
-    }
-    #canvas {
-      display: block;
-      width: 100%;
-      height: 100%;
-    }
+
+:root {
+  color-scheme: light;
+  --bg: #eef3f8;
+  --paper: rgba(255, 255, 255, 0.94);
+  --line: #c8d5e4;
+  --ink: #17324a;
+  --muted: #5c748b;
+  --accent: #1566ab;
+  --accent-soft: #dfeefe;
+  --code-bg: #f3f7fb;
+  --shadow: rgba(29, 52, 79, 0.10);
+}
+* { box-sizing: border-box; }
+html, body {
+  margin: 0;
+  min-height: 100%;
+}
+body {
+  background:
+    radial-gradient(circle at top left, rgba(21, 102, 171, 0.12), transparent 24%),
+    radial-gradient(circle at top right, rgba(255, 191, 118, 0.10), transparent 22%),
+    linear-gradient(180deg, #f8fbfd 0%, var(--bg) 100%);
+  color: var(--ink);
+  font: 16px/1.78 "Avenir Next", "Hiragino Sans", "Yu Gothic", sans-serif;
+}
+.page {
+  width: min(1080px, calc(100% - 28px));
+  margin: 0 auto;
+  padding: 24px 0 56px;
+}
+.hero,
+.doc {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  box-shadow: 0 22px 52px var(--shadow);
+}
+.hero {
+  padding: 22px 24px;
+  margin-bottom: 18px;
+}
+.hero h1 {
+  margin: 0 0 8px;
+  font-size: clamp(2rem, 4vw, 3rem);
+  line-height: 1.08;
+}
+.hero p {
+  margin: 0;
+  color: var(--muted);
+}
+.doc {
+  padding: 28px;
+}
+.doc > :first-child {
+  margin-top: 0;
+}
+h1, h2, h3, h4, h5, h6 {
+  line-height: 1.25;
+  margin: 1.45em 0 0.55em;
+}
+h1 {
+  font-size: 2.2rem;
+}
+h2 {
+  padding-bottom: 0.28em;
+  border-bottom: 1px solid var(--line);
+  font-size: 1.48rem;
+}
+h3 {
+  font-size: 1.14rem;
+}
+p, ul, ol, table, pre, blockquote {
+  margin: 0 0 1em;
+}
+ul, ol {
+  padding-left: 1.4em;
+}
+li + li {
+  margin-top: 0.26em;
+}
+a {
+  color: var(--accent);
+  text-decoration: none;
+}
+a:hover {
+  text-decoration: underline;
+}
+img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  border-radius: 16px;
+  border: 1px solid var(--line);
+  box-shadow: 0 12px 32px rgba(29, 52, 79, 0.08);
+  margin: 1.1em 0 1.4em;
+}
+code {
+  padding: 0.12em 0.38em;
+  border-radius: 0.45em;
+  background: var(--code-bg);
+  border: 1px solid #dbe6f1;
+  font: 0.92em/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+pre {
+  padding: 14px 16px;
+  overflow-x: auto;
+  border-radius: 14px;
+  background: #0f1720;
+  color: #ecf5ff;
+}
+pre code {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #ffffff;
+}
+th, td {
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  text-align: left;
+  vertical-align: top;
+}
+th {
+  background: #f5f9fc;
+}
+hr {
+  border: 0;
+  border-top: 1px solid var(--line);
+  margin: 1.5em 0;
+}
+blockquote {
+  padding: 0.3em 0 0.3em 1em;
+  border-left: 4px solid #c9dbef;
+  color: var(--muted);
+}
+@media (max-width: 720px) {
+  .page {
+    width: min(100% - 18px, 1080px);
+    padding-top: 16px;
+  }
+  .hero,
+  .doc {
+    border-radius: 18px;
+  }
+  .doc {
+    padding: 20px;
+  }
+}
+
   </style>
 </head>
 <body>
-  <canvas id="canvas" width="1120" height="760"></canvas>
-  <script type="module" src="./main.js"></script>
+  <main class="page">
+    <section class="hero">
+      <h1>physics_collider</h1>
+    </section>
+    <article class="doc">
+<h1>physics_collider</h1>
+<p><a href="index.en.html">English</a> | 日本語</p>
+<p><img src="./physics_collider.jpg" alt="physics_collider" /></p>
+<h2>概要</h2>
+<ul><li>BoxCollider を持つ複数の body が、回転しながら落下し、空中や床上で接触し、押し合いながら落ち着いていく見え方を確認するサンプルです</li><li>WebgApp を使って起動、HUD、入力、camera 操作をまとめつつ、物理 world 自体は PhysicsSpace と PhysicsNode を直接組んでいるため、実装の追跡もしやすい構成です</li><li>1 unit = 1m を前提に、1.2m x 1.2m の浅い arena へ最大 0.10m 程度の box を投入し、卓上の小物を落とすようなスケール感で挙動を確認できます</li><li>立方体だけでなく beam、plate、column、deep block を混ぜることで、OBB の向き変化、辺接触、面接触、sleep island の見え方を比較しやすくしています</li><li>Space キーで box を追加投入し、密度を上げた状態でも回転付き contact がどう落ち着くかを確認できます</li></ul>
+<h2>実行方法</h2>
+<ul><li>実行ファイルは <a href="./physics_collider.html">./physics_collider.html</a> です</li><li>WebGPU に対応したブラウザで開き、必要に応じて help panel や HUD と合わせて確認してください</li></ul>
+<h2>使用している webg 機能</h2>
+<ul><li>WebgApp: Screen、Shader、Space、Input、Message の初期化をまとめる</li><li>PhysicsSpace: 固定タイムステップ、重力、反発、摩擦、sleep island を管理する</li><li>PhysicsNode: dynamic / kinematic / static の切り替え、および姿勢と速度の初期化を行う</li><li>BoxCollider と PlaneCollider: 回転付き box と床 plane の接触を構成する</li><li>Shape と Primitive.cuboid(): 各 body、床、壁の mesh を作る</li><li>EyeRig: orbit camera による俯瞰視点の確認を担当する</li></ul>
+<h2>確認ポイント</h2>
+<ul><li>長い beam や平たい plate が、見た目の回転と collider の向きがずれずに落下することを確認します</li><li>box 同士が空中や床上で接触したときに、単に通り抜けず、押し戻しと回転変化が見えることを確認します</li><li>status に release 数、awake 数、contact 数、sleep island 集計が表示され、全体がどこまで落ち着いたかを追えることを確認します</li><li>sleep island ごとの色相変化により、同じ島に属する body と、awake / candidate / sleeping の違いを見分けやすいことを確認します</li><li>ドラッグや zoom で視点を変えても、卓上スケールの arena と body サイズが直感的に把握しやすいことを確認します</li></ul>
+<h2>操作方法</h2>
+<ul><li>ドラッグ: orbit camera</li><li>Shift + ドラッグ: pan</li><li>ホイール / [ / ]: zoom</li><li>Space: box を 4 個追加する</li><li>P: 一時停止 / 再開</li><li>R: 位置、姿勢、速度を初期状態へ戻す</li><li>?count=60 のように URL へ付けると、初期 body 数を変更できます</li></ul>
+<h2>実装の詳細</h2>
+<ul><li>見え方ではなく solver の数値を追いたい場合は unittest/physics_collider/headless_probe.js を node で実行してください</li><li>headless_probe.js は standing beam や cube corner balance の数値調査に使います。このサンプルは画面上の相互作用確認、headless probe は数値診断という役割分担です</li><li>PhysicsSpace の契約確認は unittest/physics_space_contracts が担当し、このサンプルは回転付き box 接触の見え方を担当します</li></ul>
+    </article>
+  </main>
 </body>
 </html>

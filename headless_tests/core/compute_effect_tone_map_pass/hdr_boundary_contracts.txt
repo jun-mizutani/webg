@@ -1,0 +1,35 @@
+# Tone Map High Dynamic Range境界単体テスト
+
+## 目的
+
+ComputeEffectToneMapPassを、線形High Dynamic Range処理領域と表示用8 bit色領域の唯一の境界として固定する。入力scene、Camera Reverse-Z depth、出力形式を明示し、途中でtone mapping済みの色や通常Z depthを誤接続しないことを確認する
+
+## 確認項目
+
+1. scene入力形式は `rgba16float` だけを受け付ける
+2. 出力storage texture形式は `rgba8unorm` に固定する
+3. exposure後にReinhardまたは明示的linear clampを適用する
+4. 暗部の線形区間を含む正確なsRGB符号化をこのpassで行う
+5. gamma 2.2では標準sRGBを維持し、他のgamma値はsRGB符号化後の表示調整として扱う
+6. shader内で不正gammaを自動補正せず、CPU検証値を使用する
+7. 背景はCamera Reverse-Zのdepth 0を共通helperで判定する
+8. depth resourceは `CAMERA_REVERSE_Z` identityを必須とする
+9. sceneとdepthは出力と同寸法を必須とする
+10. `blackBackground` はbooleanだけを受け付ける
+11. 不正なresize値を1へ自動補正しない
+
+## 実行方法
+
+```sh
+node headless_tests/core/compute_effect_tone_map_pass/headless_probe.js
+```
+
+## 結果
+
+2026-07-14に実行し、全項目が成功した。表示文字列は次のとおり
+
+```text
+compute_effect_tone_map_pass_hdr_boundary_contracts: all final display conversion contracts passed
+```
+
+G-bufferでsRGB入力を線形色へ復号し、Tone Mapより前のScreen Space Reflection、合成、Depth of Field、Bloom、Toonを線形 `rgba16float` で処理する。未移行passの `rgba8unorm` 出力をTone Mapへ渡した場合は、形式検証で停止する

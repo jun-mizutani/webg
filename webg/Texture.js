@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// Texture.js      2026/04/21
+// Texture.js      2026/07/25
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // ---------------------------------------------
@@ -26,6 +26,7 @@ export default class Texture {
     this.initPromise = this.init();
   }
 
+  // このインスタンスの初期化段階で、必要な状態と資源を準備して処理を開始する
   async init() {
     // GPUデバイス確定後に既定サンプラを作る
     if (this.gpu?.ready) {
@@ -102,6 +103,7 @@ export default class Texture {
     });
   }
 
+  // ファイルから画像を読み込みGPUテクスチャへ転送する
   async readImageFromFile(textureFile) {
     // 画像ファイルを読み、GPUTextureへ転送する
     await this.initPromise;
@@ -131,6 +133,7 @@ export default class Texture {
     }
   }
 
+  // ファイルから法線マップを読み込みGPUテクスチャへ転送する
   async readNormalMapFromFile(textureFile) {
     // 既にDCCツール等で生成済みの法線マップを、そのままGPUテクスチャ化する
     // 処理経路は通常テクスチャと同じで、呼び出し側で「用途」を明示するためのAPI
@@ -179,6 +182,7 @@ export default class Texture {
     return this._heightFromRgba(src[p], src[p + 1], src[p + 2], src[p + 3], channel);
   }
 
+  // `_toRgbaPixels`は座標または数値を計算し、後続処理で使う結果を返す
   async _toRgbaPixels(image, width, height, ncol = 4) {
     // ハイト→法線変換用に任意ソースをRGBA生配列へ正規化する
     if (image instanceof Uint8Array) {
@@ -227,6 +231,7 @@ export default class Texture {
     return { data: new Uint8Array(id.data), width, height, ncol: 4 };
   }
 
+  // 高さマップの画素から法線マップの画素を生成する
   async makeNormalMapPixelsFromHeightMap(options = {}) {
     // ハイトマップから法線マップRGBAを生成する
     // 計算は中央差分:
@@ -286,6 +291,7 @@ export default class Texture {
     return { image: out, width, height, ncol: 4 };
   }
 
+  // 高さマップから法線マップを生成してこのテクスチャへ設定する
   async buildNormalMapFromHeightMap(options = {}) {
     // 生成した法線マップをこのTextureへ設定する
     const normal = await this.makeNormalMapPixelsFromHeightMap(options);
@@ -293,6 +299,7 @@ export default class Texture {
     return true;
   }
 
+  // 高さ画像ファイルを読み込み法線マップへ変換する
   async readNormalMapFromHeightFile(heightMapFile, options = {}) {
     // 画像をハイトマップとして読み込み、その場で法線マップ化する
     await this.readImageFromFile(heightMapFile);
@@ -466,6 +473,7 @@ export default class Texture {
     return true;
   }
 
+  // 手続き的に生成した高さ情報から法線マップを生成する
   async buildNormalMapFromProceduralHeight(options = {}) {
     // 手続きハイト -> 法線マップ を一括で生成してこのTextureへ設定する
     const heightMap = this.makeProceduralHeightMapPixels(options);

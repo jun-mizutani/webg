@@ -1,34 +1,37 @@
 # WebgAppによるアプリ構成
 
-## WebgApp で何が簡単になるのか
+本章では、`WebgApp`に初期化、入力、シーン更新、カメラ確定、描画、HUD（Head-Up Display：画面上へ重ねる情報表示）表示、終了処理をまとめ、アプリ固有の処理を安定したフレーム順序へ配置します。
+共通の土台を再実装せずに済むため、利用者はシーンの内容と操作へ集中でき、独自の描画処理が必要な場合だけ明示的なコールバックへ進めます。
 
-第4章では、`Screen`、`SmoothShader`、`Space`、`Shape`、`eye` を順番に用意し、最後に `clear -> draw -> present` を呼び出すことで、WebGPU 画面へ 3D オブジェクトを描画しました。
+## WebgAppがアプリケーションの共通処理をまとめる
 
-この流れは `webg` の土台を理解するうえで重要です。一方で、実際のアプリケーションでは、画面の初期化、標準シェーダー、シーン、カメラ、入力、HUD、診断情報、リサイズ対応、フレームループといった周辺処理を毎回組み立てることになります。
+`WebgApp`は、WebGPUの初期化、シーン、カメラ、入力、更新処理、描画、HUD（Head-Up Display：画面上へ重ねる情報表示）を一つのアプリケーションとしてまとめます。
+利用者は、起動時に必要な要素を設定し、毎フレーム変化する状態を`onUpdate`で更新することで、標準的な3Dアプリケーションを構成できます。
 
-`WebgApp` は、この共通部分をまとめた高レイヤー（ハイレベル）の入口です。
+本章では、最小構成から始め、初期化、ライフサイクル、フレームコンテキスト、入力、カメラ、ライト、HUDの順に役割を確認します。
+標準機能だけを使う場合は、内部の描画順序やカメラ状態を利用者が個別に管理する必要はありません。
 
-| 第4章で自分で用意したもの | `WebgApp` で使うもの |
-| :--- | :--- |
-| `Screen` の作成と `await screen.ready` | `await app.init()` |
-| `SmoothShader` の作成と初期化 | `app.shader` |
-| `Space` の作成 | `app.space` |
-| `eye` の作成と `space.setEye()` | `app.eye` |
-| projection / viewport の更新 | `app.updateProjection()` と内部レイアウト処理 |
-| `requestAnimationFrame` のループ | `app.start()` |
-| `screen.clear()` / `space.draw()` / `screen.present()` | `WebgApp` の標準フレーム処理 |
-| 入力、HUD、診断、デバッグ表示 | `app.input`、`app.message`、Diagnostics、DebugDock |
+> **この章の読み方:** 最初に「最小のWebgAppアプリ」と「基本ライフサイクル」を読めば、標準アプリを開始できます。フレームコンテキスト、物理時間、詳細な描画順は、入力・物理・独自レンダーパスが必要になった時点で参照してください。
 
-つまり、`WebgApp` を使うと、開発者は「何を置くか」「毎フレームどう動かすか」に集中しやすくなります。
+## WebgAppで何が簡単になるのか
 
-ただし、`WebgApp` は何でも持った巨大な便利 API ではありません。アプリケーションの土台を作ることが主な役割です。ヘルプ、エラー表示、チュートリアル、ゲームルール、メニュー構造などは、`OverlayPanel` やサンプル側の controller / helper と組み合わせて作ります。
+第4章では、`Screen`、`SmoothShader`、`Space`、`Shape`、`eye` を順番に用意し、最後に `clear -> draw -> present` を呼び出すことで、WebGPU画面へ3Dオブジェクトを描画しました。
 
-## 最小の WebgApp アプリ
+この流れは `webg` の土台を理解するうえで重要です。
+一方で、実際のアプリケーションでは、画面の初期化、標準シェーダー、シーン、カメラ、入力、HUD、診断情報、リサイズ対応、フレームループといった周辺処理を毎回組み立てることになります。
 
-`WebgApp` を使う最小の流れは、次の 4 段階です。
+`WebgApp` は、この共通部分をまとめた高水準の入口です。
+`WebgApp` を使うと、開発者は「何を置くか」「毎フレームどう動かすか」に集中しやすくなります。
+ただし、`WebgApp` は何でも持った巨大な便利APIではありません。
+アプリケーションの土台を作ることが主な役割です。
+ヘルプ、エラー表示、チュートリアル、ゲームルール、メニュー構造などは、`OverlayPanel` やサンプル側のcontroller / 補助機能と組み合わせて作ります。
+
+## 最小のWebgAppアプリ
+
+`WebgApp` を使う最小の流れは、次の4段階です。
 
 1. `new WebgApp(...)` で設定を渡す。
-2. `await app.init()` で GPU、シーン、カメラ、入力、HUD を準備する。
+2. `await app.init()` でGPU、シーン、カメラ、入力、HUDを準備する。
 3. `app.space` にオブジェクトを置く。
 4. `app.start({ onUpdate })` でフレームループを開始する。
 
@@ -71,7 +74,8 @@ app.start({
 });
 ```
 
-この例で開発者が直接書いているのは、立方体の形状を作る処理、シーンへ配置する処理、毎フレーム回転させる処理です。`Screen`、標準シェーダー、`Space`、カメラ、入力管理、HUD、診断機能、`requestAnimationFrame` の予約は `WebgApp` がまとめて扱います。
+この例で開発者が直接書いているのは、立方体の形状を作る処理、シーンへ配置する処理、毎フレーム回転させる処理です。
+`Screen`、標準シェーダー、`Space`、カメラ、入力管理、HUD、診断機能、`requestAnimationFrame` の予約は `WebgApp` がまとめて扱います。
 
 ## 基本ライフサイクル
 
@@ -91,37 +95,51 @@ app.start({
 });
 ```
 
-### constructor は設定を保持する
+### constructorは設定を保持する
 
-`new WebgApp(options)` の時点では、GPU デバイス、`Screen`、`Space`、標準シェーダー、`eye` はまだ利用できません。constructor は、後続の `init()` で使う設定と内部状態を用意する段階です。
+`new WebgApp(options)` の時点では、GPUデバイス、`Screen`、`Space`、標準シェーダー、`eye` はまだ利用できません。
+constructorは、後続の `init()` で使う設定と内部状態を用意する段階です。
 
-代表的な option は次の通りです。
+代表的なオプションは次の通りです。
 
-| option | 役割 |
-| :--- | :--- |
-| `document` | DOM 操作に使用する document |
-| `messageFontTexture` | HUD 文字表示に使うフォントテクスチャ |
-| `clearColor` | 背景色 |
-| `camera` | 標準カメラの初期状態 |
-| `viewAngle` | 投影行列の視野角 |
-| `light` | 標準ライト設定 |
-| `fog` | 標準フォグ設定 |
-| `attachInputOnInit` | `init()` 内で入力を接続するか |
-| `autoDrawScene` | フレーム内で `space.draw(app.eye)` を自動実行するか |
-| `autoDrawBones` | スケルトンボーンを自動描画するか |
-| `layoutMode` | `viewport` または `embedded` |
-| `renderMode` | `ondemand` または `continuous` |
-| `uiTheme` | DebugDock / OverlayPanel のテーマ |
+- **document**
+  - DOM操作に使用するdocument
+  - DOMは、HTML要素を文書構造として扱う仕組み
+- **messageFontTexture**
+  - HUD文字表示に使うフォントテクスチャ
+- **clearColor**
+  - 背景色
+- **camera**
+  - 標準カメラの初期状態
+- **viewAngle**
+  - 投影行列の視野角
+- **light**
+  - 標準ライト設定
+- **fog**
+  - 標準フォグ設定
+- **attachInputOnInit**
+  - `init()`内で入力を接続するか
+- **autoDrawScene**
+  - フレーム内で確定した`cameraFrame`を使って`space.draw(cameraFrame)`を自動実行するか
+- **autoDrawBones**
+  - スケルトンボーンを自動描画するか
+- **layoutMode**
+  - `viewport`または`embedded`
+- **renderMode**
+  - `ondemand`または`continuous`
+- **uiTheme**
+  - DebugDockまたはOverlayPanelのテーマ
 
-### init の後にアプリの土台が使える
+### initの後にアプリの土台が使える
 
-`await app.init()` は、`WebgApp` における大きな境界線です。ここで `Screen` の準備を待ち、シェーダー、`Space`、標準カメラリグ、入力、HUD、診断機能などを作成します。
+`await app.init()` は、`WebgApp` のライフサイクルにおける大きな転換点です。
+ここで `Screen` の準備を待ち、シェーダー、`Space`、標準カメラリグ、入力、HUD、診断機能などを作成します。
 
 `init()` 後によく使うものは次の通りです。
 
 | プロパティ / メソッド | 用途 |
 | :--- | :--- |
-| `app.getGPU()` | `Shape` や低レイヤーリソース作成に使う GPU context |
+| `app.getGPU()` | `Shape` や低水準リソース作成に使うGPUコンテキスト |
 | `app.space` | ノード、形状、モデルを配置するシーン |
 | `app.eye` | 現在の視点ノード |
 | `app.input` | 入力状態 |
@@ -129,13 +147,16 @@ app.start({
 | `app.shader` | 標準シェーダー |
 | `app.screen` | 描画先の `Screen` |
 
-`app.getGPU()`、`app.space`、`app.eye` などは、必ず `await app.init()` の後に使ってください。`init()` 前には実体がまだ作られていないためです。
+`app.getGPU()`、`app.space`、`app.eye` などは、必ず `await app.init()` の後に使ってください。
+`init()` 前には実体がまだ作られていないためです。
 
-## app.start と onUpdate
+## app.startとonUpdate
 
-`app.start()` は、`WebgApp` のフレームループを開始します。内部では `requestAnimationFrame` から渡される時刻を受け取り、前フレームからの経過時間を計算し、更新、描画、HUD、提示を順番に進めます。
+`app.start()` は、`WebgApp` のフレームループを開始します。
+内部では `requestAnimationFrame` から渡される時刻を受け取り、前フレームからの経過時間を計算し、更新、描画、HUD、提示を順番に進めます。
 
-`onUpdate` は、その中で「描画前にシーンの状態を 1 フレームぶん進める場所」です。画面へ描く処理そのものではなく、次に描かれるべき状態を作る処理を書きます。
+`onUpdate` は、その中で「描画前にシーンの状態を1フレームぶん進める場所」です。
+画面へ描く処理そのものではなく、次に描かれるべき状態を作る処理を書きます。
 
 ```js
 app.start({
@@ -151,17 +172,20 @@ app.start({
 - ノードの位置や回転を更新する。
 - タイマーやクールダウンを進める。
 - アプリのフェーズに応じて処理を分ける。
-- HUD に表示する数値や状態を更新する。
+- HUDに表示する数値や状態を更新する。
 
 一方で、次の処理は別の場所に置くと整理しやすくなります。
 
-| 処理 | 書く場所 |
-| :--- | :--- |
-| 初期化、Shape 作成、モデル読み込み | `await app.init()` の後、`app.start()` の前 |
-| 毎フレームの状態更新 | `onUpdate` |
-| 3D シーン描画前の特殊な描画 | `onBeforeDraw` |
-| 3D シーン描画後のポストプロセス | `onAfterDraw3d` |
-| HUD 描画後の追加表示 | `onAfterHud` |
+- **初期化、Shape作成、モデル読み込み**
+  - `await app.init()`の後、`app.start()`の前に書く
+- **毎フレームの状態更新**
+  - `onUpdate`に書く
+- **3Dシーン描画前の特殊な描画**
+  - `onBeforeDraw`に書く
+- **3Dシーン描画後のポストプロセス**
+  - `onAfterDraw3d`に書く
+- **HUD描画後の追加表示**
+  - `onAfterHud`に書く
 
 `onUpdate()` が `true` を返すと、フレームループは停止します。
 
@@ -176,9 +200,10 @@ app.start({
 });
 ```
 
-## フレームコンテキスト ctx
+## フレームコンテキストctx
 
-`onUpdate(ctx)` の `ctx` は、そのフレームで使いやすい情報をまとめたフレームコンテキストです。`WebgApp` が毎フレーム作成し、`onUpdate`、`onBeforeDraw`、`onAfterDraw3d`、`onAfterHud` に渡します。
+`onUpdate(ctx)` の `ctx` は、そのフレームで使いやすい情報をまとめたフレームコンテキストです。
+`WebgApp` が毎フレーム作成し、`onUpdate`、`onBeforeDraw`、`onAfterDraw3d`、`onAfterHud` に渡します。
 
 主なプロパティは次の通りです。
 
@@ -198,7 +223,7 @@ app.start({
 | `cameraTarget` | 現在のカメラ注視点の配列コピー |
 | `cameraFollow` | カメラ追従状態 |
 | `input` | キー、ポインター、アクションの入力状態 |
-| `projection` | 現在の projection matrix |
+| `projection` | 現在の投影行列 |
 
 最初のうちは、`deltaSec`、`timeSec`、`input`、`space`、`app` を中心に見ると十分です。
 
@@ -231,7 +256,8 @@ app.start({
 });
 ```
 
-これは `webg` 独自の構文ではなく、JavaScript の分割代入です。次のコードと同じ意味です。
+これは `webg` 独自の構文ではなく、JavaScriptの分割代入です。
+次のコードと同じ意味です。
 
 ```js
 app.start({
@@ -259,7 +285,7 @@ app.start({
 
 `ctx` 全体を何度も使う場合は `onUpdate(ctx)`、必要な値が少ない場合は `onUpdate({ deltaSec, input })` のように書くと読みやすくなります。
 
-### deltaSec を使う理由
+### deltaSecを使う理由
 
 `deltaSec` は、前フレームから現在のフレームまでに経過した秒数です。
 
@@ -271,7 +297,7 @@ app.start({
 box.rotateY(0.02);
 ```
 
-`deltaSec` を掛けると、「1 秒あたりどれだけ進むか」という指定になります。
+`deltaSec` を掛けると、「1秒あたりどれだけ進むか」という指定になります。
 
 ```js
 // 1 秒あたり 1.2 回す。
@@ -306,9 +332,10 @@ app.start({
 
 ### 物理エンジンに渡す時間
 
-`PhysicsSpace.step(deltaMs)` や Scene JSON runtime の `sceneRuntime.stepPhysics(deltaMs)` は、名前の通りミリ秒単位の `deltaMs` を受け取ります。一方、`WebgApp` の `ctx` には秒単位の `deltaSec` が入っています。
+`PhysicsSpace.step(deltaMs)` やScene JSONランタイムの `sceneRuntime.stepPhysics(deltaMs)` は、名前の通りミリ秒単位の `deltaMs` を受け取ります。
+一方、`WebgApp` の `ctx` には秒単位の `deltaSec` が入っています。
 
-そのため、`onUpdate` から物理を進める場合は、`deltaSec` を 1000 倍して渡します。
+そのため、`onUpdate` から物理を進める場合は、`deltaSec` を1000倍して渡します。
 
 ```js
 import PhysicsSpace from "../../webg/PhysicsSpace.js";
@@ -326,9 +353,11 @@ app.start({
 });
 ```
 
-`PhysicsSpace.step(deltaMs)` は、渡された可変の `deltaMs` を内部の accumulator に溜め、`fixedTimeStepMs` ごとに `stepFixed(dtSec)` を必要回数だけ実行します。つまり、`onUpdate` 側では「前フレームから何ミリ秒経ったか」を渡し、物理空間側が安定しやすい固定ステップへ分配します。
+`PhysicsSpace.step(deltaMs)` は、渡された可変の `deltaMs` を内部のaccumulatorに溜め、`fixedTimeStepMs` ごとに `stepFixed(dtSec)` を必要回数だけ実行します。
+つまり、`onUpdate` 側では「前フレームから何ミリ秒経ったか」を渡し、物理空間側が安定しやすい固定ステップへ分配します。
 
-`step()` の戻り値は、実際に進めた fixed step の回数です。長い停止から復帰した場合などは、`maxSubSteps` によって一度に進める回数が抑えられます。
+`step()` の戻り値は、実際に進めたfixedステップの回数です。
+長い停止から復帰した場合などは、`maxSubSteps` によって一度に進める回数が抑えられます。
 
 ```js
 app.start({
@@ -341,11 +370,13 @@ app.start({
 });
 ```
 
-通常の移動や回転は `deltaSec`、`PhysicsSpace.step()` は `deltaMs`、`stepFixed(dtSec)` の内部処理は秒単位、という単位の違いに注意してください。物理の詳細は第26章で扱います。
+通常の移動や回転は `deltaSec`、`PhysicsSpace.step()` は `deltaMs`、`stepFixed(dtSec)` の内部処理は秒単位、という単位の違いに注意してください。
+物理の詳細は第26章で扱います。
 
 ## 入力を扱う
 
-`WebgApp` は内部に `InputController` を保持しています。`attachInputOnInit` が true（既定値）の場合、`init()` 内で `app.attachInput()` が自動的に呼ばれます。
+`WebgApp` は内部に `InputController` を保持しています。
+`attachInputOnInit` がtrue（既定値）の場合、`init()` 内で `app.attachInput()` が自動的に呼ばれます。
 
 `ctx.input` を使うと、押されているキーを毎フレーム確認できます。
 
@@ -382,15 +413,17 @@ app.start({
 });
 ```
 
-`wasActionPressed()` は「押された瞬間」を扱う用途に向いています。押されている間ずっと移動させたい場合は、`input.has()` のような継続入力を使います。
+`wasActionPressed()` は「押された瞬間」を扱う用途に向いています。
+押されている間ずっと移動させたい場合は、`input.has()` のような継続入力を使います。
 
-`app.attachInput()` は、単に入力を接続するだけでなく、`F9` を接頭辞とするデバッグキーも処理します。既定では次の順次入力が使えます。
+`app.attachInput()` は、単に入力を接続するだけでなく、`F9` を接頭辞とするデバッグキーも処理します。
+既定では次の順次入力が使えます。
 
 | 操作 | 意味 |
 | :--- | :--- |
 | `F9` -> `M` | デバッグ / リリースモードの切り替え |
 | `F9` -> `C` | 診断サマリーをコピー |
-| `F9` -> `V` | 診断 JSON をコピー |
+| `F9` -> `V` | 診断JSONをコピー |
 
 独自のキーハンドラを追加する場合も、デバッグキーを維持したいなら `app.attachInput()` を使うのが基本です。
 
@@ -407,13 +440,13 @@ app.attachInput({
 
 ## カメラの基本
 
-`WebgApp` の標準カメラは、`cameraRig -> cameraRod -> eye` の 3 段構成です。
+`WebgApp` の標準カメラは、`cameraRig -> cameraRod -> eye` の3段構成です。
 
 - `cameraRig`: 注視点や全体回転を持つ土台。
 - `cameraRod`: カメラまでの距離を表すアーム。
 - `eye`: 実際の視点ノード。
 
-constructor の `camera` option で初期状態を指定できます。
+コンストラクターの `camera` オプションで初期状態を指定できます。
 
 ```js
 const app = new WebgApp({
@@ -430,7 +463,7 @@ const app = new WebgApp({
 
 `init()` の中でこの構成が作られ、`app.eye` が `app.space` の視点として登録されます。
 
-マウスやタッチで周回できる Orbit カメラが必要な場合は、`await app.init()` の後に `createOrbitEyeRig()` を呼び出します。
+マウスやタッチで周回できる軌道カメラが必要な場合は、`await app.init()` の後に `createOrbitEyeRig()` を呼び出します。
 
 ```js
 app.createOrbitEyeRig({
@@ -443,12 +476,15 @@ app.createOrbitEyeRig({
 });
 ```
 
-このメソッドは標準リグの上に `EyeRig` を構築し、ポインター操作も接続します。`WebgApp` が毎フレーム `EyeRig` を更新するため、サンプル側で個別に `update()` を呼ぶ必要はありません。
+このメソッドは標準リグの上に `EyeRig` を構築し、ポインター操作も接続します。
+`WebgApp` が毎フレーム `EyeRig` を更新するため、サンプル側で個別に `update()` を呼ぶ必要はありません。
 
-フォロー、ロックオン、シェイクには次の補助機能があります。
+位置追従、即時位置合わせ、シェイクには次の補助機能があります。
+ここでの `followNode()` は `cameraRig` の基準位置を対象へ近づける機能です。
+独立したカメラ位置から対象へ視線だけを向ける `EyeRig`の追従機能とは役割が異なります。
 
-- `followNode()`: 対象ノードを滑らかに追従する。
-- `lockOn()`: 対象へ素早く視点を合わせる。
+- `followNode()`: 対象ノードの位置へ `cameraRig` を滑らかに追従させる。
+- `lockOn()`: 対象位置へ `cameraRig` を即時に合わせる。
 - `clearCameraTarget()`: 追従やロックオンを解除する。
 - `shakeCamera()`: 短い衝撃演出を発生させる。
 
@@ -483,11 +519,12 @@ const app = new WebgApp({
 });
 ```
 
-`init()` 後に設定を切り替える場合は、`setEyeLight()` または `setWorldLight()` を使用します。フォグは constructor option と `setFog()` の両方で指定できます。
+`init()` 後に設定を切り替える場合は、`setEyeLight()` または `setWorldLight()` を使用します。
+フォグはconstructorオプションと `setFog()` の両方で指定できます。
 
-## HUD と Overlay
+## HUDとOverlay
 
-`WebgApp` は、Canvas 上へ描く HUD 用に `app.message` と `app.hudMessage` を持っています。
+`WebgApp` は、キャンバス上へ描くHUD用に `app.message` と `app.hudMessage` を持っています。
 
 短い状態表示には `app.message.setLine()` / `setLines()` が便利です。
 
@@ -506,9 +543,10 @@ app.start({
 });
 ```
 
-項目名と値を並べたい場合は `setHudRows()` や `setControlRows()` を使います。短時間の通知には `pushToast()` や `flashMessage()` を使います。
+項目名と値を並べたい場合は `setHudRows()` や `setControlRows()` を使います。
+短時間の通知には `pushToast()` や `flashMessage()` を使います。
 
-長い説明、ヘルプ、エラー、選択肢付きのパネルには DOM ベースの `OverlayPanel` を使います。
+長い説明、ヘルプ、エラー、選択肢付きのパネルにはDOMベースの `OverlayPanel` を使います。
 
 ```js
 app.showOverlayPanel({
@@ -523,9 +561,10 @@ app.showOverlayPanel({
 });
 ```
 
-同じ `id` で `showOverlayPanel()` を呼ぶと、既存のパネルが更新されます。隠す場合は `hideOverlayPanel()`、削除する場合は `removeOverlayPanel()` を使います。
+同じ `id` で `showOverlayPanel()` を呼ぶと、既存のパネルが更新されます。
+隠す場合は `hideOverlayPanel()`、削除する場合は `removeOverlayPanel()` を使います。
 
-ヘルプやエラー表示の定型オプションが必要な場合は、`OverlayPanelPresets.js` の helper を使います。
+ヘルプやエラー表示の定型オプションが必要な場合は、`OverlayPanelPresets.js` の補助機能を使います。
 
 ```js
 import { buildHelpPanelOptions } from "../../webg/OverlayPanelPresets.js";
@@ -536,26 +575,40 @@ app.showOverlayPanel(buildHelpPanelOptions({
 }));
 ```
 
-`WebgApp` はヘルプ専用 API、エラー専用 API、会話専用 API を持ちません。表示の枠は `OverlayPanel`、文章のキューや分岐はアプリ側 controller、という分担にします。
+`WebgApp` はヘルプ専用API、エラー専用API、会話専用APIを持ちません。
+表示の枠は `OverlayPanel`、文章のキューや分岐はアプリ側controller、という分担にします。
 
 ## 必要になったら使う機能
 
-`WebgApp` には、最小アプリを越えた機能も統合されています。最初からすべてを覚える必要はありません。必要になったところから使います。
+`WebgApp` には、最小アプリを越えた機能も統合されています。
+最初からすべてを覚える必要はありません。
+必要になったところから使います。
 
-| 機能 | 用途 |
-| :--- | :--- |
-| `layoutMode: "viewport"` | canvas と overlay を画面全体基準で配置する |
-| `layoutMode: "embedded"` | 書籍や教材ページ内に canvas を埋め込む |
-| Diagnostics | 環境チェックやランタイム警告を記録する |
-| DebugDock | 診断情報を開発用 UI として表示する |
-| `loadModel()` | glTF / Collada / ModelAsset JSON を読み込む |
-| `loadScene()` | Scene JSON を読み込む |
-| `validateScene()` | Scene JSON の妥当性を確認する |
-| `createTween()` | 値を時間で補間する |
-| `createParticleEmitter()` | 軽量なパーティクル演出を作る |
-| `scenePhase` | `"title"`、`"gameplay"` などの進行状態を持つ |
-| `saveProgress()` / `loadProgress()` | 進行状況を保存 / 読み込みする |
-| `takeScreenshot()` | 描画後の canvas を画像として保存する |
+- **layoutMode: "viewport"**
+  - キャンバスとオーバーレイを画面全体基準で配置する
+- **layoutMode: "embedded"**
+  - 書籍や教材ページ内にキャンバスを埋め込む
+- **Diagnostics**
+  - 環境チェックやランタイム警告を記録する
+- **DebugDock**
+  - 診断情報を開発用UIとして表示する
+  - UIは利用者との操作・表示の接点
+- **loadModel()**
+  - glTF、Collada、ModelAsset JSONを読み込む
+- **loadScene()**
+  - Scene JSONを読み込む
+- **validateScene()**
+  - Scene JSONの妥当性を確認する
+- **createTween()**
+  - 値を時間で補間する
+- **createParticleEmitter()**
+  - 軽量なパーティクル演出を作る
+- **scenePhase**
+  - `"title"`、`"gameplay"`などの進行状態を持つ
+- **saveProgress()`、`loadProgress()**
+  - 進行状況を保存または読み込みする
+- **takeScreenshot()**
+  - 描画後のキャンバスを画像として保存する
 
 `loadModel()` の例です。
 
@@ -565,11 +618,13 @@ const runtime = await app.loadModel("./assets/robot.glb", {
 });
 ```
 
-`format` には `"gltf"`、`"collada"`、`"json"` を指定できます。シーン全体を宣言的に読み込む場合は `loadScene()` を使います。
+`format` には `"gltf"`、`"collada"`、`"json"` を指定できます。
+シーン全体を宣言的に読み込む場合は `loadScene()` を使います。
 
 ## フレーム処理の詳しい順序
 
-基本的なアプリでは、`onUpdate` に更新処理を書き、`autoDrawScene: true` のまま使えば十分です。ここから先は、ポストプロセスや独自レンダーパスを組み込むときに必要になります。
+基本的なアプリでは、`onUpdate` に更新処理を書き、`autoDrawScene: true` のまま使えば十分です。
+ここから先は、ポストプロセスや独自レンダーパスを組み込むときに必要になります。
 
 `WebgApp.frame()` は概ね次の順序で進みます。
 
@@ -578,25 +633,28 @@ const runtime = await app.loadModel("./assets/robot.glb", {
 3. 管理中の `EyeRig` を更新する。
 4. フレームコンテキスト `ctx` を作成する。
 5. `onUpdate(ctx)` を呼び出す。
-6. Tween を更新する。
+6. Tweenを更新する。
 7. `Space` のアニメーションを更新する。
 8. パーティクルエミッターを更新する。
 9. カメラ追従、ロックオン、シェイクを反映する。
-10. `screen.clear()` を呼び出す。
-11. `onBeforeDraw(ctx)` を呼び出す。
-12. `autoDrawScene` が true なら `space.draw(app.eye)` を実行する。
-13. `autoDrawBones` が true ならボーンを描画する。
-14. `onAfterDraw3d(ctx)` を呼び出す。
-15. パーティクルを描画する。
-16. HUD / メッセージ / トーストを描画する。
-17. `onAfterHud(ctx)` を呼び出す。
-18. `screen.present()` を呼び出す。
-19. 入力のワンショット状態を次フレームへ進める。
-20. 継続中なら次フレームを予約する。
+10. そのフレームの`cameraFrame`と`renderFrameToken`を確定し、`ctx`へ設定する。
+11. `screen.clear()` を呼び出す。
+12. `onBeforeDraw(ctx)` を呼び出す。
+13. `autoDrawScene` がtrueなら `space.draw(cameraFrame)` を実行する。
+14. `autoDrawBones` がtrueならボーンを描画する。
+15. `onAfterDraw3d(ctx)` を呼び出す。
+16. パーティクルを描画する。
+17. HUD / メッセージ / トーストを描画する。
+18. `onAfterHud(ctx)` を呼び出す。
+19. `screen.present()` を呼び出す。
+20. 入力のワンショット状態を次フレームへ進める。
+21. 継続中なら次フレームを予約する。
 
 ポストプロセスやオフスクリーンレンダーターゲットを使用する場合は、`autoDrawScene: false` を指定し、描画順を自前で管理します。
 
 ```js
+import DofPass from "../../webg/DofPass.js";
+
 const app = new WebgApp({
   document,
   autoDrawScene: false
@@ -604,15 +662,25 @@ const app = new WebgApp({
 
 await app.init();
 
+const dof = new DofPass(app.getGPU(), {
+  width: app.screen.getWidth(),
+  height: app.screen.getHeight()
+});
+await dof.ready;
+
 app.start({
-  onBeforeDraw({ space, eye }) {
-    offscreenRenderer.drawScene(space, eye);
+  onBeforeDraw({ renderFrameToken }) {
+    dof.beginScene(app.screen, app.clearColor, { renderFrameToken });
+    app.space.draw(renderFrameToken);
   },
-  onAfterDraw3d() {
-    postprocess.composeToScreen();
+  onAfterDraw3d({ renderFrameToken }) {
+    dof.render(app.screen, { renderFrameToken });
   }
 });
 ```
+
+色だけを読む効果ならtokenは不要です。
+シーン深度を後段で読む手動接続では`renderFrameToken`を使い、`ComputeEffectPipeline`では同じコールバックから受け取る`cameraFrame`を`renderScene()`と`encode()`へ渡します。
 
 ## 典型的な構成例
 
@@ -706,17 +774,20 @@ app.start({
 - 毎フレームの移動や回転に `deltaSec` を使っているか。
 - `PhysicsSpace.step()` に渡す値は `deltaSec` ではなく `deltaSec * 1000.0` の `deltaMs` になっているか。
 - 入力の「押された瞬間」と「押されている間」を使い分けているか。
-- Orbit カメラが必要な場合、`app.createOrbitEyeRig()` を呼んでいるか。
-- 長い説明やヘルプを HUD ではなく `OverlayPanel` に出しているか。
+- 軌道カメラが必要な場合、`app.createOrbitEyeRig()` を呼んでいるか。
+- 長い説明やヘルプをHUDではなく `OverlayPanel` に出しているか。
 - カスタムレンダーパスを使う場合、`autoDrawScene: false` が必要か確認しているか。
 - デバッグキーを維持したい独自入力は `app.attachInput()` 経由で接続しているか。
 
 ## まとめ
 
-`WebgApp` は、`webg` でアプリケーションを作るための標準的な土台です。`Screen`、シェーダー、`Space`、カメラ、入力、HUD、診断機能、フレームループをまとめ、開発者がシーン構築と更新処理に集中できるようにします。
+`WebgApp` は、`webg` でアプリケーションを作るための標準的な土台です。
+`Screen`、シェーダー、`Space`、カメラ、入力、HUD、診断機能、フレームループをまとめ、開発者がシーン構築と更新処理に集中できるようにします。
 
-最初に覚える流れは、`new WebgApp()`、`await app.init()`、`app.space` への配置、`app.start({ onUpdate })` の 4 つです。
+最初に覚える流れは、`new WebgApp()`、`await app.init()`、`app.space` への配置、`app.start({ onUpdate })` の4つです。
 
-`onUpdate` では、描画前にシーンの状態を 1 フレームぶん進めます。移動や回転には `ctx.deltaSec` を使い、必要な場合は `onUpdate({ deltaSec, input, app })` のように分割代入で取り出します。物理エンジンへ渡す場合は、`deltaSec` をミリ秒へ変換して `physics.step(deltaSec * 1000.0)` とします。
+`onUpdate` では、描画前にシーンの状態を1フレームぶん進めます。
+移動や回転には `ctx.deltaSec` を使い、必要な場合は `onUpdate({ deltaSec, input, app })` のように分割代入で取り出します。
+物理エンジンへ渡す場合は、`deltaSec` をミリ秒へ変換して `physics.step(deltaSec * 1000.0)` とします。
 
-次章では、この `WebgApp` が作る `cameraRig -> cameraRod -> eye` を土台として、`EyeRig` による Orbit、Follow、First-person などのカメラ制御を詳しく扱います。
+次章では、この `WebgApp` が作る `cameraRig -> cameraRod -> eye` を土台として、`EyeRig` による軌道、追従、1人称などのカメラ制御を詳しく扱います。

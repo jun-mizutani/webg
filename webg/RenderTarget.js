@@ -1,10 +1,11 @@
 // ---------------------------------------------
-//  RenderTarget.js  2026/04/21
+//  RenderTarget.js  2026/07/12
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // ---------------------------------------------
 
 import util from "./util.js";
+import { requireDepthConvention } from "./DepthConvention.js";
 
 export default class RenderTarget {
 
@@ -22,7 +23,10 @@ export default class RenderTarget {
     // sampleDepth を true にすると TEXTURE_BINDING usage を追加する
     // depth format 自体は既存 pipeline と合わせるため従来値を既定に保つ
     this.sampleDepth = options.sampleDepth === true;
-    this.depthFormat = options.depthFormat ?? "depth24plus";
+    this.depthConvention = this.hasDepth
+      ? requireDepthConvention(options.depthConvention, `${this.label} depthConvention`)
+      : null;
+    this.depthFormat = this.depthConvention?.format ?? null;
     this.usage = options.usage
       ?? (GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_SRC);
     this.depthUsage = options.depthUsage
@@ -79,11 +83,19 @@ export default class RenderTarget {
   }
 
   // 指定サイズに合わせて color/depth texture を作る
+  // 既存textureと寸法が同じ場合はGPU resourceを維持し、再生成しなかったことをfalseで返す
   resize(width, height) {
-    this.width = util.readOptionalInteger(width, "RenderTarget width", this.width, { min: 1 });
-    this.height = util.readOptionalInteger(height, "RenderTarget height", this.height, { min: 1 });
+    const nextWidth = util.readOptionalInteger(width, "RenderTarget width", this.width, { min: 1 });
+    const nextHeight = util.readOptionalInteger(height, "RenderTarget height", this.height, { min: 1 });
+    const hasCompleteTextures = this.colorTexture !== null
+      && (!this.hasDepth || this.depthTexture !== null);
+    if (nextWidth === this.width && nextHeight === this.height && hasCompleteTextures) {
+      return false;
+    }
+    this.width = nextWidth;
+    this.height = nextHeight;
     if (!this.device) {
-      return;
+      return false;
     }
 
     this.destroyTextures();
@@ -106,6 +118,7 @@ export default class RenderTarget {
       this.depthView = this.depthTexture.createView();
       this.depthSampleView = this.sampleDepth ? this.depthTexture.createView() : this.depthView;
     }
+    return true;
   }
 
   // screen の現在サイズへ追従する

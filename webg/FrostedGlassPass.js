@@ -1,5 +1,5 @@
 // ---------------------------------------------
-//  FrostedGlassPass.js  2026/05/04
+//  FrostedGlassPass.js  2026/06/21
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // ---------------------------------------------
@@ -21,6 +21,7 @@ export default class FrostedGlassPass {
     this.height = util.readOptionalInteger(options.height, "FrostedGlassPass height", 1, { min: 1 });
     this.sceneFormat = options.sceneFormat ?? gpu?.format ?? "bgra8unorm";
     this.canvasFormat = options.canvasFormat ?? gpu?.format ?? "bgra8unorm";
+    this.depthConvention = options.depthConvention ?? gpu?.depthConvention;
     this.blurRadius = util.readOptionalFiniteNumber(options.blurRadius, "FrostedGlassPass blurRadius", 2.2, { min: 0 });
     this.blurIterations = util.readOptionalInteger(options.blurIterations, "FrostedGlassPass blurIterations", 2, { min: 1 });
     this.blurScale = util.readOptionalFiniteNumber(options.blurScale, "FrostedGlassPass blurScale", 0.5, { minExclusive: 0 });
@@ -216,7 +217,8 @@ fn fsMain(input : VSOut) -> @location(0) vec4f {
       width: this.width,
       height: this.height,
       format: this.sceneFormat,
-      hasDepth: true
+      hasDepth: true,
+      depthConvention: this.depthConvention
     });
     this.maskTarget = new RenderTarget(this.gpu, {
       label: "FrostedGlassPass:mask",
@@ -284,12 +286,18 @@ fn fsMain(input : VSOut) -> @location(0) vec4f {
   // resize 段階: canvas サイズ変更に合わせて scene、mask、blur target を作り直す
   // width と height は composite shader の uniform にも残しておく
   resize(width, height) {
-    this.width = util.readOptionalInteger(width, "FrostedGlassPass width", this.width, { min: 1 });
-    this.height = util.readOptionalInteger(height, "FrostedGlassPass height", this.height, { min: 1 });
+    const nextWidth = util.readOptionalInteger(width, "FrostedGlassPass width", this.width, { min: 1 });
+    const nextHeight = util.readOptionalInteger(height, "FrostedGlassPass height", this.height, { min: 1 });
+    if (nextWidth === this.width && nextHeight === this.height && this.sceneTarget) {
+      return false;
+    }
+    this.width = nextWidth;
+    this.height = nextHeight;
     this.sceneTarget?.resize(this.width, this.height);
     this.maskTarget?.resize(this.width, this.height);
     this.blurPass?.resize(this.width, this.height);
     this.updateUniforms();
+    return true;
   }
 
   // resize 連携段階: Screen が持つ現在の canvas サイズへ pass 全体を追従させる

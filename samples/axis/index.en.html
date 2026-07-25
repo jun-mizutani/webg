@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>axis</title>
+  <link rel="icon" href="data:," />
+  <!-- 2026/06/19 -->
+  <style>
+
+:root {
+  color-scheme: light;
+  --bg: #eef3f8;
+  --paper: rgba(255, 255, 255, 0.94);
+  --line: #c8d5e4;
+  --ink: #17324a;
+  --muted: #5c748b;
+  --accent: #1566ab;
+  --accent-soft: #dfeefe;
+  --code-bg: #f3f7fb;
+  --shadow: rgba(29, 52, 79, 0.10);
+}
+* { box-sizing: border-box; }
+html, body {
+  margin: 0;
+  min-height: 100%;
+}
+body {
+  background:
+    radial-gradient(circle at top left, rgba(21, 102, 171, 0.12), transparent 24%),
+    radial-gradient(circle at top right, rgba(255, 191, 118, 0.10), transparent 22%),
+    linear-gradient(180deg, #f8fbfd 0%, var(--bg) 100%);
+  color: var(--ink);
+  font: 16px/1.78 "Avenir Next", "Hiragino Sans", "Yu Gothic", sans-serif;
+}
+.page {
+  width: min(1080px, calc(100% - 28px));
+  margin: 0 auto;
+  padding: 24px 0 56px;
+}
+.hero,
+.doc {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  box-shadow: 0 22px 52px var(--shadow);
+}
+.hero {
+  padding: 22px 24px;
+  margin-bottom: 18px;
+}
+.hero h1 {
+  margin: 0 0 8px;
+  font-size: clamp(2rem, 4vw, 3rem);
+  line-height: 1.08;
+}
+.hero p {
+  margin: 0;
+  color: var(--muted);
+}
+.doc {
+  padding: 28px;
+}
+.doc > :first-child {
+  margin-top: 0;
+}
+h1, h2, h3, h4, h5, h6 {
+  line-height: 1.25;
+  margin: 1.45em 0 0.55em;
+}
+h1 {
+  font-size: 2.2rem;
+}
+h2 {
+  padding-bottom: 0.28em;
+  border-bottom: 1px solid var(--line);
+  font-size: 1.48rem;
+}
+h3 {
+  font-size: 1.14rem;
+}
+p, ul, ol, table, pre, blockquote {
+  margin: 0 0 1em;
+}
+ul, ol {
+  padding-left: 1.4em;
+}
+li + li {
+  margin-top: 0.26em;
+}
+a {
+  color: var(--accent);
+  text-decoration: none;
+}
+a:hover {
+  text-decoration: underline;
+}
+img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  border-radius: 16px;
+  border: 1px solid var(--line);
+  box-shadow: 0 12px 32px rgba(29, 52, 79, 0.08);
+  margin: 1.1em 0 1.4em;
+}
+code {
+  padding: 0.12em 0.38em;
+  border-radius: 0.45em;
+  background: var(--code-bg);
+  border: 1px solid #dbe6f1;
+  font: 0.92em/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+pre {
+  padding: 14px 16px;
+  overflow-x: auto;
+  border-radius: 14px;
+  background: #0f1720;
+  color: #ecf5ff;
+}
+pre code {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #ffffff;
+}
+th, td {
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  text-align: left;
+  vertical-align: top;
+}
+th {
+  background: #f5f9fc;
+}
+hr {
+  border: 0;
+  border-top: 1px solid var(--line);
+  margin: 1.5em 0;
+}
+blockquote {
+  padding: 0.3em 0 0.3em 1em;
+  border-left: 4px solid #c9dbef;
+  color: var(--muted);
+}
+@media (max-width: 720px) {
+  .page {
+    width: min(100% - 18px, 1080px);
+    padding-top: 16px;
+  }
+  .hero,
+  .doc {
+    border-radius: 18px;
+  }
+  .doc {
+    padding: 20px;
+  }
+}
+
+  </style>
+</head>
+<body>
+  <main class="page">
+    <section class="hero">
+      <h1>axis</h1>
+    </section>
+    <article class="doc">
+<h1>axis</h1>
+<p>English | <a href="index.html">日本語</a></p>
+<p><img src="./axis.jpg" alt="axis" /></p>
+<h2>Overview</h2>
+<ul><li>This is an educational sample that places the X / Y / Z reference axes at the origin of 3D space so you can check coordinate-system orientation and scale</li><li>It uses <code>WebgApp</code> for startup and lets you compare the orbit camera from <code>EyeRig</code> with projection updates from <code>WebgApp.updateProjection()</code> in the same screen</li><li><code>projectionFar</code> is narrowed to <code>160</code>, matching <code>samples/dof</code>, so the readable range for depth-buffer precision stays compact</li><li>By changing the FOV with <code>- / =</code> and the camera distance with <code>[ / ]</code> or the mouse wheel, it becomes easier to follow how the projection matrix changes the final view</li><li>The camera's world position is displayed near the FOV display so that the relationship between viewpoint position and final appearance is easier to inspect at the same time</li><li>The background and fog are shifted slightly toward gray, and the CommandPalette is drawn in black so the axis colors and pyramid colors remain easy to read</li><li>The red X, green Y, and blue Z axes are drawn slightly thicker so the axes themselves do not get lost even on a white background</li><li>In addition to the red X, green Y, and blue Z axes, small vividly colored pyramids are placed across a wide range in the positive and negative Z directions, with denser spacing horizontally, so depth and perspective are easier to read on planes near the axes</li><li>Pressing <code>F</code> toggles fog and pressing <code>D</code> toggles DOF, making it easier to compare how depth cues change in the same scene</li><li><code>V</code> switches between <code>composite / scene / depth / focusMask / stage / smallBlur / mediumBlur / largeBlur</code>, so the focus mask and staged blur steps can be compared visually</li><li><code>focusRange</code> is treated as the distance width of one blur stage rather than the full distance to maximum blur, making the out-of-focus bleed easier to inspect step by step</li><li><code>maxBlurMix</code> is kept high so the difference between in-focus and out-of-focus areas is easier to notice</li><li><code>5 / 6</code> changes the focus range itself, making the focused distance band easier to adjust</li><li><code>1 / 2</code> changes sharpness width and <code>3 / 4</code> changes sharpness power, making it easier to compare the curve shape relative to <code>focusRange</code></li><li>The DOF focus always stays at the origin so that the center sphere remains sharp even when the camera moves</li><li>The axes and the pyramid grid are kept level to avoid confusion caused by tilt</li><li>The origin is drawn as a small sphere so the intersection of the coordinate axes is visible without being too heavy</li><li>The operation guide and educational notes are collected in the collapsible help panel at the upper left with <code>buildHelpPanelOptions()</code> and <code>showOverlayPanel()</code>, while current values are shown separately on the CommandPalette</li></ul>
+<h2>How to Run</h2>
+<ul><li>Open <a href="./axis.html">./axis.html</a></li><li>Use a browser with WebGPU support, and check the help panel and CommandPalette together with the sample when needed</li></ul>
+<h2>webg Features Used</h2>
+<ul><li><code>buildHelpPanelOptions() + showOverlayPanel()</code>: builds the standard help panel at the upper left and toggles the visibility of operation notes and supplemental explanations</li><li><code>EyeRig</code>: bundles the orbit camera and pointer / keyboard input</li><li><code>Shape / Primitive</code>: generates the axis arrows, origin sphere, and pyramid rows</li><li><code>WebgApp.updateProjection()</code>: entry point for updating the projection matrix from <code>viewAngle</code> and viewport aspect</li><li><code>CommandPalette</code>: shows current values while editing FOV, fog, and DOF settings</li></ul>
+<h2>Checkpoints</h2>
+<ul><li>Confirm that the X / Y / Z colors and directions match expectations, keeping the coordinate-system reading consistent with the other samples</li><li>Confirm that changing the camera orbit and FOV significantly changes the appearance even though the scene itself stays the same</li><li>Confirm that the origin sphere and the pyramid rows extending in the Z direction make depth easier to read than axes alone, and that comparison with the level grid is also easier</li><li>Confirm that the upper-left help panel shows the axis explanation and operation guide, that pressing <code>Hide Help</code> leaves only the <code>Show Help</code> button, and that <code>Show Help</code> restores it</li><li>Confirm how the emphasis of depth changes when fog and DOF are toggled</li><li>Confirm that CommandPalette and the help panel remain readable on the white background</li></ul>
+<h2>Controls</h2>
+<ul><li><code>Hide Help / Show Help</code> in the upper-left help panel: show or hide the operation-guide body text</li><li>Drag: orbit camera</li><li>Arrow keys: orbit camera</li><li>Mouse wheel / <code>[ ]</code>: camera distance</li><li><code>- / =</code>: FOV</li><li><code>F</code>: toggle fog on or off</li><li><code>D</code>: toggle DOF on or off</li><li><code>5 / 6</code>: narrow or widen the focus range</li><li><code>1 / 2</code>: decrease or increase sharpness width</li><li><code>3 / 4</code>: decrease or increase sharpness power</li><li><code>V</code>: switch the DOF debug view between <code>composite / scene / depth / focusMask / stage / smallBlur / mediumBlur / largeBlur</code></li><li>Compare the stage debug view with small / medium / large blur to inspect out-of-focus bleed</li><li><code>r</code>: reset the camera, FOV, fog, and DOF</li></ul>
+    </article>
+  </main>
+</body>
+</html>

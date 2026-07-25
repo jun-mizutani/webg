@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>compute_deferred_lighting</title>
+  <link rel="icon" href="data:," />
+  <!-- 2026/06/19 -->
+  <style>
+
+:root {
+  color-scheme: light;
+  --bg: #eef3f8;
+  --paper: rgba(255, 255, 255, 0.94);
+  --line: #c8d5e4;
+  --ink: #17324a;
+  --muted: #5c748b;
+  --accent: #1566ab;
+  --accent-soft: #dfeefe;
+  --code-bg: #f3f7fb;
+  --shadow: rgba(29, 52, 79, 0.10);
+}
+* { box-sizing: border-box; }
+html, body {
+  margin: 0;
+  min-height: 100%;
+}
+body {
+  background:
+    radial-gradient(circle at top left, rgba(21, 102, 171, 0.12), transparent 24%),
+    radial-gradient(circle at top right, rgba(255, 191, 118, 0.10), transparent 22%),
+    linear-gradient(180deg, #f8fbfd 0%, var(--bg) 100%);
+  color: var(--ink);
+  font: 16px/1.78 "Avenir Next", "Hiragino Sans", "Yu Gothic", sans-serif;
+}
+.page {
+  width: min(1080px, calc(100% - 28px));
+  margin: 0 auto;
+  padding: 24px 0 56px;
+}
+.hero,
+.doc {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  box-shadow: 0 22px 52px var(--shadow);
+}
+.hero {
+  padding: 22px 24px;
+  margin-bottom: 18px;
+}
+.hero h1 {
+  margin: 0 0 8px;
+  font-size: clamp(2rem, 4vw, 3rem);
+  line-height: 1.08;
+}
+.hero p {
+  margin: 0;
+  color: var(--muted);
+}
+.doc {
+  padding: 28px;
+}
+.doc > :first-child {
+  margin-top: 0;
+}
+h1, h2, h3, h4, h5, h6 {
+  line-height: 1.25;
+  margin: 1.45em 0 0.55em;
+}
+h1 {
+  font-size: 2.2rem;
+}
+h2 {
+  padding-bottom: 0.28em;
+  border-bottom: 1px solid var(--line);
+  font-size: 1.48rem;
+}
+h3 {
+  font-size: 1.14rem;
+}
+p, ul, ol, table, pre, blockquote {
+  margin: 0 0 1em;
+}
+ul, ol {
+  padding-left: 1.4em;
+}
+li + li {
+  margin-top: 0.26em;
+}
+a {
+  color: var(--accent);
+  text-decoration: none;
+}
+a:hover {
+  text-decoration: underline;
+}
+img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  border-radius: 16px;
+  border: 1px solid var(--line);
+  box-shadow: 0 12px 32px rgba(29, 52, 79, 0.08);
+  margin: 1.1em 0 1.4em;
+}
+code {
+  padding: 0.12em 0.38em;
+  border-radius: 0.45em;
+  background: var(--code-bg);
+  border: 1px solid #dbe6f1;
+  font: 0.92em/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+pre {
+  padding: 14px 16px;
+  overflow-x: auto;
+  border-radius: 14px;
+  background: #0f1720;
+  color: #ecf5ff;
+}
+pre code {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #ffffff;
+}
+th, td {
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  text-align: left;
+  vertical-align: top;
+}
+th {
+  background: #f5f9fc;
+}
+hr {
+  border: 0;
+  border-top: 1px solid var(--line);
+  margin: 1.5em 0;
+}
+blockquote {
+  padding: 0.3em 0 0.3em 1em;
+  border-left: 4px solid #c9dbef;
+  color: var(--muted);
+}
+@media (max-width: 720px) {
+  .page {
+    width: min(100% - 18px, 1080px);
+    padding-top: 16px;
+  }
+  .hero,
+  .doc {
+    border-radius: 18px;
+  }
+  .doc {
+    padding: 20px;
+  }
+}
+
+  </style>
+</head>
+<body>
+  <main class="page">
+    <section class="hero">
+      <h1>compute_deferred_lighting</h1>
+    </section>
+    <article class="doc">
+<h1>compute_deferred_lighting</h1>
+<p><a href="index.en.html">English</a> | 日本語</p>
+<p><img src="./compute_deferred_lighting.jpg" alt="compute_deferred_lighting" /></p>
+<h2>概要</h2>
+<p>Deferred Lightingは、geometryを先にG-bufferへ描き、保存した表面情報に対して後段で光源を評価する描画方式です。このサンプルでは<code>ComputeEffectPipeline</code>がGeometry Buffer、Deferred Lighting、tone mappingを接続し、最大128個のLocal Lightをpixel単位で評価します。シーンのgeometryは光源数にかかわらず一度だけ描画されるため、geometryの複雑さと光源評価の複雑さを分けて観察できます。</p>
+<p>Local Lightには、全方向へ放射する<code>type: &quot;point&quot;</code>と、指定方向の円錐内へ放射する<code>type: &quot;cone&quot;</code>があります。このサンプルは多数灯の負荷を比較しやすくするため、動く光源をすべてpointとして明示します。<code>type</code>は必須です。coneを使う場合は<code>direction</code>、<code>innerAngle</code>、<code>outerAngle</code>も必須で、不完全なconeがpointへ置き換えられることはありません。</p>
+<p>光源の<code>position</code>と<code>direction</code>はWorld座標系で指定します。<code>DeferredLightingPass</code>は、その描画frameの<code>CameraFrame</code>を使い、位置をcamera-relativeなview-space位置へ、方向を平行移動を含まないview-space方向へ変換します。このため、アプリケーションがprojection配列やview matrixを別々に構築する必要はありません。</p>
+<h2>光源とフレームの接続</h2>
+<p>point Local Lightは次のように作ります。</p>
+<pre><code class="language-js">const lights = [{
+  type: &quot;point&quot;,
+  position: [0.0, 2.0, -4.0],
+  color: [1.0, 0.45, 0.12],
+  radius: 9.0,
+  intensity: 3.2
+}];</code></pre>
+<p>同じframeの<code>cameraFrame</code>をG-buffer生成と照明計算へ渡します。サンプルではShadow、SSAO、SSR、DoF、Bloom、Toon、Edgeを無効にし、多数のLocal LightとG-bufferの関係だけを確認できる構成にしています。</p>
+<pre><code class="language-js">app.start({
+  onBeforeDraw: ({ cameraFrame }) =&gt; {
+    pipeline.renderScene(app.space, cameraFrame, app.clearColor, {
+      shadowEnabled: false
+    });
+  },
+
+  onAfterDraw3d: ({ cameraFrame }) =&gt; {
+    app.getGPU().endPass();
+    const finalColor = pipeline.encode(app.getGPU().commandEncoder, {
+      cameraFrame,
+      shadowEnabled: false,
+      ssaoEnabled: false,
+      ssrEnabled: false,
+      lights,
+      lightCount: 64,
+      lightingView: &quot;lighting&quot;
+    });
+    app.screen.beginPresentPass({ clearColor: app.clearColor });
+    copyPass.draw(finalColor);
+    app.screen.clearDepthBuffer();
+  }
+});</code></pre>
+<p><code>lightCount</code>は配列の先頭から評価する灯数です。配列長を超える値やconstructorの<code>maxLights</code>を超える値は例外になります。各pixelがすべてのactive lightを走査する基準実装なので、灯数を増やすと計算量も増えます。さらに多くの光源が必要なアプリケーションでは、tiled lightingやclustered lightingを検討します。</p>
+<h2>実行方法と確認点</h2>
+<p><a href="./compute_deferred_lighting.html">compute_deferred_lighting.html</a>をWebGPU対応ブラウザで開きます。<code>V</code>またはCommandPaletteで<code>lighting / albedo / normal / depth</code>を切り替えると、照明結果とG-buffer入力を分けて調べられます。</p>
+<p><code>1</code>と<code>2</code>、またはCommandPaletteのLightsで、有効灯数を<code>16, 32, 64, 96, 128</code>から選べます。Spaceキーでlight animationを止めると、同じ光源配置のままdebug viewや灯数を比較できます。light数を増やしたときにgeometryの形は変わらず、照明計算の負荷と重なりだけが増えることを確認してください。</p>
+    </article>
+  </main>
+</body>
+</html>

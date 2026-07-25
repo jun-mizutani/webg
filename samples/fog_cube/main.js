@@ -1,11 +1,14 @@
 // ---------------------------------------------
-// samples/fog_cube/main.js  2026/04/28
+// samples/fog_cube/main.js  2026/07/25
 //   fog_cube sample
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // ---------------------------------------------
 import WebgApp from "../../webg/WebgApp.js";
 import { buildErrorPanelOptions, buildHelpPanelOptions } from "../../webg/OverlayPanelPresets.js";
+import CommandPalette, {
+  getDefaultCommandPaletteCss
+} from "../../webg/CommandPalette.js";
 import Primitive from "../../webg/Primitive.js";
 import Shape from "../../webg/Shape.js";
 import Diagnostics from "../../webg/Diagnostics.js";
@@ -22,7 +25,8 @@ const GUIDE_LINES = [
   "[0] solid  [4] some cube wire  [5] all wire",
   "[q]/[w] near -/+  [a]/[s] far -/+",
   "[z]/[x] density -/+  [c] fog color",
-  "[space] pause motion  [r] reset view and fog"
+  "[space] pause motion  [r] reset view and fog",
+  "CommandPalette: double tap canvas or press /"
 ];
 
 const FOG_PRESETS = [
@@ -72,6 +76,7 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 });
 
+// 材質を生成し、後続処理で利用できる状態にする
 function createMaterial(color, ambient, specular, power) {
   return {
     use_texture: 0,
@@ -83,6 +88,7 @@ function createMaterial(color, ambient, specular, power) {
   };
 }
 
+// `primitive`のノードを生成し、後続処理で利用できる状態にする
 function createPrimitiveNode(app, name, asset, material, position, attitude = [0.0, 0.0, 0.0]) {
   // Primitive が返す ModelAsset を Shape に流し込み、1 node へまとめる
   const shape = new Shape(app.getGPU());
@@ -103,6 +109,7 @@ function createPrimitiveNode(app, name, asset, material, position, attitude = [0
   return node;
 }
 
+// シーンを生成し、後続処理で利用できる状態にする
 function createScene(app) {
   // 遠近方向へ object を並べ、fog の減衰を比較しやすい scene を作る
   createPrimitiveNode(
@@ -178,24 +185,28 @@ function createScene(app) {
   return { cubes, pillars };
 }
 
+// `clampFogState`は受け取った値を処理し、後続処理で利用する状態または結果を生成する
 function clampFogState(state) {
   state.near = Math.max(0.0, Math.min(state.near, 240.0));
   state.far = Math.max(state.near + 1.0, Math.min(state.far, 260.0));
   state.density = Math.max(0.0, Math.min(state.density, 0.20));
 }
 
+// `modeLabel`は現在値を読みやすい診断文字列へ整形する
 function modeLabel(mode) {
   if (mode < 0.5) return "off";
   if (mode < 1.5) return "linear";
   return "exp";
 }
 
+// `wireframeLabel`は現在値を読みやすい診断文字列へ整形する
 function wireframeLabel(mode) {
   if (mode === WIREFRAME_PARTIAL) return "some cubes";
   if (mode === WIREFRAME_ALL) return "all";
   return "solid";
 }
 
+// このインスタンスの初期化段階で、必要な状態と資源を準備して処理を開始する
 async function start() {
   const initialPreset = FOG_PRESETS[DEFAULT_FOG.presetIndex];
   app = new WebgApp({
@@ -245,6 +256,7 @@ async function start() {
   // 現在値は canvas HUD と diagnostics に分け、help は畳める説明として扱う
   app.showOverlayPanel(buildHelpPanelOptions({
     id: "fogCubeHelpOverlay",
+    collapsed: true,
     lines: GUIDE_LINES
   }));
 
@@ -269,7 +281,9 @@ async function start() {
     presetIndex: DEFAULT_FOG.presetIndex,
     wireframeMode: WIREFRAME_SOLID
   };
+  let palette = null;
 
+  // フォグを対象の状態または描画設定へ反映する
   const applyFog = () => {
     clampFogState(state);
     const preset = FOG_PRESETS[state.presetIndex];
@@ -282,6 +296,7 @@ async function start() {
       mode: state.mode
     });
   };
+  // シーンの`shapes`を現在の入力と状態から求め、呼び出し元へ返す
   const getSceneShapes = () => {
     const shapes = [];
     const nodes = app?.space?.nodes ?? [];
@@ -293,6 +308,7 @@ async function start() {
     }
     return shapes;
   };
+  // ワイヤーフレームを対象の状態または描画設定へ反映する
   const applyWireframe = () => {
     // wireframe 表示は fog と同じ scene で見え方を比較するための表示モード
     // solid / 一部 cube / scene 全体を明示的に切り替え、前状態が残らないよう毎回全 shape を設定する
@@ -310,6 +326,7 @@ async function start() {
       cubeShape?.setWireframe?.(i % 3 === 0);
     }
   };
+  // 診断情報の統計情報を現在の入力と実行状態に合わせて更新する
   const refreshDiagnosticsStats = (frameCount = app.screen.getFrameCount()) => {
     const envReport = app.checkEnvironment({
       stage: "runtime-check",
@@ -332,6 +349,7 @@ async function start() {
     });
     return envReport;
   };
+  // 検査情報のレポートを生成し、後続処理で利用できる状態にする
   const makeProbeReport = (frameCount) => {
     const envReport = app.checkEnvironment({
       stage: "runtime-probe",
@@ -357,6 +375,7 @@ async function start() {
     });
     return report;
   };
+  // 視点とフォグの設定を起動時の状態へ戻す
   const resetViewAndFog = () => {
     state.paused = false;
     state.mode = DEFAULT_FOG.mode;
@@ -371,6 +390,153 @@ async function start() {
     applyFog();
     applyWireframe();
   };
+  // `after`のコマンドを現在の入力と実行状態に合わせて更新する
+  const refreshAfterCommand = () => {
+    palette?.render();
+    app.requestRender();
+  };
+  // フォグのコマンドを対象の状態または描画設定へ反映する
+  const applyFogCommand = (command) => {
+    if (command === "fog-off") {
+      state.mode = 0.0;
+    } else if (command === "fog-linear") {
+      state.mode = 1.0;
+    } else if (command === "fog-exp") {
+      state.mode = 2.0;
+    } else if (command === "wire-solid") {
+      state.wireframeMode = WIREFRAME_SOLID;
+    } else if (command === "wire-partial") {
+      state.wireframeMode = state.wireframeMode === WIREFRAME_PARTIAL
+        ? WIREFRAME_SOLID
+        : WIREFRAME_PARTIAL;
+    } else if (command === "wire-all") {
+      state.wireframeMode = state.wireframeMode === WIREFRAME_ALL
+        ? WIREFRAME_SOLID
+        : WIREFRAME_ALL;
+    } else if (command === "near-down") {
+      state.near -= 4.0;
+    } else if (command === "near-up") {
+      state.near += 4.0;
+    } else if (command === "far-down") {
+      state.far -= 6.0;
+    } else if (command === "far-up") {
+      state.far += 6.0;
+    } else if (command === "density-down") {
+      state.density -= 0.004;
+    } else if (command === "density-up") {
+      state.density += 0.004;
+    } else if (command === "color-next") {
+      state.presetIndex = (state.presetIndex + 1) % FOG_PRESETS.length;
+    } else if (command === "pause") {
+      state.paused = !state.paused;
+    } else if (command === "reset") {
+      resetViewAndFog();
+      refreshAfterCommand();
+      return true;
+    } else {
+      return false;
+    }
+    applyFog();
+    applyWireframe();
+    refreshAfterCommand();
+    return true;
+  };
+  // キーのコマンドを対象の状態または描画設定へ反映する
+  const applyKeyCommand = (key) => {
+    if (key === "1") return applyFogCommand("fog-off");
+    if (key === "2") return applyFogCommand("fog-linear");
+    if (key === "3") return applyFogCommand("fog-exp");
+    if (key === "0") return applyFogCommand("wire-solid");
+    if (key === "4") return applyFogCommand("wire-partial");
+    if (key === "5") return applyFogCommand("wire-all");
+    if (key === "q") return applyFogCommand("near-down");
+    if (key === "w") return applyFogCommand("near-up");
+    if (key === "a") return applyFogCommand("far-down");
+    if (key === "s") return applyFogCommand("far-up");
+    if (key === "z") return applyFogCommand("density-down");
+    if (key === "x") return applyFogCommand("density-up");
+    if (key === "c") return applyFogCommand("color-next");
+    if (key === " ") return applyFogCommand("pause");
+    if (key === "r") return applyFogCommand("reset");
+    return false;
+  };
+  const getCommandState = (id) => ({
+    active: (id === "fog-off" && state.mode < 0.5)
+      || (id === "fog-linear" && state.mode >= 0.5 && state.mode < 1.5)
+      || (id === "fog-exp" && state.mode >= 1.5)
+      || (id === "wire-solid" && state.wireframeMode === WIREFRAME_SOLID)
+      || (id === "wire-partial" && state.wireframeMode === WIREFRAME_PARTIAL)
+      || (id === "wire-all" && state.wireframeMode === WIREFRAME_ALL)
+  });
+  // コマンドの操作パレットの初期化段階で、必要な状態と資源を準備して処理を開始する
+  const installCommandPalette = () => {
+    palette = new CommandPalette({
+      document,
+      container: document.body,
+      viewport: app.screen.canvas,
+      title: "Fog Cube",
+      pageRows: 5,
+      pageRowsByPage: [5, 5],
+      closeOnCommand: false,
+      getCommandState,
+      onCommand: (id) => {
+        applyFogCommand(id);
+      },
+      onChange: (id, value) => {
+        if (id === "pause") {
+          state.paused = value;
+        } else if (id === "near") {
+          state.near = value;
+        } else if (id === "far") {
+          state.far = value;
+        } else if (id === "density") {
+          state.density = value;
+        } else if (id === "color") {
+          state.presetIndex = value;
+        }
+        applyFog();
+        applyWireframe();
+        refreshAfterCommand();
+      },
+      commands: [
+        // 1ページ目
+        { id: "fog-off", label: "Off", detail: "1", modeSwitch: true },
+        { id: "fog-linear", label: "Linear", detail: "2", modeSwitch: true },
+        { id: "fog-exp", label: "Exp", detail: "3", modeSwitch: true },
+        { id: "palette-next", label: "Next", detail: "page", pageSwitch: true },
+        { type: "toggle", id: "pause", label: "Pause", detail: "space", value: () => state.paused },
+        { id: "wire-solid", label: "Solid", detail: "0", modeSwitch: true },
+        { id: "wire-partial", label: "Some", detail: "wire", modeSwitch: true },
+        { id: "wire-all", label: "All", detail: "wire", modeSwitch: true },
+        { type: "stepper", id: "near", label: "Fog Near", value: () => state.near, min: 0.0, max: 240.0, step: 4.0, input: true },
+        { type: "stepper", id: "far", label: "Fog Far", value: () => state.far, min: 1.0, max: 260.0, step: 6.0, input: true },
+        { id: "color-next", label: "Color", detail: "next" },
+        { id: "reset", label: "Reset", detail: "view+fog" },
+        null,
+        null,
+        // 2ページ目
+        null,
+        null,
+        null,
+        { id: "palette-next", label: "Next", detail: "page", pageSwitch: true },
+        { type: "stepper", id: "density", label: "Fog Density", value: () => state.density, min: 0.0, max: 0.20, step: 0.004, decimals: 3, input: true },
+        { type: "select", id: "color", label: "Fog Color", value: () => state.presetIndex, options: FOG_PRESETS.map((preset, index) => ({
+          value: index,
+          label: preset.label
+        })) },
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+      ]
+    });
+    palette.attachToCanvas(app.screen.canvas, { key: "/" });
+    palette.setStyle(getDefaultCommandPaletteCss());
+  };
 
   applyFog();
   applyWireframe();
@@ -379,57 +545,17 @@ async function start() {
     collect: () => makeProbeReport(app.screen.getFrameCount())
   });
   app.configureDebugKeyInput();
+  installCommandPalette();
 
   app.attachInput({
     onKeyDown: (key, ev) => {
       if (ev.repeat) return;
-      if (key === "1") {
-        state.mode = 0.0;
-      } else if (key === "2") {
-        state.mode = 1.0;
-      } else if (key === "3") {
-        state.mode = 2.0;
-      } else if (key === "0") {
-        state.wireframeMode = WIREFRAME_SOLID;
-      } else if (key === "4") {
-        state.wireframeMode = state.wireframeMode === WIREFRAME_PARTIAL
-          ? WIREFRAME_SOLID
-          : WIREFRAME_PARTIAL;
-      } else if (key === "5") {
-        state.wireframeMode = state.wireframeMode === WIREFRAME_ALL
-          ? WIREFRAME_SOLID
-          : WIREFRAME_ALL;
-      } else if (key === "q") {
-        state.near -= 4.0;
-      } else if (key === "w") {
-        state.near += 4.0;
-      } else if (key === "a") {
-        state.far -= 6.0;
-      } else if (key === "s") {
-        state.far += 6.0;
-      } else if (key === "z") {
-        state.density -= 0.004;
-      } else if (key === "x") {
-        state.density += 0.004;
-      } else if (key === "c") {
-        state.presetIndex = (state.presetIndex + 1) % FOG_PRESETS.length;
-      } else if (key === " ") {
-        state.paused = !state.paused;
-      } else if (key === "r") {
-        resetViewAndFog();
-        return;
-      } else {
-        return;
-      }
-      applyFog();
-      applyWireframe();
+      applyKeyCommand(key);
     }
   });
 
   app.start({
     onUpdate: ({ timeSec, deltaSec, screen }) => {
-      orbit.update(deltaSec);
-
       if (!state.paused) {
         for (let i = 0; i < scene.cubes.length; i++) {
           const cube = scene.cubes[i];

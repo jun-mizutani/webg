@@ -3,22 +3,187 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>WebGPU Bloom Sample</title>
+  <title>bloom</title>
   <link rel="icon" href="data:," />
-  <!-- 2026/03/09 -->
+  <!-- 2026/06/19 -->
   <style>
-    html, body {
-      margin: 0;
-      height: 100%;
-      background: #0f170f;
-    }
-    canvas {
-      display: block;
-    }
+
+:root {
+  color-scheme: light;
+  --bg: #eef3f8;
+  --paper: rgba(255, 255, 255, 0.94);
+  --line: #c8d5e4;
+  --ink: #17324a;
+  --muted: #5c748b;
+  --accent: #1566ab;
+  --accent-soft: #dfeefe;
+  --code-bg: #f3f7fb;
+  --shadow: rgba(29, 52, 79, 0.10);
+}
+* { box-sizing: border-box; }
+html, body {
+  margin: 0;
+  min-height: 100%;
+}
+body {
+  background:
+    radial-gradient(circle at top left, rgba(21, 102, 171, 0.12), transparent 24%),
+    radial-gradient(circle at top right, rgba(255, 191, 118, 0.10), transparent 22%),
+    linear-gradient(180deg, #f8fbfd 0%, var(--bg) 100%);
+  color: var(--ink);
+  font: 16px/1.78 "Avenir Next", "Hiragino Sans", "Yu Gothic", sans-serif;
+}
+.page {
+  width: min(1080px, calc(100% - 28px));
+  margin: 0 auto;
+  padding: 24px 0 56px;
+}
+.hero,
+.doc {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  box-shadow: 0 22px 52px var(--shadow);
+}
+.hero {
+  padding: 22px 24px;
+  margin-bottom: 18px;
+}
+.hero h1 {
+  margin: 0 0 8px;
+  font-size: clamp(2rem, 4vw, 3rem);
+  line-height: 1.08;
+}
+.hero p {
+  margin: 0;
+  color: var(--muted);
+}
+.doc {
+  padding: 28px;
+}
+.doc > :first-child {
+  margin-top: 0;
+}
+h1, h2, h3, h4, h5, h6 {
+  line-height: 1.25;
+  margin: 1.45em 0 0.55em;
+}
+h1 {
+  font-size: 2.2rem;
+}
+h2 {
+  padding-bottom: 0.28em;
+  border-bottom: 1px solid var(--line);
+  font-size: 1.48rem;
+}
+h3 {
+  font-size: 1.14rem;
+}
+p, ul, ol, table, pre, blockquote {
+  margin: 0 0 1em;
+}
+ul, ol {
+  padding-left: 1.4em;
+}
+li + li {
+  margin-top: 0.26em;
+}
+a {
+  color: var(--accent);
+  text-decoration: none;
+}
+a:hover {
+  text-decoration: underline;
+}
+img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  border-radius: 16px;
+  border: 1px solid var(--line);
+  box-shadow: 0 12px 32px rgba(29, 52, 79, 0.08);
+  margin: 1.1em 0 1.4em;
+}
+code {
+  padding: 0.12em 0.38em;
+  border-radius: 0.45em;
+  background: var(--code-bg);
+  border: 1px solid #dbe6f1;
+  font: 0.92em/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+pre {
+  padding: 14px 16px;
+  overflow-x: auto;
+  border-radius: 14px;
+  background: #0f1720;
+  color: #ecf5ff;
+}
+pre code {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #ffffff;
+}
+th, td {
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  text-align: left;
+  vertical-align: top;
+}
+th {
+  background: #f5f9fc;
+}
+hr {
+  border: 0;
+  border-top: 1px solid var(--line);
+  margin: 1.5em 0;
+}
+blockquote {
+  padding: 0.3em 0 0.3em 1em;
+  border-left: 4px solid #c9dbef;
+  color: var(--muted);
+}
+@media (max-width: 720px) {
+  .page {
+    width: min(100% - 18px, 1080px);
+    padding-top: 16px;
+  }
+  .hero,
+  .doc {
+    border-radius: 18px;
+  }
+  .doc {
+    padding: 20px;
+  }
+}
+
   </style>
 </head>
 <body>
-  <canvas id="canvas" width="960" height="720"></canvas>
-  <script type="module" src="./main.js"></script>
+  <main class="page">
+    <section class="hero">
+      <h1>bloom</h1>
+    </section>
+    <article class="doc">
+<h1>bloom</h1>
+<p><a href="index.en.html">English</a> | 日本語</p>
+<p><img src="./bloom.jpg" alt="bloom" /></p>
+<h2>概要</h2>
+<ul><li>BloomPass を使って、3D scene を一度 offscreen RenderTarget へ描いてから bloom 合成して canvas へ戻すサンプルです。</li><li>PBR や shadow map を入れる前でも、postprocess を別レイヤとして独立に追加できることを確認するための最小実装です。</li><li>WebgApp は起動と CommandPalette 表示に使いつつ、3D scene 本体は autoDrawScene: false で offscreen 描画へ切り替えています。</li><li>操作説明は buildHelpPanelOptions() と showOverlayPanel() を使って左上へまとめ、不要なときは本文を畳んで Show Help ボタンだけを残せるようにしています。</li><li>中央球の specular highlight だけでなく、暖色 / 青 / ピンクの強い emissive 小球も置き、色付き glow が背景側へどう広がるかも見やすくしています。</li></ul>
+<h2>実行方法</h2>
+<ul><li>実行ファイルは <a href="./bloom.html">./bloom.html</a> です</li><li>WebGPU に対応したブラウザで開き、必要に応じて help panel と CommandPalette と合わせて確認してください</li></ul>
+<h2>使用している webg 機能</h2>
+<ul><li>buildHelpPanelOptions() + showOverlayPanel(): 左上の help panel を標準形式で生成し、操作説明の表示 / 非表示を切り替える</li><li>EyeRig(type=&quot;orbit&quot;): シーン全体を見回すオービット視点</li><li>RenderTarget: 3D scene の描画先となる offscreen color/depth texture</li><li>BloomDebugFullscreenPass: canvas と同じ色形式の scene / extract と、低解像度の blur target を正規化 UV で画面全体へ拡大して診断表示する</li><li>WebgApp.light.mode = &quot;world-node&quot;: カメラ固定ではなく world 空間に置いた light を使うフロー</li><li>Shape: glow object と floor の形状生成</li><li>CommandPalette: bloom parameter の current value を表示しながら変更する設定パネル</li></ul>
+<h2>確認ポイント</h2>
+<ul><li>3D scene が直接 canvas ではなく offscreen target に描かれ、その後 bloom 合成を経て表示されることを確認します</li><li>中央球と周囲の bright orb の周辺ににじみが出て、単なる blur ではなく明るい部分だけが広がることを確認します</li><li>画面上部奥の暖色 / 青 / ピンクの emissive 球の周囲にも glow が出て、背景色の暗い領域へ色付き bloom が乗ることを確認します</li><li>左上の help panel に操作説明が表示され、Hide Help を押すと Show Help ボタンだけが残り、Show Help で再表示できることを確認します</li><li>CommandPalette は Strength などの現在値を stepper / select / toggle 上へ表示し、その場で変更できることを確認します</li><li>B で bloom の ON / OFF を切り替えたとき、同じ scene のまま postprocess の有無だけが変化することを確認します</li><li>1 / 2 で threshold、3 / 4 で strength、5 / 6 で blur iteration、7 / 8 で blur radius を変えたとき、画面上の見えと CommandPalette の数値が一致することを確認します</li><li>A / S で extractIntensity を変えたとき、色付き emissive と highlight が extract view へどれだけ強く回るかを確認します</li><li>U で blur quality を full / half へ切り替えたとき、にじみの見え方と blur target サイズがどう変わるかを確認します</li><li>Q / W で softKnee、A / S で extractIntensity、T / Y で exposure、G で tone map mode を切り替えたとき、抽出境界と最終合成の見え方がどう変わるかを確認します</li><li>CommandPalette の Tone Map と Exposure の row で、bloom 合成後の色を tone mapping していることを確認します</li><li>threshold 境界だけが急に切り替わるのではなく、softKnee により highlight 周辺が少し滑らかに抽出されることを確認します</li><li>bloom extract は luma だけでなく max(rgb) も強めに使うため、青やピンクの強い emissive が extract view に乗りやすいことを確認します</li><li>V で composite / scene / extract / extractHeat / blurA / blurB を切り替え、extract そのものの色と、gain を heat 表示した状態を切り分けて確認できることを確認します</li><li>viewport サイズが変わっても BloomPass.resizeToScreen() により offscreen target が追従し、ぼけの位置ずれや解像度崩れが起きないことを確認します</li><li>カメラだけを回してもハイライト位置が完全には追従せず、world 固定 light が使われていることを確認します</li><li>幅が狭いときも CommandPalette を必要なときだけ開けるため、画面を覆い続けずに parameter を確認できることを確認します</li></ul>
+<h2>操作方法</h2>
+<ul><li>左上 help panel の Hide Help / Show Help: 操作説明本文の表示 / 非表示</li><li>ドラッグ / 矢印キー: オービットカメラ回転</li><li>ホイール / [ / ]: ズーム</li><li>B: bloom の ON / OFF</li><li>1 / 2: threshold を下げる / 上げる</li><li>3 / 4: bloom strength を下げる / 上げる</li><li>5 / 6: blur iteration を減らす / 増やす</li><li>7 / 8: blur radius を減らす / 増やす</li><li>U: blur quality を full / half で切り替える</li><li>Q / W: softKnee を下げる / 上げる</li><li>A / S: extractIntensity を下げる / 上げる</li><li>T / Y: exposure を下げる / 上げる</li><li>G: tone map mode を off / reinhard / aces で切り替える</li><li>V: composite / scene / extract / extractHeat / blurA / blurB 表示切り替え</li><li>Space: orb 回転の一時停止 / 再開</li><li>R: bloom パラメータを初期値へ戻す</li></ul>
+    </article>
+  </main>
 </body>
 </html>

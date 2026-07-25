@@ -1,5 +1,5 @@
 // ---------------------------------------------
-//  PlaneCollider.js  2026/05/09
+//  PlaneCollider.js  2026/07/25
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // ---------------------------------------------
@@ -154,6 +154,7 @@ export default class PlaneCollider extends Collider {
         "PlaneCollider tangentB"
       );
       const contacts = [];
+      // `pushUniqueContact`は重複や入力条件を確認し、対象を管理配列へ追加する
       const pushUniqueContact = (vertex) => {
         if (!vertex) {
           return;
@@ -167,6 +168,7 @@ export default class PlaneCollider extends Collider {
           point: [...vertex.point]
         });
       };
+      // `pickExtremes`は現在状態から対象を選択し、結果を返すまたは選択を切り替える
       const pickExtremes = (tangent) => {
         let minVertex = supportVertices[0];
         let maxVertex = supportVertices[0];

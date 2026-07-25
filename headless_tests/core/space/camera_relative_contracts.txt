@@ -1,0 +1,34 @@
+# space_camera_relative_contracts
+
+## 目的
+
+Spaceが旧view matrixを作らず、完全な内部render frame、renderFrameToken、低レベル公開APIのeye Nodeから作ったcamera-relative snapshotのいずれかをroot Nodeとlightへ共有することを確認します。点光源は位置、方向光は方向として異なる変換を行います。
+
+## 確認内容
+
+100億単位のWorld位置にある点光源が小さいview-space位置になり、方向光では平行移動を無視してWorld方向とカメラ逆回転だけを使うことを数値で検査します。完全なCamera Frameを渡す場合と登録済みrenderFrameTokenを渡す場合は、同じCamera Frame objectがroot Nodeへ届くことを確認します。
+
+単純なフォワード描画向けの`Space.draw(eye)`はeyeのワールド行列を一度更新し、投影情報を持たない内部スナップショットを作ります。`Space.setEye(eye)`で既定の視点を登録した場合は、webg 1.0互換経路として引数なしの`Space.draw()`も同じ処理を行います。既定の視点がない引数省略、不完全なeye、旧view Matrix、未登録objectは拒否します。
+
+## 実行方法
+
+```sh
+node --experimental-default-type=module headless_tests/core/space/headless_probe.js
+```
+
+## 結果
+
+2026-07-13 JSTにSpace、Node、Camera Frame、低レベル公開APIの当時のtest一式を実行し、終了コード0を確認しました。現在は `headless_tests/run_all.js` から実行します。
+
+```text
+space_camera_relative_contracts: all frame and light contracts passed
+node_camera_relative_contracts: all hierarchy contracts passed
+camera_frame_api_contracts: all camera-relative contracts passed
+sample_low_level_public_api_contracts: all simple camera facade contracts passed
+```
+
+## 解釈
+
+100億単位のWorld位置にある点光源は、カメラWorld位置との差を取った`[4, -2, -15]`のview-space位置としてNodeへ渡ります。方向光にはライトWorld姿勢とCamera Frameの逆回転だけが適用され、ライトとカメラの巨大平行移動は入りません。
+
+完全なCamera FrameとrenderFrameTokenは同じ内部object identityをroot Nodeへ共有します。`Space.draw(eye)`と、`setEye(eye)`の後に呼ぶ`Space.draw()`は内部classを公開せず、100億単位のWorld座標でも0.25mの差を保持します。単純なサンプルはeyeだけ、深度共有の複数パスはrenderFrameTokenだけを使い、通常Zや巨大平行移動の行列相殺へ戻る互換分岐はありません。

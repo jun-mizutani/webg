@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// samples/proctex/main.js  2026/04/12
+// samples/proctex/main.js  2026/07/25
 //   proctex sample
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -121,6 +121,7 @@ const buildControlRows = (state, colorPresets) => [
   }
 ];
 
+// このインスタンスの初期化段階で、必要な状態と資源を準備して処理を開始する
 const start = async () => {
   try {
     app = new WebgApp({
@@ -197,6 +198,7 @@ const start = async () => {
 
     const clamp = (v, min, max) => Math.max(min, Math.min(max, v));
 
+    // 材質を対象の状態または描画設定へ反映する
     const applyMaterial = () => {
       // 現在 state を SmoothShader 材質へ反映する
       cubeShape.setMaterial("smooth-shader", {
@@ -214,6 +216,7 @@ const start = async () => {
       });
     };
 
+    // `textures`を現在の入力と実行状態に合わせて更新する
     const rebuildTextures = async () => {
       // まずハイトマップ生成オプションを組み立てる
       const procOptions = {
@@ -264,6 +267,7 @@ const start = async () => {
       normalTex.setRepeat();
     };
 
+    // `rebuild`の実行段階で、必要な処理を決められた順序で進める
     const processRebuild = async () => {
       // 再生成要求があるときだけ、1回ずつ非同期実行する
       if (!state.rebuildRequested || state.rebuilding) return;
@@ -282,18 +286,21 @@ const start = async () => {
       }
     };
 
+    // `requestRebuild`は入力またはイベントを受け取り、対応する処理へ振り分ける
     const requestRebuild = () => {
       // 再生成要求フラグを立て、処理キューを起動する
       state.rebuildRequested = true;
       void processRebuild();
     };
 
+    // HUDを現在の入力と実行状態に合わせて更新する
     const refreshHud = () => {
       // HUD と debug dock は同じ行情報を見るようにし、
       // 操作ガイドと現在値がずれないようにする
       app.setControlRows(buildControlRows(state, colorPresets), HUD_ROW_OPTIONS);
     };
 
+    // キーを受け取った段階で、対応する状態更新と処理を実行する
     const handleKey = (key, ev = null) => {
       // キー操作でパラメータを更新し、必要なら再生成する
       if (ev?.repeat) return;

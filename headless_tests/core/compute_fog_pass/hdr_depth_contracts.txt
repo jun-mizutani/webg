@@ -1,0 +1,22 @@
+# ComputeFogPass HDR距離fog単体テスト
+
+## 目的
+
+透明合成済みの線形HDR sceneへ、G-bufferの不透明Reverse-Z深度を使って全画面fogを
+一度だけ適用する契約を確認します。透明surface自身の深度は保持しないため、透明部分は
+背後にある不透明surfaceの距離で近似します。
+
+## 確認項目
+
+1. sceneとoutputが`rgba16float`である。
+2. Camera Reverse-Z depthと同じCameraFrameを要求する。
+3. 背景depthではscene colorを変更しない。
+4. linearとexpの距離fog式を明示する。
+5. HDR scene colorを0から1へclampしない。
+6. color、near、far、density、modeをCPU側で検証する。
+
+## 実行方法
+
+```sh
+node --experimental-default-type=module headless_tests/core/compute_fog_pass/headless_probe.js
+```

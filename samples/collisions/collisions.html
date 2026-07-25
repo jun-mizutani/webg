@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>webg collisions sample</title>
+  <link rel="icon" href="data:," />
+  <style>
+    html, body {
+      margin: 0;
+      background: #1a261b;
+      color: #dbe6ff;
+      font: 13px/1.45 monospace;
+    }
+    #canvas {
+      display: block;
+      width: 900px;
+      height: 700px;
+    }
+    #hud {
+      position: fixed;
+      left: 10px;
+      top: 10px;
+      background: rgba(11, 18, 11, 0.76);
+      border: 1px solid rgba(145, 181, 255, 0.35);
+      border-radius: 6px;
+      padding: 7px 9px;
+      white-space: pre;
+      pointer-events: none;
+      max-width: 600px;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="canvas" width="900" height="700"></canvas>
+  <div id="hud">initializing...</div>
+  <script type="module" src="./main.js"></script>
+</body>
+</html>

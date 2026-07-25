@@ -3,339 +3,199 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>tone sample</title>
+  <title>tone</title>
   <link rel="icon" href="data:," />
+  <!-- 2026/06/19 -->
   <style>
-    :root {
-      --paper: #f3eadb;
-      --ink: #243026;
-      --muted: #647064;
-      --panel: #fff9ed;
-      --panel-strong: #f6d88f;
-      --accent: #2f6f61;
-      --accent-dark: #204c43;
-      --line: #d1bc8d;
-      --shadow: rgba(44, 52, 38, 0.18);
-    }
 
-    html,
-    body {
-      margin: 0;
-      min-height: 100%;
-      background:
-        radial-gradient(circle at 20% 12%, rgba(255, 221, 128, 0.52), transparent 28rem),
-        radial-gradient(circle at 84% 18%, rgba(87, 139, 120, 0.28), transparent 24rem),
-        linear-gradient(145deg, #efe1c6, var(--paper));
-      color: var(--ink);
-      font: 15px/1.58 "Avenir Next", "Hiragino Sans", "Yu Gothic", sans-serif;
-    }
+:root {
+  color-scheme: light;
+  --bg: #eef3f8;
+  --paper: rgba(255, 255, 255, 0.94);
+  --line: #c8d5e4;
+  --ink: #17324a;
+  --muted: #5c748b;
+  --accent: #1566ab;
+  --accent-soft: #dfeefe;
+  --code-bg: #f3f7fb;
+  --shadow: rgba(29, 52, 79, 0.10);
+}
+* { box-sizing: border-box; }
+html, body {
+  margin: 0;
+  min-height: 100%;
+}
+body {
+  background:
+    radial-gradient(circle at top left, rgba(21, 102, 171, 0.12), transparent 24%),
+    radial-gradient(circle at top right, rgba(255, 191, 118, 0.10), transparent 22%),
+    linear-gradient(180deg, #f8fbfd 0%, var(--bg) 100%);
+  color: var(--ink);
+  font: 16px/1.78 "Avenir Next", "Hiragino Sans", "Yu Gothic", sans-serif;
+}
+.page {
+  width: min(1080px, calc(100% - 28px));
+  margin: 0 auto;
+  padding: 24px 0 56px;
+}
+.hero,
+.doc {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  box-shadow: 0 22px 52px var(--shadow);
+}
+.hero {
+  padding: 22px 24px;
+  margin-bottom: 18px;
+}
+.hero h1 {
+  margin: 0 0 8px;
+  font-size: clamp(2rem, 4vw, 3rem);
+  line-height: 1.08;
+}
+.hero p {
+  margin: 0;
+  color: var(--muted);
+}
+.doc {
+  padding: 28px;
+}
+.doc > :first-child {
+  margin-top: 0;
+}
+h1, h2, h3, h4, h5, h6 {
+  line-height: 1.25;
+  margin: 1.45em 0 0.55em;
+}
+h1 {
+  font-size: 2.2rem;
+}
+h2 {
+  padding-bottom: 0.28em;
+  border-bottom: 1px solid var(--line);
+  font-size: 1.48rem;
+}
+h3 {
+  font-size: 1.14rem;
+}
+p, ul, ol, table, pre, blockquote {
+  margin: 0 0 1em;
+}
+ul, ol {
+  padding-left: 1.4em;
+}
+li + li {
+  margin-top: 0.26em;
+}
+a {
+  color: var(--accent);
+  text-decoration: none;
+}
+a:hover {
+  text-decoration: underline;
+}
+img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  border-radius: 16px;
+  border: 1px solid var(--line);
+  box-shadow: 0 12px 32px rgba(29, 52, 79, 0.08);
+  margin: 1.1em 0 1.4em;
+}
+code {
+  padding: 0.12em 0.38em;
+  border-radius: 0.45em;
+  background: var(--code-bg);
+  border: 1px solid #dbe6f1;
+  font: 0.92em/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+pre {
+  padding: 14px 16px;
+  overflow-x: auto;
+  border-radius: 14px;
+  background: #0f1720;
+  color: #ecf5ff;
+}
+pre code {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #ffffff;
+}
+th, td {
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  text-align: left;
+  vertical-align: top;
+}
+th {
+  background: #f5f9fc;
+}
+hr {
+  border: 0;
+  border-top: 1px solid var(--line);
+  margin: 1.5em 0;
+}
+blockquote {
+  padding: 0.3em 0 0.3em 1em;
+  border-left: 4px solid #c9dbef;
+  color: var(--muted);
+}
+@media (max-width: 720px) {
+  .page {
+    width: min(100% - 18px, 1080px);
+    padding-top: 16px;
+  }
+  .hero,
+  .doc {
+    border-radius: 18px;
+  }
+  .doc {
+    padding: 20px;
+  }
+}
 
-    body::before {
-      content: "";
-      position: fixed;
-      inset: 0;
-      pointer-events: none;
-      background-image:
-        linear-gradient(rgba(36, 48, 38, 0.035) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(36, 48, 38, 0.035) 1px, transparent 1px);
-      background-size: 32px 32px;
-      mask-image: linear-gradient(to bottom, rgba(0, 0, 0, 0.5), transparent 80%);
-    }
-
-    #app {
-      width: min(1080px, calc(100% - 32px));
-      margin: 28px auto 40px;
-    }
-
-    header {
-      display: grid;
-      grid-template-columns: 1fr auto;
-      gap: 18px;
-      align-items: end;
-      margin-bottom: 18px;
-    }
-
-    h1 {
-      margin: 0;
-      font-family: Georgia, "Hiragino Mincho ProN", serif;
-      font-size: clamp(30px, 6vw, 62px);
-      letter-spacing: -0.045em;
-      line-height: 0.96;
-    }
-
-    .lead {
-      max-width: 720px;
-      margin: 12px 0 0;
-      color: var(--muted);
-    }
-
-    .status-card {
-      min-width: 260px;
-      padding: 14px 16px;
-      border: 1px solid var(--line);
-      border-radius: 18px;
-      background: rgba(255, 249, 237, 0.76);
-      box-shadow: 0 16px 36px var(--shadow);
-    }
-
-    #status {
-      margin: 0;
-      color: var(--accent-dark);
-      font-family: "SFMono-Regular", Menlo, Consolas, monospace;
-      white-space: pre-wrap;
-    }
-
-    .grid {
-      display: grid;
-      grid-template-columns: minmax(0, 1.05fr) minmax(300px, 0.95fr);
-      gap: 16px;
-    }
-
-    .panel {
-      position: relative;
-      border: 1px solid var(--line);
-      border-radius: 22px;
-      padding: 18px;
-      background: rgba(255, 249, 237, 0.86);
-      box-shadow: 0 18px 42px var(--shadow);
-      overflow: hidden;
-    }
-
-    .panel::after {
-      content: "";
-      position: absolute;
-      inset: auto 18px 0;
-      height: 4px;
-      border-radius: 99px 99px 0 0;
-      background: linear-gradient(90deg, var(--accent), var(--panel-strong));
-      opacity: 0.7;
-    }
-
-    h2 {
-      margin: 0 0 14px;
-      font-size: 17px;
-      letter-spacing: 0.04em;
-    }
-
-    .row {
-      display: grid;
-      grid-template-columns: 136px 1fr auto;
-      gap: 10px;
-      align-items: center;
-      margin: 10px 0;
-    }
-
-    .button-row {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 10px;
-      margin-top: 14px;
-    }
-
-    label {
-      color: var(--muted);
-      font-weight: 650;
-    }
-
-    select,
-    input[type="range"] {
-      width: 100%;
-    }
-
-    select {
-      appearance: none;
-      border: 1px solid var(--line);
-      border-radius: 12px;
-      padding: 8px 34px 8px 10px;
-      background:
-        linear-gradient(45deg, transparent 50%, var(--accent-dark) 50%) calc(100% - 17px) 50% / 7px 7px no-repeat,
-        linear-gradient(135deg, var(--accent-dark) 50%, transparent 50%) calc(100% - 12px) 50% / 7px 7px no-repeat,
-        #fffdf6;
-      color: var(--ink);
-    }
-
-    input[type="range"] {
-      accent-color: var(--accent);
-    }
-
-    .value {
-      min-width: 76px;
-      color: var(--accent-dark);
-      font-family: "SFMono-Regular", Menlo, Consolas, monospace;
-      text-align: right;
-    }
-
-    button {
-      border: 1px solid var(--accent-dark);
-      border-radius: 999px;
-      padding: 9px 15px;
-      background: var(--accent);
-      color: #fffdf6;
-      font-weight: 700;
-      cursor: pointer;
-      touch-action: none;
-      user-select: none;
-      box-shadow: 0 8px 18px rgba(47, 111, 97, 0.26);
-    }
-
-    button.secondary {
-      background: #fffdf6;
-      color: var(--accent-dark);
-      box-shadow: none;
-    }
-
-    button:disabled {
-      opacity: 0.48;
-      cursor: not-allowed;
-      box-shadow: none;
-    }
-
-    .note {
-      margin: 12px 0 0;
-      color: var(--muted);
-      font-size: 13px;
-    }
-
-    @media (max-width: 780px) {
-      header,
-      .grid {
-        grid-template-columns: 1fr;
-      }
-
-      .row {
-        grid-template-columns: 1fr;
-      }
-
-      .value {
-        text-align: left;
-      }
-    }
   </style>
 </head>
 <body>
-  <div id="app">
-    <header>
-      <div>
-        <h1>Tone Lab</h1>
-        <p class="lead">ToneSynth の最小機能だけを使い、単音または3和音で波形、envelope、reverb の違いを聞き比べるサンプルです。</p>
-      </div>
-      <div class="status-card">
-        <pre id="status">status: loading</pre>
-      </div>
-    </header>
-
-    <div class="grid">
-      <section class="panel">
-        <h2>Play</h2>
-        <div class="row">
-          <label for="masterVol">Master Vol</label>
-          <input id="masterVol" type="range" min="0" max="1" step="0.01" value="0.26" />
-          <span id="masterVal" class="value">0.26</span>
-        </div>
-        <div class="row">
-          <label for="toneVol">Tone Vol</label>
-          <input id="toneVol" type="range" min="0" max="1" step="0.01" value="0.86" />
-          <span id="toneVolVal" class="value">0.86</span>
-        </div>
-        <div class="row">
-          <label for="rootNote">Root</label>
-          <select id="rootNote"></select>
-          <span id="rootVal" class="value">C4</span>
-        </div>
-        <div class="row">
-          <label for="waveType">Wave</label>
-          <select id="waveType"></select>
-          <span id="waveVal" class="value">sine</span>
-        </div>
-        <div class="row">
-          <label for="playMode">Mode</label>
-          <select id="playMode">
-            <option value="single">single tone</option>
-            <option value="major">major triad</option>
-            <option value="minor">minor triad</option>
-          </select>
-          <span id="modeVal" class="value">single</span>
-        </div>
-        <div class="row">
-          <label for="gain">Tone Gain</label>
-          <input id="gain" type="range" min="0.01" max="0.30" step="0.01" value="0.13" />
-          <span id="gainVal" class="value">0.13</span>
-        </div>
-        <div class="button-row">
-          <button id="btnInit">Audio Start</button>
-          <button id="btnPlaySingle" disabled>Hold Single</button>
-          <button id="btnPlayTriad" disabled>Hold Triad</button>
-          <button id="btnStop" class="secondary" disabled>Stop All</button>
-        </div>
-        <p class="note">Hold Single / Hold Triad は押している間だけ sustain し、離すと選択中 envelope の release で止まります。</p>
-      </section>
-
-      <section class="panel">
-        <h2>Envelope</h2>
-        <div class="row">
-          <label for="envelopeProfile">Profile</label>
-          <select id="envelopeProfile"></select>
-          <span id="profileVal" class="value">piano</span>
-        </div>
-        <div class="row">
-          <label for="attack">Attack</label>
-          <input id="attack" type="range" min="0" max="0.25" step="0.001" value="0.002" />
-          <span id="attackVal" class="value">0.002 sec</span>
-        </div>
-        <div class="row">
-          <label for="decay">Decay</label>
-          <input id="decay" type="range" min="0" max="0.70" step="0.001" value="0.420" />
-          <span id="decayVal" class="value">0.420 sec</span>
-        </div>
-        <div class="row">
-          <label for="sustain">Sustain</label>
-          <input id="sustain" type="range" min="0" max="1" step="0.01" value="0.16" />
-          <span id="sustainVal" class="value">0.16</span>
-        </div>
-        <div class="row">
-          <label for="release">Release</label>
-          <input id="release" type="range" min="0" max="1.20" step="0.001" value="0.180" />
-          <span id="releaseVal" class="value">0.180 sec</span>
-        </div>
-      </section>
-
-      <section class="panel">
-        <h2>Reverb</h2>
-        <div class="row">
-          <label for="reverbMix">Reverb Mix</label>
-          <input id="reverbMix" type="range" min="0" max="1" step="0.01" value="0.28" />
-          <span id="reverbMixVal" class="value">0.28</span>
-        </div>
-        <div class="row">
-          <label for="reverbKind">Kind</label>
-          <select id="reverbKind"></select>
-          <span id="reverbKindVal" class="value">hall</span>
-        </div>
-        <div class="row">
-          <label for="reverbLength">Length</label>
-          <input id="reverbLength" type="range" min="0.30" max="5.00" step="0.05" value="2.60" />
-          <span id="reverbLengthVal" class="value">2.60 sec</span>
-        </div>
-        <div class="row">
-          <label for="reverbDecay">Decay</label>
-          <input id="reverbDecay" type="range" min="0.50" max="4.50" step="0.05" value="1.70" />
-          <span id="reverbDecayVal" class="value">1.70</span>
-        </div>
-        <div class="button-row">
-          <button id="btnDry" class="secondary" disabled>Dry</button>
-          <button id="btnRoom" class="secondary" disabled>Room</button>
-          <button id="btnHall" class="secondary" disabled>Hall</button>
-          <button id="btnPlate" class="secondary" disabled>Plate</button>
-        </div>
-      </section>
-
-      <section class="panel">
-        <h2>What To Listen For</h2>
-        <p class="note">sine は基音が目立ち、triangle は少し明るく、square と sawtooth は倍音が強く出ます。同じ envelope でも波形を変えると、立ち上がりや残響の印象が変わります。</p>
-        <p class="note">percussion は短く、organ は持続が長く、guitar と piano は弾いた直後の減衰を聞き取りやすい profile です。brass と woodwind は立ち上がりの遅さを比較しやすくしています。</p>
-      </section>
-    </div>
-  </div>
-  <script type="module" src="./main.js"></script>
+  <main class="page">
+    <section class="hero">
+      <h1>tone</h1>
+    </section>
+    <article class="doc">
+<h1>tone</h1>
+<p><a href="index.en.html">English</a> | 日本語</p>
+<p><img src="./tone.jpg" alt="tone" /></p>
+<h2>概要</h2>
+<ul><li>ToneSynth だけを使い、単音または3和音で波形、envelope、reverb の違いを確認するサンプルです。</li><li>AudioSynth や GameAudioSynth の SE catalog / BGM 機能を通さず、ToneSynth.playTone() が受け取る最小の音響パラメータを直接操作します。</li><li>sine、triangle、square、sawtooth の波形、percussion、brass、woodwind、organ、piano、guitar の envelope profile、room、hall、plate の reverb impulse を同じ画面で切り替えられます。</li></ul>
+<p>画面の見方</p>
+<p>画面は Play、Envelope、Reverb、What To Listen For に分かれています。まず Audio Start を押して AudioContext を開始し、Play で root、wave、mode、gain を選びます。Envelope では発音の立ち上がりと減衰を調整し、Reverb では残響量と空間の種類を調整します。</p>
+<p>Hold Single は押している間だけ現在の root を鳴らします。Hold Triad は押している間だけ root、3rd、5th の3音を同時に鳴らします。ボタンを離すと、選択中 envelope の release で音が止まります。Mode が minor のときは minor triad、それ以外のときは major triad を鳴らすので、同じ波形と envelope が単音と和音でどう違って聞こえるかを比較できます。</p>
+<h2>実行方法</h2>
+<ul><li>実行ファイルは <a href="./tone.html">./tone.html</a> です</li><li>WebGPU に対応したブラウザで開き、必要に応じて help panel や HUD と合わせて確認してください</li></ul>
+<h2>使用している webg 機能</h2>
+<ul><li>ToneSynth: 単音の再生、停止、envelope preset、reverb impulse、volume 調整を担当します。</li><li>ToneSynth.playTone(): 周波数、wave type、profile、gain、pan を指定して1 voice を鳴らします。duration を null にすることで、ボタンを離すまで sustain します。</li><li>ToneSynth.setSeEnvelopePreset(): 現在選択中の envelope profile を slider の値で更新します。</li><li>ToneSynth.setSeReverb() と ToneSynth.setSeReverbImpulse(): 残響量と impulse response の性格を切り替えます。</li></ul>
+<h2>確認ポイント</h2>
+<p>最初に Audio Start を押し、Hold Single を押している間だけ単音が鳴り、離すと release で止まることを確認します。次に Wave を sine から triangle、square、sawtooth へ切り替えると、同じ envelope でも倍音の量によって明るさや硬さが変わることが分かります。</p>
+<p>Envelope の Profile を切り替えると、同じ root と wave でも時間変化が変わります。percussion はほとんど sustain しない短い打撃音、organ はほぼ一定に鳴り続ける持続音、piano と guitar は押し続けてもすぐ減衰する撥弦/打弦系の音、brass と woodwind は立ち上がりが遅く、押し続けると息の持続が見える音として比較しやすくしています。Attack、Decay、Sustain、Release を動かすと、選択中 profile の次の発音から変化します。</p>
+<p>Reverb では Dry、Room、Hall、Plate を切り替えて、残響が音の輪郭に与える影響を確認します。短い envelope では reverb tail が特に目立ち、長い envelope では原音と残響の重なり方が変わって聞こえます。</p>
+<p>Hold Triad を押すと、単音では分かりにくい reverb のにじみや、square / sawtooth の倍音の混み方を確認しやすくなります。和音では各 voice の pan を少し分けているため、左右の広がりも聞き取れます。</p>
+<h2>操作方法</h2>
+<ul><li>Audio Start: AudioContext を開始します。</li><li>Hold Single: 押している間だけ root の単音を鳴らします。</li><li>Hold Triad: 押している間だけ major または minor の3和音を鳴らします。</li><li>Stop All: 現在鳴っている tone を短い release で停止します。</li><li>Root: 基準音を選びます。</li><li>Wave: OscillatorNode の波形を選びます。</li><li>Mode: 単音、major triad、minor triad を選びます。</li><li>Tone Gain: playTone() に渡す voice gain を調整します。</li><li>Profile: envelope preset を選びます。</li><li>Attack / Decay / Sustain / Release: 選択中 profile の ADSR を調整します。</li><li>Reverb Mix: convolver への send と return の量をまとめて調整します。</li><li>Kind / Length / Decay: reverb impulse の性格、長さ、落ち方を調整します。</li><li>Dry / Room / Hall / Plate: 代表的な reverb 設定へ切り替えます。</li></ul>
+<p>つまずきやすい点</p>
+<p>Audio Start を押していないと音は鳴りません。これは browser の自動再生制限に合わせた動きです。</p>
+<p>Tone Gain は1 voice あたりの音量の基準です。3和音では音が重なるため、サンプル側で各 voice の gain を少し下げ、単音との音量差が大きくなりすぎないようにしています。</p>
+<p>Reverb Mix が大きい状態で Release を長くすると、原音と残響が重なって輪郭がぼやけやすくなります。まず Dry で envelope の形を確認し、そのあと Room、Hall、Plate を切り替えると違いを追いやすくなります。</p>
+<p>関連文書</p>
+<ul><li><a href="../../book/18_サウンドの設計.md">18_サウンドの設計.md</a></li><li><a href="../../book/付録C_API一覧.md">付録C_API一覧.md</a></li><li><a href="./main.js">samples/tone/main.js</a></li><li><a href="./tone.html">samples/tone/tone.html</a></li></ul>
+    </article>
+  </main>
 </body>
 </html>

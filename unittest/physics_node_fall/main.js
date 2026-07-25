@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// unittest/physics_node_fall/main.js  2026/05/06
+// unittest/physics_node_fall/main.js  2026/07/25
 //   physics_node_fall unittest
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -262,6 +262,7 @@ const start = async ({ screen, gpu, setStatus, setViewportLayout, startLoop, doc
   let previousTimeMs = null;
   let settledThisRun = 0;
 
+  // すべての物体を初期状態へ戻し、前回の状態を残さない
   const resetAllBodies = () => {
     settledThisRun = 0;
     previousTimeMs = null;

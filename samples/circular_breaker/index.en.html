@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>circular_breaker</title>
+  <link rel="icon" href="data:," />
+  <!-- 2026/06/19 -->
+  <style>
+
+:root {
+  color-scheme: light;
+  --bg: #eef3f8;
+  --paper: rgba(255, 255, 255, 0.94);
+  --line: #c8d5e4;
+  --ink: #17324a;
+  --muted: #5c748b;
+  --accent: #1566ab;
+  --accent-soft: #dfeefe;
+  --code-bg: #f3f7fb;
+  --shadow: rgba(29, 52, 79, 0.10);
+}
+* { box-sizing: border-box; }
+html, body {
+  margin: 0;
+  min-height: 100%;
+}
+body {
+  background:
+    radial-gradient(circle at top left, rgba(21, 102, 171, 0.12), transparent 24%),
+    radial-gradient(circle at top right, rgba(255, 191, 118, 0.10), transparent 22%),
+    linear-gradient(180deg, #f8fbfd 0%, var(--bg) 100%);
+  color: var(--ink);
+  font: 16px/1.78 "Avenir Next", "Hiragino Sans", "Yu Gothic", sans-serif;
+}
+.page {
+  width: min(1080px, calc(100% - 28px));
+  margin: 0 auto;
+  padding: 24px 0 56px;
+}
+.hero,
+.doc {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  box-shadow: 0 22px 52px var(--shadow);
+}
+.hero {
+  padding: 22px 24px;
+  margin-bottom: 18px;
+}
+.hero h1 {
+  margin: 0 0 8px;
+  font-size: clamp(2rem, 4vw, 3rem);
+  line-height: 1.08;
+}
+.hero p {
+  margin: 0;
+  color: var(--muted);
+}
+.doc {
+  padding: 28px;
+}
+.doc > :first-child {
+  margin-top: 0;
+}
+h1, h2, h3, h4, h5, h6 {
+  line-height: 1.25;
+  margin: 1.45em 0 0.55em;
+}
+h1 {
+  font-size: 2.2rem;
+}
+h2 {
+  padding-bottom: 0.28em;
+  border-bottom: 1px solid var(--line);
+  font-size: 1.48rem;
+}
+h3 {
+  font-size: 1.14rem;
+}
+p, ul, ol, table, pre, blockquote {
+  margin: 0 0 1em;
+}
+ul, ol {
+  padding-left: 1.4em;
+}
+li + li {
+  margin-top: 0.26em;
+}
+a {
+  color: var(--accent);
+  text-decoration: none;
+}
+a:hover {
+  text-decoration: underline;
+}
+img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  border-radius: 16px;
+  border: 1px solid var(--line);
+  box-shadow: 0 12px 32px rgba(29, 52, 79, 0.08);
+  margin: 1.1em 0 1.4em;
+}
+code {
+  padding: 0.12em 0.38em;
+  border-radius: 0.45em;
+  background: var(--code-bg);
+  border: 1px solid #dbe6f1;
+  font: 0.92em/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+pre {
+  padding: 14px 16px;
+  overflow-x: auto;
+  border-radius: 14px;
+  background: #0f1720;
+  color: #ecf5ff;
+}
+pre code {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #ffffff;
+}
+th, td {
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  text-align: left;
+  vertical-align: top;
+}
+th {
+  background: #f5f9fc;
+}
+hr {
+  border: 0;
+  border-top: 1px solid var(--line);
+  margin: 1.5em 0;
+}
+blockquote {
+  padding: 0.3em 0 0.3em 1em;
+  border-left: 4px solid #c9dbef;
+  color: var(--muted);
+}
+@media (max-width: 720px) {
+  .page {
+    width: min(100% - 18px, 1080px);
+    padding-top: 16px;
+  }
+  .hero,
+  .doc {
+    border-radius: 18px;
+  }
+  .doc {
+    padding: 20px;
+  }
+}
+
+  </style>
+</head>
+<body>
+  <main class="page">
+    <section class="hero">
+      <h1>circular_breaker</h1>
+    </section>
+    <article class="doc">
+<h1>circular_breaker</h1>
+<p>English | <a href="index.html">日本語</a></p>
+<p><img src="./circular_breaker.jpg" alt="circular_breaker" /></p>
+<h2>Overview</h2>
+<ul><li>This is an integrated 3D breakout sample that uses <code>webg</code>'s basic features together, including scene management, collision handling, HUD, and audio</li><li>It can be used as a reference implementation for game development patterns such as &quot;reusing multiple <code>Shape</code> objects&quot;, &quot;updating nodes&quot;, and &quot;reflecting input&quot;</li><li>On both desktop and mobile, the canvas follows the full browser viewport</li><li>On tall screens, the FOV is adjusted automatically so the field of view remains usable</li><li>Short status displays during gameplay are gathered into the canvas HUD drawn by <code>drawHud()</code>, narrowing the on-screen information to what is needed for game progression</li></ul>
+<h2>How to Run</h2>
+<ul><li>Open <a href="./circular_breaker.html">./circular_breaker.html</a></li><li>Use a browser with WebGPU support, and check the help panel and HUD together with the sample when needed</li></ul>
+<h2>webg Features Used</h2>
+<ul><li>Sample-side <code>GameStateManager</code>: manages the top-level phases <code>intro / play / pause / stage-clear / result</code></li><li><code>Space / Node</code>: manages the game objects</li><li><code>Shape</code>: generates the floor, walls, blocks, paddle, and packs</li><li><code>SmoothShader</code>: shared standard material for drawing blocks both with and without normal maps</li><li><code>ParticleEmitter</code>: manages spark effects when blocks are destroyed</li><li><code>Texture</code>: generates procedural textures for blocks</li><li><code>Message</code>: gameplay-specific HUD drawn from <code>drawHud()</code></li><li><code>Touch</code>: fixed buttons <code>← / → / A / D / R</code></li><li><code>GameAudioSynth</code>: plays BGM and sound effects from melody presets and the SE catalog</li></ul>
+<h2>Implementation Flow</h2>
+<p><code>main.js</code> initializes <code>WebgApp</code>, <code>SmoothShader</code>, and <code>GameAudioSynth</code>, creates the arena, blocks, paddle, pack, and particles, and then connects input, the game runtime, scene phases, and diagnostics. Per-frame game rules are kept out of <code>main.js</code> so its initialization and module wiring remain visible.</p>
+<p><code>gameRuntime.js</code> stores play-time state such as score, level, the remaining <code>PACK</code> count, and paddle and puck position and velocity. It updates paddle movement, puck reflection, block collision, and short recoil effects, while delegating stage decisions to <code>stageFlow.js</code>. <code>stageFlow.js</code> handles the time limit, target break count, score calculation, block reset, and game over, separating object movement from stage rules.</p>
+<p><code>scenePhases.js</code> uses <code>GameStateManager</code> to switch the top-level <code>intro / play / pause / stage-clear / result</code> states. It converts stage results into scene phases and chooses phase-specific BGM and notification sound effects. HUD drawing is in <code>Hud.js</code>, sparks are in <code>particleEffects.js</code>, and persistent high scores are in <code>highScoreStore.js</code>, so rendering, short effects, and saved data can be inspected independently of gameplay updates.</p>
+<p>The frame flow converts input to actions, updates the scene phase, advances the game runtime according to that phase, draws the updated nodes, and then overlays particles and the HUD. Pause keeps the current frame while stopping gameplay updates. Result stops movement and collision while continuing the ending display and particle updates.</p>
+<h2>File Structure</h2>
+<ul><li><code>main.js</code>: connects WebgApp initialization, scene construction, input, the update/render loop, and diagnostics</li><li><code>constants.js</code>: shared arena dimensions, block counts, speeds, stage timing, and 2D math helpers</li><li><code>arenaScene.js</code>: creates the arena floor, walls, guide ring, and lighting</li><li><code>shapeFactory.js</code>: creates shared shapes such as beveled boxes and cylinders</li><li><code>blockField.js</code>: manages block textures, prototypes, instances, types, and stage resets</li><li><code>gameRuntime.js</code>: updates paddle and puck movement, collisions, score, and play-time state</li><li><code>stageFlow.js</code>: evaluates the time limit, mission target, stage clear, score, and game over</li><li><code>scenePhases.js</code>: manages top-level phases and phase-specific audio through <code>GameStateManager</code></li><li><code>particleEffects.js</code>: creates and draws sparks when blocks are destroyed</li><li><code>Hud.js</code>: formats gameplay and diagnostic state for the canvas HUD</li><li><code>inputConfig.js</code>: defines keyboard, touch, and debug action mappings</li><li><code>highScoreStore.js</code>: saves the top five scores through <code>WebgApp.saveProgress()</code> and <code>loadProgress()</code></li></ul>
+<h2>Checkpoints</h2>
+<ul><li>Confirm that the reflection direction of the pack is updated stably in response to paddle movement and rotation, verifying the basic quality of the collision-response logic</li><li>Confirm that when the pack enters the positive local-Z side of <code>paddleNode</code>, the remaining <code>PACK</code> count decreases by 1 exactly once and does not keep decreasing while the pack remains in the area</li><li>Confirm that when <code>PACK</code> reaches <code>0</code>, the game ends on that frame and the ending HUD shows the top five high scores</li><li>Confirm that destroying the green supply block (single-color <code>SmoothShader</code> path without normals or texture) produces an effect that increases the remaining <code>PACK</code> count by 1</li><li>Confirm that score and progress display (<code>current count / target count</code>) update immediately when blocks are destroyed, verifying that the gameplay HUD linked through <code>drawHud()</code> is correct</li><li>Confirm that SE and BGM are organized so they play according to the game state, including BGM presets, notification SE, and collision SE</li></ul>
+<h2>Controls</h2>
+<ul><li><code>ArrowLeft / ArrowRight</code>: move the paddle along its long axis</li><li><code>A / D</code>: rotate the paddle</li><li><code>R</code>: reset the pack position during play, or restart the game after game over</li><li><code>K</code>: toggle pause on or off</li><li><code>O</code>: force game over</li><li><code>P</code>: save a screenshot</li><li><code>Q / W</code>: show diagnostics as text / JSON in the probe display</li><li><code>C / V</code>: copy diagnostics as text / JSON to the clipboard</li><li><code>J / L</code>: print diagnostics as text / JSON to the console</li><li><code>F / G</code>: save diagnostics as text / JSON</li><li><code>M</code>: switch between debug and release display</li><li><code>Enter / Space / click</code>: start trigger while waiting to begin the stage</li><li>On smartphones (<code>coarse pointer</code>), touch buttons <code>← / → / A / D / R</code> are shown at the bottom of the screen</li><li>The smartphone UI does not show pause / debug / diagnostics buttons such as <code>K / O / P / Q / W / C / V / J / L / F / G / M</code></li></ul>
+    </article>
+  </main>
+</body>
+</html>

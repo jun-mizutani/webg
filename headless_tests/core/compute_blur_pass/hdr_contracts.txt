@@ -1,0 +1,29 @@
+# 共通Blur線形High Dynamic Range単体テスト
+
+## 目的
+
+ComputeBlurPassを線形High Dynamic Range色の加重平均として定義し、1.0を超える輝度を8 bit textureで失わないことを確認する。Depth of Fieldが継承するblur基盤として先に形式と数値契約を確定する
+
+## 確認項目
+
+1. source、水平中間target、垂直出力targetは `rgba16float` である
+2. shaderは色を0から1へclampしない
+3. radiusはCPUで1から8の整数として検証する
+4. shader内でradiusを再補正しない
+5. radius 1以上なら有効tapと正のweight sumが存在するためepsilon fallbackを使わない
+6. 水平・垂直passへ同じradiusを渡す
+7. 旧 `rgba8unorm` sourceとoutputを拒否する
+
+## 実行方法
+
+```sh
+node headless_tests/core/compute_blur_pass/headless_probe.js
+```
+
+## 結果
+
+2026-07-13に実行し、全項目が成功した。表示文字列は次のとおり
+
+```text
+compute_blur_pass_hdr_contracts: all linear blur contracts passed
+```

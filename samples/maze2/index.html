@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>maze2 (sci-fi tube edition)</title>
+  <link rel="icon" href="data:," />
+  <!-- 2026/06/19 -->
+  <style>
+
+:root {
+  color-scheme: light;
+  --bg: #eef3f8;
+  --paper: rgba(255, 255, 255, 0.94);
+  --line: #c8d5e4;
+  --ink: #17324a;
+  --muted: #5c748b;
+  --accent: #1566ab;
+  --accent-soft: #dfeefe;
+  --code-bg: #f3f7fb;
+  --shadow: rgba(29, 52, 79, 0.10);
+}
+* { box-sizing: border-box; }
+html, body {
+  margin: 0;
+  min-height: 100%;
+}
+body {
+  background:
+    radial-gradient(circle at top left, rgba(21, 102, 171, 0.12), transparent 24%),
+    radial-gradient(circle at top right, rgba(255, 191, 118, 0.10), transparent 22%),
+    linear-gradient(180deg, #f8fbfd 0%, var(--bg) 100%);
+  color: var(--ink);
+  font: 16px/1.78 "Avenir Next", "Hiragino Sans", "Yu Gothic", sans-serif;
+}
+.page {
+  width: min(1080px, calc(100% - 28px));
+  margin: 0 auto;
+  padding: 24px 0 56px;
+}
+.hero,
+.doc {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  box-shadow: 0 22px 52px var(--shadow);
+}
+.hero {
+  padding: 22px 24px;
+  margin-bottom: 18px;
+}
+.hero h1 {
+  margin: 0 0 8px;
+  font-size: clamp(2rem, 4vw, 3rem);
+  line-height: 1.08;
+}
+.hero p {
+  margin: 0;
+  color: var(--muted);
+}
+.doc {
+  padding: 28px;
+}
+.doc > :first-child {
+  margin-top: 0;
+}
+h1, h2, h3, h4, h5, h6 {
+  line-height: 1.25;
+  margin: 1.45em 0 0.55em;
+}
+h1 {
+  font-size: 2.2rem;
+}
+h2 {
+  padding-bottom: 0.28em;
+  border-bottom: 1px solid var(--line);
+  font-size: 1.48rem;
+}
+h3 {
+  font-size: 1.14rem;
+}
+p, ul, ol, table, pre, blockquote {
+  margin: 0 0 1em;
+}
+ul, ol {
+  padding-left: 1.4em;
+}
+li + li {
+  margin-top: 0.26em;
+}
+a {
+  color: var(--accent);
+  text-decoration: none;
+}
+a:hover {
+  text-decoration: underline;
+}
+img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  border-radius: 16px;
+  border: 1px solid var(--line);
+  box-shadow: 0 12px 32px rgba(29, 52, 79, 0.08);
+  margin: 1.1em 0 1.4em;
+}
+code {
+  padding: 0.12em 0.38em;
+  border-radius: 0.45em;
+  background: var(--code-bg);
+  border: 1px solid #dbe6f1;
+  font: 0.92em/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+pre {
+  padding: 14px 16px;
+  overflow-x: auto;
+  border-radius: 14px;
+  background: #0f1720;
+  color: #ecf5ff;
+}
+pre code {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #ffffff;
+}
+th, td {
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  text-align: left;
+  vertical-align: top;
+}
+th {
+  background: #f5f9fc;
+}
+hr {
+  border: 0;
+  border-top: 1px solid var(--line);
+  margin: 1.5em 0;
+}
+blockquote {
+  padding: 0.3em 0 0.3em 1em;
+  border-left: 4px solid #c9dbef;
+  color: var(--muted);
+}
+@media (max-width: 720px) {
+  .page {
+    width: min(100% - 18px, 1080px);
+    padding-top: 16px;
+  }
+  .hero,
+  .doc {
+    border-radius: 18px;
+  }
+  .doc {
+    padding: 20px;
+  }
+}
+
+  </style>
+</head>
+<body>
+  <main class="page">
+    <section class="hero">
+      <h1>maze2 (sci-fi tube edition)</h1>
+    </section>
+    <article class="doc">
+<h1>maze2 (sci-fi tube edition)</h1>
+<p><a href="index.en.html">English</a> | 日本語</p>
+<p><img src="./maze2.jpg" alt="maze2" /></p>
+<h2>概要</h2>
+<p><code>maze2</code> は、壁心間と天井高を4 mとし、壁上下の構造斜面で八角形断面を作るwalk-through mazeです。曲がり角では直交するrail終端辺をmiter bridgeで直接つなぎ、隙間を作らず開口側へ不要な面を張りません。分岐、部屋、扉は論理wall boundaryから生成し、同じboundaryを衝突判定とレーダーにも使用します。</p>
+<p>描画は<code>ComputeEffectPipeline</code>を使用し、<code>WebgApp</code>が描画直前に確定した同一の<code>CameraFrame</code>をG-buffer、Deferred Shading、SSR、Bloom、geometry edgeで共有します。<br />各cellの天井には、通路方向へ長い薄型panelを中心高さ<code>y = 3.95m</code>で配置し、その下の<code>y = 3.70m</code>に通路照明用のpoint Local Lightを置きます。<br />point Local Lightは半径<code>7.2m</code>、強度<code>5.2</code>で全方向を照らし、下側の通路を照らすと同時に、光源から約<code>0.2375m</code>上にある天井灯下面へ強い直接反射を作ります。<br />構造天井の<code>roughness</code>は<code>0.55</code>とし、点光源による細長い鏡面反射を広げて弱めます。<br />Shadow Mapは無効なため、点光源と照明対象の間にある形状による遮蔽は計算しません。<br />天井灯全体の<code>emissive</code>は<code>0.10</code>へ抑え、<code>specular = 0.80</code>、<code>roughness = 0.10</code>の下面中央に生じる直接反射を主な高輝度成分とします。<br />照明色は白60%、緑・オレンジ・赤を各13.3%の固定比率で分散します。<br />camera近傍から最大64灯を評価します。<br />SSRは床、壁、斜面、天井の反射へ使用します。<br />Bloomは<code>threshold = 0.60</code>、<code>softKnee = 0.40</code>、<code>strength = 1.10</code>、<code>1/32 Weight = 0.80</code>とし、天井灯全面の自己発光ではなく、下面中央のHDR反射から広い光芒を作ります。<br />Shadow MapとSSAOの効果は無効にしています。</p>
+<p>詳細な形状規則は<a href="./maze2_spec.md">maze2_spec.md</a>に記載しています。</p>
+<h2>実行方法</h2>
+<ul><li>実行ファイルは<a href="./maze2.html">./maze2.html</a>です</li><li>WebGPU対応browserで開きます</li><li>PCではdragとkeyboard、coarse pointer端末では画面上のtouch操作を使います</li><li>double tap、double click、または<code>/</code> keyでCommand Paletteを開きます</li></ul>
+<h2>使用しているwebg機能</h2>
+<ul><li><code>WebgApp</code>: 初期化、描画loop、CameraFrame、HUD、Help Panel、GPU計測をまとめる</li><li><code>EyeRig</code>: first-personの視線回転と移動基準を作る</li><li><code>Shape</code>: grouped meshとして床、壁、斜面、rail、天井、照明panelをGPU bufferへまとめる</li><li><code>ComputeEffectPipeline</code>: G-buffer、Deferred Lighting、SSR、Bloom、geometry edgeを同じCameraFrameで実行する</li><li><code>FullscreenPass</code>: pipelineの最終表示textureをcanvasへ転送する</li><li><code>CommandPalette</code>: SSR intensityとgeometry edgeなど、低頻度の設定を変更する</li><li><code>Diagnostics</code>: triangle数、collision segment数、active light数、GPU timingをHUDとreportへ出す</li><li>sample側<code>CollisionWorld</code>: 論理wall segmentと円柱playerの衝突をXZ平面で解決する</li></ul>
+<h2>実装の流れ</h2>
+<p><code>main.js</code>は固定seedから15×15 cellの迷路を作り、roomとdoorを上書きして、通行可能な論理wall boundaryを確定します。次に同じboundaryから床、斜面、壁、rail、天井のgrouped meshと衝突線分を作ります。レーダーもこの衝突線分を読むため、画面上の壁、移動を止める壁、レーダー上の線が別々の規則から生成されません。</p>
+<p>毎frameの更新では、入力からfirst-personの移動量を求め、<code>CollisionWorld</code>でplayer円柱をwall segmentの外へ押し戻します。cameraが一定距離以上移動したときだけ近傍lightを選び直し、最大64灯をDeferred Lightingへ渡します。HUDとレーダーは衝突解決後の位置を使って更新します。</p>
+<p>描画では、<code>onBeforeDraw</code>が受け取る<code>cameraFrame</code>で<code>ComputeEffectPipeline.renderScene()</code>を実行し、<code>onAfterDraw3d</code>で同じframeを<code>encode()</code>へ渡します。完成textureは<code>beginPresentPass()</code>と<code>FullscreenPass</code>でcanvasへ転送し、<code>clearDepthBuffer()</code>でHUD用の深度付きpassへ戻します。Shadow MapとSSAOは無効で、SSR、Bloom、geometry edgeだけを用途に応じて使用します。</p>
+<h2>操作方法</h2>
+<ul><li>左右 drag: 進行方向と視線を回転</li><li>上下 drag: 一時的に上下を見る</li><li><code>W</code> / <code>S</code>: 前進 / 後進</li><li><code>A</code> / <code>←</code>: 右旋回、<code>D</code> / <code>→</code>: 左旋回</li><li><code>Shift</code>: 走る</li><li><code>5</code> / <code>6</code>: SSR intensity を減らす / 増やす</li><li><code>0</code>: 初期視点へ戻る。位置は<code>[5.8319, 0.0, 2.3017]</code>、視点高さは<code>1.60m</code>、方位角は<code>31.5°</code></li><li><code>K</code>: screenshot</li><li>double tap / double click または <code>/</code>: command palette</li><li>CommandPaletteの <code>Edge</code>: geometry edgeのON/OFF</li></ul>
+<h2>確認ポイント</h2>
+<ul><li>直線通路が床、下部斜面、垂直壁、上部斜面、天井による八角形断面に見える</li><li>扉、曲がり角、分岐、部屋を通行でき、壁抜けがない</li><li>各cellの天井灯下面中央に強い反射が生じ、その反射を中心に広いBloomが見える</li><li>SSR の ON / OFF 差が床と金属レールで確認できる</li><li>3方向以上の分岐床が青緑色になり、通常通路と区別できる</li><li>HUD に triangle 数、collision segment 数、active light 数、GPU timing が表示される</li><li>radarが半径12 mの範囲を表示する</li></ul>
+<h2>ファイル</h2>
+<ul><li><code>maze2.html</code>: 実行ページ</li><li><code>main.js</code>: 迷路生成、grouped mesh、first-person 操作、deferred lighting、SSR、geometry edge</li><li><code>CollisionWorld.js</code>: 論理 wall segment に対する円柱 player collision</li><li><code>maze2_spec.md</code>: 形状、迷路生成、衝突判定、照明の詳細仕様</li><li><code>maze2.txt</code>: サンプル一覧向けの概要説明</li></ul>
+    </article>
+  </main>
+</body>
+</html>

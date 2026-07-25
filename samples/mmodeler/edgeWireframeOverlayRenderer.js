@@ -1,9 +1,11 @@
 // ---------------------------------------------
-// samples/webgmodeler/edgeWireframeOverlayRenderer.js  2026/04/26
+// samples/webgmodeler/edgeWireframeOverlayRenderer.js  2026/07/13
 //   line-list edge overlay renderer
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // ---------------------------------------------
+import { CAMERA_REVERSE_Z } from "../../webg/DepthConvention.js";
+
 export default class EdgeWireframeOverlayRenderer {
   // インスタンス生成時に renderer や shader が使う状態を初期化する
   constructor(gpu, {
@@ -100,9 +102,9 @@ struct VSOut {
 fn vsMain(input : VSIn) -> VSOut {
   var out : VSOut;
   var clip = uniforms.proj * uniforms.view * vec4f(input.position, 1.0);
-  // params.x is a small clip-space depth bias. Multiplying by w keeps the bias
-  // approximately constant after perspective divide.
-  clip.z = max(0.0, clip.z - uniforms.params.x * clip.w);
+  // Camera Reverse-Zはnear=1、far=0なので、手前へ寄せるbiasはclip.zへ加算する
+  // w比例にすることで透視除算後のbiasを距離に対してほぼ一定に保つ
+  clip.z = min(clip.w, clip.z + uniforms.params.x * clip.w);
   out.position = clip;
   out.color = input.color;
   return out;
@@ -178,11 +180,12 @@ fn fsMain(input : VSOut) -> @location(0) vec4f {
         cullMode: "none"
       },
       depthStencil: {
-        format: "depth24plus",
+        // Screenの通常カメラpassと同じCamera Reverse-Z attachment契約を使う
+        format: CAMERA_REVERSE_Z.format,
         // mesh に隠れた edge は基本的に表示しないただし overlay 自体は後続描画へ
         // 影響しないよう depth buffer へ書き込まない
         depthWriteEnabled: false,
-        depthCompare: "less-equal"
+        depthCompare: CAMERA_REVERSE_Z.compareEqual
       }
     });
   }

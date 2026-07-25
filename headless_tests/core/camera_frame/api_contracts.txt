@@ -1,0 +1,66 @@
+# camera_frame_api_contracts
+
+## 何のためのテストか
+
+World座標とカメラWorld座標をJavaScript倍精度で減算し、値が小さくなった後でGPU用float32へ変換するcamera-relative renderingの数値契約を確認する。巨大座標で表示が揺れた後に符号を調整するのではなく、原点付近と巨大World位置の相対結果が一致することを先に証明する。
+
+## 対象
+
+- `webg/CameraFrame.js`
+- World pointからcamera-relative pointへの変換
+- camera-relative pointからview-space pointへの変換
+- object World matrixからmodel-view matrixへの変換
+- 一frame内で固定するカメラsnapshot
+- projectionを持たない低レベルSpace用camera transform snapshot
+- 現行Node形式の倍精度view×model合成との比較
+
+## 確認内容
+
+1. 10億単位のWorld位置で0.25mの差を保持してからfloat32へ変換する。
+2. World値を先にfloat32へ変換する誤った順序では同じ差が失われる。
+3. 回転した1兆単位のカメラでもview-space pointを復元できる。
+4. 原点付近と巨大World位置で同じ相対配置のmodel-view全要素が一致する。
+5. 現行Node相当の倍精度view×model合成では、3×3回転は一致するが巨大平行移動の一般行列相殺に追加誤差が出ることを測定する。
+6. Shadow Map用Depth Conventionや不正な行列を拒否する。
+7. eye World matrixはframe生成時に一度だけ更新し、その後はsnapshotとして独立する。
+8. 低レベル用transform snapshotがnear、far、Depth Conventionを持たず、完全なCamera Frameと同じmodel-viewを作る。
+
+## 実行方法
+
+```sh
+node headless_tests/core/camera_frame/headless_probe.js
+```
+
+## 予想
+
+```text
+camera_frame_api_contracts: all camera-relative contracts passed
+```
+
+## 結果
+
+2026-07-12 JSTに構文確認、Camera Frame、Matrix、Depth Conventionのheadless test、`git diff --check` を実行した。最初の実行では1兆単位のWorld座標で期待値との差が約0.000041mとなり、当初の許容値を超えて停止した。これは符号誤りではなく、`Number.EPSILON × 1e12` から見積もれる約0.000222mのbinary64量子幅内だったため、根拠をコメントに記載して0.00025m以内を合格条件とした。
+
+次の実行では現行Node相当の一般的なview×model合成と、明示的camera-relative合成の平行移動に約0.000012mの差を検出した。3×3回転は一致した。巨大平行移動を含む二行列を一般乗算で相殺すると追加誤差が出る事実としてtestへ固定し、NodeをCamera Frame接続の変更対象と判定した。
+
+最終実行はすべて終了コード0となり、次を表示した。
+
+```text
+camera_frame_api_contracts: all camera-relative contracts passed
+matrix_projection_contracts: all projection contracts passed
+depth_convention_api_contracts: all numeric contracts passed
+```
+
+## 解釈
+
+10億単位では0.25mの相対差を倍精度減算後のfloat32へ正確に渡せた。同じWorld値を先にfloat32へ変換すると差が0になるため、変換順序の必要性を数値で確認できた。
+
+1兆単位の回転カメラでも誤差はbinary64の理論的な量子幅内だった。原点付近と巨大World位置のmodel-viewも同じ相対配置として一致した。
+
+Camera Frameを同一frameで共有する設計は有効である。Nodeの現行計算もGPUへ送る前に倍精度で処理しているが、巨大なviewとmodelの平行移動を一般行列乗算で相殺する追加誤差があるため、Node描画を `CameraFrame.createModelViewMatrix()` へ接続する必要がある。
+
+2026-07-13 JSTの追加確認では、camera-relative変換部分をprojection情報から分離した。低レベル用snapshotはnear、far、projection、Depth Conventionを持たないが、完全なCamera Frameとmodel-view全16要素が一致した。これにより `Space.draw(eye)` の内部実装へ同じ精度基盤を利用できる。
+
+## Commit
+
+`CameraFrame.js` と本テストを同じコミットへ含める。

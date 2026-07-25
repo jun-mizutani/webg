@@ -1,11 +1,12 @@
 // ---------------------------------------------
-// samples/mmodeler/ObjectModeController.js  2026/05/26
+// samples/mmodeler/ObjectModeController.js  2026/07/25
 //   object mode controller for mmodeler
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // ---------------------------------------------
 import { add3, normalize3 } from "./math3d.js";
 
+// `function`を検証し、後続処理が扱える共通形式へ整える
 function requireFunction(value, name) {
   if (typeof value !== "function") {
     throw new Error(`ObjectModeController requires ${name}`);
@@ -13,12 +14,14 @@ function requireFunction(value, name) {
   return value;
 }
 
+// ワールドの`origin`の条件を判定し、結果を真偽値で返す
 function isWorldOrigin(origin) {
   return Math.abs(origin[0]) <= 1.0e-9
     && Math.abs(origin[1]) <= 1.0e-9
     && Math.abs(origin[2]) <= 1.0e-9;
 }
 
+// `quatFromAxisAngle`は座標または数値を計算し、後続処理で使う結果を返す
 function quatFromAxisAngle(axis, angleRad) {
   const n = normalize3(axis, "object transform axis");
   const half = angleRad * 0.5;
@@ -31,6 +34,7 @@ function quatFromAxisAngle(axis, angleRad) {
   ];
 }
 
+// `multiplyQuatXyzw`は座標または数値を計算し、後続処理で使う結果を返す
 function multiplyQuatXyzw(a, b) {
   const ax = a[0];
   const ay = a[1];
@@ -67,9 +71,8 @@ export default class ObjectModeController {
     getObjectOrigin,
     getObjectRotation,
     getObjectScale,
-    buildJoinedObject,
-    buildPrimitiveObject,
-    orientAllFacesConsistently
+    localToWorldPosition,
+    buildPrimitiveObject
   }) {
     if (!scene) {
       throw new Error("ObjectModeController requires scene");
@@ -84,9 +87,8 @@ export default class ObjectModeController {
     this.getObjectOrigin = requireFunction(getObjectOrigin, "getObjectOrigin");
     this.getObjectRotation = requireFunction(getObjectRotation, "getObjectRotation");
     this.getObjectScale = requireFunction(getObjectScale, "getObjectScale");
-    this.buildJoinedObject = requireFunction(buildJoinedObject, "buildJoinedObject");
+    this.localToWorldPosition = requireFunction(localToWorldPosition, "localToWorldPosition");
     this.buildPrimitiveObject = requireFunction(buildPrimitiveObject, "buildPrimitiveObject");
-    this.orientAllFacesConsistently = requireFunction(orientAllFacesConsistently, "orientAllFacesConsistently");
   }
 
   // Object Mode で操作できる状態かを確認する
@@ -205,6 +207,15 @@ export default class ObjectModeController {
     ]));
   }
 
+  // Object Mode transform が対象にする object 群を返す
+  getTransformTargetObjects() {
+    this.commitActiveObject();
+    const selectedIds = this.scene.selectedObjectIds.size > 0
+      ? this.scene.selectedObjectIds
+      : new Set(this.scene.activeObjectId !== null ? [this.scene.activeObjectId] : []);
+    return this.scene.objects.filter((object) => selectedIds.has(object.id));
+  }
+
   // Object Mode の drag preview を object transform state へ反映する
   // vertices / faces は object local geometry の正本なので、この method では変更しない
   applyObjectTransformPreview({
@@ -262,8 +273,50 @@ export default class ObjectModeController {
     this.setMessage(`deleted ${removedIds.size} object(s)`);
   }
 
+  // 複数 object の geometry を world 原点 origin の単一 object へ詰め替える
+  buildJoinedObject(selectedObjects, joinedId) {
+    const vertices = [];
+    const faces = [];
+    let nextFaceId = 1;
+    for (const object of selectedObjects) {
+      const idMap = new Map();
+      for (const vertex of object.vertices) {
+        const id = vertices.length;
+        idMap.set(vertex.id, id);
+        vertices.push({
+          id,
+          position: this.localToWorldPosition(object, vertex.position)
+        });
+      }
+      for (const face of object.faces) {
+        const indices = face.indices.map((vertexId) => {
+          const mappedId = idMap.get(vertexId);
+          if (mappedId === undefined) {
+            throw new Error(`join objects missing vertex ${vertexId} in object ${object.id}`);
+          }
+          return mappedId;
+        });
+        faces.push({
+          id: nextFaceId++,
+          indices
+        });
+      }
+    }
+    return {
+      id: joinedId,
+      name: "Joined",
+      origin: [0.0, 0.0, 0.0],
+      rotation: [0.0, 0.0, 0.0, 1.0],
+      scale: 1.0,
+      vertices,
+      faces,
+      nextVertexId: vertices.length,
+      nextFaceId
+    };
+  }
+
   // Object Mode で選択中の複数 object を 1 object へ統合する
-  // controller は選択確認、undo、scene 置換、表示更新を担当し、geometry の詰め替えは注入された helper に任せる
+  // controller は選択確認、undo、geometry の詰め替え、scene 置換、表示更新を担当する
   joinSelectedObjects() {
     if (!this.requireObjectMode("switch to object mode before joining objects")) {
       return;

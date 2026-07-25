@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// samples/mmodeler/MobileInputController.js  2026/05/25
+// samples/mmodeler/MobileInputController.js  2026/07/25
 //   mobile input state and gesture controller for mmodeler
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -19,6 +19,7 @@ function defaultNow() {
   return typeof performance !== "undefined" ? performance.now() : Date.now();
 }
 
+// キャンバスの`click`の`snapshot`を生成し、後続処理で利用できる状態にする
 function makeCanvasClickSnapshot(ev) {
   return {
     clientX: Number(ev?.clientX ?? 0.0),
@@ -34,6 +35,7 @@ function makeCanvasClickSnapshot(ev) {
   };
 }
 
+// `roll`の`gesture`の状態を生成し、後続処理で利用できる状態にする
 function makeRollGestureState() {
   return {
     pointers: new Map(),
@@ -51,6 +53,7 @@ function getScreenAngleBetweenPointers(a, b) {
   return Math.atan2(b.y - a.y, b.x - a.x) * 180.0 / Math.PI;
 }
 
+// `roll`の`gesture`の`metrics`を現在の入力と状態から求め、呼び出し元へ返す
 function getRollGestureMetrics(pointers) {
   if (!Array.isArray(pointers) || pointers.length < 2) {
     return null;
@@ -63,6 +66,7 @@ function getRollGestureMetrics(pointers) {
   };
 }
 
+// `angle`の`delta`を検証し、後続処理が扱える共通形式へ整える
 function normalizeAngleDelta(delta) {
   let value = Number(delta);
   while (value > 180.0) value -= 360.0;
@@ -70,6 +74,7 @@ function normalizeAngleDelta(delta) {
   return value;
 }
 
+// `function`を検証し、後続処理が扱える共通形式へ整える
 function requireFunction(value, name) {
   if (typeof value !== "function") {
     throw new Error(`MobileInputController requires ${name}`);
@@ -78,6 +83,7 @@ function requireFunction(value, name) {
 }
 
 export default class MobileInputController {
+  // インスタンス生成時に、受け取った設定を検証して初期状態を準備する
   constructor({
     isMobileProfile,
     ribbonPages,
@@ -122,6 +128,7 @@ export default class MobileInputController {
     this.services = {};
   }
 
+  // `services`を受け取り、現在の設定と後続処理へ反映する
   setServices(services = {}) {
     this.services = { ...this.services, ...services };
     return this;
@@ -135,6 +142,7 @@ export default class MobileInputController {
     return this.rollGesture?.active === true;
   }
 
+  // 選択状態の`shift`の有効状態を切り替え、表示と処理へ反映する
   toggleSelectionShift() {
     this.selectionShiftActive = !this.selectionShiftActive;
     this.services.setMessage?.(`selection shift ${this.selectionShiftActive ? "on" : "off"}`);
@@ -149,6 +157,7 @@ export default class MobileInputController {
     this.transformAxisConstraint = null;
   }
 
+  // 変換の`axis`の有効状態を切り替え、表示と処理へ反映する
   toggleTransformAxis(axis) {
     const normalized = axis === "x" || axis === "y" || axis === "z" || axis === "n" ? axis : null;
     this.transformAxisConstraint = this.transformAxisConstraint === normalized ? null : normalized;
@@ -159,6 +168,7 @@ export default class MobileInputController {
     this.services.setMessage?.(`transform axis ${label}`);
   }
 
+  // `cycleRibbonPage`は現在状態から対象を選択し、結果を返すまたは選択を切り替える
   cycleRibbonPage(step) {
     const count = this.ribbonPages.length;
     if (count <= 0) {
@@ -169,6 +179,7 @@ export default class MobileInputController {
     this.services.setMessage?.(`ribbon: ${this.currentRibbonPage.name.toLowerCase()}`);
   }
 
+  // `armBoxSelect`は受け取った値を処理し、後続処理で利用する状態または結果を生成する
   armBoxSelect(canvasClick = null) {
     if (!this.isMobileProfile) {
       return;
@@ -185,6 +196,7 @@ export default class MobileInputController {
     this.services.setMessage?.("box select armed: drag to add selection");
   }
 
+  // `disarmBoxSelect`は選択対象を削除または解除し、関連状態を整理する
   disarmBoxSelect() {
     if (!this.isMobileProfile) {
       return;
@@ -194,6 +206,7 @@ export default class MobileInputController {
     this.services.setMobileOrbitEnabled?.(true);
   }
 
+  // `confirmBoxSelectPreview`は受け取った値を処理し、後続処理で利用する状態または結果を生成する
   confirmBoxSelectPreview({ resetCanvasClick } = {}) {
     if (!this.services.isBoxSelectAwaitingConfirm?.()) {
       return false;
@@ -207,6 +220,7 @@ export default class MobileInputController {
     return true;
   }
 
+  // `rememberCanvasTap`は受け取った値を処理し、後続処理で利用する状態または結果を生成する
   rememberCanvasTap(ev) {
     if (!this.isMobileProfile) {
       return;
@@ -217,6 +231,7 @@ export default class MobileInputController {
     this.lastCanvasTapPointerType = String(ev?.pointerType ?? "");
   }
 
+  // `cancel`の`pending`の`tap`の条件を判定し、結果を真偽値で返す
   cancelPendingTap() {
     if (this.pendingCanvasTapTimer !== null) {
       clearTimeout(this.pendingCanvasTapTimer);
@@ -225,6 +240,7 @@ export default class MobileInputController {
     this.pendingCanvasTapEvent = null;
   }
 
+  // `scheduleCanvasTap`は受け取った値を処理し、後続処理で利用する状態または結果を生成する
   scheduleCanvasTap(ev, handleCanvasClick) {
     if (!this.isMobileProfile) {
       handleCanvasClick(ev);
@@ -244,6 +260,7 @@ export default class MobileInputController {
     }, this.singleTapDelayMs);
   }
 
+  // キャンバスの`double`の`tap`の`candidate`の条件を判定し、結果を真偽値で返す
   isCanvasDoubleTapCandidate(ev) {
     if (!this.isMobileProfile || this.boxSelectArmed || this.services.isTransformActive?.()) {
       return false;
@@ -261,11 +278,15 @@ export default class MobileInputController {
     return distance <= this.doubleTapDistancePx;
   }
 
+  // キャンバスの`double`の`tap`を受け取った段階で、対応する状態更新と処理を実行する
   handleCanvasDoubleTap(ev, { canvasClick = null } = {}) {
     this.cancelPendingTap();
     this.disarmBoxSelect();
     const hit = this.services.inspectGestureTarget?.(ev.clientX, ev.clientY) ?? { kind: "empty" };
     if (hit.kind === "empty") {
+      if (this.services.handleSculptEmptyDoubleTap?.(ev) === true) {
+        return;
+      }
       if (this.services.hasAnyModelerVertices?.()) {
         this.armBoxSelect(canvasClick);
         this.services.setMessage?.("box select armed: drag to add selection");
@@ -279,11 +300,12 @@ export default class MobileInputController {
     this.services.setMessage?.("command palette");
   }
 
+  // `accept`の`flick`の`shortcut`の条件を判定し、結果を真偽値で返す
   shouldAcceptFlickShortcut(gesture) {
-    if (this.services.isTransformActive?.() || this.boxSelectArmed) {
+    if (this.services.isTransformActive?.() || this.services.isSculptStrokeActive?.() || this.boxSelectArmed) {
       return false;
     }
-    if (gesture.direction !== "left" && gesture.direction !== "right") {
+    if (gesture.direction !== "left" && gesture.direction !== "right" && gesture.direction !== "up") {
       return false;
     }
     const elapsedMs = Number(gesture.elapsedMs);
@@ -304,12 +326,16 @@ export default class MobileInputController {
     }
     const absX = Math.abs(dx);
     const absY = Math.abs(dy);
-    if (absX < absY * this.flick.horizontalDominance) {
+    if ((gesture.direction === "left" || gesture.direction === "right") && absX < absY * this.flick.horizontalDominance) {
+      return false;
+    }
+    if (gesture.direction === "up" && absY < absX * this.flick.horizontalDominance) {
       return false;
     }
     return elapsedMs <= maxMs && (distance / elapsedMs) >= minSpeed;
   }
 
+  // `gesture`の`motion`を現在の入力と状態から求め、呼び出し元へ返す
   formatGestureMotion(gesture) {
     const elapsedMs = Number(gesture.elapsedMs);
     const distance = Number(gesture.distance);
@@ -321,6 +347,7 @@ export default class MobileInputController {
     return ` ${Math.round(elapsedMs)}ms ${speed.toFixed(2)}px/ms`;
   }
 
+  // `flick`の`shortcut`の実行段階で、必要な処理を決められた順序で進める
   executeFlickShortcut(gesture, source) {
     const now = this.now();
     if (this.lastFlickPointerId === gesture.pointerId && (now - this.lastFlickTime) < 120.0) {
@@ -336,7 +363,9 @@ export default class MobileInputController {
     if (this.services.isCommandPaletteOpen?.()) {
       this.services.closeMobilePalette?.();
     }
-    if (gesture.direction === "left") {
+    if (gesture.direction === "up") {
+      this.services.enterSculptModeFromFlick?.();
+    } else if (gesture.direction === "left") {
       this.cycleRibbonPage(1);
     } else if (gesture.direction === "right") {
       this.cycleRibbonPage(-1);
@@ -344,19 +373,34 @@ export default class MobileInputController {
     return true;
   }
 
-  installRawFlickHandlers() {
-    const isMobileRibbonTarget = (target) => {
+  // `raw`の`flick`の`handlers`の初期化段階で、必要な状態と資源を準備して処理を開始する
+  installRawFlickHandlers(canvas = null) {
+    // `flick`の`shortcut`の対象の条件を判定し、結果を真偽値で返す
+    const isFlickShortcutTarget = (ev) => {
+      const target = ev.target;
       if (typeof target?.closest !== "function") {
         return false;
       }
-      return Boolean(target.closest(".mobile-ribbon"));
+      if (target.closest(".mobile-ribbon") || target.closest(".view-dock")) {
+        return true;
+      }
+      if (canvas && target === canvas) {
+        const rect = canvas.getBoundingClientRect?.();
+        if (!rect) {
+          return false;
+        }
+        const bottomEdgeHeight = Math.min(96.0, Math.max(48.0, rect.height * 0.16));
+        return ev.clientY >= rect.bottom - bottomEdgeHeight;
+      }
+      return false;
     };
+    // `begin`は処理周期の開始または終了に必要な状態を更新する
     const begin = (ev) => {
-      if (!this.isMobileProfile || this.services.isTransformActive?.() || this.boxSelectArmed) {
+      if (!this.isMobileProfile || this.services.isTransformActive?.() || this.services.isSculptStrokeActive?.() || this.boxSelectArmed) {
         this.flickPointer = null;
         return;
       }
-      if (!isMobileRibbonTarget(ev.target)) {
+      if (!isFlickShortcutTarget(ev)) {
         this.flickPointer = null;
         return;
       }
@@ -377,6 +421,7 @@ export default class MobileInputController {
       this.lastGesture = `rawstart:${this.flickPointer.pointerType || "-"}:${targetName}`;
       this.lastGesturePointer = this.flickPointer.pointerType || "-";
     };
+    // このインスタンスを入力値に従って変更し、関連する状態を同期する
     const move = (ev) => {
       const state = this.flickPointer;
       if (!state || ev.pointerId !== state.pointerId) {
@@ -385,6 +430,7 @@ export default class MobileInputController {
       state.lastX = ev.clientX;
       state.lastY = ev.clientY;
     };
+    // `end`は処理周期の開始または終了に必要な状態を更新する
     const end = (ev) => {
       const state = this.flickPointer;
       if (!state || ev.pointerId !== state.pointerId) {
@@ -422,6 +468,7 @@ export default class MobileInputController {
         ev.preventDefault();
       }
     };
+    // `cancel`の条件を判定し、結果を真偽値で返す
     const cancel = (ev) => {
       const state = this.flickPointer;
       if (state && ev.pointerId === state.pointerId) {
@@ -436,6 +483,7 @@ export default class MobileInputController {
     window.addEventListener("pointercancel", cancel, true);
   }
 
+  // `beginRollGesture`は処理周期の開始または終了に必要な状態を更新する
   beginRollGesture(state) {
     const pointers = getRollGesturePointers(state);
     const orbit = this.services.getOrbit?.();
@@ -458,6 +506,7 @@ export default class MobileInputController {
     return true;
   }
 
+  // `roll`の`gesture`を現在の入力と実行状態に合わせて更新する
   updateRollGesture(state, ev = null) {
     const orbit = this.services.getOrbit?.();
     const app = this.services.getApp?.();
@@ -472,18 +521,20 @@ export default class MobileInputController {
     if (!metrics) {
       return;
     }
-    const delta = normalizeAngleDelta(metrics.angle - state.startAngle);
+    const inputDelta = normalizeAngleDelta(metrics.angle - state.startAngle);
+    const appliedDelta = -inputDelta;
     // 2 本指 roll gesture も orbit camera の主姿勢として rod 側へ蓄積し、
-    // camera target / distance は維持したまま view forward 軸まわりに回転する
-    orbit.rotateOrbitByViewRoll(delta);
+    // camera target / distance は維持したまま、検出角度の符号だけを反転してview forward軸まわりに回転する
+    orbit.rotateOrbitByViewRoll(appliedDelta);
     orbit.apply?.(true);
     app?.syncCameraFromEyeRig?.(orbit);
     state.startAngle = metrics.angle;
     state.lastRoll = Number(orbit.orbit.roll ?? state.lastRoll);
-    this.lastGesture = `roll:${delta.toFixed(1)}`;
+    this.lastGesture = `roll:input=${inputDelta.toFixed(1)} applied=${appliedDelta.toFixed(1)}`;
     this.lastGesturePointer = String(ev?.pointerType ?? "touch");
   }
 
+  // `finishRollGesture`は処理周期の開始または終了に必要な状態を更新する
   finishRollGesture(state, canceled = false) {
     if (!state.active) {
       return;
@@ -496,6 +547,7 @@ export default class MobileInputController {
     this.lastGesturePointer = "touch";
   }
 
+  // `two`の`finger`の`roll`の`gesture`の初期化段階で、必要な状態と資源を準備して処理を開始する
   installTwoFingerRollGesture(canvas) {
     if (!canvas || !this.isMobileProfile) {
       return;
@@ -503,6 +555,7 @@ export default class MobileInputController {
     const state = makeRollGestureState();
     this.rollGesture = state;
 
+    // ポインターの`down`を受け取った段階で、対応する状態更新と処理を実行する
     const onPointerDown = (ev) => {
       if (String(ev.pointerType ?? "") !== "touch") {
         return;
@@ -517,6 +570,7 @@ export default class MobileInputController {
       }
     };
 
+    // ポインターの`move`を受け取った段階で、対応する状態更新と処理を実行する
     const onPointerMove = (ev) => {
       if (String(ev.pointerType ?? "") !== "touch" || !state.pointers.has(ev.pointerId)) {
         return;
@@ -533,6 +587,7 @@ export default class MobileInputController {
       }
     };
 
+    // ポインターの`end`を受け取った段階で、対応する状態更新と処理を実行する
     const onPointerEnd = (ev) => {
       if (String(ev.pointerType ?? "") !== "touch" || !state.pointers.has(ev.pointerId)) {
         return;
@@ -552,6 +607,7 @@ export default class MobileInputController {
     canvas.addEventListener("pointercancel", onPointerEnd, true);
   }
 
+  // `suppress`のモバイル操作のボタンの`activation`の条件を判定し、結果を真偽値で返す
   shouldSuppressMobileButtonActivation(ev = null) {
     const now = this.now();
     if (now > this.suppressMobileButtonUntil) {
@@ -565,12 +621,14 @@ export default class MobileInputController {
     return ev?.pointerId === this.suppressMobileButtonPointerId;
   }
 
+  // `suppressNextCanvasPointer`は入力またはイベントを受け取り、対応する処理へ振り分ける
   suppressNextCanvasPointer(pointerId = null, durationMs = 520) {
     const now = this.now();
     this.suppressCanvasPointerId = Number.isInteger(pointerId) ? pointerId : null;
     this.suppressCanvasPointerUntil = now + durationMs;
   }
 
+  // `suppress`のキャンバスのポインターの条件を判定し、結果を真偽値で返す
   shouldSuppressCanvasPointer(ev) {
     const now = this.now();
     if (now > this.suppressCanvasPointerUntil) {
@@ -584,16 +642,19 @@ export default class MobileInputController {
     return ev.pointerId === this.suppressCanvasPointerId;
   }
 
+  // キャンバスの`suppression`を初期状態へ戻し、前回の状態を残さない
   clearCanvasSuppression() {
     this.suppressCanvasPointerId = null;
     this.suppressCanvasPointerUntil = 0;
   }
 
+  // `surface`の`gestures`の初期化段階で、必要な状態と資源を準備して処理を開始する
   installSurfaceGestures(canvas, {
     setEditorMode,
-    isEditMode,
+    getEditorMode,
     editModeName,
     objectModeName,
+    sculptModeName,
     editModeController
   } = {}) {
     if (!this.isMobileProfile || !canvas) {
@@ -643,17 +704,26 @@ export default class MobileInputController {
           return;
         }
         this.disarmBoxSelect();
+        const currentMode = getEditorMode?.();
         const hit = this.services.inspectGestureTarget?.(gesture.x, gesture.y) ?? { kind: "empty" };
         if (hit.kind === "empty") {
-          this.services.setMessage?.("empty long press");
+          if (currentMode === sculptModeName) {
+            this.services.showSculptBrushSettings?.();
+            return;
+          }
+          this.services.showActiveObjectInfo?.();
           return;
         }
-        setEditorMode?.(isEditMode?.() ? objectModeName : editModeName);
+        if (currentMode === sculptModeName) {
+          this.services.setMessage?.("long press does not switch modes");
+          return;
+        }
+        setEditorMode?.(currentMode === editModeName ? objectModeName : editModeName);
       },
       onFlick: null
     });
     this.gestureAttached = Boolean(this.touch);
-    this.installRawFlickHandlers();
+    this.installRawFlickHandlers(canvas);
     this.installTwoFingerRollGesture(canvas);
   }
 }

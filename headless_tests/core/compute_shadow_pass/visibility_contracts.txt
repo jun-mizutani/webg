@@ -1,0 +1,32 @@
+# Shadow resolveのvisibility責務単体テスト
+
+## 目的
+
+ComputeShadowPassとComputeSpotShadowPassが完成色を生成せず、0を遮蔽、1を可視とするshadow visibilityだけを出力することを確認する。これにより、後続のShadow Map visibilityとコンタクトシャドウvisibilityを統合し、Deferred Shadingが材質、拡散反射、鏡面反射、spot coneを一度だけ評価できる構成にする
+
+## 確認項目
+
+1. 出力が `vec4f(vec3f(visibility), 1)` である
+2. camera背景とshadow無効時は遮蔽なしを表すvisibility 1を出力する
+3. WGSLがalbedo、ambient、diffuse、完成色を扱わない
+4. spot WGSLがspot coneやspotFactorを扱わない
+5. bindingがnormal、camera depth、Shadow Map depth、outputに限定される
+6. `enabled: false` がuniformへ0として入り、別の色へfallbackしない
+7. 旧ambient、view、directIntensity、spot cone optionを黙って無視せず例外にする
+8. bias、normal bias、Percentage-Closer Filtering radius、Shadow Map寸法を維持する
+
+## 実行方法
+
+```sh
+node headless_tests/core/compute_shadow_pass/headless_probe.js
+```
+
+## 結果
+
+2026-07-12に実行し、全項目が成功した。表示文字列は次のとおり
+
+```text
+compute_shadow_pass_visibility_contracts: all visibility-only contracts passed
+```
+
+このテストは統合Deferred Shadingの最終色を評価しない。Shadow Map resolveの出力意味と責務境界を固定し、コンタクトシャドウ追加時に照明計算が重複しないことを保証する基礎とする

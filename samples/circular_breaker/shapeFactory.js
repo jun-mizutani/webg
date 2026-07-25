@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// samples/circular_breaker/shapeFactory.js  2026/04/10
+// samples/circular_breaker/shapeFactory.js  2026/07/25
 //   circular_breaker sample
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -41,6 +41,7 @@ export const makeBeveledBox = (gpu, sx, sy, sz, bevel) => {
   const iy = hy - b;
   const iz = hz - b;
 
+  // `face`を対象へ追加し、後続処理から参照できるようにする
   const addFace = (pts) => {
     const n = pts.length;
     const cx = pts.reduce((a, p) => a + p[0], 0) / n;

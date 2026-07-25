@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// samples/embedded_glb_viewer/main.js  2026/04/23
+// samples/embedded_glb_viewer/main.js  2026/07/25
 //   embedded_glb_viewer sample
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -9,7 +9,10 @@ import SmoothShader from "../../webg/SmoothShader.js";
 import Shape from "../../webg/Shape.js";
 import Primitive from "../../webg/Primitive.js";
 import Diagnostics from "../../webg/Diagnostics.js";
-import { buildErrorPanelOptions } from "../../webg/OverlayPanelPresets.js";
+import { buildErrorPanelOptions, buildHelpPanelOptions } from "../../webg/OverlayPanelPresets.js";
+import CommandPalette, {
+  getDefaultCommandPaletteCss
+} from "../../webg/CommandPalette.js";
 
 const BUNDLED_SAMPLE = new URL("../gltf_loader/hand.glb", import.meta.url).href;
 const DEFAULT_ORBIT = {
@@ -87,6 +90,8 @@ let orbit = null;
 let placeholderRoot = null;
 let placeholderSpinNode = null;
 let detachArrowKeyBridge = null;
+let palette = null;
+let lastHelpText = "";
 
 const state = {
   activeModelRoot: null,
@@ -124,6 +129,7 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 });
 
+// `cacheUi`は必要な画面要素を準備し、表示状態を更新する
 function cacheUi() {
   ui.fileInput = document.getElementById("glbFile");
   ui.loadSampleButton = document.getElementById("loadBundledSample");
@@ -135,6 +141,7 @@ function cacheUi() {
   ui.status = document.getElementById("status");
 }
 
+// `focusViewerCanvas`は必要な画面要素を準備し、表示状態を更新する
 function focusViewerCanvas() {
   const canvas = app?.screen?.canvas ?? null;
   if (!canvas) {
@@ -153,6 +160,7 @@ function focusViewerCanvas() {
   }
 }
 
+// `viewer`の`arrow`のキーを検証し、後続処理が扱える共通形式へ整える
 function normalizeViewerArrowKey(ev) {
   const normalizedKey = app?.input?.normalizeKey(ev?.key ?? "") ?? "";
   const normalizedCode = String(ev?.code ?? "").toLowerCase();
@@ -174,6 +182,7 @@ function normalizeViewerArrowKey(ev) {
   return normalizedKey;
 }
 
+// `arrow`のキーの`bridge`の初期化段階で、必要な状態と資源を準備して処理を開始する
 function installArrowKeyBridge() {
   if (typeof window === "undefined" || !app?.input) {
     return () => {};
@@ -185,6 +194,7 @@ function installArrowKeyBridge() {
     "arrowdown",
     "shift"
   ]);
+  // キーの`down`を受け取った段階で、対応する状態更新と処理を実行する
   const onKeyDown = (ev) => {
     const key = normalizeViewerArrowKey(ev);
     if (!bridgedKeys.has(key)) {
@@ -196,6 +206,7 @@ function installArrowKeyBridge() {
     ev.preventDefault();
     app.input.press(key);
   };
+  // キーの`up`を受け取った段階で、対応する状態更新と処理を実行する
   const onKeyUp = (ev) => {
     const key = normalizeViewerArrowKey(ev);
     if (!bridgedKeys.has(key)) {
@@ -204,6 +215,7 @@ function installArrowKeyBridge() {
     ev.preventDefault();
     app.input.release(key);
   };
+  // `blur`を受け取った段階で、対応する状態更新と処理を実行する
   const onBlur = () => {
     for (const key of bridgedKeys) {
       app.input.release(key);
@@ -219,6 +231,7 @@ function installArrowKeyBridge() {
   };
 }
 
+// 材質の形状を生成し、後続処理で利用できる状態にする
 function createMaterialShape(gpu, primitiveAsset, params) {
   const shape = new Shape(gpu);
   shape.applyPrimitiveAsset(primitiveAsset);
@@ -227,6 +240,7 @@ function createMaterialShape(gpu, primitiveAsset, params) {
   return shape;
 }
 
+// `placeholder`の`primitive`を対象へ追加し、後続処理から参照できるようにする
 function addPlaceholderPrimitive(parentNode, nodeName, primitiveAsset, materialParams, position) {
   const node = app.space.addNode(parentNode, nodeName);
   const shape = createMaterialShape(
@@ -239,6 +253,7 @@ function addPlaceholderPrimitive(parentNode, nodeName, primitiveAsset, materialP
   return node;
 }
 
+// デバッグの`number`を現在の入力と状態から求め、呼び出し元へ返す
 function formatDebugNumber(value, digits = 6) {
   if (Number.isFinite(value)) {
     return Number(value).toFixed(digits);
@@ -246,6 +261,7 @@ function formatDebugNumber(value, digits = 6) {
   return String(value);
 }
 
+// `placeholder`のシーンを生成し、後続処理で利用できる状態にする
 function createPlaceholderScene() {
   placeholderRoot = app.space.addNode(null, "uploadPlaceholderRoot");
   placeholderRoot.setPosition(0.0, -PLACEHOLDER_SIZE.centery, 0.0);
@@ -299,6 +315,7 @@ function createPlaceholderScene() {
   );
 }
 
+// ノードの`tree`の`hidden`を受け取り、現在の設定と後続処理へ反映する
 function setNodeTreeHidden(node, hidden) {
   if (!node) return;
   if (typeof node.hide === "function") {
@@ -310,13 +327,16 @@ function setNodeTreeHidden(node, hidden) {
   }
 }
 
+// `placeholder`の`visible`を受け取り、現在の設定と後続処理へ反映する
 function setPlaceholderVisible(visible) {
   if (!placeholderRoot) return;
   setNodeTreeHidden(placeholderRoot, !visible);
 }
 
+// `placeholder`の`shapes`を現在の入力と状態から求め、呼び出し元へ返す
 function collectPlaceholderShapes() {
   const shapes = [];
+  // `walk`は受け取った値を処理し、後続処理で利用する状態または結果を生成する
   const walk = (node) => {
     if (!node) return;
     if (Array.isArray(node.shapes)) {
@@ -333,6 +353,7 @@ function collectPlaceholderShapes() {
   return shapes;
 }
 
+// `viewer`の`shapes`を現在の入力と状態から求め、呼び出し元へ返す
 function getViewerShapes() {
   if (state.hasActiveModel && Array.isArray(state.instantiated?.shapes)) {
     return state.instantiated.shapes;
@@ -340,6 +361,7 @@ function getViewerShapes() {
   return collectPlaceholderShapes();
 }
 
+// ワイヤーフレームの状態を対象の状態または描画設定へ反映する
 function applyWireframeState() {
   const shapes = getViewerShapes();
   for (let i = 0; i < shapes.length; i++) {
@@ -347,6 +369,7 @@ function applyWireframeState() {
   }
 }
 
+// 周回視点を初期状態へ戻し、前回の状態を残さない
 function resetOrbit(size = state.modelSize, options = {}) {
   const maxSize = Math.max(2.4, Number(size?.max) || PLACEHOLDER_SIZE.max);
   const target = Array.isArray(options.target) && options.target.length >= 3
@@ -361,6 +384,7 @@ function resetOrbit(size = state.modelSize, options = {}) {
   syncOrbitStateToAppCamera();
 }
 
+// 周回視点の状態をアプリケーションのカメラへ同期する
 function syncOrbitStateToAppCamera() {
   if (!app?.camera || !orbit?.orbit) {
     return;
@@ -373,6 +397,7 @@ function syncOrbitStateToAppCamera() {
   app.camera.pitch = orbit.orbit.pitch;
 }
 
+// `stepOrbitByButtons`は受け取った値を処理し、後続処理で利用する状態または結果を生成する
 function stepOrbitByButtons({ yaw = 0.0, pitch = 0.0, zoom = 1.0 } = {}) {
   if (!orbit?.orbit) {
     return;
@@ -392,6 +417,7 @@ function stepOrbitByButtons({ yaw = 0.0, pitch = 0.0, zoom = 1.0 } = {}) {
   syncOrbitStateToAppCamera();
 }
 
+// `load`のパネルを現在の入力と実行状態に合わせて更新する
 function updateLoadPanel() {
   const lines = [
     "embedded_glb_viewer",
@@ -418,6 +444,7 @@ function updateLoadPanel() {
   }
 }
 
+// `load`のステージを受け取り、現在の設定と後続処理へ反映する
 function setLoadStage(stage) {
   state.loadStage = String(stage ?? "");
   state.loadElapsedMs = Math.max(0, performance.now() - state.loadStartedAtMs);
@@ -430,6 +457,7 @@ function setLoadStage(stage) {
   updateLoadPanel();
 }
 
+// `screenshot`の名前を生成し、後続処理で利用できる状態にする
 function makeScreenshotName() {
   const base = state.fileLabel && state.fileLabel !== "(none)"
     ? state.fileLabel.replace(/\.[^.]+$/, "")
@@ -440,6 +468,7 @@ function makeScreenshotName() {
     || "embedded_glb_viewer";
 }
 
+// `takeViewerScreenshot`は現在のキャンバス画像を取得し、指定形式で保存する
 function takeViewerScreenshot() {
   const file = app.takeScreenshot({
     prefix: `${makeScreenshotName()}_view`
@@ -451,11 +480,13 @@ function takeViewerScreenshot() {
   });
 }
 
+// エラーの状態を初期状態へ戻し、前回の状態を残さない
 function clearErrorState() {
   state.lastError = "";
   app.removeOverlayPanel("embeddedViewerError");
 }
 
+// `showErrorState`は必要な画面要素を準備し、表示状態を更新する
 function showErrorState(err) {
   const report = Diagnostics.createErrorReport(err, {
     system: "embedded-glb-viewer",
@@ -471,6 +502,7 @@ function showErrorState(err) {
   }));
 }
 
+// 読み込んだモデルを現在の表示対象として設定する
 function setCurrentModel(rootNode, runtime, instantiated, size) {
   disposeCurrentModel();
   state.activeModelRoot = rootNode;
@@ -484,6 +516,7 @@ function setCurrentModel(rootNode, runtime, instantiated, size) {
   setPlaceholderVisible(false);
 }
 
+// 現在のモデルが保持する実体と資源を安全に解放する
 function disposeCurrentModel() {
   if (state.instantiated) {
     state.instantiated.setAnimationsPaused?.(true);
@@ -504,6 +537,7 @@ function disposeCurrentModel() {
   state.paused = false;
 }
 
+// 現在のモデルを表示から外して初期状態へ戻す
 function clearCurrentModel(options = {}) {
   disposeCurrentModel();
   state.fileLabel = "(none)";
@@ -523,6 +557,7 @@ function clearCurrentModel(options = {}) {
   }
 }
 
+// 複製したルートノードを対象へ追加し、後続処理から参照できるようにする
 function attachInstantiatedRoots(runtime, instantiated, mountNode) {
   const roots = runtime.nodes.filter((nodeInfo) => nodeInfo.parent === null);
   for (let i = 0; i < roots.length; i++) {
@@ -533,6 +568,7 @@ function attachInstantiatedRoots(runtime, instantiated, mountNode) {
   }
 }
 
+// `triangle`の`count`を入力値から計算し、後続処理で使える結果を返す
 function computeTriangleCount(shapes) {
   let total = 0;
   for (let i = 0; i < shapes.length; i++) {
@@ -541,6 +577,7 @@ function computeTriangleCount(shapes) {
   return total;
 }
 
+// `viewer`のサイズを入力値から計算し、後続処理で使える結果を返す
 function computeViewerSize(shapes) {
   const size = app.getShapeSize(shapes);
   if (!Number.isFinite(size.max) || size.max <= 0.0) {
@@ -549,6 +586,7 @@ function computeViewerSize(shapes) {
   return size;
 }
 
+// `placeModelRoot`は現在の進行状態に必要な要素を生成または配置する
 function placeModelRoot(rootNode, size) {
   rootNode.setPosition(
     -Number(size.centerx ?? 0.0),
@@ -557,6 +595,7 @@ function placeModelRoot(rootNode, size) {
   );
 }
 
+// アニメーションの`pause`の有効状態を切り替え、表示と処理へ反映する
 function toggleAnimationPause() {
   if (!state.runtime || state.clipCount <= 0) {
     app.pushToast("no animation clip", {
@@ -572,6 +611,7 @@ function toggleAnimationPause() {
   });
 }
 
+// `viewer`の`animations`を現在の入力と状態から求め、呼び出し元へ返す
 function getViewerAnimations() {
   const animationMap = state.instantiated?.animationMap;
   if (!(animationMap instanceof Map)) {
@@ -583,6 +623,7 @@ function getViewerAnimations() {
   return [...animationMap.values()];
 }
 
+// `advanceViewerAnimations`はゲームまたは計測の進行段階を次の状態へ更新する
 function advanceViewerAnimations() {
   if (!state.runtime || state.clipCount <= 0 || state.paused) {
     state.animationRunning = false;
@@ -607,6 +648,7 @@ function advanceViewerAnimations() {
   }
 }
 
+// ワイヤーフレームの有効状態を切り替え、表示と処理へ反映する
 function toggleWireframe() {
   state.wireframe = !state.wireframe;
   applyWireframeState();
@@ -616,6 +658,7 @@ function toggleWireframe() {
   });
 }
 
+// `pressed`の`actions`を受け取った段階で、対応する状態更新と処理を実行する
 function handlePressedActions() {
   if (app.input.wasActionPressed("orbit-left")) {
     stepOrbitByButtons({
@@ -664,6 +707,7 @@ function handlePressedActions() {
   }
 }
 
+// 指定したデータ源からモデルを読み込む
 async function loadModelFromSource(source, {
   fileLabel,
   sourceLabel
@@ -736,6 +780,7 @@ async function loadModelFromSource(source, {
   }
 }
 
+// `bundled`の`sample`を読み込み、検証済みのデータとして後続処理へ渡す
 async function loadBundledSample() {
   await loadModelFromSource(BUNDLED_SAMPLE, {
     fileLabel: "hand.glb",
@@ -743,6 +788,7 @@ async function loadBundledSample() {
   });
 }
 
+// ファイルの選択状態を受け取った段階で、対応する状態更新と処理を実行する
 async function handleFileSelection(file) {
   if (!file) {
     return;
@@ -763,6 +809,7 @@ async function handleFileSelection(file) {
   }
 }
 
+// `dom`の`handlers`の初期化段階で、必要な状態と資源を準備して処理を開始する
 function installDomHandlers() {
   ui.fileInput?.addEventListener("change", (event) => {
     const file = event.target.files?.[0] ?? null;
@@ -798,63 +845,111 @@ function installDomHandlers() {
   });
 }
 
-function updateHudRows() {
-  app.setHudRows([
-    { line: "embedded glb viewer" },
-    {
-      label: "File",
-      value: state.fileLabel,
-      note: state.sourceLabel
-    },
-    {
-      label: "Stage",
-      value: state.loading ? state.loadStage : "idle",
-      note: `${Math.round(state.loadElapsedMs)} ms`
-    },
-    {
-      label: "Model",
-      value: state.hasActiveModel ? "loaded" : "placeholder",
-      note: `tris=${state.triangleCount} clips=${state.clipCount}`
-    },
-    {
-      label: "Orbit",
-      value: `yaw=${orbit.orbit.yaw.toFixed(1)} pitch=${orbit.orbit.pitch.toFixed(1)}`,
-      note: `dist=${orbit.orbit.distance.toFixed(1)}`
-    },
-    {
-      label: "Target",
-      value: `${orbit.orbit.target[0].toFixed(2)}, ${orbit.orbit.target[1].toFixed(2)}, ${orbit.orbit.target[2].toFixed(2)}`,
-      note: "Shift+Drag / Shift+Arrow / 2finger"
-    },
-    {
-      label: "Anim",
-      value: state.clipCount > 0 ? (state.paused ? "paused" : "playing") : "none",
-      note: "Space / touch ||"
-    },
-    {
-      label: "Wire",
-      value: state.wireframe ? "on" : "off",
-      note: "W / button / touch"
-    },
-    {
-      label: "Shot",
-      value: state.screenshotName || "-",
-      note: "S / touch Shot"
-    },
-    {
-      line: state.lastError
-        ? `error: ${state.lastError}`
-        : "pick a .glb file or load the bundled sample"
-    }
-  ], {
-    anchor: "top-left",
-    x: 0,
-    y: 0,
-    color: [0.92, 0.96, 1.0],
-    minScale: 0.82
-  });
+// `viewer`のヘルプの行を生成し、後続処理で利用できる状態にする
+function buildViewerHelpLines() {
+  return [
+    "embedded_glb_viewer",
+    "CommandPalette: double tap canvas or press /",
+    "Drag/Arrow: orbit  Shift+Drag/Arrow or two-finger drag: pan  wheel/pinch: zoom",
+    "Use the page controls to select a GLB file or load the bundled sample",
+    "",
+    `File: ${state.fileLabel}  source=${state.sourceLabel}`,
+    `Stage: ${state.loading ? state.loadStage : "idle"}  elapsed=${Math.round(state.loadElapsedMs)}ms`,
+    `Model: ${state.hasActiveModel ? "loaded" : "placeholder"}  tris=${state.triangleCount} nodes=${state.nodeCount} clips=${state.clipCount}`,
+    `Orbit: yaw=${orbit.orbit.yaw.toFixed(1)} pitch=${orbit.orbit.pitch.toFixed(1)} dist=${orbit.orbit.distance.toFixed(1)}`,
+    `Target: ${orbit.orbit.target[0].toFixed(2)}, ${orbit.orbit.target[1].toFixed(2)}, ${orbit.orbit.target[2].toFixed(2)}`,
+    `Animation: ${state.clipCount > 0 ? (state.paused ? "paused" : "playing") : "none"}  wireframe=${state.wireframe ? "on" : "off"}`,
+    `Screenshot: ${state.screenshotName || "-"}`,
+    state.lastError ? `Error: ${state.lastError}` : "Status: pick a .glb file or load the bundled sample"
+  ];
 }
 
+// ヘルプのパネルを現在の入力と実行状態に合わせて更新する
+function updateHelpPanel() {
+  const panel = app?.getOverlayPanel?.("embeddedGlbViewerHelp");
+  if (!panel || !orbit?.orbit) {
+    return;
+  }
+  const lines = buildViewerHelpLines();
+  const nextText = lines.join("\n");
+  if (nextText === lastHelpText) {
+    return;
+  }
+  app.updateOverlayPanel("embeddedGlbViewerHelp", { lines });
+  lastHelpText = nextText;
+}
+
+// `viewer`の`controls`を現在の入力と実行状態に合わせて更新する
+function refreshViewerControls() {
+  palette?.render();
+  updateHelpPanel();
+  app.requestRender();
+}
+
+// コマンドの操作パレットの初期化段階で、必要な状態と資源を準備して処理を開始する
+function installCommandPalette() {
+  palette = new CommandPalette({
+    document,
+    container: document.body,
+    viewport: app.screen.canvas,
+    title: "GLB Viewer",
+    pageRows: 5,
+    pageRowsByPage: [5],
+    closeOnCommand: false,
+    onChange: (id, value) => {
+      if (id === "pause") {
+        state.paused = value;
+      } else if (id === "wireframe") {
+        state.wireframe = value;
+        applyWireframeState();
+      }
+      refreshViewerControls();
+    },
+    onCommand: (id) => {
+      if (id === "load-sample") {
+        loadBundledSample().catch((err) => {
+          showErrorState(err);
+        });
+      } else if (id === "clear") {
+        clearCurrentModel({ toast: true });
+      } else if (id === "reset-view") {
+        resetOrbit(state.modelSize);
+        app.pushToast("camera reset", { durationMs: 900 });
+      } else if (id === "screenshot") {
+        takeViewerScreenshot();
+      }
+      focusViewerCanvas();
+      refreshViewerControls();
+    },
+    commands: [
+      // 1ページ目
+      { id: "load-sample", label: "Load", detail: "sample" },
+      { id: "clear", label: "Clear", detail: "model" },
+      { id: "reset-view", label: "Reset", detail: "view" },
+      { id: "palette-next", label: "Next", detail: "page", pageSwitch: true },
+      { id: "screenshot", label: "Shot", detail: "png" },
+      { type: "toggle", id: "pause", label: "Pause", detail: "anim", value: () => state.paused },
+      { type: "toggle", id: "wireframe", label: "Wire", detail: "mesh", value: () => state.wireframe },
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+    ]
+  });
+  palette.attachToCanvas(app.screen.canvas, { key: "/" });
+  palette.setStyle(getDefaultCommandPaletteCss());
+}
+
+// `viewer`の診断情報の統計情報を現在の入力と実行状態に合わせて更新する
 function updateViewerDiagnosticsStats() {
   const rodAttitude = typeof app.cameraRod?.getWorldAttitude === "function"
     ? app.cameraRod.getWorldAttitude()
@@ -901,6 +996,7 @@ function updateViewerDiagnosticsStats() {
   });
 }
 
+// 状態表示のパネルを現在の入力と実行状態に合わせて更新する
 function updateStatusPanel() {
   if (!ui.status) {
     return;
@@ -945,6 +1041,7 @@ function updateStatusPanel() {
   ].join("\n");
 }
 
+// このインスタンスの初期化段階で、必要な状態と資源を準備して処理を開始する
 async function start() {
   cacheUi();
   detachArrowKeyBridge?.();
@@ -1016,37 +1113,39 @@ async function start() {
   applyWireframeState();
   resetOrbit(PLACEHOLDER_SIZE);
   installDomHandlers();
+  app.showOverlayPanel(buildHelpPanelOptions({
+    id: "embeddedGlbViewerHelp",
+    collapsed: true,
+    lines: buildViewerHelpLines()
+  }));
+  lastHelpText = buildViewerHelpLines().join("\n");
+  installCommandPalette();
   focusViewerCanvas();
-  updateHudRows();
+  refreshViewerControls();
   updateViewerDiagnosticsStats();
   updateStatusPanel();
 
   app.start({
     onUpdate(ctx) {
       state.lastCtxDeltaSec = ctx.deltaSec;
-      const previousOrbitYaw = orbit.orbit.yaw;
-      const previousOrbitPitch = orbit.orbit.pitch;
-      const previousTargetX = orbit.orbit.target[0];
-      const previousTargetY = orbit.orbit.target[1];
-      const previousTargetZ = orbit.orbit.target[2];
-      const previousEyeAttitude = typeof app.eye?.getWorldAttitude === "function"
-        ? app.eye.getWorldAttitude()
-        : [NaN, NaN, NaN];
-      orbit.update(ctx.deltaSec);
-      syncOrbitStateToAppCamera();
-      state.orbitChangedThisFrame =
-        orbit.orbit.yaw !== previousOrbitYaw
-        || orbit.orbit.pitch !== previousOrbitPitch
-        || orbit.orbit.target[0] !== previousTargetX
-        || orbit.orbit.target[1] !== previousTargetY
-        || orbit.orbit.target[2] !== previousTargetZ;
+      const previousEyeAttitude = state.previousEyeAttitude;
       const nextEyeAttitude = typeof app.eye?.getWorldAttitude === "function"
         ? app.eye.getWorldAttitude()
         : [NaN, NaN, NaN];
+      state.orbitChangedThisFrame =
+        orbit.orbit.yaw !== state.previousOrbitYaw
+        || orbit.orbit.pitch !== state.previousOrbitPitch
+        || orbit.orbit.target[0] !== state.previousTarget[0]
+        || orbit.orbit.target[1] !== state.previousTarget[1]
+        || orbit.orbit.target[2] !== state.previousTarget[2];
       state.eyeChangedThisFrame =
         nextEyeAttitude[0] !== previousEyeAttitude[0]
         || nextEyeAttitude[1] !== previousEyeAttitude[1]
         || nextEyeAttitude[2] !== previousEyeAttitude[2];
+      state.previousOrbitYaw = orbit.orbit.yaw;
+      state.previousOrbitPitch = orbit.orbit.pitch;
+      state.previousTarget = [...orbit.orbit.target];
+      state.previousEyeAttitude = [...nextEyeAttitude];
       handlePressedActions();
       state.loadElapsedMs = state.loading
         ? Math.max(0, performance.now() - state.loadStartedAtMs)
@@ -1059,7 +1158,7 @@ async function start() {
         placeholderSpinNode.rotateX(8.0 * ctx.deltaSec);
       }
 
-      updateHudRows();
+      updateHelpPanel();
       updateViewerDiagnosticsStats();
       updateStatusPanel();
     }

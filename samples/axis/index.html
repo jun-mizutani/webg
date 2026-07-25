@@ -3,31 +3,187 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>WebGPU Axis Study</title>
+  <title>axis</title>
   <link rel="icon" href="data:," />
-  <!-- 2026/03/21 -->
+  <!-- 2026/06/19 -->
   <style>
-    html, body {
-      margin: 0;
-      width: 100%;
-      height: 100%;
-      overflow: hidden;
-      background:
-        radial-gradient(circle at top left, rgba(73, 101, 158, 0.22), transparent 30%),
-        radial-gradient(circle at bottom right, rgba(254, 166, 92, 0.16), transparent 28%),
-        #091019;
-      color: #d8e6f6;
-      font: 12px/1.5 "Avenir Next", "Hiragino Sans", "Yu Gothic", sans-serif;
-    }
-    #canvas {
-      display: block;
-      width: 100%;
-      height: 100%;
-    }
+
+:root {
+  color-scheme: light;
+  --bg: #eef3f8;
+  --paper: rgba(255, 255, 255, 0.94);
+  --line: #c8d5e4;
+  --ink: #17324a;
+  --muted: #5c748b;
+  --accent: #1566ab;
+  --accent-soft: #dfeefe;
+  --code-bg: #f3f7fb;
+  --shadow: rgba(29, 52, 79, 0.10);
+}
+* { box-sizing: border-box; }
+html, body {
+  margin: 0;
+  min-height: 100%;
+}
+body {
+  background:
+    radial-gradient(circle at top left, rgba(21, 102, 171, 0.12), transparent 24%),
+    radial-gradient(circle at top right, rgba(255, 191, 118, 0.10), transparent 22%),
+    linear-gradient(180deg, #f8fbfd 0%, var(--bg) 100%);
+  color: var(--ink);
+  font: 16px/1.78 "Avenir Next", "Hiragino Sans", "Yu Gothic", sans-serif;
+}
+.page {
+  width: min(1080px, calc(100% - 28px));
+  margin: 0 auto;
+  padding: 24px 0 56px;
+}
+.hero,
+.doc {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  box-shadow: 0 22px 52px var(--shadow);
+}
+.hero {
+  padding: 22px 24px;
+  margin-bottom: 18px;
+}
+.hero h1 {
+  margin: 0 0 8px;
+  font-size: clamp(2rem, 4vw, 3rem);
+  line-height: 1.08;
+}
+.hero p {
+  margin: 0;
+  color: var(--muted);
+}
+.doc {
+  padding: 28px;
+}
+.doc > :first-child {
+  margin-top: 0;
+}
+h1, h2, h3, h4, h5, h6 {
+  line-height: 1.25;
+  margin: 1.45em 0 0.55em;
+}
+h1 {
+  font-size: 2.2rem;
+}
+h2 {
+  padding-bottom: 0.28em;
+  border-bottom: 1px solid var(--line);
+  font-size: 1.48rem;
+}
+h3 {
+  font-size: 1.14rem;
+}
+p, ul, ol, table, pre, blockquote {
+  margin: 0 0 1em;
+}
+ul, ol {
+  padding-left: 1.4em;
+}
+li + li {
+  margin-top: 0.26em;
+}
+a {
+  color: var(--accent);
+  text-decoration: none;
+}
+a:hover {
+  text-decoration: underline;
+}
+img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  border-radius: 16px;
+  border: 1px solid var(--line);
+  box-shadow: 0 12px 32px rgba(29, 52, 79, 0.08);
+  margin: 1.1em 0 1.4em;
+}
+code {
+  padding: 0.12em 0.38em;
+  border-radius: 0.45em;
+  background: var(--code-bg);
+  border: 1px solid #dbe6f1;
+  font: 0.92em/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+pre {
+  padding: 14px 16px;
+  overflow-x: auto;
+  border-radius: 14px;
+  background: #0f1720;
+  color: #ecf5ff;
+}
+pre code {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #ffffff;
+}
+th, td {
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  text-align: left;
+  vertical-align: top;
+}
+th {
+  background: #f5f9fc;
+}
+hr {
+  border: 0;
+  border-top: 1px solid var(--line);
+  margin: 1.5em 0;
+}
+blockquote {
+  padding: 0.3em 0 0.3em 1em;
+  border-left: 4px solid #c9dbef;
+  color: var(--muted);
+}
+@media (max-width: 720px) {
+  .page {
+    width: min(100% - 18px, 1080px);
+    padding-top: 16px;
+  }
+  .hero,
+  .doc {
+    border-radius: 18px;
+  }
+  .doc {
+    padding: 20px;
+  }
+}
+
   </style>
 </head>
 <body>
-  <canvas id="canvas" width="960" height="720"></canvas>
-  <script type="module" src="./main.js"></script>
+  <main class="page">
+    <section class="hero">
+      <h1>axis</h1>
+    </section>
+    <article class="doc">
+<h1>axis</h1>
+<p><a href="index.en.html">English</a> | 日本語</p>
+<p><img src="./axis.jpg" alt="axis" /></p>
+<h2>概要</h2>
+<ul><li>3D 空間の原点に X / Y / Z の基準軸を置き、座標系の向きとスケール感を確認する教育用サンプルです</li><li>WebgApp で起動をまとめ、EyeRig の orbit camera と WebgApp.updateProjection() による投影更新を同じ画面で見比べられるようにしています</li><li>projectionFar を 160 に絞り、samples/dof と同じく depth buffer の精度を読みやすい範囲へ合わせています</li><li>- / = で FOV を動かし、[ / ] やホイールで camera 距離を変えることで、projection matrix が見え方をどう変えるかを追いやすくしています</li><li>camera の world 座標を FOV の近くに表示し、視点位置と見え方の関係を同時に確認しやすくしています</li><li>背景と fog を少しグレー寄りにして、CommandPalette は黒で重ねることで、軸と四角錐の色を読みやすくしています</li><li>赤い X、緑の Y、青の Z は少し太めにして、白背景でも軸そのものが埋もれにくいようにしています</li><li>赤い X、緑の Y、青の Z に加えて、はっきりした色の小さな四角錐を Z 軸の正負方向へ広い範囲に並べ、横方向はより密にして座標軸に近い面で奥行きと遠近法を確認しやすくしています</li><li>F で fog を切り替え、D で DOF を切り替えると、同じ scene でも depth cue の出方がどう変わるかを確認しやすくしています</li><li>V で composite / scene / depth / focusMask / stage / smallBlur / mediumBlur / largeBlur を切り替え、focus mask と staged blur の段階を目視比較しやすくしています</li><li>focusRange は最大 blur までの距離ではなく 1 stage 分の距離幅として扱い、focus 面から外れた部分のにじみ方を段階的に確認できます</li><li>maxBlurMix を高めにして、焦点が合っている場合と外れている場合の差が見えやすいようにしています</li><li>5 / 6 で focus range を変え、焦点の合う距離帯そのものを調整しやすくしています</li><li>1 / 2 で sharpness width、3 / 4 で sharpness power を変え、focusRange に対する曲線の形を比べやすくしています</li><li>DOF の焦点は常に原点へ合わせ、camera を動かしても center sphere が sharp に見えることを確認しやすくしています</li><li>軸と四角錐の grid は水平にそろえ、傾きによる見え方の混乱を避けやすくしています</li><li>原点は小さな球にして、座標軸の交点を軽く見せています</li><li>操作説明と教育用の補足は buildHelpPanelOptions() と showOverlayPanel() を使って左上の畳める help panel へまとめ、現在値は CommandPalette 側へ分けています</li></ul>
+<h2>実行方法</h2>
+<ul><li>実行ファイルは <a href="./axis.html">./axis.html</a> です</li><li>WebGPU に対応したブラウザで開き、必要に応じて help panel と CommandPalette と合わせて確認してください</li></ul>
+<h2>使用している webg 機能</h2>
+<ul><li>buildHelpPanelOptions() + showOverlayPanel(): 左上の help panel を標準形式で生成し、操作説明と補足説明の表示 / 非表示を切り替える</li><li>EyeRig: orbit camera と pointer / キーボード入力をまとめる</li><li>Shape / Primitive: axis arrow、origin sphere、四角錐列の生成</li><li>WebgApp.updateProjection(): viewAngle と viewport aspect から projection matrix を更新する入口</li><li>CommandPalette: current value を表示しながら FOV / fog / DOF を変更する設定パネル</li></ul>
+<h2>確認ポイント</h2>
+<ul><li>X / Y / Z の色と向きが想定どおりかを確認し、座標系の読み方を他のサンプルとそろえます</li><li>camera orbit と FOV 変更で、同じ scene でも見え方が大きく変わることを確認します</li><li>origin sphere と Z 方向に広げた四角錐の列が残ることで、軸だけよりも奥行きがつかみやすく、水平な grid との比較もしやすいことを確認します</li><li>左上の help panel に座標軸の補足と操作説明が表示され、Hide Help を押すと Show Help ボタンだけが残り、Show Help で再表示できることを確認します</li><li>fog と DOF を切り替えると、奥行きの強調方法がどう変わるかを確認します</li><li>CommandPalette と help panel が白背景上でも読みやすいことを確認します</li></ul>
+<h2>操作方法</h2>
+<ul><li>左上 help panel の Hide Help / Show Help: 操作説明本文の表示 / 非表示</li><li>ドラッグ: orbit camera</li><li>arrow keys: orbit camera</li><li>ホイール / [ ]: camera 距離</li><li>- / =: FOV</li><li>F: fog の ON / OFF</li><li>D: DOF の ON / OFF</li><li>5 / 6: focus range を狭める / 広げる</li><li>1 / 2: sharpness width を下げる / 上げる</li><li>3 / 4: sharpness power を下げる / 上げる</li><li>V: DOF debug view を composite / scene / depth / focusMask / stage / smallBlur / mediumBlur / largeBlur で切り替え</li><li>stage debug と small / medium / large blur を見比べ、focus 外のにじみ方を比較します</li><li>r: camera、FOV、fog、DOF を reset</li></ul>
+    </article>
+  </main>
 </body>
 </html>

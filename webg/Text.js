@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// Text.js        2026/04/30
+// Text.js        2026/07/25
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // ---------------------------------------------
@@ -321,6 +321,7 @@ export default class Text {
     this.gpu.queue.writeBuffer(this.vertexBuffer, 0, vertices);
   }
 
+  // このインスタンスの初期化段階で、必要な状態と資源を準備して処理を開始する
   async init(texture_file, options = {}) {
     // テキスト描画の初期化:
     // 1) Fontシェーダ

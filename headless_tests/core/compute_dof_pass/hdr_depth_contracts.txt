@@ -1,0 +1,28 @@
+# Depth of Field線形HDR・Reverse-Z単体テスト
+
+## 目的
+
+ComputeDofPassのscene画像ピラミッド、近景・遠景CoC layer、depth compositeをTone Map前の線形HDR領域で実行し、Geometry Bufferと同じCamera Reverse-Z Camera Frameから焦点距離を計算することを確認します。
+
+## 確認項目
+
+1. scene、近景・遠景抽出target、3系統の1/2、1/4、1/8、1/16 Level、composite outputは `rgba16float` である
+2. 各Levelは一つ前のLevelを13 tapでlow-passして生成する
+3. `blurRadius` は全Levelのsample間隔へ適用し、既定値1.0では従来のfilter幅を維持する
+4. depthは `CAMERA_REVERSE_Z` identityを必須とする
+5. finite farとinfinite farのprojectionをCamera Frameから生成する
+6. 背景depth 0自身にはCoCを与えず、符号付きCoCにより近景・遠景geometryを別のpremultiplied色と被覆率へ抽出する
+7. 背景では遠景layerを先に、近景layerを後に合成し、合焦領域自身を広げない
+8. 近景layerは焦点面・遠景・背景の手前へ広がり、遠景layerは焦点面・近景の後ろに留める
+9. 近景・遠景とも焦点からの距離差を使い、1/16まで隣接Level間だけを滑らかに補間する
+10. 旧staged blur設定とnear/far個別入力を拒否する
+
+## 実行方法
+
+```sh
+node headless_tests/core/compute_dof_pass/hdr_depth_contracts.js
+```
+
+## 結果
+
+2026-07-23に実行し、全項目が成功しました。

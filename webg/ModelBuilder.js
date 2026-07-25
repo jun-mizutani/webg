@@ -1,5 +1,5 @@
 // ---------------------------------------------
-//  ModelBuilder.js  2026/04/21
+//  ModelBuilder.js  2026/07/25
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // ---------------------------------------------
@@ -11,6 +11,7 @@ import Quat from "./Quat.js";
 import Animation from "./Animation.js";
 import ModelValidator from "./ModelValidator.js";
 
+// 形状の一覧が保持する資源と参照を安全に解放する
 function destroyShapeList(shapes, options = {}) {
   let destroyedCount = 0;
   if (!Array.isArray(shapes)) {
@@ -24,6 +25,7 @@ function destroyShapeList(shapes, options = {}) {
   return destroyedCount;
 }
 
+// 形状の資源の一覧が保持する資源と参照を安全に解放する
 function destroyShapeResourceList(shapeResources) {
   let destroyedCount = 0;
   if (!Array.isArray(shapeResources)) {
@@ -37,6 +39,7 @@ function destroyShapeResourceList(shapeResources) {
   return destroyedCount;
 }
 
+// 実行状態の`instantiation`を検証し、後続処理が扱える共通形式へ整える
 function requireRuntimeInstantiation(instantiation, methodName) {
   if (!instantiation || instantiation.isDestroyed) {
     throw new Error(`Model runtime.${methodName}() requires an active instantiation`);
@@ -44,6 +47,7 @@ function requireRuntimeInstantiation(instantiation, methodName) {
   return instantiation;
 }
 
+// 実行状態のアニメーションを検証し、後続処理が扱える共通形式へ整える
 function requireRuntimeAnimation(animationMap, id, methodName) {
   const animationId = String(id ?? "").trim();
   const animation = animationMap.get(animationId);
@@ -62,12 +66,14 @@ export default class ModelBuilder {
     this.validator = new ModelValidator();
   }
 
+  // `emitStage`は入力またはイベントを受け取り、対応する処理へ振り分ける
   emitStage(handler, stage) {
     if (typeof handler === "function") {
       handler(stage);
     }
   }
 
+  // `yieldFrame`は処理周期の開始または終了に必要な状態を更新する
   async yieldFrame() {
     if (typeof requestAnimationFrame === "function") {
       await new Promise((resolve) => requestAnimationFrame(() => resolve()));
@@ -132,6 +138,9 @@ export default class ModelBuilder {
     shape.primitiveCount = geometry.polygonCount ?? Math.floor(indices.length / 3);
     shape.positionArray = positions.slice();
     shape.indicesArray = indices.slice();
+    // ModelAsset 1.0のmeshは従来どおり単一materialなので、全triangleを互換slot 0へ割り当てる
+    // 複数material対応asset形式へ拡張するときはgeometry側のslot配列をここで明示的に読み込む
+    shape.triangleMaterialIndices = new Array(shape.primitiveCount).fill(0);
     shape.normalArray = normals ? normals.slice() : new Array(shape.vertexCount * 3).fill(0);
     shape.texCoordsArray = uvs ? uvs.slice() : new Array(shape.vertexCount * 2).fill(0);
     shape.altVertices = geometry.altVertices ? geometry.altVertices.slice() : [];
@@ -194,11 +203,13 @@ export default class ModelBuilder {
     // その後で正規化すると継ぎ目の陰影が揃いやすい
     if (shape.altVertices.length > 0) {
       const parent = new Map();
+      // `touch`は受け取った値を処理し、後続処理で利用する状態または結果を生成する
       const touch = (index) => {
         if (!parent.has(index)) {
           parent.set(index, index);
         }
       };
+      // このインスタンスを現在の入力と状態から求め、呼び出し元へ返す
       const find = (index) => {
         let root = parent.get(index);
         while (root !== parent.get(root)) {
@@ -212,6 +223,7 @@ export default class ModelBuilder {
         }
         return root;
       };
+      // `unite`は受け取った値を処理し、後続処理で利用する状態または結果を生成する
       const unite = (a, b) => {
         touch(a);
         touch(b);
@@ -457,6 +469,7 @@ export default class ModelBuilder {
     const liveInstantiations = new Set();
     let runtime = null;
 
+    // `instantiation`の`facade`を生成し、後続処理で利用できる状態にする
     const createInstantiationFacade = (
       space,
       createdNodeMap,
@@ -585,6 +598,7 @@ export default class ModelBuilder {
       return instantiation;
     };
 
+    // `instantiateRuntime`は元データから独立して利用できる複製または実行状態を作る
     const instantiateRuntime = (space, options = {}) => {
       const { bindAnimations = true, setActive = true } = options;
       const createdNodeMap = new Map();
@@ -592,6 +606,7 @@ export default class ModelBuilder {
       const instantiatedAnimationMap = new Map();
       const bindingEntries = [];
 
+      // ノードを生成し、後続処理で利用できる状態にする
       const makeNode = (nodeInfo) => {
         if (createdNodeMap.has(nodeInfo.id)) {
           return createdNodeMap.get(nodeInfo.id);
@@ -784,6 +799,7 @@ export default class ModelBuilder {
     return runtime;
   }
 
+  // `async`を生成し、後続処理で利用できる状態にする
   async buildAsync(asset, options = {}) {
     this.validator.assertValid(asset);
     const builder = this;
@@ -869,6 +885,7 @@ export default class ModelBuilder {
     const liveInstantiations = new Set();
     let runtime = null;
 
+    // `instantiation`の`facade`を生成し、後続処理で利用できる状態にする
     const createInstantiationFacade = (
       space,
       createdNodeMap,
@@ -997,6 +1014,7 @@ export default class ModelBuilder {
       return instantiation;
     };
 
+    // `instantiateRuntime`は元データから独立して利用できる複製または実行状態を作る
     const instantiateRuntime = (space, instantiateOptions = {}) => {
       const { bindAnimations = true, setActive = true } = instantiateOptions;
       const createdNodeMap = new Map();
@@ -1004,6 +1022,7 @@ export default class ModelBuilder {
       const instantiatedAnimationMap = new Map();
       const bindingEntries = [];
 
+      // ノードを生成し、後続処理で利用できる状態にする
       const makeNode = (nodeInfo) => {
         if (createdNodeMap.has(nodeInfo.id)) {
           return createdNodeMap.get(nodeInfo.id);

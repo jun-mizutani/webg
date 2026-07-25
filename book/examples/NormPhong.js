@@ -1,10 +1,11 @@
 // ---------------------------------------------
-// NormPhong.js    2026/04/18
+// NormPhong.js    2026/07/13
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // ---------------------------------------------
 
 import Shader from "../../webg/Shader.js";
+import { CAMERA_REVERSE_Z } from "../../webg/DepthConvention.js";
 import { alignTo } from "../../webg/SkinningConfig.js";
 
 export default class NormPhong extends Shader {
@@ -286,9 +287,9 @@ fn fsMain(input : FSIn) -> @location(0) vec4f {
         frontFace: this.frontFace
       },
       depthStencil: {
-        format: "depth24plus",
+        format: CAMERA_REVERSE_Z.format,
         depthWriteEnabled: true,
-        depthCompare: "less"
+        depthCompare: CAMERA_REVERSE_Z.compare
       }
     });
 

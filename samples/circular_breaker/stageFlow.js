@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// samples/circular_breaker/stageFlow.js  2026/04/09
+// samples/circular_breaker/stageFlow.js  2026/07/25
 //   circular_breaker sample
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -37,11 +37,13 @@ export const createStageFlowController = ({
 } = {}) => {
   const getAliveBlockCount = () => countAliveBlocks(blocks);
 
+  // ステージの`remaining`の`sec`を現在の入力と状態から求め、呼び出し元へ返す
   const getStageRemainingSec = () => {
     const elapsed = (performance.now() - state.stageStartTime) / 1000.0;
     return Math.max(0.0, state.stageTimeLimitSec - elapsed);
   };
 
+  // `triggerPackEvent`は入力またはイベントを受け取り、対応する処理へ振り分ける
   const triggerPackEvent = (text, sec = 1.05) => {
     state.packEventText = text;
     state.packEventBannerSec = sec;
@@ -57,6 +59,7 @@ export const createStageFlowController = ({
     });
   };
 
+  // `endGame`は処理周期の開始または終了に必要な状態を更新する
   const endGame = (reasonText = "GAME OVER") => {
     if (state.gameFinished) return false;
     state.gameFinished = true;
@@ -90,6 +93,7 @@ export const createStageFlowController = ({
     }
   };
 
+  // `nextStage`は現在状態から対象を選択し、結果を返すまたは選択を切り替える
   const nextStage = (clearedByMission) => {
     clearKeys();
     const alive = getAliveBlockCount();
@@ -121,6 +125,7 @@ export const createStageFlowController = ({
     spawnSparks(0, PUCK_Y, 0, 0.0);
   };
 
+  // 段階を現在の入力と実行状態に合わせて更新する
   const updateLevel = () => {
     if (state.gameFinished) return;
     if (state.stageIntroSec > 0.0) return;

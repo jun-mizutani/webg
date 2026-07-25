@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// unittest/theme/main.js  2026/04/10
+// unittest/theme/main.js  2026/07/25
 //   theme unittest
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -95,6 +95,7 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 }, false);
 
+// `theme`の重ね合わせ表示を生成し、後続処理で利用できる状態にする
 function buildThemeOverlay() {
   app.showOverlayPanel({
     id: "theme-controls",
@@ -143,6 +144,7 @@ function buildThemeOverlay() {
   };
 }
 
+// 形状の`colors`を現在の入力と実行状態に合わせて更新する
 function updateShapeColors(preset) {
   // theme 切替に連動して 3D 側の見え方も少し変え、
   // 半透明 panel 越しに scene を見たときの印象差も一度に確認できるようにする
@@ -166,6 +168,7 @@ function updateShapeColors(preset) {
   app.screen.setClearColor(app.clearColor);
 }
 
+// `overview`の`text`を生成し、後続処理で利用できる状態にする
 function buildOverviewText(preset) {
   return [
     `preset=${preset.id}`,
@@ -178,6 +181,7 @@ function buildOverviewText(preset) {
   ].join("\n");
 }
 
+// `binding`の`text`を生成し、後続処理で利用できる状態にする
 function buildBindingText() {
   const prefix = app?.getDebugKeyPrefixLabel?.() ?? "F9";
   return [
@@ -189,6 +193,7 @@ function buildBindingText() {
   ].join("\n");
 }
 
+// `preview`のパネルの`text`を生成し、後続処理で利用できる状態にする
 function buildPreviewPanelText(preset) {
   return [
     "Theme Preview Panel",
@@ -200,6 +205,7 @@ function buildPreviewPanelText(preset) {
   ].join("\n");
 }
 
+// `preview`のパネルを現在の入力と実行状態に合わせて更新する
 function syncPreviewPanel() {
   if (!previewPanelVisible) {
     app.removeOverlayPanel(FIXED_PANEL_ID);
@@ -223,12 +229,14 @@ function syncPreviewPanel() {
   });
 }
 
+// `preview`のパネルの`visible`を受け取り、現在の設定と後続処理へ反映する
 function setPreviewPanelVisible(visible) {
   previewPanelVisible = visible === true;
   syncPreviewPanel();
   renderUi();
 }
 
+// `theme`の`preset`を対象の状態または描画設定へ反映する
 function applyThemePreset(nextIndex) {
   currentThemeIndex = (nextIndex + THEME_PRESETS.length) % THEME_PRESETS.length;
   const preset = THEME_PRESETS[currentThemeIndex];
@@ -239,6 +247,7 @@ function applyThemePreset(nextIndex) {
   renderUi();
 }
 
+// 操作画面の描画段階で、必要な描画命令と表示内容を記録する
 function renderUi() {
   if (!ui || !app) return;
   const preset = THEME_PRESETS[currentThemeIndex];
@@ -269,6 +278,7 @@ function renderUi() {
   });
 }
 
+// `dock`の`rows`を生成し、後続処理で利用できる状態にする
 function buildDockRows(preset, envReport, frameCount) {
   const lines = [
     "theme unittest",
@@ -285,6 +295,7 @@ function buildDockRows(preset, envReport, frameCount) {
   return app.makeTextControlRows(lines);
 }
 
+// 診断情報を現在の入力と実行状態に合わせて更新する
 function refreshDiagnostics(frameCount) {
   const preset = THEME_PRESETS[currentThemeIndex];
   const envReport = app.checkEnvironment({
@@ -306,6 +317,7 @@ function refreshDiagnostics(frameCount) {
   return envReport;
 }
 
+// 検査情報のレポートを生成し、後続処理で利用できる状態にする
 function makeProbeReport(frameCount) {
   const preset = THEME_PRESETS[currentThemeIndex];
   const envReport = app.checkEnvironment({
@@ -330,6 +342,7 @@ function makeProbeReport(frameCount) {
   return report;
 }
 
+// カメラを初期状態へ戻し、前回の状態を残さない
 function resetCamera() {
   orbit.setAngles(28.0, -14.0);
   orbit.setDistance(30.0);
@@ -338,6 +351,7 @@ function resetCamera() {
 function bindUiEvents() {
 }
 
+// このインスタンスの初期化段階で、必要な状態と資源を準備して処理を開始する
 async function start() {
   app = new WebgApp({
     document,
@@ -426,7 +440,6 @@ async function start() {
   app.start({
     onUpdate: ({ deltaSec, screen }) => {
       const preset = THEME_PRESETS[currentThemeIndex];
-      orbit.update(deltaSec);
 
       if (!paused) {
         mainNode.rotateX(14.0 * deltaSec);

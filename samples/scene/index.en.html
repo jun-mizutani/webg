@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>scene</title>
+  <link rel="icon" href="data:," />
+  <!-- 2026/06/19 -->
+  <style>
+
+:root {
+  color-scheme: light;
+  --bg: #eef3f8;
+  --paper: rgba(255, 255, 255, 0.94);
+  --line: #c8d5e4;
+  --ink: #17324a;
+  --muted: #5c748b;
+  --accent: #1566ab;
+  --accent-soft: #dfeefe;
+  --code-bg: #f3f7fb;
+  --shadow: rgba(29, 52, 79, 0.10);
+}
+* { box-sizing: border-box; }
+html, body {
+  margin: 0;
+  min-height: 100%;
+}
+body {
+  background:
+    radial-gradient(circle at top left, rgba(21, 102, 171, 0.12), transparent 24%),
+    radial-gradient(circle at top right, rgba(255, 191, 118, 0.10), transparent 22%),
+    linear-gradient(180deg, #f8fbfd 0%, var(--bg) 100%);
+  color: var(--ink);
+  font: 16px/1.78 "Avenir Next", "Hiragino Sans", "Yu Gothic", sans-serif;
+}
+.page {
+  width: min(1080px, calc(100% - 28px));
+  margin: 0 auto;
+  padding: 24px 0 56px;
+}
+.hero,
+.doc {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  box-shadow: 0 22px 52px var(--shadow);
+}
+.hero {
+  padding: 22px 24px;
+  margin-bottom: 18px;
+}
+.hero h1 {
+  margin: 0 0 8px;
+  font-size: clamp(2rem, 4vw, 3rem);
+  line-height: 1.08;
+}
+.hero p {
+  margin: 0;
+  color: var(--muted);
+}
+.doc {
+  padding: 28px;
+}
+.doc > :first-child {
+  margin-top: 0;
+}
+h1, h2, h3, h4, h5, h6 {
+  line-height: 1.25;
+  margin: 1.45em 0 0.55em;
+}
+h1 {
+  font-size: 2.2rem;
+}
+h2 {
+  padding-bottom: 0.28em;
+  border-bottom: 1px solid var(--line);
+  font-size: 1.48rem;
+}
+h3 {
+  font-size: 1.14rem;
+}
+p, ul, ol, table, pre, blockquote {
+  margin: 0 0 1em;
+}
+ul, ol {
+  padding-left: 1.4em;
+}
+li + li {
+  margin-top: 0.26em;
+}
+a {
+  color: var(--accent);
+  text-decoration: none;
+}
+a:hover {
+  text-decoration: underline;
+}
+img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  border-radius: 16px;
+  border: 1px solid var(--line);
+  box-shadow: 0 12px 32px rgba(29, 52, 79, 0.08);
+  margin: 1.1em 0 1.4em;
+}
+code {
+  padding: 0.12em 0.38em;
+  border-radius: 0.45em;
+  background: var(--code-bg);
+  border: 1px solid #dbe6f1;
+  font: 0.92em/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+pre {
+  padding: 14px 16px;
+  overflow-x: auto;
+  border-radius: 14px;
+  background: #0f1720;
+  color: #ecf5ff;
+}
+pre code {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #ffffff;
+}
+th, td {
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  text-align: left;
+  vertical-align: top;
+}
+th {
+  background: #f5f9fc;
+}
+hr {
+  border: 0;
+  border-top: 1px solid var(--line);
+  margin: 1.5em 0;
+}
+blockquote {
+  padding: 0.3em 0 0.3em 1em;
+  border-left: 4px solid #c9dbef;
+  color: var(--muted);
+}
+@media (max-width: 720px) {
+  .page {
+    width: min(100% - 18px, 1080px);
+    padding-top: 16px;
+  }
+  .hero,
+  .doc {
+    border-radius: 18px;
+  }
+  .doc {
+    padding: 20px;
+  }
+}
+
+  </style>
+</head>
+<body>
+  <main class="page">
+    <section class="hero">
+      <h1>scene</h1>
+    </section>
+    <article class="doc">
+<h1>scene</h1>
+<p>English | <a href="index.html">日本語</a></p>
+<p><img src="./scene.jpg" alt="scene" /></p>
+<h2>Overview</h2>
+<ul><li>This sample loads a Scene JSON file with <code>SceneAsset.load()</code> and displays it as-is by passing it through <code>WebgApp.validateScene()</code> and <code>WebgApp.loadScene()</code></li><li>Camera, primitives, models, HUD, and input mapping are collected inside a single scene definition, while the JavaScript side implements only the action handlers</li><li>An <code>OverlayPanel</code>-based DOM UI is also layered on top of the screen so Scene JSON actions can be triggered from buttons as well. This makes it easier to compare the connection between the scene-side input definitions and the JavaScript-side handlers</li></ul>
+<h2>How to Run</h2>
+<ul><li>Open <a href="./scene.html">./scene.html</a></li><li>Use a browser with WebGPU support, and check the help panel and HUD together with the sample when needed</li></ul>
+<h2>webg Features Used</h2>
+<ul><li><code>WebgApp</code>: standard initialization, render loop, and Scene JSON loading</li><li><code>SceneAsset.load</code>: loads the Scene JSON file</li><li><code>WebgApp.validateScene</code>: validates the Scene JSON</li><li><code>WebgApp.loadScene</code>: places the scene into the current app</li><li><code>SceneLoader</code>: restores camera / HUD / primitives / models / input mapping</li><li><code>SceneValidator</code>: schema validation with path information</li><li><code>ModelAsset</code>: intermediate representation for models inside the scene</li><li><code>ModelBuilder</code>: converts models / primitives in the scene into runtime shape groups</li><li><code>EyeRig(type=&quot;orbit&quot;)</code>: viewpoint control for looking around the entire scene</li><li><code>Message</code>: displays <code>hud.guideLines / hud.statusLines</code> from the Scene JSON as the HUD</li></ul>
+<h2>Checkpoints</h2>
+<ul><li>Confirm that the validator passes for <code>scene.json</code> and that camera, HUD, primitives, models, and input can all be loaded together</li><li>Confirm that <code>hud.guideLines / hud.statusLines</code> in <code>scene.json</code> are explicitly described as objects with <code>x / y / text / color</code> for each row</li><li>Confirm that the floor primitive and marker primitive are displayed and that primitive definitions can be placed through <code>SceneLoader</code></li><li>Confirm that the model loaded from <code>../json_loader/modelasset.json</code> appears in the same scene, showing that the existing <code>ModelAsset</code> path can also be reused from the scene side</li><li>Confirm that the action buttons in the left <code>OverlayPanel</code> can run <code>pause / replay / floor wire / reset / download</code>, and that they invoke the same processing flow as the keyboard shortcuts</li><li>Confirm that the <code>p, 1, 2, r, d</code> actions reach the JavaScript-side handlers through <code>sceneRuntime.createInputHandler()</code>, showing that the Scene JSON input mapping is used as metadata</li><li>Confirm that <code>p</code> toggles pause / resume for all animations of the model inside the scene</li><li>Confirm that <code>1</code> restarts the model animation from the beginning</li><li>Confirm that <code>2</code> toggles the floor primitive wireframe display</li><li>Confirm that <code>r</code> returns the orbit camera to the initial angles and distance defined by the scene</li><li>Confirm that <code>d</code> can download the current Scene JSON again, serving as a minimal entry point for scene export</li><li>Confirm that the right <code>OverlayPanel</code> shows the scene file, entry count, primitive count, model count, action names, and validator warning count, making the load state of the Scene JSON visible on screen</li></ul>
+<h2>Controls</h2>
+<ul><li>Drag / arrow keys: orbit camera rotation</li><li>Mouse wheel / <code>[ / ]</code>: zoom</li><li>Upper-left buttons: <code>Pause Scene</code>, <code>Replay Model</code>, <code>Floor Wire</code>, <code>Reset Camera</code>, <code>Download Scene JSON</code></li><li><code>P</code>: pause / resume scene animation</li><li><code>1</code>: restart the model animation</li><li><code>2</code>: toggle floor wireframe</li><li><code>R</code>: return the camera to its initial position</li><li><code>D</code>: download the current Scene JSON</li></ul>
+    </article>
+  </main>
+</body>
+</html>

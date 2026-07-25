@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>compute_cloth</title>
+  <link rel="icon" href="data:," />
+  <!-- 2026/06/19 -->
+  <style>
+
+:root {
+  color-scheme: light;
+  --bg: #eef3f8;
+  --paper: rgba(255, 255, 255, 0.94);
+  --line: #c8d5e4;
+  --ink: #17324a;
+  --muted: #5c748b;
+  --accent: #1566ab;
+  --accent-soft: #dfeefe;
+  --code-bg: #f3f7fb;
+  --shadow: rgba(29, 52, 79, 0.10);
+}
+* { box-sizing: border-box; }
+html, body {
+  margin: 0;
+  min-height: 100%;
+}
+body {
+  background:
+    radial-gradient(circle at top left, rgba(21, 102, 171, 0.12), transparent 24%),
+    radial-gradient(circle at top right, rgba(255, 191, 118, 0.10), transparent 22%),
+    linear-gradient(180deg, #f8fbfd 0%, var(--bg) 100%);
+  color: var(--ink);
+  font: 16px/1.78 "Avenir Next", "Hiragino Sans", "Yu Gothic", sans-serif;
+}
+.page {
+  width: min(1080px, calc(100% - 28px));
+  margin: 0 auto;
+  padding: 24px 0 56px;
+}
+.hero,
+.doc {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  box-shadow: 0 22px 52px var(--shadow);
+}
+.hero {
+  padding: 22px 24px;
+  margin-bottom: 18px;
+}
+.hero h1 {
+  margin: 0 0 8px;
+  font-size: clamp(2rem, 4vw, 3rem);
+  line-height: 1.08;
+}
+.hero p {
+  margin: 0;
+  color: var(--muted);
+}
+.doc {
+  padding: 28px;
+}
+.doc > :first-child {
+  margin-top: 0;
+}
+h1, h2, h3, h4, h5, h6 {
+  line-height: 1.25;
+  margin: 1.45em 0 0.55em;
+}
+h1 {
+  font-size: 2.2rem;
+}
+h2 {
+  padding-bottom: 0.28em;
+  border-bottom: 1px solid var(--line);
+  font-size: 1.48rem;
+}
+h3 {
+  font-size: 1.14rem;
+}
+p, ul, ol, table, pre, blockquote {
+  margin: 0 0 1em;
+}
+ul, ol {
+  padding-left: 1.4em;
+}
+li + li {
+  margin-top: 0.26em;
+}
+a {
+  color: var(--accent);
+  text-decoration: none;
+}
+a:hover {
+  text-decoration: underline;
+}
+img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  border-radius: 16px;
+  border: 1px solid var(--line);
+  box-shadow: 0 12px 32px rgba(29, 52, 79, 0.08);
+  margin: 1.1em 0 1.4em;
+}
+code {
+  padding: 0.12em 0.38em;
+  border-radius: 0.45em;
+  background: var(--code-bg);
+  border: 1px solid #dbe6f1;
+  font: 0.92em/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+pre {
+  padding: 14px 16px;
+  overflow-x: auto;
+  border-radius: 14px;
+  background: #0f1720;
+  color: #ecf5ff;
+}
+pre code {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #ffffff;
+}
+th, td {
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  text-align: left;
+  vertical-align: top;
+}
+th {
+  background: #f5f9fc;
+}
+hr {
+  border: 0;
+  border-top: 1px solid var(--line);
+  margin: 1.5em 0;
+}
+blockquote {
+  padding: 0.3em 0 0.3em 1em;
+  border-left: 4px solid #c9dbef;
+  color: var(--muted);
+}
+@media (max-width: 720px) {
+  .page {
+    width: min(100% - 18px, 1080px);
+    padding-top: 16px;
+  }
+  .hero,
+  .doc {
+    border-radius: 18px;
+  }
+  .doc {
+    padding: 20px;
+  }
+}
+
+  </style>
+</head>
+<body>
+  <main class="page">
+    <section class="hero">
+      <h1>compute_cloth</h1>
+    </section>
+    <article class="doc">
+<h1>compute_cloth</h1>
+<p><a href="index.en.html">English</a> | 日本語</p>
+<p><img src="./compute_cloth.jpg" alt="compute_cloth" /></p>
+<h2>概要</h2>
+<ul><li>WebGPU の Compute Shader を使い、格子状の布を mass-spring モデルで更新するサンプルです</li><li>webg コアライブラリには compute 用 API を追加せず、WebgApp が初期化した WebGPU device / queue / canvas context をサンプル内で直接使っています</li><li>布の頂点は storage buffer に保持し、compute pass が前フレームの頂点位置と近傍頂点を読んで次フレームの位置と速度を書き込みます</li><li>src buffer と dst buffer を分ける ping-pong 構成にしているため、ある頂点が近傍頂点を読む途中で別 invocation がその近傍値を書き換える競合を避けています</li><li>構造バネの力だけでは布が伸びすぎやすいため、上下左右の隣接頂点との距離が許容長を超えた場合に少し戻す strain limit を入れています</li><li>可動頂点の質量を縦96段の累積荷重に合わせて設定し、重力は加速度として一定のまま、バネがカーテンの長さを支えられるようにしています</li><li>床の衝突面は最大許容伸長時の下端より下へ置き、通常の垂れでは床に当たって重ならないようにしています</li><li>1 frameを3 substepへ分け、位置制限後の実際の移動量から速度を再計算して、下向き速度が補正後も残ることを防いでいます</li><li>2頂点先を結ぶ曲げバネを追加し、下部が鋭く折れて自己交差して見える状態を抑えています</li><li>風はカーテン全体で同じ前後方向へ周期的に反転し、位置によって振幅だけを変えることで、中央の折り返しと一方向への流出を防いでいます</li><li>上端の固定位置は中央が0.18だけ下がる緩やかな弧にし、真っ直ぐ張った板ではなく吊られた布として見える形にしています</li><li>render pass は compute 後の storage buffer を vertex shader で読み、Wire / Flat / Smooth の表示 mode に応じて line-list または triangle-list として描画します</li></ul>
+<h2>実行方法</h2>
+<ul><li>実行ファイルは <a href="./compute_cloth.html">./compute_cloth.html</a> です</li><li>WebGPU に対応したブラウザで開き、必要に応じて help panel や HUD と合わせて確認してください</li></ul>
+<h2>使用している webg 機能</h2>
+<ul><li>WebgApp: Screen、diagnostics、入力基盤をまとめて初期化する</li><li>WebgApp computeFrame: <code>computeFrame: true</code>と<code>onComputeFrame</code> handlerで、標準scene描画を行わずcompute / renderの順序を制御する</li><li>Screen.resize(): WebgApp が保持する Screen を通じて viewport 変更時の canvas 実ピクセルを更新する</li><li>WebgApp.getGPU(): core API を変更せず、サンプル側で raw WebGPU pipeline を作るための入口</li><li>buildHelpPanelOptions() + showOverlayPanel(): 操作説明と現在状態を折りたたみ可能な help panel として表示</li><li>InputController.installTouchControls(): PCとスマートフォンの両方へ 1 / 2 / 3 / R / P / W の操作ボタンを表示</li></ul>
+<h2>使用している WebGPU 機能</h2>
+<ul><li>storage buffer: 布頂点の位置、固定フラグ、速度を GPU 側に保持</li><li>vertex mass: 各可動頂点の質量を保持し、バネ力、風力、速度抵抗を質量で割って加速度へ変換</li><li>ping-pong buffer: read-only の src と writeable の dst を毎フレーム交互に入れ替える</li><li>compute pipeline: 1 invocation = 1 cloth vertex として近傍ばね、重力、風、減衰を計算</li><li>bend spring: 横と縦の2頂点先を弱いバネで結び、布の長さを支えながら局所的な折れ曲がりを抑制</li><li>coherent gust: カーテン全体の風向を同じ時間波で反転し、横位置と高さでは振幅だけを変えて自然な揺れを生成</li><li>strain limit: 構造バネの隣接距離を初期長の1.06倍以内へ戻し、軽い動きを保ちながら布の過伸長を抑える</li><li>simulation substeps: 1 frameを3回に分けて積分と位置制限を反復し、縦長カーテンの累積荷重を安定して処理</li><li>line vertex index stream: 横方向と縦方向の格子線を Wire 表示として描画</li><li>triangle vertex index stream: 格子 cell を 2 triangle に分け、Flat / Smooth が同じ高解像度の面を共有して描画</li><li>render pipeline: storage buffer を vertex shader から読み、CPU readback なしで変形後の布を表示</li><li>fixed cloth color: 風による速度で頂点色を変えず、Wire / Flat / Smooth を同じ固定オレンジ色で表示</li><li>view-space lighting: 視点右上からの光を使い、弱い ambient、diffuse 主体、specular highlight で面の向きを表示</li><li>camera-following light: world space の法線を camera 回転で view space へ変換し、画面右上に固定した光と同じ座標系で照明を計算</li><li>timestamp query: 3 substep全体のGPU Compute時間とRender Pass時間を取得し、各区間と合計のloadを表示する</li></ul>
+<h2>確認ポイント</h2>
+<ul><li>起動後に 64 x 96 の縦長格子布が上端で固定され、重力と風で揺れることを確認します</li><li>ドラッグで camera を回し、Shift + ドラッグ、右ドラッグ、または中ドラッグで PAN しても、布の simulation は GPU 側のまま継続することを確認します</li><li>スマートフォンでは1本指ドラッグで orbit、2本指ドラッグで PAN、pinch で zoom できることを確認します</li><li>PCとスマートフォンの画面下部に表示される 1 / 2 / 3 / R / P / W ボタンで表示 mode、reset、pause、wind を操作できることを確認します</li><li>H または help panel のボタンで説明を折りたたみ、Show Help で再表示できることを確認します</li><li>1 / 2 / 3 で Wire / Flat / Smooth を切り替え、同じ storage buffer から線表示とポリゴン表示を切り替えられることを確認します</li><li>W で wind を切り替えると、奥行き方向の波が弱まる／戻ることを確認します</li><li>P で pause したとき、compute pass が止まり、現在の storage buffer がそのまま描画されることを確認します</li><li>R で布が初期状態へ戻ることを確認します</li><li>Help panelの<code>GPU compute / GPU render / GPU total / JS time</code>と各loadが更新され、pause中のrender時間がGPU Compute時間へ混ざらないことを確認します</li></ul>
+<h2>操作方法</h2>
+<ul><li>ドラッグ: camera orbit</li><li>Shift + ドラッグ / 右ドラッグ / 中ドラッグ: camera pan</li><li>ホイール: zoom</li><li>1本指ドラッグ: camera orbit</li><li>2本指ドラッグ: camera pan</li><li>pinch: zoom</li><li>1: Wire 表示</li><li>2: Flat polygon 表示</li><li>3: Smooth polygon 表示</li><li>W: wind on / off</li><li>P: pause / resume</li><li>R: reset cloth</li><li>H: hide / show help</li></ul>
+<h2>実装の詳細</h2>
+<ul><li>main.js の compute shader は srcState を read-only、dstState を read-write として分けています</li><li>ばね計算では上下左右と斜め近傍を読み、距離が極端に短い場合は正規化せずゼロ寄与にしています</li><li>重力は質量に左右されない加速度として加え、バネ、風、速度抵抗は力を頂点質量で割って加速度へ変換します</li><li>strain limitや床で位置を補正した後は、補正済み位置と前substep位置の差から速度を再計算し、補正前の下向き速度を残しません</li><li>render shader は vertex attribute で渡された cloth vertex index を使い、storage buffer 内の頂点位置を直接参照しています</li><li>Flat / Smooth は同じ triangle stream を使い、Flat は変形後の3頂点から作った面法線を WGSL の <code>@interpolate(flat)</code> で triangle 全体へ一定値として渡し、Smooth は grid 近傍から作った頂点法線を補間しています</li><li>布の色は固定で、視点右上の光に対する diffuse と specular highlight によって揺れと面の向きを読み取ります</li><li>操作説明と状態表示は独自 HUD ではなく OverlayPanel の help panel にまとめ、スマートフォンの単発操作は Touch ボタンへ分離しています</li><li>CPU 側へ頂点座標を戻さない構成なので、布や髪などの描画寄り simulation を GPU 内で完結させる例として確認できます</li></ul>
+    </article>
+  </main>
+</body>
+</html>

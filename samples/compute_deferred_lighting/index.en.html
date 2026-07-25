@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>compute_deferred_lighting</title>
+  <link rel="icon" href="data:," />
+  <!-- 2026/06/19 -->
+  <style>
+
+:root {
+  color-scheme: light;
+  --bg: #eef3f8;
+  --paper: rgba(255, 255, 255, 0.94);
+  --line: #c8d5e4;
+  --ink: #17324a;
+  --muted: #5c748b;
+  --accent: #1566ab;
+  --accent-soft: #dfeefe;
+  --code-bg: #f3f7fb;
+  --shadow: rgba(29, 52, 79, 0.10);
+}
+* { box-sizing: border-box; }
+html, body {
+  margin: 0;
+  min-height: 100%;
+}
+body {
+  background:
+    radial-gradient(circle at top left, rgba(21, 102, 171, 0.12), transparent 24%),
+    radial-gradient(circle at top right, rgba(255, 191, 118, 0.10), transparent 22%),
+    linear-gradient(180deg, #f8fbfd 0%, var(--bg) 100%);
+  color: var(--ink);
+  font: 16px/1.78 "Avenir Next", "Hiragino Sans", "Yu Gothic", sans-serif;
+}
+.page {
+  width: min(1080px, calc(100% - 28px));
+  margin: 0 auto;
+  padding: 24px 0 56px;
+}
+.hero,
+.doc {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  box-shadow: 0 22px 52px var(--shadow);
+}
+.hero {
+  padding: 22px 24px;
+  margin-bottom: 18px;
+}
+.hero h1 {
+  margin: 0 0 8px;
+  font-size: clamp(2rem, 4vw, 3rem);
+  line-height: 1.08;
+}
+.hero p {
+  margin: 0;
+  color: var(--muted);
+}
+.doc {
+  padding: 28px;
+}
+.doc > :first-child {
+  margin-top: 0;
+}
+h1, h2, h3, h4, h5, h6 {
+  line-height: 1.25;
+  margin: 1.45em 0 0.55em;
+}
+h1 {
+  font-size: 2.2rem;
+}
+h2 {
+  padding-bottom: 0.28em;
+  border-bottom: 1px solid var(--line);
+  font-size: 1.48rem;
+}
+h3 {
+  font-size: 1.14rem;
+}
+p, ul, ol, table, pre, blockquote {
+  margin: 0 0 1em;
+}
+ul, ol {
+  padding-left: 1.4em;
+}
+li + li {
+  margin-top: 0.26em;
+}
+a {
+  color: var(--accent);
+  text-decoration: none;
+}
+a:hover {
+  text-decoration: underline;
+}
+img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  border-radius: 16px;
+  border: 1px solid var(--line);
+  box-shadow: 0 12px 32px rgba(29, 52, 79, 0.08);
+  margin: 1.1em 0 1.4em;
+}
+code {
+  padding: 0.12em 0.38em;
+  border-radius: 0.45em;
+  background: var(--code-bg);
+  border: 1px solid #dbe6f1;
+  font: 0.92em/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+pre {
+  padding: 14px 16px;
+  overflow-x: auto;
+  border-radius: 14px;
+  background: #0f1720;
+  color: #ecf5ff;
+}
+pre code {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #ffffff;
+}
+th, td {
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  text-align: left;
+  vertical-align: top;
+}
+th {
+  background: #f5f9fc;
+}
+hr {
+  border: 0;
+  border-top: 1px solid var(--line);
+  margin: 1.5em 0;
+}
+blockquote {
+  padding: 0.3em 0 0.3em 1em;
+  border-left: 4px solid #c9dbef;
+  color: var(--muted);
+}
+@media (max-width: 720px) {
+  .page {
+    width: min(100% - 18px, 1080px);
+    padding-top: 16px;
+  }
+  .hero,
+  .doc {
+    border-radius: 18px;
+  }
+  .doc {
+    padding: 20px;
+  }
+}
+
+  </style>
+</head>
+<body>
+  <main class="page">
+    <section class="hero">
+      <h1>compute_deferred_lighting</h1>
+    </section>
+    <article class="doc">
+<h1>compute_deferred_lighting</h1>
+<p>English | <a href="index.html">日本語</a></p>
+<p><img src="./compute_deferred_lighting.jpg" alt="compute_deferred_lighting" /></p>
+<h2>Overview</h2>
+<p>Deferred Lighting renders geometry into a G-buffer first, then evaluates lights against the stored surface data. In this sample, <code>ComputeEffectPipeline</code> connects the Geometry Buffer, Deferred Lighting, and tone-mapping stages while evaluating up to 128 Local Lights per pixel. Scene geometry is rendered only once regardless of the light count, making it possible to observe geometry complexity and light-evaluation complexity separately.</p>
+<p>A Local Light is either an omnidirectional <code>type: &quot;point&quot;</code> light or a directional <code>type: &quot;cone&quot;</code> light. This sample declares every animated light as a point so that the cost of a large light count is easy to compare. The <code>type</code> property is required. A cone also requires <code>direction</code>, <code>innerAngle</code>, and <code>outerAngle</code>; an incomplete cone is never replaced with a point light.</p>
+<p>Light <code>position</code> and <code>direction</code> use World coordinates. <code>DeferredLightingPass</code> uses the frame's <code>CameraFrame</code> to transform positions into camera-relative view space and directions into view space without translation. The application therefore does not build a projection array or view matrix separately.</p>
+<h2>Connecting Lights to a Frame</h2>
+<p>A point Local Light is created as follows.</p>
+<pre><code class="language-js">const lights = [{
+  type: &quot;point&quot;,
+  position: [0.0, 2.0, -4.0],
+  color: [1.0, 0.45, 0.12],
+  radius: 9.0,
+  intensity: 3.2
+}];</code></pre>
+<p>The same <code>cameraFrame</code> is passed to G-buffer generation and lighting. The sample disables Shadow, SSAO, SSR, DoF, Bloom, Toon, and Edge so the relationship between the G-buffer and many Local Lights remains isolated.</p>
+<pre><code class="language-js">app.start({
+  onBeforeDraw: ({ cameraFrame }) =&gt; {
+    pipeline.renderScene(app.space, cameraFrame, app.clearColor, {
+      shadowEnabled: false
+    });
+  },
+
+  onAfterDraw3d: ({ cameraFrame }) =&gt; {
+    app.getGPU().endPass();
+    const finalColor = pipeline.encode(app.getGPU().commandEncoder, {
+      cameraFrame,
+      shadowEnabled: false,
+      ssaoEnabled: false,
+      ssrEnabled: false,
+      lights,
+      lightCount: 64,
+      lightingView: &quot;lighting&quot;
+    });
+    app.screen.beginPresentPass({ clearColor: app.clearColor });
+    copyPass.draw(finalColor);
+    app.screen.clearDepthBuffer();
+  }
+});</code></pre>
+<p><code>lightCount</code> selects a prefix of the array. A value beyond the array length or the constructor's <code>maxLights</code> is rejected. This baseline implementation scans every active light for every pixel, so compute cost increases with the light count. Applications requiring substantially more lights should consider tiled or clustered lighting.</p>
+<h2>Running and Inspecting the Sample</h2>
+<p>Open <a href="./compute_deferred_lighting.html">compute_deferred_lighting.html</a> in a WebGPU-capable browser. Use <code>V</code> or the CommandPalette to switch among <code>lighting / albedo / normal / depth</code>, separating the final lighting result from its G-buffer inputs.</p>
+<p>Use <code>1</code> and <code>2</code>, or the Lights control in the CommandPalette, to select <code>16, 32, 64, 96, 128</code> active lights. Press Space to pause light animation and compare debug views or light counts with an unchanged arrangement. Increasing the light count should leave the geometry unchanged while increasing only lighting overlap and compute cost.</p>
+    </article>
+  </main>
+</body>
+</html>

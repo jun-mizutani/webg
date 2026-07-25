@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>compute_json</title>
+  <link rel="icon" href="data:," />
+  <!-- 2026/06/19 -->
+  <style>
+
+:root {
+  color-scheme: light;
+  --bg: #eef3f8;
+  --paper: rgba(255, 255, 255, 0.94);
+  --line: #c8d5e4;
+  --ink: #17324a;
+  --muted: #5c748b;
+  --accent: #1566ab;
+  --accent-soft: #dfeefe;
+  --code-bg: #f3f7fb;
+  --shadow: rgba(29, 52, 79, 0.10);
+}
+* { box-sizing: border-box; }
+html, body {
+  margin: 0;
+  min-height: 100%;
+}
+body {
+  background:
+    radial-gradient(circle at top left, rgba(21, 102, 171, 0.12), transparent 24%),
+    radial-gradient(circle at top right, rgba(255, 191, 118, 0.10), transparent 22%),
+    linear-gradient(180deg, #f8fbfd 0%, var(--bg) 100%);
+  color: var(--ink);
+  font: 16px/1.78 "Avenir Next", "Hiragino Sans", "Yu Gothic", sans-serif;
+}
+.page {
+  width: min(1080px, calc(100% - 28px));
+  margin: 0 auto;
+  padding: 24px 0 56px;
+}
+.hero,
+.doc {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  box-shadow: 0 22px 52px var(--shadow);
+}
+.hero {
+  padding: 22px 24px;
+  margin-bottom: 18px;
+}
+.hero h1 {
+  margin: 0 0 8px;
+  font-size: clamp(2rem, 4vw, 3rem);
+  line-height: 1.08;
+}
+.hero p {
+  margin: 0;
+  color: var(--muted);
+}
+.doc {
+  padding: 28px;
+}
+.doc > :first-child {
+  margin-top: 0;
+}
+h1, h2, h3, h4, h5, h6 {
+  line-height: 1.25;
+  margin: 1.45em 0 0.55em;
+}
+h1 {
+  font-size: 2.2rem;
+}
+h2 {
+  padding-bottom: 0.28em;
+  border-bottom: 1px solid var(--line);
+  font-size: 1.48rem;
+}
+h3 {
+  font-size: 1.14rem;
+}
+p, ul, ol, table, pre, blockquote {
+  margin: 0 0 1em;
+}
+ul, ol {
+  padding-left: 1.4em;
+}
+li + li {
+  margin-top: 0.26em;
+}
+a {
+  color: var(--accent);
+  text-decoration: none;
+}
+a:hover {
+  text-decoration: underline;
+}
+img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  border-radius: 16px;
+  border: 1px solid var(--line);
+  box-shadow: 0 12px 32px rgba(29, 52, 79, 0.08);
+  margin: 1.1em 0 1.4em;
+}
+code {
+  padding: 0.12em 0.38em;
+  border-radius: 0.45em;
+  background: var(--code-bg);
+  border: 1px solid #dbe6f1;
+  font: 0.92em/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+pre {
+  padding: 14px 16px;
+  overflow-x: auto;
+  border-radius: 14px;
+  background: #0f1720;
+  color: #ecf5ff;
+}
+pre code {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #ffffff;
+}
+th, td {
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  text-align: left;
+  vertical-align: top;
+}
+th {
+  background: #f5f9fc;
+}
+hr {
+  border: 0;
+  border-top: 1px solid var(--line);
+  margin: 1.5em 0;
+}
+blockquote {
+  padding: 0.3em 0 0.3em 1em;
+  border-left: 4px solid #c9dbef;
+  color: var(--muted);
+}
+@media (max-width: 720px) {
+  .page {
+    width: min(100% - 18px, 1080px);
+    padding-top: 16px;
+  }
+  .hero,
+  .doc {
+    border-radius: 18px;
+  }
+  .doc {
+    padding: 20px;
+  }
+}
+
+  </style>
+</head>
+<body>
+  <main class="page">
+    <section class="hero">
+      <h1>compute_json</h1>
+    </section>
+    <article class="doc">
+<h1>compute_json</h1>
+<p><img src="./compute_json.jpg" alt="compute_json" /></p>
+<p><code>compute_json</code> is a general-purpose JSON viewer that loads a 3D model and its animations from ModelAsset JSON and applies <code>ComputeEffectPipeline</code> effects to the animated scene. It does not depend on model-specific names, part names, or coordinates, so changing <code>MODEL_ASSET_FILE</code> is enough to reuse the same viewing, animation, and effect workflow with another ModelAsset JSON file.</p>
+<p>The included <code>modelasset.json</code> contains a skeletal animation. It demonstrates how effects such as Toon and Edge follow a deforming model. Toon and Edge are enabled initially, while the other effects can be added independently through the controls.</p>
+<h2>How to Run</h2>
+<p>Open <code>./compute_json.html</code> in a browser with WebGPU support. Serve the repository through an HTTP server instead of opening the file directly from the local filesystem.</p>
+<p>To display another model, place a ModelAsset JSON or gzipped ModelAsset JSON file in this directory and change <code>MODEL_ASSET_FILE</code> in <code>main.js</code>. The camera target, distance, movement scale, and light range are derived from the bounding box of all loaded shapes, allowing the viewer to adapt to models with different dimensions.</p>
+<h2>webg Features Used</h2>
+<p><code>WebgApp.loadModel()</code> loads the JSON and creates a playable runtime together with animation clip information. <code>startAnimations: true</code> starts playback, and the runtime animation is advanced before the scene is rendered on each frame.</p>
+<p><code>createOrbitEyeRig()</code> creates a camera that moves around the model. It supports orbit, pan, zoom, and roll around the viewing axis. The two-finger twist and <code>O</code> / <code>P</code> roll controls use the same roll behavior as mmodeler while reversing only the sign of the input angle.</p>
+<p><code>ComputeEffectPipeline</code> exposes Shadow Map, SSAO, SSR, Toon, DoF, Bloom, and Edge through one high-level API. Shadow Map uses the default directional light here, while applications can select spot-light shadows by passing <code>shadow.type: &quot;spot&quot;</code>. This viewer keeps the default directional shadow because its main purpose is general model inspection. <code>renderScene()</code> produces the required G-buffer, and <code>encode()</code> processes only the effects that are currently enabled. <code>FullscreenPass</code> copies the final result to the canvas.</p>
+<h2>Processing Flow</h2>
+<ol><li><code>WebgApp.loadModel()</code> loads <code>modelasset.json</code> and obtains its runtime and animation clips</li><li>The combined shape bounding box determines an orbit camera and light range that fit the model</li><li>Each frame advances the runtime animation and renders the deformed shapes through <code>ComputeEffectPipeline.renderScene()</code></li><li><code>ComputeEffectPipeline.encode()</code> receives the current effect switches and executes only the enabled compute effects</li><li><code>FullscreenPass</code> presents the composed color texture on the canvas</li></ol>
+<p>This order applies the same screen-space effects to static JSON models, skeletal animation, and node-transform animation. When every effect is disabled, no unnecessary effect pass is encoded and the normal scene color is sent to the final output.</p>
+<h2>Controls</h2>
+<ul><li>Drag / Arrow: orbit camera</li><li>Shift + Drag / Shift + Arrow: pan the camera target</li><li>Wheel / <code>[</code> / <code>]</code>: zoom</li><li>Two-finger twist: view roll with the input angle reversed</li><li><code>O</code> / <code>P</code>: decrease / increase roll</li><li><code>Y</code>: reset roll to zero</li><li><code>A</code>: SSAO</li><li><code>S</code>: Shadow Map</li><li><code>R</code>: SSR</li><li><code>T</code>: Toon</li><li><code>D</code>: DoF</li><li><code>B</code>: Bloom</li><li><code>E</code>: Edge</li><li><code>L</code>: direct + ambient / ambient only</li><li><code>5</code> / <code>6</code>: Toon levels</li><li><code>7</code> / <code>8</code>: Edge thickness</li><li><code>M</code>: Edge blend mode</li><li><code>Space</code>: pause / resume all animations</li><li><code>1</code>: replay the selected clip from the beginning</li><li><code>2</code> / <code>3</code>: pause / resume the selected clip</li><li><code>4</code> / <code>9</code>: select the previous / next clip</li><li><code>W</code>: wireframe</li><li><code>K</code>: screenshot</li><li><code>J</code>: download the loaded ModelAsset JSON</li><li><code>0</code>: reset the camera to fit the complete model</li><li>Double tap / Double click: open / close the command palette</li></ul>
+<h2>Checkpoints</h2>
+<p>Verify that Toon and Edge follow the silhouette and shading of the animated model. Then toggle SSAO, Shadow Map, SSR, DoF, and Bloom independently, and compare the visual result together with the GPU Compute / GPU Render values in the HUD to see that each effect enters the output flow only when needed.</p>
+<p>After replacing the asset with JSON that has multiple animation clips, verify that <code>4</code> / <code>9</code> changes the selected clip and that <code>1</code> / <code>2</code> / <code>3</code> affects only that clip. A JSON file without animation can still use the model viewer and all compute effect controls.</p>
+<h2>Blender Import / Export Add-on</h2>
+<p><code>blender_modelasset_animation_io.py</code> converts Blender meshes, Armatures, vertex weights, and Actions to ModelAsset JSON. Install the Python file from Blender's Add-ons preferences. <code>Webg Animated ModelAsset JSON</code> will then appear in the File menu under Import and Export. Both plain JSON and gzip-compressed <code>.json.gz</code> files are supported.</p>
+<p>When <code>Export Skeletons</code> is enabled, the add-on finds the Armature modifier of each selected mesh and writes its bone hierarchy, rest pose, inverse bind matrices, and per-vertex weights. It keeps and normalizes the four strongest bone weights per vertex. A vertex without any weight for the Armature is reported as an error instead of being silently assigned to a bone.</p>
+<p>Rigify Armatures can contain many <code>ORG-*</code> and <code>MCH-*</code> control bones that do not deform the mesh directly. The exporter never writes those bones as joints, regardless of their weights, and collapses them into the local matrices of their retained children. This removes control joints while preserving the rest pose, inverse bind matrices, and evaluated Action poses. Export stops with an error if the resulting skeleton still exceeds webg's 320-bone limit. If a vertex is weighted only to <code>ORG-*</code> / <code>MCH-*</code> bones, export reports invalid weights instead of silently reassigning it to another bone.</p>
+<p>When <code>Export Animations</code> is enabled, Blender Actions that control pose bones of the exported Armature are written as clips. The exporter forms the union of keyframe times found in every bone F-Curve and stores only those times in the shared ModelAsset timeline. Constraints are included in the evaluated pose at each keyframe, but Blender's Bezier interpolation curves are not exported; interpolation between keys is performed by the webg animation runtime. Because every animation targets a skeleton, <code>Export Animations</code> is disabled when <code>Export Skeletons</code> is off.</p>
+<p>On import, <code>Import Skeletons</code> recreates Blender Armatures and vertex groups from the ModelAsset skeletons. <code>Import Animations</code> converts each clip into a Blender Action with linearly interpolated keyframes. Static ModelAsset files without animation can be imported through the same add-on.</p>
+<p>A skinned mesh must preserve the correspondence between undeformed vertices and vertex groups. For that reason, <code>Apply Modifiers</code> is not applied to skinned meshes during export and is applied to static meshes. Animation support covers Armature-based skeletal animation. Shape keys, morph targets, Actions that contain only object transforms, and direct conversion of NLA strips into clips are not supported.</p>
+<p>Place the exported file in this directory as <code>modelasset.json</code> to play it in <code>compute_json</code>. The same file, including its skeletons and animations, can also be loaded by <code>json_loader</code>.</p>
+<h2>Files</h2>
+<ul><li><code>compute_json.html</code>: executable page</li><li><code>main.js</code>: JSON loading, animation controls, camera, and compute effects</li><li><code>modelasset.json</code>: sample ModelAsset with skeletal animation</li><li><code>blender_modelasset_animation_io.py</code>: Blender import / export add-on with skeleton and animation support</li><li><code>blender_animation_sample.blend</code>: Blender test source with two bones, vertex weights, and an Action</li><li><code>README.md</code>: Japanese documentation</li><li><code>README.en.md</code>: English documentation</li></ul>
+    </article>
+  </main>
+</body>
+</html>

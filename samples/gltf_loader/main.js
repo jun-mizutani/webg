@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// samples/gltf_loader/main.js  2026/04/20
+// samples/gltf_loader/main.js  2026/07/25
 //   gltf_loader sample
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -9,6 +9,9 @@ import SmoothShader from "../../webg/SmoothShader.js";
 import Matrix from "../../webg/Matrix.js";
 import Diagnostics from "../../webg/Diagnostics.js";
 import { buildErrorPanelOptions, buildHelpPanelOptions } from "../../webg/OverlayPanelPresets.js";
+import CommandPalette, {
+  getDefaultCommandPaletteCss
+} from "../../webg/CommandPalette.js";
 import util from "../../webg/util.js";
 
 // Blender から glTF を書き出す場合は、Y-up で出力したファイルを前提とする
@@ -57,11 +60,14 @@ let viewerSize = {
 };
 let screenshotName = "";
 let wireframe = false;
+let palette = null;
+let lastHelpText = "";
 
 function isBoneAnalysisStage(stage) {
   return stage.startsWith("rigify-bones ") || stage.startsWith("skin-bones ");
 }
 
+// `load`のステージを現在の入力と実行状態に合わせて更新する
 function updateLoadStage(stage) {
   const elapsedMs = Math.round(performance.now() - loadStartedAtMs);
   if (isBoneAnalysisStage(stage)) {
@@ -99,6 +105,7 @@ function updateLoadStage(stage) {
   });
 }
 
+// 診断情報の統計情報を現在の入力と実行状態に合わせて更新する
 function refreshDiagnosticsStats() {
   app.mergeDiagnosticsStats({
     clipCount: clipNames.length,
@@ -114,6 +121,7 @@ function refreshDiagnosticsStats() {
   });
 }
 
+// 検査情報のレポートを生成し、後続処理で利用できる状態にする
 function makeProbeReport(frameCount) {
   const selectedState = getPrimaryClipState();
   const report = app.createProbeReport("runtime-probe");
@@ -135,6 +143,7 @@ function makeProbeReport(frameCount) {
   return report;
 }
 
+// 周回視点の状態をアプリケーションのカメラへ同期する
 function syncOrbitStateToAppCamera() {
   if (!app?.camera || !orbit?.orbit) {
     return;
@@ -147,11 +156,13 @@ function syncOrbitStateToAppCamera() {
   app.camera.pitch = orbit.orbit.pitch;
 }
 
+// `pan`の`unit`を現在の入力と状態から求め、呼び出し元へ返す
 function getPanUnit(size = viewerSize) {
   const maxSize = Math.max(1.0e-6, Number(size?.max) || 10.0);
   return maxSize * 0.05;
 }
 
+// `vec3`を検証し、後続処理が扱える共通形式へ整える
 function normalizeVec3(vec) {
   const x = Number(vec?.[0] ?? 0.0);
   const y = Number(vec?.[1] ?? 0.0);
@@ -160,6 +171,7 @@ function normalizeVec3(vec) {
   return [x / length, y / length, z / length];
 }
 
+// 周回視点の画面の`basis`を現在の入力と状態から求め、呼び出し元へ返す
 function getOrbitScreenBasis() {
   const eyeMatrix = app.eye.getWorldMatrix();
   return {
@@ -168,6 +180,7 @@ function getOrbitScreenBasis() {
   };
 }
 
+// `panOrbitByScreenStep`は入力に従って位置または姿勢を更新し、表示状態へ反映する
 function panOrbitByScreenStep(stepX = 0.0, stepY = 0.0) {
   if (!orbit?.orbit) {
     return;
@@ -187,6 +200,7 @@ function panOrbitByScreenStep(stepX = 0.0, stepY = 0.0) {
   syncOrbitStateToAppCamera();
 }
 
+// `stepOrbitByButtons`は受け取った値を処理し、後続処理で利用する状態または結果を生成する
 function stepOrbitByButtons({ yaw = 0.0, pitch = 0.0, zoom = 1.0 } = {}) {
   if (!orbit?.orbit) {
     return;
@@ -206,11 +220,13 @@ function stepOrbitByButtons({ yaw = 0.0, pitch = 0.0, zoom = 1.0 } = {}) {
   syncOrbitStateToAppCamera();
 }
 
+// `screenshot`の名前を生成し、後続処理で利用できる状態にする
 function makeScreenshotName() {
   const base = GLTF_FILE.replace(/^.*\//, "").replace(/\.[^.]+$/, "") || "gltf_loader";
   return `${base}_view`;
 }
 
+// `takeViewerScreenshot`は現在のキャンバス画像を取得し、指定形式で保存する
 function takeViewerScreenshot() {
   const file = app.takeScreenshot({
     prefix: makeScreenshotName()
@@ -225,6 +241,7 @@ function getViewerShapes() {
   return runtime?.shapes ?? [];
 }
 
+// ワイヤーフレームの状態を対象の状態または描画設定へ反映する
 function applyWireframeState() {
   const shapes = getViewerShapes();
   for (let i = 0; i < shapes.length; i++) {
@@ -232,6 +249,7 @@ function applyWireframeState() {
   }
 }
 
+// ワイヤーフレームの有効状態を切り替え、表示と処理へ反映する
 function toggleWireframe() {
   wireframe = !wireframe;
   applyWireframeState();
@@ -244,11 +262,13 @@ function getPrimaryClipId() {
   return clipNames.length > 0 ? clipNames[0] : null;
 }
 
+// 主となるクリップの`info`を現在の入力と状態から求め、呼び出し元へ返す
 function getPrimaryClipInfo() {
   const clipId = getPrimaryClipId();
   return clipId ? modelAsset.getClipInfo(clipId) : null;
 }
 
+// 明示的なテクスチャ設定を実行時の形状へ反映する
 function applyExplicitTextureFlagsToRuntimeShapes(runtime) {
   const shapes = runtime?.shapes ?? [];
   for (let i = 0; i < shapes.length; i++) {
@@ -266,6 +286,7 @@ function applyExplicitTextureFlagsToRuntimeShapes(runtime) {
   }
 }
 
+// `summarizeAnimationInterpolation`は現在値を読みやすい診断文字列へ整形する
 function summarizeAnimationInterpolation(importer) {
   // raw glTF の sampler interpolation を見て、
   // 現在の loader で LINEAR に変換した補間種別があるかを集約する
@@ -302,6 +323,7 @@ function summarizeAnimationInterpolation(importer) {
   };
 }
 
+// `interpolation`の`notice`の行を現在の入力と状態から求め、呼び出し元へ返す
 function formatInterpolationNoticeLines(summary) {
   if (!summary?.hasCubicSpline) {
     return [];
@@ -316,6 +338,7 @@ function formatInterpolationNoticeLines(summary) {
   ];
 }
 
+// `interpolation`の`notice`のパネルを現在の入力と実行状態に合わせて更新する
 function syncInterpolationNoticePanel() {
   if (!interpolationSummary?.hasCubicSpline) {
     app.removeOverlayPanel(INTERPOLATION_NOTICE_ID);
@@ -336,6 +359,7 @@ function syncInterpolationNoticePanel() {
   });
 }
 
+// 主となるクリップの状態を現在の入力と状態から求め、呼び出し元へ返す
 function getPrimaryClipState() {
   const clipId = getPrimaryClipId();
   const animation = clipId ? runtime?.getAnimation(clipId) : null;
@@ -353,6 +377,7 @@ function getPrimaryClipState() {
   return { label, paused: pausedState, stopped: stoppedState };
 }
 
+// `replayPrimaryClip`は選択中の音声またはアニメーションの再生状態を更新する
 function replayPrimaryClip() {
   const clipId = getPrimaryClipId();
   if (!runtime || !clipId) return false;
@@ -363,18 +388,21 @@ function replayPrimaryClip() {
   return true;
 }
 
+// `pausePrimaryClip`は選択中の音声またはアニメーションの再生状態を更新する
 function pausePrimaryClip() {
   const clipId = getPrimaryClipId();
   if (!runtime || !clipId) return false;
   return runtime.pauseAnimation(clipId) !== null;
 }
 
+// `resumePrimaryClip`は選択中の音声またはアニメーションの再生状態を更新する
 function resumePrimaryClip() {
   const clipId = getPrimaryClipId();
   if (!runtime || !clipId) return false;
   return runtime.resumeAnimation(clipId) !== null;
 }
 
+// ワールドの形状のサイズを現在の入力と状態から求め、呼び出し元へ返す
 function getWorldShapeSize(built) {
   // glTF は親ノード側の transform が mesh の見える位置に効くため、
   // node 階層を含んだ world bbox を使って framing を決める
@@ -389,6 +417,7 @@ function getWorldShapeSize(built) {
   };
   const worldMap = new Map();
 
+  // ワールドを生成し、後続処理で利用できる状態にする
   const buildWorld = (nodeInfo) => {
     if (!nodeInfo) return new Matrix();
     if (worldMap.has(nodeInfo.id)) {
@@ -448,6 +477,7 @@ function getWorldShapeSize(built) {
   return size;
 }
 
+// 構築済みモデルの範囲から周回視点を初期化する
 function configureOrbitFromBuilt(built) {
   // 親ノード込み world bbox から、glTF 確認向けの距離を決める
   const size = getWorldShapeSize(built);
@@ -466,6 +496,7 @@ function configureOrbitFromBuilt(built) {
   syncOrbitStateToAppCamera();
 }
 
+// カメラの`lift`を入力値に従って変更し、関連する状態を同期する
 function moveCameraLift(step) {
   // 読み込んだモデルの bbox 中心から少しだけ target を上下させ、
   // 手や腕のように重心が下寄りなモデルでも見せたい部分へ寄せやすくする
@@ -478,6 +509,7 @@ function moveCameraLift(step) {
   syncOrbitStateToAppCamera();
 }
 
+// `triangles`を現在の入力と状態から求め、呼び出し元へ返す
 function countTriangles(shapeList) {
   let total = 0;
   for (let i = 0; i < shapeList.length; i++) {
@@ -486,12 +518,14 @@ function countTriangles(shapeList) {
   return total;
 }
 
+// クリップの名前の一覧を現在の入力と状態から求め、呼び出し元へ返す
 function formatClipNameList(names, maxCount = 3) {
   if (!Array.isArray(names) || names.length === 0) return "-";
   if (names.length <= maxCount) return names.join(", ");
   return `${names.slice(0, maxCount).join(", ")} ... +${names.length - maxCount}`;
 }
 
+// 主となるクリップの行を生成し、後続処理で利用できる状態にする
 function buildPrimaryClipLines() {
   if (!clipInfo) {
     return ["clip0=-"];
@@ -503,62 +537,112 @@ function buildPrimaryClipLines() {
   ];
 }
 
-function updateHudRows() {
+// 状態表示の行を生成し、後続処理で利用できる状態にする
+function buildStatusLines() {
   const selectedState = getPrimaryClipState();
-  app.setHudRows([
-    { line: "gltf loader" },
-    {
-      label: "File",
-      value: GLTF_FILE.replace(/^.*\//, ""),
-      note: `tris=${totalTriangles} clips=${clipNames.length}`
-    },
-    {
-      label: "Model",
-      value: `nodes=${runtime?.nodes?.length ?? 0} shapes=${runtime?.shapes?.length ?? 0}`,
-      note: `anim=${runtime?.getAnimationNames?.().length ?? 0}`
-    },
-    {
-      label: "Orbit",
-      value: `yaw=${orbit.orbit.yaw.toFixed(1)} pitch=${orbit.orbit.pitch.toFixed(1)}`,
-      note: `dist=${orbit.orbit.distance.toFixed(1)}`
-    },
-    {
-      label: "Target",
-      value: `${orbit.orbit.target[0].toFixed(2)}, ${orbit.orbit.target[1].toFixed(2)}, ${orbit.orbit.target[2].toFixed(2)}`,
-      note: `panStep=${getPanUnit().toFixed(3)}`
-    },
-    {
-      label: "Anim",
-      value: selectedState.label,
-      note: paused ? "global pause=on" : "global pause=off"
-    },
-    {
-      label: "Clip0",
-      value: clipInfo?.id ?? "-",
-      note: clipBound ? "bound=yes" : "bound=no"
-    },
-    {
-      label: "Interp",
-      value: interpolationSummary?.runtimeLabel ?? "LINEAR",
-      note: interpolationSummary?.conversionLabel ?? "none"
-    },
-    {
-      label: "Wire",
-      value: wireframe ? "on" : "off",
-      note: `shot=${screenshotName || "-"}`
-    },
-    {
-      line: "Drag/Arrow orbit  Shift+Drag/Arrow pan  [/] zoom  Space pause  W wire  S shot  D json  R reset"
-    }
-  ], {
-    anchor: "top-left",
-    x: 0,
-    y: 0,
-    color: [0.92, 0.96, 1.0],
-    minScale: 0.82
-  });
+  return [
+    "gltf_loader",
+    "CommandPalette: double tap canvas or press /",
+    "Drag/Arrow: orbit  Shift+Drag/Arrow: pan  [ / ] or wheel: zoom",
+    "",
+    `File: ${GLTF_FILE.replace(/^.*\//, "")}  tris=${totalTriangles} clips=${clipNames.length}`,
+    `Model: nodes=${runtime?.nodes?.length ?? 0} shapes=${runtime?.shapes?.length ?? 0} animations=${runtime?.getAnimationNames?.().length ?? 0}`,
+    `Orbit: yaw=${orbit.orbit.yaw.toFixed(1)} pitch=${orbit.orbit.pitch.toFixed(1)} dist=${orbit.orbit.distance.toFixed(1)}`,
+    `Target: ${orbit.orbit.target[0].toFixed(2)}, ${orbit.orbit.target[1].toFixed(2)}, ${orbit.orbit.target[2].toFixed(2)}  panStep=${getPanUnit().toFixed(3)}`,
+    `Animation: ${selectedState.label}  globalPause=${paused ? "on" : "off"}  bound=${clipBound ? "yes" : "no"}`,
+    `Clip0: ${clipInfo?.id ?? "-"}`,
+    `Interpolation: ${interpolationSummary?.runtimeLabel ?? "LINEAR"}  conversion=${interpolationSummary?.conversionLabel ?? "none"}`,
+    `Wireframe: ${wireframe ? "on" : "off"}  screenshot=${screenshotName || "-"}`
+  ];
 }
 
+// ヘルプのパネルを現在の入力と実行状態に合わせて更新する
+function updateHelpPanel() {
+  const panel = app?.getOverlayPanel?.("gltfLoaderHelp");
+  if (!panel || !orbit?.orbit) {
+    return;
+  }
+  const lines = [
+    ...buildStatusLines(),
+    "",
+    ...app.getDebugKeyGuideLines()
+  ];
+  const nextText = lines.join("\n");
+  if (nextText === lastHelpText) {
+    return;
+  }
+  app.updateOverlayPanel("gltfLoaderHelp", { lines });
+  lastHelpText = nextText;
+}
+
+// `after`のコマンドを現在の入力と実行状態に合わせて更新する
+function refreshAfterCommand() {
+  palette?.render();
+  refreshDiagnosticsStats();
+  updateHelpPanel();
+  app.requestRender();
+}
+
+// コマンドの操作パレットの初期化段階で、必要な状態と資源を準備して処理を開始する
+function installCommandPalette() {
+  palette = new CommandPalette({
+    document,
+    container: document.body,
+    viewport: app.screen.canvas,
+    title: "glTF Loader",
+    pageRows: 5,
+    pageRowsByPage: [5],
+    closeOnCommand: false,
+    onChange: (id, value) => {
+      if (id === "pause-all") {
+        paused = value;
+        runtime.setAnimationsPaused(paused);
+      } else if (id === "wireframe") {
+        wireframe = value;
+        applyWireframeState();
+      }
+      refreshAfterCommand();
+    },
+    onCommand: (id) => {
+      if (id === "replay") replayPrimaryClip();
+      else if (id === "pause-clip") pausePrimaryClip();
+      else if (id === "resume-clip") resumePrimaryClip();
+      else if (id === "target-up") moveCameraLift(orbitLiftStep);
+      else if (id === "target-down") moveCameraLift(-orbitLiftStep);
+      else if (id === "reset-view") configureOrbitFromBuilt(runtime);
+      else if (id === "screenshot") takeViewerScreenshot();
+      else if (id === "download-json") model.downloadJSON(DOWNLOAD_FILE);
+      refreshAfterCommand();
+    },
+    commands: [
+      // 1ページ目
+      { type: "toggle", id: "pause-all", label: "Pause", detail: "all", value: () => paused },
+      { id: "replay", label: "Replay", detail: "clip" },
+      { id: "pause-clip", label: "Pause", detail: "clip" },
+      { id: "palette-next", label: "Next", detail: "page", pageSwitch: true },
+      { id: "resume-clip", label: "Resume", detail: "clip" },
+      { type: "toggle", id: "wireframe", label: "Wire", detail: "mesh", value: () => wireframe },
+      { id: "target-up", label: "Target", detail: "up" },
+      { id: "target-down", label: "Target", detail: "down" },
+      { id: "reset-view", label: "Reset", detail: "view" },
+      { id: "screenshot", label: "Shot", detail: "png" },
+      { id: "download-json", label: "JSON", detail: "download" },
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+    ]
+  });
+  palette.attachToCanvas(app.screen.canvas, { key: "/" });
+  palette.setStyle(getDefaultCommandPaletteCss());
+}
+
+// このインスタンスの初期化段階で、必要な状態と資源を準備して処理を開始する
 async function start() {
   app = new WebgApp({
     document,
@@ -577,22 +661,10 @@ async function start() {
       mode: DEBUG_MODE,
       system: "gltf_loader",
       source: GLTF_FILE,
-      guideLines: GUIDE_LINES,
-      guideOptions: {
-        anchor: "top-left",
-        x: 0,
-        y: 0,
-        width: 44,
-        wrap: true
-      },
       probeDefaultAfterFrames: 1
     }
   });
   await app.init();
-  app.showOverlayPanel(buildHelpPanelOptions({
-    id: "gltfLoaderHelp",
-    lines: [...GUIDE_LINES, ...app.getDebugKeyGuideLines()]
-  }));
 
   orbit = app.createOrbitEyeRig({
     target: [...DEFAULT_ORBIT.target],
@@ -656,6 +728,14 @@ async function start() {
     collect: () => makeProbeReport(app.screen.getFrameCount())
   });
   app.configureDebugKeyInput();
+  app.showOverlayPanel(buildHelpPanelOptions({
+    id: "gltfLoaderHelp",
+    collapsed: true,
+    lines: buildStatusLines()
+  }));
+  lastHelpText = buildStatusLines().join("\n");
+  installCommandPalette();
+  refreshAfterCommand();
 
   app.attachInput({
     onKeyDown: async (key, ev) => {
@@ -678,22 +758,19 @@ async function start() {
       } else if (key === "r") {
         configureOrbitFromBuilt(runtime);
       }
+      refreshAfterCommand();
     }
   });
 
   app.start({
-    onUpdate: ({ deltaSec }) => {
-      orbit.update(deltaSec);
-      syncOrbitStateToAppCamera();
-
+    onUpdate: () => {
       if (!paused) {
         runtime.playAllAnimations();
       }
 
       refreshDiagnosticsStats();
       app.updateDebugProbe();
-      updateHudRows();
-      app.setControlRows([]);
+      updateHelpPanel();
     }
   });
 }

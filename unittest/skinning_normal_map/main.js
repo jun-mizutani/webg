@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// unittest/skinning_normal_map/main.js  2026/04/12
+// unittest/skinning_normal_map/main.js  2026/07/25
 //   skinning_normal_map sample
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -28,6 +28,7 @@ const OBJECT_HEAD_DEG = 45.0;
 const ROOT_YAW_DEG = 8.0;
 const CHILD_BEND_DEG = 60.0;
 
+// このインスタンスの初期化段階で、必要な状態と資源を準備して処理を開始する
 const start = async ({ screen, gpu, setStatus, setViewportLayout, startLoop }) => {
   const shader = new SmoothShader(gpu);
   await shader.init();

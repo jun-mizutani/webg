@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>physics_collider</title>
+  <link rel="icon" href="data:," />
+  <!-- 2026/06/19 -->
+  <style>
+
+:root {
+  color-scheme: light;
+  --bg: #eef3f8;
+  --paper: rgba(255, 255, 255, 0.94);
+  --line: #c8d5e4;
+  --ink: #17324a;
+  --muted: #5c748b;
+  --accent: #1566ab;
+  --accent-soft: #dfeefe;
+  --code-bg: #f3f7fb;
+  --shadow: rgba(29, 52, 79, 0.10);
+}
+* { box-sizing: border-box; }
+html, body {
+  margin: 0;
+  min-height: 100%;
+}
+body {
+  background:
+    radial-gradient(circle at top left, rgba(21, 102, 171, 0.12), transparent 24%),
+    radial-gradient(circle at top right, rgba(255, 191, 118, 0.10), transparent 22%),
+    linear-gradient(180deg, #f8fbfd 0%, var(--bg) 100%);
+  color: var(--ink);
+  font: 16px/1.78 "Avenir Next", "Hiragino Sans", "Yu Gothic", sans-serif;
+}
+.page {
+  width: min(1080px, calc(100% - 28px));
+  margin: 0 auto;
+  padding: 24px 0 56px;
+}
+.hero,
+.doc {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  box-shadow: 0 22px 52px var(--shadow);
+}
+.hero {
+  padding: 22px 24px;
+  margin-bottom: 18px;
+}
+.hero h1 {
+  margin: 0 0 8px;
+  font-size: clamp(2rem, 4vw, 3rem);
+  line-height: 1.08;
+}
+.hero p {
+  margin: 0;
+  color: var(--muted);
+}
+.doc {
+  padding: 28px;
+}
+.doc > :first-child {
+  margin-top: 0;
+}
+h1, h2, h3, h4, h5, h6 {
+  line-height: 1.25;
+  margin: 1.45em 0 0.55em;
+}
+h1 {
+  font-size: 2.2rem;
+}
+h2 {
+  padding-bottom: 0.28em;
+  border-bottom: 1px solid var(--line);
+  font-size: 1.48rem;
+}
+h3 {
+  font-size: 1.14rem;
+}
+p, ul, ol, table, pre, blockquote {
+  margin: 0 0 1em;
+}
+ul, ol {
+  padding-left: 1.4em;
+}
+li + li {
+  margin-top: 0.26em;
+}
+a {
+  color: var(--accent);
+  text-decoration: none;
+}
+a:hover {
+  text-decoration: underline;
+}
+img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  border-radius: 16px;
+  border: 1px solid var(--line);
+  box-shadow: 0 12px 32px rgba(29, 52, 79, 0.08);
+  margin: 1.1em 0 1.4em;
+}
+code {
+  padding: 0.12em 0.38em;
+  border-radius: 0.45em;
+  background: var(--code-bg);
+  border: 1px solid #dbe6f1;
+  font: 0.92em/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+pre {
+  padding: 14px 16px;
+  overflow-x: auto;
+  border-radius: 14px;
+  background: #0f1720;
+  color: #ecf5ff;
+}
+pre code {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #ffffff;
+}
+th, td {
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  text-align: left;
+  vertical-align: top;
+}
+th {
+  background: #f5f9fc;
+}
+hr {
+  border: 0;
+  border-top: 1px solid var(--line);
+  margin: 1.5em 0;
+}
+blockquote {
+  padding: 0.3em 0 0.3em 1em;
+  border-left: 4px solid #c9dbef;
+  color: var(--muted);
+}
+@media (max-width: 720px) {
+  .page {
+    width: min(100% - 18px, 1080px);
+    padding-top: 16px;
+  }
+  .hero,
+  .doc {
+    border-radius: 18px;
+  }
+  .doc {
+    padding: 20px;
+  }
+}
+
+  </style>
+</head>
+<body>
+  <main class="page">
+    <section class="hero">
+      <h1>physics_collider</h1>
+    </section>
+    <article class="doc">
+<h1>physics_collider</h1>
+<p>English | <a href="index.html">日本語</a></p>
+<p><img src="./physics_collider.jpg" alt="physics_collider" /></p>
+<h2>Overview</h2>
+<ul><li>This sample lets you inspect multiple bodies with <code>BoxCollider</code> as they fall while rotating, contact each other in midair or on the floor, push against each other, and gradually settle</li><li>It uses <code>WebgApp</code> to collect startup, HUD, input, and camera control, while the physics world itself is built directly from <code>PhysicsSpace</code> and <code>PhysicsNode</code>, making the implementation easier to trace</li><li>Assuming <code>1 unit = 1 m</code>, it drops boxes of up to about <code>0.10 m</code> into a shallow <code>1.2 m x 1.2 m</code> arena, so the behavior can be observed at the scale of dropping small tabletop objects</li><li>By mixing not only cubes but also beams, plates, columns, and deep blocks, the sample makes it easier to compare OBB orientation changes, edge contacts, face contacts, and the appearance of sleep islands</li><li>Pressing <code>Space</code> injects additional boxes, letting you observe how rotational contacts settle even in denser situations</li></ul>
+<h2>How to Run</h2>
+<ul><li>Open <a href="./physics_collider.html">./physics_collider.html</a></li><li>Use a browser with WebGPU support, and check the help panel and HUD together with the sample when needed</li></ul>
+<h2>webg Features Used</h2>
+<ul><li><code>WebgApp</code>: initializes <code>Screen</code>, <code>Shader</code>, <code>Space</code>, <code>Input</code>, and <code>Message</code></li><li><code>PhysicsSpace</code>: manages fixed time steps, gravity, restitution, friction, and sleep islands</li><li><code>PhysicsNode</code>: switches between dynamic / kinematic / static and initializes pose and velocity</li><li><code>BoxCollider</code> and <code>PlaneCollider</code>: build contacts between rotating boxes and the floor plane</li><li><code>Shape</code> and <code>Primitive.cuboid()</code>: create meshes for each body, the floor, and the walls</li><li><code>EyeRig</code>: provides the orbit camera used for overhead inspection</li></ul>
+<h2>Checkpoints</h2>
+<ul><li>Confirm that long beams and flat plates fall without a mismatch between their visible rotation and collider orientation</li><li>Confirm that when boxes contact each other in midair or on the floor, they do not simply pass through one another and you can see pushback and rotational change</li><li>Confirm that the status display shows release count, awake count, contact count, and sleep-island totals so you can follow how settled the whole system has become</li><li>Confirm that hue changes by sleep island make it easy to distinguish bodies belonging to the same island, as well as the differences between awake / candidate / sleeping states</li><li>Confirm that even when the viewpoint changes through drag and zoom, the tabletop-scale arena and body sizes remain easy to grasp intuitively</li></ul>
+<h2>Controls</h2>
+<ul><li>Drag: orbit camera</li><li><code>Shift + Drag</code>: pan</li><li>Mouse wheel / <code>[ / ]</code>: zoom</li><li><code>Space</code>: add 4 boxes</li><li><code>P</code>: pause / resume</li><li><code>R</code>: return positions, poses, and velocities to their initial states</li><li>Add a URL parameter such as <code>?count=60</code> to change the initial body count</li></ul>
+<h2>Implementation Details</h2>
+<ul><li>If you want to inspect solver values rather than visible behavior, run <code>unittest/physics_collider/headless_probe.js</code> with Node</li><li><code>headless_probe.js</code> is used for numeric investigation of cases such as the standing beam and cube-corner balance. This sample is responsible for on-screen interaction checks, while the headless probe handles numeric diagnostics</li><li>Contract verification for <code>PhysicsSpace</code> is handled by <code>unittest/physics_space_contracts</code>, while this sample focuses on the appearance of rotating box contacts</li></ul>
+    </article>
+  </main>
+</body>
+</html>

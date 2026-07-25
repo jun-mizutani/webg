@@ -1,0 +1,73 @@
+# matrix_projection_contracts
+
+## 何のためのテストか
+
+`Matrix` の投影行列を、通常カメラ用 `depth32float` Reverse-ZとShadow Map用通常Zの明示的な規則へ移行する。表示を見ながら係数の符号を調整するのではなく、view-space距離を行列で投影したdepthと、独立した参照式の結果が一致することを数値で確認する。
+
+## 対象
+
+- `Matrix.makeProjectionMatrix()`
+- `Matrix.makeProjectionMatrixWH()`
+- `Matrix.makeProjectionMatrixOrtho()`
+- finite farの透視Reverse-Z
+- infinite farの透視Reverse-Z
+- 正射影Reverse-Z
+- Shadow Map用通常Z
+- 投影入力の検証
+
+## 確認内容
+
+1. 公開4引数形式が明示 `CAMERA_REVERSE_Z` と同じ行列になり、旧通常Zへ戻らない。
+2. finite farの透視行列でnearが1、farが0になり、中間距離が参照式と一致する。
+3. 行列で投影したdepthを線形化すると元のview-space距離へ戻る。
+4. infinite farで `m10=0`、`m14=near`、`depth=near/distance` が成立する。
+5. near plane幅高指定版のX/Y scaleとZ係数が正しい。
+6. 正射影Reverse-Zが距離に対して線形に1から0へ減少する。
+7. Shadow Map用通常Zを明示するとnearが0、farが1になる。
+8. near、far、画角、aspect、正射影の無限farが不正な場合は生成時に例外になる。
+
+## 実行方法
+
+```sh
+node headless_tests/core/matrix/headless_probe.js
+```
+
+## 予想
+
+すべてのassertionが成功し、最後に次の一行が表示されるはずである。
+
+```text
+matrix_projection_contracts: all projection contracts passed
+```
+
+## 結果
+
+2026-07-12 JSTに初回の明示Depth Convention契約を確認した。2026-07-13 JSTに低レベル公開APIを再検討し、4引数形式をCamera Reverse-Z固定へ変更して再実行した。
+
+```sh
+node --check webg/Matrix.js
+node --check headless_tests/core/matrix/headless_probe.js
+node headless_tests/core/matrix/headless_probe.js
+node headless_tests/core/depth_convention/headless_probe.js
+git diff --check
+```
+
+構文確認と二つの数値テストはすべて終了コード0だった。Matrixテストは次を表示した。
+
+```text
+matrix_projection_contracts: all projection contracts passed
+```
+
+前段のDepth Conventionテストも `depth_convention_api_contracts: all numeric contracts passed` を表示した。`git diff --check` は出力なしで成功した。
+
+## 解釈
+
+Matrixの列優先規則、view-space前方が負のZ、WebGPU depth範囲0から1という前提のもとで、finite far、infinite far、幅高指定、正射影のReverse-Z係数が参照式と一致した。
+
+Shadow Map用通常ZはDepth Conventionを明示した場合だけnear 0、far 1を維持する。Depth Convention省略は通常カメラ用Reverse-Zという固定仕様になり、旧通常Zへ戻る経路はない。`null` や独自objectは省略として扱わず例外になる。
+
+この公開仕様により、単純な低レベル利用者はDepth Conventionをimportする必要がない。Shadow Mapを生成するコアだけが通常Zを明示し、通常カメラとShadow Mapの選択を自動推測しない。
+
+## Commit
+
+`Matrix.js` と本テストを同じコミットへ含める。

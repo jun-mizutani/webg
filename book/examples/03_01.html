@@ -220,7 +220,6 @@ let elapsedSec = 0.0;
 app.start({
   onUpdate: ({ deltaSec }) => {
     elapsedSec += deltaSec;
-    orbit.update(deltaSec);
 
     // 太陽系は親 pivot を回して公転を作り、本体 node を回して自転を作る
     solar.sun.rotateY(0.35);

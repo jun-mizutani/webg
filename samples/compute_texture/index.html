@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>compute_texture</title>
+  <link rel="icon" href="data:," />
+  <!-- 2026/06/19 -->
+  <style>
+
+:root {
+  color-scheme: light;
+  --bg: #eef3f8;
+  --paper: rgba(255, 255, 255, 0.94);
+  --line: #c8d5e4;
+  --ink: #17324a;
+  --muted: #5c748b;
+  --accent: #1566ab;
+  --accent-soft: #dfeefe;
+  --code-bg: #f3f7fb;
+  --shadow: rgba(29, 52, 79, 0.10);
+}
+* { box-sizing: border-box; }
+html, body {
+  margin: 0;
+  min-height: 100%;
+}
+body {
+  background:
+    radial-gradient(circle at top left, rgba(21, 102, 171, 0.12), transparent 24%),
+    radial-gradient(circle at top right, rgba(255, 191, 118, 0.10), transparent 22%),
+    linear-gradient(180deg, #f8fbfd 0%, var(--bg) 100%);
+  color: var(--ink);
+  font: 16px/1.78 "Avenir Next", "Hiragino Sans", "Yu Gothic", sans-serif;
+}
+.page {
+  width: min(1080px, calc(100% - 28px));
+  margin: 0 auto;
+  padding: 24px 0 56px;
+}
+.hero,
+.doc {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  box-shadow: 0 22px 52px var(--shadow);
+}
+.hero {
+  padding: 22px 24px;
+  margin-bottom: 18px;
+}
+.hero h1 {
+  margin: 0 0 8px;
+  font-size: clamp(2rem, 4vw, 3rem);
+  line-height: 1.08;
+}
+.hero p {
+  margin: 0;
+  color: var(--muted);
+}
+.doc {
+  padding: 28px;
+}
+.doc > :first-child {
+  margin-top: 0;
+}
+h1, h2, h3, h4, h5, h6 {
+  line-height: 1.25;
+  margin: 1.45em 0 0.55em;
+}
+h1 {
+  font-size: 2.2rem;
+}
+h2 {
+  padding-bottom: 0.28em;
+  border-bottom: 1px solid var(--line);
+  font-size: 1.48rem;
+}
+h3 {
+  font-size: 1.14rem;
+}
+p, ul, ol, table, pre, blockquote {
+  margin: 0 0 1em;
+}
+ul, ol {
+  padding-left: 1.4em;
+}
+li + li {
+  margin-top: 0.26em;
+}
+a {
+  color: var(--accent);
+  text-decoration: none;
+}
+a:hover {
+  text-decoration: underline;
+}
+img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  border-radius: 16px;
+  border: 1px solid var(--line);
+  box-shadow: 0 12px 32px rgba(29, 52, 79, 0.08);
+  margin: 1.1em 0 1.4em;
+}
+code {
+  padding: 0.12em 0.38em;
+  border-radius: 0.45em;
+  background: var(--code-bg);
+  border: 1px solid #dbe6f1;
+  font: 0.92em/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+pre {
+  padding: 14px 16px;
+  overflow-x: auto;
+  border-radius: 14px;
+  background: #0f1720;
+  color: #ecf5ff;
+}
+pre code {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #ffffff;
+}
+th, td {
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  text-align: left;
+  vertical-align: top;
+}
+th {
+  background: #f5f9fc;
+}
+hr {
+  border: 0;
+  border-top: 1px solid var(--line);
+  margin: 1.5em 0;
+}
+blockquote {
+  padding: 0.3em 0 0.3em 1em;
+  border-left: 4px solid #c9dbef;
+  color: var(--muted);
+}
+@media (max-width: 720px) {
+  .page {
+    width: min(100% - 18px, 1080px);
+    padding-top: 16px;
+  }
+  .hero,
+  .doc {
+    border-radius: 18px;
+  }
+  .doc {
+    padding: 20px;
+  }
+}
+
+  </style>
+</head>
+<body>
+  <main class="page">
+    <section class="hero">
+      <h1>compute_texture</h1>
+    </section>
+    <article class="doc">
+<h1>compute_texture</h1>
+<p><a href="index.en.html">English</a> | 日本語</p>
+<p><img src="./compute_texture.jpg" alt="compute_texture" /></p>
+<h2>概要</h2>
+<ul><li>WebGPU の Compute Shader を使い、2 枚の texture を ping-pong しながら毎フレーム内容を書き換えるサンプルです</li><li>webg コアライブラリには compute 専用 API を追加せず、WebgApp が初期化した WebGPU device / queue / canvas context をサンプル内で直接使っています</li><li>compute pass は前フレームの sampled texture を読み、拡散、流れ場、背景模様、ポインタ入力、中央 burst を合成して次フレームの storage texture へ書き込みます</li><li>render pass は同じ texture を左下の平面 preview と、<code>Primitive.sphere()</code> で作った球 mesh へ同時に使い、GPU 内で更新したテクスチャを CPU readback なしで画面へ出します</li><li>ドラッグするとポインタ位置に色の種を注入し、クリック時には反転した色の輪が少しずつ大きくなりながら薄れていく演出も重なります。左下の平面 preview では入力位置との対応を確認でき、中央の球体では貼り込まれた texture と照明の見え方を確認できます</li></ul>
+<h2>実行方法</h2>
+<ul><li>実行ファイルは <a href="./compute_texture.html">./compute_texture.html</a> です</li><li>WebGPU に対応したブラウザで開き、必要に応じて help panel や HUD と合わせて確認してください</li></ul>
+<h2>使用している webg 機能</h2>
+<ul><li>WebgApp: Screen、diagnostics、入力基盤をまとめて初期化する</li><li>WebgApp computeFrame: <code>computeFrame: true</code>と<code>onComputeFrame</code> handlerで、標準scene描画を行わずcompute / renderの順序を制御する</li><li>Screen.resize(): WebgApp が保持する Screen を通じて viewport 変更時の canvas 実ピクセルを更新する</li><li>WebgApp.getGPU(): core API を変更せず、サンプル側で raw WebGPU texture / sampler / pipeline を作るための入口</li><li>buildHelpPanelOptions() + showOverlayPanel(): 操作説明と現在状態を OverlayPanel の help panel として表示する</li><li>InputController.installTouchControls(): PC とスマートフォンの両方へ mode 切替や clear を行うタッチボタンを表示する</li></ul>
+<h2>使用している WebGPU 機能</h2>
+<ul><li>sampled texture: 前フレームの色分布を compute shader が読む入力として使う</li><li>storage texture: compute shader が次フレームの色を書き込む出力として使う</li><li>ping-pong texture: 同じ texture を読み書きせず、source と destination を毎フレーム交換して更新競合を避ける</li><li>sampler: 隣接 pixel や流れ方向のずれた UV を線形補間で読み、にじみや流れを作る</li><li>uniform buffer: time、deltaTime、pointer 位置、mode、brush 半径、burst、brush color を shader へ渡す</li><li>compute pipeline: 1 invocation = 1 pixel として前フレームの色、近傍色、背景波形、入力注入を合成する</li><li>render pipeline: compute 後の texture を平面 preview と <code>Primitive.sphere()</code> の照明付き球 mesh に使い、書き換え結果を 2 通りの見え方で可視化する</li><li>timestamp query: texture更新のGPU Compute時間とRender Pass時間を取得し、各区間と合計のloadを表示する</li></ul>
+<h2>確認ポイント</h2>
+<ul><li>起動後に、左下の平面 preview と中央の球体の両方へ、クリック前から色の入った時間変化する流れ模様が表示されることを確認します</li><li>ドラッグまたは 1 本指ドラッグで色を描くと、平面 preview ではポインタ位置と同じ向きに色が入り、短いクリックやタップでも注入色が少し残ってから Compute Shader によって流れながら広がることを確認します</li><li>クリックやタップの直後には、入力位置を中心に色反転を含む輪が色を変えながら外側へ広がり、時間とともに薄くなることを確認します</li><li>球体側では、<code>Primitive.sphere()</code> の UV へ同じ texture が回転しながら貼られ、明暗と highlight によって面の丸みと texture の巻かれ方が分かることを確認します</li><li>1 / 2 / 3 で mode を切り替えると、同じ更新構造のまま色調と模様の出方が変わることを確認します</li><li>B または Space で中央 burst を発生させると、画面中心から輪が広がることを確認します</li><li>C で texture が初期化され、残っていた色の履歴が消えることを確認します</li><li>P で pause したとき、compute 更新が止まり、現在の texture 表示だけが維持されることを確認します</li><li>ホイールまたは - / + ボタンで brush 半径を変えると、描画時の注入範囲が変わることを確認します</li><li>H で OverlayPanel の help panel を畳み、再度 H または Show Help ボタンで再表示できることを確認します</li><li>Help panelの<code>GPU compute / GPU render / GPU total / JS time</code>と各loadが更新されることを確認します</li></ul>
+<h2>操作方法</h2>
+<ul><li>ドラッグ: texture へ色を描く</li><li>1 本指ドラッグ: texture へ色を描く</li><li>ホイール: brush 半径の変更</li><li>- / +: brush 半径の変更</li><li>1: Aurora mode</li><li>2: Ink mode</li><li>3: Cells mode</li><li>B / Space: center burst</li><li>C: clear texture</li><li>P: pause / resume</li><li>H: hide / show help</li></ul>
+<h2>実装の詳細</h2>
+<ul><li>main.js の compute shader は sampled texture を read、storage texture を write として分け、前フレームの内容を壊さず次フレームを作っています</li><li>同じ 2 枚の texture を毎フレーム入れ替える ping-pong 構成にしているため、動的なテクスチャフィードバックを GPU 内だけで継続できます</li><li>pointer 入力は CPU 側で座標、半径、残像用の注入エネルギー、click pulse の進行度と中心座標を uniform へ渡し、実際の注入範囲、色反転、色の加算は compute shader 側で pixel ごとに判定しています</li><li>render 側の球体は <code>Primitive.sphere()</code> の geometry.positions / uvs / indices を raw render pipeline 用 buffer へ詰めて描画し、seam が目立ちにくい既存の UV 展開をそのまま使っています</li><li>球体はその UV で texture を sample し、directional light、specular、rim light を使って面の向きと貼り込み状態を見やすくしています</li><li>ポストプロセス、反応する HUD、手続き模様、ペイント可能な effect map など、動的 texture 生成の入口として確認できます</li></ul>
+    </article>
+  </main>
+</body>
+</html>

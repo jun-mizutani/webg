@@ -1,0 +1,15 @@
+# compute_shadow_map
+
+このサンプルは、directional light 1灯について、光源視点のdepth textureをRender Passで生成し、camera視点のG-bufferとCompute Shaderで比較して影を表示します。固定の正射影範囲を使う `fixed` と、camera 視錐台を light-space のAABBへ合わせる `frustum-fit` を切り替えられます。
+
+`webg/ShadowMapPass.js`はSpaceからstatic Shapeとskinned Shapeを収集し、光源view-projection matrixを使ってdepth-only Render Passへ描画します。skinned Shapeは標準Shapeの`vertexBuffer0`、`vertexBuffer1`とSkeletonのmatrix paletteを使うため、通常表示と同じbone姿勢の影を生成します。生成したdepth textureは`getBindingResources()`から後段へ渡します。
+
+`webg/ComputeShadowPass.js`はcamera depthからview-space位置を復元し、camera world matrixでworld-spaceへ戻した後、light view-projection matrixでshadow map座標へ投影します。constant biasとnormal biasを適用し、1、3×3、5×5のPCFでvisibilityを求めます。
+
+`FrameTimer`はshadow depthからG-buffer終了までをGPU Render時間、shadow評価をGPU Compute時間としてtimestamp queryで計測します。Help panelへGPU Compute、GPU Render、GPU Total、GPU Loadを表示し、GPU LoadはGPU Totalをframe間隔で割って求めます。最終fullscreen copyは計測対象外です。
+
+`Fit Far` は、`frustum-fit` が camera 視錐台のどこまでを shadow fit の対象に含めるかを調整します。値を大きくすると遠方まで影を含めやすくなりますが、同じshadow mapをより広い空間へ割り当てるため精度は下がりやすくなります。
+
+現在のコア契約ではstatic/skinned opaque Shape、単一directional light、固定解像度shadow mapを対象とし、未対応のalpha testへfallbackしません。
+
+画面手前側を移動・回転する緑色の円柱は両端を閉じ、5本のboneでも曲がります。端面は対応する端のboneへ固定されているため、曲げても側面から分離しません。本体と床へ落ちる影の位置と輪郭が同時に変わることから、通常描画、GeometryBufferPass、ShadowMapPassが同じNode transformとSkeleton姿勢を参照していることを確認できます。

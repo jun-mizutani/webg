@@ -1,5 +1,5 @@
 // ---------------------------------------------
-//  Diagnostics.js 2026/04/04
+//  Diagnostics.js 2026/07/25
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // ---------------------------------------------
@@ -8,6 +8,7 @@ import DebugConfig from "./DebugConfig.js";
 
 export default class Diagnostics {
 
+  // レポートを検証し、後続処理が扱える共通形式へ整える
   static requireReport(report, methodName) {
     if (!report || typeof report !== "object" || Array.isArray(report)) {
       throw new Error(`Diagnostics.${methodName} requires a diagnostics report object`);
@@ -15,6 +16,7 @@ export default class Diagnostics {
     return report;
   }
 
+  // `plain`のオブジェクトを検証し、後続処理が扱える共通形式へ整える
   static requirePlainObject(value, methodName, name) {
     if (value === undefined) {
       return {};
@@ -25,6 +27,7 @@ export default class Diagnostics {
     return value;
   }
 
+  // `array`を検証し、後続処理が扱える共通形式へ整える
   static requireArray(value, methodName, name) {
     if (!Array.isArray(value)) {
       throw new Error(`Diagnostics.${methodName} requires ${name} to be an array`);
@@ -32,6 +35,7 @@ export default class Diagnostics {
     return value;
   }
 
+  // 入力のフレームを検証し、後続処理が扱える共通形式へ整える
   static requireInputFrame(frame, methodName, index = null) {
     if (!frame || typeof frame !== "object" || Array.isArray(frame)) {
       const suffix = index === null ? "" : `[${index}]`;

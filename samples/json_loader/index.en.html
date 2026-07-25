@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>json_loader</title>
+  <link rel="icon" href="data:," />
+  <!-- 2026/06/19 -->
+  <style>
+
+:root {
+  color-scheme: light;
+  --bg: #eef3f8;
+  --paper: rgba(255, 255, 255, 0.94);
+  --line: #c8d5e4;
+  --ink: #17324a;
+  --muted: #5c748b;
+  --accent: #1566ab;
+  --accent-soft: #dfeefe;
+  --code-bg: #f3f7fb;
+  --shadow: rgba(29, 52, 79, 0.10);
+}
+* { box-sizing: border-box; }
+html, body {
+  margin: 0;
+  min-height: 100%;
+}
+body {
+  background:
+    radial-gradient(circle at top left, rgba(21, 102, 171, 0.12), transparent 24%),
+    radial-gradient(circle at top right, rgba(255, 191, 118, 0.10), transparent 22%),
+    linear-gradient(180deg, #f8fbfd 0%, var(--bg) 100%);
+  color: var(--ink);
+  font: 16px/1.78 "Avenir Next", "Hiragino Sans", "Yu Gothic", sans-serif;
+}
+.page {
+  width: min(1080px, calc(100% - 28px));
+  margin: 0 auto;
+  padding: 24px 0 56px;
+}
+.hero,
+.doc {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  box-shadow: 0 22px 52px var(--shadow);
+}
+.hero {
+  padding: 22px 24px;
+  margin-bottom: 18px;
+}
+.hero h1 {
+  margin: 0 0 8px;
+  font-size: clamp(2rem, 4vw, 3rem);
+  line-height: 1.08;
+}
+.hero p {
+  margin: 0;
+  color: var(--muted);
+}
+.doc {
+  padding: 28px;
+}
+.doc > :first-child {
+  margin-top: 0;
+}
+h1, h2, h3, h4, h5, h6 {
+  line-height: 1.25;
+  margin: 1.45em 0 0.55em;
+}
+h1 {
+  font-size: 2.2rem;
+}
+h2 {
+  padding-bottom: 0.28em;
+  border-bottom: 1px solid var(--line);
+  font-size: 1.48rem;
+}
+h3 {
+  font-size: 1.14rem;
+}
+p, ul, ol, table, pre, blockquote {
+  margin: 0 0 1em;
+}
+ul, ol {
+  padding-left: 1.4em;
+}
+li + li {
+  margin-top: 0.26em;
+}
+a {
+  color: var(--accent);
+  text-decoration: none;
+}
+a:hover {
+  text-decoration: underline;
+}
+img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  border-radius: 16px;
+  border: 1px solid var(--line);
+  box-shadow: 0 12px 32px rgba(29, 52, 79, 0.08);
+  margin: 1.1em 0 1.4em;
+}
+code {
+  padding: 0.12em 0.38em;
+  border-radius: 0.45em;
+  background: var(--code-bg);
+  border: 1px solid #dbe6f1;
+  font: 0.92em/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+pre {
+  padding: 14px 16px;
+  overflow-x: auto;
+  border-radius: 14px;
+  background: #0f1720;
+  color: #ecf5ff;
+}
+pre code {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #ffffff;
+}
+th, td {
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  text-align: left;
+  vertical-align: top;
+}
+th {
+  background: #f5f9fc;
+}
+hr {
+  border: 0;
+  border-top: 1px solid var(--line);
+  margin: 1.5em 0;
+}
+blockquote {
+  padding: 0.3em 0 0.3em 1em;
+  border-left: 4px solid #c9dbef;
+  color: var(--muted);
+}
+@media (max-width: 720px) {
+  .page {
+    width: min(100% - 18px, 1080px);
+    padding-top: 16px;
+  }
+  .hero,
+  .doc {
+    border-radius: 18px;
+  }
+  .doc {
+    padding: 20px;
+  }
+}
+
+  </style>
+</head>
+<body>
+  <main class="page">
+    <section class="hero">
+      <h1>json_loader</h1>
+    </section>
+    <article class="doc">
+<h1>json_loader</h1>
+<p>English | <a href="index.html">日本語</a></p>
+<p><img src="./json_loader.jpg" alt="json_loader" /></p>
+<h2>Overview</h2>
+<ul><li>This sample loads and displays the <code>ModelAsset</code> JSON file specified in <code>main.js</code> as-is</li><li>JSON exported by <code>gltf_loader</code> or <code>collada_loader</code> with the <code>D</code> key can be shown again in this sample by matching the file name</li><li>It calls the JSON facade from <code>WebgApp.loadModel()</code>, making it a sample that obtains <code>ModelAsset</code> data and runtime objects without caring about format differences</li><li>The included <code>modelasset.json</code> contains two clips, <code>ArmatureAction_skeleton_0</code> and <code>ArmatureAction_skeleton_0_copy</code>, created by duplicating the same source clip</li></ul>
+<h2>How to Run</h2>
+<ul><li>Open <a href="./json_loader.html">./json_loader.html</a></li><li>Use a browser with WebGPU support, and check the Help Panel and CommandPalette together with the sample when needed</li></ul>
+<h2>webg Features Used</h2>
+<ul><li><code>WebgApp</code>: standard initialization, render loop, and Help Panel display</li><li><code>CommandPalette</code>: groups clip control, wireframe, screenshot, JSON export, and camera reset</li><li><code>WebgApp.loadModel</code>: high-level entry point for the JSON facade</li><li><code>ModelLoader</code>: bundles JSON load / validate / build / instantiate</li><li><code>ModelAsset.load</code>: loads the JSON file</li><li><code>ModelAsset.getClipNames</code>: inspects the clip list contained in the JSON</li><li><code>ModelAsset.build</code>: constructs shapes, skeletons, and animations from the JSON</li><li><code>ModelBuilder.animationMap</code>: accesses runtime animations from clip IDs</li><li><code>build()</code> result helpers: <code>instantiate() / createNodeTree() / bindAnimationBindings() / getAnimation() / getAnimationNames() / startAllAnimations() / playAllAnimations() / setAnimationsPaused()</code></li><li><code>EyeRig(type=&quot;orbit&quot;)</code>: orbit viewpoint based on the bounding box</li></ul>
+<h2>Checkpoints</h2>
+<ul><li>Confirm that the JSON specified by <code>MODEL_ASSET_FILE</code> passes the validator and can be rendered directly</li><li>Confirm that the Help Panel displays <code>file / model / orbit / target / anim / clip / wireframe</code> state so the information needed for a viewer can be followed on screen</li><li>Confirm that inside the sample, the runtime returned by the facade is used to unify node restoration and animation binding, and that the connection can be checked through <code>getAnimation()</code> / <code>getAnimationNames()</code> instead of direct <code>animationMap</code> access</li><li>Confirm that <code>4 / 5</code> switches the target clip and that <code>1 / 2 / 3</code> act on the currently selected clip</li><li>Confirm that <code>4 / 5</code> can switch between <code>ArmatureAction_skeleton_0</code> and <code>ArmatureAction_skeleton_0_copy</code></li><li>Confirm that <code>1</code> can restart the selected clip by name with <code>restartAnimation(clipId)</code></li><li>Confirm that <code>2 / 3</code> can pause and resume the selected clip individually with <code>pauseAnimation(clipId)</code> / <code>resumeAnimation(clipId)</code></li><li>Confirm that the camera distance is set automatically from the bounding-box size so the whole model remains in view</li><li>Confirm that <code>Shift + Arrow</code> and <code>Shift + Drag</code> move the camera target in parallel, making it easy to bring details to the center</li><li>Confirm that <code>W</code> toggles wireframe, <code>S</code> saves a screenshot, and <code>R</code> restores the initial framing</li><li>Confirm that the CommandPalette can run clip replay / pause / resume / selection, wireframe, screenshot, JSON export, and camera reset</li><li>Confirm that the Help Panel is used for current values and operation hints, while the CommandPalette is used for changing settings and running commands</li></ul>
+<h2>Controls</h2>
+<ul><li>Drag / arrow keys: orbit camera rotation</li><li><code>Shift + Drag / arrow keys</code>: pan the camera target</li><li>Mouse wheel / <code>[ / ]</code>: zoom</li><li><code>Space</code>: pause animation</li><li><code>1</code>: replay the selected clip</li><li><code>2</code>: pause the selected clip</li><li><code>3</code>: resume the selected clip</li><li><code>4</code>: select the previous clip</li><li><code>5</code>: select the next clip</li><li><code>W</code>: toggle wireframe</li><li><code>S</code>: save a screenshot</li><li><code>D</code>: download the current JSON again</li><li><code>R</code>: return the camera to the initial position based on the bounding box</li><li><code>/</code> or double tap the canvas: open the CommandPalette</li></ul>
+    </article>
+  </main>
+</body>
+</html>

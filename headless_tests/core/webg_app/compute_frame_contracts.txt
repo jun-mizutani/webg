@@ -1,0 +1,22 @@
+サンプル: webg_app_compute_frame
+
+概要
+- `webg/WebgApp.js`へ統合したCompute-first frameの契約を、DOMやGPUを使わずに確認するheadless testです
+- `computeFrame: true`と`start({ onComputeFrame })`によって、標準scene描画を行わずアプリケーションがCompute / Render Passを管理する構成を検証します
+- `timestamp-query`は`WebgApp`の正式なGPU optional feature指定から要求し、ブラウザの`requestAdapter()`を差し替えません
+
+このテストで使う機能
+- `WebgApp.frame()`: 時間差分の検証、`onFrameTiming`、`onUpdate`、`onComputeFrame`、入力edge更新、次frame予約を順に実行する
+- `onFrameTiming`: FPS集計など、GPU command発行前のsample固有処理を差し込む
+- `onComputeFrame`: 各sampleがCompute Pass、Render Pass、submitを完了する必須handler
+
+確認ポイント
+- 通常frameでtiming hook、update、render、input、次frame予約が決められた順序で呼ばれることを確認します
+- `onUpdate`が停止を要求した場合、compute / render処理へ進まないことを確認します
+- page非表示相当では時刻基準をresetし、GPU処理へ進まないことを確認します
+- 時刻が逆行した場合は数値を自動補正せず、例外として表面化することを確認します
+- `onComputeFrame`を指定し忘れた場合、無表示で継続せず例外になることを確認します
+- `computeFrame`と`onComputeFrame`の片方だけを指定した場合、loop開始前に例外になることを確認します
+
+実行方法
+- `node headless_tests/core/webg_app/headless_probe.js`

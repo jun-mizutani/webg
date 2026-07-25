@@ -1,0 +1,49 @@
+# sample_maze2_pipeline_contracts
+
+## 目的
+
+`samples/maze2` が第2版の座標・深度基盤へ移行し、削除済みの `createViewMatrix()` や `createGBufferProjectionParams()` を再び使用せず、現在の `ComputeEffectPipeline` APIで多数のpoint light、SSR、geometry edgeを構成することを確認します。
+
+## 確認内容
+
+`WebgApp` が描画直前に確定してhandler contextへ渡す同一のCamera Frameを、`pipeline.renderScene()` と `pipeline.encode()` の両方へ渡すことを検査します。sample側ではeyeからview matrixを再構築せず、projection near、far、画角からG-buffer用parameterを重複生成しません。
+
+maze2はfirst-person EyeRigをsample側で所有するため、移動後の位置を `app.camera.target` へ明示的に同期してからWebgAppがcamera effectとCamera Frameを確定する順序を検査します。これにより論理player、radar、描画視点、Deferred point lightのview-space変換が同じcamera World位置を使用します。
+
+開始位置はX座標5.8318959138505555 m、Z座標2.301664061813298 m、身体の向きは31.5度とします。視点の高さは従来どおり1.60 mとし、開始時と視点reset時に同じ設定を使用することを検査します。
+
+迷路の照明は天井灯に対応する最大64灯の点光源を使用します。光源の高さは3.70 mとします。不要な平行光源は強度を0とし、シャドウマップとスクリーンスペース環境遮蔽の効果を明示的に無効化します。一方、指定済みのスクリーンスペース反射設定と幾何学的な輪郭設定は統合パイプラインへ引き継ぐことを確認します。
+
+天井灯のブルームは`threshold 0.60`、`softKnee 0.40`、`strength 0.70`とし、白だけでなく赤とオレンジの照明パネルからも発光成分を抽出できる設定を検査します。広い発光を担う1/32段階の重みは0.36とします。
+
+白系の壁と天井はglobal ambient 0.11、metallic 0.28とし、point lightの範囲外でも形状を判別できる基礎輝度を確保します。天井のroughnessは0.55とし、点光源による細長い鏡面反射を広げて弱めます。上下railはmetallic 0.32 / 0.36とし、白さを保ちながら上部をわずかに反射的にします。
+
+第2版G-bufferが要求するspecular、roughness、metallic、emissiveは全共通材質で明示し、値の不足を自動補完しません。天井panelは対応するpoint light色のemissive材質とし、照明器具の表示色と光の色が一致することを表示確認できる状態にします。
+
+Tone Mapping後のtextureはdepthなしの `beginPresentPass()` へcopyし、その後 `clearDepthBuffer()` でWebgAppのFontおよびHUD用Camera Reverse-Z depth付きpassを開き直す順序も検査します。README、英語版README、両HTML版が同じ処理フローを説明することも確認します。
+
+## 予想
+
+削除済み補助関数や個別pass importが残る場合、first-person位置をWebgAppのcamera targetへ同期しない場合、別々のcamera snapshotを使用する場合、Shadow MapまたはSSAOを暗黙に有効化する場合、SSR設定が変わる場合、presentationとHUDのpass境界が崩れる場合、日英文書が旧実装を説明する場合はassertionで停止するはずです。
+
+## 実行方法
+
+```sh
+node headless_tests/samples/maze2/headless_probe.js
+```
+
+## 結果
+
+2026-07-13に実行し、次を表示して終了コード0で成功しました。
+
+```text
+sample_maze2_pipeline_contracts: all integrated sample contracts passed
+```
+
+## 解釈
+
+静的契約testに加えて実WebGPUブラウザで確認し、八角形通路、白・緑・赤を含む天井灯、床と壁の反射、濃色geometry edgeが描画されました。修正後の新規タブではconsole errorとwarningは0件でした。
+
+first-person同期修正後にW buttonを保持すると、Help上の位置は `[-28.00, 0.00, -28.00]` から `[-26.38, 0.00, -28.00]` へ変化しました。canvasでも通路終端、天井panel、床反射が接近して視点の前進を確認できました。active lightは13灯から14灯へ再選択され、白とオレンジを含む天井灯が壁、上下斜面、床へ照明を反映しました。この確認でもconsole errorとwarningは0件でした。
+
+global ambientを0.11へ上げ、壁と天井のmetallicを0.28、上下railを0.32 / 0.36としました。床は白系と鮮やかなarea accentへ変更しています。これらの最終的な表示確認は別途実GPU環境で行います。

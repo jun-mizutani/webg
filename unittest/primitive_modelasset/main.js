@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// unittest/primitive_modelasset/main.js  2026/04/12
+// unittest/primitive_modelasset/main.js  2026/07/25
 //   primitive_modelasset sample
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -35,6 +35,7 @@ const PALETTE = [
   [0.92, 0.56, 0.66, 1.0]
 ];
 
+// 基本形状のアセット群を生成し、後続処理で利用できる状態にする
 const buildPrimitiveAssets = () => {
   // `ModelAsset.fromData()` を 1 件含め、Primitive が返す asset と
   // 中間 JSON を通した asset の両方を同じ builder 経路へ載せる
@@ -70,6 +71,7 @@ const buildPrimitiveAssets = () => {
   ];
 };
 
+// 投影を受け取り、現在の設定と後続処理へ反映する
 const setProjection = (screen, shader, angle = 50) => {
   // 3x3 配置の build 結果を見渡しやすい固定投影へそろえる
   const proj = new Matrix();
@@ -78,6 +80,7 @@ const setProjection = (screen, shader, angle = 50) => {
   shader.setProjectionMatrix(proj);
 };
 
+// 材質を対象の状態または描画設定へ反映する
 const applyMaterial = (shape, color) => {
   // validator / builder の確認が主目的なので、material 条件は色付き SmoothShader に絞る
   shape.shaderParameter("has_bone", 0);
@@ -87,6 +90,7 @@ const applyMaterial = (shape, color) => {
   shape.shaderParameter("power", 42.0);
 };
 
+// このインスタンスの初期化段階で、必要な状態と資源を準備して処理を開始する
 const start = async ({ screen, gpu, setStatus, setViewportLayout, startLoop, document }) => {
   const shader = new SmoothShader(gpu);
   await shader.init();

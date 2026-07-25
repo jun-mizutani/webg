@@ -1,5 +1,5 @@
 <!doctype html>
-<!-- webg/book/examples/06_02.html 2026/04/24 -->
+<!-- webg/book/examples/06_02.html 2026/06/12 -->
 <html lang="ja">
 <head>
   <meta charset="UTF-8" />
@@ -13,7 +13,7 @@
     <h2>06_02 follow camera</h2>
     <div class="section-card">
       <p>`book/06_カメラ制御とEyeRig.md` の follow camera 例を、そのまま本文へ埋め込んで追従の見え方を確認しやすくしたページです</p>
-      <p class="note">オレンジ色の target が円運動し、`EyeRig` の follow mode が後方視点を保ちながら追いかけます。ドラッグで yaw / pitch を変え、ホイールで距離を変えられます</p>
+      <p class="note">青いcamera anchorは中央に残り、オレンジ色のtargetが円運動します。`EyeRig` Followはbaseをtargetへ移動せず、eyeの姿勢だけで滑らかに注視します</p>
     </div>
 
     <div class="canvas-block">
@@ -25,7 +25,7 @@
     <script type="module" id="example-source">
 import WebgApp from "../../webg/WebgApp.js";
 import { buildHelpPanelOptions } from "../../webg/OverlayPanelPresets.js";
-import EyeRig from "../../webg/EyeRig.js";
+import EyeRig from "../../webg/EyeRig.js?v=20260612_02";
 import Shape from "../../webg/Shape.js";
 import Primitive from "../../webg/Primitive.js";
 
@@ -136,14 +136,16 @@ const followRig = new EyeRig(app.cameraRig, app.cameraRod, app.eye, {
   follow: {
     targetNode: targetRoot,
     targetOffset: [0.0, 2.3, 0.0],
+    basePosition: [0.0, 2.2, 0.0],
+    baseAttitude: [0.0, 0.0, 0.0],
     distance: 14.0,
     yaw: 0.0,
     pitch: -12.0,
     minDistance: 7.0,
     maxDistance: 22.0,
-    inheritTargetYaw: true,
-    targetYawOffset: 180.0,
-    followLerp: 6.0
+    response: 6.0,
+    maxAngularSpeed: 220.0,
+    upReference: "world"
   }
 });
 followRig.attachPointer();
@@ -152,8 +154,9 @@ app.showOverlayPanel(buildHelpPanelOptions({
   id: "example0602Help",
   anchor: "bottom-left",
   lines: [
-    "Drag: rotate follow camera",
+    "Drag: change rod composition",
     "Wheel: zoom distance",
+    "Follow moves eye orientation, not base",
     "EyeRig mode: follow"
   ]
 }));
@@ -178,6 +181,7 @@ app.start({
     app.message.setLines("status", [
       `target x=${x.toFixed(2)} z=${z.toFixed(2)}`,
       `follow distance=${followRig.getModeState().distance.toFixed(2)}`,
+      `follow dot=${followRig.follow.lastViewDot.toFixed(5)}`,
       "EyeRig follow sample"
     ], {
       anchor: "top-left",

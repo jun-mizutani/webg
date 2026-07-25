@@ -196,14 +196,13 @@ let elapsedSec = 0.0;
 app.start({
   onUpdate: ({ deltaSec }) => {
     elapsedSec += deltaSec;
-    orbit.update(deltaSec);
     node.rotateY(0.8);
     node.rotateX(0.3);
 
     app.message.setLines("guide", [
-      "guide lines -> short操作説明",
+      "guide lines -> short hints",
       "status lines -> current state",
-      "overlay panel -> 日本語と長文"
+      "overlay panel -> Japanese and long text"
     ], {
       anchor: "bottom-left",
       x: 0,

@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// samples/animation_state/main.js  2026/04/12
+// samples/animation_state/main.js  2026/07/25
 //   AnimationState sample based on hand sample
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -89,11 +89,13 @@ function getPoseIndex(stateId) {
   return Math.max(0, STATE_DEFS.findIndex((item) => item.id === stateId));
 }
 
+// 現在の姿勢に続く姿勢の識別子を返す
 function getNextPoseId() {
   const currentIndex = getPoseIndex(desiredPoseId);
   return STATE_DEFS[(currentIndex + 1) % STATE_DEFS.length].id;
 }
 
+// ヘルプの行を生成し、後続処理で利用できる状態にする
 function buildHelpLines() {
   return [
     "[w]/[s] rotate model X",
@@ -118,6 +120,7 @@ function buildHelpLines() {
   ];
 }
 
+// 診断情報の統計情報を現在の入力と実行状態に合わせて更新する
 function refreshDiagnosticsStats() {
   const shapeList = fig?.shapes ?? [];
   const envReport = app.checkEnvironment({
@@ -146,6 +149,7 @@ function refreshDiagnosticsStats() {
   return envReport;
 }
 
+// 検査情報のレポートを生成し、後続処理で利用できる状態にする
 function makeProbeReport(frameCount) {
   const shapeList = fig?.shapes ?? [];
   const envReport = app.checkEnvironment({
@@ -187,6 +191,7 @@ function makeProbeReport(frameCount) {
   return report;
 }
 
+// ボーンの`params`を受け取り、現在の設定と後続処理へ反映する
 function setBoneParams() {
   bones = skeletons[MESH];
   if (bones) {
@@ -194,6 +199,7 @@ function setBoneParams() {
   }
 }
 
+// メッシュの`visibility`を対象の状態または描画設定へ反映する
 function applyMeshVisibility() {
   if (!fig || !fig.shapes) return;
   for (let i = 0; i < fig.shapes.length; i++) {
@@ -202,6 +208,7 @@ function applyMeshVisibility() {
   }
 }
 
+// `showBones`は必要な画面要素を準備し、表示状態を更新する
 function showBones(true_or_false) {
   if (!fig || !fig.shapes) return;
   for (let i = 0; i < fig.shapes.length; i++) {
@@ -213,6 +220,7 @@ function showBones(true_or_false) {
   app.space.scanSkeletons();
 }
 
+// ボーンの形状を生成し、後続処理で利用できる状態にする
 function createBoneShape(size, r, g, b, shader) {
   const shape = new Shape(app.getGPU());
   shape.applyPrimitiveAsset(Primitive.debugBone(size, shape.getPrimitiveOptions()));
@@ -233,6 +241,7 @@ function createBoneShape(size, r, g, b, shader) {
   return shape;
 }
 
+// 状態の`transitions`を生成し、後続処理で利用できる状態にする
 function buildStateTransitions(stateId) {
   return STATE_DEFS
     .filter((item) => item.id !== stateId)
@@ -242,6 +251,7 @@ function buildStateTransitions(stateId) {
     }));
 }
 
+// アニメーションの状態を生成し、後続処理で利用できる状態にする
 function buildAnimationState() {
   animationState = new AnimationState(action, {
     initialState: "pose0"
@@ -257,11 +267,13 @@ function buildAnimationState() {
   animationState.setVariable("desiredPoseId", desiredPoseId);
 }
 
+// `desired`の`pose`を受け取り、現在の設定と後続処理へ反映する
 function setDesiredPose(nextStateId) {
   desiredPoseId = nextStateId;
   animationState?.setVariable("desiredPoseId", desiredPoseId);
 }
 
+// 自動処理の`cycle`を現在の入力と実行状態に合わせて更新する
 function updateAutoCycle(nowMs) {
   if (!autoCycleEnabled) {
     return;
@@ -276,6 +288,7 @@ function updateAutoCycle(nowMs) {
   }
 }
 
+// `replayCurrentState`は選択中の音声またはアニメーションの再生状態を更新する
 function replayCurrentState() {
   const stateId = animationState?.getCurrentState?.()?.id ?? desiredPoseId;
   animationState?.setState(stateId, {
@@ -287,6 +300,7 @@ function replayCurrentState() {
   });
 }
 
+// キーを受け取った段階で、対応する状態更新と処理を実行する
 function handleKey(key) {
   const ROT = 1.0;
   lastKey = key;
@@ -398,6 +412,7 @@ function handleKey(key) {
   }
 }
 
+// HUDを現在の入力と実行状態に合わせて更新する
 function updateHud() {
   const envReport = refreshDiagnosticsStats();
   const actionInfo = action?.getActionInfo?.() ?? null;
@@ -456,6 +471,7 @@ function updateHud() {
   }
 }
 
+// このインスタンスの初期化段階で、必要な状態と資源を準備して処理を開始する
 async function start() {
   const output = document.getElementById("output_area") ?? "";
 
@@ -485,6 +501,7 @@ async function start() {
   // current state 表示とは分離して読む構成にする
   helpPanel = app.showOverlayPanel(buildHelpPanelOptions({
     id: "animationStateHelpOverlay",
+    collapsed: true,
     lines: buildHelpLines()
   }));
   app.setDiagnosticsStage("loading");

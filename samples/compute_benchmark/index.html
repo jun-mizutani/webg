@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>compute_benchmark</title>
+  <link rel="icon" href="data:," />
+  <!-- 2026/06/19 -->
+  <style>
+
+:root {
+  color-scheme: light;
+  --bg: #eef3f8;
+  --paper: rgba(255, 255, 255, 0.94);
+  --line: #c8d5e4;
+  --ink: #17324a;
+  --muted: #5c748b;
+  --accent: #1566ab;
+  --accent-soft: #dfeefe;
+  --code-bg: #f3f7fb;
+  --shadow: rgba(29, 52, 79, 0.10);
+}
+* { box-sizing: border-box; }
+html, body {
+  margin: 0;
+  min-height: 100%;
+}
+body {
+  background:
+    radial-gradient(circle at top left, rgba(21, 102, 171, 0.12), transparent 24%),
+    radial-gradient(circle at top right, rgba(255, 191, 118, 0.10), transparent 22%),
+    linear-gradient(180deg, #f8fbfd 0%, var(--bg) 100%);
+  color: var(--ink);
+  font: 16px/1.78 "Avenir Next", "Hiragino Sans", "Yu Gothic", sans-serif;
+}
+.page {
+  width: min(1080px, calc(100% - 28px));
+  margin: 0 auto;
+  padding: 24px 0 56px;
+}
+.hero,
+.doc {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  box-shadow: 0 22px 52px var(--shadow);
+}
+.hero {
+  padding: 22px 24px;
+  margin-bottom: 18px;
+}
+.hero h1 {
+  margin: 0 0 8px;
+  font-size: clamp(2rem, 4vw, 3rem);
+  line-height: 1.08;
+}
+.hero p {
+  margin: 0;
+  color: var(--muted);
+}
+.doc {
+  padding: 28px;
+}
+.doc > :first-child {
+  margin-top: 0;
+}
+h1, h2, h3, h4, h5, h6 {
+  line-height: 1.25;
+  margin: 1.45em 0 0.55em;
+}
+h1 {
+  font-size: 2.2rem;
+}
+h2 {
+  padding-bottom: 0.28em;
+  border-bottom: 1px solid var(--line);
+  font-size: 1.48rem;
+}
+h3 {
+  font-size: 1.14rem;
+}
+p, ul, ol, table, pre, blockquote {
+  margin: 0 0 1em;
+}
+ul, ol {
+  padding-left: 1.4em;
+}
+li + li {
+  margin-top: 0.26em;
+}
+a {
+  color: var(--accent);
+  text-decoration: none;
+}
+a:hover {
+  text-decoration: underline;
+}
+img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  border-radius: 16px;
+  border: 1px solid var(--line);
+  box-shadow: 0 12px 32px rgba(29, 52, 79, 0.08);
+  margin: 1.1em 0 1.4em;
+}
+code {
+  padding: 0.12em 0.38em;
+  border-radius: 0.45em;
+  background: var(--code-bg);
+  border: 1px solid #dbe6f1;
+  font: 0.92em/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+pre {
+  padding: 14px 16px;
+  overflow-x: auto;
+  border-radius: 14px;
+  background: #0f1720;
+  color: #ecf5ff;
+}
+pre code {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #ffffff;
+}
+th, td {
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  text-align: left;
+  vertical-align: top;
+}
+th {
+  background: #f5f9fc;
+}
+hr {
+  border: 0;
+  border-top: 1px solid var(--line);
+  margin: 1.5em 0;
+}
+blockquote {
+  padding: 0.3em 0 0.3em 1em;
+  border-left: 4px solid #c9dbef;
+  color: var(--muted);
+}
+@media (max-width: 720px) {
+  .page {
+    width: min(100% - 18px, 1080px);
+    padding-top: 16px;
+  }
+  .hero,
+  .doc {
+    border-radius: 18px;
+  }
+  .doc {
+    padding: 20px;
+  }
+}
+
+  </style>
+</head>
+<body>
+  <main class="page">
+    <section class="hero">
+      <h1>compute_benchmark</h1>
+    </section>
+    <article class="doc">
+<h1>compute_benchmark</h1>
+<p><a href="index.en.html">English</a> | 日本語</p>
+<p><img src="./compute_benchmark.jpg" alt="compute_benchmark" /></p>
+<h2>概要</h2>
+<p><code>compute_benchmark</code> は、<code>ComputeEffectPipeline</code> と標準の compute effect API を使ったときに、各処理が GPU にどの程度の負荷を与えるかを比較するサンプルです。<code>samples/compute_effect</code> が「複数の effect をひとつの 3D アプリへ組み込んだ見え方と操作」を確認するサンプルであるのに対して、このサンプルは「同じ scene 条件で各 effect を個別に測り、どの効果を導入するかを判断する」ための計測ツールです。</p>
+<p>このサンプルは、標準解像度のまま<code>ComputeEffectPipeline</code>、<code>ComputePyramidBlurPass</code>、<code>ComputeBloomPass</code>、<code>ComputeDofPass</code>、<code>SsaoPass</code>、<code>ComputeSsrPass</code>などを順番に測ります。測定対象は床、壁、複数の不透明な立体、半透明の立体、反射率の差を含む固定sceneです。G-buffer、shadow map、透明合成、screen-space reflection、Fog、post effectが、それぞれ意味のある入力を持つように構成しています。</p>
+<h2>測定する項目</h2>
+<p><code>gbuffer-render</code>はG-buffer作成、<code>shadow-map</code>はshadow map作成、<code>shadow-visibility</code>はG-bufferとshadow mapから直接光の可視率を作るcompute処理です。これらは「後段effectを使う前に必要になる処理」の負荷を見るための基準になります。</p>
+<p><code>blur</code>、<code>toon</code>、<code>dof</code>、<code>bloom</code>、<code>ssao</code>、<code>ssr-ray</code>、<code>ssr-composer</code>、<code>transparency</code>、<code>fog</code>、<code>tone-map</code>、<code>edge</code>、<code>vignette</code>は、それぞれの処理を個別に測る項目です。<code>transparency</code>は、二段階のFrost用blur、roughness mask、透明triangle描画を含む<code>TransparencyPass</code>全体を測ります。<code>fog</code>は透明合成済みHDR sceneと不透明G-buffer深度を入力にし、<code>vignette</code>はTone MapとEdgeを終えた表示色を入力にします。</p>
+<p><code>blur</code>は線形HDR sceneを<code>ComputeImagePyramid</code>で1/2、1/4、1/8、1/16へ連続縮小し、1/16から1/8、1/4、1/2、フル解像度へ順番に拡大する<code>ComputePyramidBlurPass</code>全体を測ります。各縮小処理は13 tapの低域通過フィルター、各拡大処理は9 tapのテントフィルターを使います。最小階層の低周波画像だけを段階的に拡大するため、途中階層の色を追加して光量を増やしません。</p>
+<p>最後の<code>full-pipeline</code>は、shadow、SSAO、SSR、透明合成、Fog、Toon、DoF、Bloom、Tone Map、Edge、Vignetteを現行<code>ComputeEffectPipeline</code>の順序でまとめて有効にした代表的な複合負荷です。透明合成は固定sceneに半透明材質があるため自動的に実行されます。これにより、個別導入の判断と、複合利用した場合の目安を同じ画面で比較できます。</p>
+<h2>実行方法</h2>
+<ul><li>実行ファイルは <a href="./compute_benchmark.html">./compute_benchmark.html</a> です</li><li>WebGPU と <code>timestamp-query</code> に対応した browser で開いてください</li><li><code>Samples</code> は本測定の回数、<code>Warmup</code> は統計へ含めない慣らし回数です</li><li><code>Pyramid Radius</code>は縮小時と拡大時のサンプル間隔で、既定値は<code>1.0</code>、設定範囲は<code>0.25</code>から<code>3.0</code>です</li><li><code>Pyramid Radius</code>は単独の<code>blur</code>測定にだけ適用されます</li><li><code>dof</code>、<code>bloom</code>、<code>full-pipeline</code> は、各処理の既定値を使う固定条件で測定します</li></ul>
+<p><code>Run Benchmark</code> を押すと、各項目を warmup のあとに複数回測定し、平均、標準偏差、最小、最大を表で表示します。結果は <code>Download JSON</code> と <code>Download CSV</code> で保存できます。JSON には raw sample、canvas サイズ、DPR、browser 情報、<code>pyramidFilterRadius</code>、<code>pyramidLevels</code>も含めるため、後から別端末の結果と照合できます。</p>
+<p>確認画像とトーンマッピングを含む測定項目は、照明条件を変えずに暗部を読み取れるよう、Reinhardトーンマッピングの露出を<code>2.0</code>に固定しています。この値はJSONの<code>toneMapExposure</code>にも記録されます。</p>
+<h2>結果の読み方</h2>
+<p>この sample が返す時間は、各 pass 自体の GPU 実行時間を比較するための値です。測定前の入力準備は毎回同じ条件で行いますが、その準備時間は各項目の本体時間へ含めていません。そのため、「DoF 自体の cost はどの程度か」「Bloom を追加するとどれだけ増えるか」を個別に比較しやすくなります。一方で、実フレーム全体の体感負荷を知りたい場合は、<code>full-pipeline</code> の値や <code>samples/compute_effect</code> の Help Panel と合わせて確認してください。</p>
+<p>複数 pass を内部で使う項目は、browser や GPU driver によって単一 pass の timestamp が不安定になる場合があります。そのため、この sample では一部の項目を queue 完了待ち時間で測ります。表の <code>timer</code> 列は <code>gpu</code> と <code>queue</code> の 2 種だけを表示し、<code>gpu</code> は <code>timestamp-query</code> による GPU timestamp、<code>queue</code> は command submit から queue 完了までの時間を表します。</p>
+<p>表の <code>avg ms</code> は warmup 後に記録した複数回の平均時間です。機種比較や effect の導入判断では、まずこの値を基準に見ます。<code>stddev</code> はばらつきの大きさで、値が大きいほど測定ごとの差が大きいことを示します。<code>min/max</code> は観測された最小値と最大値で、同じ項目でも driver の状態や他処理の影響でどの程度揺れたかを読むための値です。<code>n</code> は統計に使った記録回数で、<code>Samples</code> と一致します。</p>
+<p><code>full-pipeline</code>は、個別項目を単純に足した値ではなく、<code>ComputeEffectPipeline</code>を使ってshadow、SSAO、SSR、透明合成、Fog、Toon、DoF、Bloom、Tone Map、Edge、Vignetteを同じframe内で順に実行した時の通し負荷です。ここには、effect間でtextureを受け渡すcost、順番に依存するencodeの流れ、途中結果を次段で読むための実際の処理フローが含まれます。そのため、<code>transparency</code>、<code>fog</code>、<code>dof</code>、<code>bloom</code>、<code>edge</code>、<code>vignette</code>を別々に測った結果の合計と、<code>full-pipeline</code>が必ずしも一致するとは限りません。</p>
+<p>個別実行と同時実行で結果が異なる理由は 2 つあります。1 つは、個別測定では「その pass だけ」を見るために他の後段 effect を動かしていないのに対し、<code>full-pipeline</code> では前段の出力を後段がそのまま受け取るため、実際の依存関係を含んだ通し処理になることです。もう 1 つは、GPU の cache、resource の再利用、command のまとまり方、queue 完了待ちの測り方が変わるためです。このため、<code>full-pipeline</code> は個別値の単純合計より少し小さくなる場合もあれば、逆に大きくなる場合もあります。</p>
+<p>このsampleでは<code>gbuffer-render</code>の値が比較的小さいため、「共通部分が小さいのでfull-pipelineも個別和とあまり変わらない」ように見えることがあります。ただし、実際には<code>full-pipeline</code>は<code>renderScene()</code>と<code>encode()</code>を通した複合実行であり、個別項目の測定方法とは条件が同一ではありません。<code>gbuffer-render</code>が小さいことは差を小さく見せる要因の一つではありますが、それだけで<code>full-pipeline</code>の意味を説明しきれるわけではありません。判断の目安としては、個別項目で「どのeffectが重いか」を見て、<code>full-pipeline</code>で「実際にまとめて入れた時に全体がどこまで増えるか」を確認する、という使い分けが分かりやすいです。</p>
+<h2>確認ポイント</h2>
+<ul><li><code>main.js</code> が sample 固有の複製 pipeline を持たず、公開済みの <code>webg/ComputeEffectPipeline.js</code> と各 pass をそのまま呼んでいること</li><li>同じfixed sceneを使って<code>render</code>、<code>shadow</code>、<code>SSAO</code>、<code>SSR</code>、透明合成、<code>Fog</code>、<code>DoF</code>、<code>Bloom</code>、<code>Vignette</code>の負荷差を比較できること</li><li><code>fog</code>が透明合成後のHDR入力、<code>vignette</code>がTone MapとEdge後の表示色入力を使うこと</li><li><code>blur</code>が1/2から1/16までの連続縮小と、1/16からフル解像度までの段階的な拡大を測定すること</li><li><code>Pyramid Radius</code>を変えると<code>blur</code>のサンプル間隔だけが変わり、<code>dof</code>、<code>bloom</code>、<code>full-pipeline</code>の条件は変わらないこと</li><li>JSON に canvas サイズ、DPR、samples、warmup、browser 情報が入り、機種比較の記録として残せること</li></ul>
+    </article>
+  </main>
+</body>
+</html>

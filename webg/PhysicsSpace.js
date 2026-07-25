@@ -1,5 +1,5 @@
 // ---------------------------------------------
-//  PhysicsSpace.js  2026/05/09
+//  PhysicsSpace.js  2026/07/25
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // ---------------------------------------------
@@ -260,6 +260,7 @@ export default class PhysicsSpace {
     ];
   }
 
+  // `_isSupportNormal`は入力条件や交差状態を比較し、判定結果を返す
   _isSupportNormal(normal, threshold = 0.25) {
     if (!Array.isArray(normal)) {
       return false;
@@ -727,6 +728,7 @@ export default class PhysicsSpace {
     return maxPenetration;
   }
 
+  // `_getManifoldCenterPoint`は受け取った値を処理し、後続処理で利用する状態または結果を生成する
   _getManifoldCenterPoint(manifold) {
     if (!manifold || !Array.isArray(manifold.contacts) || manifold.contacts.length <= 0) {
       return null;
@@ -751,6 +753,7 @@ export default class PhysicsSpace {
     return center;
   }
 
+  // `_wakeSleepingBodyForContact`は衝突状態を評価し、位置、速度、接触情報を更新する
   _wakeSleepingBodyForContact(sleepingBody, otherBody, stateMap = null, manifold = null) {
     if (!sleepingBody?.isDynamic?.() || sleepingBody.getSleeping?.() !== true) {
       return false;
@@ -1476,6 +1479,7 @@ export default class PhysicsSpace {
     return true;
   }
 
+  // `_isZeroRestitutionPlaneBoxSupport`は入力条件や交差状態を比較し、判定結果を返す
   _isZeroRestitutionPlaneBoxSupport(manifold) {
     const colliderA = manifold?.bodyA?.getCollider?.();
     const colliderB = manifold?.bodyB?.getCollider?.();
@@ -1486,6 +1490,7 @@ export default class PhysicsSpace {
     return this._isZeroRestitutionStaticBoxSupport(manifold);
   }
 
+  // `_isStaticPlaneBoxContact`は入力条件や交差状態を比較し、判定結果を返す
   _isStaticPlaneBoxContact(manifold) {
     const colliderA = manifold?.bodyA?.getCollider?.();
     const colliderB = manifold?.bodyB?.getCollider?.();
@@ -1617,6 +1622,7 @@ export default class PhysicsSpace {
     let accumulatedTangentImpulse = Array.isArray(contactPoint.tangentImpulse)
       ? [...contactPoint.tangentImpulse]
       : [0.0, 0.0, 0.0];
+    // `solveFrictionAxis`は衝突状態を評価し、位置、速度、接触情報を更新する
     const solveFrictionAxis = (axis) => {
       const currentVelocityA = this._getContactPointVelocity(stateA, rA);
       const currentVelocityB = this._getContactPointVelocity(stateB, rB);
@@ -2000,6 +2006,7 @@ export default class PhysicsSpace {
   _stabilizeRestingBoxes(stateMap, contacts) {
     const supportMap = new Map();
     const dynamicBoxSupportCandidates = [];
+    // `pushSupportContact`は重複や入力条件を確認し、対象を管理配列へ追加する
     const pushSupportContact = (dynamicBody, supportBody, supportKind, supportNormal, contact) => {
       if (dynamicBody?.getCollider?.()?.type !== "box") {
         return;
@@ -2708,6 +2715,7 @@ export default class PhysicsSpace {
     this.sleepStepMap.delete(body);
   }
 
+  // `_getSleepIslandKey`は受け取った値を処理し、後続処理で利用する状態または結果を生成する
   _getSleepIslandKey(island) {
     const ids = island.map((body) => this._getBodyId(body)).sort((a, b) => a - b);
     return ids.join(":");
@@ -2717,6 +2725,7 @@ export default class PhysicsSpace {
     return this.sleepIslandStepMap.get(islandKey) ?? 0;
   }
 
+  // `_incrementSleepIslandStepCount`は受け取った値を処理し、後続処理で利用する状態または結果を生成する
   _incrementSleepIslandStepCount(islandKey) {
     const nextCount = this._getSleepIslandStepCount(islandKey) + 1;
     this.sleepIslandStepMap.set(islandKey, nextCount);

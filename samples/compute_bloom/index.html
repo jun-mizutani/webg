@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>compute_bloom</title>
+  <link rel="icon" href="data:," />
+  <!-- 2026/06/19 -->
+  <style>
+
+:root {
+  color-scheme: light;
+  --bg: #eef3f8;
+  --paper: rgba(255, 255, 255, 0.94);
+  --line: #c8d5e4;
+  --ink: #17324a;
+  --muted: #5c748b;
+  --accent: #1566ab;
+  --accent-soft: #dfeefe;
+  --code-bg: #f3f7fb;
+  --shadow: rgba(29, 52, 79, 0.10);
+}
+* { box-sizing: border-box; }
+html, body {
+  margin: 0;
+  min-height: 100%;
+}
+body {
+  background:
+    radial-gradient(circle at top left, rgba(21, 102, 171, 0.12), transparent 24%),
+    radial-gradient(circle at top right, rgba(255, 191, 118, 0.10), transparent 22%),
+    linear-gradient(180deg, #f8fbfd 0%, var(--bg) 100%);
+  color: var(--ink);
+  font: 16px/1.78 "Avenir Next", "Hiragino Sans", "Yu Gothic", sans-serif;
+}
+.page {
+  width: min(1080px, calc(100% - 28px));
+  margin: 0 auto;
+  padding: 24px 0 56px;
+}
+.hero,
+.doc {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  box-shadow: 0 22px 52px var(--shadow);
+}
+.hero {
+  padding: 22px 24px;
+  margin-bottom: 18px;
+}
+.hero h1 {
+  margin: 0 0 8px;
+  font-size: clamp(2rem, 4vw, 3rem);
+  line-height: 1.08;
+}
+.hero p {
+  margin: 0;
+  color: var(--muted);
+}
+.doc {
+  padding: 28px;
+}
+.doc > :first-child {
+  margin-top: 0;
+}
+h1, h2, h3, h4, h5, h6 {
+  line-height: 1.25;
+  margin: 1.45em 0 0.55em;
+}
+h1 {
+  font-size: 2.2rem;
+}
+h2 {
+  padding-bottom: 0.28em;
+  border-bottom: 1px solid var(--line);
+  font-size: 1.48rem;
+}
+h3 {
+  font-size: 1.14rem;
+}
+p, ul, ol, table, pre, blockquote {
+  margin: 0 0 1em;
+}
+ul, ol {
+  padding-left: 1.4em;
+}
+li + li {
+  margin-top: 0.26em;
+}
+a {
+  color: var(--accent);
+  text-decoration: none;
+}
+a:hover {
+  text-decoration: underline;
+}
+img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  border-radius: 16px;
+  border: 1px solid var(--line);
+  box-shadow: 0 12px 32px rgba(29, 52, 79, 0.08);
+  margin: 1.1em 0 1.4em;
+}
+code {
+  padding: 0.12em 0.38em;
+  border-radius: 0.45em;
+  background: var(--code-bg);
+  border: 1px solid #dbe6f1;
+  font: 0.92em/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+pre {
+  padding: 14px 16px;
+  overflow-x: auto;
+  border-radius: 14px;
+  background: #0f1720;
+  color: #ecf5ff;
+}
+pre code {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #ffffff;
+}
+th, td {
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  text-align: left;
+  vertical-align: top;
+}
+th {
+  background: #f5f9fc;
+}
+hr {
+  border: 0;
+  border-top: 1px solid var(--line);
+  margin: 1.5em 0;
+}
+blockquote {
+  padding: 0.3em 0 0.3em 1em;
+  border-left: 4px solid #c9dbef;
+  color: var(--muted);
+}
+@media (max-width: 720px) {
+  .page {
+    width: min(100% - 18px, 1080px);
+    padding-top: 16px;
+  }
+  .hero,
+  .doc {
+    border-radius: 18px;
+  }
+  .doc {
+    padding: 20px;
+  }
+}
+
+  </style>
+</head>
+<body>
+  <main class="page">
+    <section class="hero">
+      <h1>compute_bloom</h1>
+    </section>
+    <article class="doc">
+<h1>compute_bloom</h1>
+<p><a href="index.en.html">English</a> | 日本語</p>
+<p><img src="./compute_bloom.jpg" alt="compute_bloom" /></p>
+<h2>概要</h2>
+<p>Bloomは、HDR sceneから高輝度部分を抽出し、その光を周囲へ広げてから元のsceneへ加算するポストプロセスです。このサンプルは、コアの<code>ComputeBloomPass</code>が使用するPyramid方式について、抽出、各縮小Level、再構成結果、最終合成を個別に表示して確認します。</p>
+<p>Pyramid方式は、連続した近傍をfilterしながら段階的に解像度を下げ、解像度階層によってBloomの広がりを作ります。縮小した画像を低解像度側から段階的に拡大し、各Levelの成分を重み付きで合成します。</p>
+<h2>Pyramid Bloomの処理</h2>
+<p>最初にfull-resolutionの線形HDR sceneへ<code>Threshold</code>と<code>Soft Knee</code>を一度だけ適用し、Bloom sourceを<code>rgba16float</code>で作ります。縮小後の平均輝度へthresholdを適用すると孤立した高輝度pixelが消える可能性があるため、bright extractは縮小前に完了させます。</p>
+<p>extract後は、1/2、1/4、1/8、1/16、1/32解像度のtargetを前段から順番に作ります。各downsampleは13 tapのlow-pass filterとlinear samplerを使います。すべてのLevelが直前のLevelから連続した近傍を受け取るので、大きなsample stepによる空間的な抜けはありません。</p>
+<p>再構成は1/32 Levelから始めます。coarse Levelを9 tapのtent filterで一つ上の解像度へ拡大し、その解像度固有のLevelを重み付きで加えます。この処理を1/16、1/8、1/4、1/2、full-resolutionの順に繰り返します。1/2 Levelは光源に近い比較的狭い成分を、1/32 Levelは散乱の多い環境で遠くまで届く弱い成分を表します。最終Bloomを線形HDR sceneへ加算した後、<code>ComputeEffectPipeline</code>のTone Mapで一度だけ表示色へ変換します。</p>
+<h2>操作と確認方法</h2>
+<p>実行ファイルは<a href="./compute_bloom.html">./compute_bloom.html</a>です。WebGPU対応ブラウザーで開き、canvasをダブルタップするか<code>/</code>を押すとCommandPaletteを表示できます。</p>
+<p><code>View</code>では<code>scene / extract / half / quarter / eighth / sixteenth / thirty-second / blur / composite</code>を切り替えられます。<code>extract</code>は縮小前のBloom source、<code>half</code>から<code>thirty-second</code>はdownsample直後の各Level、<code>blur</code>はprogressive upsample後のfull-resolution Bloom、<code>composite</code>はsceneへ加算してTone Mapした最終表示です。低解像度Levelを表示する場合は、<code>BloomDebugViewPass</code>が線形補間で画面解像度へ拡大し、ReinhardとsRGB変換を適用します。</p>
+<p><code>Threshold</code>はBloomへ入るHDR輝度、<code>Soft Knee</code>はthreshold付近の立ち上がりを決めます。<code>Strength</code>は再構成済みBloomをsceneへ加える量です。<code>Filter Radius</code>はprogressive upsampleのtent filter間隔をcoarse texel単位で変更します。値を大きくすると各Levelの成分が広がりますが、Level間の重なり方も変わるため、<code>blur</code> Viewと<code>composite</code> Viewを合わせて確認してください。</p>
+<p>2ページ目の<code>1/2 Weight</code>、<code>1/4 Weight</code>、<code>1/8 Weight</code>、<code>1/16 Weight</code>、<code>1/32 Weight</code>は、各解像度が最終Bloomへ寄与する量です。高解像度側を上げると光源近傍が強くなり、低解像度側を上げると外側の弱い光芒が目立ちます。1/2から1/16までの合計1.0を維持し、その外側へ1/32 Weight <code>0.18</code>を追加しています。散乱の多いデモとして、広がりと全体光量を同時に強める設定です。</p>
+<p>カメラの既定距離は<code>14.0</code>で、中心の大きな球と周囲のBloomを近くから確認できます。中心球は発光レベルを<code>0.60</code>から<code>0.95</code>まで往復させます。中心球の下には<code>0.50</code>から<code>1.00</code>まで<code>0.05</code>刻みの固定発光体を配置しています。Threshold付近でBloomが連続的に立ち上がること、細い発光体が1/32 Levelでも欠落または粒状化しないこと、1/32 Weightを上げたときに滑らかな広い光芒が増えることを確認してください。</p>
+<p>コアPassの既定値は<code>threshold=0.60</code>、<code>softKnee=0.40</code>、<code>strength=0.70</code>、<code>filterRadius=1.00</code>、<code>halfWeight=0.45</code>、<code>quarterWeight=0.28</code>、<code>eighthWeight=0.17</code>、<code>sixteenthWeight=0.10</code>、<code>thirtySecondWeight=0.18</code>です。このサンプルでは外側の弱い光芒を読み取りやすくするため、<code>strength=2.00</code>へ上書きしています。Tone Mapの<code>exposure=1.00</code>はBloom固有値ではありません。</p>
+    </article>
+  </main>
+</body>
+</html>

@@ -1,0 +1,31 @@
+# Deferred Lighting線形High Dynamic Range出力単体テスト
+
+## 目的
+
+DeferredLightingPassが照明計算の途中でReinhard tone mappingやdisplay gamma変換を行わず、1.0を超える線形輝度を保持できる `rgba16float` targetへ結果を出すことを確認する。これによりScreen Space Reflectionなどの後続処理が表示変換前の輝度を利用でき、tone mappingを最終表示段へ一度だけ集約できる
+
+## 確認項目
+
+1. 出力storage texture形式が `rgba16float` である
+2. shaderが線形 `lighting` を直接出力する
+3. DeferredLightingPass内にReinhard tone mappingが残っていない
+4. DeferredLightingPass内にdisplay gamma変換が残っていない
+5. GPU texture、StorageTarget、ComputePass bindingの形式が一致する
+6. 旧 `rgba8unorm` 形式の指定を拒否し、暗黙の互換分岐を持たない
+7. encode結果が固定されたHigh Dynamic Range targetである
+
+## 実行方法
+
+```sh
+node headless_tests/core/deferred_lighting_pass/headless_probe.js
+```
+
+## 結果
+
+2026-07-12に実行し、全項目が成功した。表示文字列は次のとおり
+
+```text
+deferred_lighting_pass_hdr_output_contracts: all linear HDR output contracts passed
+```
+
+このテストが保証するのはDeferredLightingPassの出力境界までである。後続のScreen Space Reflectionや合成passのHigh Dynamic Range化、最終ComputeEffectToneMapPassへの表示変換集約は、各モジュールの単体テストを追加して別段階で確認する

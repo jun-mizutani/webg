@@ -1,0 +1,14 @@
+# ComputeEdgePass headless test
+
+## 目的
+
+- `webg/ComputeEdgePass.js` のparameter、scene、encode順序、resource契約を実GPUなしで確認する
+
+## 確認内容
+
+- `strength`、`threshold`、`mix`、`blendMode`、`thickness`、`enabled` の既定値と入力検証
+- geometry edge用の `normal`、`depth`、`projection` 契約
+- color View を持つ scene resource の寸法契約
+- Sobel edge dispatch が1回だけ実行され、最終output targetを返すこと
+- geometry edge有効時に normal / depth / projection を使う dispatch へ切り替わること
+- resize が output target へ同じ寸法を適用すること

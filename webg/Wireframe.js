@@ -1,10 +1,11 @@
 // ---------------------------------------------
-// Wireframe.js   2026/04/30
+// Wireframe.js   2026/07/12
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // ---------------------------------------------
 
 import Shader from "./Shader.js";
+import { CAMERA_REVERSE_Z } from "./DepthConvention.js";
 import {
   DEFAULT_MAX_SKIN_BONES,
   SKIN_MATRIX_FLOATS_PER_BONE,
@@ -204,7 +205,7 @@ fn fsMain(input : VSOut) -> @location(0) vec4f {
         cullMode: "none"
       },
       depthStencil: {
-        format: "depth24plus",
+        format: CAMERA_REVERSE_Z.format,
         // Shape.setWireframe(true) は overlay 専用 pass ではなく、
         // shape 自体を line-list として scene 内へ描く経路である
         // そのため depth を書かないと、あとから描かれる床や他 mesh が
@@ -212,7 +213,7 @@ fn fsMain(input : VSOut) -> @location(0) vec4f {
         // ここでは通常 mesh と同様に depth を更新し、
         // scene 内の前後関係を render order に依存させない
         depthWriteEnabled: true,
-        depthCompare: "less-equal"
+        depthCompare: CAMERA_REVERSE_Z.compareEqual
       }
     });
 

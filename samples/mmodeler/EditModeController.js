@@ -1,16 +1,21 @@
 // ---------------------------------------------
-// samples/mmodeler/EditModeController.js  2026/05/25
+// samples/mmodeler/EditModeController.js  2026/07/25
 //   edit mode controller for mmodeler
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // ---------------------------------------------
 import { add3, cross3, dot3, length3, mul3, normalize3, sub3 } from "./math3d.js";
 
+// `function`を検証し、後続処理が扱える共通形式へ整える
 function requireFunction(value, name) {
   if (typeof value !== "function") {
     throw new Error(`EditModeController requires ${name}`);
   }
   return value;
+}
+
+function isVertexIndex(value, vertices) {
+  return Number.isInteger(value) && value >= 0 && value < vertices.length;
 }
 
 // Edit Mode の操作状態と geometry command を扱う
@@ -71,6 +76,7 @@ export default class EditModeController {
     this.transformSession = null;
   }
 
+  // `cloneVertices`は元データから独立して利用できる複製または実行状態を作る
   cloneVertices(vertices) {
     return vertices.map((vertex) => ({
       id: vertex.id,
@@ -78,6 +84,7 @@ export default class EditModeController {
     }));
   }
 
+  // `cloneFaces`は元データから独立して利用できる複製または実行状態を作る
   cloneFaces(faces) {
     return faces.map((face) => ({
       id: face.id,
@@ -85,9 +92,75 @@ export default class EditModeController {
     }));
   }
 
+  // 頂点参照の中核となる不変条件を session / scene state に適用する
+  // vertices は 0-based の密な配列とし、vertex.id は配列 index と必ず一致させる
+  // face.indices、vertex selection、last selected、X Mirror ペアは古い vertex id / index から新しい index へ変換する
+  // 参照先が存在しない face は補正せず例外にし、壊れた topology を静かに隠さない
+  normalizeDenseVertexIndices(state = this.getEditMeshState(), {
+    remapMirrorPairs = true,
+    sync = true
+  } = {}) {
+    if (!state || !Array.isArray(state.vertices) || !Array.isArray(state.faces)) {
+      throw new Error("normalizeDenseVertexIndices requires a mesh state");
+    }
+    const oldToNew = new Map();
+    state.vertices = state.vertices.map((vertex, index) => {
+      if (!vertex || !Array.isArray(vertex.position) || vertex.position.length !== 3) {
+        throw new Error(`vertex ${index} must contain a vec3 position`);
+      }
+      if (oldToNew.has(vertex.id)) {
+        throw new Error(`duplicate vertex index ${vertex.id}`);
+      }
+      oldToNew.set(vertex.id, index);
+      return {
+        ...vertex,
+        id: index,
+        position: [...vertex.position]
+      };
+    });
+    // `mapVertexIndex`は入力データを解析し、後続処理で参照する構造へ変換する
+    const mapVertexIndex = (value, label) => {
+      const mapped = oldToNew.get(value);
+      if (mapped === undefined) {
+        throw new Error(`${label} references missing vertex index ${value}`);
+      }
+      return mapped;
+    };
+    for (const face of state.faces) {
+      if (!Array.isArray(face.indices) || (face.indices.length !== 3 && face.indices.length !== 4)) {
+        throw new Error(`face ${face?.id ?? "-"} must have 3 or 4 vertex indices`);
+      }
+      face.indices = face.indices.map((value) => mapVertexIndex(value, `face ${face.id}`));
+    }
+    state.selectedVertices = new Set(
+      Array.from(state.selectedVertices ?? [])
+        .filter((value) => oldToNew.has(value))
+        .map((value) => oldToNew.get(value))
+    );
+    state.lastSelectedVertexId = state.lastSelectedVertexId !== null && state.lastSelectedVertexId !== undefined
+      ? (oldToNew.get(state.lastSelectedVertexId) ?? null)
+      : null;
+    state.nextVertexId = state.vertices.length;
+    if (remapMirrorPairs) {
+      const pairs = new Map();
+      for (const [source, mirror] of this.explicitXMirrorVertexPairs.entries()) {
+        if (!oldToNew.has(source) || !oldToNew.has(mirror)) {
+          continue;
+        }
+        pairs.set(oldToNew.get(source), oldToNew.get(mirror));
+      }
+      this.explicitXMirrorVertexPairs = pairs;
+    }
+    if (sync) {
+      this.syncSceneModeBridge();
+    }
+    return oldToNew;
+  }
+
+  // オブジェクトから編集セッションを生成する
   createSessionFromObject(object, options = {}) {
     if (!object) {
-      return {
+      const emptySession = {
         objectId: null,
         mode: this.editModeName,
         tool: options.tool ?? this.tool,
@@ -96,11 +169,13 @@ export default class EditModeController {
         selectedVertices: new Set(options.selectedVertices ?? []),
         selectedFaces: new Set(options.selectedFaces ?? []),
         lastSelectedVertexId: options.lastSelectedVertexId ?? null,
-        nextVertexId: options.nextVertexId ?? 1,
+        nextVertexId: options.nextVertexId ?? 0,
         nextFaceId: options.nextFaceId ?? 1
       };
+      this.normalizeDenseVertexIndices(emptySession, { remapMirrorPairs: false, sync: false });
+      return emptySession;
     }
-    return {
+    const session = {
       objectId: object.id,
       mode: this.editModeName,
       tool: options.tool ?? this.tool,
@@ -112,8 +187,11 @@ export default class EditModeController {
       nextVertexId: options.nextVertexId ?? object.nextVertexId,
       nextFaceId: options.nextFaceId ?? object.nextFaceId
     };
+    this.normalizeDenseVertexIndices(session, { remapMirrorPairs: false, sync: false });
+    return session;
   }
 
+  // シーンのモードの`bridge`を現在の入力と実行状態に合わせて更新する
   syncSceneModeBridge() {
     if (!this.editSession) {
       return;
@@ -177,6 +255,10 @@ export default class EditModeController {
     state.nextVertexId = snapshot.nextVertexId ?? state.nextVertexId;
     state.nextFaceId = snapshot.nextFaceId ?? state.nextFaceId;
     this.explicitXMirrorVertexPairs = new Map(snapshot.explicitXMirrorVertexPairs ?? []);
+    this.normalizeDenseVertexIndices(state, { remapMirrorPairs: true, sync: false });
+    if (!this.editSession) {
+      this.scene.commitActiveObject();
+    }
     if (state.mode !== this.editModeName) {
       this.editSession = null;
       this.scene.mode = state.mode;
@@ -193,6 +275,7 @@ export default class EditModeController {
     return this.getEditMeshState().tool;
   }
 
+  // `tool`は受け取った値を処理し、後続処理で利用する状態または結果を生成する
   set tool(value) {
     this.getEditMeshState().tool = value;
     this.syncSceneModeBridge();
@@ -206,6 +289,7 @@ export default class EditModeController {
     return this.getEditMeshState().faces;
   }
 
+  // `faces`は入力データを解析し、後続処理で参照する構造へ変換する
   set faces(value) {
     this.getEditMeshState().faces = value;
     this.syncSceneModeBridge();
@@ -215,6 +299,7 @@ export default class EditModeController {
     return this.getEditMeshState().selectedVertices;
   }
 
+  // 選択中の`vertices`を現在の入力と状態から求め、呼び出し元へ返す
   set selectedVertices(value) {
     this.getEditMeshState().selectedVertices = value;
     this.syncSceneModeBridge();
@@ -224,6 +309,7 @@ export default class EditModeController {
     return this.getEditMeshState().selectedFaces;
   }
 
+  // 選択中の`faces`を現在の入力と状態から求め、呼び出し元へ返す
   set selectedFaces(value) {
     this.getEditMeshState().selectedFaces = value;
     this.syncSceneModeBridge();
@@ -233,19 +319,25 @@ export default class EditModeController {
     return this.getEditMeshState().lastSelectedVertexId;
   }
 
+  // `lastSelectedVertexId`は現在状態から対象を選択し、結果を返すまたは選択を切り替える
   set lastSelectedVertexId(value) {
     this.getEditMeshState().lastSelectedVertexId = value;
     this.syncSceneModeBridge();
   }
 
+  // `nextVertexId`は現在状態から対象を選択し、結果を返すまたは選択を切り替える
   nextVertexId() {
     const state = this.getEditMeshState();
+    if (state.nextVertexId !== state.vertices.length) {
+      throw new Error(`dense vertex invariant broken: nextVertexId ${state.nextVertexId} does not match vertices.length ${state.vertices.length}`);
+    }
     const id = state.nextVertexId;
     state.nextVertexId += 1;
     this.syncSceneModeBridge();
     return id;
   }
 
+  // `nextFaceId`は現在状態から対象を選択し、結果を返すまたは選択を切り替える
   nextFaceId() {
     const state = this.getEditMeshState();
     const id = state.nextFaceId;
@@ -254,6 +346,7 @@ export default class EditModeController {
     return id;
   }
 
+  // 選択中の頂点から選択面を更新する
   syncSelectedFacesFromVertices() {
     const state = this.getEditMeshState();
     state.selectedFaces.clear();
@@ -268,6 +361,7 @@ export default class EditModeController {
     this.syncSceneModeBridge();
   }
 
+  // 選択中の面から選択頂点を更新する
   syncSelectedVerticesFromFaces(faces) {
     const state = this.getEditMeshState();
     state.selectedVertices.clear();
@@ -286,8 +380,10 @@ export default class EditModeController {
   // ModelerScene の edit mesh 互換 field へは mode / tool だけを残し、geometry は active object へ commit する
   commitEditMeshState() {
     if (!this.editSession) {
+      this.normalizeDenseVertexIndices(this.scene, { remapMirrorPairs: true, sync: false });
       return this.scene.commitActiveObject();
     }
+    this.normalizeDenseVertexIndices(this.editSession, { remapMirrorPairs: true, sync: false });
     const object = this.scene.objects.find((entry) => entry.id === this.editSession.objectId) ?? null;
     if (!object) {
       return false;
@@ -409,6 +505,7 @@ export default class EditModeController {
     const removedVertices = new Set(this.selectedVertices);
     this.faces = this.faces.filter((face) => !face.indices.some((vertexId) => removedVertices.has(vertexId)));
     this.getEditMeshState().vertices = this.vertices.filter((vertex) => !removedVertices.has(vertex.id));
+    this.normalizeDenseVertexIndices();
     this.syncSceneModeBridge();
     this.clearSelection();
     this.rebuildScene();
@@ -616,6 +713,7 @@ export default class EditModeController {
     this.setMessage(`selected X<0 vertices (${this.selectedVertices.size})`);
   }
 
+  // `loop`を現在の入力と状態から求め、呼び出し元へ返す
   selectLoop() {
     if (this.mode !== this.editModeName) {
       this.setMessage("switch to edit mode before SelectLoop");
@@ -633,6 +731,7 @@ export default class EditModeController {
     let seedTargetCount = 0;
     let expandedTargetCount = 0;
     let enqueueCount = 0;
+    // `enqueue`は重複や入力条件を確認し、対象を管理配列へ追加する
     const enqueue = (vertexId, incomingVertexId = null) => {
       const key = `${vertexId}:${incomingVertexId ?? ""}`;
       if (queued.has(key)) {
@@ -719,6 +818,7 @@ export default class EditModeController {
     return this.getActiveVertexObjects()[0] ?? null;
   }
 
+  // `chain`の`select`の`preview`の初期化段階で、必要な状態と資源を準備して処理を開始する
   startChainSelectPreview(seedVertexId) {
     this.chainSelectPreview.active = true;
     this.chainSelectPreview.seedVertexId = seedVertexId;
@@ -728,6 +828,7 @@ export default class EditModeController {
     this.chainSelectPreview.lastClientY = 0.0;
   }
 
+  // `cancel`の`chain`の`select`の`preview`の条件を判定し、結果を真偽値で返す
   cancelChainSelectPreview() {
     if (!this.chainSelectPreview.active) {
       return false;
@@ -774,6 +875,7 @@ export default class EditModeController {
     return this.setChainSelectPreviewDirection(best.neighborId, clientX, clientY);
   }
 
+  // `chain`の`select`の`preview`の方向を受け取り、現在の設定と後続処理へ反映する
   setChainSelectPreviewDirection(directionNeighborId, clientX, clientY) {
     if (!this.chainSelectPreview.active) {
       return false;
@@ -830,6 +932,7 @@ export default class EditModeController {
     return uniqueIds;
   }
 
+  // `traceChainSelectVertexIds`は受け取った値を処理し、後続処理で利用する状態または結果を生成する
   traceChainSelectVertexIds(seed, firstVertex, initialDirection, context) {
     if (!this.isChainSelectEdgeAllowed(seed.id, firstVertex.id, context.edgeOwners)) {
       return [];
@@ -861,6 +964,7 @@ export default class EditModeController {
     return ids;
   }
 
+  // 連続選択で次にたどる隣接要素を返す
   findNextChainSelectNeighbor(current, previous, direction, context) {
     let best = null;
     const excludedIds = context.excludedIds ?? new Set();
@@ -891,6 +995,7 @@ export default class EditModeController {
     return best?.vertex ?? null;
   }
 
+  // `chain`の`select`の輪郭の`allowed`の条件を判定し、結果を真偽値で返す
   isChainSelectEdgeAllowed(aId, bId, edgeOwners) {
     const owners = edgeOwners.get(this.edgeKey(aId, bId)) ?? [];
     if (owners.length === 0 || owners.length > 2) {
@@ -899,6 +1004,7 @@ export default class EditModeController {
     return owners.every((owner) => owner.face.indices.length === 4);
   }
 
+  // `chain`の`select`の`preview`の`guide`の行を現在の入力と状態から求め、呼び出し元へ返す
   getChainSelectPreviewGuideLines() {
     if (!this.chainSelectPreview.active || this.chainSelectPreview.candidateVertexIds.length < 2) {
       return [];
@@ -928,6 +1034,7 @@ export default class EditModeController {
     return lines;
   }
 
+  // `confirmChainSelectPreview`は受け取った値を処理し、後続処理で利用する状態または結果を生成する
   confirmChainSelectPreview() {
     if (!this.chainSelectPreview.active) {
       return false;
@@ -947,6 +1054,7 @@ export default class EditModeController {
     return true;
   }
 
+  // `chain`の`select`の`preview`を現在の入力と状態から求め、呼び出し元へ返す
   getChainSelectPreview() {
     return {
       ...this.chainSelectPreview,
@@ -990,6 +1098,7 @@ export default class EditModeController {
     return { ids, targetCount: selectedTargets.length };
   }
 
+  // `loop`の`select`の描画先の`for`の`incoming`の方向を現在の入力と状態から求め、呼び出し元へ返す
   getLoopSelectTargetsForIncomingDirection(vertex, targets, options = {}) {
     const incomingVertexId = options.incomingVertexId ?? null;
     if (incomingVertexId === null || targets.length <= 1) {
@@ -1022,6 +1131,11 @@ export default class EditModeController {
     return this.faces.filter((face) => this.selectedFaces.has(face.id));
   }
 
+  getSelectedVertexObjects() {
+    return this.vertices.filter((vertex) => this.selectedVertices.has(vertex.id));
+  }
+
+  // 現在操作対象となっている頂点の識別子を返す
   getActiveVertexIds() {
     if (this.selectedVertices.size > 0) {
       return Array.from(this.selectedVertices);
@@ -1035,14 +1149,28 @@ export default class EditModeController {
     return Array.from(ids);
   }
 
+  // 現在操作対象となっている頂点オブジェクトを返す
   getActiveVertexObjects() {
     return this.getActiveVertexIds()
       .map((id) => this.getVertexById(id))
       .filter((vertex) => vertex !== null);
   }
 
+  // `highlighted`の頂点の`ids`を現在の入力と状態から求め、呼び出し元へ返す
+  getHighlightedVertexIds() {
+    const ids = new Set(this.selectedVertices);
+    for (const face of this.getSelectedFaceObjects()) {
+      for (const id of face.indices) {
+        ids.add(id);
+      }
+    }
+    return ids;
+  }
+
+  // 頂点ごとに隣接頂点の識別子をまとめる
   buildNeighborIdsByVertexId() {
     const neighborIdsByVertexId = new Map();
+    // `neighbor`を対象へ追加し、後続処理から参照できるようにする
     const addNeighbor = (a, b) => {
       if (!neighborIdsByVertexId.has(a)) {
         neighborIdsByVertexId.set(a, new Set());
@@ -1060,6 +1188,7 @@ export default class EditModeController {
     return neighborIdsByVertexId;
   }
 
+  // `collinear`の`middle`の描画先を現在の入力と状態から求め、呼び出し元へ返す
   getCollinearMiddleTargets(vertex, options = {}) {
     if (!vertex) {
       return [];
@@ -1121,6 +1250,7 @@ export default class EditModeController {
     return targets.sort((a, b) => b.rank - a.rank);
   }
 
+  // 輪郭の`slide`の描画先を現在の入力と状態から求め、呼び出し元へ返す
   getEdgeSlideTargets(vertices) {
     if (!Array.isArray(vertices) || vertices.length === 0) {
       return [];
@@ -1152,6 +1282,25 @@ export default class EditModeController {
     return this.faces.find((face) => face.id === id) ?? null;
   }
 
+  // `last`の選択中の頂点を現在の入力と状態から求め、呼び出し元へ返す
+  getLastSelectedVertex() {
+    if (this.lastSelectedVertexId === null || !this.selectedVertices.has(this.lastSelectedVertexId)) {
+      return null;
+    }
+    return this.getVertexById(this.lastSelectedVertexId);
+  }
+
+  // `last`の選択中の頂点の`label`を現在の入力と状態から求め、呼び出し元へ返す
+  getLastSelectedVertexLabel() {
+    const vertex = this.getLastSelectedVertex();
+    if (!vertex) {
+      return "-";
+    }
+    const coords = vertex.position.map((value) => Number(value).toFixed(3)).join(", ");
+    return `v${vertex.id} (${coords})`;
+  }
+
+  // 形状から最後に選択された頂点の識別子を返す
   getLastSelectedVertexIdFromGeometry() {
     for (let i = this.vertices.length - 1; i >= 0; i--) {
       const id = this.vertices[i].id;
@@ -1162,6 +1311,7 @@ export default class EditModeController {
     return null;
   }
 
+  // `face`の`center`を現在の入力と状態から求め、呼び出し元へ返す
   getFaceCenter(face) {
     let count = 0;
     const sum = [0.0, 0.0, 0.0];
@@ -1181,6 +1331,7 @@ export default class EditModeController {
     return [sum[0] / count, sum[1] / count, sum[2] / count];
   }
 
+  // `center`を入力値から計算し、後続処理で使える結果を返す
   computeCenter(vertices) {
     if (!Array.isArray(vertices) || vertices.length === 0) {
       return [0.0, 0.0, 0.0];
@@ -1194,6 +1345,7 @@ export default class EditModeController {
     return [sum[0] / vertices.length, sum[1] / vertices.length, sum[2] / vertices.length];
   }
 
+  // `face`の法線を入力値から計算し、後続処理で使える結果を返す
   computeFaceNormal(face) {
     if (!face || face.indices.length < 3) {
       return [0.0, 1.0, 0.0];
@@ -1212,6 +1364,7 @@ export default class EditModeController {
     return [normal[0] / len, normal[1] / len, normal[2] / len];
   }
 
+  // 法線の`for`の頂点の`ids`を入力値から計算し、後続処理で使える結果を返す
   computeNormalForVertexIds(vertexIds) {
     if (!Array.isArray(vertexIds) || vertexIds.length < 3) {
       return [0.0, 1.0, 0.0];
@@ -1226,6 +1379,7 @@ export default class EditModeController {
     return [...vertexIds].reverse();
   }
 
+  // `loop`の輪郭の方向を現在の入力と状態から求め、呼び出し元へ返す
   getLoopEdgeDirection(loop, a, b) {
     for (let i = 0; i < loop.length; i++) {
       const current = loop[i];
@@ -1240,6 +1394,7 @@ export default class EditModeController {
     return 0;
   }
 
+  // 頂点の輪を原点から離れる向きへ反転すべきか判定する
   shouldFlipLoopAwayFromOrigin(vertexIds) {
     const vertices = vertexIds
       .map((id) => this.getVertexById(id))
@@ -1256,6 +1411,7 @@ export default class EditModeController {
     return dot3(normal, toOrigin) > 0.0;
   }
 
+  // `orientLoopByAdjacentFaces`は座標または数値を計算し、後続処理で使う結果を返す
   orientLoopByAdjacentFaces(vertexIds) {
     let score = 0;
     for (const face of this.faces) {
@@ -1280,6 +1436,7 @@ export default class EditModeController {
       : [...vertexIds];
   }
 
+  // 指定方向へ向きをそろえた面を追加する
   addFaceOrientedToDirection(vertexIds, targetDirection) {
     let orientedIds = [...vertexIds];
     if (length3(targetDirection) > 1.0e-9) {
@@ -1293,6 +1450,7 @@ export default class EditModeController {
     return this.addFace(orientedIds);
   }
 
+  // 選択状態の法線を入力値から計算し、後続処理で使える結果を返す
   computeSelectionNormal() {
     const faces = this.getSelectedFaceObjects();
     if (faces.length > 0) {
@@ -1326,6 +1484,7 @@ export default class EditModeController {
     return this.computeNormalAxisConstraintVector() !== null;
   }
 
+  // `average`の`face`の法線を入力値から計算し、後続処理で使える結果を返す
   computeAverageFaceNormal(faces) {
     if (!Array.isArray(faces) || faces.length === 0) {
       return null;
@@ -1344,6 +1503,7 @@ export default class EditModeController {
     return [sum[0] / len, sum[1] / len, sum[2] / len];
   }
 
+  // `edit`のメッシュのサイズを現在の入力と状態から求め、呼び出し元へ返す
   getEditMeshSize() {
     if (this.vertices.length === 0) {
       return 1.0;
@@ -1376,10 +1536,19 @@ export default class EditModeController {
     return [-position[0], position[1], position[2]];
   }
 
+  // 識別子に対応する頂点を返す
   getVertexById(id) {
-    return this.vertices.find((vertex) => vertex.id === id) ?? null;
+    if (!isVertexIndex(id, this.vertices)) {
+      return null;
+    }
+    const vertex = this.vertices[id];
+    if (vertex.id !== id) {
+      throw new Error(`dense vertex invariant broken: vertices[${id}].id is ${vertex.id}`);
+    }
+    return vertex;
   }
 
+  // `x`の`mirror`の頂点を現在の入力と状態から求め、呼び出し元へ返す
   findXMirrorVertex(vertex, referencePosition, excludedVertexIds = new Set()) {
     if (!vertex) {
       return null;
@@ -1407,6 +1576,7 @@ export default class EditModeController {
     return best;
   }
 
+  // `x`の`mirror`の`edit`の`pairs`を生成し、後続処理で利用できる状態にする
   makeXMirrorEditPairs(sourceVertices, initialPositions = null) {
     if (!this.getXMirrorEdit() || this.mode !== this.editModeName || !Array.isArray(sourceVertices) || sourceVertices.length === 0) {
       return [];
@@ -1437,6 +1607,7 @@ export default class EditModeController {
     return pairs;
   }
 
+  // `x`の`mirror`の`edit`を対象の状態または描画設定へ反映する
   applyXMirrorEdit(sourceVertices, initialPositions = null, mirrorPairs = null) {
     if (!this.getXMirrorEdit() || this.mode !== this.editModeName || !Array.isArray(sourceVertices) || sourceVertices.length === 0) {
       return {
@@ -1479,6 +1650,7 @@ export default class EditModeController {
     };
   }
 
+  // `x`の`mirror`の選択中の頂点の`ids`を現在の入力と状態から求め、呼び出し元へ返す
   getXMirrorSelectedVertexIds() {
     const ids = new Set();
     if (!this.getXMirrorEdit() || this.mode !== this.editModeName || this.selectedVertices.size === 0) {
@@ -1503,6 +1675,7 @@ export default class EditModeController {
     return ids;
   }
 
+  // `x`の`mirror`の`face`を現在の入力と状態から求め、呼び出し元へ返す
   findXMirrorFace(face, excludedFaceIds = new Set()) {
     if (!face) {
       return null;
@@ -1548,6 +1721,7 @@ export default class EditModeController {
     return null;
   }
 
+  // `x`の`mirror`の`extrusion`の`faces`を現在の入力と状態から求め、呼び出し元へ返す
   getXMirrorExtrusionFaces(faces) {
     const empty = {
       faces,
@@ -1621,6 +1795,7 @@ export default class EditModeController {
     return true;
   }
 
+  // `explicit`の`x`の`mirror`の頂点の`pairs`を対象へ追加し、後続処理から参照できるようにする
   addExplicitXMirrorVertexPairs(pairs) {
     if (!Array.isArray(pairs) || pairs.length === 0) {
       return;
@@ -1638,6 +1813,7 @@ export default class EditModeController {
     return a < b ? `${a}:${b}` : `${b}:${a}`;
   }
 
+  // 輪郭の`owners`を生成し、後続処理で利用できる状態にする
   buildEdgeOwners() {
     const edgeOwners = new Map();
     for (const face of this.faces) {
@@ -1651,6 +1827,7 @@ export default class EditModeController {
     return edgeOwners;
   }
 
+  // ループカットの基準にする辺を選ぶ
   chooseDefaultLoopCutEdge(face) {
     const edgeLengths = [];
     for (let i = 0; i < 4; i++) {
@@ -1667,6 +1844,7 @@ export default class EditModeController {
     return edgeLengths[0] + edgeLengths[2] >= edgeLengths[1] + edgeLengths[3] ? 0 : 1;
   }
 
+  // `loop`の`cut`の輪郭を現在の入力と状態から求め、呼び出し元へ返す
   chooseLoopCutEdge(face, selectedFaceCount, neighborEdges, options) {
     const oppositeEdgeIndex = (edgeIndex) => (edgeIndex + 2) % 4;
     if (
@@ -1690,6 +1868,7 @@ export default class EditModeController {
     return null;
   }
 
+  // 頂点を対象へ追加し、後続処理から参照できるようにする
   addVertex(position) {
     if (!Array.isArray(position) || position.length !== 3) {
       throw new Error("addVertex requires a vec3 position");
@@ -1712,6 +1891,7 @@ export default class EditModeController {
     return id;
   }
 
+  // `face`を対象へ追加し、後続処理から参照できるようにする
   addFace(vertexIds) {
     if (!Array.isArray(vertexIds) || (vertexIds.length !== 3 && vertexIds.length !== 4)) {
       throw new Error("addFace requires 3 or 4 vertex ids");
@@ -1733,6 +1913,7 @@ export default class EditModeController {
     return id;
   }
 
+  // `or`の`create`の輪郭の`midpoint`を現在の入力と状態から求め、呼び出し元へ返す
   getOrCreateEdgeMidpoint(aId, bId, midpointByEdge) {
     const key = this.edgeKey(aId, bId);
     const existing = midpointByEdge.get(key);
@@ -1841,6 +2022,7 @@ export default class EditModeController {
     const vertexEdgeKeys = new Map();
     const boundaryNeighbors = new Map();
     const usedVertexIds = new Set();
+    // `average`は座標または数値を計算し、後続処理で使う結果を返す
     const average = (positions) => {
       const sum = [0.0, 0.0, 0.0];
       for (const position of positions) {
@@ -1850,6 +2032,7 @@ export default class EditModeController {
       }
       return [sum[0] / positions.length, sum[1] / positions.length, sum[2] / positions.length];
     };
+    // `to`の`set`のマップを対象へ追加し、後続処理から参照できるようにする
     const addToSetMap = (map, id, value) => {
       const set = map.get(id) ?? new Set();
       set.add(value);
@@ -1985,11 +2168,13 @@ export default class EditModeController {
     const oldVertexPointIds = new Map();
     const edgePointIds = new Map();
     const facePointIds = new Map();
+    // `allocateVertex`は入力データを解析し、後続処理で参照する構造へ変換する
     const allocateVertex = (position) => {
-      const id = this.nextVertexId();
+      const id = newVertices.length;
       newVertices.push({ id, position });
       return id;
     };
+    // `allocateFace`は入力データを解析し、後続処理で参照する構造へ変換する
     const allocateFace = (indices) => {
       const id = this.nextFaceId();
       newFaces.push({ id, indices });
@@ -2025,6 +2210,7 @@ export default class EditModeController {
     const state = this.getEditMeshState();
     state.vertices = newVertices;
     state.faces = newFaces;
+    this.normalizeDenseVertexIndices(state);
     this.selectedFaces = new Set(newFaceIds);
     this.syncSelectedVerticesFromFaces(newFaces);
     this.rebuildScene();
@@ -2263,12 +2449,14 @@ export default class EditModeController {
     return true;
   }
 
+  // `confirmEditTransformSession`は受け取った値を処理し、後続処理で利用する状態または結果を生成する
   confirmEditTransformSession() {
     const hadSession = this.transformSession !== null;
     this.transformSession = null;
     return hadSession;
   }
 
+  // `cancel`の`edit`の変換の`session`の条件を判定し、結果を真偽値で返す
   cancelEditTransformSession() {
     const hadSession = this.transformSession !== null;
     this.transformSession = null;
@@ -2287,6 +2475,43 @@ export default class EditModeController {
     return this.transformSession?.segmentChanged === true;
   }
 
+  // rebuildScene() は commitEditMeshState() を通じて editSession.vertices を正規化し直すため、
+  // transformSession が保持していた vertex object 参照は 1 preview 後に古くなる
+  // ここで vertex id を基準に現在の editSession 側 object へ張り直し、次の pointermove でも同じ session を継続する
+  relinkEditTransformSessionVertices() {
+    const session = this.transformSession;
+    if (!session) {
+      return false;
+    }
+    const relinkedVertices = [];
+    const relinkedInitialPositions = new Map();
+    for (const oldVertex of session.vertices) {
+      const vertex = this.getVertexById(oldVertex?.id);
+      if (!vertex) {
+        continue;
+      }
+      relinkedVertices.push(vertex);
+      const initial = session.initialPositions.get(oldVertex);
+      if (initial) {
+        relinkedInitialPositions.set(vertex, [...initial]);
+      }
+    }
+    session.vertices = relinkedVertices;
+    session.initialPositions = relinkedInitialPositions;
+    session.edgeSlideTargets = session.edgeSlideTargets.map((target) => {
+      const vertex = this.getVertexById(target.vertex?.id);
+      return vertex
+        ? {
+          ...target,
+          vertex,
+          start: [...target.start]
+        }
+        : null;
+    }).filter((target) => target !== null);
+    return true;
+  }
+
+  // `edit`の変換の`axis`の`constraint`の有効状態を切り替え、表示と処理へ反映する
   toggleEditTransformAxisConstraint(axis) {
     if (!this.transformSession) {
       return null;
@@ -2309,6 +2534,7 @@ export default class EditModeController {
     return this.transformSession.axisConstraint;
   }
 
+  // `edit`の変換の`constraint`の`axis`の`vector`を現在の入力と状態から求め、呼び出し元へ返す
   getEditTransformConstraintAxisVector() {
     const axisConstraint = this.getEditTransformAxisConstraint();
     if (axisConstraint === "x") return [1.0, 0.0, 0.0];
@@ -2318,6 +2544,7 @@ export default class EditModeController {
     return null;
   }
 
+  // `edit`の変換の`move`の`delta`を生成し、後続処理で利用できる状態にする
   makeEditTransformMoveDelta(basis, dx, dy, worldPerPixel) {
     return add3(
       mul3(basis.right, dx * worldPerPixel),
@@ -2325,6 +2552,7 @@ export default class EditModeController {
     );
   }
 
+  // `edit`の変換の`axis`の`move`の`delta`を生成し、後続処理で利用できる状態にする
   makeEditTransformAxisMoveDelta(axis, basis, dx, dy, worldPerPixel) {
     const screenX = dot3(axis, basis.right);
     const screenY = dot3(axis, basis.up);
@@ -2336,6 +2564,7 @@ export default class EditModeController {
     return mul3(axis, pixelsAlongAxis * worldPerPixel);
   }
 
+  // `edit`の変換のワールドの`per`の`pixel`を生成し、後続処理で利用できる状態にする
   makeEditTransformWorldPerPixel(viewportWidth, viewportHeight) {
     const viewportSize = Math.max(160.0, Math.min(viewportWidth, viewportHeight));
     return Math.max(0.002, this.getEditMeshSize() / viewportSize);
@@ -2428,6 +2657,7 @@ export default class EditModeController {
     session.changed = true;
     session.segmentChanged = true;
     this.rebuildScene();
+    this.relinkEditTransformSessionVertices();
     this.setMessage(`${mode === "edge-slide" ? "edge slide" : mode} drag${axis ? " constrained" : ""}`);
     return true;
   }
@@ -2502,6 +2732,7 @@ export default class EditModeController {
     const planByFaceId = new Map();
     const oppositeEdgeIndex = (edgeIndex) => (edgeIndex + 2) % 4;
     const isSameCutPair = (left, right) => left === right || oppositeEdgeIndex(left) === right;
+    // `cut`の`plan`を対象へ追加し、後続処理から参照できるようにする
     const addCutPlan = (face, cutEdge) => {
       if (face.indices.length !== 4) {
         return true;

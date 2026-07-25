@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// WebgUiTheme.js 2026/04/12
+// WebgUiTheme.js 2026/07/25
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // ---------------------------------------------
@@ -231,6 +231,7 @@ export const UI_THEME_PRESETS = {
   forest: DEFAULT_UI_FOREST_THEME
 };
 
+// `mergeUiTheme`は受け取った値を処理し、後続処理で利用する状態または結果を生成する
 export function mergeUiTheme(overrides = {}) {
   // テーマは group 単位で浅く上書きできるようにし、
   // sample 側が 1 色だけ差し替えたい時でも全体を再定義しなくて済むようにする

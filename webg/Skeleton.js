@@ -1,5 +1,5 @@
 // ---------------------------------------------
-//  Skeleton.js       2026/03/10
+//  Skeleton.js       2026/07/25
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // ---------------------------------------------
@@ -32,6 +32,7 @@ export default class Skeleton {
     let num = 0;
     skel.setBoneOrder(this.boneOrder);
 
+    // 元のボーン階層を上限数の範囲で新しい階層へ複製する
     let copyBoneToBone = function (src_bone, parent) {
       if (num < this.MAX_BONE) {
         num++;

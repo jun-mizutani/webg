@@ -1,0 +1,25 @@
+# sample_materials_rendering_contracts
+
+`samples/materials`が、同じ形状とCamera Frameを使って`SmoothShader`とDeferred Lightingを比較する契約を検査します。
+
+## 確認内容
+
+- 分割数2のイコスフィアが162共有頂点、320三角形、外向きwindingを持つ
+- 頂点法線が位置を正規化した有限な単位球面法線である
+- 実`Shape.endShape()`後もUV継ぎ目を含む178頂点の法線が有限かつ単位長である
+- 標準経路とDeferred経路が同じ`cameraFrame`を使用する
+- Smooth用ambientとDeferred用ambientを分離する
+- Deferred比較表示がReinhardではなくlinear clampを使用する
+- roughness、metallic、specular、power、emissiveを省略しない
+
+## 実行方法
+
+```sh
+node --experimental-default-type=module headless_tests/samples/materials/headless_probe.js
+```
+
+成功時は次を表示します。
+
+```text
+sample_materials_rendering_contracts: geometry, palette, and render-path contracts passed
+```

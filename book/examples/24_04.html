@@ -196,7 +196,6 @@ app.showOverlayPanel(buildHelpPanelOptions({
 
 app.start({
   onUpdate: ({ deltaSec }) => {
-    orbit.update(deltaSec);
     app.message.setLines("status", [
       `rows=${info.rows} cols=${info.cols}`,
       `vertices=${info.vertexCount}`,

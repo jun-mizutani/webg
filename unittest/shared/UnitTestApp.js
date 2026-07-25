@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// unittest/shared/UnitTestApp.js  2026/05/15
+// unittest/shared/UnitTestApp.js  2026/07/25
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // ---------------------------------------------
@@ -17,6 +17,7 @@ const getViewportSize = (win) => {
   };
 };
 
+// 状態表示の`writer`を生成し、後続処理で利用できる状態にする
 const createStatusWriter = (doc, elementId) => {
   const statusEl = elementId ? doc.getElementById(elementId) : null;
   const setStatus = (message) => {
@@ -25,6 +26,7 @@ const createStatusWriter = (doc, elementId) => {
   return { statusEl, setStatus };
 };
 
+// エラーのメッセージを現在の入力と状態から求め、呼び出し元へ返す
 const formatErrorMessage = (value) => {
   if (value?.error?.message) return value.error.message;
   if (value?.reason?.message) return value.reason.message;
@@ -32,6 +34,7 @@ const formatErrorMessage = (value) => {
   return String(value);
 };
 
+// `unit`の`test`のアプリケーションを生成し、後続処理で利用できる状態にする
 export const createUnitTestApp = async (options = {}) => {
   const doc = options.document ?? document;
   const win = options.window ?? window;
@@ -51,6 +54,7 @@ export const createUnitTestApp = async (options = {}) => {
 
   let viewportCallback = typeof options.onResize === "function" ? options.onResize : null;
 
+  // `viewport`の配置を対象の状態または描画設定へ反映する
   const applyViewportLayout = () => {
     const size = getViewportSize(win);
     screen.resize(size.width, size.height);
@@ -74,7 +78,9 @@ export const createUnitTestApp = async (options = {}) => {
     });
   }
 
+  // `loop`の初期化段階で、必要な状態と資源を準備して処理を開始する
   const startLoop = (drawFrame) => {
+    // `frame`は処理周期の開始または終了に必要な状態を更新する
     const frame = (timeMs) => {
       drawFrame(timeMs);
       win.requestAnimationFrame(frame);
@@ -98,6 +104,7 @@ export const createUnitTestApp = async (options = {}) => {
   };
 };
 
+// `unit`の`test`のアプリケーションの初期化段階で、必要な状態と資源を準備して処理を開始する
 export const bootUnitTestApp = (options, start) => {
   const doc = options?.document ?? document;
   const win = options?.window ?? window;
@@ -105,6 +112,7 @@ export const bootUnitTestApp = (options, start) => {
   doc.addEventListener("DOMContentLoaded", () => {
     const { setStatus } = createStatusWriter(doc, options?.statusElementId ?? "status");
 
+    // エラーを受け取った段階で、対応する状態更新と処理を実行する
     const onError = (event) => {
       const msg = formatErrorMessage(event);
       setStatus(`error:\n${msg}`);

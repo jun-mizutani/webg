@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// samples/mmodeler/ModelerPicking.js  2026/05/24
+// samples/mmodeler/ModelerPicking.js  2026/07/25
 //   Picking calculations for the mmodeler sample.
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -15,6 +15,7 @@ import {
   sub3
 } from "./math3d.js";
 
+// `cssToNdc`は座標または数値を計算し、後続処理で使う結果を返す
 export function cssToNdc(canvas, clientX, clientY) {
   const rect = canvas.getBoundingClientRect();
   const x = ((clientX - rect.left) / rect.width) * 2.0 - 1.0;
@@ -22,6 +23,7 @@ export function cssToNdc(canvas, clientX, clientY) {
   return [x, y];
 }
 
+// `intersectRayPlane`は入力条件や交差状態を比較し、判定結果を返す
 export function intersectRayPlane(ray, point, normal) {
   const n = normalize3(normal, "plane normal");
   const denom = dot3(ray.dir, n);
@@ -35,6 +37,7 @@ export function intersectRayPlane(ray, point, normal) {
   return add3(ray.origin, mul3(ray.dir, t));
 }
 
+// `intersectRayTriangle`は入力条件や交差状態を比較し、判定結果を返す
 export function intersectRayTriangle(ray, p0, p1, p2) {
   const eps = 1.0e-8;
   const edge1 = sub3(p1, p0);
@@ -65,18 +68,36 @@ export function intersectRayTriangle(ray, p0, p1, p2) {
   };
 }
 
+// 頂点一覧から識別子に対応する頂点を返す
 export function getVertexByIdFromList(vertices, id) {
-  return vertices.find((vertex) => vertex.id === id) ?? null;
+  if (!Number.isInteger(id) || id < 0 || id >= vertices.length) {
+    return null;
+  }
+  const vertex = vertices[id];
+  if (vertex.id !== id) {
+    throw new Error(`dense vertex invariant broken: vertices[${id}].id is ${vertex.id}`);
+  }
+  return vertex;
 }
 
+// 検索表から識別子に対応する頂点を読み出す
+function readVertexFromLookup(vertexLookup, vertices, id) {
+  if (Array.isArray(vertexLookup)) {
+    return getVertexByIdFromList(vertexLookup, id);
+  }
+  if (vertexLookup) {
+    throw new Error("vertex lookup must be a dense vertex array");
+  }
+  return getVertexByIdFromList(vertices, id);
+}
+
+// 面を構成する頂点から面の法線を計算する
 export function computeFaceNormalFromVertices(face, vertices, options = {}) {
   if (!face || face.indices.length < 3) {
     return null;
   }
   const vertexLookup = options.vertexLookup ?? null;
-  const readVertex = (id) => vertexLookup
-    ? (vertexLookup.get(id) ?? null)
-    : getVertexByIdFromList(vertices, id);
+  const readVertex = (id) => readVertexFromLookup(vertexLookup, vertices, id);
   const v0 = readVertex(face.indices[0]);
   const v1 = readVertex(face.indices[1]);
   const v2 = readVertex(face.indices[2]);
@@ -94,6 +115,7 @@ export function computeFaceNormalFromVertices(face, vertices, options = {}) {
   return [normal[0] / len, normal[1] / len, normal[2] / len];
 }
 
+// `face`の`front`の`facing`の`ray`の条件を判定し、結果を真偽値で返す
 export function isFaceFrontFacingRay(face, vertices, ray, options = {}) {
   const normal = computeFaceNormalFromVertices(face, vertices, options);
   if (!normal) {
@@ -102,6 +124,7 @@ export function isFaceFrontFacingRay(face, vertices, ray, options = {}) {
   return dot3(normal, ray.dir) < -1.0e-8;
 }
 
+// 面を構成する頂点から面の中心を求める
 export function getFaceCenterFromVertices(face, vertices) {
   const points = face.indices
     .map((id) => getVertexByIdFromList(vertices, id))
@@ -114,6 +137,7 @@ export function getFaceCenterFromVertices(face, vertices) {
   return mul3(sum, 1.0 / points.length);
 }
 
+// `point`の`ray`の距離を現在の入力と状態から求め、呼び出し元へ返す
 export function getPointRayDistance(ray, point) {
   const denom = dot3(ray.dir, ray.dir);
   if (!Number.isFinite(denom) || denom <= 0.0) {
@@ -127,6 +151,7 @@ export function getPointRayDistance(ray, point) {
 }
 
 export default class ModelerPicking {
+  // インスタンス生成時に、受け取った設定を検証して初期状態を準備する
   constructor(options = {}) {
     this.getCanvas = options.getCanvas;
     this.getEye = options.getEye;
@@ -155,6 +180,7 @@ export default class ModelerPicking {
     this.setVisiblePickSelectionStats = options.setVisiblePickSelectionStats;
   }
 
+  // クライアント座標から選択判定用のレイを生成する
   makeRayFromClient(clientX, clientY) {
     const eye = this.getEye();
     eye.setWorldMatrix();
@@ -190,19 +216,73 @@ export default class ModelerPicking {
     };
   }
 
+  // 同じ view / projection から多数の screen point ray を作る処理向けの共有 context を作る
+  // box select の可視判定では候補 vertex ごとに ray が必要になるため、
+  // ここで inverse view-projection と canvas rect を 1 回だけ計算して使い回す
+  makeRayBuildContext() {
+    const eye = this.getEye();
+    eye.setWorldMatrix();
+    const view = new Matrix();
+    view.makeView(eye.worldMatrix);
+    const invVp = this.getProjectionMatrix().clone();
+    invVp.mul_(view);
+    invVp.inverse_strict();
+    const projectionMode = this.getProjectionMode();
+    return {
+      invVp,
+      projectionMode,
+      eyePosition: projectionMode === this.orthographicMode ? null : eye.getWorldPosition(),
+      canvasRect: this.getCanvas().getBoundingClientRect()
+    };
+  }
+
+  // makeRayBuildContext() で共有した逆行列から client 座標 ray を作る
+  // makeRayFromClient() と同じ戻り値形状を保ち、visible pick の既存処理へそのまま渡せるようにする
+  makeRayFromClientWithContext(clientX, clientY, context = null) {
+    if (!context) {
+      return this.makeRayFromClient(clientX, clientY);
+    }
+    const rect = context.canvasRect;
+    const nx = ((clientX - rect.left) / rect.width) * 2.0 - 1.0;
+    const ny = 1.0 - ((clientY - rect.top) / rect.height) * 2.0;
+    const near = context.invVp.mulVector([nx, ny, -1.0]);
+    const far = context.invVp.mulVector([nx, ny, 1.0]);
+    if (context.projectionMode === this.orthographicMode) {
+      return {
+        origin: near,
+        dir: sub3(far, near),
+        near,
+        far,
+        ndc: [nx, ny],
+        client: { x: clientX, y: clientY },
+        projectionMode: context.projectionMode
+      };
+    }
+    return {
+      origin: context.eyePosition,
+      dir: sub3(far, context.eyePosition),
+      near,
+      far,
+      ndc: [nx, ny],
+      client: { x: clientX, y: clientY },
+      projectionMode: context.projectionMode
+    };
+  }
+
+  // `pickFaceInObject`は現在状態から対象を選択し、結果を返すまたは選択を切り替える
   pickFaceInObject(ray, object, options = {}) {
     const localRay = this.makeObjectLocalRay(ray, object);
     const ignoreFaceId = options.ignoreFaceId ?? null;
     const ignoreVertexId = options.ignoreVertexId ?? null;
     const faces = Array.isArray(options.faces) ? options.faces : object.faces;
     const vertices = Array.isArray(options.vertices) ? options.vertices : object.vertices;
-    const vertexLookup = options.vertexLookup ?? this.buildVertexLookup(vertices);
+    const vertexLookup = options.vertexLookup ?? vertices;
     let best = null;
     for (const face of faces) {
       if (face.id === ignoreFaceId || (ignoreVertexId !== null && face.indices.includes(ignoreVertexId))) {
         continue;
       }
-      const verts = face.indices.map((id) => vertexLookup.get(id) ?? null);
+      const verts = face.indices.map((id) => readVertexFromLookup(vertexLookup, vertices, id));
       if (verts.some((vertex) => vertex === null)) {
         throw new Error(`object ${object.id} face ${face.id} contains missing vertex`);
       }
@@ -228,6 +308,7 @@ export default class ModelerPicking {
     return best;
   }
 
+  // `pickFace`は現在状態から対象を選択し、結果を返すまたは選択を切り替える
   pickFace(ray, options = {}) {
     const object = this.getActiveObject();
     if (!object) {
@@ -248,6 +329,7 @@ export default class ModelerPicking {
     return this.pickFace(ray);
   }
 
+  // `pickObjectFace`は現在状態から対象を選択し、結果を返すまたは選択を切り替える
   pickObjectFace(ray) {
     let best = null;
     for (const object of this.getObjects()) {
@@ -263,6 +345,7 @@ export default class ModelerPicking {
     return null;
   }
 
+  // `pickAtClientPoint`は現在状態から対象を選択し、結果を返すまたは選択を切り替える
   pickAtClientPoint(clientX, clientY, options = {}) {
     const ray = this.makeRayFromClient(clientX, clientY);
     return {
@@ -274,6 +357,7 @@ export default class ModelerPicking {
     };
   }
 
+  // 点が現在のオブジェクトに遮られているか判定する
   isPointOccludedByActiveObject(point, ray, options = {}) {
     const object = this.getActiveObject();
     if (!object) {
@@ -309,19 +393,50 @@ export default class ModelerPicking {
     return hit.t < pointT - tolerance;
   }
 
-  makeVisibleOcclusionGrid(viewProjection) {
+  // box select の 1 回の確定処理内で、編集メッシュ頂点の screen 投影結果を共有する
+  // 15000 頂点級の mesh では、候補抽出後に face grid 構築で同じ頂点を面ごとに再投影すると、
+  // 共有頂点が属する面数ぶんだけ projectWorldToClient() が繰り返される
+  makeProjectedEditMeshContext(viewProjection) {
+    const object = this.getActiveObject();
+    const editMesh = this.getRenderableEditMeshState();
+    const vertexLookup = editMesh.vertices;
+    const projectedVerticesById = [];
+    const vertexEntries = [];
+    for (const vertex of editMesh.vertices) {
+      const projected = object && viewProjection
+        ? this.projectWorldToClient(viewProjection, this.localToWorldPosition(object, vertex.position))
+        : null;
+      projectedVerticesById[vertex.id] = projected;
+      vertexEntries.push({
+        vertex,
+        projected
+      });
+    }
+    return {
+      object,
+      editMesh,
+      vertexLookup,
+      projectedVerticesById,
+      vertexEntries
+    };
+  }
+
+  // `visible`の`occlusion`の`grid`を生成し、後続処理で利用できる状態にする
+  makeVisibleOcclusionGrid(viewProjection, projectionContext = null) {
     if (!viewProjection) {
       return null;
     }
-    const editMesh = this.getRenderableEditMeshState();
+    const editMesh = projectionContext?.editMesh ?? this.getRenderableEditMeshState();
     const rect = this.getCanvas().getBoundingClientRect();
     const cols = this.visiblePickGridCols;
     const rows = this.visiblePickGridRows;
     const cells = Array.from({ length: cols * rows }, () => []);
     const pad = this.visiblePickGridPaddingPx;
     const object = this.getActiveObject();
-    const vertexLookup = this.buildVertexLookup(editMesh.vertices);
+    const vertexLookup = projectionContext?.vertexLookup ?? editMesh.vertices;
+    const projectedVerticesById = projectionContext?.projectedVerticesById ?? null;
     let faceCount = 0;
+    // 面を画面上で重なる分割領域へ登録する
     const addFaceToCells = (face, bounds) => {
       const left = Math.max(rect.left, bounds.left - pad);
       const right = Math.min(rect.right, bounds.right + pad);
@@ -343,9 +458,11 @@ export default class ModelerPicking {
     for (const face of editMesh.faces) {
       faceCount += 1;
       const projected = face.indices
-        .map((id) => vertexLookup.get(id) ?? null)
+        .map((id) => readVertexFromLookup(vertexLookup, editMesh.vertices, id))
         .filter((vertex) => vertex !== null)
-        .map((vertex) => this.projectWorldToClient(viewProjection, this.localToWorldPosition(object, vertex.position)))
+        .map((vertex) => projectedVerticesById
+          ? (projectedVerticesById[vertex.id] ?? null)
+          : this.projectWorldToClient(viewProjection, this.localToWorldPosition(object, vertex.position)))
         .filter((point) => point !== null);
       if (projected.length === 0) {
         addFaceToCells(face, {
@@ -401,6 +518,7 @@ export default class ModelerPicking {
     };
   }
 
+  // `visible`の`occlusion`の`faces`を現在の入力と状態から求め、呼び出し元へ返す
   getVisibleOcclusionFaces(clientPoint, context = null) {
     const grid = context?.occlusionGrid ?? null;
     if (!grid || !clientPoint) {
@@ -415,12 +533,16 @@ export default class ModelerPicking {
     return cells[row * cols + col];
   }
 
-  makeVisiblePickContext(viewProjection = null) {
-    const editMesh = this.getRenderableEditMeshState();
+  // `visible`の`adjacency`の実行コンテキストを生成し、後続処理で利用できる状態にする
+  makeVisibleAdjacencyContext(projectionContext = null, vertexIdFilter = null) {
+    const editMesh = projectionContext?.editMesh ?? this.getRenderableEditMeshState();
     const adjacentFacesByVertexId = new Map();
-    const vertexLookup = this.buildVertexLookup(editMesh.vertices);
+    const vertexLookup = projectionContext?.vertexLookup ?? editMesh.vertices;
     for (const face of editMesh.faces) {
       for (const vertexId of face.indices) {
+        if (vertexIdFilter && !vertexIdFilter.has(vertexId)) {
+          continue;
+        }
         let faces = adjacentFacesByVertexId.get(vertexId);
         if (!faces) {
           faces = [];
@@ -431,11 +553,27 @@ export default class ModelerPicking {
     }
     return {
       adjacentFacesByVertexId,
-      vertexLookup,
-      occlusionGrid: this.makeVisibleOcclusionGrid(viewProjection)
+      vertexLookup
     };
   }
 
+  // `visible`の`pick`の実行コンテキストを生成し、後続処理で利用できる状態にする
+  makeVisiblePickContext(viewProjection = null, projectionContext = null) {
+    return {
+      ...this.makeVisibleAdjacencyContext(projectionContext),
+      occlusionGrid: this.makeVisibleOcclusionGrid(viewProjection, projectionContext)
+    };
+  }
+
+  // `fast`の`face`の`visibility`の実行コンテキストを生成し、後続処理で利用できる状態にする
+  makeFastFaceVisibilityContext(editMesh) {
+    return {
+      adjacentFacesByVertexId: null,
+      vertexLookup: editMesh.vertices
+    };
+  }
+
+  // 頂点の`front`の`facing`の`ray`の条件を判定し、結果を真偽値で返す
   isVertexFrontFacingRay(vertex, ray, context = null) {
     const editMesh = this.getRenderableEditMeshState();
     const adjacentFaces = context?.adjacentFacesByVertexId?.get(vertex.id)
@@ -448,6 +586,7 @@ export default class ModelerPicking {
     }));
   }
 
+  // 現在の視点から頂点を選択できるか判定する
   isVertexSelectableFromView(vertex, ray, context = null) {
     if (!this.getVisiblePickOnly()) {
       return true;
@@ -466,6 +605,7 @@ export default class ModelerPicking {
     });
   }
 
+  // 現在の視点から面を選択できるか判定する
   isFaceSelectableFromView(face, ray, context = null) {
     if (!this.getVisiblePickOnly()) {
       return true;
@@ -481,6 +621,7 @@ export default class ModelerPicking {
     });
   }
 
+  // `pickVertexByRayDistance`は座標または数値を計算し、後続処理で使う結果を返す
   pickVertexByRayDistance(ray) {
     const object = this.getActiveObject();
     const viewProjection = this.getCurrentViewProjectionMatrix();
@@ -533,8 +674,9 @@ export default class ModelerPicking {
     candidates.sort((a, b) => (a.distance2 - b.distance2) || (a.z - b.z));
     const visibleCandidates = candidates.slice(0, maxVisibleCandidates);
     const context = this.makeVisiblePickContext(this.getCurrentViewProjectionMatrix());
+    const rayContext = this.makeRayBuildContext();
     for (const candidate of visibleCandidates) {
-      const candidateRay = this.makeRayFromClient(candidate.projected.x, candidate.projected.y);
+      const candidateRay = this.makeRayFromClientWithContext(candidate.projected.x, candidate.projected.y, rayContext);
       if (this.isVertexSelectableFromView(candidate.vertex, candidateRay, context)) {
         this.setVisiblePickSelectionStats("click-vertex", candidateCount, 1, context);
         return {
@@ -548,6 +690,7 @@ export default class ModelerPicking {
     return null;
   }
 
+  // `objectIntersectsClientRect`は入力条件や交差状態を比較し、判定結果を返す
   objectIntersectsClientRect(object, viewProjection, rect) {
     for (const vertex of object.vertices) {
       if (this.clientPointInRect(this.projectWorldToClient(viewProjection, this.localToWorldPosition(object, vertex.position)), rect)) {
@@ -563,6 +706,7 @@ export default class ModelerPicking {
     return false;
   }
 
+  // オブジェクトの`rect`の`candidates`を現在の入力と状態から求め、呼び出し元へ返す
   collectObjectRectCandidates(rect, viewProjection) {
     const selectedIds = this.getObjects()
       .filter((object) => this.objectIntersectsClientRect(object, viewProjection, rect))
@@ -573,35 +717,41 @@ export default class ModelerPicking {
     };
   }
 
+  // 頂点の`rect`の`candidates`を現在の入力と状態から求め、呼び出し元へ返す
   collectVertexRectCandidates(rect, viewProjection) {
-    const object = this.getActiveObject();
-    const editMesh = this.getRenderableEditMeshState();
-    const entries = editMesh.vertices
-      .map((vertex) => {
-        const projected = this.projectWorldToClient(viewProjection, this.localToWorldPosition(object, vertex.position));
-        return {
-          vertex,
-          projected
-        };
-      })
+    const projectionContext = this.makeProjectedEditMeshContext(viewProjection);
+    const entries = projectionContext.vertexEntries
       .filter((entry) => this.clientPointInRect(entry.projected, rect));
-    const context = this.getVisiblePickOnly() ? this.makeVisiblePickContext(viewProjection) : null;
+    if (!this.getVisiblePickOnly() || this.getObjectWireframe()) {
+      return {
+        candidateCount: entries.length,
+        selectedIds: entries.map((entry) => entry.vertex.id),
+        context: null,
+        mode: "box-vertex"
+      };
+    }
+
+    // box select では矩形の広さで可視判定アルゴリズムを変えない
+    // 狭い範囲だけ exact occlusion を使うと、遮蔽候補集合の違いで選択結果と速度が不安定になる
+    // vertex は接続 face の front-facing 判定だけを行い、候補数によらず同じ処理フローに揃える
+    const context = this.makeVisibleAdjacencyContext(projectionContext, new Set(entries.map((entry) => entry.vertex.id)));
+    const rayContext = this.makeRayBuildContext();
     const selectedIds = entries
       .filter((entry) => {
-        if (!this.getVisiblePickOnly()) {
-          return true;
-        }
-        const ray = this.makeRayFromClient(entry.projected.x, entry.projected.y);
-        return this.isVertexSelectableFromView(entry.vertex, ray, context);
+        const ray = this.makeRayFromClientWithContext(entry.projected.x, entry.projected.y, rayContext);
+        const localRay = this.makeObjectLocalRay(ray, projectionContext.object);
+        return this.isVertexFrontFacingRay(entry.vertex, localRay, context);
       })
       .map((entry) => entry.vertex.id);
     return {
       candidateCount: entries.length,
       selectedIds,
-      context
+      context,
+      mode: "box-vertex-fast"
     };
   }
 
+  // `face`の`rect`の`candidates`を現在の入力と状態から求め、呼び出し元へ返す
   collectFaceRectCandidates(rect, viewProjection) {
     const object = this.getActiveObject();
     const editMesh = this.getRenderableEditMeshState();
@@ -616,20 +766,33 @@ export default class ModelerPicking {
         };
       })
       .filter((entry) => entry.center && this.clientPointInRect(entry.projected, rect));
-    const context = this.getVisiblePickOnly() ? this.makeVisiblePickContext(viewProjection) : null;
+    if (!this.getVisiblePickOnly() || this.getObjectWireframe()) {
+      return {
+        candidateCount: entries.length,
+        selectedIds: entries.map((entry) => entry.face.id),
+        context: null,
+        mode: "box-face"
+      };
+    }
+
+    // face box select も矩形の広さで可視判定アルゴリズムを変えない
+    // face center が矩形内にある候補へ front-facing 判定だけを行い、狭い範囲でも広い範囲でも同じ結果規則にする
+    const context = this.makeFastFaceVisibilityContext(editMesh);
+    const rayContext = this.makeRayBuildContext();
     const selectedIds = entries
       .filter((entry) => {
-        if (!this.getVisiblePickOnly()) {
-          return true;
-        }
-        const ray = this.makeRayFromClient(entry.projected.x, entry.projected.y);
-        return this.isFaceSelectableFromView(entry.face, ray, context);
+        const ray = this.makeRayFromClientWithContext(entry.projected.x, entry.projected.y, rayContext);
+        const localRay = this.makeObjectLocalRay(ray, object);
+        return isFaceFrontFacingRay(entry.face, editMesh.vertices, localRay, {
+          vertexLookup: context?.vertexLookup ?? null
+        });
       })
       .map((entry) => entry.face.id);
     return {
       candidateCount: entries.length,
       selectedIds,
-      context
+      context,
+      mode: "box-face-fast"
     };
   }
 }

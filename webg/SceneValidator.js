@@ -1,5 +1,5 @@
 // ---------------------------------------------
-//  SceneValidator.js  2026/05/06
+//  SceneValidator.js  2026/07/25
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // ---------------------------------------------
@@ -300,6 +300,7 @@ export default class SceneValidator {
   validateHud(hud, path) {
     const obj = this.ensureObject(hud, path, "hud");
     if (!obj) return;
+    // 線の`array`を検証し、後続処理が扱える共通形式へ整える
     const validateLineArray = (value, linePath, label) => {
       const lines = this.ensureArray(value, linePath, label);
       if (!lines) return;

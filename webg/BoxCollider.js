@@ -1,5 +1,5 @@
 // ---------------------------------------------
-//  BoxCollider.js  2026/05/07
+//  BoxCollider.js  2026/07/25
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // ---------------------------------------------
@@ -231,6 +231,7 @@ export default class BoxCollider extends Collider {
     let bestEdgeAxis = null;
     let bestEdgeSource = null;
 
+    // `testAxis`は入力条件や交差状態を比較し、判定結果を返す
     const testAxis = (axis, source) => {
       const length = this._lengthVec3(axis);
       if (length <= 1.0e-8) {

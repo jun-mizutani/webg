@@ -1,5 +1,5 @@
 // ---------------------------------------------
-//  GameAudioSynth.js   2026/05/14
+//  GameAudioSynth.js   2026/07/25
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // ---------------------------------------------
@@ -8,6 +8,7 @@ import AudioSynth from "./AudioSynth.js";
 
 export default class GameAudioSynth extends AudioSynth {
 
+  // インスタンス生成時に、受け取った設定を検証して初期状態を準備する
   constructor() {
     super();
 
@@ -431,6 +432,7 @@ export default class GameAudioSynth extends AudioSynth {
     }
   }
 
+  // `se`の`presets`の初期化段階で、必要な状態と資源を準備して処理を開始する
   installSePresets() {
     // ゲーム SE は、単発の短い波形で終わらせず、
     // 主音・補助音・少し長い余韻を重ねて、reverb と delay が聞こえやすい設計にする
@@ -577,6 +579,7 @@ export default class GameAudioSynth extends AudioSynth {
     return Object.keys(this.soundEffectCatalog ?? {});
   }
 
+  // 音の`effect`の`info`を現在の入力と状態から求め、呼び出し元へ返す
   getSoundEffectInfo(name) {
     if (!name || typeof name !== "string") {
       throw new Error("Sound effect name must be a non-empty string.");
@@ -597,6 +600,7 @@ export default class GameAudioSynth extends AudioSynth {
     return Object.keys(this.gameSe ?? {});
   }
 
+  // `playSe`は選択中の音声またはアニメーションの再生状態を更新する
   playSe(name) {
     this.ensureContext();
     const t0 = this.ctx.currentTime;

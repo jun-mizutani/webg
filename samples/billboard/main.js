@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// samples/billboard/main.js  2026/04/12
+// samples/billboard/main.js  2026/07/25
 //   billboard sample
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -58,6 +58,7 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 });
 
+// 床の形状を生成し、後続処理で利用できる状態にする
 const createFloorShape = (gpu) => {
   // billboard の奥行き感を拾いやすくするため、薄い床だけを置く
   const shape = new Shape(gpu);
@@ -74,6 +75,7 @@ const createFloorShape = (gpu) => {
   return shape;
 };
 
+// `core`の形状を生成し、後続処理で利用できる状態にする
 const createCoreShape = (gpu) => {
   // 旧 sample の大きな回転柱は存在感が強すぎたため、
   // particle の見えを邪魔しにくい小さめの sphere へ差し替える
@@ -91,6 +93,7 @@ const createCoreShape = (gpu) => {
   return shape;
 };
 
+// テクスチャを生成し、後続処理で利用できる状態にする
 const createTexture = async (gpu, builder) => {
   const tex = new Texture(gpu);
   await tex.initPromise;
@@ -99,6 +102,7 @@ const createTexture = async (gpu, builder) => {
   return tex;
 };
 
+// 操作の`rows`を生成し、後続処理で利用できる状態にする
 const makeControlRows = (state, aliveCount) => {
   const boost = state.centerBoostByMode[state.mode];
   const rows = [
@@ -158,6 +162,7 @@ const makeControlRows = (state, aliveCount) => {
   return rows;
 };
 
+// このインスタンスの初期化段階で、必要な状態と資源を準備して処理を開始する
 const start = async () => {
   app = new WebgApp({
     document,
@@ -267,6 +272,7 @@ const start = async () => {
     cameraPitchDeg: -12.0
   };
 
+  // カメラを現在の入力と実行状態に合わせて更新する
   const updateCamera = () => {
     // WebgApp の camera rig をそのまま使い、
     // billboard と背景 scene の両方へ同じ orbit 視点を適用する
@@ -275,6 +281,7 @@ const start = async () => {
   };
   updateCamera();
 
+  // 現在の設定からビルボード用テクスチャを作り直す
   const rebuildCurrentTexture = () => {
     // centerBoost は mode ごとに独立保持し、
     // 現在 mode の texture だけを再生成して比較しやすくする
@@ -315,6 +322,7 @@ const start = async () => {
     shadowBillboard.setTexture(smokeTex);
   };
 
+  // 使用可能状態の`count`を現在の入力と状態から求め、呼び出し元へ返す
   const getAliveCount = () => {
     let n = 0;
     for (let i = 0; i < particles.length; i++) {
@@ -323,6 +331,7 @@ const start = async () => {
     return n;
   };
 
+  // `spawnBurst`は現在の進行状態に必要な要素を生成または配置する
   const spawnBurst = (count = 56) => {
     // 空き slot を再利用して particle を生成し、
     // billboard 側は毎 frame addBillboard だけを行う
@@ -346,12 +355,14 @@ const start = async () => {
     }
   };
 
+  // `particles`を初期状態へ戻し、前回の状態を残さない
   const clearParticles = () => {
     for (let i = 0; i < particles.length; i++) {
       particles[i].life = 0.0;
     }
   };
 
+  // `particles`を現在の入力と実行状態に合わせて更新する
   const updateParticles = (dt) => {
     for (let i = 0; i < particles.length; i++) {
       const p = particles[i];
@@ -368,6 +379,7 @@ const start = async () => {
     }
   };
 
+  // 診断情報の統計情報を現在の入力と実行状態に合わせて更新する
   const refreshDiagnosticsStats = (frameCount) => {
     const envReport = app.checkEnvironment({
       stage: "runtime-check",
@@ -387,6 +399,7 @@ const start = async () => {
     return envReport;
   };
 
+  // 検査情報のレポートを生成し、後続処理で利用できる状態にする
   const makeProbeReport = (frameCount) => {
     const envReport = app.checkEnvironment({
       stage: "runtime-probe",
@@ -417,6 +430,7 @@ const start = async () => {
   });
   app.configureDebugKeyInput();
 
+  // キーの操作を対象の状態または描画設定へ反映する
   const applyKeyAction = (key) => {
     if (key === "space") {
       spawnBurst(56);

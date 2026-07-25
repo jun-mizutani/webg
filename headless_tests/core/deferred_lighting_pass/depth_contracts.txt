@@ -1,0 +1,33 @@
+# DeferredLightingPass Reverse-Z・Camera Frame単体テスト
+
+## 目的
+
+Geometry Bufferを読むDeferredLightingPassが、通常Z時代の「depthが1なら背景」という判定を残さず、Reverse-Zの背景値0をGeometryBufferPassと同じ規則で扱うことを確認する。背景色は固定グラデーションで上書きせず、G-bufferのalbedo clear値を引き継ぐことも確認する
+
+Deferred Lightingへ渡すprojectionとlight位置が別々のカメラ状態から作られないようにし、一つのCamera Frameから投影paramとview-space light位置を生成する契約を確認する。特に巨大World座標では、World light位置をfloat32へ落としてからカメラ位置と相殺せず、JavaScript Numberの差分を先に求めることを数値で確認する
+
+## 確認項目
+
+1. WGSLの背景判定が `isGBufferBackgroundDepth(depth)` を使用し、旧 `depth >= 0.999999` を含まない
+2. 背景分岐が `albedo.rgb` を出力し、旧固定グラデーションの色と`mix()`を含まない
+3. depth debug表示がReverse-Z raw depthを使用し、無限遠projectionで成立しないfar除算へ依存しない
+4. `encode()` が `cameraFrame` を必須とし、projection配列とview matrixの個別入力を受け付けない
+5. 1e10規模のカメラ・light World座標から、差分 `[4, -2, -15]` がlight bufferへ書かれる
+6. 有限farでは実際のfar値、無限遠ではsentinel 0がprojection uniformへ書かれる
+7. Reverse-Z Camera Frameではない値を渡すとGPU dispatch前に例外になる
+
+## 実行方法
+
+```sh
+node headless_tests/core/deferred_lighting_pass/headless_probe.js
+```
+
+## 結果
+
+2026-07-14に実行し、全項目が成功した。表示文字列は次のとおり
+
+```text
+deferred_lighting_pass_depth_contracts: all deferred lighting contracts passed
+```
+
+このテストは実GPU上の最終色を評価するものではない。Reverse-Z背景判定、albedo clear値の継承、ComputePassへ渡すuniform、light Storage Bufferの数値を検査し、背景色や深度規約が暗黙に置き換わらないことを確認する

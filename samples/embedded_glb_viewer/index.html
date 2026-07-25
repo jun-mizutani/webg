@@ -3,276 +3,187 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>webg sample embedded_glb_viewer</title>
+  <title>embedded_glb_viewer</title>
   <link rel="icon" href="data:," />
+  <!-- 2026/06/19 -->
   <style>
-    :root {
-      color-scheme: light;
-      --page-bg: #edf2f6;
-      --paper: #ffffff;
-      --line: #cad5e2;
-      --ink: #17212b;
-      --sub: #556475;
-      --accent: #0f6fb2;
-      --accent-soft: #dfeefc;
-      --panel-bg: rgba(14, 22, 34, 0.92);
-      --panel-line: rgba(145, 189, 236, 0.24);
-      --panel-text: #eff6ff;
-    }
 
-    html,
-    body {
-      margin: 0;
-      min-height: 100%;
-      background:
-        linear-gradient(180deg, rgba(255, 255, 255, 0.72), rgba(232, 239, 246, 0.92)),
-        var(--page-bg);
-      color: var(--ink);
-      font: 15px/1.8 "Hiragino Sans", "Yu Gothic", sans-serif;
-    }
+:root {
+  color-scheme: light;
+  --bg: #eef3f8;
+  --paper: rgba(255, 255, 255, 0.94);
+  --line: #c8d5e4;
+  --ink: #17324a;
+  --muted: #5c748b;
+  --accent: #1566ab;
+  --accent-soft: #dfeefe;
+  --code-bg: #f3f7fb;
+  --shadow: rgba(29, 52, 79, 0.10);
+}
+* { box-sizing: border-box; }
+html, body {
+  margin: 0;
+  min-height: 100%;
+}
+body {
+  background:
+    radial-gradient(circle at top left, rgba(21, 102, 171, 0.12), transparent 24%),
+    radial-gradient(circle at top right, rgba(255, 191, 118, 0.10), transparent 22%),
+    linear-gradient(180deg, #f8fbfd 0%, var(--bg) 100%);
+  color: var(--ink);
+  font: 16px/1.78 "Avenir Next", "Hiragino Sans", "Yu Gothic", sans-serif;
+}
+.page {
+  width: min(1080px, calc(100% - 28px));
+  margin: 0 auto;
+  padding: 24px 0 56px;
+}
+.hero,
+.doc {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  box-shadow: 0 22px 52px var(--shadow);
+}
+.hero {
+  padding: 22px 24px;
+  margin-bottom: 18px;
+}
+.hero h1 {
+  margin: 0 0 8px;
+  font-size: clamp(2rem, 4vw, 3rem);
+  line-height: 1.08;
+}
+.hero p {
+  margin: 0;
+  color: var(--muted);
+}
+.doc {
+  padding: 28px;
+}
+.doc > :first-child {
+  margin-top: 0;
+}
+h1, h2, h3, h4, h5, h6 {
+  line-height: 1.25;
+  margin: 1.45em 0 0.55em;
+}
+h1 {
+  font-size: 2.2rem;
+}
+h2 {
+  padding-bottom: 0.28em;
+  border-bottom: 1px solid var(--line);
+  font-size: 1.48rem;
+}
+h3 {
+  font-size: 1.14rem;
+}
+p, ul, ol, table, pre, blockquote {
+  margin: 0 0 1em;
+}
+ul, ol {
+  padding-left: 1.4em;
+}
+li + li {
+  margin-top: 0.26em;
+}
+a {
+  color: var(--accent);
+  text-decoration: none;
+}
+a:hover {
+  text-decoration: underline;
+}
+img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  border-radius: 16px;
+  border: 1px solid var(--line);
+  box-shadow: 0 12px 32px rgba(29, 52, 79, 0.08);
+  margin: 1.1em 0 1.4em;
+}
+code {
+  padding: 0.12em 0.38em;
+  border-radius: 0.45em;
+  background: var(--code-bg);
+  border: 1px solid #dbe6f1;
+  font: 0.92em/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+pre {
+  padding: 14px 16px;
+  overflow-x: auto;
+  border-radius: 14px;
+  background: #0f1720;
+  color: #ecf5ff;
+}
+pre code {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #ffffff;
+}
+th, td {
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  text-align: left;
+  vertical-align: top;
+}
+th {
+  background: #f5f9fc;
+}
+hr {
+  border: 0;
+  border-top: 1px solid var(--line);
+  margin: 1.5em 0;
+}
+blockquote {
+  padding: 0.3em 0 0.3em 1em;
+  border-left: 4px solid #c9dbef;
+  color: var(--muted);
+}
+@media (max-width: 720px) {
+  .page {
+    width: min(100% - 18px, 1080px);
+    padding-top: 16px;
+  }
+  .hero,
+  .doc {
+    border-radius: 18px;
+  }
+  .doc {
+    padding: 20px;
+  }
+}
 
-    body {
-      min-height: 100vh;
-    }
-
-    .page {
-      max-width: 1220px;
-      margin: 0 auto;
-      padding: 28px 20px 80px;
-      box-sizing: border-box;
-    }
-
-    .hero,
-    .paper,
-    .viewer-shell {
-      background: var(--paper);
-      border: 1px solid var(--line);
-      border-radius: 18px;
-      box-shadow: 0 18px 42px rgba(22, 36, 52, 0.08);
-    }
-
-    .hero,
-    .paper {
-      padding: 24px 28px;
-      margin-bottom: 24px;
-    }
-
-    .hero h1,
-    .hero h2,
-    .paper h2 {
-      margin: 0 0 12px;
-      line-height: 1.35;
-    }
-
-    .hero p,
-    .paper p {
-      margin: 10px 0 0;
-      color: var(--sub);
-    }
-
-    .viewer-shell {
-      display: grid;
-      grid-template-columns: minmax(0, 1fr) 320px;
-      gap: 22px;
-      padding: 20px;
-      align-items: start;
-    }
-
-    .viewer-copy h2 {
-      margin: 0 0 10px;
-      line-height: 1.35;
-    }
-
-    .viewer-copy p {
-      margin: 10px 0 0;
-      color: var(--sub);
-    }
-
-    .control-bar {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 10px;
-      margin: 18px 0 10px;
-      align-items: center;
-    }
-
-    .file-pick {
-      display: inline-flex;
-      align-items: center;
-      gap: 10px;
-      padding: 10px 14px;
-      border-radius: 999px;
-      border: 1px solid rgba(15, 111, 178, 0.22);
-      background: var(--accent-soft);
-      color: var(--accent);
-      font: 600 13px/1 "Hiragino Sans", "Yu Gothic", sans-serif;
-      cursor: pointer;
-    }
-
-    .file-pick input {
-      display: none;
-    }
-
-    .control-bar button {
-      appearance: none;
-      border: 1px solid rgba(15, 111, 178, 0.18);
-      background: #f5f9fd;
-      color: var(--ink);
-      border-radius: 999px;
-      padding: 10px 14px;
-      font: 600 13px/1 "Hiragino Sans", "Yu Gothic", sans-serif;
-      cursor: pointer;
-    }
-
-    .control-bar button:hover,
-    .file-pick:hover {
-      background: #d4e9fb;
-    }
-
-    .control-note {
-      margin-top: 6px;
-      font-size: 13px;
-      color: var(--sub);
-    }
-
-    .canvas-wrap {
-      margin-top: 18px;
-      overflow-x: auto;
-    }
-
-    #canvas {
-      display: block;
-      margin: 0;
-      background: #1a261a;
-      box-shadow: 0 18px 40px rgba(11, 22, 38, 0.18);
-    }
-
-    .status-panel {
-      position: sticky;
-      top: 18px;
-      background: var(--panel-bg);
-      color: var(--panel-text);
-      border: 1px solid var(--panel-line);
-      border-radius: 16px;
-      padding: 16px;
-      box-sizing: border-box;
-    }
-
-    .status-panel h3 {
-      margin: 0 0 8px;
-      font: 700 15px/1.35 "Hiragino Sans", "Yu Gothic", sans-serif;
-    }
-
-    .status-panel p {
-      margin: 0 0 10px;
-      color: rgba(219, 231, 247, 0.82);
-      font-size: 13px;
-      line-height: 1.6;
-    }
-
-    #status {
-      margin: 0;
-      white-space: pre-wrap;
-      font: 12px/1.55 ui-monospace, "SFMono-Regular", "Cascadia Mono", monospace;
-    }
-
-    .code-block {
-      margin-top: 18px;
-      padding: 14px 16px;
-      border-radius: 14px;
-      background: #17222c;
-      color: #eef5ff;
-      font: 12px/1.65 ui-monospace, "SFMono-Regular", "Cascadia Mono", monospace;
-      overflow-x: auto;
-    }
-
-    @media (max-width: 980px) {
-      .viewer-shell {
-        grid-template-columns: 1fr;
-      }
-
-      .status-panel {
-        position: static;
-      }
-    }
   </style>
 </head>
 <body>
   <main class="page">
     <section class="hero">
-      <h1>webg sample: embedded_glb_viewer</h1>
-      <h2>`WebgApp` と `EyeRig` を使い、HTML の file input から `.glb` を読み込む埋め込みビューア</h2>
-      <p>
-        この sample は、`layoutMode: "embedded"` の canvas を文書中へ置いたまま、
-        `input[type=file]` で選んだ `.glb` をその場で表示するための最小ビューアです。
-        orbit camera は pointer drag / pinch に加えて、`Shift + Drag` や `Shift + Arrow` による PAN にも対応しています。
-      </p>
-      <p>
-        `Load bundled sample` を押すと同梱の `hand.glb` で即確認でき、`Choose GLB` からは手元の `.glb` を直接読み込めます。
-      </p>
+      <h1>embedded_glb_viewer</h1>
     </section>
-
-    <section class="paper">
-      <h2>確認したいポイント</h2>
-      <p>
-        1. canvas が本文に埋め込まれたままでも、fixed panel と touch buttons が同じ host を基準に重なること
-      </p>
-      <p>
-        2. `.glb` を file input から選ぶと、`WebgApp.loadModel()` の経路で読み込まれ、orbit camera でそのまま見回せること
-      </p>
-      <p>
-        3. touch buttons の `← → ↑ ↓ + -` と `R / || / W / S`、さらに `Shift + Drag` / `Shift + Arrow` / 2 本指 drag の PAN が、`EyeRig` と viewer action に自然につながること
-      </p>
-    </section>
-
-    <section class="viewer-shell">
-      <div class="viewer-copy">
-        <h2 id="viewerHeadline">Upload a GLB file</h2>
-        <p>
-          `WebgApp` が Screen / shader / camera rig / input / overlay をまとめて初期化し、
-          `EyeRig(type="orbit")` が drag / wheel / pinch / keyboard / touch buttons の camera 操作を一つにまとめます。
-        </p>
-        <div class="control-bar">
-          <label class="file-pick">
-            <span>Choose GLB</span>
-            <input id="glbFile" type="file" accept=".glb,model/gltf-binary" />
-          </label>
-          <button type="button" id="loadBundledSample">Load bundled sample</button>
-          <button type="button" id="resetView">Reset view</button>
-          <button type="button" id="clearModel">Clear</button>
-          <button type="button" id="toggleWireframe">W</button>
-          <button type="button" id="saveShot">S</button>
-        </div>
-        <div class="control-note">
-          対応形式は単体 `.glb` です。モデルはバウンディングボックス中心がワールド原点へ来るように配置し、PAN は `Shift + Drag`、`Shift + Arrow`、2 本指 drag で行えます。
-        </div>
-        <div class="canvas-wrap">
-          <canvas id="canvas" width="960" height="720"></canvas>
-        </div>
-        <pre class="code-block">const app = new WebgApp({
-  document,
-  layoutMode: "embedded",
-  fixedCanvasSize: { width: 820, height: 560, useDevicePixelRatio: false }
-});
-
-const orbit = app.createOrbitEyeRig({
-  target: [0.0, 0.0, 0.0],
-  distance: 8.0,
-  yaw: 0.0,
-  pitch: 0.0
-});</pre>
-      </div>
-
-      <aside class="status-panel">
-        <h3>viewer status</h3>
-        <p>
-          現在の file、load stage、triangle 数、camera 姿勢、error の有無をここで追えます。
-        </p>
-        <pre id="status">initializing...</pre>
-      </aside>
-    </section>
+    <article class="doc">
+<h1>embedded_glb_viewer</h1>
+<p><a href="index.en.html">English</a> | 日本語</p>
+<p><img src="./embedded_glb_viewer.jpg" alt="embedded_glb_viewer" /></p>
+<h2>概要</h2>
+<ul><li>WebgApp の layoutMode: &quot;embedded&quot; と fixedCanvasSize を使い、本文の途中へ埋め込んだ canvas の中で .glb ビューアを動かすサンプルです</li><li>input[type=file] で選んだ単体 .glb を WebgApp.loadModel() から読み込み、EyeRig(type=&quot;orbit&quot;) のドラッグ / pinch / キーボード操作、viewer 側のタッチ orbit / zoom ボタン、CommandPalette の viewer action で確認できるようにしています</li><li>読み込んだモデルは、バウンディングボックス中心がワールド原点へ来るように配置し、camera の target も原点から始めます</li><li>Load bundled sample を押すと同梱の samples/gltf_loader/hand.glb をそのまま表示できるため、手元のモデルが無い状態でも embedded viewer の挙動をすぐ確認できます</li><li>タッチ controls は InputController.installTouchControls() で追加し、← / → / ↑ / ↓ / + / - を orbit / zoom の step action として、R / || / W / S を viewer action として接続しています</li><li>W キー、DOM の W ボタン、タッチの W、CommandPalette の Wire で、表示中 shape 全体を wireframe 表示へ一括切り替えできます</li><li>PAN は EyeRig の標準操作にそろえ、Shift + Drag、Shift + Arrow、2 本指ドラッグで target を screen 方向へ移動できます</li><li>読み込み中は showOverlayPanel({ format: &quot;pre&quot;, ... }) で stage と経過時間を canvas 上へ出し、Help Panel と右側 status には file 名、triangle 数、clip 数、camera 状態、error をまとめて表示します</li></ul>
+<h2>実行方法</h2>
+<ul><li>実行ファイルは <a href="./embedded_glb_viewer.html">./embedded_glb_viewer.html</a> です</li><li>WebGPU に対応したブラウザで開き、必要に応じて Help Panel と CommandPalette を合わせて確認してください</li></ul>
+<h2>使用している webg 機能</h2>
+<ul><li>WebgApp: Screen / Shader / Space / Input / Message / overlay の標準初期化</li><li>EyeRig(type=&quot;orbit&quot;): ドラッグ / ホイール / pinch / キーボードによるオービットカメラ</li><li>WebgApp.loadModel(..., { format: &quot;gltf&quot; }): glTF / GLB ローダー経路</li><li>InputController.installTouchControls(): coarse pointer 向けのタッチボタン</li><li>CommandPalette: load sample / clear / reset / pause / wireframe / screenshot を canvas 上のパレットにまとめる</li><li>WebgApp.showOverlayPanel(): 読み込み中 stage 表示</li><li>WebgApp.takeScreenshot(): 現在の canvas の保存</li></ul>
+<h2>確認ポイント</h2>
+<ul><li>Choose GLB から .glb を選ぶと、その場で読み込みが始まり、読み込み完了後にモデルが表示されることを確認します</li><li>Load bundled sample で hand.glb が表示され、animation を持つモデルでは Space またはタッチの || で pause / resume できることを確認します</li><li>読み込み直後にモデルの中心がワールド原点へ来て、Help Panel の target が 0, 0, 0 から始まることを確認します</li><li>ドラッグ、pinch、Arrow、[ ]、タッチの ← / → / ↑ / ↓ / + / - が同じ orbit camera を操作し、タッチボタンは 1 tap ごとに確実に反応することを確認します</li><li>Shift + Drag、Shift + Arrow、2 本指ドラッグで、view の target が screen 方向へ自然に平行移動することを確認します</li><li>W を切り替えると、表示中モデル全体が solid / wireframe で切り替わることを確認します</li><li>R または Reset view で camera がフレーミング初期値へ戻ることを確認します</li><li>S またはタッチの S で現在の canvas が保存されることを確認します</li><li>/ または canvas ダブルタップで CommandPalette が開き、Load / Clear / Reset / Pause / Wire / Shot を実行できることを確認します</li></ul>
+<h2>操作方法</h2>
+<ul><li>Choose GLB: ローカルの .glb ファイルを選択</li><li>Load bundled sample: 同梱 hand.glb を読み込む</li><li>ドラッグ: orbit camera</li><li>2 本指ドラッグ: camera 平行移動</li><li>pinch / ホイール / [ ] / タッチ + -: zoom</li><li>Arrow / タッチ ← → ↑ ↓: orbit camera</li><li>Shift + Drag / Shift + Arrow: camera 平行移動</li><li>W / DOM W / タッチ W: wireframe 切り替え</li><li>R / タッチ R: camera reset</li><li>Space / タッチ ||: animation pause / resume</li><li>S / DOM S / タッチ S: screenshot 保存</li><li>Clear: 現在モデルを隠して placeholder 表示へ戻す</li><li>/ または canvas ダブルタップ: CommandPalette を開く</li></ul>
+    </article>
   </main>
-
-  <script type="module" src="./main.js"></script>
 </body>
 </html>

@@ -1,0 +1,6 @@
+Sample Help Panel initial-collapse contract
+
+- Scan every JavaScript implementation below `samples/`.
+- Find each `buildHelpPanelOptions({ ... })` call.
+- Require every sample Help Panel to specify `collapsed: true`.
+- Keep the core preset default unchanged so non-sample callers retain their existing behavior.

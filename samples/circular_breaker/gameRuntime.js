@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// samples/circular_breaker/gameRuntime.js  2026/04/09
+// samples/circular_breaker/gameRuntime.js  2026/07/25
 //   circular_breaker sample
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -203,6 +203,7 @@ export const createGameRuntime = ({
     resetPuck(true);
   };
 
+  // `takeScreenshot`は現在のキャンバス画像を取得し、指定形式で保存する
   const takeScreenshot = () => {
     const d = new Date();
     const pad2 = (v) => String(v).padStart(2, "0");
@@ -274,6 +275,7 @@ export const createGameRuntime = ({
     }
   };
 
+  // パドルの位置と回転を起動時の状態へ戻す
   const resetPaddleToInitial = () => {
     state.paddleSpin = 0.0;
     state.paddleYaw = Math.PI * 0.5;
@@ -340,6 +342,7 @@ export const createGameRuntime = ({
     highScoreStore
   });
 
+  // `supply`の`highlight`を現在の入力と実行状態に合わせて更新する
   const updateSupplyHighlight = () => {
     // 補給ブロックを常に視認しやすくするため、発光色をゆっくり脈動させる
     // あわせて非補給ブロックの texture/normal-map 利用フラグを明示的に戻し、
@@ -386,6 +389,7 @@ export const createGameRuntime = ({
     }
   };
 
+  // `puck`の`backside`の状態を現在の入力と実行状態に合わせて更新する
   const updatePuckBacksideState = () => {
     // 確認用途: パック位置を paddleNode ローカルZ軸へ毎フレーム投影
     // `puckInPaddleLocalZPositive` が true のとき、パックはローカルZ正側に存在する
@@ -395,6 +399,7 @@ export const createGameRuntime = ({
     state.puckInPaddleLocalZPositive = state.puckLocalZ > 0.0;
   };
 
+  // パックの表裏に応じて外観を更新する
   const updatePuckVisualByBackside = () => {
     // パックが paddleNode ローカルZ正側にある間は暗色・高specularへ切り替える
     // 見た目更新を毎フレーム行わず、状態が変わったときだけ反映して負荷を抑える
@@ -621,6 +626,7 @@ export const createGameRuntime = ({
     return true;
   };
 
+  // `openLockedBlocks`は必要な画面要素を準備し、表示状態を更新する
   const openLockedBlocks = () => {
     state.locksOpen = true;
     for (let i = 0; i < blocks.length; i++) {
@@ -633,6 +639,7 @@ export const createGameRuntime = ({
     }
   };
 
+  // `block`の`collisions`を受け取った段階で、対応する状態更新と処理を実行する
   const handleBlockCollisions = () => {
     if (state.blockHitCooldown > 0.0) return;
     for (let i = 0; i < blocks.length; i++) {
@@ -710,6 +717,7 @@ export const createGameRuntime = ({
     }
   };
 
+  // パックがパドルの背後へ抜けたときの失敗処理を行う
   const handlePuckMissByPaddleBack = () => {
     if (state.puckMissGraceSec > 0.0) return;
     // 仕様:

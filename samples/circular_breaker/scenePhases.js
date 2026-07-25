@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// samples/circular_breaker/scenePhases.js  2026/05/06
+// samples/circular_breaker/scenePhases.js  2026/07/25
 //   circular_breaker sample
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -45,6 +45,7 @@ const SCENE_EVENT_SOUND_MAP = {
   fail: "gameover"
 };
 
+// シーンの`bgm`の`profile`を対象の状態または描画設定へ反映する
 const applySceneBgmProfile = (audio, name) => {
   const profile = SCENE_BGM_PROFILES[name];
   if (!profile) {
@@ -57,6 +58,7 @@ const applySceneBgmProfile = (audio, name) => {
   return profile;
 };
 
+// `playSceneEventSound`は選択中の音声またはアニメーションの再生状態を更新する
 const playSceneEventSound = (audio, name) => {
   const seName = SCENE_EVENT_SOUND_MAP[name];
   if (!seName) {

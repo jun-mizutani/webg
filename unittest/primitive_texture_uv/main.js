@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// unittest/primitive_texture_uv/main.js  2026/04/28
+// unittest/primitive_texture_uv/main.js  2026/07/25
 //   primitive_texture_uv sample
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -21,6 +21,7 @@ import { bootUnitTestApp } from "../shared/UnitTestApp.js";
 
 const SPEED = 0.42;
 
+// 投影を受け取り、現在の設定と後続処理へ反映する
 const setProjection = (screen, shader, angle = 50) => {
   // UV の見えを比較しやすいよう、少し引いた固定視点の投影にする
   const proj = new Matrix();
@@ -29,6 +30,7 @@ const setProjection = (screen, shader, angle = 50) => {
   shader.setProjectionMatrix(proj);
 };
 
+// テクスチャのY方向の反転を読み込み、検証済みのデータとして後続処理へ渡す
 const loadTextureFlipY = async (gpu, url) => {
   // canvas の画素列は上端から並ぶため、webg の Bottom-Left UV 基準に合わせて Y 方向だけ反転する
   // X 方向は反転しないことで、UV 検査用の番号が左右反転せず読める向きになる
@@ -49,6 +51,7 @@ const loadTextureFlipY = async (gpu, url) => {
   return tex;
 };
 
+// `textured`の形状を生成し、後続処理で利用できる状態にする
 const createTexturedShape = (gpu, label, texture) => {
   // 各 primitive に対して、sample 側で texture mapping の違いだけを与える
   const shape = new Shape(gpu);
@@ -106,6 +109,7 @@ const createTexturedShape = (gpu, label, texture) => {
   return shape;
 };
 
+// このインスタンスの初期化段階で、必要な状態と資源を準備して処理を開始する
 const start = async ({ screen, gpu, setStatus, setViewportLayout, startLoop, document }) => {
   // unittest では shader と projection の共通処理だけを持ち、UV 確認ロジックは sample 本体に残す
   const shader = new SmoothShader(gpu);

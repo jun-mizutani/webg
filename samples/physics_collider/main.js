@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// samples/physics_collider/main.js  2026/05/12
+// samples/physics_collider/main.js  2026/07/25
 //   physics_collider sample
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -132,6 +132,7 @@ let app = null;
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
 const normalizeRatio = (value) => value - Math.floor(value);
 
+// `showStartError`は必要な画面要素を準備し、表示状態を更新する
 const showStartError = (error) => {
   const existing = document.getElementById("start-error");
   if (existing) existing.remove();
@@ -217,6 +218,7 @@ const generateBodySpecs = (count) => {
   return specs;
 };
 
+// `box`の形状を生成し、後続処理で利用できる状態にする
 const createBoxShape = (gpu, size, color) => {
   const shape = new Shape(gpu);
   shape.applyPrimitiveAsset(Primitive.cuboid(size[0], size[1], size[2]));
@@ -232,6 +234,7 @@ const createBoxShape = (gpu, size, color) => {
   return shape;
 };
 
+// 床の形状を生成し、後続処理で利用できる状態にする
 const createFloorShape = (gpu) => {
   const shape = new Shape(gpu);
   shape.applyPrimitiveAsset(Primitive.cuboid(FLOOR_SIZE[0], FLOOR_SIZE[1], FLOOR_SIZE[2]));
@@ -247,6 +250,7 @@ const createFloorShape = (gpu) => {
   return shape;
 };
 
+// `wall`の形状を生成し、後続処理で利用できる状態にする
 const createWallShape = (gpu, size) => {
   const shape = new Shape(gpu);
   shape.applyPrimitiveAsset(Primitive.cuboid(size[0], size[1], size[2]));
@@ -386,6 +390,7 @@ const resetBodyEntry = (entry) => {
   entry.lastContactMs = -Infinity;
 };
 
+// 状態表示の行を現在の入力と状態から求め、呼び出し元へ返す
 const formatStatusLines = (entries, physicsSpace, paused, fps, runTimeMs, sleepIslandDebug) => {
   const contactCount = physicsSpace.getLastContacts().length;
   let awakeCount = 0;
@@ -413,6 +418,7 @@ const formatStatusLines = (entries, physicsSpace, paused, fps, runTimeMs, sleepI
   ];
 };
 
+// このインスタンスの初期化段階で、必要な状態と資源を準備して処理を開始する
 const start = async () => {
   app = new WebgApp({
     document,
@@ -470,6 +476,7 @@ const start = async () => {
   });
   physicsSpace.addBody(floor);
 
+  // `wall`を対象へ追加し、後続処理から参照できるようにする
   const addWall = (name, position, size) => {
     const wallVisual = space.addNode(null, `${name}_visual`);
     wallVisual.setPosition(position[0], position[1], position[2]);
@@ -557,6 +564,7 @@ const start = async () => {
   let runTimeMs = 0.0;
   let fpsEstimate = 0.0;
 
+  // `burst`の`bodies`を対象へ追加し、後続処理から参照できるようにする
   const addBurstBodies = () => {
     const releasedNow = activateBurstEntries(bodyEntries, BURST_BODY_COUNT);
     if (releasedNow > 0) {
@@ -611,6 +619,7 @@ const start = async () => {
     return activateBurstEntries(bodyEntries, addCount);
   };
 
+  // すべての物体を初期状態へ戻し、前回の状態を残さない
   const resetAllBodies = () => {
     for (let i = 0; i < bodyEntries.length; i++) {
       resetBodyEntry(bodyEntries[i]);

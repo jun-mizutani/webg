@@ -1,0 +1,33 @@
+# ComputeSsrPass Reverse-Z単体テスト
+
+## 目的
+
+ComputeSsrPassが、対象pixel、ray開始位置、coarse sample、binary refinement、最終hit候補で読むGeometry Buffer depthをReverse-Z規則で扱うことを確認する。背景値0だけを除外し、geometryのdepthは共通関数で正のview-space距離へ復元してからrayとの前後関係を比較する
+
+SSRの交差判定はraw depthの大小ではなく線形化後の距離差を使うため、Reverse-Z移行を理由に符号を反転しない。この点を文字列契約として確認し、表示を見ながら符号を試す対症療法を防ぐ
+
+## 確認項目
+
+1. shader本体の5種類のdepth sampleと共通helper定義が `isGBufferBackgroundDepth` を使用する
+2. 旧通常Zの `0.999999` 比較が残っていない
+3. coarse交差候補は `previousDelta < 0` かつ `currentDelta >= 0` のまま維持される
+4. 最終hitは `hitDelta >= 0` かつ `hitDelta <= thickness` のまま維持される
+5. depth debug表示はfinite/infinite farの双方で使えるReverse-Z raw depthを表示する
+6. Camera Frameからfinite farのprojection uniformを作り、infinite farは0 sentinelを保持する
+7. 旧projection配列だけを渡した場合はReverse-Z Camera Frame不足として例外になる
+
+## 実行方法
+
+```sh
+node headless_tests/core/compute_ssr_pass/headless_probe.js
+```
+
+## 結果
+
+2026-07-12に実行し、全項目が成功した。表示文字列は次のとおり
+
+```text
+compute_ssr_pass_depth_contracts: all SSR depth contracts passed
+```
+
+このテストはreflection画像の品質を判定するものではない。背景判定の網羅、線形化後の交差符号、projection uniformを検査し、Reverse-Z移行範囲を深度契約に限定する

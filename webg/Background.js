@@ -1,11 +1,12 @@
 // ---------------------------------------------
-// Background.js   2026/04/21
+// Background.js   2026/07/25
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // ---------------------------------------------
 
 import Shader from "./Shader.js";
 import Texture from "./Texture.js";
+import { CAMERA_REVERSE_Z } from "./DepthConvention.js";
 
 export default class Background extends Shader {
   // 背景描画用の色/窓/順序パラメータを初期化する
@@ -109,9 +110,9 @@ fn fsMain(input : VSOut) -> @location(0) vec4f {
         cullMode: "none"
       },
       depthStencil: {
-        format: "depth24plus",
+        format: CAMERA_REVERSE_Z.format,
         depthWriteEnabled: false,
-        depthCompare: "less"
+        depthCompare: CAMERA_REVERSE_Z.compare
       }
     });
 
@@ -199,6 +200,7 @@ fn fsMain(input : VSOut) -> @location(0) vec4f {
     this.texture = texture;
   }
 
+  // 背景の画像を受け取り、現在の設定と後続処理へ反映する
   async setBackgroundImage(file) {
     // 画像ファイルをTextureとして読み込み、背景テクスチャに設定する
     const tex = new Texture(this.gpu);

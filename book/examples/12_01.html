@@ -199,7 +199,6 @@ app.showOverlayPanel(buildHelpPanelOptions({
 
 app.start({
   onUpdate: ({ deltaSec }) => {
-    orbit.update(deltaSec);
     modelRoot.rotateY(12.0 * deltaSec);
 
     const nowMs = app.space.now();

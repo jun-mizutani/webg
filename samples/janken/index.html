@@ -3,21 +3,189 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>WebGPU Janken</title>
+  <title>janken</title>
   <link rel="icon" href="data:," />
-  <!-- 2026/03/12 -->
+  <!-- 2026/06/19 -->
   <style>
-    html, body {
-      margin: 0;
-      background: #1d291d;
-    }
-    canvas {
-      display: block;
-    }
+
+:root {
+  color-scheme: light;
+  --bg: #eef3f8;
+  --paper: rgba(255, 255, 255, 0.94);
+  --line: #c8d5e4;
+  --ink: #17324a;
+  --muted: #5c748b;
+  --accent: #1566ab;
+  --accent-soft: #dfeefe;
+  --code-bg: #f3f7fb;
+  --shadow: rgba(29, 52, 79, 0.10);
+}
+* { box-sizing: border-box; }
+html, body {
+  margin: 0;
+  min-height: 100%;
+}
+body {
+  background:
+    radial-gradient(circle at top left, rgba(21, 102, 171, 0.12), transparent 24%),
+    radial-gradient(circle at top right, rgba(255, 191, 118, 0.10), transparent 22%),
+    linear-gradient(180deg, #f8fbfd 0%, var(--bg) 100%);
+  color: var(--ink);
+  font: 16px/1.78 "Avenir Next", "Hiragino Sans", "Yu Gothic", sans-serif;
+}
+.page {
+  width: min(1080px, calc(100% - 28px));
+  margin: 0 auto;
+  padding: 24px 0 56px;
+}
+.hero,
+.doc {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  box-shadow: 0 22px 52px var(--shadow);
+}
+.hero {
+  padding: 22px 24px;
+  margin-bottom: 18px;
+}
+.hero h1 {
+  margin: 0 0 8px;
+  font-size: clamp(2rem, 4vw, 3rem);
+  line-height: 1.08;
+}
+.hero p {
+  margin: 0;
+  color: var(--muted);
+}
+.doc {
+  padding: 28px;
+}
+.doc > :first-child {
+  margin-top: 0;
+}
+h1, h2, h3, h4, h5, h6 {
+  line-height: 1.25;
+  margin: 1.45em 0 0.55em;
+}
+h1 {
+  font-size: 2.2rem;
+}
+h2 {
+  padding-bottom: 0.28em;
+  border-bottom: 1px solid var(--line);
+  font-size: 1.48rem;
+}
+h3 {
+  font-size: 1.14rem;
+}
+p, ul, ol, table, pre, blockquote {
+  margin: 0 0 1em;
+}
+ul, ol {
+  padding-left: 1.4em;
+}
+li + li {
+  margin-top: 0.26em;
+}
+a {
+  color: var(--accent);
+  text-decoration: none;
+}
+a:hover {
+  text-decoration: underline;
+}
+img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  border-radius: 16px;
+  border: 1px solid var(--line);
+  box-shadow: 0 12px 32px rgba(29, 52, 79, 0.08);
+  margin: 1.1em 0 1.4em;
+}
+code {
+  padding: 0.12em 0.38em;
+  border-radius: 0.45em;
+  background: var(--code-bg);
+  border: 1px solid #dbe6f1;
+  font: 0.92em/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+pre {
+  padding: 14px 16px;
+  overflow-x: auto;
+  border-radius: 14px;
+  background: #0f1720;
+  color: #ecf5ff;
+}
+pre code {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #ffffff;
+}
+th, td {
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  text-align: left;
+  vertical-align: top;
+}
+th {
+  background: #f5f9fc;
+}
+hr {
+  border: 0;
+  border-top: 1px solid var(--line);
+  margin: 1.5em 0;
+}
+blockquote {
+  padding: 0.3em 0 0.3em 1em;
+  border-left: 4px solid #c9dbef;
+  color: var(--muted);
+}
+@media (max-width: 720px) {
+  .page {
+    width: min(100% - 18px, 1080px);
+    padding-top: 16px;
+  }
+  .hero,
+  .doc {
+    border-radius: 18px;
+  }
+  .doc {
+    padding: 20px;
+  }
+}
+
   </style>
 </head>
 <body>
-  <canvas id="canvas" width="900" height="700"></canvas>
-  <script type="module" src="./main.js"></script>
+  <main class="page">
+    <section class="hero">
+      <h1>janken</h1>
+    </section>
+    <article class="doc">
+<h1>janken</h1>
+<p><a href="index.en.html">English</a> | 日本語</p>
+<p><img src="./janken.jpg" alt="janken" /></p>
+<h2>概要</h2>
+<ul><li>samples/gltf_loader/hand.glb の手モデルと AnimationState を使って、ジャンケンを行うサンプルです。</li><li>手を 2 つ同時に表示し、左側は user、右側は app が担当します。</li><li>user は G / C / P で手を決め、app 側は同じ frame で乱数から手を決めます。</li><li>画面下にはタッチボタンも表示し、PC でも G / C / P を直接押して操作できます。</li><li>hand.glb は 1 回だけ build し、その runtime から player / cpu の 2 hand を instantiate() しているため、geometry / GPU buffer は共有しつつ animation runtime は別々に進みます。</li><li>各 hand は独立した Action と AnimationState を持ち、同じ asset を使っても別々に animation を再生できます。</li><li>操作ガイドと現在状態は app.message.setLines() でそろえ、勝敗だけを 2 倍スケールの短い Message で中央表示します。</li><li>2 つの hand は少し引いた距離からやや見上げ気味に見えるようにし、左右に約 30 度ロールさせています。</li><li>ジャンケンの手遷移は entryDurationMs = 250 にそろえ、0.25 秒程度で次の手へ移る設定です。</li></ul>
+<h2>実行方法</h2>
+<ul><li>実行ファイルは <a href="./janken.html">./janken.html</a> です</li><li>WebGPU に対応したブラウザで開き、必要に応じて help panel や HUD と合わせて確認してください</li></ul>
+<h2>使用している webg 機能</h2>
+<ul><li>WebgApp: Screen / Shader / Space / Input / Message をまとめて初期化し、app.message.setLines() と loadModel(..., { format: &quot;gltf&quot;, instantiate: false }) で shared runtime を 1 回 build したあと、runtime.instantiate() で 2 hand を起こす</li><li>Action: hand の key 区間を N0 / N2 / N5 の action として再生する</li><li>Message: 勝敗結果の短い ASCII title を大きく中央表示する</li></ul>
+<h2>確認ポイント</h2>
+<ul><li>G は hand の N0=12-13, C は N2=4-5, P は N5=10-11 に対応する pose になっていることを確認します。</li><li>同じ手を連続で入力しても self-transition により animation が再始動することを確認します。</li><li>guide は画面下、status は画面上へ分かれ、勝敗だけが中央の大きな Message で表示されることを確認します。</li></ul>
+<h2>操作方法</h2>
+<ul><li>G: グーを出す</li><li>C: チョキを出す</li><li>P: パーを出す</li><li>Space: round と表示を初期状態へ戻す</li><li>タッチボタン: G / C / P を PC と mobile の両方で表示し、キーボード と同じ key 名で扱う</li></ul>
+<p>補足</p>
+<ul><li>このサンプルでは hand asset の pose 対応を次のように使います<ul><li>グー: hand の N0=12-13</li><li>チョキ: hand の N2=4-5</li><li>パー: hand の N5=10-11</li></ul></li></ul><ul><li>AnimationState は再生品質自体を変えるものではなく、どの hand action を始めるかを整理するために使っています</li><li>janken では入力イベントごとに AnimationState.setState(..., force: true) を呼び、同じ手でも action を再始動できる構成にしています</li><li>2 つの hand は runtime.instantiate() で別々に生成しているため、同じ mesh resource を共有していても Skeleton と Animation の runtime 状態は別です</li><li><code>hand.glb</code>では、GはN0の12-13、CはN2の4-5、PはN5の10-11を使います</li></ul>
+    </article>
+  </main>
 </body>
 </html>

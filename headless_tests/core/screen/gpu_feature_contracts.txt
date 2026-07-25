@@ -1,0 +1,22 @@
+サンプル: screen_gpu_features
+
+概要
+- `Screen` と `WebgApp` のGPU feature指定を、実GPUを使わずに確認するheadless testです
+- required feature、optional feature、既存コードの未指定時互換、Compute-first `WebgApp`のtimestamp-query要求を検証します
+
+このテストで使う機能
+- `new Screen(document, { gpu })`: GPU device作成時のfeatureを指定する
+- `getRequestedGPUFeatures()`: deviceへ実際に要求したfeature名を取得する
+- `getUnavailableOptionalGPUFeatures()`: adapter未対応だったoptional feature名を取得する
+- `hasGPUFeature()`: 初期化済みdeviceがfeatureを持つか確認する
+
+確認ポイント
+- feature未指定時は従来どおり`requestDevice()`を引数なしで呼ぶことを確認します
+- required featureと対応済みoptional featureだけを重複なしで要求することを確認します
+- 未対応optional featureをdeviceへ要求せず、名前を確認できることを確認します
+- 未対応required featureを通常deviceへ置き換えず、明示的な例外にすることを確認します
+- gpu optionのobject型とfeature optionの配列型、非空文字列を検証することを確認します
+- `computeFrame: true`の`WebgApp`が既存featureを維持して`timestamp-query`をoptionalへ追加することを確認します
+
+実行方法
+- `node headless_tests/core/screen/headless_probe.js`

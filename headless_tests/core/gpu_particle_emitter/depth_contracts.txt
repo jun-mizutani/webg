@@ -1,0 +1,34 @@
+# gpu_particle_emitter_depth_contracts
+
+## 目的
+
+GpuParticleEmitterの独自render pipelineを通常カメラReverse-Zへ一致させる。粒子buffer layoutは利用側WGSLが決めるため、コアが位置fieldを推測して書き換えず、camera-relative座標を明示契約として要求する。
+
+## 確認内容
+
+- render pipelineが `depth32float`・`greater`を使う。
+- render passがdepth 0でclearする。
+- `CAMERA_REVERSE_Z`を必須にする。
+- `coordinateSpace: "camera-relative"`を必須にする。
+- Shadow通常Z、World座標指定、指定省略を拒否する。
+- `samples/compute_particles`が両方の必須optionを渡し、WGSLで近大・遠小のReverse-Z depthを出力する。
+
+## 実行方法
+
+```sh
+node --experimental-default-type=module headless_tests/core/gpu_particle_emitter/headless_probe.js
+```
+
+## 結果
+
+2026-07-13 JSTにモジュールとsampleの構文確認、専用headless testを実行した。すべて終了コード0となり、次を表示した。
+
+```text
+gpu_particle_emitter_depth_contracts: all particle contracts passed
+```
+
+## 解釈
+
+render pipelineは `depth32float`・`greater`、render passはclear value 0となった。Shadow通常Zやdepth convention省略は拒否された。
+
+粒子bufferのどのfieldが位置かはコアから判定できないため、値を推測して減算する処理は追加していない。`coordinateSpace: "camera-relative"`を必須にし、利用側WGSLとparam layoutがCamera Frameに従うことを明示契約にした。`samples/compute_particles`もこの指定へ移行し、sample独自WGSLの通常Z出力をReverse-Zへ変更した。

@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// samples/shapes/main.js  2026/04/28
+// samples/shapes/main.js  2026/07/25
 //   shapes sample
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -105,6 +105,7 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 });
 
+// テクスチャのY方向の反転を読み込み、検証済みのデータとして後続処理へ渡す
 const loadTextureFlipY = async (gpu, url) => {
   // canvas は上端から画素を返すため、webg の Bottom-Left UV 基準に合わせて Y 方向だけ反転する
   const response = await fetch(url);
@@ -131,6 +132,7 @@ const loadTextureFlipY = async (gpu, url) => {
   };
 };
 
+// 画像の法線のテクスチャを生成し、後続処理で利用できる状態にする
 const createImageNormalTexture = async (gpu, rgba, width, height) => {
   // 元画像そのものから normal map を作ると、
   // texture 比較と image normal 比較を 1 本の sample 内で読み分けやすい
@@ -150,6 +152,7 @@ const createImageNormalTexture = async (gpu, rgba, width, height) => {
   return normalTex;
 };
 
+// `procedural`の法線の`textures`を生成し、後続処理で利用できる状態にする
 const createProceduralNormalTextures = async (gpu) => {
   // 旧 `shapes` で使っていた procedural normal の 2 系統を残し、
   // image normal と同じ sample 上で見比べられるようにする
@@ -191,6 +194,7 @@ const createProceduralNormalTextures = async (gpu) => {
   return { noise, dots };
 };
 
+// `worldToCell`は座標または数値を計算し、後続処理で使う結果を返す
 const worldToCell = (vp, worldPos) => {
   // 3D 座標を 80x25 の文字セルへ変換し、画面上の番号ラベル位置へ使う
   const ndc = vp.mulVector(worldPos);
@@ -200,6 +204,7 @@ const worldToCell = (vp, worldPos) => {
   return [cx, cy];
 };
 
+// 指定した基本形状の設定を描画用の形状へ反映する
 const applyPrimitiveToShape = (shape, index) => {
   // geometry 自体は固定にして、surface mode の差だけを比較しやすくする
   shape.setTextureMappingMode(0);
@@ -226,6 +231,7 @@ const applyPrimitiveToShape = (shape, index) => {
   }
 };
 
+// `shapes`を生成し、後続処理で利用できる状態にする
 const createShapes = (gpu) => {
   // surface mode 切替では material だけを更新したいので、
   // shape と geometry は起動時に一度だけ確定しておく
@@ -239,6 +245,7 @@ const createShapes = (gpu) => {
   return shapes;
 };
 
+// 操作の`rows`を生成し、後続処理で利用できる状態にする
 const makeControlRows = (app, state) => {
   const mode = SURFACE_MODE_INFO[state.surfaceModeKey];
   const wireRows = [];
@@ -276,6 +283,7 @@ const makeControlRows = (app, state) => {
   ];
 };
 
+// このインスタンスの初期化段階で、必要な状態と資源を準備して処理を開始する
 const start = async () => {
   app = new WebgApp({
     document,
@@ -316,6 +324,7 @@ const start = async () => {
     wireframeStates: new Array(SHAPE_LABELS.length).fill(false)
   };
 
+  // `pickNormalTexture`は座標または数値を計算し、後続処理で使う結果を返す
   const pickNormalTexture = () => {
     const mode = SURFACE_MODE_INFO[state.surfaceModeKey];
     if (mode.normalSource === "image") return imageNormalTex;
@@ -324,6 +333,7 @@ const start = async () => {
     return null;
   };
 
+  // 選択した表面の表示方式をすべての形状へ反映する
   const applySurfaceModeToShapes = () => {
     // unified sample の中心処理:
     // geometry は固定のまま、texture / normal / wireframe 条件だけを切り替える
@@ -369,6 +379,7 @@ const start = async () => {
   labels.shader.setScale(1.0);
   labels.setColor(1.0, 1.0, 1.0);
 
+  // 診断情報の統計情報を現在の入力と実行状態に合わせて更新する
   const refreshDiagnosticsStats = (frameCount = app.screen.getFrameCount()) => {
     const envReport = app.checkEnvironment({
       stage: "runtime-check",
@@ -389,6 +400,7 @@ const start = async () => {
     return envReport;
   };
 
+  // 検査情報のレポートを生成し、後続処理で利用できる状態にする
   const makeProbeReport = (frameCount) => {
     const mode = SURFACE_MODE_INFO[state.surfaceModeKey];
     const envReport = app.checkEnvironment({
@@ -417,6 +429,7 @@ const start = async () => {
   });
   app.configureDebugKeyInput();
 
+  // キーの操作を対象の状態または描画設定へ反映する
   const applyKeyAction = (key) => {
     if (SURFACE_MODE_KEYS.includes(key)) {
       state.surfaceModeKey = key;
@@ -476,6 +489,7 @@ const start = async () => {
     onAction: ({ key }) => applyKeyAction(String(key).toLowerCase())
   });
 
+  // 操作の`rows`を現在の入力と実行状態に合わせて更新する
   const refreshControlRows = () => {
     const rows = makeControlRows(app, state);
     app.setControlRows(rows, HUD_ROW_OPTIONS);

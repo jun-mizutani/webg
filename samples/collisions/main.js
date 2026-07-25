@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// samples/collisions/main.js  2026/04/10
+// samples/collisions/main.js  2026/07/25
 //   collisions sample
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -14,6 +14,7 @@ import InputController from "../../webg/InputController.js";
 
 const hud = document.getElementById("hud");
 
+// 投影を受け取り、現在の設定と後続処理へ反映する
 const setProjection = (screen, shader, fov = 53) => {
   // 透視投影行列を設定してシェーダへ渡す
   const proj = new Matrix();
@@ -23,6 +24,7 @@ const setProjection = (screen, shader, fov = 53) => {
   return proj;
 };
 
+// 形状を生成し、後続処理で利用できる状態にする
 const createShape = (gpu, kind, color, scale = 1.0) => {
   // 種別ごとに基本形状を作り、scaleでサイズ調整する
   const s = new Shape(gpu);
@@ -41,6 +43,7 @@ const createShape = (gpu, kind, color, scale = 1.0) => {
   return s;
 };
 
+// このインスタンスの初期化段階で、必要な状態と資源を準備して処理を開始する
 const start = async () => {
   // 画面とシェーダの初期化
   const screen = new Screen(document);
@@ -50,6 +53,7 @@ const start = async () => {
   const shader = new SmoothShader(screen.getGPU());
   await shader.init();
   Shape.prototype.shader = shader;
+  // `viewport`の配置を対象の状態または描画設定へ反映する
   const applyViewportLayout = () => {
     screen.resize(Math.max(1, Math.floor(window.innerWidth)), Math.max(1, Math.floor(window.innerHeight)));
     setProjection(screen, shader, 55);
@@ -99,6 +103,7 @@ const start = async () => {
     document.head.appendChild(style);
   }
 
+  // 視点の周回視点を現在の入力と実行状態に合わせて更新する
   const updateEyeOrbit = () => {
     // 親ノード回転で eye を原点周りに公転させる
     // eye のローカル前方は常に親回転を継承するため、原点中心を向き続ける
@@ -145,6 +150,7 @@ const start = async () => {
   // 初期位置での衝突多発を避けるため、位相をずらして開始する
   let t = Math.PI;
 
+  // 形状の`triangles`を現在の入力と状態から求め、呼び出し元へ返す
   const getShapeTriangles = (shape) => {
     if (Array.isArray(shape.indicesArray) && shape.indicesArray.length >= 3) {
       return shape.indicesArray;
@@ -155,6 +161,7 @@ const start = async () => {
     return [];
   };
 
+  // ワールドの`vertices`を現在の入力と状態から求め、呼び出し元へ返す
   const getWorldVertices = (node, shape) => {
     node.setWorldMatrix();
     const src = shape.positionArray ?? [];
@@ -168,6 +175,7 @@ const start = async () => {
     return out;
   };
 
+  // `mover`の半径を現在の入力と状態から求め、呼び出し元へ返す
   const getMoverRadius = () => {
     // moverは球を前提としているので、ローカルAABBから半径を求める
     const box = mover.shape.getBoundingBox();
@@ -180,6 +188,7 @@ const start = async () => {
   const sub3 = (vecA, vecB) => [vecA[0] - vecB[0], vecA[1] - vecB[1], vecA[2] - vecB[2]];
   const dot3 = (vecA, vecB) => vecA[0] * vecB[0] + vecA[1] * vecB[1] + vecA[2] * vecB[2];
 
+  // `closestPointOnTriangle`は座標または数値を計算し、後続処理で使う結果を返す
   const closestPointOnTriangle = (point, triA, triB, triC) => {
     // Real-Time Collision Detection の標準実装
     const ab = sub3(triB, triA);
@@ -228,6 +237,7 @@ const start = async () => {
     ];
   };
 
+  // `sqDistPointTriangle`は座標または数値を計算し、後続処理で使う結果を返す
   const sqDistPointTriangle = (point, triA, triB, triC) => {
     const closest = closestPointOnTriangle(point, triA, triB, triC);
     const dx = point[0] - closest[0];
@@ -236,6 +246,7 @@ const start = async () => {
     return dx * dx + dy * dy + dz * dz;
   };
 
+  // 移動球と相手の形状の組を球対メッシュの判定で再検証する
   const validateMoverPairBySphereMesh = (pair) => {
     // tri-triの誤判定を抑えるため、mover(球) vs 相手メッシュで再確認する
     const otherNode = pair.nodeA === mover.node ? pair.nodeB : pair.nodeA;
@@ -299,6 +310,7 @@ const start = async () => {
     ]
   });
 
+  // `animateMover`は入力に従って位置または姿勢を更新し、表示状態へ反映する
   const animateMover = () => {
     // moverをゆっくり動かして衝突判定の差を観察しやすくする
     t += 0.007;
@@ -308,6 +320,7 @@ const start = async () => {
     mover.node.setPosition(x, y, z);
   };
 
+  // `base`の`colors`を受け取り、現在の設定と後続処理へ反映する
   const setBaseColors = () => {
     // 毎フレーム、ベース色へ戻してから状態色を上書きする
     for (let i = 0; i < entries.length; i++) {
@@ -316,6 +329,7 @@ const start = async () => {
     }
   };
 
+  // `filterMoverPairs`は入力に従って位置または姿勢を更新し、表示状態へ反映する
   const filterMoverPairs = (pairs) => {
     const out = [];
     for (let i = 0; i < pairs.length; i++) {
@@ -327,12 +341,14 @@ const start = async () => {
     return out;
   };
 
+  // 移動球との衝突組から相手側の形状を返す
   const getOtherShapeFromMoverPair = (pair) => {
     if (pair.shapeA === mover.shape) return pair.shapeB;
     if (pair.shapeB === mover.shape) return pair.shapeA;
     return null;
   };
 
+  // `colorByMoverCollisionState`は入力に従って位置または姿勢を更新し、表示状態へ反映する
   const colorByMoverCollisionState = (moverBroadPairs, moverDetailedPairs) => {
     // moverと他物体を状態で色分けする:
     // 非衝突=青(ベース), AABBのみ=緑, 詳細衝突=赤
@@ -364,6 +380,7 @@ const start = async () => {
     }
   };
 
+  // `loop`は処理周期の開始または終了に必要な状態を更新する
   const loop = () => {
     // 矢印キー入力をオービット角に反映
     if (input.has("arrowleft")) orbitYawDeg -= 0.8;

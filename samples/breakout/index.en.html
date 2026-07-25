@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>breakout</title>
+  <link rel="icon" href="data:," />
+  <!-- 2026/06/19 -->
+  <style>
+
+:root {
+  color-scheme: light;
+  --bg: #eef3f8;
+  --paper: rgba(255, 255, 255, 0.94);
+  --line: #c8d5e4;
+  --ink: #17324a;
+  --muted: #5c748b;
+  --accent: #1566ab;
+  --accent-soft: #dfeefe;
+  --code-bg: #f3f7fb;
+  --shadow: rgba(29, 52, 79, 0.10);
+}
+* { box-sizing: border-box; }
+html, body {
+  margin: 0;
+  min-height: 100%;
+}
+body {
+  background:
+    radial-gradient(circle at top left, rgba(21, 102, 171, 0.12), transparent 24%),
+    radial-gradient(circle at top right, rgba(255, 191, 118, 0.10), transparent 22%),
+    linear-gradient(180deg, #f8fbfd 0%, var(--bg) 100%);
+  color: var(--ink);
+  font: 16px/1.78 "Avenir Next", "Hiragino Sans", "Yu Gothic", sans-serif;
+}
+.page {
+  width: min(1080px, calc(100% - 28px));
+  margin: 0 auto;
+  padding: 24px 0 56px;
+}
+.hero,
+.doc {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  box-shadow: 0 22px 52px var(--shadow);
+}
+.hero {
+  padding: 22px 24px;
+  margin-bottom: 18px;
+}
+.hero h1 {
+  margin: 0 0 8px;
+  font-size: clamp(2rem, 4vw, 3rem);
+  line-height: 1.08;
+}
+.hero p {
+  margin: 0;
+  color: var(--muted);
+}
+.doc {
+  padding: 28px;
+}
+.doc > :first-child {
+  margin-top: 0;
+}
+h1, h2, h3, h4, h5, h6 {
+  line-height: 1.25;
+  margin: 1.45em 0 0.55em;
+}
+h1 {
+  font-size: 2.2rem;
+}
+h2 {
+  padding-bottom: 0.28em;
+  border-bottom: 1px solid var(--line);
+  font-size: 1.48rem;
+}
+h3 {
+  font-size: 1.14rem;
+}
+p, ul, ol, table, pre, blockquote {
+  margin: 0 0 1em;
+}
+ul, ol {
+  padding-left: 1.4em;
+}
+li + li {
+  margin-top: 0.26em;
+}
+a {
+  color: var(--accent);
+  text-decoration: none;
+}
+a:hover {
+  text-decoration: underline;
+}
+img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  border-radius: 16px;
+  border: 1px solid var(--line);
+  box-shadow: 0 12px 32px rgba(29, 52, 79, 0.08);
+  margin: 1.1em 0 1.4em;
+}
+code {
+  padding: 0.12em 0.38em;
+  border-radius: 0.45em;
+  background: var(--code-bg);
+  border: 1px solid #dbe6f1;
+  font: 0.92em/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+pre {
+  padding: 14px 16px;
+  overflow-x: auto;
+  border-radius: 14px;
+  background: #0f1720;
+  color: #ecf5ff;
+}
+pre code {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #ffffff;
+}
+th, td {
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  text-align: left;
+  vertical-align: top;
+}
+th {
+  background: #f5f9fc;
+}
+hr {
+  border: 0;
+  border-top: 1px solid var(--line);
+  margin: 1.5em 0;
+}
+blockquote {
+  padding: 0.3em 0 0.3em 1em;
+  border-left: 4px solid #c9dbef;
+  color: var(--muted);
+}
+@media (max-width: 720px) {
+  .page {
+    width: min(100% - 18px, 1080px);
+    padding-top: 16px;
+  }
+  .hero,
+  .doc {
+    border-radius: 18px;
+  }
+  .doc {
+    padding: 20px;
+  }
+}
+
+  </style>
+</head>
+<body>
+  <main class="page">
+    <section class="hero">
+      <h1>breakout</h1>
+    </section>
+    <article class="doc">
+<h1>breakout</h1>
+<p>English | <a href="index.html">日本語</a></p>
+<p><img src="./breakout.jpg" alt="breakout" /></p>
+<h2>Overview</h2>
+<ul><li>This sample builds a simple breakout game with 3D presentation by using <code>webg</code>'s basic game-oriented features</li><li>It uses <code>WebgApp</code> as the entry point and collects input, HUD, scene phase, game-state management, and display messages into a single processing flow</li><li>The board progresses through four states, <code>title / play / pause / result</code>, and switches naturally according to input, remaining bricks, remaining time, and remaining lives</li><li>The appearance is close to 2D, but the game is built by generating <code>Paddle / Ball / Brick / Wall</code> as 3D shapes and combining them with 2D-like coordinate management</li><li>The <code>Message</code>-based HUD shows score, combo, time, lives, phase, and ball state so the game flow can be followed from on-screen information alone</li><li>Touch buttons for left / right movement and <code>Start / Pause / R</code> are provided so the same game actions can be performed through both keyboard and touch input</li></ul>
+<h2>How to Run</h2>
+<ul><li>Open <a href="./breakout.html">./breakout.html</a></li><li>Use a browser with WebGPU support, and check the help panel and HUD together with the sample when needed</li></ul>
+<h2>webg Features Used</h2>
+<ul><li><code>WebgApp</code>: initializes <code>Screen / Shader / Space / Input / Message / HUD / debug tools</code> together</li><li>Sample-side <code>GameStateManager</code>: organizes state transitions for <code>title / play / pause / result</code></li><li><code>InputController</code>: gathers normalized key names from keyboard and touch input into action names</li><li><code>Touch</code>: enters left / right movement and launch / pause / restart through touch buttons</li><li><code>Shape</code>: creates arbitrarily sized box shapes for the paddle, bricks, walls, backdrop, and related objects</li><li><code>Primitive</code>: generates the sphere mesh for the ball</li><li><code>Space</code>: places each shape as a node and builds the 3D scene for display</li><li><code>Message</code>: displays guide rows, control rows, game HUD, and status</li><li><code>Toast</code>: displays temporary state notifications such as serve, pause, miss, and result</li></ul>
+<h2>Implementation Characteristics</h2>
+<ul><li>Input is collected into <code>left / right / launch / pause / restart</code> through <code>app.registerActionMap()</code></li><li><code>left</code> corresponds to <code>ArrowLeft / A</code>, and <code>right</code> corresponds to <code>ArrowRight / D</code></li><li><code>launch</code> corresponds to <code>Enter / Space</code>, <code>pause</code> corresponds to <code>P / Esc</code>, and <code>restart</code> corresponds to <code>R</code></li><li>The touch buttons <code>← / →</code> are treated as hold input and used for left-right paddle movement</li><li>The touch buttons <code>Start / Pause / R</code> are treated as action input and correspond to <code>launch / pause / restart</code></li><li>Collision shapes are also attached to <code>Ball / Paddle / Brick / Wall</code>, but the actual game judgement in this sample is handled by the sample-side 2D checks using <code>makeBox()</code> and <code>circleIntersectsBox()</code></li><li>Ball movement divides one frame into multiple smaller steps so the ball is less likely to tunnel through walls or bricks even at high speed</li><li>Paddle reflection changes direction according to where on the paddle the ball hits</li><li>When the ball hits a brick, only one brick disappears and <code>score</code> and <code>combo</code> are updated</li><li>When the ball falls to the floor side, <code>lives</code> decreases, and if lives remain the ball is returned to the paddle</li><li>When all bricks are removed the game is cleared, when <code>lives</code> reaches <code>0</code> it becomes game over, and when time reaches <code>0</code> it enters the result state as time up</li></ul>
+<h2>Checkpoints</h2>
+<ul><li>Confirm that <code>Enter / Space</code> moves the game from <code>title</code> to <code>play</code> and launches the ball from the paddle</li><li>Confirm that <code>ArrowLeft / ArrowRight / A / D</code> move the paddle immediately, and that the touch buttons <code>← / →</code> produce the same movement</li><li>Confirm that <code>P / Esc</code> enters pause and that <code>Enter / Space</code> or <code>P / Esc</code> can return to play</li><li>During play, confirm that when the ball hits the paddle the reflection direction changes according to the hit position</li><li>Confirm that when the ball hits a brick, only one brick disappears and <code>score</code> and <code>combo</code> are updated</li><li>Confirm that the ball reflects from the left and right walls and from the ceiling</li><li>Confirm that when the ball falls to the floor side, <code>lives</code> decreases, and if lives remain the ball is returned to the paddle</li><li>Confirm that removing all bricks, reaching <code>0</code> lives, or reaching <code>0</code> time enters the result state, and that <code>R</code> returns to the title state</li><li>Confirm that the touch buttons <code>Start / Pause / R</code> can also start, stop, resume, and restart just like the keyboard</li><li>Confirm that the HUD displays <code>score / combo / time / lives / phase / ball</code> state so the game progress can be followed</li></ul>
+<h2>Controls</h2>
+<ul><li><code>ArrowLeft / A</code>: move the paddle left</li><li><code>ArrowRight / D</code>: move the paddle right</li><li><code>Enter / Space</code>: start from the title screen, resume from pause, or launch the ball from the serve-wait state during play</li><li><code>P / Esc</code>: pause, or resume from pause</li><li><code>R</code>: return from result to title</li><li>Touch button <code>←</code>: move the paddle left</li><li>Touch button <code>→</code>: move the paddle right</li><li>Touch button <code>Start</code>: trigger the launch action</li><li>Touch button <code>Pause</code>: trigger the pause action</li><li>Touch button <code>R</code>: trigger the restart action</li></ul>
+<h2>State Transitions</h2>
+<ul><li><code>title</code>: initial state. The level is initialized and the sample waits for a start input</li><li><code>play</code>: the state where the actual game progresses. It updates paddle movement, ball movement, reflection, brick destruction, and remaining time</li><li><code>pause</code>: paused state. Game progress stops, but paddle movement input can still be checked</li><li><code>result</code>: finished state. It displays the result of <code>clear / game over / time up</code> and waits for restart input</li></ul>
+<h2>Notes</h2>
+<ul><li>As a minimal verification sample for game-oriented APIs, this sample prioritizes an easy-to-follow flow for state, input, HUD, and collision checks over flashy visuals</li><li>The ball is created with <code>Primitive.sphere()</code>, while the paddle, bricks, walls, and backdrop are created as arbitrarily sized box meshes through <code>createBoxShape()</code> inside the sample</li><li>The ball uses a sphere collision shape, and the paddle, bricks, and walls use AABB collision shapes</li><li>However, the collision test used for actual game progression is not the <code>enter</code> result from <code>Space.stepCollisions()</code>, but the sample-side simplified 2D check using <code>circleIntersectsBox()</code></li><li>Nodes and collision bodies are registered in <code>Space</code>, but in this sample it is used mainly as the foundation for placing game elements in a 3D scene</li><li>The result screen groups <code>clear / game over / time up</code> into the same phase and changes only the reason text</li><li>Input processing assumes normalized key names and action names from the <code>WebgApp / InputController</code> side instead of handling raw <code>event.key</code> directly</li></ul>
+    </article>
+  </main>
+</body>
+</html>

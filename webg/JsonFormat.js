@@ -1,5 +1,5 @@
 // ---------------------------------------------
-//  JsonFormat.js    2026/03/09
+//  JsonFormat.js    2026/07/25
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // ---------------------------------------------
@@ -12,6 +12,7 @@ function isPlainObject(value) {
   return value !== null && typeof value === "object" && !Array.isArray(value);
 }
 
+// `finite`の`number`の`array`の条件を判定し、結果を真偽値で返す
 function isFiniteNumberArray(value) {
   return Array.isArray(value)
     && value.every((item) => typeof item === "number" && Number.isFinite(item));
@@ -21,6 +22,7 @@ function isJsonOmittable(value) {
   return value === undefined || typeof value === "function" || typeof value === "symbol";
 }
 
+// 値を現在の入力と状態から求め、呼び出し元へ返す
 function formatValue(value, level, indentUnit) {
   if (Array.isArray(value)) {
     if (value.length === 0) {
@@ -57,6 +59,7 @@ function formatValue(value, level, indentUnit) {
   return JSON.stringify(value);
 }
 
+// JSONを現在の入力と状態から求め、呼び出し元へ返す
 export default function formatJSON(value, indent = 2) {
   const indentUnit = typeof indent === "number"
     ? " ".repeat(Math.max(0, indent))

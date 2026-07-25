@@ -1,5 +1,5 @@
 // ---------------------------------------------
-//  Node.js        2026/05/04
+//  Node.js        2026/07/25
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // ---------------------------------------------
@@ -219,6 +219,7 @@ export default class Node extends CoordinateSystem {
       return null;
     }
 
+    // `angle`を読み込み、検証済みのデータとして後続処理へ渡す
     const readAngle = (value, label) => {
       if (value === undefined) {
         return undefined;
@@ -468,11 +469,12 @@ export default class Node extends CoordinateSystem {
 
   // Node 描画段階: この Node の行列を確定し、自分の Shape と子 Node を描く
   // drawContext.filter がある場合は、Shape ごとに現在の pass で描くかどうかを判定する
-  draw(view_matrix, light_vec, count, drawContext = {}) {
+  draw(cameraFrame, light_vec, count, drawContext = {}, parentModelView = null) {
     // Node 単位の描画手順:
-    // 1) modelView と normal 行列を作る
-    // 2) filter を通った自分の Shape を描く
-    // 3) 同じ drawContext を子 Node へ渡して再帰する
+    // 1) rootはCamera Frameからcamera-relative modelViewを作る
+    // 2) childは小さいlocal行列を親modelViewへ合成する
+    // 3) filter を通った自分の Shape を描く
+    // 4) 同じCamera FrameとdrawContextを子 Nodeへ渡して再帰する
     if ((this.type === this.BONE_T) && !this.attachable) {
       return;
     }
@@ -480,8 +482,17 @@ export default class Node extends CoordinateSystem {
     let modelview = this.modelViewMatrix;
     let normal = this.normalMatrix;
     this.setMatrix();
-    modelview.copyFrom(this.matrix);
-    modelview.lmul(view_matrix);  //  eye = [view] * [model] * local
+    if (parentModelView === null) {
+      if (!cameraFrame || typeof cameraFrame.createModelViewMatrix !== "function") {
+        throw new Error("Node.draw requires a CameraFrame for a root Node");
+      }
+      // rootのlocal matrixはSpace上のWorld配置なので、大きな平行移動を明示的にcamera-relative化します
+      modelview.copyFrom(cameraFrame.createModelViewMatrix(this.matrix));
+    } else {
+      // childのmatrixは親に対するlocal変換なので、既に小さい親modelViewへ左から合成します
+      modelview.copyFrom(this.matrix);
+      modelview.lmul(parentModelView);
+    }
     normal.copyFrom(modelview);
     normal.position([0, 0, 0]);
 
@@ -495,14 +506,47 @@ export default class Node extends CoordinateSystem {
         if (light_vec !== null) {
           shapes[i].shaderParameter("light", light_vec);
         }
-        shapes[i].draw(modelview, normal);
+        if (drawContext.phase === "opaque") {
+          if (typeof shapes[i].drawOpaqueMaterials === "function") {
+            shapes[i].drawOpaqueMaterials(modelview, normal, {
+              shaderOverride: drawContext.shaderOverride
+            });
+          } else {
+            // Shape互換の低レベル独自objectはmaterial slot APIを持たないため、従来のdrawを1回呼ぶ
+            shapes[i].draw(modelview, normal, {
+              shaderOverride: drawContext.shaderOverride
+            });
+          }
+        } else if (drawContext.phase === "collect-translucent") {
+          if (typeof shapes[i].collectTranslucentTriangles === "function") {
+            shapes[i].collectTranslucentTriangles(
+              modelview,
+              normal,
+              drawContext.translucentQueue,
+              { traversalOrder: drawContext.nextTraversalOrder() }
+            );
+          }
+        } else if (drawContext.phase === "translucent-materials") {
+          // Max BlendのRoughness Maskなど描画順に依存しないpassでは、
+          // triangle収集を行わず既存のmaterial別index bufferを一度だけ描く
+          if (typeof shapes[i].drawTranslucentMaterials === "function") {
+            shapes[i].drawTranslucentMaterials(modelview, normal, {
+              shaderOverride: drawContext.shaderOverride
+            });
+          }
+        } else {
+          // Node.draw()を直接利用する従来経路ではslot 0を一回描く互換動作を保つ
+          shapes[i].draw(modelview, normal, {
+            shaderOverride: drawContext.shaderOverride
+          });
+        }
       }
     }
 
     let children = this.children;
     for (let j=0; j<children.length; j++) {
       if (children[j]) {
-        children[j].draw(modelview, light_vec, count, drawContext);
+        children[j].draw(cameraFrame, light_vec, count, drawContext, modelview);
       }
     }
   }

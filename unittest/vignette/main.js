@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// unittest/vignette/main.js  2026/04/10
+// unittest/vignette/main.js  2026/07/25
 //   vignette sample
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -9,7 +9,9 @@ import Primitive from "../../webg/Primitive.js";
 import Shape from "../../webg/Shape.js";
 import Matrix from "../../webg/Matrix.js";
 import SmoothShader from "../../webg/SmoothShader.js";
-import FullscreenPass from "../../webg/FullscreenPass.js";
+import FullscreenPass, {
+  FULLSCREEN_SOURCE_FORMAT
+} from "../../webg/FullscreenPass.js";
 import VignettePass from "../../webg/VignettePass.js";
 import { bootUnitTestApp } from "../shared/UnitTestApp.js";
 
@@ -48,6 +50,7 @@ const clamp = (value, min, max) => {
   return Math.max(min, Math.min(max, value));
 };
 
+// 投影を受け取り、現在の設定と後続処理へ反映する
 const setProjection = (screen, shader, angle = 52) => {
   // 周辺へ置いた object も一度に見渡せるよう、少し広めの固定投影へそろえる
   const proj = new Matrix();
@@ -56,6 +59,7 @@ const setProjection = (screen, shader, angle = 52) => {
   shader.setProjectionMatrix(proj);
 };
 
+// 形状を生成し、後続処理で利用できる状態にする
 const createShape = (gpu, asset, color, material = {}) => {
   // unittest では shape ごとの差よりも vignette の掛かり方を見たいので、
   // 材質は見やすい固定値へ寄せる
@@ -73,6 +77,7 @@ const createShape = (gpu, asset, color, material = {}) => {
   return shape;
 };
 
+// ビネットの状態を対象の状態または描画設定へ反映する
 const applyVignetteState = (pass, state) => {
   // status 表示と pass 実体がずれないよう、変更後は必ずここへ集約して反映する
   pass.setEnabled(state.enabled);
@@ -83,8 +88,11 @@ const applyVignetteState = (pass, state) => {
   pass.setTint(...TINTS[state.tintIndex].value);
 };
 
+// このインスタンスの初期化段階で、必要な状態と資源を準備して処理を開始する
 const start = async ({ screen, gpu, setStatus, setViewportLayout, startLoop, document }) => {
-  const shader = new SmoothShader(gpu);
+  const shader = new SmoothShader(gpu, {
+    colorFormat: FULLSCREEN_SOURCE_FORMAT
+  });
   await shader.init();
   Shape.prototype.shader = shader;
   shader.setLightPosition([40.0, 90.0, 150.0, 1.0]);
@@ -92,7 +100,7 @@ const start = async ({ screen, gpu, setStatus, setViewportLayout, startLoop, doc
   // scene 自体は普通の 3D 描画で作り、最後だけ offscreen result に vignette を掛ける
   const sceneTarget = screen.createRenderTarget({
     label: "UnitTest:vignette:scene",
-    format: gpu.format,
+    format: FULLSCREEN_SOURCE_FORMAT,
     hasDepth: true
   });
   await sceneTarget.ready;

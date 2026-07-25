@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// unittest/touch/main.js  2026/04/10
+// unittest/touch/main.js  2026/07/25
 //   touch unittest
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -48,6 +48,7 @@ const start = async () => {
   Shape.prototype.shader = shader;
 
   const proj = new Matrix();
+  // `viewport`の配置を対象の状態または描画設定へ反映する
   const applyViewportLayout = () => {
     screen.resize(Math.max(1, Math.floor(window.innerWidth)), Math.max(1, Math.floor(window.innerHeight)));
     const fov = screen.getRecommendedFov(53.0);
@@ -169,6 +170,7 @@ const start = async () => {
       state.debugActionCount += 1;
     }
   };
+  // キーの`up`を受け取った段階で、対応する状態更新と処理を実行する
   const onKeyUp = (ev) => {
     const key = ev.key.toLowerCase();
     release(key);

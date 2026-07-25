@@ -1,0 +1,33 @@
+# sample_custom_depth_contracts
+
+## 目的
+
+独自のWebGPU RenderPipelineを所有する`compute_cloth`、`compute_physics_bounce`、`compute_texture`が、通常カメラ用Screenと同じCamera Reverse-Z depth契約を使用することを確認します。
+
+## 確認内容
+
+各sampleが`CAMERA_REVERSE_Z`を明示的にimportし、pipeline format、geometry比較、render pass clear値を一つのDepth Conventionから取得することを検査します。旧`depth24plus`、`less`、clear 1が再導入された場合は停止します。
+
+`compute_texture`のpreview quadは3D geometryとの前後比較を行わないoverlayなので、`always`比較を正式な責務として維持します。
+
+## 予想
+
+修正前はScreenの`depth32float` attachmentとsampleの`depth24plus` pipelineが一致せず、pipeline設定時にWebGPU validation errorになるはずです。formatだけを変更して`less`とclear 1を残した場合は、validationが通ってもnear=1、far=0のReverse-Z geometryが表示されません。
+
+三つの値をCamera Reverse-Zへ一体で揃えると、独自shaderがWebgAppのReverse-Z projectionを使用する限り、手前のgeometryほど大きいdepthとなり、clear 0より手前のfragmentが表示されるはずです。
+
+## 実行方法
+
+```sh
+node headless_tests/samples/custom_depth/headless_probe.js
+```
+
+## 結果
+
+2026-07-13にES moduleとしてheadless probeを実行し、次の出力を確認しました。
+
+```text
+v2 sample custom depth probe: ok
+```
+
+三つのsampleはいずれも`CAMERA_REVERSE_Z`からdepth format、geometry比較、clear値を取得していました。`compute_texture`のpreview quadだけは、3D geometryの前後関係を判定しないため`always`を維持しています。

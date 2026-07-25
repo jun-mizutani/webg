@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>compute_postprocess</title>
+  <link rel="icon" href="data:," />
+  <!-- 2026/06/19 -->
+  <style>
+
+:root {
+  color-scheme: light;
+  --bg: #eef3f8;
+  --paper: rgba(255, 255, 255, 0.94);
+  --line: #c8d5e4;
+  --ink: #17324a;
+  --muted: #5c748b;
+  --accent: #1566ab;
+  --accent-soft: #dfeefe;
+  --code-bg: #f3f7fb;
+  --shadow: rgba(29, 52, 79, 0.10);
+}
+* { box-sizing: border-box; }
+html, body {
+  margin: 0;
+  min-height: 100%;
+}
+body {
+  background:
+    radial-gradient(circle at top left, rgba(21, 102, 171, 0.12), transparent 24%),
+    radial-gradient(circle at top right, rgba(255, 191, 118, 0.10), transparent 22%),
+    linear-gradient(180deg, #f8fbfd 0%, var(--bg) 100%);
+  color: var(--ink);
+  font: 16px/1.78 "Avenir Next", "Hiragino Sans", "Yu Gothic", sans-serif;
+}
+.page {
+  width: min(1080px, calc(100% - 28px));
+  margin: 0 auto;
+  padding: 24px 0 56px;
+}
+.hero,
+.doc {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  box-shadow: 0 22px 52px var(--shadow);
+}
+.hero {
+  padding: 22px 24px;
+  margin-bottom: 18px;
+}
+.hero h1 {
+  margin: 0 0 8px;
+  font-size: clamp(2rem, 4vw, 3rem);
+  line-height: 1.08;
+}
+.hero p {
+  margin: 0;
+  color: var(--muted);
+}
+.doc {
+  padding: 28px;
+}
+.doc > :first-child {
+  margin-top: 0;
+}
+h1, h2, h3, h4, h5, h6 {
+  line-height: 1.25;
+  margin: 1.45em 0 0.55em;
+}
+h1 {
+  font-size: 2.2rem;
+}
+h2 {
+  padding-bottom: 0.28em;
+  border-bottom: 1px solid var(--line);
+  font-size: 1.48rem;
+}
+h3 {
+  font-size: 1.14rem;
+}
+p, ul, ol, table, pre, blockquote {
+  margin: 0 0 1em;
+}
+ul, ol {
+  padding-left: 1.4em;
+}
+li + li {
+  margin-top: 0.26em;
+}
+a {
+  color: var(--accent);
+  text-decoration: none;
+}
+a:hover {
+  text-decoration: underline;
+}
+img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  border-radius: 16px;
+  border: 1px solid var(--line);
+  box-shadow: 0 12px 32px rgba(29, 52, 79, 0.08);
+  margin: 1.1em 0 1.4em;
+}
+code {
+  padding: 0.12em 0.38em;
+  border-radius: 0.45em;
+  background: var(--code-bg);
+  border: 1px solid #dbe6f1;
+  font: 0.92em/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+pre {
+  padding: 14px 16px;
+  overflow-x: auto;
+  border-radius: 14px;
+  background: #0f1720;
+  color: #ecf5ff;
+}
+pre code {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #ffffff;
+}
+th, td {
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  text-align: left;
+  vertical-align: top;
+}
+th {
+  background: #f5f9fc;
+}
+hr {
+  border: 0;
+  border-top: 1px solid var(--line);
+  margin: 1.5em 0;
+}
+blockquote {
+  padding: 0.3em 0 0.3em 1em;
+  border-left: 4px solid #c9dbef;
+  color: var(--muted);
+}
+@media (max-width: 720px) {
+  .page {
+    width: min(100% - 18px, 1080px);
+    padding-top: 16px;
+  }
+  .hero,
+  .doc {
+    border-radius: 18px;
+  }
+  .doc {
+    padding: 20px;
+  }
+}
+
+  </style>
+</head>
+<body>
+  <main class="page">
+    <section class="hero">
+      <h1>compute_postprocess</h1>
+    </section>
+    <article class="doc">
+<h1>compute_postprocess</h1>
+<p>English | <a href="index.html">日本語</a></p>
+<p><img src="./compute_postprocess.jpg" alt="compute_postprocess" /></p>
+<h2>Overview</h2>
+<ul><li>This sample takes the postprocess rendering flow from Chapter 20 and applies the effect with a compute shader instead of a fragment-shader <code>FullscreenPass</code></li><li>Without changing the <code>webg</code> core, it integrates a compute pass using only the WebGPU device obtained from <code>WebgApp</code> and <code>Screen.createRenderTarget()</code></li><li>The 3D scene is rendered to an offscreen <code>RenderTarget</code>, then the compute shader reads that color texture and writes to a storage texture</li><li>Finally, <code>FullscreenPass</code> displays the compute-output texture on the canvas, while the operation guide stays in the Help Panel and editable current values are collected in CommandPalette</li></ul>
+<h2>How to Run</h2>
+<ul><li>Open <a href="./compute_postprocess.html">./compute_postprocess.html</a></li><li>Use a browser with WebGPU support, and check the help panel and CommandPalette together with the sample when needed</li></ul>
+<h2>webg Features Used</h2>
+<ul><li><code>WebgApp(autoDrawScene: false)</code>: lets the sample side control the 3D-scene draw destination and the postprocess order</li><li><code>RenderTarget</code>: stores the textures for scene color/depth and compute output</li><li><code>FullscreenPass</code>: copies the storage texture written by the compute shader to the canvas</li><li><code>Shape / Primitive</code>: builds a standard 3D scene for inspecting the postprocess appearance</li><li><code>buildHelpPanelOptions() + showOverlayPanel()</code>: shows the operation guide in a collapsible panel at the upper left</li></ul>
+<h2>Checkpoints</h2>
+<ul><li>Confirm that the 3D scene is first drawn to an offscreen target and only then displayed after going through the compute pass</li><li>Press <code>C</code> to toggle Compute Postprocess on or off and confirm that only the postprocess changes while the scene itself stays the same</li><li>Press <code>V</code> to switch the view between <code>composite / scene / output</code> and compare the original scene with the compute output</li><li>When changing edge strength with <code>1 / 2</code>, local-contrast sharpness with <code>3 / 4</code>, white vignette with <code>5 / 6</code>, and red-blue chromatic offset with <code>7 / 8</code>, confirm that the CommandPalette values and the visual changes match</li><li>Press <code>M</code> to switch the mode between <code>film / edge / heat</code> and confirm that the appearance can change by branching inside the same compute shader</li><li>Confirm that even when the viewport size changes, the scene target and compute output follow the screen size correctly</li></ul>
+<h2>Controls</h2>
+<ul><li>Drag / arrow keys: orbit camera rotation</li><li>Mouse wheel / <code>[ / ]</code>: zoom</li><li><code>C</code>: toggle compute postprocess on or off</li><li><code>V</code>: switch display between <code>composite / scene / output</code></li><li><code>M</code>: switch the <code>film / edge / heat</code> mode</li><li><code>1 / 2</code>: decrease / increase edge strength</li><li><code>3 / 4</code>: decrease / increase sharpness</li><li><code>5 / 6</code>: decrease / increase white vignette</li><li><code>7 / 8</code>: decrease / increase chromatic offset by 1px</li><li><code>Space</code>: pause / resume scene animation</li><li><code>R</code>: restore parameters to their defaults</li></ul>
+    </article>
+  </main>
+</body>
+</html>

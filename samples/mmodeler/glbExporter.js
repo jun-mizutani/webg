@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// samples/webgmodeler/glbExporter.js  2026/05/24
+// samples/webgmodeler/glbExporter.js  2026/06/02
 //   webgmodeler minimal GLB exporter
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -50,13 +50,11 @@ export function buildGlbFromGeometry({
     throw new Error("GLB nodeScale must be non-zero");
   }
   const scale = [scaleValue, scaleValue, scaleValue];
-  const idToIndex = new Map();
   const positions = new Float32Array(vertices.length * 3);
   const min = [Number.POSITIVE_INFINITY, Number.POSITIVE_INFINITY, Number.POSITIVE_INFINITY];
   const max = [Number.NEGATIVE_INFINITY, Number.NEGATIVE_INFINITY, Number.NEGATIVE_INFINITY];
   for (let i = 0; i < vertices.length; i++) {
     const vertex = vertices[i];
-    idToIndex.set(vertex.id, i);
     for (let axis = 0; axis < 3; axis++) {
       const value = vertex.position[axis];
       positions[i * 3 + axis] = value;
@@ -67,11 +65,11 @@ export function buildGlbFromGeometry({
 
   const indexValues = [];
   for (const face of faces) {
-    const loop = face.indices.map((vertexId) => {
-      if (!idToIndex.has(vertexId)) {
-        throw new Error(`face ${face.id} references missing vertex ${vertexId}`);
+    const loop = face.indices.map((vertexIndex) => {
+      if (!Number.isInteger(vertexIndex) || vertexIndex < 0 || vertexIndex >= vertices.length) {
+        throw new Error(`face ${face.id} references missing vertex index ${vertexIndex}`);
       }
-      return idToIndex.get(vertexId);
+      return vertexIndex;
     });
     for (let i = 0; i < loop.length - 2; i++) {
       indexValues.push(loop[0], loop[i + 1], loop[i + 2]);

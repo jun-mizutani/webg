@@ -2,521 +2,244 @@
 <html lang="ja">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
-  <title>webg sample mmodeler</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>mmodeler の使い方</title>
   <link rel="icon" href="data:," />
+  <!-- 2026/06/19 -->
   <style>
-    :root {
-      color-scheme: dark;
-      --bg: #061018;
-      --panel: rgba(8, 18, 28, 0.84);
-      --panel-strong: rgba(10, 24, 38, 0.94);
-      --line: rgba(138, 202, 255, 0.18);
-      --ink: #eff8ff;
-      --sub: #a2bdd3;
-      --accent: #51b7ff;
-      --accent-strong: #1f8fd8;
-      --accent-soft: rgba(81, 183, 255, 0.18);
-      --warn: #ffd36b;
-      --danger: #ff7f7f;
-      --safe-top: env(safe-area-inset-top, 0px);
-      --safe-right: env(safe-area-inset-right, 0px);
-      --safe-bottom: env(safe-area-inset-bottom, 0px);
-      --safe-left: env(safe-area-inset-left, 0px);
-    }
 
-    html,
-    body {
-      margin: 0;
-      width: 100%;
-      height: 100%;
-      min-height: 100dvh;
-      overflow: hidden;
-      background: var(--bg);
-      color: var(--ink);
-      font: 14px/1.5 "Hiragino Sans", "Yu Gothic", sans-serif;
-      touch-action: none;
-      user-select: none;
-      -webkit-user-select: none;
-      -webkit-touch-callout: none;
-      -webkit-tap-highlight-color: transparent;
-    }
+:root {
+  color-scheme: light;
+  --bg: #eef3f8;
+  --paper: rgba(255, 255, 255, 0.94);
+  --line: #c8d5e4;
+  --ink: #17324a;
+  --muted: #5c748b;
+  --accent: #1566ab;
+  --accent-soft: #dfeefe;
+  --code-bg: #f3f7fb;
+  --shadow: rgba(29, 52, 79, 0.10);
+}
+* { box-sizing: border-box; }
+html, body {
+  margin: 0;
+  min-height: 100%;
+}
+body {
+  background:
+    radial-gradient(circle at top left, rgba(21, 102, 171, 0.12), transparent 24%),
+    radial-gradient(circle at top right, rgba(255, 191, 118, 0.10), transparent 22%),
+    linear-gradient(180deg, #f8fbfd 0%, var(--bg) 100%);
+  color: var(--ink);
+  font: 16px/1.78 "Avenir Next", "Hiragino Sans", "Yu Gothic", sans-serif;
+}
+.page {
+  width: min(1080px, calc(100% - 28px));
+  margin: 0 auto;
+  padding: 24px 0 56px;
+}
+.hero,
+.doc {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  box-shadow: 0 22px 52px var(--shadow);
+}
+.hero {
+  padding: 22px 24px;
+  margin-bottom: 18px;
+}
+.hero h1 {
+  margin: 0 0 8px;
+  font-size: clamp(2rem, 4vw, 3rem);
+  line-height: 1.08;
+}
+.hero p {
+  margin: 0;
+  color: var(--muted);
+}
+.doc {
+  padding: 28px;
+}
+.doc > :first-child {
+  margin-top: 0;
+}
+h1, h2, h3, h4, h5, h6 {
+  line-height: 1.25;
+  margin: 1.45em 0 0.55em;
+}
+h1 {
+  font-size: 2.2rem;
+}
+h2 {
+  padding-bottom: 0.28em;
+  border-bottom: 1px solid var(--line);
+  font-size: 1.48rem;
+}
+h3 {
+  font-size: 1.14rem;
+}
+p, ul, ol, table, pre, blockquote {
+  margin: 0 0 1em;
+}
+ul, ol {
+  padding-left: 1.4em;
+}
+li + li {
+  margin-top: 0.26em;
+}
+a {
+  color: var(--accent);
+  text-decoration: none;
+}
+a:hover {
+  text-decoration: underline;
+}
+img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  border-radius: 16px;
+  border: 1px solid var(--line);
+  box-shadow: 0 12px 32px rgba(29, 52, 79, 0.08);
+  margin: 1.1em 0 1.4em;
+}
+code {
+  padding: 0.12em 0.38em;
+  border-radius: 0.45em;
+  background: var(--code-bg);
+  border: 1px solid #dbe6f1;
+  font: 0.92em/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+pre {
+  padding: 14px 16px;
+  overflow-x: auto;
+  border-radius: 14px;
+  background: #0f1720;
+  color: #ecf5ff;
+}
+pre code {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #ffffff;
+}
+th, td {
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  text-align: left;
+  vertical-align: top;
+}
+th {
+  background: #f5f9fc;
+}
+hr {
+  border: 0;
+  border-top: 1px solid var(--line);
+  margin: 1.5em 0;
+}
+blockquote {
+  padding: 0.3em 0 0.3em 1em;
+  border-left: 4px solid #c9dbef;
+  color: var(--muted);
+}
+@media (max-width: 720px) {
+  .page {
+    width: min(100% - 18px, 1080px);
+    padding-top: 16px;
+  }
+  .hero,
+  .doc {
+    border-radius: 18px;
+  }
+  .doc {
+    padding: 20px;
+  }
+}
 
-    button,
-    input,
-    select {
-      font: inherit;
-    }
-
-    .app {
-      position: relative;
-      width: 100vw;
-      height: 100vh;
-      height: 100dvh;
-      min-height: 100dvh;
-      overflow: hidden;
-      background:
-        radial-gradient(circle at 50% 0%, rgba(39, 114, 168, 0.18), transparent 40%),
-        linear-gradient(180deg, #08131c 0%, #061018 100%);
-      touch-action: none;
-      user-select: none;
-      -webkit-user-select: none;
-      -webkit-touch-callout: none;
-      -webkit-tap-highlight-color: transparent;
-    }
-
-    .viewport {
-      position: absolute;
-      inset: 0;
-      overflow: hidden;
-      touch-action: none;
-      user-select: none;
-      -webkit-user-select: none;
-      -webkit-touch-callout: none;
-    }
-
-    #canvas {
-      display: block;
-      width: 100%;
-      height: 100%;
-      touch-action: none;
-      background: #101a24;
-    }
-
-    .mobile-status {
-      position: absolute;
-      left: calc(var(--safe-left) + 10px);
-      bottom: calc(var(--safe-bottom) + 10px);
-      max-width: min(76vw, 520px);
-      z-index: 12;
-      padding: 4px 8px;
-      border: 1px solid rgba(138, 202, 255, 0.14);
-      border-radius: 999px;
-      background: rgba(6, 14, 22, 0.54);
-      color: rgba(232, 245, 255, 0.82);
-      font-size: 11px;
-      line-height: 1.35;
-      letter-spacing: 0.04em;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-      pointer-events: none;
-      backdrop-filter: blur(10px);
-      text-shadow: 0 1px 0 rgba(0, 0, 0, 0.34);
-    }
-
-    .command-palette {
-      position: absolute;
-      box-sizing: border-box;
-      width: 264px;
-      transform: translate(-50%, -50%);
-      display: none;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 8px;
-      z-index: 20;
-    }
-
-    .command-palette.open {
-      display: grid;
-      pointer-events: auto;
-    }
-
-    .palette-button {
-      width: 100%;
-      min-width: 0;
-      height: 48px;
-      border: 1px solid var(--line);
-      border-radius: 10px;
-      background: rgba(12, 26, 38, 0.54);
-      color: var(--ink);
-      font-weight: 800;
-      box-shadow: 0 8px 16px rgba(0, 0, 0, 0.18);
-      backdrop-filter: blur(10px);
-      touch-action: manipulation;
-      user-select: none;
-      -webkit-user-select: none;
-      -webkit-touch-callout: none;
-      -webkit-tap-highlight-color: transparent;
-    }
-
-    .palette-button small {
-      display: block;
-      margin-top: 2px;
-      color: var(--sub);
-      font-size: 9px;
-      font-weight: 600;
-      letter-spacing: 0.03em;
-    }
-
-    .palette-button.active {
-      border-color: rgb(255, 255, 255);
-      background: rgba(75, 167, 10, 0.489);
-      color: #fff5cf;
-      box-shadow:
-        0 0 0 1px rgba(255, 232, 160, 0.10) inset,
-        0 8px 16px rgba(120, 88, 26, 0.14);
-    }
-
-    .palette-button.page-switch {
-      border-color: rgba(255, 132, 116, 0.66);
-      background: rgba(255, 1, 1, 0.594);
-      color: #fff3f0;
-    }
-
-    .palette-button.page-switch small {
-      color: rgba(255, 211, 204, 0.86);
-    }
-
-    .palette-button.axis-x,
-    .palette-button.axis-x small {
-      color: #ff1010;
-      background: rgba(100, 100, 100, 0.40);
-    }
-
-    .palette-button.axis-y,
-    .palette-button.axis-y small {
-      color: #5050ff;
-      background: rgba(100, 100, 100, 0.40);
-    }
-
-    .palette-button.axis-z,
-    .palette-button.axis-z small {
-      color: #19ff10;
-      background: rgba(100, 100, 100, 0.40);
-    }
-
-    .palette-button.axis-n,
-    .palette-button.axis-n small {
-      color: #fff0a8;
-      background: rgba(100, 100, 100, 0.40);
-    }
-
-    .view-dock {
-      position: absolute;
-      left: 50%;
-      top: calc(var(--safe-top) + 10px);
-      z-index: 17;
-      display: grid;
-      grid-template-columns: repeat(6, 42px);
-      gap: 6px;
-      transform: translateX(-50%);
-      pointer-events: auto;
-    }
-
-    .view-button {
-      width: 42px;
-      height: 38px;
-      border: 1px solid rgba(120, 186, 255, 0.38);
-      border-radius: 10px;
-      background: rgba(8, 22, 34, 0.58);
-      color: rgba(236, 247, 255, 0.92);
-      font-weight: 800;
-      line-height: 1;
-      box-shadow: 0 8px 16px rgba(0, 0, 0, 0.16);
-      backdrop-filter: blur(10px);
-      touch-action: manipulation;
-      user-select: none;
-      -webkit-user-select: none;
-      -webkit-touch-callout: none;
-      -webkit-tap-highlight-color: transparent;
-    }
-
-    .view-button.active {
-      border-color: rgba(248, 212, 118, 0.62);
-      background: rgba(86, 74, 42, 0.60);
-      color: #fff5cf;
-    }
-
-    .selection-shift-button {
-      position: absolute;
-      left: calc(var(--safe-left) + 10px);
-      top: calc(var(--safe-top) + 10px);
-      z-index: 18;
-      width: 44px;
-      height: 38px;
-      border: 1px solid rgba(255, 90, 148, 0.50);
-      border-radius: 10px;
-      background: rgba(255, 30, 106, 0.30);
-      color: rgba(255, 245, 250, 0.94);
-      font-weight: 900;
-      line-height: 1;
-      box-shadow:
-        0 0 0 1px rgba(255, 255, 255, 0.08) inset,
-        0 0 12px rgba(255, 30, 106, 0.20),
-        0 8px 16px rgba(0, 0, 0, 0.16);
-      backdrop-filter: blur(10px);
-      touch-action: manipulation;
-      user-select: none;
-      -webkit-user-select: none;
-      -webkit-touch-callout: none;
-      -webkit-tap-highlight-color: transparent;
-    }
-
-    .selection-shift-button.active {
-      border-color: rgba(255, 255, 255, 0.88);
-      background: rgba(255, 30, 106, 0.72);
-      color: #ffffff;
-      box-shadow:
-        0 0 0 2px rgba(255, 255, 255, 0.20) inset,
-        0 0 18px rgba(255, 30, 106, 0.42),
-        0 8px 16px rgba(0, 0, 0, 0.22);
-    }
-
-    .coordinate-overlay,
-    .info-overlay {
-      position: absolute;
-      right: calc(var(--safe-right) + 12px);
-      bottom: calc(var(--safe-bottom) + 48px);
-      z-index: 22;
-      display: none;
-      width: min(300px, calc(100vw - var(--safe-left) - var(--safe-right) - 24px));
-      box-sizing: border-box;
-      padding: 12px;
-      border: 1px solid rgba(138, 202, 255, 0.24);
-      border-radius: 16px;
-      background: rgba(7, 18, 29, 0.92);
-      color: var(--ink);
-      box-shadow: 0 18px 36px rgba(0, 0, 0, 0.32);
-      backdrop-filter: blur(14px);
-      pointer-events: auto;
-      touch-action: manipulation;
-      user-select: text;
-      -webkit-user-select: text;
-      -webkit-touch-callout: default;
-    }
-
-    .coordinate-overlay.open,
-    .info-overlay.open {
-      display: block;
-    }
-
-    .coordinate-overlay h2,
-    .info-overlay h2 {
-      margin: 0 0 4px;
-      font-size: 13px;
-      line-height: 1.25;
-      letter-spacing: 0.04em;
-    }
-
-    .coordinate-overlay p,
-    .info-overlay p {
-      margin: 0 0 10px;
-      color: var(--sub);
-      font-size: 11px;
-      line-height: 1.35;
-    }
-
-    .info-grid {
-      display: grid;
-      grid-template-columns: auto 1fr;
-      gap: 7px 10px;
-      align-items: baseline;
-      font-size: 12px;
-      line-height: 1.3;
-    }
-
-    .info-grid span {
-      color: var(--sub);
-      font-weight: 700;
-    }
-
-    .info-grid strong {
-      color: var(--ink);
-      font-weight: 800;
-      overflow-wrap: anywhere;
-    }
-
-    .coordinate-row {
-      display: grid;
-      grid-template-columns: 24px 1fr;
-      align-items: center;
-      gap: 8px;
-      margin-top: 7px;
-    }
-
-    .coordinate-row label {
-      font-weight: 800;
-      color: var(--accent);
-      text-align: center;
-    }
-
-    .coordinate-row input {
-      min-width: 0;
-      box-sizing: border-box;
-      width: 100%;
-      padding: 8px 9px;
-      border: 1px solid rgba(138, 202, 255, 0.24);
-      border-radius: 10px;
-      background: rgba(0, 0, 0, 0.26);
-      color: var(--ink);
-      font-size: 13px;
-      touch-action: manipulation;
-      user-select: text;
-      -webkit-user-select: text;
-      -webkit-touch-callout: default;
-    }
-
-    .coordinate-row input:disabled {
-      opacity: 0.42;
-    }
-
-    .coordinate-actions {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 8px;
-      margin-top: 12px;
-    }
-
-    .coordinate-actions button {
-      height: 36px;
-      border: 1px solid var(--line);
-      border-radius: 10px;
-      background: rgba(20, 44, 62, 0.78);
-      color: var(--ink);
-      font-weight: 800;
-      touch-action: manipulation;
-    }
-
-    .coordinate-actions .primary {
-      border-color: rgba(81, 183, 255, 0.58);
-      background: rgba(31, 143, 216, 0.58);
-    }
-
-    @media (orientation: landscape) {
-      .view-dock {
-        left: auto;
-        right: calc(var(--safe-right) + 10px);
-        top: 50%;
-        grid-template-columns: 42px;
-        transform: translateY(-50%);
-      }
-    }
-
-    .hidden-controls {
-      display: none;
-    }
-
-    * {
-      -webkit-touch-callout: none;
-    }
-
-    .selection-rect {
-      position: absolute;
-      display: none;
-      pointer-events: none;
-      border: 1px solid rgba(98, 181, 255, 0.92);
-      background: rgba(98, 181, 255, 0.12);
-      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.14);
-      z-index: 10;
-    }
   </style>
 </head>
-<body data-modeler-profile="mobile">
-  <div class="app">
-    <div class="viewport">
-      <canvas id="canvas"></canvas>
-
-      <div class="view-dock" id="mobileViewDock" aria-label="View controls">
-        <button class="view-button" type="button" data-view-action="view-x">X</button>
-        <button class="view-button" type="button" data-view-action="view-x-reverse">-X</button>
-        <button class="view-button" type="button" data-view-action="view-y">Y</button>
-        <button class="view-button" type="button" data-view-action="view-y-reverse">-Y</button>
-        <button class="view-button" type="button" data-view-action="view-z">Z</button>
-        <button class="view-button" type="button" data-view-action="view-z-reverse">-Z</button>
-      </div>
-      <button class="selection-shift-button" id="mobileSelectionShift" type="button" aria-label="Shift selection" aria-pressed="false">↑</button>
-
-      <div class="command-palette" id="mobilePalette">
-        <button class="palette-button" type="button" data-slot="0"></button>
-        <button class="palette-button" type="button" data-slot="1"></button>
-        <button class="palette-button" type="button" data-slot="2"></button>
-        <button class="palette-button" type="button" data-slot="3"></button>
-        <button class="palette-button" type="button" data-slot="4"></button>
-        <button class="palette-button" type="button" data-slot="5"></button>
-        <button class="palette-button" type="button" data-slot="6"></button>
-        <button class="palette-button" type="button" data-slot="7"></button>
-        <button class="palette-button" type="button" data-slot="8"></button>
-        <button class="palette-button" type="button" data-slot="9"></button>
-        <button class="palette-button" type="button" data-slot="10"></button>
-        <button class="palette-button" type="button" data-slot="11"></button>
-        <button class="palette-button" type="button" data-slot="12"></button>
-        <button class="palette-button" type="button" data-slot="13"></button>
-        <button class="palette-button" type="button" data-slot="14"></button>
-        <button class="palette-button" type="button" data-slot="15"></button>
-      </div>
-
-      <div class="coordinate-overlay" id="coordinateOverlay" aria-label="Coordinate editor">
-        <h2 id="coordinateOverlayTitle">Vertex coordinates</h2>
-        <p id="coordinateOverlayHint">Select one vertex to edit X / Y / Z.</p>
-        <div class="coordinate-row">
-          <label for="coordinateX">X</label>
-          <input id="coordinateX" data-coordinate-axis="x" type="number" inputmode="decimal" step="any" />
-        </div>
-        <div class="coordinate-row">
-          <label for="coordinateY">Y</label>
-          <input id="coordinateY" data-coordinate-axis="y" type="number" inputmode="decimal" step="any" />
-        </div>
-        <div class="coordinate-row">
-          <label for="coordinateZ">Z</label>
-          <input id="coordinateZ" data-coordinate-axis="z" type="number" inputmode="decimal" step="any" />
-        </div>
-        <div class="coordinate-actions">
-          <button class="primary" id="coordinateOverlayApply" type="button">Apply</button>
-          <button id="coordinateOverlayClose" type="button">Close</button>
-        </div>
-      </div>
-
-      <div class="info-overlay" id="objectInfoOverlay" aria-label="Object info">
-        <h2 id="objectInfoTitle">Object info</h2>
-        <p>Tap to close</p>
-        <div class="info-grid">
-          <span>Bounds</span><strong id="objectInfoBounds">-</strong>
-          <span>Vertices</span><strong id="objectInfoVertices">-</strong>
-          <span>Polygons</span><strong id="objectInfoPolygons">-</strong>
-          <span>Origin</span><strong id="objectInfoOrigin">-</strong>
-          <span>Lens</span><strong id="objectInfoFocalLength">-</strong>
-          <span>Orbit dist</span><strong id="objectInfoOrbitDistance">-</strong>
-          <span>Origin dist</span><strong id="objectInfoCameraDistance">-</strong>
-        </div>
-      </div>
-
-      <div class="mobile-status" id="mobileStatus">object / select | ready</div>
-    </div>
-
-    <div class="hidden-controls" aria-hidden="true">
-      <pre id="status"></pre>
-      <input id="modelFile" type="file" />
-      <select id="meshSelect"></select>
-      <button id="useMesh" type="button">Use Mesh</button>
-      <button id="saveJson" type="button">Save JSON GZ</button>
-      <button id="saveJsonGz" type="button">Save GZ</button>
-      <button id="saveGlb" type="button">Save GLB</button>
-      <button id="screenshot" type="button">Screenshot</button>
-      <button id="newScene" type="button">New</button>
-      <button id="makeFace" type="button">Face</button>
-      <button id="flipFaces" type="button">Flip</button>
-      <button id="loopCutFaces" type="button">Loop Cut</button>
-      <button id="xMirrorEdit" type="button">X Mirror</button>
-      <button id="undo" type="button">Undo</button>
-      <button id="redo" type="button">Redo</button>
-      <button id="objectWireframe" type="button">Wireframe</button>
-      <button id="lightBackground" type="button">Light Background</button>
-      <button id="visiblePickOnly" type="button">Visible Pick</button>
-      <input id="overlayAlpha" type="range" min="0" max="1" step="0.01" value="0.65" />
-      <span id="overlayAlphaValue">0.65</span>
-      <input id="overlayMarkerColor" type="color" value="#000000" />
-      <span id="overlayMarkerColorValue">#000000</span>
-      <input id="overlayEdgeColor" type="color" value="#000000" />
-      <span id="overlayEdgeColorValue">#000000</span>
-
-      <button type="button" data-mode="object">Object</button>
-      <button type="button" data-mode="edit">Edit</button>
-      <button type="button" data-tool="selectVertex">Vertex</button>
-      <button type="button" data-tool="selectFace">Face</button>
-      <button type="button" data-tool="addVertex">Add</button>
-    </div>
-  </div>
-
-  <script type="module" src="./main.js"></script>
+<body>
+  <main class="page">
+    <section class="hero">
+      <h1>mmodeler の使い方</h1>
+    </section>
+    <article class="doc">
+<h1>mmodeler の使い方</h1>
+<p><a href="index.en.html">English</a> | 日本語</p>
+<p><img src="./mmodeler.jpg" alt="mmodeler" /></p>
+<h2>概要</h2>
+<p>mmodeler は、スマートフォンやタブレットのタッチ操作に最適化した、Blender風の3Dモデリングツールです。WebGPU と JavaScript で構築されており、直感的なジェスチャー操作によって、カメラ制御、オブジェクト編集、プリミティブ追加、ファイルの保存・読込に加えて、スカルプトモードによる自由な形状変形が行えます。</p>
+<h2>実行方法</h2>
+<ul><li>実行ファイルは <a href="./mmodeler.html">./mmodeler.html</a> です</li></ul>
+<p>mmodeler の動作に依存するライブラリや外部サーバは不要で、起動したらすべてローカル環境で完結します。</p>
+<p>ここから実行できます。<br /><a href="https://jun-mizutani.github.io/webg/samples/mmodeler.html">https://jun-mizutani.github.io/webg/samples/mmodeler.html</a></p>
+<h2>モバイル操作体系</h2>
+<p>本ツールでは、編集画面（キャンバス）上での操作を以下のジェスチャーに割り当てています。PCではマウスで同様の操作が可能です。</p>
+<h3>基本ジェスチャー</h3>
+<p>最も重要な操作は、図形部分のダブルタップです。 ダブルタップすることでコマンドパレットが開いて多くの操作を実行できます。</p>
+<ul><li><strong>1本指ドラッグ</strong>: カメラの回転（オービット）</li><li><strong>2本指ドラッグ</strong>: カメラの平行移動（パン）</li><li><strong>2本指回転</strong>: ビューのロール回転。指で検出した回転角度の符号を反転し、現在の view 軸まわりにオービット姿勢として蓄積します。</li><li><strong>ピンチ操作</strong>: カメラのズーム</li><li><strong>短いタップ</strong>: <ul><li>オブジェクトモード：オブジェクトを選択。</li><li>編集モード：ツールに応じて頂点または面を選択。</li><li>頂点追加ツール中：タップ位置に頂点を追加。</li></ul></li></ul><ul><li><strong>ダブルタップ</strong>: コマンド選択の基本操作<ul><li><strong>図形上の場合</strong>: 現在の選択状態を維持したままコマンドパレットを展開します。</li><li><strong>何もない領域の場合</strong>: 矩形選択（ボックス選択）の準備状態になります（シーンに頂点が存在しない場合はコマンドパレットを開きます）。</li><li><strong>Sculpt Mode 中の何もない領域の場合</strong>: カメラ操作とブラシ操作を切り替えます。</li></ul></li></ul><ul><li><strong>長押し</strong>:<ul><li><strong>Object / Edit Mode の図形上</strong>: モード切り替え（オブジェクトモード $\leftrightarrow$ 編集モード）を行います。</li><li><strong>Object / Edit Mode の何もない領域</strong>: <code>Info</code> ボタンと同じ object info overlay を開きます。</li><li><strong>Sculpt Mode の図形上</strong>: モード切り替えは行いません。ブラシ操作との競合を避けるため無効です。</li><li><strong>Sculpt Mode の何もない領域</strong>: <code>Brsh</code> と同じブラシ設定 overlay を開きます。</li></ul></li></ul><ul><li><strong>上方向フリック</strong>: ビュー dock またはキャンバス下端から上へ素早くスワイプすると、「スカルプトモード」へ移行します。</li></ul>
+<h3>特殊ボタン：左上の「↑」ボタン</h3>
+<p>このボタンはモードによって役割が変わります。</p>
+<ul><li><strong>オブジェクト/編集モード</strong>: <strong>「追加選択（Shift相当）」</strong>。ONの間はタップで選択を追加でき、選択済み要素を再度タップすると選択解除されます。</li><li><strong>スカルプトモード</strong>: <strong>「ブラシ有効化（Armed）」</strong>。ONの間だけ、1本指ドラッグがブラシによる変形操作になります。OFFの間はカメラ操作が優先されます。</li></ul>
+<h2>コマンドパレット</h2>
+<p>ダブルタップで表示される 4x4 のグリッドメニューです。Object / Edit Mode では <code>Next</code> ボタンで計4ページのメニューを切り替えて使用します。スカルプトモード では、ブラシ操作に絞った専用の1ページパレットに切り替わります。パレットは操作位置を妨げないよう、画面中心からの相対位置に基づいて自動的に配置されます。</p>
+<h3>第1ページ：基本編集と軸制限</h3>
+<p>基本的な変形コマンドと、変形時の軸制限オプションを配置しています。</p>
+<p><img src="./mm01.jpg" alt="第1ページ: 基本編集と軸制限" /></p>
+<table><thead><tr><th>ボタン</th><th>解説</th></tr></thead><tbody><tr><td><code>G</code></td><td><strong>移動</strong>: 選択中のオブジェクト、面、頂点を移動します。ボタン押下後、画面を1本指でドラッグして位置を確認し、短いタップで確定します。</td></tr><tr><td><code>E</code></td><td><strong>押し出し</strong>: 編集モードで選択中の面または頂点を押し出します。ドラッグで移動量を調整します。</td></tr><tr><td><code>Vert</code></td><td><strong>頂点選択モード</strong>: 編集モードの選択対象を「頂点」に切り替えます。頂点単位の移動、削除、追加、ループ選択に使用します。</td></tr><tr><td><code>X</code></td><td><strong>X軸制限</strong>: 次に実行する変形操作（G/R/S/E/GG）の方向をワールドX軸に制限します。もう一度押すと制限なし（Free）に戻ります。</td></tr><tr><td><code>R</code></td><td><strong>回転</strong>: 選択中のオブジェクト、面、頂点を回転させます。ドラッグで角度を確認し、タップで確定します。</td></tr><tr><td><code>GG</code></td><td><strong>エッジスライド</strong>: 選択頂点が2つの隣接頂点に挟まれた中点である場合、そのエッジの直線上でスライドさせます。</td></tr><tr><td><code>Face</code></td><td><strong>面選択モード</strong>: 編集モードの選択対象を「面」に切り替えます。面の押し出し、削除、ループカットなどを実行できます。</td></tr><tr><td><code>Y</code></td><td><strong>Y軸制限</strong>: 次に実行する変形操作（G/R/S/E/GG）の方向をワールドY軸に制限します。もう一度押すと制限なし（Free）に戻ります。</td></tr><tr><td><code>S</code></td><td><strong>拡大縮小</strong>: 選択中のオブジェクト、面、頂点をスケールさせます。ドラッグで倍率を確認し、タップで確定します。</td></tr><tr><td><code>Cut</code></td><td><strong>ループカット</strong>: 編集モードで選択した四角面を分割します。単一の面を選択している場合は、プレビュー線を見ながら方向を選択します。</td></tr><tr><td><code>Undo</code></td><td><strong>元に戻す</strong>: 直前の編集操作（変形、プリミティブ追加、削除など）を1つ取り消します。</td></tr><tr><td><code>Z</code></td><td><strong>Z軸制限</strong>: 次に実行する変形操作（G/R/S/E/GG）の方向をワールドZ軸に制限します。もう一度押すと制限なし（Free）に戻ります。</td></tr><tr><td><code>Next</code></td><td>次のページへ切り替えます。</td></tr><tr><td><code>Chain</code></td><td><strong>チェーン選択</strong>: 選択頂点から隣接エッジの方向を選び、四角面だけでつながる頂点列をタップで確定選択します。</td></tr><tr><td><code>Redo</code></td><td><strong>やり直し</strong>: <code>Undo</code> で戻した操作を再度実行します。</td></tr><tr><td><code>N</code></td><td><strong>法線制限</strong>: 編集モードで、選択面の平均法線方向、または選択頂点周辺の平均法線方向へ変形を制限します。もう一度押すと制限なしに戻ります。</td></tr></tbody></table>
+<h3>第2ページ：選択・表示切替・Sculpt 入口</h3>
+<p><img src="./mm02.jpg" alt="第2ページ: 選択・細分化・表示切替" /></p>
+<table><thead><tr><th>ボタン</th><th>解説</th></tr></thead><tbody><tr><td><code>Catm</code></td><td><strong>Catmull-Clark細分化</strong>: メッシュ全体を滑らかに細分化し、丸みのある形状にします。</td></tr><tr><td><code>A</code></td><td><strong>全選択</strong>: オブジェクトモードでは全オブジェクトを、編集モードでは全頂点または全面を選択します。</td></tr><tr><td><code>Add</code></td><td><strong>頂点追加 / 面作成</strong>: 3〜4個の頂点を選択中なら面を作成し、それ以外ではタップ位置に頂点を追加するツールに切り替わります。</td></tr><tr><td><code>Pr</code></td><td><strong>投影切替</strong>: 透視投影（Perspective）と平行投影（Orthographic）を切り替えます。正確な位置合わせには平行投影が便利です。</td></tr><tr><td><code>Subd</code></td><td><strong>細分化</strong>: 四角面のみのメッシュを1段階細分化し、面構造を保ったままポリゴン密度を上げます。</td></tr><tr><td><code>Inv</code></td><td><strong>選択反転</strong>: 現在の選択状態を反転させます。</td></tr><tr><td><code>Del</code></td><td><strong>削除</strong>: 選択中のオブジェクト、頂点、または面を削除します。</td></tr><tr><td><code>Wire</code></td><td><strong>ワイヤーフレーム表示</strong>: 表示を切り替えます。ONの間は、裏側にある頂点も選択対象になります。</td></tr><tr><td><code>M</code></td><td><strong>Xミラー</strong>: X=0 を基準としたミラー編集を有効にします。</td></tr><tr><td><code>Half</code></td><td><strong>半分選択</strong>: X座標が0より小さい側の要素を選択します。片側削除やミラー編集の準備に使用します。</td></tr><tr><td><code>Sclpt</code></td><td><strong>Sculpt Mode</strong>: スカルプトモードに入り、法線方向へ膨らませる Draw ブラシを選びます。Sculpt Mode に入った後は専用パレットからブラシ種類や方向を切り替えます。</td></tr><tr><td><code>Smth</code></td><td><strong>スムーズシェーディング</strong>: 陰影表示を滑らかに切り替えます。形状（頂点構造）は変えず、見た目だけを滑らかにします。</td></tr><tr><td><code>Lens</code></td><td><strong>レンズプリセット</strong>: カメラの画角（広角・標準・望遠）を切り替えて見え方を確認できます。</td></tr><tr><td><code>Next</code></td><td>次のページへ切り替えます。</td></tr><tr><td><code>Loop</code></td><td><strong>ループ選択</strong>: ループカットで作成された中点頂点から、カットライン方向に沿って頂点列を選択します。</td></tr></tbody></table>
+<h3>第3ページ：ファイル操作・情報</h3>
+<p><img src="./mm03.jpg" alt="第3ページ: ファイル操作・オブジェクト管理" /></p>
+<table><thead><tr><th>ボタン</th><th>解説</th></tr></thead><tbody><tr><td><code>Load</code></td><td><strong>読み込み</strong>: ローカルファイルからモデルファイルや保存済み ModelAsset JSON を読み込みます。</td></tr><tr><td><code>O</code></td><td><strong>原点リセット</strong>: 選択中オブジェクトの原点（Origin）をワールド原点へ戻します。形状は維持したまま基準点のみを整えます。</td></tr><tr><td><code>Cood</code></td><td><strong>座標表示</strong>: 編集モードで選択中の頂点座標をオーバーレイ表示します。単一頂点選択時は直接数値を入力して更新可能です。</td></tr><tr><td><code>Info</code></td><td><strong>情報表示</strong>: 選択オブジェクトのサイズ（バウンディングボックス）、頂点数、ポリゴン数、原点を表示します。タップで閉じます。</td></tr><tr><td><code>Json</code></td><td><strong>JSON保存</strong>: 現在のシーンを gzip 圧縮済み JSON (<code>.json.gz</code>) として保存します。再編集に最適な形式です。</td></tr><tr><td><code>Shot</code></td><td><strong>スクリーンショット</strong>: 現在の表示画面を画像として保存します。</td></tr><tr><td><code>Glb</code></td><td><strong>GLB保存</strong>: 現在のシーンを GLB 形式で書き出します。他の3Dツールやビューアで利用可能です。</td></tr><tr><td><code>Join</code></td><td><strong>統合</strong>: オブジェクトモードで選択中の2つ以上のオブジェクトを1つにまとめます。</td></tr><tr><td><code>Next</code></td><td>次のページへ切り替えます。</td></tr><tr><td><code>New</code></td><td><strong>新規作成</strong>: 現在のシーンを破棄し、空のシーンから開始します。</td></tr></tbody></table>
+<h3>スカルプトモード専用ページ：ブラシ操作</h3>
+<p>スカルプトモード中は通常の4ページ構成ではなく、以下の1ページだけを表示します。</p>
+<p><img src="./mm05.jpg" alt="Sculpt Mode 専用ページ" /></p>
+<table><thead><tr><th>ボタン</th><th>解説</th></tr></thead><tbody><tr><td><code>Draw</code></td><td><strong>Drawブラシ</strong>: 頂点を法線方向へ移動します。<code>Sclp+</code> では膨らみ、<code>Sclp-</code> では凹みます。</td></tr><tr><td><code>Brsh</code></td><td><strong>ブラシ設定</strong>: 半径、強度、減衰形状を overlay で編集します。</td></tr><tr><td><code>Pr</code></td><td><strong>投影切替</strong>: 透視投影と平行投影を切り替えます。</td></tr><tr><td><code>Blur</code></td><td><strong>Blurブラシ</strong>: 近傍頂点の平均位置へ近づけ、表面をならします。</td></tr><tr><td><code>M</code></td><td><strong>Xミラー</strong>: Sculpt のブラシ変形を X=0 基準で対称適用します。</td></tr><tr><td><code>Wire</code></td><td><strong>ワイヤーフレーム表示</strong>: 表示を切り替えます。</td></tr><tr><td><code>Grab</code></td><td><strong>Grabブラシ</strong>: カーソルの移動方向へ頂点を引っ張ります。</td></tr><tr><td><code>Sclp+</code></td><td><strong>正方向</strong>: Draw / Pinch などの符号を正方向にします。</td></tr><tr><td><code>Undo</code></td><td><strong>元に戻す</strong>: 直前の stroke や編集操作を取り消します。</td></tr><tr><td><code>Smth</code></td><td><strong>スムーズシェーディング</strong>: 表示上の陰影を滑らかにします。</td></tr><tr><td><code>Pinch</code></td><td><strong>Pinchブラシ</strong>: 頂点をカーソル中心へ寄せます。</td></tr><tr><td><code>Sclp-</code></td><td><strong>負方向</strong>: Draw / Pinch などの符号を負方向にします。</td></tr><tr><td><code>Redo</code></td><td><strong>やり直し</strong>: <code>Undo</code> で戻した操作を再実行します。</td></tr><tr><td><code>Edit</code></td><td><strong>編集モードへ戻る</strong>: スカルプトモードから編集モードへ戻ります。</td></tr></tbody></table>
+<h3>第4ページ：プリミティブ追加と分割数</h3>
+<p><img src="./mm04.jpg" alt="第4ページ: プリミティブ追加と分割数" /></p>
+<table><thead><tr><th>ボタン</th><th>解説</th></tr></thead><tbody><tr><td><code>Cube</code></td><td><strong>立方体</strong>: 中心に原点を持つ立方体を追加します。</td></tr><tr><td><code>Torus</code></td><td><strong>トーラス</strong>: ドーナツ状の形状を追加します。分割数設定がリングとチューブの密度に反映されます。</td></tr><tr><td><code>Ball</code></td><td><strong>球体</strong>: 中心に原点を持つ球体を追加します。分割数設定が経緯度の密度に反映されます。</td></tr><tr><td><code>DCone</code></td><td><strong>二重円錐</strong>: 上下に頂点を持つ円錐を追加します。中心のリングが原点高さに配置されます。</td></tr><tr><td><code>Cyl</code></td><td><strong>円柱</strong>: 中心に原点を持つ円柱を追加します。分割数設定が円周の密度に反映されます。</td></tr><tr><td><code>Cone</code></td><td><strong>円錐</strong>: 円錐を追加します。底面と頂点の中間がオブジェクト原点になります。</td></tr><tr><td><code>Plane</code></td><td><strong>平面</strong>: XZ平面に配置される平面を追加します。床面や押し出しのベースとして利用します。</td></tr><tr><td><code>3</code>〜<code>32</code></td><td><strong>分割数設定</strong>: プリミティブ作成時の密度を指定します。数値が大きいほど滑らかになりますが、編集点数が増え負荷が高まります（初期値: 12）。</td></tr><tr><td><code>Next</code></td><td>第1ページへ戻ります。</td></tr></tbody></table>
+<h2>詳細機能仕様</h2>
+<h3>変形操作 (Transform)</h3>
+<p><code>G/R/S/E/GG</code> のいずれかを選択した後、1本指ドラッグでプレビューを行います。</p>
+<ul><li><strong>確定</strong>: 短いタップで確定します。</li><li><strong>継続操作</strong>: 指を離した時点では確定されず、その位置を基準に再度ドラッグして微調整を行うことが可能です。</li><li><strong>エッジスライド (GG)</strong>: 選択頂点が2つの隣接頂点に挟まれた中点である場合に限り、そのエッジの直線上でスライドさせます。</li></ul>
+<h3>Sculpt Mode</h3>
+<p>Sculpt Mode は active object の頂点だけをブラシで直接変形する第 3 のモードです。</p>
+<ul><li><strong>入口</strong>: 通常パレットの <code>Sclpt</code>、または view dock / canvas 下端からの上方向 flick。</li><li><strong>ブラシ種類</strong>: <code>Draw</code> は法線方向、<code>Blur</code> は平均化、<code>Grab</code> はカーソル移動方向、<code>Pinch</code> はカーソル中心方向へ変形します。</li><li><strong>ブラシ方向</strong>: <code>Sclp+</code> は正方向、<code>Sclp-</code> は負方向です。Draw では膨らみ / 凹みの切り替えになります。</li><li><strong>ブラシ設定</strong>: <code>Brsh</code> で、半径、強度、減衰形状を overlay から編集できます。強度は 1.0 が強い入力値です。</li><li><strong>X Mirror / Edit</strong>: 専用パレットの <code>M</code> で左右対称 sculpt を切り替え、<code>Edit</code> で編集モードへ戻れます。</li><li><strong>減衰形状 (Falloff)</strong>:<ul><li><code>Sphere</code>: 半球状に滑らかに減衰。</li><li><code>Triangle</code>: 距離に比例して直線的に減衰。</li><li><code>Peak</code>: 中心付近で強く、急激に減衰。</li><li><code>Flat</code>: 範囲内は均一に適用。</li></ul></li></ul><ul><li><strong>ストローク開始</strong>: Sculpt Mode では <code>↑</code> を ON にした間だけ 1 本指ドラッグがブラシ stroke になり、OFF の間は camera orbit を優先します。何もない領域のダブルタップでも brush / camera を切り替えられます。</li><li><strong>長押し</strong>: Sculpt Mode の何もない領域では <code>Brsh</code> と同じく brush 設定 overlay を開きます。Sculpt Mode の図形上では mode を切り替えません。Object / Edit Mode の図形上では mode を切り替えます。</li><li><strong>ブラシカーソル</strong>: 表面を認識すると、法線に合わせて回転した「楕円」が表示されます。サイズは 3D 上の半径を画面に投影した実際の大きさに連動します。</li><li><strong>X Mirror</strong>: <code>M</code> が ON のときは、ブラシ変形も X=0 基準の対称位置へ同時に適用されます。</li></ul>
+<h3>ループカット (Loop Cut)</h3>
+<p>編集モードで四角面を選択して <code>Cut</code> を実行します。</p>
+<ul><li><strong>伝播</strong>: 選択した面を開始点として、隣接する四角面へ向かってカットを伝播させます。</li><li><strong>方向選択</strong>: 単一の面のみを選択している場合は、緑色のプレビュー線が表示されます。指を辺に近づけて方向を選び、タップで確定します。</li><li><strong>X Mirror</strong>: ON の場合、選択した側のカット方向を反対側のミラー面にも同時に適用します。</li></ul>
+<h3>ループ選択 (Select Loop)</h3>
+<p><code>Loop</code> は、ループカットで作成された中点頂点列を効率的に選択するための機能です。</p>
+<ul><li><strong>開始点</strong>: ループカット後の中点頂点を「頂点選択モード」で選択してから実行します。</li><li><strong>選択方向</strong>: 選択頂点がエッジの中点であることを判定し、対辺側にある中点頂点へ向かって選択を広げます。</li><li><strong>活用例</strong>: <code>Cut</code> $\rightarrow$ <code>Loop</code> で中点列を選択し、そのまま <code>GG</code> でエッジに沿って位置調整を行う、といった使い方が可能です。</li></ul>
+<h3>連続選択 (Chain Select)</h3>
+<p><code>Chain</code> は、任意の頂点から隣接エッジの方向を指定し、四角面のみで繋がっている頂点列を選択します。</p>
+<ul><li><strong>開始点</strong>: 「頂点選択モード」で開始頂点を選択してから実行します。</li><li><strong>方向選択</strong>: プレビュー線を確認しながら方向（縦・横など）を選び、タップで確定します。</li><li><strong>停止条件</strong>: 立方体の角（90度）、三角面、五角面などに到達すると選択は停止します。</li></ul>
+<h3>矩形選択 (Box Select)</h3>
+<p>図形が存在する状態で、何もない領域をダブルタップして開始します。</p>
+<ul><li><strong>Sculpt Mode では例外</strong>: 何もない領域のダブルタップは、矩形選択ではなく camera / brush 操作の切り替えになります。</li><li><strong>操作</strong>: ドラッグで選択範囲をプレビュー表示します。</li><li><strong>確定</strong>: 指を離した後、範囲を確認し、タップで選択を確定します。</li><li><strong>修正</strong>: 確定前に再度ドラッグすることで、範囲を引き直せます。</li><li><strong>キャンセル</strong>: 準備中またはプレビュー中に再度ダブルタップすると、キャンセルされます。</li></ul>
+<h3>細分化 (Subdivision)</h3>
+<ul><li><strong>Subd (単純細分化)</strong>: 四角面のみのメッシュを1段階細分化します。1つの四角面を4つの四角面に分割します（三角面を含む場合は実行されません）。</li><li><strong>Catmull-Clark (スムージング細分化)</strong>: 面の中心点やエッジの中点を用いてメッシュを再構成し、滑らかな形状にします。ただし、非多様体（non-manifold）エッジや複雑な境界を持つ形状では実行されません。</li></ul>
+<h3>選択・表示の仕様</h3>
+<ul><li><strong>マーカー</strong>: 選択済みの頂点は赤く表示されます。また、両端の頂点が選択されているエッジも赤く表示されるため、ループ選択の結果を線として確認できます。</li><li><strong>裏側選択</strong>: <code>Wire</code> (ワイヤーフレーム) が ON の編集モードでは、視覚的に裏側に隠れている頂点も選択可能です。</li><li><strong>陰影</strong>: <code>Smth</code> は、頂点構造を変えずに表示上のシェーディングのみを滑らかにします。</li><li><strong>追加選択</strong>: 画面左上の <code>↑</code> ボタンが有効な間は、PC の Shift キーと同様に「追加選択」として動作します。</li></ul>
+<h3>ビュー dock (視点切り替え)</h3>
+<p>画面端（縦画面では上部、横画面では右端）に配置されたボタンで、以下の視点へ即座に切り替えられます。</p>
+<ul><li><code>X</code> / <code>-X</code>: 側面 / 反転側面</li><li><code>Y</code> / <code>-Y</code>: 上面 / 反転上面</li><li><code>Z</code> / <code>-Z</code>: 正面 / 反転正面</li></ul>
+<p>view dock の視点切り替えは、camera target と距離を維持したまま、オービット姿勢を標準方向へ戻します。2 本指回転で傾けた view roll もここでリセットされます。</p>
+<h2>Blender との連携</h2>
+<p>専用の Blender アドオン (<code>blender_modelasset_io.py</code>) を使用することで、mmodeler と Blender 間でデータをやり取りできます。</p>
+<h3>導入方法</h3>
+<ol><li>Blender の <code>Edit &gt; Preferences &gt; Add-ons &gt; Install...</code> から <code>blender_modelasset_io.py</code> をインストールします。</li><li><code>Webg ModelAsset JSON I/O</code> を有効化します。</li></ol>
+<h3>データの受け渡し</h3>
+<ul><li><strong>mmodeler $\rightarrow$ Blender</strong>: mmodeler で <code>Json</code> (gzip圧縮済みJSON) として保存し、Blender の <code>File &gt; Import &gt; Webg ModelAsset JSON</code> で読み込みます。</li><li><strong>Blender $\rightarrow$ mmodeler</strong>: Blender でメッシュを選択し、<code>File &gt; Export &gt; Webg ModelAsset JSON</code> で書き出し、mmodeler の <code>Load</code> で読み込みます。</li><li><strong>軸変換</strong>: 標準設定で、Blender の Z-up と mmodeler の Y-up を相互に変換します（設定で OFF にすることも可能です）。</li></ul>
+    </article>
+  </main>
 </body>
 </html>

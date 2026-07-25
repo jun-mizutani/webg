@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// unittest/background/main.js  2026/03/14
+// unittest/background/main.js  2026/07/25
 //   background sample
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -14,6 +14,7 @@ import { bootUnitTestApp } from "../shared/UnitTestApp.js";
 const CANVAS_WIDTH = 800;
 const CANVAS_HEIGHT = 600;
 
+// このインスタンスの初期化段階で、必要な状態と資源を準備して処理を開始する
 const start = async ({ screen, gpu, setStatus, startLoop }) => {
   // 共通 helper 側で Screen 初期化と viewport 追従を終えたあと、Background の準備だけを行う
   setStatus("creating background shader...");

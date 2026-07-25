@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// WebgApp.js     2026/04/30
+// WebgApp.js     2026/07/25
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // ---------------------------------------------
@@ -22,8 +22,11 @@ import SceneLoader from "./SceneLoader.js";
 import DebugDock from "./DebugDock.js";
 import OverlayPanel from "./OverlayPanel.js?v=20260430_overlaypanel2";
 import EyeRig from "./EyeRig.js";
+import FrameTimer from "./FrameTimer.js";
 import util from "./util.js";
 import { mergeUiTheme } from "./WebgUiTheme.js";
+import { createCameraFrameFromEye, createRenderFrameToken } from "./CameraFrame.js";
+import { CAMERA_REVERSE_Z } from "./DepthConvention.js";
 
 // WebgApp:
 // - Screen / Shader / Space / Camera / Input / Message の初期化を1か所へ集約する
@@ -34,6 +37,19 @@ export default class WebgApp {
   // ここでは GPU 初期化はまだ行わず、init() で使う材料だけを先にそろえる
   constructor(options = {}) {
     this.doc = options.document ?? document;
+    if (options.computeFrame !== undefined && typeof options.computeFrame !== "boolean") {
+      throw new Error("WebgApp computeFrame must be boolean");
+    }
+    if (options.frameTiming !== undefined && typeof options.frameTiming !== "boolean") {
+      throw new Error("WebgApp frameTiming must be boolean");
+    }
+    // Compute-firstでは標準scene描画を行わず、onComputeFrameがGPU command発行からsubmitまでを所有する
+    // frameTimingは通常appでも単独利用でき、Compute-firstでは負荷確認に必要なため自動的に有効にする
+    this.computeFrame = options.computeFrame === true;
+    this.frameTiming = options.frameTiming === true || this.computeFrame;
+    // GPU device feature要求はScreenの初期化責務へ渡し、WebgApp側でadapterを差し替えない
+    // requiredFeaturesとoptionalFeaturesの型・対応可否はScreenが一貫して検証する
+    this.gpuOptions = this.buildGpuOptions(options.gpu);
     this.shader = options.shader ?? null;
     this.shaderClass = options.shaderClass ?? SmoothShader;
     this.clearColor = [...(options.clearColor ?? [0.1, 0.15, 0.1, 1.0])];
@@ -189,6 +205,10 @@ export default class WebgApp {
       }
     });
     this.projectionMatrix = null;
+    this.cameraFrame = null;
+    // 通常sampleにはCameraFrame本体を要求せず、renderFrameTokenだけを描画callbackへ渡します。
+    // Compute系コアは従来どおり内部cameraFrameを使い、同一frame identityを厳密に検証します。
+    this.renderFrameToken = null;
     this.running = false;
     this.lastFrameTime = 0.0;
     this.elapsedSec = 0.0;
@@ -220,6 +240,8 @@ export default class WebgApp {
     this._frameScheduled = false;
     this.handlers = {
       onUpdate: null,
+      onFrameTiming: null,
+      onComputeFrame: null,
       onBeforeDraw: null,
       onAfterDraw3d: null,
       onAfterHud: null
@@ -241,8 +263,32 @@ export default class WebgApp {
     };
     this.modelRuntime = null;
     this.sceneRuntime = null;
+    this.frameTimer = null;
   }
 
+  // 利用側のGPU feature指定を維持し、frame計測時だけtimestamp-queryをoptionalへ追加する
+  // 不正なgpu optionをobjectへ補正せず、Screenへ渡す前に構造上の誤りを例外として明示する
+  buildGpuOptions(options) {
+    const gpuOptions = options === undefined ? {} : options;
+    if (!this.frameTiming) {
+      return gpuOptions;
+    }
+    if (!gpuOptions || typeof gpuOptions !== "object" || Array.isArray(gpuOptions)) {
+      throw new Error("WebgApp gpu options must be an object");
+    }
+    const optionalFeatures = gpuOptions.optionalFeatures;
+    if (optionalFeatures !== undefined && !Array.isArray(optionalFeatures)) {
+      throw new Error("WebgApp gpu.optionalFeatures must be an array");
+    }
+    return {
+      ...gpuOptions,
+      optionalFeatures: (optionalFeatures ?? []).includes("timestamp-query")
+        ? [...optionalFeatures]
+        : [...(optionalFeatures ?? []), "timestamp-query"]
+    };
+  }
+
+  // 配置の`dimension`を現在の入力と状態から求め、呼び出し元へ返す
   selectLayoutDimension(candidates, name) {
     for (let i = 0; i < candidates.length; i++) {
       const candidate = candidates[i];
@@ -446,6 +492,7 @@ export default class WebgApp {
     return panel;
   }
 
+  // 重ね合わせ表示のパネルを現在の入力と状態から求め、呼び出し元へ返す
   resolveOverlayPanel(panelOrId) {
     if (typeof panelOrId === "string") {
       return this.overlayPanels.get(panelOrId) ?? null;
@@ -456,6 +503,7 @@ export default class WebgApp {
     return null;
   }
 
+  // `showOverlayPanel`は必要な画面要素を準備し、表示状態を更新する
   showOverlayPanel(options = {}) {
     const safeOptions = util.readPlainObject(options, "WebgApp showOverlayPanel options");
     const panelId = util.readOptionalString(safeOptions.id, "WebgApp showOverlayPanel options.id", undefined, {
@@ -481,6 +529,7 @@ export default class WebgApp {
     });
   }
 
+  // 重ね合わせ表示のパネルを現在の入力と実行状態に合わせて更新する
   updateOverlayPanel(panelOrId, patch = {}) {
     const panel = this.resolveOverlayPanel(panelOrId);
     if (!panel) {
@@ -493,6 +542,7 @@ export default class WebgApp {
     });
   }
 
+  // `hideOverlayPanel`は必要な画面要素を準備し、表示状態を更新する
   hideOverlayPanel(panelOrId) {
     const panel = this.resolveOverlayPanel(panelOrId);
     if (!panel) {
@@ -502,6 +552,7 @@ export default class WebgApp {
     return true;
   }
 
+  // 重ね合わせ表示のパネルを対象から切り離し、関連する参照を整理する
   removeOverlayPanel(panelOrId) {
     const panel = this.resolveOverlayPanel(panelOrId);
     if (!panel) {
@@ -512,6 +563,7 @@ export default class WebgApp {
     return true;
   }
 
+  // 重ね合わせ表示の`panels`を初期状態へ戻し、前回の状態を残さない
   clearOverlayPanels() {
     const ids = [...this.overlayPanels.keys()];
     for (let i = 0; i < ids.length; i++) {
@@ -531,6 +583,7 @@ export default class WebgApp {
     return [...this.overlayPanels.values()];
   }
 
+  // すべての重ね合わせパネルを現在の入力と実行状態に合わせて更新する
   syncAllOverlayPanels() {
     this.overlayPanels.forEach((panel) => {
       panel.setTheme(this.uiTheme.uiPanel);
@@ -1145,6 +1198,7 @@ export default class WebgApp {
       this.fog.mode = Number(options.mode);
     }
 
+    // シェーダーのフォグを対象の状態または描画設定へ反映する
     const applyShaderFog = (key, value, setterName) => {
       // WebgApp の fog は scene 全体の基準値なので、shader の default として更新する
       // Shape.draw() の per-shape parameter 復帰や Wireframe への同期も、この default を参照する
@@ -1212,13 +1266,35 @@ export default class WebgApp {
       this.projectionNear,
       this.projectionFar,
       vfov,
-      this.screen.getAspect()
+      this.screen.getAspect(),
+      CAMERA_REVERSE_Z
     );
     this.projectionMatrix = proj;
     if (this.shader?.setProjectionMatrix) {
       this.shader.setProjectionMatrix(proj);
     }
     return proj;
+  }
+
+  // 現在のeye、viewport、projection設定から、この描画frameで共有するCamera Frameを確定する
+  updateCameraFrame() {
+    if (!this.eye) {
+      throw new Error("WebgApp.updateCameraFrame requires an eye Node");
+    }
+    const vfov = this.screen.getRecommendedFov(this.viewAngle);
+    this.cameraFrame = createCameraFrameFromEye(this.eye, {
+      near: this.projectionNear,
+      far: this.projectionFar,
+      vfov,
+      aspect: this.screen.getAspect(),
+      depthConvention: CAMERA_REVERSE_Z
+    });
+    this.renderFrameToken = createRenderFrameToken(this.cameraFrame);
+    this.projectionMatrix = this.cameraFrame.projectionMatrix;
+    if (this.shader?.setProjectionMatrix) {
+      this.shader.setProjectionMatrix(this.projectionMatrix);
+    }
+    return this.cameraFrame;
   }
 
   // viewport 追従と projection 更新を1本化する
@@ -1290,7 +1366,7 @@ export default class WebgApp {
   }
 
   // 視線回転用の親 node、rod node、視点 node を作成し、標準 rig 構成として初期化する
-  // この rig は convenience であり、本質 API は Space.setEye(node)
+  // このrigはカメラ姿勢を作り、描画frame開始時にCamera Frameへsnapshotされる
   createCameraRig() {
     this.cameraRig = this.space.addNode(null, this.camera.rigName);
     this.cameraRig.setPosition(...this.camera.target);
@@ -1434,8 +1510,13 @@ export default class WebgApp {
     this.debugProbe = new DebugProbe({
       defaultAfterFrames: this.debugTools.probeDefaultAfterFrames
     });
-    this.screen = new Screen(this.doc);
+    this.screen = new Screen(this.doc, {
+      gpu: this.gpuOptions
+    });
     await this.screen.ready;
+    if (this.frameTiming) {
+      this.frameTimer = new FrameTimer(this.screen.getGPU().device);
+    }
     this.screen.setClearColor(this.clearColor);
     this.ensureCanvasHost();
     if (this.fixedCanvasSize) {
@@ -1696,6 +1777,7 @@ export default class WebgApp {
     this.clearHudRows();
   }
 
+  // HUDの`optional`の`int`を読み込み、検証済みのデータとして後続処理へ渡す
   readHudOptionalInt(value, methodName, name, fallback) {
     if (value === undefined) {
       return fallback;
@@ -1706,6 +1788,7 @@ export default class WebgApp {
     return Number(value);
   }
 
+  // HUDの色を読み込み、検証済みのデータとして後続処理へ渡す
   readHudColor(color, methodName, fallback) {
     if (color === undefined) {
       return [...fallback];
@@ -1716,6 +1799,7 @@ export default class WebgApp {
     return [...color];
   }
 
+  // HUDの`row`を読み込み、検証済みのデータとして後続処理へ渡す
   readHudRow(row, index, methodName) {
     if (!row || typeof row !== "object" || Array.isArray(row)) {
       throw new Error(`WebgApp.${methodName} requires row[${index}] to be an object`);
@@ -1982,6 +2066,7 @@ export default class WebgApp {
     }
     const details = [];
     const warnings = [];
+    // `pushUnique`は重複や入力条件を確認し、対象を管理配列へ追加する
     const pushUnique = (list, value) => {
       const text = String(value ?? "");
       if (!text || list.includes(text)) {
@@ -2839,6 +2924,7 @@ export default class WebgApp {
     const dockParts = [];
     const hudNormalParts = [];
     const hudCompactParts = [];
+    // `pushKey`は重複や入力条件を確認し、対象を管理配列へ追加する
     const pushKey = (key, action) => {
       if (!key) return;
       const safeKey = String(key);
@@ -3123,7 +3209,11 @@ export default class WebgApp {
       cameraTarget: [...this.camera.target],
       cameraFollow: this.cameraFollow,
       input: this.input,
-      projection: this.projectionMatrix
+      projection: this.projectionMatrix,
+      // onUpdateはcamera確定前に呼ぶため、前frameのhandleをcurrentとして公開しません。
+      // 通常描画とCompute描画の分岐でupdateCameraFrame()した後、同じctxへ当該frame値を設定します。
+      cameraFrame: null,
+      renderFrameToken: null
     };
   }
 
@@ -3131,15 +3221,70 @@ export default class WebgApp {
   // sample 側は start() のたびに loop 関数を作らず、この handler 群だけ更新すればよい
   setLoopHandlers(handlers = {}) {
     this.handlers.onUpdate = handlers.onUpdate ?? null;
+    this.handlers.onFrameTiming = handlers.onFrameTiming ?? null;
+    this.handlers.onComputeFrame = handlers.onComputeFrame ?? null;
     this.handlers.onBeforeDraw = handlers.onBeforeDraw ?? null;
     this.handlers.onAfterDraw3d = handlers.onAfterDraw3d ?? null;
     this.handlers.onAfterHud = handlers.onAfterHud ?? null;
+  }
+
+  // Compute-first用の正式handlerを呼び、未指定時は無表示のloopを継続せず例外にする
+  // handlerはCompute Pass、Render Pass、queue.submit()まで1 frame分を完了させる
+  renderComputeFrame(ctx) {
+    if (typeof this.handlers.onComputeFrame !== "function") {
+      throw new Error("WebgApp computeFrame requires start({ onComputeFrame })");
+    }
+    return this.handlers.onComputeFrame(ctx);
+  }
+
+  // Help panelへ表示するframe間隔、GPU時間、JavaScript時間の英語行を返す
+  // frameTiming無効時は空配列へせず、計測が有効でない状態を明示する
+  getFrameTimingLines() {
+    return this.frameTimer?.getDisplayLines?.() ?? [
+      "GPU timing: unavailable",
+      "JS timing: unavailable"
+    ];
+  }
+
+  // 当該frame用のtimestamp query slotを確保し、空きがなければ計測だけを省略する
+  beginGpuTiming() {
+    return this.frameTimer?.beginGpuTiming() ?? false;
+  }
+
+  // Compute Pass descriptorへ設定する開始・終了timestampを返す
+  getGpuTimestampWrites(begin, end) {
+    return this.frameTimer?.getGpuTimestampWrites(begin, end);
+  }
+
+  // Render Pass descriptorへ設定する開始・終了timestampを返す
+  getGpuRenderTimestampWrites(begin = true, end = true) {
+    return this.frameTimer?.getGpuRenderTimestampWrites(begin, end);
+  }
+
+  // 全Pass記録後にquery resolveとreadback copyをcommand encoderへ追加する
+  endGpuTiming(encoder) {
+    return this.frameTimer?.endGpuTiming(encoder) ?? false;
+  }
+
+  // queue.submit()直後にGPU timestampの非同期readbackを開始する
+  afterGpuSubmit() {
+    this.frameTimer?.afterSubmit();
   }
 
   // requestAnimationFrame ループを開始する
   // handlers を先に登録してから running を立て、初回 frame へ進む
   start(handlers = {}) {
     this.setLoopHandlers(handlers);
+    if (this.computeFrame && typeof this.handlers.onComputeFrame !== "function") {
+      throw new Error("WebgApp computeFrame requires start({ onComputeFrame })");
+    }
+    if (!this.computeFrame && this.handlers.onComputeFrame !== null) {
+      throw new Error("WebgApp onComputeFrame requires computeFrame: true");
+    }
+    if (this.handlers.onFrameTiming !== null &&
+      typeof this.handlers.onFrameTiming !== "function") {
+      throw new Error("WebgApp onFrameTiming must be a function");
+    }
     this.running = true;
     this.lastFrameTime = 0.0;
     this.runtimeElapsedSec = 0.0;
@@ -3220,6 +3365,10 @@ export default class WebgApp {
     this.elapsedSec = deltaMs * 0.001;
     this.runtimeElapsedSec += this.elapsedSec;
     this.lastFrameTime = timeMs;
+    this.frameTimer?.beginFrame(deltaMs);
+    if (this.handlers.onFrameTiming) {
+      this.handlers.onFrameTiming(deltaMs, timeMs);
+    }
     this.updateManagedEyeRig(this.elapsedSec);
     const ctx = this.getFrameContext(timeMs);
 
@@ -3227,8 +3376,25 @@ export default class WebgApp {
       const shouldStop = this.handlers.onUpdate(ctx);
       if (shouldStop === true) {
         this.running = false;
+        this.frameTimer?.endFrame();
         return;
       }
+    }
+
+    if (this.computeFrame) {
+      const cameraFrame = this.updateCameraFrame();
+      ctx.cameraFrame = cameraFrame;
+      ctx.renderFrameToken = this.renderFrameToken;
+      ctx.projection = cameraFrame.projectionMatrix;
+      this.renderComputeFrame(ctx);
+      if (this.input?.beginFrame) {
+        this.input.beginFrame();
+      }
+      this.frameTimer?.endFrame();
+      if (this.running) {
+        this.requestRender();
+      }
+      return;
     }
 
     this.updateTweens(deltaMs);
@@ -3243,12 +3409,16 @@ export default class WebgApp {
       this.syncCameraFromEyeRig(this.eyeRig);
     }
     this.updateCameraEffects(timeMs);
+    const cameraFrame = this.updateCameraFrame();
+    ctx.cameraFrame = cameraFrame;
+    ctx.renderFrameToken = this.renderFrameToken;
+    ctx.projection = cameraFrame.projectionMatrix;
     this.screen.clear();
     if (this.handlers.onBeforeDraw) {
       this.handlers.onBeforeDraw(ctx);
     }
     if (this.autoDrawScene) {
-      this.space.draw(this.eye);
+      this.space.draw(cameraFrame);
     }
     if (this.autoDrawBones) {
       this.space.scanSkeletons();
@@ -3266,6 +3436,7 @@ export default class WebgApp {
     if (this.input?.beginFrame) {
       this.input.beginFrame();
     }
+    this.frameTimer?.endFrame();
 
     if (this.running) {
       this.requestRender();

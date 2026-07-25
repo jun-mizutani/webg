@@ -1,11 +1,12 @@
 // ---------------------------------------------
-// BoneNormPhong.js 2026/04/18
+// BoneNormPhong.js 2026/07/13
 //   WebGPU Version
 // ---------------------------------------------
 
 'use strict';
 
 import Shader from '../../webg/Shader.js';
+import { CAMERA_REVERSE_Z } from '../../webg/DepthConvention.js';
 import { DEFAULT_MAX_SKIN_BONES, SKIN_MATRIX_FLOATS_PER_BONE, SKIN_MATRIX_VECTORS_PER_BONE, alignTo } from "../../webg/SkinningConfig.js";
 
 export default class BoneNormPhong extends Shader {
@@ -357,8 +358,8 @@ export default class BoneNormPhong extends Shader {
       },
       depthStencil: {
         depthWriteEnabled: true,
-        depthCompare: 'less',
-        format: 'depth24plus'
+        depthCompare: CAMERA_REVERSE_Z.compare,
+        format: CAMERA_REVERSE_Z.format
       }
     });
 

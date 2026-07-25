@@ -186,7 +186,6 @@ let elapsedSec = 0.0;
 
 app.start({
   onUpdate: ({ deltaSec }) => {
-    orbit.update(deltaSec);
     if (!state.paused) {
       elapsedSec += deltaSec;
       staticPlainNode.rotateX(0.28);

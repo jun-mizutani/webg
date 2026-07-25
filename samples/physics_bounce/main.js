@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// samples/physics_bounce/main.js  2026/05/12
+// samples/physics_bounce/main.js  2026/07/25
 //   physics_bounce sample
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -106,6 +106,7 @@ let app = null;
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
 const normalizeRatio = (value) => value - Math.floor(value);
 
+// `showStartError`は必要な画面要素を準備し、表示状態を更新する
 const showStartError = (error) => {
   const existing = document.getElementById("start-error");
   if (existing) existing.remove();
@@ -245,6 +246,7 @@ const createSpherePrototypeShape = (gpu, radius) => {
   return shape;
 };
 
+// `sphere`のインスタンスの形状を生成し、後続処理で利用できる状態にする
 const createSphereInstanceShape = (prototypeShape, color) => {
   const shape = prototypeShape.createInstance();
   shape.updateMaterial({
@@ -253,6 +255,7 @@ const createSphereInstanceShape = (prototypeShape, color) => {
   return shape;
 };
 
+// 床の形状を生成し、後続処理で利用できる状態にする
 const createFloorShape = (gpu) => {
   const shape = new Shape(gpu);
   shape.applyPrimitiveAsset(Primitive.cuboid(FLOOR_SIZE[0], FLOOR_SIZE[1], FLOOR_SIZE[2]));
@@ -268,6 +271,7 @@ const createFloorShape = (gpu) => {
   return shape;
 };
 
+// `wall`の形状を生成し、後続処理で利用できる状態にする
 const createWallShape = (gpu, size) => {
   const shape = new Shape(gpu);
   shape.applyPrimitiveAsset(Primitive.cuboid(size[0], size[1], size[2]));
@@ -324,6 +328,7 @@ const contactIncludesBody = (contact, body) => (
 const isBallBody = (entries, body) => entries.some((entry) => entry.body === body);
 const isFloorBody = (body) => body?.getName?.() === "floor";
 
+// `ball`の`ball`の`contact`の`count`を現在の入力と状態から求め、呼び出し元へ返す
 const getBallBallContactCount = (entries, contacts) => {
   let count = 0;
   for (let i = 0; i < contacts.length; i++) {
@@ -381,6 +386,7 @@ const updateBounceDiagnostics = (entries, contacts, deltaMs) => {
   return ballBallContacts;
 };
 
+// 状態表示の行を現在の入力と状態から求め、呼び出し元へ返す
 const formatStatusLines = (entries, paused, totalBallBallContacts, lastBallBallContacts, sharedSphereResource, fps) => {
   const awakeCount = entries.filter((entry) => !entry.body.getSleeping()).length;
   return [
@@ -393,6 +399,7 @@ const formatStatusLines = (entries, paused, totalBallBallContacts, lastBallBallC
   ];
 };
 
+// このインスタンスの初期化段階で、必要な状態と資源を準備して処理を開始する
 const start = async () => {
   app = new WebgApp({
     document,
@@ -449,6 +456,7 @@ const start = async () => {
   });
   world.addBody(floorNode);
 
+  // `wall`を対象へ追加し、後続処理から参照できるようにする
   const addWall = (name, position, size) => {
     const wallVisual = space.addNode(null, `${name}_visual`);
     wallVisual.setPosition(position[0], position[1], position[2]);
@@ -492,6 +500,7 @@ const start = async () => {
   const bodyEntries = [];
   let nextBallIndex = ballSpecs.length;
 
+  // `ball`の`entry`を対象へ追加し、後続処理から参照できるようにする
   const addBallEntry = (spec) => {
     const body = space.addPhysicsNode(null, spec.name, {
       bodyType: "kinematic",
@@ -531,6 +540,7 @@ const start = async () => {
     resetBodyEntry(entry);
   };
 
+  // `burst`の`balls`を対象へ追加し、後続処理から参照できるようにする
   const addBurstBalls = () => {
     const available = MAX_BALL_COUNT - bodyEntries.length;
     if (available <= 0) {
@@ -554,6 +564,7 @@ const start = async () => {
   let totalBallBallContacts = 0;
   let lastBallBallContacts = 0;
 
+  // すべての物体を初期状態へ戻し、前回の状態を残さない
   const resetAllBodies = () => {
     totalBallBallContacts = 0;
     lastBallBallContacts = 0;

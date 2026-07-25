@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>lowlevel_terrain</title>
+  <link rel="icon" href="data:," />
+  <!-- 2026/06/19 -->
+  <style>
+
+:root {
+  color-scheme: light;
+  --bg: #eef3f8;
+  --paper: rgba(255, 255, 255, 0.94);
+  --line: #c8d5e4;
+  --ink: #17324a;
+  --muted: #5c748b;
+  --accent: #1566ab;
+  --accent-soft: #dfeefe;
+  --code-bg: #f3f7fb;
+  --shadow: rgba(29, 52, 79, 0.10);
+}
+* { box-sizing: border-box; }
+html, body {
+  margin: 0;
+  min-height: 100%;
+}
+body {
+  background:
+    radial-gradient(circle at top left, rgba(21, 102, 171, 0.12), transparent 24%),
+    radial-gradient(circle at top right, rgba(255, 191, 118, 0.10), transparent 22%),
+    linear-gradient(180deg, #f8fbfd 0%, var(--bg) 100%);
+  color: var(--ink);
+  font: 16px/1.78 "Avenir Next", "Hiragino Sans", "Yu Gothic", sans-serif;
+}
+.page {
+  width: min(1080px, calc(100% - 28px));
+  margin: 0 auto;
+  padding: 24px 0 56px;
+}
+.hero,
+.doc {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  box-shadow: 0 22px 52px var(--shadow);
+}
+.hero {
+  padding: 22px 24px;
+  margin-bottom: 18px;
+}
+.hero h1 {
+  margin: 0 0 8px;
+  font-size: clamp(2rem, 4vw, 3rem);
+  line-height: 1.08;
+}
+.hero p {
+  margin: 0;
+  color: var(--muted);
+}
+.doc {
+  padding: 28px;
+}
+.doc > :first-child {
+  margin-top: 0;
+}
+h1, h2, h3, h4, h5, h6 {
+  line-height: 1.25;
+  margin: 1.45em 0 0.55em;
+}
+h1 {
+  font-size: 2.2rem;
+}
+h2 {
+  padding-bottom: 0.28em;
+  border-bottom: 1px solid var(--line);
+  font-size: 1.48rem;
+}
+h3 {
+  font-size: 1.14rem;
+}
+p, ul, ol, table, pre, blockquote {
+  margin: 0 0 1em;
+}
+ul, ol {
+  padding-left: 1.4em;
+}
+li + li {
+  margin-top: 0.26em;
+}
+a {
+  color: var(--accent);
+  text-decoration: none;
+}
+a:hover {
+  text-decoration: underline;
+}
+img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  border-radius: 16px;
+  border: 1px solid var(--line);
+  box-shadow: 0 12px 32px rgba(29, 52, 79, 0.08);
+  margin: 1.1em 0 1.4em;
+}
+code {
+  padding: 0.12em 0.38em;
+  border-radius: 0.45em;
+  background: var(--code-bg);
+  border: 1px solid #dbe6f1;
+  font: 0.92em/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+pre {
+  padding: 14px 16px;
+  overflow-x: auto;
+  border-radius: 14px;
+  background: #0f1720;
+  color: #ecf5ff;
+}
+pre code {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #ffffff;
+}
+th, td {
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  text-align: left;
+  vertical-align: top;
+}
+th {
+  background: #f5f9fc;
+}
+hr {
+  border: 0;
+  border-top: 1px solid var(--line);
+  margin: 1.5em 0;
+}
+blockquote {
+  padding: 0.3em 0 0.3em 1em;
+  border-left: 4px solid #c9dbef;
+  color: var(--muted);
+}
+@media (max-width: 720px) {
+  .page {
+    width: min(100% - 18px, 1080px);
+    padding-top: 16px;
+  }
+  .hero,
+  .doc {
+    border-radius: 18px;
+  }
+  .doc {
+    padding: 20px;
+  }
+}
+
+  </style>
+</head>
+<body>
+  <main class="page">
+    <section class="hero">
+      <h1>lowlevel_terrain</h1>
+    </section>
+    <article class="doc">
+<h1>lowlevel_terrain</h1>
+<p>English | <a href="index.html">日本語</a></p>
+<p><img src="./lowlevel_terrain.jpg" alt="lowlevel_terrain" /></p>
+<h2>Overview</h2>
+<ul><li>This sample uses <code>WebgApp</code> for the camera and HUD while building the terrain mesh itself only with the low-level <code>Shape</code> API</li><li>It determines heights with value noise and <code>fbm</code>, lays quads over a shared-vertex grid with <code>addPlane()</code>, and constructs continuous terrain as a single mesh</li><li>It also generates a height-band texture from the same height field as the mesh, providing shoreline, grassland, rock, and snowline-like color transitions as one procedural texture</li><li>Steep steps are softened with simple erosion-like smoothing, slightly collapsing sharp cliffs into more natural ridges and slopes</li><li>Because a falloff lowers the outer area and raises the center, an island-like silhouette appears clearly</li><li>The sample is arranged so that inspecting normals up close with orbit and zoom, then inspecting the outline from far away, makes the intention of the low-level terrain generation easier to understand</li><li><code>Q / E</code> changes camera distance and <code>- / =</code> changes terrain relief on the spot, making it easy to compare how appearance changes while the topology stays the same</li></ul>
+<h2>How to Run</h2>
+<ul><li>Open <a href="./lowlevel_terrain.html">./lowlevel_terrain.html</a></li><li>Use a browser with WebGPU support, and check the help panel and HUD together with the sample when needed</li></ul>
+<h2>webg Features Used</h2>
+<ul><li><code>WebgApp</code>: initializes startup, camera, HUD, input, and fog</li><li><code>EyeRig</code>: orbit camera and zoom</li><li><code>Shape.addVertexUV()</code>: places grid vertices</li><li><code>Shape.addPlane()</code>: adds quads as pairs of triangles</li></ul>
+<h2>Checkpoints</h2>
+<ul><li>Right after startup, confirm that an island-like terrain appears and can be inspected both from above and from an angled viewpoint with the orbit camera</li><li>Confirm that rows / cols, vertex count, quad count, and the minimum and maximum height values are displayed at the upper right</li><li>Confirm that surface colors change by height band, making the terrain easier to read from lowlands to highlands</li><li>Because normals are generated from shared vertices, confirm that the terrain surface looks continuous and smooth</li><li>Confirm that the erosion-like smoothing softens steep noise-only steps slightly compared with raw terrain noise</li><li>Confirm that zooming in reveals mountain-surface slopes, while zooming out reveals the overall silhouette and the effect of the falloff</li><li>Confirm that <code>heightScale</code> and the terrain relief change together at the upper right when using <code>- / =</code></li></ul>
+<h2>Controls</h2>
+<ul><li>Drag: orbit camera</li><li>Two-finger drag: pan the camera</li><li>Pinch / mouse wheel: zoom</li><li>Arrow keys: orbit camera</li><li><code>[ / ]</code>: zoom</li><li><code>Q / E</code>: move the camera closer / farther</li><li><code>- / =</code>: decrease / increase terrain relief</li><li><code>R</code>: return to the default view</li></ul>
+    </article>
+  </main>
+</body>
+</html>

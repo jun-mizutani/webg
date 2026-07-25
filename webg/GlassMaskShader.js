@@ -1,10 +1,11 @@
 // ---------------------------------------------
-//  GlassMaskShader.js  2026/05/04
+//  GlassMaskShader.js  2026/07/12
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // ---------------------------------------------
 
 import Shader from "./Shader.js";
+import { CAMERA_REVERSE_Z } from "./DepthConvention.js";
 
 export default class GlassMaskShader extends Shader {
 
@@ -13,7 +14,7 @@ export default class GlassMaskShader extends Shader {
   constructor(gpu, options = {}) {
     super(gpu);
     this.targetFormat = options.targetFormat ?? gpu?.format ?? "bgra8unorm";
-    this.depthCompare = options.depthCompare ?? "less";
+    this.depthCompare = CAMERA_REVERSE_Z.compare;
     this.cullMode = options.cullMode ?? "back";
     this.frontFace = options.frontFace ?? "ccw";
     this.OFF_PROJ = 0;
@@ -92,7 +93,7 @@ fn fsMain() -> @location(0) vec4f {
       depthStencil: {
         depthWriteEnabled: false,
         depthCompare: this.depthCompare,
-        format: "depth24plus"
+        format: CAMERA_REVERSE_Z.format
       }
     });
     this.createUniformBuffer(this.uniformData.byteLength);

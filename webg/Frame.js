@@ -1,5 +1,5 @@
 // ---------------------------------------------
-//  Frame.js      2026/04/02
+//  Frame.js      2026/07/25
 //  handle <node> elements of COLLADA format
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -148,6 +148,7 @@ export default class Frame extends CoordinateSystem {
     return frames;
   }
 
+  // `to`のボーンを指定された形式または保存先へ出力する
   copyToBone(joint_names, bind_shape_matrix,
              skeleton, parent_bone, count, verbose) {
     if (!this.findChildFrames(joint_names)) { return; }

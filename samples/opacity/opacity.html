@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>webg opacity sample</title>
+  <link rel="icon" href="data:," />
+  <style>
+    :root { color-scheme: dark; font-family: "Avenir Next", "Hiragino Sans", sans-serif; }
+    html, body { margin: 0; height: 100%; overflow: hidden; background: #07101c; }
+    canvas { display: block; width: 100%; height: 100%; }
+    #controls {
+      position: fixed; top: 12px; left: 12px; z-index: 10;
+      width: min(560px, calc(100vw - 24px)); padding: 10px 12px;
+      border: 1px solid rgba(160, 205, 255, 0.35); border-radius: 10px;
+      background: rgba(5, 13, 25, 0.82); backdrop-filter: blur(8px);
+      box-sizing: border-box; font-size: 13px; line-height: 1.55;
+    }
+    #controls h1 { margin: 0 0 6px; font-size: 16px; }
+    #controls .row { display: flex; flex-wrap: wrap; gap: 4px 12px; align-items: center; }
+    #controls label { white-space: nowrap; }
+    #controls input[type="range"] { width: 130px; vertical-align: middle; }
+    #status { color: #a9d8ff; }
+    #error { color: #ffaaaa; white-space: pre-wrap; }
+  </style>
+</head>
+<body>
+  <canvas id="canvas" width="960" height="720"></canvas>
+  <section id="controls" aria-label="opacity sample controls">
+    <h1>Mixed-material opacity / ComputeEffectPipeline</h1>
+    <div class="row">
+      <label><input id="ssao" type="checkbox" checked /> SSAO</label>
+      <label><input id="shadow" type="checkbox" checked /> Shadow</label>
+      <label><input id="ssr" type="checkbox" checked /> SSR</label>
+      <label><input id="toon" type="checkbox" /> Toon</label>
+      <label><input id="dof" type="checkbox" /> DoF</label>
+      <label><input id="bloom" type="checkbox" /> Bloom</label>
+      <label><input id="edge" type="checkbox" /> Edge</label>
+      <label><input id="pause" type="checkbox" /> Pause</label>
+    </div>
+    <div class="row">
+      <label>Transparent alpha <input id="alpha" type="range" min="0" max="1" step="0.01" value="0.42" /></label>
+      <output id="alphaValue" for="alpha">0.42</output>
+    </div>
+    <div class="row">
+      <label>Translucent roughness <input id="roughness" type="range" min="0.04" max="1" step="0.01" value="0.25" /></label>
+      <output id="roughnessValue" for="roughness">0.25</output>
+      <span id="status">starting</span>
+    </div>
+    <div id="error"></div>
+  </section>
+  <script type="module" src="./main.js?v=20260724_pyramid_bloom"></script>
+</body>
+</html>

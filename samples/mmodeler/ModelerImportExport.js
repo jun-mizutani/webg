@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// samples/mmodeler/ModelerImportExport.js  2026/05/24
+// samples/mmodeler/ModelerImportExport.js  2026/07/25
 //   Import / export helpers for the mmodeler sample.
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -112,6 +112,7 @@ export function matrixFromNodeDef(node) {
 export function buildWorldMatrixResolver(nodes) {
   const nodeById = new Map(nodes.map((node) => [node.id, node]));
   const cache = new Map();
+  // このインスタンスを現在の入力と状態から求め、呼び出し元へ返す
   const resolve = (node) => {
     if (!node) {
       return new Matrix();
@@ -130,6 +131,7 @@ export function buildWorldMatrixResolver(nodes) {
 }
 
 export default class ModelerImportExport {
+  // インスタンス生成時に、受け取った設定を検証して初期状態を準備する
   constructor(options = {}) {
     this.filenamePrefix = options.filenamePrefix ?? "ma";
     this.documentRef = options.documentRef ?? document;
@@ -154,6 +156,7 @@ export default class ModelerImportExport {
     return `${this.filenamePrefix}_${timestamp}${serialSuffix}${ext}`;
   }
 
+  // `blob`を指定された形式または保存先へ出力する
   downloadBlob(blob, filename) {
     downloadBlob(blob, filename, {
       documentRef: this.documentRef,
@@ -161,6 +164,7 @@ export default class ModelerImportExport {
     });
   }
 
+  // モデルのアセットのJSONを指定された形式または保存先へ出力する
   saveModelAssetJson(asset) {
     asset.assertValid();
     const filename = this.makeDownloadFilename(".json");
@@ -168,6 +172,7 @@ export default class ModelerImportExport {
     return filename;
   }
 
+  // モデルのアセットのJSONの`gz`を指定された形式または保存先へ出力する
   async saveModelAssetJsonGz(asset) {
     asset.assertValid();
     const filename = this.makeDownloadFilename(".json.gz");
@@ -175,6 +180,7 @@ export default class ModelerImportExport {
     return filename;
   }
 
+  // `glb`の`bytes`を指定された形式または保存先へ出力する
   saveGlbBytes(glb) {
     const filename = this.makeDownloadFilename(".glb");
     this.downloadBlob(new Blob([glb], { type: "model/gltf-binary" }), filename);
@@ -232,11 +238,9 @@ export default class ModelerImportExport {
       throw new Error(`${name} scale must be non-zero`);
     }
     const material = options.material;
-    const idToIndex = new Map();
     const positions = [];
     for (let i = 0; i < vertices.length; i++) {
       const vertex = vertices[i];
-      idToIndex.set(vertex.id, i);
       positions.push(vertex.position[0], vertex.position[1], vertex.position[2]);
     }
 
@@ -246,11 +250,11 @@ export default class ModelerImportExport {
       if (face.indices.length !== 3 && face.indices.length !== 4) {
         throw new Error(`face ${face.id} must have 3 or 4 vertices`);
       }
-      const loop = face.indices.map((vertexId) => {
-        if (!idToIndex.has(vertexId)) {
-          throw new Error(`face ${face.id} references missing vertex ${vertexId}`);
+      const loop = face.indices.map((vertexIndex) => {
+        if (!Number.isInteger(vertexIndex) || vertexIndex < 0 || vertexIndex >= vertices.length) {
+          throw new Error(`face ${face.id} references missing vertex index ${vertexIndex}`);
         }
-        return idToIndex.get(vertexId);
+        return vertexIndex;
       });
       polygonLoops.push(loop);
       for (let i = 0; i < loop.length - 2; i++) {
@@ -353,7 +357,6 @@ export default class ModelerImportExport {
     }
     const vertices = [];
     const faces = [];
-    let nextVertexId = 1;
     let nextFaceId = 1;
     if (!entry.worldMatrix || typeof entry.worldMatrix.mulVector !== "function") {
       throw new Error(`mesh ${entry.label} does not contain a world transform`);
@@ -365,9 +368,10 @@ export default class ModelerImportExport {
         readFiniteNumber(geometry.positions[i + 1], `positions[${i + 1}]`),
         readFiniteNumber(geometry.positions[i + 2], `positions[${i + 2}]`)
       ]);
+      const vertexIndex = vertices.length;
       vertices.push({
-        id: nextVertexId++,
-        position: readVec3(position, `object ${objectId} vertex ${nextVertexId - 1}`)
+        id: vertexIndex,
+        position: readVec3(position, `object ${objectId} vertex ${vertexIndex}`)
       });
     }
     const loops = Array.isArray(geometry.polygonLoops) && geometry.polygonLoops.length > 0
@@ -379,12 +383,12 @@ export default class ModelerImportExport {
         if (!Array.isArray(loop) || (loop.length !== 3 && loop.length !== 4)) {
           throw new Error(`polygonLoops[${i}] must be a triangle or quad for this initial modeler`);
         }
-        const indices = loop.map((vertexIndex) => {
-          const id = Number(vertexIndex) + 1;
-          if (!vertices.some((vertex) => vertex.id === id)) {
+        const indices = loop.map((sourceIndex) => {
+          const vertexIndex = Number(sourceIndex);
+          if (!Number.isInteger(vertexIndex) || vertexIndex < 0 || vertexIndex >= vertices.length) {
             throw new Error(`polygonLoops[${i}] references missing vertex index ${vertexIndex}`);
           }
-          return id;
+          return vertexIndex;
         });
         faces.push({
           id: nextFaceId++,
@@ -393,13 +397,17 @@ export default class ModelerImportExport {
       }
     } else {
       for (let i = 0; i + 2 < geometry.indices.length; i += 3) {
+        const a = Number(geometry.indices[i]);
+        const b = Number(geometry.indices[i + 1]);
+        const c = Number(geometry.indices[i + 2]);
+        for (const vertexIndex of [a, b, c]) {
+          if (!Number.isInteger(vertexIndex) || vertexIndex < 0 || vertexIndex >= vertices.length) {
+            throw new Error(`indices[${i}] triangle references missing vertex index ${vertexIndex}`);
+          }
+        }
         faces.push({
           id: nextFaceId++,
-          indices: [
-            Number(geometry.indices[i]) + 1,
-            Number(geometry.indices[i + 1]) + 1,
-            Number(geometry.indices[i + 2]) + 1
-          ]
+          indices: [a, b, c]
         });
       }
     }
@@ -417,11 +425,12 @@ export default class ModelerImportExport {
       scale: 1.0,
       vertices,
       faces,
-      nextVertexId,
+      nextVertexId: vertices.length,
       nextFaceId
     };
   }
 
+  // モデルのアセットのファイルを読み込み、検証済みのデータとして後続処理へ渡す
   async loadModelAssetFile(file, options = {}) {
     if (!file) {
       return null;

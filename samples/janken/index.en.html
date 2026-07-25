@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>janken</title>
+  <link rel="icon" href="data:," />
+  <!-- 2026/06/19 -->
+  <style>
+
+:root {
+  color-scheme: light;
+  --bg: #eef3f8;
+  --paper: rgba(255, 255, 255, 0.94);
+  --line: #c8d5e4;
+  --ink: #17324a;
+  --muted: #5c748b;
+  --accent: #1566ab;
+  --accent-soft: #dfeefe;
+  --code-bg: #f3f7fb;
+  --shadow: rgba(29, 52, 79, 0.10);
+}
+* { box-sizing: border-box; }
+html, body {
+  margin: 0;
+  min-height: 100%;
+}
+body {
+  background:
+    radial-gradient(circle at top left, rgba(21, 102, 171, 0.12), transparent 24%),
+    radial-gradient(circle at top right, rgba(255, 191, 118, 0.10), transparent 22%),
+    linear-gradient(180deg, #f8fbfd 0%, var(--bg) 100%);
+  color: var(--ink);
+  font: 16px/1.78 "Avenir Next", "Hiragino Sans", "Yu Gothic", sans-serif;
+}
+.page {
+  width: min(1080px, calc(100% - 28px));
+  margin: 0 auto;
+  padding: 24px 0 56px;
+}
+.hero,
+.doc {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  box-shadow: 0 22px 52px var(--shadow);
+}
+.hero {
+  padding: 22px 24px;
+  margin-bottom: 18px;
+}
+.hero h1 {
+  margin: 0 0 8px;
+  font-size: clamp(2rem, 4vw, 3rem);
+  line-height: 1.08;
+}
+.hero p {
+  margin: 0;
+  color: var(--muted);
+}
+.doc {
+  padding: 28px;
+}
+.doc > :first-child {
+  margin-top: 0;
+}
+h1, h2, h3, h4, h5, h6 {
+  line-height: 1.25;
+  margin: 1.45em 0 0.55em;
+}
+h1 {
+  font-size: 2.2rem;
+}
+h2 {
+  padding-bottom: 0.28em;
+  border-bottom: 1px solid var(--line);
+  font-size: 1.48rem;
+}
+h3 {
+  font-size: 1.14rem;
+}
+p, ul, ol, table, pre, blockquote {
+  margin: 0 0 1em;
+}
+ul, ol {
+  padding-left: 1.4em;
+}
+li + li {
+  margin-top: 0.26em;
+}
+a {
+  color: var(--accent);
+  text-decoration: none;
+}
+a:hover {
+  text-decoration: underline;
+}
+img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  border-radius: 16px;
+  border: 1px solid var(--line);
+  box-shadow: 0 12px 32px rgba(29, 52, 79, 0.08);
+  margin: 1.1em 0 1.4em;
+}
+code {
+  padding: 0.12em 0.38em;
+  border-radius: 0.45em;
+  background: var(--code-bg);
+  border: 1px solid #dbe6f1;
+  font: 0.92em/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+pre {
+  padding: 14px 16px;
+  overflow-x: auto;
+  border-radius: 14px;
+  background: #0f1720;
+  color: #ecf5ff;
+}
+pre code {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #ffffff;
+}
+th, td {
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  text-align: left;
+  vertical-align: top;
+}
+th {
+  background: #f5f9fc;
+}
+hr {
+  border: 0;
+  border-top: 1px solid var(--line);
+  margin: 1.5em 0;
+}
+blockquote {
+  padding: 0.3em 0 0.3em 1em;
+  border-left: 4px solid #c9dbef;
+  color: var(--muted);
+}
+@media (max-width: 720px) {
+  .page {
+    width: min(100% - 18px, 1080px);
+    padding-top: 16px;
+  }
+  .hero,
+  .doc {
+    border-radius: 18px;
+  }
+  .doc {
+    padding: 20px;
+  }
+}
+
+  </style>
+</head>
+<body>
+  <main class="page">
+    <section class="hero">
+      <h1>janken</h1>
+    </section>
+    <article class="doc">
+<h1>janken</h1>
+<p>English | <a href="index.html">日本語</a></p>
+<p><img src="./janken.jpg" alt="janken" /></p>
+<h2>Overview</h2>
+<ul><li>This sample plays rock-paper-scissors by using the hand model from <code>samples/gltf_loader/hand.glb</code> together with <code>AnimationState</code></li><li>Two hands are displayed at the same time, with the left side acting as the user and the right side acting as the app</li><li>The user chooses a hand with <code>G / C / P</code>, while the app chooses its hand from a random value on the same frame</li><li>Touch buttons are also shown at the bottom of the screen, and on desktop you can press <code>G / C / P</code> directly there as well</li><li><code>hand.glb</code> is built only once, and then two hands for player / CPU are created with <code>instantiate()</code> from that runtime, so geometry and GPU buffers are shared while animation runtime progresses independently</li><li>Each hand has its own <code>Action</code> and <code>AnimationState</code>, so even when the same asset is used, the animations can play separately</li><li>The operation guide and current state are aligned through <code>app.message.setLines()</code>, while only the win / loss result is displayed at the center with a short <code>Message</code> scaled to 2x</li><li>The two hands are shown from a slightly pulled-back, slightly upward-looking view and rolled about 30 degrees to the left and right</li><li>Hand transitions for rock-paper-scissors share <code>entryDurationMs = 250</code>, so each next hand is reached in about 0.25 seconds</li></ul>
+<h2>How to Run</h2>
+<ul><li>Open <a href="./janken.html">./janken.html</a></li><li>Use a browser with WebGPU support, and check the help panel and HUD together with the sample when needed</li></ul>
+<h2>webg Features Used</h2>
+<ul><li><code>WebgApp</code>: initializes <code>Screen / Shader / Space / Input / Message</code> together, builds the shared runtime once with <code>app.message.setLines()</code> and <code>loadModel(..., { format: &quot;gltf&quot;, instantiate: false })</code>, then creates two hands with <code>runtime.instantiate()</code></li><li><code>Action</code>: plays the hand key ranges as <code>N0 / N2 / N5</code> actions</li><li><code>Message</code>: displays a short ASCII win / loss title largely at the center</li></ul>
+<h2>Checkpoints</h2>
+<ul><li>Confirm that <code>G</code> corresponds to hand pose <code>N0=12-13</code>, <code>C</code> corresponds to <code>N2=4-5</code>, and <code>P</code> corresponds to <code>N5=10-11</code></li><li>Confirm that even if the same hand is entered repeatedly, the animation restarts through a self-transition</li><li>Confirm that the guide is shown at the bottom, the status at the top, and only the result is shown in the large center <code>Message</code></li></ul>
+<h2>Controls</h2>
+<ul><li><code>G</code>: play rock</li><li><code>C</code>: play scissors</li><li><code>P</code>: play paper</li><li><code>Space</code>: reset the round and the display to the initial state</li><li>Touch buttons: show <code>G / C / P</code> on both desktop and mobile and handle them with the same key names as the keyboard</li></ul>
+<h2>Notes</h2>
+<ul><li>This sample uses the pose mapping of the hand asset as follows</li><li>Rock: <code>N0=12-13</code> on the hand</li><li>Scissors: <code>N2=4-5</code> on the hand</li><li>Paper: <code>N5=10-11</code> on the hand</li><li><code>AnimationState</code> is not used to improve playback quality itself, but to organize which hand action should be started</li><li>In <code>janken</code>, <code>AnimationState.setState(..., force: true)</code> is called on every input event so the action can restart even when the same hand is chosen</li><li>The two hands are generated separately through <code>runtime.instantiate()</code>, so even though they share the same mesh resources, the runtime state of <code>Skeleton</code> and <code>Animation</code> is separate</li><li>In <code>hand.glb</code>, <code>G</code> uses <code>N0 12-13</code>, <code>C</code> uses <code>N2 4-5</code>, and <code>P</code> uses <code>N5 10-11</code></li></ul>
+    </article>
+  </main>
+</body>
+</html>

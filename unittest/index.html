@@ -17,122 +17,52 @@ pre { background: #f6f8fa; border: 1px solid #d0d7de; padding: 12px; overflow-x:
 <h1>webg unittest</h1>
 <div class='guide'>
 <h2>unittest の見方</h2>
+<p>ここはブラウザで人が表示・操作して確認する開発用 POC の一覧です。Node.js で自動実行する contract は <a href='../headless_tests/README.md'>../headless_tests/</a> を参照してください</p>
 <p>公開向けの sample 一覧は <a href='../samples/index.html'>../samples/index.html</a> を参照してください</p>
 <p>book 内の実行用 HTML 一覧は <a href='../book/examples/index.html'>../book/examples/index.html</a> を参照してください</p>
 </div>
 <h2>個別目次</h2>
+<h3>visual POC</h3>
 <ul>
-<li><a href='#ai_contracts'>ai_contracts</a>: 基本 API 規約と初期化順序をまとめて自動確認する</li>
-<li><a href='#animation_state_contracts'>animation_state_contracts</a>: AnimationState の state / transition 規約を自動確認する</li>
 <li><a href='#background'>background</a>: Background の画像描画と aspect 補正を確認する</li>
-<li><a href='#camera_follow'>camera_follow</a>: WebgApp camera follow helper の追従と解除を確認する</li>
-<li><a href='#compression'>compression</a>: Compression Streams による ModelAsset JSON gzip 往復を確認する</li>
 <li><a href='#cube_axes'>cube_axes</a>: addVertex / addPlane だけで作る cube の面向きと軸を確認する</li>
-<li><a href='#destroy_lifecycle'>destroy_lifecycle</a>: ShapeResource / runtime / instantiated の destroy 規約を確認する</li>
-<li><a href='#detouch_min'>detouch_min</a>: attach / detach で world 位置が保たれるかを確認する</li>
-<li><a href='#embedded'>embedded</a>: embedded layout と overlay の配置を確認する</li>
-<li><a href='#flick'>flick</a>: Touch.attachSurface の flick / long press / double tap を確認する</li>
-<li><a href='#game_api'>game_api</a>: WebgApp のゲーム向け helper API を確認する</li>
-<li><a href='#input_controller'>input_controller</a>: InputController の key 正規化と action / hold 入力を確認する</li>
 <li><a href='#message'>message</a>: Message / HUD 表示の基本動作を確認する</li>
-<li><a href='#overlay_panel'>overlay_panel</a>: OverlayPanel の表示状態と UI 統合を確認する</li>
-<li><a href='#particle_emitter'>particle_emitter</a>: ParticleEmitter の emit / update / draw / clear を確認する</li>
-<li><a href='#physics_node_contracts'>physics_node_contracts</a>: PhysicsNode 単体 API の規約を自動確認する</li>
-<li><a href='#physics_space_contracts'>physics_space_contracts</a>: PhysicsSpace の接触 / 摩擦 / raycast / query 規約を自動確認する</li>
-<li><a href='#physics_node_fall'>physics_node_fall</a>: PhysicsNode が重力で落下して床で止まる見え方を確認する</li>
-<li><a href='#physics_node_rotate'>physics_node_rotate</a>: angularVelocity / torque の姿勢反映を確認する</li>
-<li><a href='#scene_loader_contracts'>scene_loader_contracts</a>: Scene JSON から PhysicsSpace / PhysicsNode を構築する規約を確認する</li>
 <li><a href='#phong_debug'>phong_debug</a>: Phong 系 shader の debug 表示を確認する</li>
 <li><a href='#primitive_modelasset'>primitive_modelasset</a>: Primitive から ModelAsset / runtime 復元を確認する</li>
 <li><a href='#primitive_normal_map'>primitive_normal_map</a>: Primitive 形状の normal map 表示を比較する</li>
 <li><a href='#primitive_texture_uv'>primitive_texture_uv</a>: Primitive 形状の texture UV を確認する</li>
 <li><a href='#primitive_wireframe'>primitive_wireframe</a>: Primitive 形状の solid / wireframe 切替を確認する</li>
-<li><a href='#raycast'>raycast</a>: mouse 位置から ray を生成して picking を確認する</li>
 <li><a href='#skinning_basic'>skinning_basic</a>: SmoothShader の skinning と wireframe 経路を確認する</li>
 <li><a href='#skinning_normal_map'>skinning_normal_map</a>: skinning と normal map の組み合わせを確認する</li>
 <li><a href='#smooth_shader'>smooth_shader</a>: SmoothShader の static / skinned / normal map / flat 経路を確認する</li>
 <li><a href='#textdemo'>textdemo</a>: 低水準 Text 表示を確認する</li>
-<li><a href='#theme'>theme</a>: WebgApp UI theme 切替を確認する</li>
-<li><a href='#tilt_input'>tilt_input</a>: deviceorientation と PC エミュレーションの傾きベクトルを可視化する</li>
-<li><a href='#touch'>touch</a>: Touch の hold / action ボタン通知を確認する</li>
-<li><a href='#tween'>tween</a>: Tween の補間と update 挙動を確認する</li>
 <li><a href='#translucent'>translucent</a>: FrostedGlassPass の曇りガラス表現を確認する</li>
 <li><a href='#vignette'>vignette</a>: Vignette postprocess の見え方を確認する</li>
 </ul>
-<section class='sample'>
-<h2 id='ai_contracts'>ai_contracts</h2>
-<p>URL: <a href='./ai_contracts/index.html'>./ai_contracts/index.html</a></p>
-<pre>
-サンプル: ai_contracts
-
-概要
-- `webg` の基本 API が期待どおりに失敗し、期待どおりに動くことをまとめて確認するページです。
-- 境界条件、失敗例、最小構成、破棄処理、リサイズ、入力正規化のうち、軽量に自動確認できる基本仕様を 1 画面にまとめています。
-- 3D の見た目を作り込むものではなく、API の基本仕様を軽く確認するための基本仕様確認ページです。
-
-このサンプルで使うwebg機能
-- `Screen`: `getGPU()`、`resize()`、`getRecommendedFov()` の基本仕様
-- `WebgApp`: `init()` 前に使ってはいけない API の失敗例
-- `Shape`: `Primitive` から最小形状を作り、`endShape()` で GPU buffer が確定すること
-- `ShapeResource`: 参照中 resource の `destroy()` guard と、最後の参照からの破棄
-- `InputController`: raw key を action 比較用の正規化名へ変換する規約
-- `UnitTestApp`: unittest の起動、resize、status 表示の共通 helper
-
-確認ポイント
-- `Screen.getGPU()` が現在の GPU context wrapper を返すことを確認します。
-- `Screen.resize()` が正の有限値だけを受け付け、不正値を明確に拒否することを確認します。
-- `Screen.getRecommendedFov()` が範囲外の FOV を拒否することを確認します。
-- `WebgApp.createOrbitEyeRig()` を `init()` 前に呼ぶと、初期化順序の誤りとして失敗することを確認します。
-- `Shape.endShape()` の前後で GPU buffer の確定状態が変わることを確認します。
-- 参照中の `ShapeResource.destroy()` は false になり、最後の `Shape.destroy({ destroyResource: true })` で破棄されることを確認します。
-- `InputController` の key 正規化と action map が、`space` / `escape` / lower-case の規約に従うことを確認します。
-
-操作説明
-- 操作は不要です。画面を開くと自動確認が走ります。
-- PASS / FAIL の一覧が status に表示されます。
-- canvas 部分は最小の clear / present だけを行い、WebGPU frame が成立していることを確認します。
-
-実装確認の見方
-- 初期化順序、resize、Shape の buffer 確定、destroy 系の挙動を見るときは、このページで基本仕様をまとめて確認できます。
-- 入力まわりの確認では `unittest/input_controller` も併せて確認すると、action map と touch control の流れを追いやすくなります。
-- raycast の確認では `unittest/raycast`、animation state の確認では `samples/animation_state` と関連 unittest を併せて見ると、機能ごとの役割が分かります。
-</pre>
-</section>
-<section class='sample'>
-<h2 id='animation_state_contracts'>animation_state_contracts</h2>
-<p>URL: <a href='./animation_state_contracts/index.html'>./animation_state_contracts/index.html</a></p>
-<pre>
-サンプル: animation_state_contracts
-
-概要
-- `AnimationState` の状態定義と遷移ルールだけを、描画や実アセットから切り離して確認する状態遷移ルール確認ページです。
-- animation state まわりの挙動を、軽量な自動確認として切り分けて見られます。
-- `samples/animation_state` や `samples/janken` の前段として、state machine の基本仕様を確認します。
-
-このサンプルで使うwebg機能
-- `AnimationState`: state の追加、transition の正規化、`update()` による state 遷移
-- mock controller: `start()`、`play()`、`getActionInfo()` を持つ最小 controller
-
-確認ポイント
-- state 定義が object でない場合に失敗することを確認します。
-- state に `action` または `clip` がない場合に失敗することを確認します。
-- transition に `to` または `test(context)` がない場合に失敗することを確認します。
-- `update()` には有限の `context.nowMs` が必須であることを確認します。
-- 初回 update で initial state が開始されることを確認します。
-- 同じ frame で state が開始または切り替わった場合、`play()` をまだ進めないことを確認します。
-- 複数 transition が成立するとき、priority の高いものが選ばれることを確認します。
-- 次 frame では現在 action の `play()` が呼ばれることを確認します。
-- `getCurrentTransition()` と `getDebugInfo()` が HUD / diagnostics に使いやすい要約を返すことを確認します。
-
-操作説明
-- 操作は不要です。画面を開くと自動確認が走ります。
-- PASS / FAIL の一覧が status に表示されます。
-
-実装確認の見方
-- `AnimationState.js`、`Action.js`、`samples/animation_state`、`samples/janken` の関係を見るときは、このページで state machine の基本仕様を確認できます。
-- 実際の骨や glTF / Collada clip の見え方は、このページでは扱いません。見た目の確認は `samples/animation_state`、`samples/janken`、skinning 系 unittest を併用してください。
-</pre>
-</section>
+<h3>interaction / browser API POC</h3>
+<ul>
+<li><a href='#compression'>compression</a>: Compression Streams による ModelAsset JSON gzip 往復を確認する</li>
+<li><a href='#detouch_min'>detouch_min</a>: attach / detach で world 位置が保たれるかを確認する</li>
+<li><a href='#flick'>flick</a>: Touch.attachSurface の flick / long press / double tap を確認する</li>
+<li><a href='#game_api'>game_api</a>: WebgApp のゲーム向け helper API を確認する</li>
+<li><a href='#physics_node_fall'>physics_node_fall</a>: PhysicsNode が重力で落下して床で止まる見え方を確認する</li>
+<li><a href='#physics_node_rotate'>physics_node_rotate</a>: angularVelocity / torque の姿勢反映を確認する</li>
+<li><a href='#raycast'>raycast</a>: mouse 位置から ray を生成して picking を確認する</li>
+<li><a href='#theme'>theme</a>: WebgApp UI theme 切替を確認する</li>
+<li><a href='#tilt_input'>tilt_input</a>: deviceorientation と PC エミュレーションの傾きベクトルを可視化する</li>
+<li><a href='#touch'>touch</a>: Touch の hold / action ボタン通知を確認する</li>
+</ul>
+<h3>hybrid POC</h3>
+<ul>
+<li><a href='#camera_follow'>camera_follow</a>: WebgApp camera follow helper の追従と解除を確認する</li>
+<li><a href='#destroy_lifecycle'>destroy_lifecycle</a>: ShapeResource / runtime / instantiated の destroy 規約を確認する</li>
+<li><a href='#embedded'>embedded</a>: embedded layout と overlay の配置を確認する</li>
+<li><a href='#input_controller'>input_controller</a>: InputController の key 正規化と action / hold 入力を確認する</li>
+<li><a href='#overlay_panel'>overlay_panel</a>: OverlayPanel の表示状態と UI 統合を確認する</li>
+<li><a href='#particle_emitter'>particle_emitter</a>: ParticleEmitter の emit / update / draw / clear を確認する</li>
+<li><a href='#scene_loader_contracts'>scene_loader_contracts</a>: Scene JSON の構築contractと物理挙動を確認する</li>
+<li><a href='#tween'>tween</a>: Tween の補間と update 挙動を確認する</li>
+</ul>
 <section class='sample'>
 <h2 id='background'>background</h2>
 <p>URL: <a href='./background/index.html'>./background/index.html</a></p>
@@ -573,91 +503,6 @@ source の位置、preset の切り替え、burst 数の調整、shadow billboar
 </pre>
 </section>
 <section class='sample'>
-<h2 id='physics_node_contracts'>physics_node_contracts</h2>
-<p>URL: <a href='./physics_node_contracts/index.html'>./physics_node_contracts/index.html</a></p>
-<pre>
-サンプル: physics_node_contracts
-
-概要
-- `PhysicsNode` 単体 API の振る舞いを固定するための基本仕様確認ページです。
-- ここでは見た目の物理挙動ではなく、`bodyType` 切替、速度保存、sleep、teleport、`syncNodeFromPhysics()`、各種 guard のような API の規約を自動確認します。
-- 実際の落下と床停止の見え方は `unittest/physics_node_fall` が担当し、このページは「PhysicsNode 単体をどう使うか」を確認する位置付けです。
-
-このサンプルで使うwebg機能
-- `PhysicsNode`: `dynamic / kinematic / static`、速度、減衰、sleep、trigger、fixedRotation、collision layer / mask、`teleport()`、`syncNodeFromPhysics()`
-- `Space.addPhysicsNode()`: scene graph に PhysicsNode を登録する入口
-- `UnitTestApp`: unittest の起動、resize、status 表示の共通 helper
-
-確認ポイント
-- `dynamic` の既定値、`mass` と `invMass` の関係を確認します。
-- `kinematic` と `static` が `invMass = 0` になることを確認します。
-- `pauseDynamic()` / `resumeDynamic()` が速度保存と復元の規約に従うことを確認します。
-- `teleport()` が `keepVelocity` の設定どおりに速度を消すか保持するかを確認します。
-- `syncNodeFromPhysics()` が位置と姿勢を node 側へ反映できることを確認します。
-- `dynamic` 中の `setPosition()` や `animatePosition()` が例外で拒否されることを確認します。
-- `applyImpulse()`、`applyAngularImpulse()`、sleep、accumulator clear、参照オブジェクト保持が期待どおりに動くことを確認します。
-
-操作説明
-- 操作は不要です。画面を開くと自動確認が走ります。
-- PASS / FAIL の一覧が status に表示されます。
-- canvas 部分は最小の clear / present だけを行い、WebGPU frame が成立していることを確認します。
-
-実装確認の見方
-- `webg/PhysicsNode.js` の挙動を見るときは、まずこのページで body type、速度、sleep、teleport、node 同期の規約を確認できます。
-- 単体 API の規約確認はこのページが担当し、複数物体の関係確認は `unittest/physics_space_contracts` が担当します。
-- 見た目の落下や床停止だけを確認したい場合は `unittest/physics_node_fall` を併せて確認してください。
-</pre>
-</section>
-<section class='sample'>
-<h2 id='physics_space_contracts'>physics_space_contracts</h2>
-<p>URL: <a href='./physics_space_contracts/index.html'>./physics_space_contracts/index.html</a></p>
-<pre>
-サンプル: physics_space_contracts
-
-概要
-- `PhysicsSpace` が、固定タイムステップ、gravity、角速度積分、body 登録、box collider / plane collider / sphere collider / capsule collider の接触解決、反発、摩擦、sleep 判定、trigger contact、raycast / raycastAll、queryAabb、overlapSphere を期待どおりに処理できるかを自動確認する基本仕様確認ページです。
-- `PhysicsNode` 単体 API の規約は `unittest/physics_node_contracts` が担当し、このページは複数 body の関係を解く world 側の規約を確認します。
-- 見た目の落下シーンは `unittest/physics_node_fall` が担当し、このページは PASS / FAIL による切り分けを優先します。
-
-このサンプルで使うwebg機能
-- `PhysicsSpace`: gravity、fixed timestep、angular velocity / torque の姿勢反映、solver、contact 記録、listener、trigger、raycast、raycastAll、queryAabb、overlapSphere、反発、摩擦、sleep 判定
-- `PhysicsNode`: dynamic / static body、box / plane / sphere / capsule collider、物理材質、sleep 状態
-- `Space.addPhysicsNode()`: world へ登録する body を scene graph 上に作る入口
-- `UnitTestApp`: unittest の起動、resize、status 表示の共通 helper
-
-確認ポイント
-- `PhysicsSpace` の constructor option と getter / setter が整合することを確認します。
-- sleep step / angular threshold の getter / setter と、連続低速 contact による sleep 安定化を確認します。
-- sleeping dynamic body が active body との contact で wake することを確認します。
-- `addBody()` と `removeBody()` が所属 world 参照と body 一覧を整合させることを確認します。
-- plane floor と box の最小シーンで、重力落下後に box が床上面で sleep へ入ることを確認します。
-- 同質量 2 体の head-on collision で、反発係数に応じて速度が反転することを確認します。
-- AABB broadphase が、離れた有限 collider を narrowphase 前に除外し、重なった有限 collider は narrowphase へ渡すことを確認します。
-- `sweepAabb` broadphase と `bruteForce` broadphase が同じ finite contact pair を返すことを確認します。
-- 回転した `BoxCollider` が外接 AABB、raycast normal、queryAabb、overlapSphere、sphere / box / capsule contact の dispatch に乗ることを確認します。
-- collision layer / mask が contact 候補を制御し、query 系の `layerMask` が対象 body を絞ることを確認します。
-- query 系の `triggerOnly` が trigger body だけを対象にすることを確認します。
-- `angularVelocity` と `torque` が `PhysicsNode` の姿勢へ反映され、`fixedRotation` が角更新を止めることを確認します。
-- 中心から外れた contact が contact point と inertia を使って角速度を生み、`fixedRotation` では角 impulse が入らないことを確認します。
-- plane contact で摩擦により接線方向速度が減ることを確認します。
-- `SphereCollider` が broadphase / narrowphase / query / raycast の既存 dispatch に参加できることを確認します。
-- `CapsuleCollider` が broadphase / narrowphase / query / raycast の既存 dispatch に参加できることを確認します。
-- `getLastContacts()` が直近解決 contact の body、normal、penetration を返すことを確認します。
-- `raycast()` と `raycastAll()` が plane / box / sphere / capsule collider に対して hit を返し、`includeTriggers`、`filter`、`maxDistance`、距離順整列を扱えることを確認します。
-- `queryAabb()` が AABB 対応 collider に対する重なり問い合わせを返し、`includeTriggers`、`filter`、境界一致を扱えることを確認します。
-- `overlapSphere()` が collider に対する球範囲問い合わせを返し、`includeTriggers`、`filter`、球中心が collider 内にあるケースを扱えることを確認します。
-
-操作説明
-- 操作は不要です。画面を開くと自動確認が走ります。
-- PASS / FAIL の一覧が status に表示されます。
-- canvas 部分は最小の clear / present だけを行い、WebGPU frame が成立していることを確認します。
-
-実装確認の見方
-- `webg/PhysicsSpace.js` の挙動を見るときは、まずこのページで固定タイムステップ、contact、query、raycast の規約を確認できます。
-- collider 種別や query API の関係を見る場合も、ここで最小の自動確認を押さえてから、見た目を確認するサンプルへ進むと切り分けやすくなります。
-</pre>
-</section>
-<section class='sample'>
 <h2 id='physics_node_fall'>physics_node_fall</h2>
 <p>URL: <a href='./physics_node_fall/index.html'>./physics_node_fall/index.html</a></p>
 <pre>
@@ -688,8 +533,8 @@ physics_node_fall
 
 実装確認の見方
 - `PhysicsSpace.js` や `PhysicsNode.js` の落下、接地、sleep の流れを見るときは、このページで最小シーンを確認できます。
-- `PhysicsNode` 単体 API の規約は `unittest/physics_node_contracts` が担当し、このページは world を通した落下シーンの確認を担当します。
-- plane collider と box collider の組み合わせ、および box-box の OBB 解決を目視できます。問い合わせ系と OBB dispatch は `physics_space_contracts` の raycast / raycastAll / queryAabb / overlapSphere 確認を参照してください。
+- `PhysicsNode` 単体 API の規約は `headless_tests/core/physics_node` が担当し、このページは world を通した落下シーンの確認を担当します。
+- plane collider と box collider の組み合わせ、および box-box の OBB 解決を目視できます。問い合わせ系と OBB dispatch は `headless_tests/core/physics_space` の raycast / raycastAll / queryAabb / overlapSphere 確認を参照してください。
 </pre>
 </section>
 <section class='sample'>
@@ -725,8 +570,8 @@ physics_node_rotate
 
 実装確認の見方
 - `PhysicsSpace.js` の `angularVelocity`、`torque`、`angularDamping`、`fixedRotation`、sleep 条件を見るときは、このページで画面上の回転と status を確認できます。
-- `BoxCollider` の OBB dispatch は `unittest/physics_space_contracts` が自動確認します。ここでは画面上の姿勢更新を中心に見ており、inertia tensor や本格的な回転 contact solver の確認ではありません。
-- 自動確認の規約は `unittest/physics_space_contracts` が担当し、このページは画面上の見え方確認を担当します。
+- `BoxCollider` の OBB dispatch は `headless_tests/core/physics_space` が自動確認します。ここでは画面上の姿勢更新を中心に見ており、inertia tensor や本格的な回転 contact solver の確認ではありません。
+- 自動確認の規約は `headless_tests/core/physics_space` が担当し、このページは画面上の見え方確認を担当します。
 </pre>
 </section>
 <section class='sample'>
@@ -763,7 +608,7 @@ scene_loader_contracts
 
 実装確認の見方
 - `SceneLoader.js`、`SceneValidator.js`、`SceneAsset.js`、`PhysicsSpace.js` の関係を見るときは、この確認ページで Scene JSON から runtime までの流れを追えます。
-- ここで見ているのは Scene JSON からの物理入口です。接触式や query の規約は `unittest/physics_space_contracts` を参照してください。
+- ここで見ているのは Scene JSON からの物理入口です。接触式や query の規約は `headless_tests/core/physics_space` を参照してください。
 - runtime の `stepPhysics(deltaMs)` を明示的に呼び、Scene JSON から作られた body が物理更新へ届くことを確認します。
 </pre>
 </section>

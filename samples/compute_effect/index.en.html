@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>compute_effect</title>
+  <link rel="icon" href="data:," />
+  <!-- 2026/06/19 -->
+  <style>
+
+:root {
+  color-scheme: light;
+  --bg: #eef3f8;
+  --paper: rgba(255, 255, 255, 0.94);
+  --line: #c8d5e4;
+  --ink: #17324a;
+  --muted: #5c748b;
+  --accent: #1566ab;
+  --accent-soft: #dfeefe;
+  --code-bg: #f3f7fb;
+  --shadow: rgba(29, 52, 79, 0.10);
+}
+* { box-sizing: border-box; }
+html, body {
+  margin: 0;
+  min-height: 100%;
+}
+body {
+  background:
+    radial-gradient(circle at top left, rgba(21, 102, 171, 0.12), transparent 24%),
+    radial-gradient(circle at top right, rgba(255, 191, 118, 0.10), transparent 22%),
+    linear-gradient(180deg, #f8fbfd 0%, var(--bg) 100%);
+  color: var(--ink);
+  font: 16px/1.78 "Avenir Next", "Hiragino Sans", "Yu Gothic", sans-serif;
+}
+.page {
+  width: min(1080px, calc(100% - 28px));
+  margin: 0 auto;
+  padding: 24px 0 56px;
+}
+.hero,
+.doc {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  box-shadow: 0 22px 52px var(--shadow);
+}
+.hero {
+  padding: 22px 24px;
+  margin-bottom: 18px;
+}
+.hero h1 {
+  margin: 0 0 8px;
+  font-size: clamp(2rem, 4vw, 3rem);
+  line-height: 1.08;
+}
+.hero p {
+  margin: 0;
+  color: var(--muted);
+}
+.doc {
+  padding: 28px;
+}
+.doc > :first-child {
+  margin-top: 0;
+}
+h1, h2, h3, h4, h5, h6 {
+  line-height: 1.25;
+  margin: 1.45em 0 0.55em;
+}
+h1 {
+  font-size: 2.2rem;
+}
+h2 {
+  padding-bottom: 0.28em;
+  border-bottom: 1px solid var(--line);
+  font-size: 1.48rem;
+}
+h3 {
+  font-size: 1.14rem;
+}
+p, ul, ol, table, pre, blockquote {
+  margin: 0 0 1em;
+}
+ul, ol {
+  padding-left: 1.4em;
+}
+li + li {
+  margin-top: 0.26em;
+}
+a {
+  color: var(--accent);
+  text-decoration: none;
+}
+a:hover {
+  text-decoration: underline;
+}
+img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  border-radius: 16px;
+  border: 1px solid var(--line);
+  box-shadow: 0 12px 32px rgba(29, 52, 79, 0.08);
+  margin: 1.1em 0 1.4em;
+}
+code {
+  padding: 0.12em 0.38em;
+  border-radius: 0.45em;
+  background: var(--code-bg);
+  border: 1px solid #dbe6f1;
+  font: 0.92em/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+pre {
+  padding: 14px 16px;
+  overflow-x: auto;
+  border-radius: 14px;
+  background: #0f1720;
+  color: #ecf5ff;
+}
+pre code {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #ffffff;
+}
+th, td {
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  text-align: left;
+  vertical-align: top;
+}
+th {
+  background: #f5f9fc;
+}
+hr {
+  border: 0;
+  border-top: 1px solid var(--line);
+  margin: 1.5em 0;
+}
+blockquote {
+  padding: 0.3em 0 0.3em 1em;
+  border-left: 4px solid #c9dbef;
+  color: var(--muted);
+}
+@media (max-width: 720px) {
+  .page {
+    width: min(100% - 18px, 1080px);
+    padding-top: 16px;
+  }
+  .hero,
+  .doc {
+    border-radius: 18px;
+  }
+  .doc {
+    padding: 20px;
+  }
+}
+
+  </style>
+</head>
+<body>
+  <main class="page">
+    <section class="hero">
+      <h1>compute_effect</h1>
+    </section>
+    <article class="doc">
+<h1>compute_effect</h1>
+<p>English | <a href="index.html">日本語</a></p>
+<p><img src="./compute_effect.jpg" alt="compute_effect" /></p>
+<h2>Overview</h2>
+<p><code>compute_effect</code> demonstrates the integrated rendering path provided by <code>ComputeEffectPipeline</code>. The application builds an ordinary scene from <code>Space</code> and <code>Shape</code>, then gives the Pipeline the frame state and effect settings. The Pipeline owns the order from the G-buffer through Shadows, Ambient Occlusion, Deferred and Local Lighting, SSR, transparency, Fog, High Dynamic Range post effects, Tone Mapping, Edge, Vignette, and final presentation.</p>
+<p>The sample uses the integrated API from <code>WebgApp</code> and does not construct low-level bind groups, storage textures, or Camera Reverse-Z reconstruction formulas.</p>
+<h2>Processing Flow</h2>
+<p>The rendering order is:</p>
+<pre><code class="language-text">WebgApp fixes the camera state once for the frame
+  -&gt; GeometryBufferPass
+       albedo / view-space normal / surface material / Camera Reverse-Z depth
+  -&gt; ShadowMapPass or SpotShadowMapPass
+  -&gt; ComputeShadowPass / ComputeSpotShadowPass
+       produce shadow visibility rather than a finished color
+  -&gt; SsaoPass
+       produces ambient-occlusion visibility
+  -&gt; DeferredLightingPass
+       evaluates directional / spot / point and cone Local Lights and visibility once
+  -&gt; ComputeSsrPass
+       produces a linear High Dynamic Range reflection
+  -&gt; ComputeEffectComposer
+  -&gt; TransparencyPass (when transparent Shapes exist)
+  -&gt; ComputeFogPass (optional)
+  -&gt; ComputeToonPass (optional)
+  -&gt; ComputeDofPass (optional)
+  -&gt; ComputeBloomPass (optional)
+  -&gt; ComputeEffectToneMapPass
+       applies exposure, tone mapping, and gamma conversion once
+  -&gt; ComputeEdgePass (optional)
+  -&gt; ComputeVignettePass (optional)
+  -&gt; FullscreenPass
+       presents to the canvas in a depth-free presentation pass</code></pre>
+<p>The normal camera uses Reverse-Z in a <code>depth32float</code> texture. Directional and spot Shadow Map generation intentionally retain standard Z because they render a separate Light View. The Pipeline distinguishes both depth conventions internally, so the sample does not switch depth signs or comparison rules.</p>
+<h2>G-buffer and Materials</h2>
+<p>The version 2 G-buffer does not store a pre-lit color. It reads the following explicit values from every Shape:</p>
+<ul><li><code>color</code>: unlit albedo</li><li><code>specular</code>: specular strength, also used by SSR reflection selection</li><li><code>roughness</code>: surface roughness</li><li><code>metallic</code>: metallic response</li><li><code>emissive</code>: light-independent emission</li></ul>
+<p>The floor, walls, sphere, cubes, pillar, and torus all provide these values explicitly. Reflectivity is stored in <code>specular</code>, and direct-light specular is not added to the G-buffer color. Deferred Lighting reads albedo, normal, surface material, lights, shadow visibility, and ambient occlusion, then evaluates lighting once with a GGX-style reflection model.</p>
+<p>The reflectivity palette control updates <code>specular</code> for the moving objects. Their roughness and metallic values remain distinct, so equal specular strength can still produce different reflection sharpness and material appearance.</p>
+<h2>Sharing One Frame</h2>
+<p>WebgApp fixes the camera state once per rendered frame and gives the same frame object to <code>onBeforeDraw</code> and <code>onAfterDraw3d</code>. The sample passes that object to both <code>renderScene()</code> and <code>encode()</code>.</p>
+<pre><code class="language-js">onBeforeDraw: ({ cameraFrame }) =&gt; {
+  pipeline.renderScene(app.space, cameraFrame, app.clearColor, {
+    shadowEnabled: state.shadowEnabled,
+    timestampWrites: app.getGpuRenderTimestampWrites(true, true)
+  });
+},
+
+onAfterDraw3d: ({ cameraFrame }) =&gt; {
+  const finalColor = pipeline.encode(gpu.commandEncoder, {
+    cameraFrame,
+    shadowEnabled: state.shadowEnabled,
+    ssaoEnabled: state.ssaoEnabled,
+    ssrEnabled: state.ssrEnabled
+  });
+}</code></pre>
+<p>This prevents the G-buffer, screen-space effects, and Deferred Lighting from reading different camera positions or projections. Reconstruction parameters come from <code>CameraFrame</code>; the sample does not create them from projection near/far values or clone the eye World Matrix.</p>
+<h2>Final Presentation and HUD</h2>
+<p>The <code>rgba8unorm</code> texture produced after Tone Mapping is presented to the canvas in a render pass without a depth attachment.</p>
+<pre><code class="language-js">app.screen.beginPresentPass({
+  clearColor: app.clearColor,
+  colorLoadOp: &quot;clear&quot;
+});
+copyPass.draw(finalColor);</code></pre>
+<p>WebgApp draws Font and HUD content afterward. The Font pipeline requires a <code>depth32float</code> attachment, so the sample reopens a Camera Reverse-Z depth pass while preserving the displayed color.</p>
+<pre><code class="language-js">app.screen.clearDepthBuffer();</code></pre>
+<p>Drawing the fullscreen copy in a normal depth pass, or drawing Font in the depth-free presentation pass, fails WebGPU attachment validation. These two passes separate presentation and HUD attachment responsibilities; they are not a color fallback.</p>
+<h2>How to Run</h2>
+<ul><li>Open <a href="./compute_effect.html">./compute_effect.html</a> in a WebGPU-capable browser</li><li>Double-tap the canvas or press <code>/</code> to open the CommandPalette</li><li>Drag to orbit the camera</li></ul>
+<h2>Controls and Checkpoints</h2>
+<p>The CommandPalette uses eight pages of up to ten rows. Next always occupies the rightmost cell of the first row, so page navigation stays in the same position while the full-width controls change. Bloom occupies Pages 7 and 8, where every Pyramid option exposed by <code>compute_bloom</code> can be adjusted independently.</p>
+<ul><li>Page 1: Shadow, SSAO, SSR, lighting color and strength, reflectivity, SSR composition, Tone Map, exposure, and background</li><li>Page 2: Toon and DoF, including levels, strength, gamma, floor, focus distance, focus range, the Pyramid-filter Blur Radius, and CoC Scale for selecting a blur Level</li><li>Page 3: Ambient Only, Local Lights, transparent glass, detailed SSAO, Shadow bias and PCF, and Local Light range</li><li>Page 4: Fog, Edge, Vignette, SSR tracing options, and Fog mode, color, near, and far</li><li>Page 5: Fog density, detailed Edge controls, and Vignette radius, softness, and strength</li><li>Page 6: Vignette tint and center, saturation, gamma, and glass alpha and roughness</li><li>Page 7: Bloom enable state, threshold, global strength, soft knee, and upsample filter radius</li><li>Page 8: weights for the 1/2, 1/4, 1/8, 1/16, and 1/32 Levels</li></ul>
+<p>Bloom <code>threshold</code> and <code>soft knee</code> are applied once to the full-resolution HDR scene. The shared <code>ComputeImagePyramid</code> then reduces the extracted image continuously from 1/2 through 1/32 with a 13-tap filter, and the Bloom pass reconstructs it from 1/32 with progressive 9-tap tent upsampling. Each Level <code>weight</code> distributes energy from the near-source glow to the weak outer halo, <code>filter radius</code> controls the upsample extent, and global <code>strength</code> controls how much reconstructed Bloom is added to the scene. The initial values come from the core <code>COMPUTE_BLOOM_DEFAULTS</code>, so the standalone <code>compute_bloom</code> sample and the integrated Pipeline start from the same reference settings.</p>
+<p>The same shared Pyramid is used differently by the other effects. DoF selects scene-color Levels 1/2, 1/4, 1/8, and 1/16 from foreground and background depth differences, SSR filters reflection color according to material roughness, and Frost filters the background behind translucent surfaces according to roughness. DoF creates four Levels through 1/16, while SSR and Frost create three Levels through 1/8. None of these effects needs Bloom's long 1/32 halo, so each effect allocates only the Levels it requests.</p>
+<p>DoF does not assign a fictitious distance to the clear background. It separates geometry by signed CoC into near and far premultiplied color-and-coverage layers, then low-pass filters both through 1/16. Far blur is composed behind the focus plane and near geometry; near blur is composed in front of far geometry, the focus plane, and the clear background. Defocused near and far geometry can therefore spread across their boundary with the background while the in-focus object itself does not spread. <code>DoF Blur Radius</code> changes the sample spacing of the scene, near, and far Pyramid downsampling and controls their spatial spread.</p>
+<p>The scene includes point and cone Local Lights plus a translucent glass sphere. This makes the Deferred Local Light array and <code>TransparencyPass</code> part of the normal sample path rather than inactive API options.</p>
+<p>Fog, Toon, DoF, Bloom, Edge, and Vignette start disabled. Inspect the base Deferred Lighting, Shadow, SSAO, SSR, Local Light, and transparency path first, then enable post effects to compare their visual and GPU cost.</p>
+<p>The Help Panel displays 0.5-second averages for CPU, GPU Compute, GPU Render, and GPU Total. Enabling all optional effects increases Compute time, which also confirms that the passes entered the active processing flow.</p>
+<p>Important checkpoints are:</p>
+<ul><li><code>main.js</code> does not handle low-level bind groups or storage textures</li><li>albedo and surface material are separate and lighting is evaluated once in Deferred Lighting</li><li>normal-camera Reverse-Z and Shadow Map standard Z do not become mixed</li><li>SSR, Fog, Toon, DoF, and Bloom operate in linear High Dynamic Range before Tone Mapping</li><li>Edge and Vignette run in order on display color after Tone Mapping</li><li>translucent glass is composed by TransparencyPass rather than written into the opaque G-buffer</li><li>Fullscreen presentation and HUD render correctly in passes with different attachment layouts</li><li>palette changes do not produce WebGPU validation errors</li></ul>
+<p>This sample imports <code>../../webg/ComputeEffectPipeline.js</code> directly and does not contain a sample-local Pipeline copy.</p>
+    </article>
+  </main>
+</body>
+</html>

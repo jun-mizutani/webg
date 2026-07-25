@@ -1,16 +1,19 @@
 // ---------------------------------------------
-// samples/axis/main.js  2026/04/12
+// samples/axis/main.js  2026/07/25
 //   axis sample
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // ---------------------------------------------
 import WebgApp from "../../webg/WebgApp.js";
 import { buildErrorPanelOptions, buildHelpPanelOptions } from "../../webg/OverlayPanelPresets.js";
+import CommandPalette, {
+  getDefaultCommandPaletteCss
+} from "../../webg/CommandPalette.js";
 import Primitive from "../../webg/Primitive.js";
 import Shape from "../../webg/Shape.js";
 import FullscreenPass from "../../webg/FullscreenPass.js";
 import Diagnostics from "../../webg/Diagnostics.js";
-import DofPass from "../../webg/DofPass.js";
+import DofPass from "../../webg/DofPass.js?v=20260702_stage_width";
 
 // webgクラスの役割:
 // WebgApp   : Screen / Shader / Space / Input / Message / debug dock の初期化をまとめる
@@ -33,13 +36,19 @@ const FOG_SETTINGS = {
 };
 const DOF_SETTINGS = {
   focusDistance: 31.0,
-  focusRange: 8.0,
+  // focusRange は最大blurまでの距離ではなく、scene -> small など 1 stage 分の距離幅
+  focusRange: 7.0,
   maxBlurMix: 0.92,
-  sharpnessWidth: 0.2,
-  sharpnessPower: 8.0,
-  blurScale: 0.55,
-  blurIterations: 2,
-  blurRadius: 4.0
+  sharpnessWidth: 0.35,
+  sharpnessPower: 1.0,
+  blurScale: 1.0,
+  stageBlurIterations: {
+    small: 1,
+    medium: 2,
+    large: 4
+  },
+  blurRadius: 2.0,
+  stagedStageCount: 3
 };
 const ORBIT_DEFAULT = {
   target: [0.0, 0.0, 0.0],
@@ -50,35 +59,59 @@ const ORBIT_DEFAULT = {
   maxDistance: 80.0,
   wheelZoomStep: 1.4
 };
-const HUD_ROW_OPTIONS = {
-  anchor: "top-left",
-  x: 0,
-  y: 0,
-  color: [0.05, 0.05, 0.06],
-  minScale: 0.80
-};
-
 let app = null;
 let orbit = null;
 let dof = null;
 let debugPass = null;
+let palette = null;
+let lastHelpText = "";
 
 const HELP_LINES = [
   "red = X   green = Y   blue = Z",
   "small sphere marks the world center",
   "bright pyramids express depth and perspective",
   "white background and fog make depth easier to read",
+  "CommandPalette: double tap canvas or press /",
   "drag or arrow keys: orbit camera",
   "wheel / [ / ]: camera distance",
-  "[-] / [=]: fov",
-  "[f] fog on/off",
-  "[d] dof on/off",
-  "[5] / [6] focus range -/+",
-  "[1] / [2] sharpness width -/+",
-  "[3] / [4] sharpness power -/+",
-  "[v] dof debug view",
-  "[r] reset camera / fov / fog / dof"
+  "Use palette controls to inspect fog and DOF"
 ];
+
+const AXIS_PANEL_STYLE = {
+  color: "#f5f8fb",
+  background: "rgba(11, 16, 24, 0.90)",
+  border: "1px solid rgba(12, 20, 30, 0.72)",
+  boxShadow: "0 18px 34px rgba(0, 0, 0, 0.24)",
+  bodyBackground: "transparent",
+  bodyPadding: "10px 12px",
+  bodyBorderRadius: "8px"
+};
+
+const AXIS_PALETTE_THEME = {
+  line: "rgba(248, 250, 252, 0.30)",
+  ink: "#f7fafc",
+  sub: "rgba(215, 226, 236, 0.92)",
+  panel: "rgba(9, 14, 21, 0.94)",
+  button: "rgba(24, 34, 45, 0.92)",
+  buttonActive: "rgba(16, 96, 72, 0.96)",
+  accent: "#ffd166"
+};
+
+const AXIS_PALETTE_CSS = `${getDefaultCommandPaletteCss()}
+.command-palette.surface {
+  border-color: rgba(248, 250, 252, 0.34);
+  background: var(--command-palette-panel);
+  box-shadow: 0 22px 42px rgba(0, 0, 0, 0.34);
+}
+.palette-button,
+.palette-control-button,
+.palette-select-button {
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.55);
+}
+.palette-row-input {
+  background: rgba(2, 6, 12, 0.90);
+}
+`;
 
 const state = {
   viewAngle: DEFAULT_VIEW_ANGLE,
@@ -92,6 +125,7 @@ const state = {
 
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
 
+// `arrow`の形状を生成し、後続処理で利用できる状態にする
 const createArrowShape = (gpu, length, color) => {
   // 軸表示で見分けやすいよう、細長い矢印プリミティブを色付きで作る
   const shape = new Shape(gpu);
@@ -107,6 +141,7 @@ const createArrowShape = (gpu, length, color) => {
   return shape;
 };
 
+// `origin`の形状を生成し、後続処理で利用できる状態にする
 const createOriginShape = (gpu) => {
   // 原点の位置だけを読むための小さな球を置く
   const shape = new Shape(gpu);
@@ -123,6 +158,7 @@ const createOriginShape = (gpu) => {
   return shape;
 };
 
+// `pyramid`の形状を生成し、後続処理で利用できる状態にする
 const createPyramidShape = (gpu, color) => {
   // 床の代わりに置く小さな四角錐を作り、遠近感の見え方を強める
   // はっきりした色を付けて、fog / DOF が掛かったときの差も見えやすくする
@@ -140,6 +176,7 @@ const createPyramidShape = (gpu, color) => {
   return shape;
 };
 
+// `pyramid`の色を生成し、後続処理で利用できる状態にする
 const makePyramidColor = (rowIndex, colIndex) => {
   const palette = [
     [1.00, 0.30, 0.34, 1.0],
@@ -159,6 +196,7 @@ const makePyramidColor = (rowIndex, colIndex) => {
   ];
 };
 
+// `axis`のノードを生成し、後続処理で利用できる状態にする
 const createAxisNode = (space, gpu, length) => {
   // X / Y / Z の 3 本を同じ原点から出すことで座標系を見比べやすくする
   const base = space.addNode(null, "axis-base");
@@ -175,90 +213,42 @@ const createAxisNode = (space, gpu, length) => {
   return base;
 };
 
-const buildControlRows = () => {
+// ヘルプの行を生成し、後続処理で利用できる状態にする
+const buildHelpLines = () => {
   app.eye?.setWorldMatrix?.();
   const camera = orbit?.orbit ?? {};
   const eyePos = app.eye?.getWorldPosition?.() ?? [0.0, 0.0, 0.0];
   const focusDistance = Math.hypot(eyePos[0], eyePos[1], eyePos[2]);
   return [
-    { label: "Camera", value: "orbit", note: "drag / wheel / arrows" },
-    {
-      label: "FOV",
-      value: `${state.viewAngle.toFixed(1)} deg`,
-      decKey: "-",
-      decAction: "-1",
-      incKey: "=",
-      incAction: "+1"
-    },
-    {
-      label: "Camera World",
-      value: `${eyePos[0].toFixed(1)}, ${eyePos[1].toFixed(1)}, ${eyePos[2].toFixed(1)}`
-    },
-    {
-      label: "Fog",
-      value: state.fogEnabled ? "on" : "off",
-      keys: [{ key: "F" }]
-    },
-    {
-      label: "DOF",
-      value: state.dofEnabled ? "on" : "off",
-      keys: [{ key: "D" }]
-    },
-    {
-      label: "Sharp W",
-      value: state.sharpnessWidth.toFixed(2),
-      decKey: "1",
-      incKey: "2",
-      note: "focus curve width"
-    },
-    {
-      label: "Sharp P",
-      value: state.sharpnessPower.toFixed(1),
-      decKey: "3",
-      incKey: "4",
-      note: "focus curve power"
-    },
-    {
-      label: "View",
-      value: state.dofView,
-      keys: [{ key: "V" }]
-    },
-    {
-      label: "Focus",
-      value: `${focusDistance.toFixed(1)} / ${state.focusRange.toFixed(1)}`,
-      decKey: "5",
-      incKey: "6",
-      note: "origin / range"
-    },
-    {
-      label: "Zoom",
-      value: Number.isFinite(camera.distance) ? camera.distance.toFixed(1) : "-",
-      note: "[ / ] / wheel"
-    },
-    {
-      label: "Orbit",
-      value: `yaw ${Number.isFinite(camera.yaw) ? camera.yaw.toFixed(1) : "0.0"} pitch ${Number.isFinite(camera.pitch) ? camera.pitch.toFixed(1) : "0.0"}`
-    },
-    {
-      label: "Projection",
-      value: "perspective",
-      note: "WebgApp.updateProjection()"
-    },
-    {
-      label: "Reset",
-      value: "ready",
-      key: "R",
-      action: "reset all"
-    }
+    ...HELP_LINES,
+    "",
+    `FOV: ${state.viewAngle.toFixed(1)} deg / fog: ${state.fogEnabled ? "ON" : "OFF"} / DOF: ${state.dofEnabled ? "ON" : "OFF"}`,
+    `DOF view: ${state.dofView} / focus ${focusDistance.toFixed(1)} / range ${state.focusRange.toFixed(1)}`,
+    `Sharpness: width ${state.sharpnessWidth.toFixed(2)} / power ${state.sharpnessPower.toFixed(1)} / stages ${dof?.getStagedStageCount?.() ?? "--"}`,
+    `Camera: ${eyePos[0].toFixed(1)}, ${eyePos[1].toFixed(1)}, ${eyePos[2].toFixed(1)}`,
+    `Orbit: yaw ${Number.isFinite(camera.yaw) ? camera.yaw.toFixed(1) : "0.0"} / pitch ${Number.isFinite(camera.pitch) ? camera.pitch.toFixed(1) : "0.0"}`
   ];
 };
 
+// ヘルプのパネルを現在の入力と実行状態に合わせて更新する
+const updateHelpPanel = () => {
+  const panel = app?.getOverlayPanel?.("axisHelpOverlay");
+  if (!panel) return;
+  const lines = buildHelpLines();
+  const text = lines.join("\n");
+  if (text === lastHelpText) return;
+  app.updateOverlayPanel("axisHelpOverlay", { lines });
+  lastHelpText = text;
+};
+
+// 表示の`angle`を対象の状態または描画設定へ反映する
 const applyViewAngle = (nextViewAngle) => {
   state.viewAngle = clamp(nextViewAngle, MIN_VIEW_ANGLE, MAX_VIEW_ANGLE);
   app.viewAngle = state.viewAngle;
   app.updateProjection(state.viewAngle);
 };
 
+// フォグを対象の状態または描画設定へ反映する
 const applyFog = () => {
   app.setFog({
     color: FOG_SETTINGS.color,
@@ -269,6 +259,7 @@ const applyFog = () => {
   });
 };
 
+// 被写界深度を対象の状態または描画設定へ反映する
 const applyDof = () => {
   if (!dof) return;
   app.eye?.setWorldMatrix?.();
@@ -281,17 +272,19 @@ const applyDof = () => {
   dof.setSharpnessWidth(state.sharpnessWidth);
   dof.setSharpnessPower(state.sharpnessPower);
   dof.setBlurScale(DOF_SETTINGS.blurScale);
-  dof.setBlurIterations(DOF_SETTINGS.blurIterations);
+  dof.setStageBlurIterations(DOF_SETTINGS.stageBlurIterations);
   dof.setBlurRadius(DOF_SETTINGS.blurRadius);
-  dof.setProjectionRange(app.projectionNear, app.projectionFar);
+  dof.setStagedStageCount(DOF_SETTINGS.stagedStageCount);
 };
 
+// `nextDofView`は現在状態から対象を選択し、結果を返すまたは選択を切り替える
 const nextDofView = () => {
-  const order = ["composite", "scene", "depth", "focusMask", "blurA", "blurB"];
+  const order = ["composite", "scene", "depth", "focusMask", "stage", "smallBlur", "mediumBlur", "largeBlur"];
   const current = order.indexOf(state.dofView);
   state.dofView = order[(current + 1) % order.length];
 };
 
+// 表示を初期状態へ戻し、前回の状態を残さない
 const resetView = () => {
   applyViewAngle(DEFAULT_VIEW_ANGLE);
   state.fogEnabled = true;
@@ -305,6 +298,7 @@ const resetView = () => {
   applyDof();
 };
 
+// シーンを生成し、後続処理で利用できる状態にする
 const buildScene = () => {
   const gpu = app.getGPU();
 
@@ -357,8 +351,9 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 });
 
+// このインスタンスの初期化段階で、必要な状態と資源を準備して処理を開始する
 const start = async () => {
-  // WebgApp に初期化を寄せ、camera / Message / HUD の共通形をそのまま使う
+  // WebgApp に初期化を寄せ、camera / Message / OverlayPanel の共通形をそのまま使う
   app = new WebgApp({
     document,
     autoDrawScene: false,
@@ -392,10 +387,15 @@ const start = async () => {
   });
   // axis sample でも通常 sample の標準形に合わせ、
   // 操作説明と教育用の補足は左上 help panel へまとめる
-  app.showOverlayPanel(buildHelpPanelOptions({
-    id: "axisHelpOverlay",
-    lines: HELP_LINES
-  }));
+  app.showOverlayPanel({
+    ...buildHelpPanelOptions({
+      id: "axisHelpOverlay",
+      collapsed: true,
+      lines: HELP_LINES,
+      ...AXIS_PANEL_STYLE
+    }),
+    color: AXIS_PANEL_STYLE.color
+  });
 
   orbit = app.createOrbitEyeRig({
     target: ORBIT_DEFAULT.target,
@@ -409,14 +409,15 @@ const start = async () => {
   dof = new DofPass(app.getGPU(), {
     width: app.screen.getWidth(),
     height: app.screen.getHeight(),
-    projectionNear: app.projectionNear,
-    projectionFar: app.projectionFar,
     focusDistance: DOF_SETTINGS.focusDistance,
     focusRange: DOF_SETTINGS.focusRange,
     maxBlurMix: DOF_SETTINGS.maxBlurMix,
+    sharpnessWidth: DOF_SETTINGS.sharpnessWidth,
+    sharpnessPower: DOF_SETTINGS.sharpnessPower,
     blurScale: DOF_SETTINGS.blurScale,
-    blurIterations: DOF_SETTINGS.blurIterations,
-    blurRadius: DOF_SETTINGS.blurRadius
+    stageBlurIterations: DOF_SETTINGS.stageBlurIterations,
+    blurRadius: DOF_SETTINGS.blurRadius,
+    stagedStageCount: DOF_SETTINGS.stagedStageCount
   });
   await dof.ready;
   debugPass = new FullscreenPass(app.getGPU(), {
@@ -427,6 +428,98 @@ const start = async () => {
 
   buildScene();
   resetView();
+
+  // 操作変更後の表示と状態を現在の入力と実行状態に合わせて更新する
+  const refreshAfterControlChange = () => {
+    palette?.render();
+    updateHelpPanel();
+    app.requestRender();
+  };
+
+  // 操作パレットを生成し、後続処理で利用できる状態にする
+  const createPalette = () => {
+    palette = new CommandPalette({
+      document,
+      container: document.body,
+      viewport: app.screen.canvas,
+      title: "Axis DOF",
+      className: "command-palette surface",
+      pageRows: 5,
+      pageRowsByPage: [5, 5],
+      closeOnCommand: false,
+      onChange: (id, value) => {
+        if (id === "fog") {
+          state.fogEnabled = value;
+          applyFog();
+        } else if (id === "dof") {
+          state.dofEnabled = value;
+          applyDof();
+        } else if (id === "view") {
+          state.dofView = value;
+        } else if (id === "fov") {
+          applyViewAngle(value);
+        } else if (id === "focus-range") {
+          state.focusRange = value;
+          applyDof();
+        } else if (id === "sharp-width") {
+          state.sharpnessWidth = value;
+          applyDof();
+        } else if (id === "sharp-power") {
+          state.sharpnessPower = value;
+          applyDof();
+        }
+        refreshAfterControlChange();
+      },
+      onCommand: (id) => {
+        if (id === "reset") resetView();
+        refreshAfterControlChange();
+      },
+      commands: [
+        // 1ページ目
+        { type: "toggle", id: "fog", label: "Fog", detail: "on/off", value: () => state.fogEnabled },
+        { type: "toggle", id: "dof", label: "DOF", detail: "on/off", value: () => state.dofEnabled },
+        null,
+        { id: "palette-next", label: "Next", detail: "page", pageSwitch: true },
+        { type: "select", id: "view", label: "DOF View", value: () => state.dofView, options: [
+          { value: "composite", label: "composite" },
+          { value: "scene", label: "scene" },
+          { value: "depth", label: "depth" },
+          { value: "focusMask", label: "focusMask" },
+          { value: "stage", label: "stage" },
+          { value: "smallBlur", label: "smallBlur" },
+          { value: "mediumBlur", label: "mediumBlur" },
+          { value: "largeBlur", label: "largeBlur" }
+        ] },
+        { type: "stepper", id: "fov", label: "FOV", value: () => state.viewAngle, min: MIN_VIEW_ANGLE, max: MAX_VIEW_ANGLE, step: VIEW_ANGLE_STEP, decimals: 1, input: true },
+        { type: "stepper", id: "focus-range", label: "Focus Range", value: () => state.focusRange, min: 0.5, max: 64.0, step: 0.5, decimals: 1, input: true },
+        { type: "stepper", id: "sharp-width", label: "Sharp W", value: () => state.sharpnessWidth, min: 0.02, max: 2.0, step: 0.02, decimals: 2, input: true },
+        // 2ページ目
+        null,
+        null,
+        null,
+        { id: "palette-next", label: "Next", detail: "page", pageSwitch: true },
+        { type: "stepper", id: "sharp-power", label: "Sharp P", value: () => state.sharpnessPower, min: 0.5, max: 32.0, step: 0.5, decimals: 1, input: true },
+        { id: "reset", label: "Reset", detail: "view" },
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+      ]
+    });
+    palette.attachToCanvas(app.screen.canvas, { key: "/" });
+    palette.setStyle(AXIS_PALETTE_CSS);
+    palette.setTheme(AXIS_PALETTE_THEME);
+  };
+
+  createPalette();
+  refreshAfterControlChange();
 
   app.attachInput({
     onKeyDown: (key, ev) => {
@@ -468,18 +561,20 @@ const start = async () => {
   });
 
   app.start({
-    onUpdate: ({ deltaSec, screen }) => {
-      orbit.update(deltaSec);
+    onUpdate: ({ screen }) => {
       applyDof();
-      dof?.resizeToScreen(screen);
-      app.setControlRows(buildControlRows(), HUD_ROW_OPTIONS);
+      updateHelpPanel();
     },
-    onBeforeDraw: () => {
-      dof?.beginScene(app.screen, app.clearColor);
-      app.space.draw(app.eye);
+    onBeforeDraw: ({ renderFrameToken }) => {
+      // beginScene() はコア側で寸法変化を判定し、必要な場合だけtargetを再生成する
+      // tokenはWebgAppが所有し、sampleはCameraFrameやdepth方式を直接扱わない
+      dof?.beginScene(app.screen, app.clearColor, { renderFrameToken });
+      // offscreen sceneも同じtokenで描き、DoF depth復元とのcamera snapshot混在を防ぐ
+      app.space.draw(renderFrameToken);
     },
-    onAfterDraw3d: () => {
+    onAfterDraw3d: ({ renderFrameToken }) => {
       dof?.render(app.screen, {
+        renderFrameToken,
         clearColor: app.clearColor
       });
 
@@ -490,13 +585,16 @@ const start = async () => {
             ? dof.getDepthDebugTarget()
             : state.dofView === "focusMask"
               ? dof.getFocusDebugTarget()
-              : state.dofView === "blurA"
-                ? dof.getBlurTargetA()
-                : dof.getBlurTargetB();
-        app.screen.beginPass({
+              : state.dofView === "stage"
+                ? dof.getStageDebugTarget()
+                : state.dofView === "smallBlur"
+                  ? dof.getSmallBlurTarget()
+                  : state.dofView === "mediumBlur"
+                    ? dof.getMediumBlurTarget()
+                    : dof.getLargeBlurTarget();
+        app.screen.beginPresentPass({
           clearColor: app.clearColor,
-          colorLoadOp: "clear",
-          depthView: null
+          colorLoadOp: "clear"
         });
         debugPass.draw(debugSource);
       }

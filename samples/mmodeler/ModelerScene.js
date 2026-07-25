@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// samples/mmodeler/ModelerScene.js  2026/05/24
+// samples/mmodeler/ModelerScene.js  2026/06/02
 //   scene state container for mmodeler
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -28,14 +28,15 @@ export default class ModelerScene {
     this.nextObjectId = nextObjectId;
 
     // Edit Mode 中に active object から取り出して編集する mesh data
-    // vertex.id / face.id は削除後も意味が変わらない識別子として使う
-    // face.indices は vertex id の配列であり、三角形または四角形だけを許可する
+    // vertices は 0-based の密な配列として扱い、vertex.id は常に配列 index と一致させる
+    // face.indices は vertex 配列 index の配列であり、三角形または四角形だけを許可する
+    // 頂点削除の後は face.indices と vertex selection を同時に再番号付けし、直接参照できる状態を保つ
     this.vertices = [];
     this.faces = [];
     this.selectedVertices = new Set();
     this.selectedFaces = new Set();
     this.lastSelectedVertexId = null;
-    this.nextVertexId = 1;
+    this.nextVertexId = 0;
     this.nextFaceId = 1;
 
     // Edit Mode の選択 tool を保持する
@@ -171,7 +172,7 @@ export default class ModelerScene {
     }
     object.vertices = this.vertices;
     object.faces = this.faces;
-    object.nextVertexId = this.nextVertexId;
+    object.nextVertexId = this.vertices.length;
     object.nextFaceId = this.nextFaceId;
     return true;
   }
@@ -181,7 +182,7 @@ export default class ModelerScene {
   clearEditableMesh() {
     this.vertices = [];
     this.faces = [];
-    this.nextVertexId = 1;
+    this.nextVertexId = 0;
     this.nextFaceId = 1;
     this.clearEditSelection();
   }
@@ -202,7 +203,7 @@ export default class ModelerScene {
     this.activeObjectId = object.id;
     this.vertices = object.vertices;
     this.faces = object.faces;
-    this.nextVertexId = object.nextVertexId;
+    this.nextVertexId = object.vertices.length;
     this.nextFaceId = object.nextFaceId;
     if (clearEditSelection) {
       this.clearEditSelection();
@@ -233,26 +234,6 @@ export default class ModelerScene {
       clearEditSelection: true,
       commitCurrent: false
     });
-  }
-
-  // 現在の編集配列から単一 object の scene state を作り直す
-  // new model のように、既存 object list を 1 object へ初期化する場面で使う
-  resetObjectState(name, objectId) {
-    const id = objectId;
-    this.objects = [{
-      id,
-      name: String(name || "Object"),
-      origin: [0.0, 0.0, 0.0],
-      rotation: [0.0, 0.0, 0.0, 1.0],
-      scale: 1.0,
-      vertices: this.vertices,
-      faces: this.faces,
-      nextVertexId: this.nextVertexId,
-      nextFaceId: this.nextFaceId
-    }];
-    this.nextObjectId = id + 1;
-    this.activeObjectId = id;
-    this.selectedObjectIds = new Set([id]);
   }
 
   // 新しい object を scene に追加し、その object を active / selected にする

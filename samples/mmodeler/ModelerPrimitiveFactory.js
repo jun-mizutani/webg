@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// samples/mmodeler/ModelerPrimitiveFactory.js  2026/05/26
+// samples/mmodeler/ModelerPrimitiveFactory.js  2026/06/02
 //   Editable primitive geometry factory for mmodeler.
 //   mmodeler は頂点選択、face 選択、loop cut、subdivision などの編集操作を行うため、
 //   webg core の描画用 Primitive ではなく、編集可能な vertices / faces 構造を直接生成する。
@@ -24,6 +24,7 @@ export function readPrimitiveSegments(value) {
 // 既存 object を置き換えず、1 primitive を 1 object として scene へ足すための local geometry を返す
 // primitive の local origin は形状の中心に置き、object origin と一致させる
 // ここで返す face loop は外向きの面順を正とし、追加後に原点基準の自動反転を掛けない
+// face loop の値は vertices 配列を直接指す 0-based index とする
 export function makePrimitiveGeometry(kind, options = {}) {
   const normalized = String(kind ?? "").trim().toLowerCase();
   const segments = readPrimitiveSegments(options.segments ?? 12);
@@ -41,12 +42,12 @@ export function makePrimitiveGeometry(kind, options = {}) {
         [-1.0, 1.0, 1.0]
       ],
       faces: [
-        [1, 2, 3, 4],
-        [5, 8, 7, 6],
+        [0, 1, 2, 3],
+        [4, 7, 6, 5],
+        [0, 4, 5, 1],
         [1, 5, 6, 2],
         [2, 6, 7, 3],
-        [3, 7, 8, 4],
-        [4, 8, 5, 1]
+        [3, 7, 4, 0]
       ]
     };
   }
@@ -59,7 +60,7 @@ export function makePrimitiveGeometry(kind, options = {}) {
         [1.0, 0.0, 1.0],
         [-1.0, 0.0, 1.0]
       ],
-      faces: [[1, 4, 3, 2]]
+      faces: [[0, 3, 2, 1]]
     };
   }
   if (normalized === "sphere") {
@@ -67,7 +68,7 @@ export function makePrimitiveGeometry(kind, options = {}) {
     const faces = [];
     const longitudeSegments = segments;
     const latitudeSegments = Math.max(3, Math.floor(segments / 2));
-    const ringVertexId = (lat, lon) => 2 + (lat - 1) * longitudeSegments + (lon % longitudeSegments);
+    const ringVertexId = (lat, lon) => 1 + (lat - 1) * longitudeSegments + (lon % longitudeSegments);
     for (let lat = 1; lat < latitudeSegments; lat++) {
       const theta = Math.PI * lat / latitudeSegments;
       const y = Math.cos(theta);
@@ -81,11 +82,11 @@ export function makePrimitiveGeometry(kind, options = {}) {
         ]);
       }
     }
-    const bottomId = vertices.length + 1;
+    const bottomId = vertices.length;
     vertices.push([0.0, -1.0, 0.0]);
     for (let lon = 0; lon < longitudeSegments; lon++) {
       const nextLon = (lon + 1) % longitudeSegments;
-      faces.push([1, ringVertexId(1, nextLon), ringVertexId(1, lon)]);
+      faces.push([0, ringVertexId(1, nextLon), ringVertexId(1, lon)]);
     }
     for (let lat = 1; lat < latitudeSegments - 1; lat++) {
       for (let lon = 0; lon < longitudeSegments; lon++) {
@@ -111,7 +112,7 @@ export function makePrimitiveGeometry(kind, options = {}) {
     const tubeSegments = Math.max(3, Math.floor(segments / 2));
     const majorRadius = 0.78;
     const tubeRadius = 0.28;
-    const vertexId = (ring, tube) => (ring % ringSegments) * tubeSegments + (tube % tubeSegments) + 1;
+    const vertexId = (ring, tube) => (ring % ringSegments) * tubeSegments + (tube % tubeSegments);
     for (let ring = 0; ring < ringSegments; ring++) {
       const ringAngle = 2.0 * Math.PI * ring / ringSegments;
       for (let tube = 0; tube < tubeSegments; tube++) {
@@ -139,8 +140,8 @@ export function makePrimitiveGeometry(kind, options = {}) {
   if (normalized === "cylinder" || normalized === "cone" || normalized === "double-cone") {
     const vertices = [];
     const faces = [];
-    const bottomCenterId = 1;
-    const topCenterId = 2;
+    const bottomCenterId = 0;
+    const topCenterId = 1;
     vertices.push([0.0, -1.0, 0.0]);
     vertices.push([0.0, 1.0, 0.0]);
     for (let i = 0; i < segments; i++) {
@@ -162,8 +163,8 @@ export function makePrimitiveGeometry(kind, options = {}) {
     }
     for (let i = 0; i < segments; i++) {
       const next = (i + 1) % segments;
-      const bottomA = 3 + i;
-      const bottomB = 3 + next;
+      const bottomA = 2 + i;
+      const bottomB = 2 + next;
       if (normalized === "cone") {
         // cone は bottom ring と apex で三角面を作るため、bottom cap と side の向きを別々に決める
         // bottom cap は下向き、side は斜面外側を向くよう、ring edge と apex の順序を明示する
@@ -174,8 +175,8 @@ export function makePrimitiveGeometry(kind, options = {}) {
         faces.push([bottomA, bottomB, bottomCenterId]);
         faces.push([bottomA, topCenterId, bottomB]);
       } else {
-        const topA = 3 + segments + i;
-        const topB = 3 + segments + next;
+        const topA = 2 + segments + i;
+        const topB = 2 + segments + next;
         faces.push([bottomCenterId, bottomA, bottomB]);
         faces.push([bottomA, topA, topB, bottomB]);
         faces.push([topCenterId, topB, topA]);
@@ -199,8 +200,8 @@ export function makePrimitiveGeometry(kind, options = {}) {
 export function buildPrimitiveObject(kind, objectId, options = {}) {
   const geometry = makePrimitiveGeometry(kind, options);
   const vertices = geometry.vertices.map((position, index) => ({
-    id: index + 1,
-    position: readVec3(position, `${geometry.name} vertex ${index + 1}`)
+    id: index,
+    position: readVec3(position, `${geometry.name} vertex ${index}`)
   }));
   const faces = geometry.faces.map((indices, index) => ({
     id: index + 1,
@@ -214,7 +215,7 @@ export function buildPrimitiveObject(kind, objectId, options = {}) {
     scale: 1.0,
     vertices,
     faces,
-    nextVertexId: vertices.length + 1,
+    nextVertexId: vertices.length,
     nextFaceId: faces.length + 1
   };
 }

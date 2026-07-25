@@ -3,22 +3,187 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Low-Level Fractal Terrain Sample</title>
+  <title>lowlevel_terrain</title>
   <link rel="icon" href="data:," />
-  <!-- 2026/04/05 -->
+  <!-- 2026/06/19 -->
   <style>
-    html, body {
-      margin: 0;
-      height: 100%;
-      background: #0f1b14;
-    }
-    canvas {
-      display: block;
-    }
+
+:root {
+  color-scheme: light;
+  --bg: #eef3f8;
+  --paper: rgba(255, 255, 255, 0.94);
+  --line: #c8d5e4;
+  --ink: #17324a;
+  --muted: #5c748b;
+  --accent: #1566ab;
+  --accent-soft: #dfeefe;
+  --code-bg: #f3f7fb;
+  --shadow: rgba(29, 52, 79, 0.10);
+}
+* { box-sizing: border-box; }
+html, body {
+  margin: 0;
+  min-height: 100%;
+}
+body {
+  background:
+    radial-gradient(circle at top left, rgba(21, 102, 171, 0.12), transparent 24%),
+    radial-gradient(circle at top right, rgba(255, 191, 118, 0.10), transparent 22%),
+    linear-gradient(180deg, #f8fbfd 0%, var(--bg) 100%);
+  color: var(--ink);
+  font: 16px/1.78 "Avenir Next", "Hiragino Sans", "Yu Gothic", sans-serif;
+}
+.page {
+  width: min(1080px, calc(100% - 28px));
+  margin: 0 auto;
+  padding: 24px 0 56px;
+}
+.hero,
+.doc {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  box-shadow: 0 22px 52px var(--shadow);
+}
+.hero {
+  padding: 22px 24px;
+  margin-bottom: 18px;
+}
+.hero h1 {
+  margin: 0 0 8px;
+  font-size: clamp(2rem, 4vw, 3rem);
+  line-height: 1.08;
+}
+.hero p {
+  margin: 0;
+  color: var(--muted);
+}
+.doc {
+  padding: 28px;
+}
+.doc > :first-child {
+  margin-top: 0;
+}
+h1, h2, h3, h4, h5, h6 {
+  line-height: 1.25;
+  margin: 1.45em 0 0.55em;
+}
+h1 {
+  font-size: 2.2rem;
+}
+h2 {
+  padding-bottom: 0.28em;
+  border-bottom: 1px solid var(--line);
+  font-size: 1.48rem;
+}
+h3 {
+  font-size: 1.14rem;
+}
+p, ul, ol, table, pre, blockquote {
+  margin: 0 0 1em;
+}
+ul, ol {
+  padding-left: 1.4em;
+}
+li + li {
+  margin-top: 0.26em;
+}
+a {
+  color: var(--accent);
+  text-decoration: none;
+}
+a:hover {
+  text-decoration: underline;
+}
+img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  border-radius: 16px;
+  border: 1px solid var(--line);
+  box-shadow: 0 12px 32px rgba(29, 52, 79, 0.08);
+  margin: 1.1em 0 1.4em;
+}
+code {
+  padding: 0.12em 0.38em;
+  border-radius: 0.45em;
+  background: var(--code-bg);
+  border: 1px solid #dbe6f1;
+  font: 0.92em/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+pre {
+  padding: 14px 16px;
+  overflow-x: auto;
+  border-radius: 14px;
+  background: #0f1720;
+  color: #ecf5ff;
+}
+pre code {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #ffffff;
+}
+th, td {
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  text-align: left;
+  vertical-align: top;
+}
+th {
+  background: #f5f9fc;
+}
+hr {
+  border: 0;
+  border-top: 1px solid var(--line);
+  margin: 1.5em 0;
+}
+blockquote {
+  padding: 0.3em 0 0.3em 1em;
+  border-left: 4px solid #c9dbef;
+  color: var(--muted);
+}
+@media (max-width: 720px) {
+  .page {
+    width: min(100% - 18px, 1080px);
+    padding-top: 16px;
+  }
+  .hero,
+  .doc {
+    border-radius: 18px;
+  }
+  .doc {
+    padding: 20px;
+  }
+}
+
   </style>
 </head>
 <body>
-  <canvas id="canvas" width="960" height="720"></canvas>
-  <script type="module" src="./main.js"></script>
+  <main class="page">
+    <section class="hero">
+      <h1>lowlevel_terrain</h1>
+    </section>
+    <article class="doc">
+<h1>lowlevel_terrain</h1>
+<p><a href="index.en.html">English</a> | 日本語</p>
+<p><img src="./lowlevel_terrain.jpg" alt="lowlevel_terrain" /></p>
+<h2>概要</h2>
+<ul><li>WebgApp で camera と HUD を整え、terrain mesh そのものは Shape の low-level API だけで作るサンプルです</li><li>value noise と fbm を使って高さを決め、共有頂点の grid に対して addPlane() で quad を張り、連続した地形を 1 枚の mesh として構築します</li><li>mesh と同じ height field から高さ帯 texture も生成し、海辺、草地、岩場、雪線のような色の変化を 1 枚の procedural texture として与えます</li><li>steep な段差には簡易 erosion 風 smoothing をかけ、急な崖を少しだけ崩して自然な尾根と斜面へ寄せています</li><li>中心を高く、外周を低くする falloff を入れているため、島状の silhouette が分かりやすく出ます</li><li>orbit と zoom で近くから法線、遠くから輪郭を見比べると、low-level terrain 生成の意図を確認しやすい構成です</li><li>Q / E で camera 距離、- / = で terrain の起伏量をその場で変えられるため、同じ topology で見え方がどう変わるかを比較できます</li></ul>
+<h2>実行方法</h2>
+<ul><li>実行ファイルは <a href="./lowlevel_terrain.html">./lowlevel_terrain.html</a> です</li><li>WebGPU に対応したブラウザで開き、必要に応じて help panel や HUD と合わせて確認してください</li></ul>
+<h2>使用している webg 機能</h2>
+<ul><li>WebgApp: 起動、camera、HUD、input、fog の初期化</li><li>EyeRig: orbit camera と zoom</li><li>Shape.addVertexUV(): grid 上の頂点を並べる</li><li>Shape.addPlane(): quad を 2 三角形へ分けて追加する</li></ul>
+<h2>確認ポイント</h2>
+<ul><li>起動直後に島状の地形が見え、orbit camera で上空と斜めから観察できることを確認します</li><li>rows / cols、vertex 数、quad 数、高さの最小値と最大値が右上に表示されることを確認します</li><li>高さ帯ごとに地表色が変わり、低地から高地までの地形の読みやすさが上がっていることを確認します</li><li>共有頂点で法線を作っているため、地形表面が連続して smooth に見えることを確認します</li><li>erosion 風 smoothing により、ノイズだけの terrain よりも steep な段差が少し和らいでいることを確認します</li><li>zoom を寄せると山肌の傾き、引くと全体の silhouette と falloff の効き方が分かることを確認します</li><li>- / = で右上の heightScale と地形の起伏量が一緒に変わることを確認します</li></ul>
+<h2>操作方法</h2>
+<ul><li>ドラッグ: orbit camera</li><li>2本指ドラッグ: camera を平行移動</li><li>pinch / ホイール: zoom</li><li>arrow keys: orbit camera</li><li>[ / ]: zoom</li><li>Q / E: camera 距離を近づける / 遠ざける</li><li>- / =: terrain の起伏量を下げる / 上げる</li><li>R: 既定 view へ戻す</li></ul>
+    </article>
+  </main>
 </body>
 </html>

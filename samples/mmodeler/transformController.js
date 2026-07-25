@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// samples/mmodeler/transformController.js  2026/05/24
+// samples/mmodeler/transformController.js  2026/07/25
 //   mmodeler transform controller
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -106,6 +106,7 @@ export function createTransformController(services) {
     state.targetKind = targetKind;
     state.historyTransaction = historyTransaction;
     state.changed = false;
+    services.setMobileOrbitEnabled?.(false);
     services.setMessage(`${getTransformModeLabel(normalized)} mode: move mouse, left click confirm`);
     return true;
   }
@@ -115,6 +116,7 @@ export function createTransformController(services) {
     services.restoreTransformStartSnapshot(state.historyTransaction);
   }
 
+  // 変換の`changed`の条件を判定し、結果を真偽値で返す
   function hasTransformChanged() {
     return getTransformTargetKind() === "edit"
       ? services.hasEditTransformChanged()
@@ -125,6 +127,7 @@ export function createTransformController(services) {
     return state.targetKind;
   }
 
+  // 変換の`segment`の`changed`の条件を判定し、結果を真偽値で返す
   function hasTransformSegmentChanged() {
     return getTransformTargetKind() === "edit"
       ? services.hasEditTransformSegmentChanged()
@@ -151,6 +154,7 @@ export function createTransformController(services) {
     state.targetKind = null;
     state.historyTransaction = null;
     state.changed = false;
+    services.setMobileOrbitEnabled?.(true);
     if (targetKind === "edit") {
       if (editSessionEnd === "confirm") {
         services.confirmEditTransformSession();
@@ -250,6 +254,7 @@ export function createTransformController(services) {
     return true;
   }
 
+  // ポインターの`drag`の入力を生成し、後続処理で利用できる状態にする
   function makePointerDragInput(clientX, clientY) {
     const canvas = services.getCanvas();
     const rect = canvas.getBoundingClientRect();
@@ -264,6 +269,7 @@ export function createTransformController(services) {
     };
   }
 
+  // オブジェクトの変換の`drag`の入力を生成し、後続処理で利用できる状態にする
   function makeObjectTransformDragInput(clientX, clientY) {
     const input = makePointerDragInput(clientX, clientY);
     const bounds = services.getEditorBounds();
@@ -286,6 +292,7 @@ export function createTransformController(services) {
     };
   }
 
+  // オブジェクトの変換の`drag`の`preview`を対象の状態または描画設定へ反映する
   function applyObjectTransformDragPreview(clientX, clientY) {
     const objects = Array.from(state.initialObjectTransforms.keys());
     if (objects.length === 0) {
@@ -309,6 +316,7 @@ export function createTransformController(services) {
     markObjectTransformSegmentChanged();
   }
 
+  // `edit`の変換の`drag`の`preview`を対象の状態または描画設定へ反映する
   function applyEditTransformDragPreview(clientX, clientY) {
     const input = makePointerDragInput(clientX, clientY);
     services.applyEditTransformDrag({
@@ -384,6 +392,7 @@ export function createTransformController(services) {
       applyTransformDrag(ev.clientX, ev.clientY);
       stopTransformEvent(ev);
     };
+    // ポインターの`up`の`capture`を受け取った段階で、対応する状態更新と処理を実行する
     const onPointerUpCapture = (ev) => {
       rememberPointer(ev);
       if (!state.active || String(ev.pointerType ?? "") !== "touch") {

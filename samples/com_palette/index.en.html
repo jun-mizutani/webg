@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>com_palette</title>
+  <link rel="icon" href="data:," />
+  <!-- 2026/06/19 -->
+  <style>
+
+:root {
+  color-scheme: light;
+  --bg: #eef3f8;
+  --paper: rgba(255, 255, 255, 0.94);
+  --line: #c8d5e4;
+  --ink: #17324a;
+  --muted: #5c748b;
+  --accent: #1566ab;
+  --accent-soft: #dfeefe;
+  --code-bg: #f3f7fb;
+  --shadow: rgba(29, 52, 79, 0.10);
+}
+* { box-sizing: border-box; }
+html, body {
+  margin: 0;
+  min-height: 100%;
+}
+body {
+  background:
+    radial-gradient(circle at top left, rgba(21, 102, 171, 0.12), transparent 24%),
+    radial-gradient(circle at top right, rgba(255, 191, 118, 0.10), transparent 22%),
+    linear-gradient(180deg, #f8fbfd 0%, var(--bg) 100%);
+  color: var(--ink);
+  font: 16px/1.78 "Avenir Next", "Hiragino Sans", "Yu Gothic", sans-serif;
+}
+.page {
+  width: min(1080px, calc(100% - 28px));
+  margin: 0 auto;
+  padding: 24px 0 56px;
+}
+.hero,
+.doc {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  box-shadow: 0 22px 52px var(--shadow);
+}
+.hero {
+  padding: 22px 24px;
+  margin-bottom: 18px;
+}
+.hero h1 {
+  margin: 0 0 8px;
+  font-size: clamp(2rem, 4vw, 3rem);
+  line-height: 1.08;
+}
+.hero p {
+  margin: 0;
+  color: var(--muted);
+}
+.doc {
+  padding: 28px;
+}
+.doc > :first-child {
+  margin-top: 0;
+}
+h1, h2, h3, h4, h5, h6 {
+  line-height: 1.25;
+  margin: 1.45em 0 0.55em;
+}
+h1 {
+  font-size: 2.2rem;
+}
+h2 {
+  padding-bottom: 0.28em;
+  border-bottom: 1px solid var(--line);
+  font-size: 1.48rem;
+}
+h3 {
+  font-size: 1.14rem;
+}
+p, ul, ol, table, pre, blockquote {
+  margin: 0 0 1em;
+}
+ul, ol {
+  padding-left: 1.4em;
+}
+li + li {
+  margin-top: 0.26em;
+}
+a {
+  color: var(--accent);
+  text-decoration: none;
+}
+a:hover {
+  text-decoration: underline;
+}
+img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  border-radius: 16px;
+  border: 1px solid var(--line);
+  box-shadow: 0 12px 32px rgba(29, 52, 79, 0.08);
+  margin: 1.1em 0 1.4em;
+}
+code {
+  padding: 0.12em 0.38em;
+  border-radius: 0.45em;
+  background: var(--code-bg);
+  border: 1px solid #dbe6f1;
+  font: 0.92em/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+pre {
+  padding: 14px 16px;
+  overflow-x: auto;
+  border-radius: 14px;
+  background: #0f1720;
+  color: #ecf5ff;
+}
+pre code {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #ffffff;
+}
+th, td {
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  text-align: left;
+  vertical-align: top;
+}
+th {
+  background: #f5f9fc;
+}
+hr {
+  border: 0;
+  border-top: 1px solid var(--line);
+  margin: 1.5em 0;
+}
+blockquote {
+  padding: 0.3em 0 0.3em 1em;
+  border-left: 4px solid #c9dbef;
+  color: var(--muted);
+}
+@media (max-width: 720px) {
+  .page {
+    width: min(100% - 18px, 1080px);
+    padding-top: 16px;
+  }
+  .hero,
+  .doc {
+    border-radius: 18px;
+  }
+  .doc {
+    padding: 20px;
+  }
+}
+
+  </style>
+</head>
+<body>
+  <main class="page">
+    <section class="hero">
+      <h1>com_palette</h1>
+    </section>
+    <article class="doc">
+<h1>com_palette</h1>
+<p>English | <a href="index.html">日本語</a></p>
+<p><img src="./com_palette.jpg" alt="com_palette" /></p>
+<h2>Overview</h2>
+<p><code>com_palette</code> demonstrates how to use the core <code>webg/CommandPalette.js</code> as a UI component independently of WebgApp. It places buttons, toggles, steppers, selects, and an exclusive mode switch in one palette and shows how command definitions connect to application state.</p>
+<p>The center 2D preview and HUD read the same <code>state</code> that the palette updates. Switching <code>Obj / Edit / Scpt</code> changes both the active button and the preview. Toggle and stepper changes affect the background or shape on the next frame. This keeps application-specific state in the caller while CommandPalette only displays and updates it.</p>
+<h2>How to Run</h2>
+<ul><li>Open <a href="./com_palette.html">./com_palette.html</a></li><li>WebGPU is not used; the sample only requires a browser that supports Canvas 2D and the DOM</li></ul>
+<h2>webg Features Used</h2>
+<ul><li><code>CommandPalette</code>: builds the palette DOM from command definitions and handles opening, pagination, and value display</li><li><code>getDefaultCommandPaletteCss()</code>: returns the default CSS so the sample can restore it after a style experiment</li><li><code>setStyle()</code>: replaces the complete CSS applied to the palette</li><li><code>setTheme()</code>: changes only color-related CSS custom properties</li><li><code>attachToCanvas()</code>: connects double click, double tap, and the <code>/</code> key to palette opening</li></ul>
+<h2>Implementation Flow</h2>
+<p><code>state</code> stores pause, grid, glow, wire, mode, brush, radius, strength, and theme. The command <code>value</code> functions and <code>getCommandState</code> read this object to display the current toggle, stepper, select, and mode-switch state.</p>
+<p>Buttons are handled by <code>onCommand</code>, while toggles, steppers, and selects update <code>state</code> through <code>onChange</code>. Calling <code>palette.render()</code> and updating the HUD after changes keeps the palette, preview, and HUD synchronized. <code>pageRows: 4</code> provides the global limit and <code>pageRowsByPage: [4, 3]</code> changes only the second page to three rows. Buttons count as one cell, while steppers and selects occupy a complete row.</p>
+<h2>Checkpoints</h2>
+<ul><li>Double click, double tap, and the <code>/</code> key all open the same palette</li><li>Only one of <code>Obj / Edit / Scpt</code> is active and the center preview changes to the same mode</li><li>Toggle, stepper, and select changes appear in both the HUD and preview and remain visible after reopening the palette</li><li><code>Next</code> advances through row-based pages without splitting a stepper or select row</li><li><code>CSS</code> applies the custom style and <code>Def</code> restores the default CSS and theme</li></ul>
+<h2>Controls</h2>
+<ul><li>Double click / double tap: command palette</li><li><code>/</code>: command palette</li><li>Palette button: run command</li><li>Obj / Edit / Scpt: switch modes, update the active color, and change the center preview</li><li>Next: advance to the next row-based page</li><li>Radius / Strength: stepper</li><li>Brush / Theme: select row</li><li>CSS: test <code>setStyle()</code></li><li>Def: restore default style</li></ul>
+    </article>
+  </main>
+</body>
+</html>

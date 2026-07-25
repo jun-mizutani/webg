@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// unittest/shared/SkinningTestUtils.js  2026/05/15
+// unittest/shared/SkinningTestUtils.js  2026/07/25
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // ---------------------------------------------
@@ -20,6 +20,7 @@ export const setProjection = (screen, shader, angle = 53) => {
   shader.setProjectionMatrix(proj);
 };
 
+// テクスチャのX方向の反転を読み込み、検証済みのデータとして後続処理へ渡す
 export const loadTextureFlipX = async (gpu, url) => {
   // 既存 sample と同じ向きで比較できるよう、`num256.png` は左右反転して取り込む
   const response = await fetch(url);
@@ -47,6 +48,7 @@ export const loadTextureFlipX = async (gpu, url) => {
   };
 };
 
+// テクスチャを読み込み、検証済みのデータとして後続処理へ渡す
 export const loadTexture = async (gpu, url) => {
   // 元画像の向きをそのまま使って比較したい場合はこちらを使う
   // webg の UV は左下原点なので、読み込んだ画像の上下をここで勝手に触らない
@@ -76,6 +78,7 @@ export const loadTexture = async (gpu, url) => {
   };
 };
 
+// 画像の法線のマップを生成し、後続処理で利用できる状態にする
 export const buildImageNormalMap = async (gpu, rgba, width, height, options = {}) => {
   // BoneNormPhong 側では、ベース画像そのものから normal map を作り、
   // 「法線マップ付き skinning shader が崩れないか」だけを素直に確認する
@@ -95,6 +98,7 @@ export const buildImageNormalMap = async (gpu, rgba, width, height, options = {}
   return texture;
 };
 
+// `two`のボーンの`skinned`の`prism`を生成し、後続処理で利用できる状態にする
 export const createTwoBoneSkinnedPrism = (gpu, options = {}) => {
   // 少数ボーン + 単純な円柱側面メッシュに絞り、
   // shader の skinning 経路が正常かどうかを観察しやすい形へ固定する
@@ -154,6 +158,7 @@ export const createTwoBoneSkinnedPrism = (gpu, options = {}) => {
   return { shape, skeleton, j0, j1 };
 };
 
+// `two`のボーンの`skinned`の`tube`を生成し、後続処理で利用できる状態にする
 export const createTwoBoneSkinnedTube = (gpu, options = {}) => {
   // revolution 系の筒を skinned mesh として扱う最小構成を作る
   // 側面だけを残し、上下面は閉じないことで裏面と normal map の両方を追いやすくする
@@ -218,6 +223,7 @@ export const createTwoBoneSkinnedTube = (gpu, options = {}) => {
   return { shape, skeleton, j0, j1 };
 };
 
+// デバッグのボーンの形状を生成し、後続処理で利用できる状態にする
 export const createDebugBoneShape = (gpu, shader, size = 0.6) => {
   // メッシュ変形とボーン向きの一致を見やすくするため、最小の debugBone 表示を共通化する
   const boneShape = new Shape(gpu);

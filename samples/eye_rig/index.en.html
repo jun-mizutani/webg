@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>eye_rig</title>
+  <link rel="icon" href="data:," />
+  <!-- 2026/06/19 -->
+  <style>
+
+:root {
+  color-scheme: light;
+  --bg: #eef3f8;
+  --paper: rgba(255, 255, 255, 0.94);
+  --line: #c8d5e4;
+  --ink: #17324a;
+  --muted: #5c748b;
+  --accent: #1566ab;
+  --accent-soft: #dfeefe;
+  --code-bg: #f3f7fb;
+  --shadow: rgba(29, 52, 79, 0.10);
+}
+* { box-sizing: border-box; }
+html, body {
+  margin: 0;
+  min-height: 100%;
+}
+body {
+  background:
+    radial-gradient(circle at top left, rgba(21, 102, 171, 0.12), transparent 24%),
+    radial-gradient(circle at top right, rgba(255, 191, 118, 0.10), transparent 22%),
+    linear-gradient(180deg, #f8fbfd 0%, var(--bg) 100%);
+  color: var(--ink);
+  font: 16px/1.78 "Avenir Next", "Hiragino Sans", "Yu Gothic", sans-serif;
+}
+.page {
+  width: min(1080px, calc(100% - 28px));
+  margin: 0 auto;
+  padding: 24px 0 56px;
+}
+.hero,
+.doc {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  box-shadow: 0 22px 52px var(--shadow);
+}
+.hero {
+  padding: 22px 24px;
+  margin-bottom: 18px;
+}
+.hero h1 {
+  margin: 0 0 8px;
+  font-size: clamp(2rem, 4vw, 3rem);
+  line-height: 1.08;
+}
+.hero p {
+  margin: 0;
+  color: var(--muted);
+}
+.doc {
+  padding: 28px;
+}
+.doc > :first-child {
+  margin-top: 0;
+}
+h1, h2, h3, h4, h5, h6 {
+  line-height: 1.25;
+  margin: 1.45em 0 0.55em;
+}
+h1 {
+  font-size: 2.2rem;
+}
+h2 {
+  padding-bottom: 0.28em;
+  border-bottom: 1px solid var(--line);
+  font-size: 1.48rem;
+}
+h3 {
+  font-size: 1.14rem;
+}
+p, ul, ol, table, pre, blockquote {
+  margin: 0 0 1em;
+}
+ul, ol {
+  padding-left: 1.4em;
+}
+li + li {
+  margin-top: 0.26em;
+}
+a {
+  color: var(--accent);
+  text-decoration: none;
+}
+a:hover {
+  text-decoration: underline;
+}
+img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  border-radius: 16px;
+  border: 1px solid var(--line);
+  box-shadow: 0 12px 32px rgba(29, 52, 79, 0.08);
+  margin: 1.1em 0 1.4em;
+}
+code {
+  padding: 0.12em 0.38em;
+  border-radius: 0.45em;
+  background: var(--code-bg);
+  border: 1px solid #dbe6f1;
+  font: 0.92em/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+pre {
+  padding: 14px 16px;
+  overflow-x: auto;
+  border-radius: 14px;
+  background: #0f1720;
+  color: #ecf5ff;
+}
+pre code {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #ffffff;
+}
+th, td {
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  text-align: left;
+  vertical-align: top;
+}
+th {
+  background: #f5f9fc;
+}
+hr {
+  border: 0;
+  border-top: 1px solid var(--line);
+  margin: 1.5em 0;
+}
+blockquote {
+  padding: 0.3em 0 0.3em 1em;
+  border-left: 4px solid #c9dbef;
+  color: var(--muted);
+}
+@media (max-width: 720px) {
+  .page {
+    width: min(100% - 18px, 1080px);
+    padding-top: 16px;
+  }
+  .hero,
+  .doc {
+    border-radius: 18px;
+  }
+  .doc {
+    padding: 20px;
+  }
+}
+
+  </style>
+</head>
+<body>
+  <main class="page">
+    <section class="hero">
+      <h1>eye_rig</h1>
+    </section>
+    <article class="doc">
+<h1>eye_rig</h1>
+<p>English | <a href="index.html">日本語</a></p>
+<p><img src="./eye_rig.jpg" alt="eye_rig" /></p>
+<h2>Overview</h2>
+<p>This sample verifies the responsibilities of Orbit, First Person, and Follow modes and the effect of application-defined scene hierarchies using the <code>base -&gt; rod -&gt; eye</code> EyeRig structure.</p>
+<p>The blue camera vehicle and orange target vehicle travel along a banked three-dimensional track. Orbit and First Person demonstrate camera placement relative to the camera vehicle. Follow keeps the camera base attached to the camera vehicle while only the eye orientation smoothly tracks the independently moving target vehicle.</p>
+<p>The specification verified by this sample is implemented in <code>webg/EyeRig.js</code>. The sample uses the core <code>EyeRig</code> directly to demonstrate Follow, Orbit world-to-local conversion under a rotated parent, and independent First Person <code>lookYaw</code> input.</p>
+<h2>How to Run</h2>
+<ul><li>Open <a href="./eye_rig.html">./eye_rig.html</a></li><li>Use a WebGPU-capable browser and inspect the Help panel for controls and current values</li><li>Press <code>/</code> or double tap the canvas to open the CommandPalette for mode and setting changes</li></ul>
+<h2>webg Features Used</h2>
+<ul><li><code>WebgApp</code>: initializes Screen, Space, the camera rig, InputController, Message, OverlayPanel, and diagnostics</li><li><code>EyeRig</code>: supplies all three mode states, input handling, world-to-local conversion, and Follow orientation tracking</li><li><code>CoordinateSystem</code>: composes the camera vehicle hierarchy and the rotation-independent camera anchor</li><li><code>Shape / Primitive</code>: draws the track markers and two vehicles</li><li><code>buildHelpPanelOptions()</code>: presents the specification and controls in a collapsible panel</li><li><code>CommandPalette</code>: groups mode switching, pause, reset, Orbit hierarchy, and Follow up-reference controls</li></ul>
+<h2>Checkpoints</h2>
+<p>In Orbit mode, press <code>H</code> to compare a camera base parented to the vehicle with one parented to a non-rotating anchor that only shares its position. This demonstrates that inherited rotation is selected by the application hierarchy rather than by a different Orbit mode.</p>
+<p>In First Person mode, the base starts behind, above, and slightly to the right of the camera vehicle. The camera body faces local <code>-Z</code>, while the vehicle faces local <code>+Z</code>, so <code>bodyYaw: 180</code> aligns their forward axes. <code>W</code> moves along the body local <code>-Z</code> rotated by <code>bodyYaw</code>, <code>D</code> moves along local <code>+X</code>, and <code>S / A</code> move in the opposite directions. Horizontal dragging changes <code>eye.lookYaw</code>, not <code>bodyYaw</code>, and <code>lookYaw</code> does not change the movement direction. This allows the view to turn while the vehicle heading remains unchanged. <code>Q / E</code> move the base vertically in its parent coordinate system.</p>
+<p>In Follow mode, the base stays attached to the camera vehicle and is never copied to the target position. The rod preserves the application-controlled composition, while the eye stores the dynamic local orientation that looks at the target vehicle. A <code>follow dot</code> value near 1 in the Help panel means that the eye world-forward direction matches the target direction.</p>
+<p>Press <code>U</code> to compare <code>base</code>, <code>rod</code>, and <code>world</code> up references. When the target direction is nearly parallel to the selected up direction, the sample projects the previous right axis onto the new view plane to preserve roll continuity.</p>
+<p>Follow interpolates orientation with a frame-rate-independent response and a maximum angular speed. It does not delay the target position itself.</p>
+<h2>Controls</h2>
+<ul><li><code>1</code>: Orbit</li><li><code>2</code>: First Person</li><li><code>3</code>: Follow</li><li><code>R</code>: reset the active mode</li><li><code>P</code>: pause or resume both vehicles</li><li><code>H</code>: toggle Orbit hierarchy between inherited and independent rotation</li><li><code>U</code>: cycle Follow up reference through <code>base / rod / world</code></li><li>Drag: Orbit rotation, First Person independent look, or Follow rod composition</li><li><code>Shift + Drag</code> or two-finger drag: Orbit pan</li><li>Wheel or pinch: Orbit or Follow reference distance</li><li><code>W / A / S / D</code>: move the First Person base</li><li><code>Q / E</code>: move the First Person base down or up</li><li><code>Shift</code>: increase First Person movement speed</li><li><code>/</code> or canvas double tap: open the CommandPalette</li></ul>
+<h2>Implementation Files</h2>
+<ul><li><code>main.js</code>: scene, vehicle paths, mode switching, UI, and diagnostics</li><li><code>eye_rig.txt</code>: detailed implementation notes for users and coding assistants</li><li><code>book/06_カメラ制御とEyeRig.md</code>: Chapter 6, shared by the core implementation and camera-control examples</li></ul>
+    </article>
+  </main>
+</body>
+</html>

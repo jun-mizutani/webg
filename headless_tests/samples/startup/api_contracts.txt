@@ -1,0 +1,39 @@
+# sample_startup_api_contracts
+
+## 目的
+
+第2版コア変更後に起動不能となったsampleが、削除済みAPIや旧depth規則へ戻らず、同一Camera Frame、統合Deferred Shading、HDR effect、専用presentation passへ接続されていることを確認します。
+
+## 確認内容
+
+統合Compute effectを使うsampleでは、`onBeforeDraw`と`onAfterDraw3d`が同じCamera Frameを受け取り、`ComputeEffectPipeline.renderScene()`と`encode()`へ渡すことを検査します。最終copyは`beginPresentPass()`の後に実行し、その後`clearDepthBuffer()`でFont/HUD用のCamera Reverse-Z passを復元します。
+
+`compute_benchmark`の単独blurは`ComputePyramidBlurPass`を使い、1/2から1/16までの連続縮小とフル解像度までの段階的拡大を測定します。旧`ComputeBlurPass`、`blurRadius`、`blurIterations`が再導入された場合は停止します。
+
+`compute_ssao_gbuffer`では、共通の`addObject()`を通らず直接Nodeへ追加されるnormal-map cubeとskinned cylinderについても、`roughness`、`metallic`、`emissive`を含む完全なsurface materialを持つことを検査します。
+
+render-pass版DoFはCameraFrameをsampleへ露出せず、scene描画、`beginScene()`、`render()`へ同じ`renderFrameToken`を渡します。旧`view`入力は明示的に拒否します。独自SSAOはG-buffer共通WGSLの背景depth 0判定と線形化を使い、旧背景depth 1比較を拒否します。
+
+削除済み`createViewMatrix`、旧`gbufferColorMode`、`setProjectionRange`、旧`pipeline.sceneTarget`とsample側`sceneTarget`、旧projection near/far option、cameraWorld再生成、`depth24plus`が対象sampleへ再導入された場合は停止します。
+
+## 予想
+
+修正前のsampleは、module link、constructor option検証、Camera Frame identity検証、G-buffer material検証、Fullscreen presentation検証のいずれかで停止します。現行契約へ揃えると、少なくともmoduleとCPU側resource接続が成立し、GPU実行時には同一frameのReverse-Z depthとHDR resourceが各passへ渡るはずです。
+
+静的契約testが成功しても、実GPU shader compilation、WebGPU validation、色、影、反射、ぼけ、AOの表示品質は別の観測項目です。実ブラウザを利用できない環境では、未確認であることを作業記録へ明示します。
+
+## 実行方法
+
+```sh
+node --experimental-default-type=module headless_tests/samples/startup/headless_probe.js
+```
+
+## 結果
+
+2026-07-13にES moduleとしてheadless probeを実行し、次の出力を確認しました。
+
+```text
+sample_startup_api_contracts: all migrated sample contracts passed
+```
+
+対象sampleから削除済みAPIと旧depth規則が除かれ、同一Camera Frame、HDR effect resource、depthなしpresentation passを使う接続が静的契約を満たしました。実GPU上の表示品質はこのprobeの対象外です。

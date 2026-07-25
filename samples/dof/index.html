@@ -3,22 +3,195 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>WebGPU DOF Sample</title>
+  <title>dof</title>
   <link rel="icon" href="data:," />
-  <!-- 2026/03/13 -->
+  <!-- 2026/06/19 -->
   <style>
-    html, body {
-      margin: 0;
-      height: 100%;
-      background: #0d150d;
-    }
-    canvas {
-      display: block;
-    }
+
+:root {
+  color-scheme: light;
+  --bg: #eef3f8;
+  --paper: rgba(255, 255, 255, 0.94);
+  --line: #c8d5e4;
+  --ink: #17324a;
+  --muted: #5c748b;
+  --accent: #1566ab;
+  --accent-soft: #dfeefe;
+  --code-bg: #f3f7fb;
+  --shadow: rgba(29, 52, 79, 0.10);
+}
+* { box-sizing: border-box; }
+html, body {
+  margin: 0;
+  min-height: 100%;
+}
+body {
+  background:
+    radial-gradient(circle at top left, rgba(21, 102, 171, 0.12), transparent 24%),
+    radial-gradient(circle at top right, rgba(255, 191, 118, 0.10), transparent 22%),
+    linear-gradient(180deg, #f8fbfd 0%, var(--bg) 100%);
+  color: var(--ink);
+  font: 16px/1.78 "Avenir Next", "Hiragino Sans", "Yu Gothic", sans-serif;
+}
+.page {
+  width: min(1080px, calc(100% - 28px));
+  margin: 0 auto;
+  padding: 24px 0 56px;
+}
+.hero,
+.doc {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  box-shadow: 0 22px 52px var(--shadow);
+}
+.hero {
+  padding: 22px 24px;
+  margin-bottom: 18px;
+}
+.hero h1 {
+  margin: 0 0 8px;
+  font-size: clamp(2rem, 4vw, 3rem);
+  line-height: 1.08;
+}
+.hero p {
+  margin: 0;
+  color: var(--muted);
+}
+.doc {
+  padding: 28px;
+}
+.doc > :first-child {
+  margin-top: 0;
+}
+h1, h2, h3, h4, h5, h6 {
+  line-height: 1.25;
+  margin: 1.45em 0 0.55em;
+}
+h1 {
+  font-size: 2.2rem;
+}
+h2 {
+  padding-bottom: 0.28em;
+  border-bottom: 1px solid var(--line);
+  font-size: 1.48rem;
+}
+h3 {
+  font-size: 1.14rem;
+}
+p, ul, ol, table, pre, blockquote {
+  margin: 0 0 1em;
+}
+ul, ol {
+  padding-left: 1.4em;
+}
+li + li {
+  margin-top: 0.26em;
+}
+a {
+  color: var(--accent);
+  text-decoration: none;
+}
+a:hover {
+  text-decoration: underline;
+}
+img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  border-radius: 16px;
+  border: 1px solid var(--line);
+  box-shadow: 0 12px 32px rgba(29, 52, 79, 0.08);
+  margin: 1.1em 0 1.4em;
+}
+code {
+  padding: 0.12em 0.38em;
+  border-radius: 0.45em;
+  background: var(--code-bg);
+  border: 1px solid #dbe6f1;
+  font: 0.92em/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+pre {
+  padding: 14px 16px;
+  overflow-x: auto;
+  border-radius: 14px;
+  background: #0f1720;
+  color: #ecf5ff;
+}
+pre code {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #ffffff;
+}
+th, td {
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  text-align: left;
+  vertical-align: top;
+}
+th {
+  background: #f5f9fc;
+}
+hr {
+  border: 0;
+  border-top: 1px solid var(--line);
+  margin: 1.5em 0;
+}
+blockquote {
+  padding: 0.3em 0 0.3em 1em;
+  border-left: 4px solid #c9dbef;
+  color: var(--muted);
+}
+@media (max-width: 720px) {
+  .page {
+    width: min(100% - 18px, 1080px);
+    padding-top: 16px;
+  }
+  .hero,
+  .doc {
+    border-radius: 18px;
+  }
+  .doc {
+    padding: 20px;
+  }
+}
+
   </style>
 </head>
 <body>
-  <canvas id="canvas" width="960" height="720"></canvas>
-  <script type="module" src="./main.js"></script>
+  <main class="page">
+    <section class="hero">
+      <h1>dof</h1>
+    </section>
+    <article class="doc">
+<h1>dof</h1>
+<p><a href="index.en.html">English</a> | 日本語</p>
+<p><img src="./dof.jpg" alt="dof" /></p>
+<h2>概要</h2>
+<ul><li>DofPass を使って、3D scene を一度 offscreen RenderTarget へ描いたあと、depth を参照して focus 面だけ sharp に残す最小の被写界深度サンプルです。</li><li>SeparableBlurPass を bloom 以外でも再利用できることを確認するためのサンプルです。</li><li>WebgApp は起動と overlay表示に使い、3D scene 本体は autoDrawScene: false で postprocess 経由の描画に切り替えています。</li><li>blur 元になる sceneTarget には、通常の forward 描画結果をそのまま入れます。つまり材質色だけではなく、直接光の diffuse / specular も含んだ scene color をぼかします。これにより、blur画像へ切り替わった瞬間に specular highlight だけが消える不自然さを避けています。</li><li>床は置かず、近距離 / 焦点付近 / 遠距離に小さめの球を多めに配置し、focus 面の移動を見分けやすくしています。</li><li>現在の focusDistance には十字状の小さな guide を 3D scene 内へ置き、debug view を開かなくても focus 面の位置を追いやすくしています。</li><li>CommandPalette 上の Focus Range は、<code>compute_dof</code> と同じく blur stage 1つ分の距離幅として扱います。DofPass も同じ stage 幅仕様で scene color から small / medium / large の3段階blurへ順に移るため、焦点から少し外れた場所でも急に強いボケへ飛びにくくしています。</li><li>既定では多段階ぼかし（staged blur）を使い、small / medium / large の blur texture を depth差に応じて段階的に選びます。これがこの sample の標準経路です。</li><li>多段階ぼかしの 3 段階blur は同じ解像度で3枚作るのではなく、small は基準解像度、medium はその約 0.7 倍、large は約 0.5 倍の offscreen target で生成します。大きいblurほど低解像度でも破綻しにくい性質を利用して、見た目を保ちながら fill cost を下げる構成です。</li><li>small / medium / large の blur iteration はそれぞれ <code>1 / 2 / 4</code> を既定値にしています。小さいblurほど iteration を増やしても表示品質の改善が少ないため、stage ごとに必要な反復だけを使う構成です。</li><li>CommandPalette の benchmark page から <code>Bench</code> を実行すると、<code>DOF Off / Staged S1 / Staged S2 / Staged Full / Staged Half</code> を自動で順に測定し、平均値と各frameの記録を JSON として download できます。<code>Staged S1</code> は small blur だけ、<code>Staged S2</code> は small + medium までを使う比較用 case です。測定中は比較条件を揃えるため、view は <code>composite</code> に固定されます。</li><li>CommandPalette の Background で背景色を切り替え、黒背景で目立つbloom状のにじみや、明るい背景での境界の見え方を比較できます。</li><li>初期値は <code>compute_dof</code> と比較しやすい軽めのボケを確認しやすい設定にしており、CommandPalette 上では <code>focusRange=7.0</code>、<code>Focus Hold=0.35</code>、<code>maxBlurMix=1.0</code>、full quality、stage blur iteration <code>1 / 2 / 4</code>、<code>blurRadius=2.0</code> を使います。</li><li>球の geometry は unit sphere を 1 回だけ作り、各 node は Shape instance と uniform scale で半径差を表す構成にしているため、色だけを変えつつ mesh build の重複を避けています。</li><li>操作説明と負荷表示は buildHelpPanelOptions() と showOverlayPanel() を使って左上の畳める help panel へ出し、各DoF設定値は CommandPalette の toggle / stepper / select 上で直接確認できるようにしています。</li></ul>
+<h2>実行方法</h2>
+<ul><li>実行ファイルは <a href="./dof.html">./dof.html</a> です</li><li>WebGPU に対応したブラウザで開き、必要に応じて help panel と CommandPalette を合わせて確認してください</li><li>CommandPalette は canvas のダブルタップ、または <code>/</code> キーで開きます。background、focus distance、focus range、blur radius、stage別iterationなどの現在値を見ながら変更できます。Help panelにはFrame timingも表示されるため、見た目と負荷を同じ画面で比較できます。</li></ul>
+<h2>使用している webg 機能</h2>
+<ul><li>WebgApp: Screen / Shader / Space / Input / Message の初期化と overlay表示</li><li>buildHelpPanelOptions() + showOverlayPanel(): 左上の help panel を標準形式で生成し、操作説明の表示 / 非表示を切り替える</li><li>CommandPalette: canvas のダブルタップまたは <code>/</code> キーで開く設定パネルを作り、DoF設定の現在値を表示しながら変更する</li><li>Shape.createInstance(): unit sphere の shared resource を再利用し、色違いの球を individual material + node scale で並べる</li><li>RenderTarget(sampleDepth=true): 3D scene の color と depth を後段 pass から読めるようにする offscreen 描画先</li><li>EyeRig(type=&quot;orbit&quot;): depth 配置を見回すオービット視点</li></ul>
+<p>インスタンス化の観測結果</p>
+<ul><li>インスタンス化前</li></ul>
+<p>vertexCount=12252<br />triangleCount=22436<br />boneCount=0<br />nodeCount=27<br />shapeCount=23<br />meshCount=23</p>
+<ul><li>インスタンス化後</li></ul>
+<p>vertexCount=681<br />triangleCount=1156<br />boneCount=0<br />nodeCount=27<br />shapeCount=23<br />meshCount=4</p>
+<ul><li>shapeCount が変わらないのは、scene に置いている球の個数そのものは同じだからです</li><li>meshCount、vertexCount、triangleCount が大きく減るのは、unit sphere の geometry を 1 回だけ build し、その shared resource を複数の Shape instance が再利用するためです</li></ul>
+<h2>確認ポイント</h2>
+<ul><li>CommandPalette の DOF toggle で DOF の ON / OFF を切り替えると、focus 面から外れた球ほど blur されることを確認します</li><li>カメラを回したときも床で視界が隠れず、複数の小球が前後の層として見えることを確認します</li><li>CommandPalette の Focus Dist を動かしたとき、sharp に見える深度帯が前後へ移動することを確認します</li><li>CommandPalette の Focus Dist を動かしたとき、3D scene 内の十字 guide も同じ距離へ前後移動することを確認します</li><li>左上の help panel に操作説明が表示され、Hide Help を押すと Show Help ボタンだけが残り、Show Help で再表示できることを確認します</li><li>CommandPalette の Focus Range を動かしたとき、blur stage 1つ分の距離幅が狭く / 広く変わることを確認します</li><li>CommandPalette の Blur Radius や stage別iterationを変えたとき、focus 外のにじみ方とGPU負荷がどう変わるかを確認します</li><li>CommandPalette の Max Blur を変えたとき、blur を scene にどこまで強く混ぜるかが変化することを確認します</li><li>CommandPalette の Quality で full / half blur quality を切り替えたとき、small / medium / large の各 blur target サイズがまとめて変わり、見え方と負荷がどう変化するかを確認します</li><li>CommandPalette の Stage Cnt を <code>1 / 2 / 3</code> で切り替えたとき、多段階ぼかしの段階数に応じて見え方と負荷がどう変わるかを確認します</li><li>CommandPalette の benchmark page で <code>Warmup</code> と <code>Samples</code> を調整し、<code>Bench</code> 実行後に <code>JSON</code> から測定結果を保存できることを確認します</li><li>CommandPalette の View で composite / scene / depth / focusMask / stageMask / blurSmall / blurMedium / blurLarge を切り替え、depth の分布、focus 面の mask、3段階blurのどこが使われるか、各 blur texture そのものを直接確認できることを確認します</li></ul>
+<p>focusMask は <code>compute_dof</code> と同じ色分けで、合焦を 0、手前を -1 / -2 / -3、奥を 1 / 2 / 3 として表示します<br />stageMask は scene / small / medium / large を別の色で示し、どの段階が選ばれているかを確認できます</p>
+<ul><li>CommandPalette の Background を切り替え、背景色によってblurの色漏れや合焦境界の見え方が変わることを確認します</li></ul>
+<h2>操作方法</h2>
+<ul><li>左上 help panel の Hide Help / Show Help: 操作説明本文の表示 / 非表示</li><li>canvas のダブルタップ、または <code>/</code>: CommandPalette の表示 / 非表示</li><li>ドラッグ / 矢印キー: オービットカメラ回転</li><li>ホイール / [ / ]: ズーム</li><li>CommandPalette 1ページ目: DOF ON/OFF、Staged、Focus Dist、Focus Range、Focus Hold。Focus Range は blur stage 1つ分の距離幅です</li><li>CommandPalette 2ページ目: Blur Radius、Max Blur</li><li>CommandPalette 3ページ目: View、Background、Quality、Small Iter、Medium Iter、Large Iter、Stage Cnt、Curve、Reset</li><li>CommandPalette 4ページ目: Bench、JSON、Warmup、Samples</li></ul>
+    </article>
+  </main>
 </body>
 </html>

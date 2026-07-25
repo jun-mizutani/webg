@@ -1,0 +1,33 @@
+# sample_low_level_public_api_contracts
+
+## 目的
+
+WebgAppを使わない単純なforward描画で、利用者が`CameraFrame`、`renderFrameToken`、`DepthConvention`を理解・生成しなくても、第2版のCamera Reverse-Zとcamera-relative renderingを利用できることを確認します。対象となる公開構文は`samples/low_level`の4引数projectionと`Space.draw(eye)`です。
+
+## 確認内容
+
+4引数 `Matrix.makeProjectionMatrix(near, far, vfov, aspect)` がnear depth 1、far depth 0のCamera Reverse-Z行列を作ることを数値で確認します。これは引数不足時の通常Zfallbackではなく、公開4引数形式の固定仕様です。
+
+次に、100億単位の同じWorld領域へeyeとobjectを置き、`space.draw(eye)`だけでobjectのmodel-view平行移動が`[2, -3, -20]`になることを確認します。最後に`samples/low_level/main.js`がCamera Frame、renderFrameToken、Depth Convention、Reverse-Z定数をimportせず、従来のprojection・clear・draw・present構文を維持することを検査します。
+
+## 予想
+
+低レベル利用者のコードに内部フレームclassや深度方式を追加しなくても、投影はReverse-Zとなり、巨大World座標はGPUへ渡す前に小さいcamera-relative値へ変換されるはずです。通常Zへ戻る分岐、旧view Matrixによる巨大平行移動の相殺、sampleへの内部class importが残る場合は失敗するはずです。
+
+## 実行方法
+
+```sh
+node headless_tests/samples/low_level/headless_probe.js
+```
+
+## 結果
+
+成功時は次を表示します。
+
+```text
+sample_low_level_public_api_contracts: all simple camera facade contracts passed
+```
+
+## 解釈
+
+このテストは公開APIの数値とsample構文を確認します。WebGPU pipelineの生成、実ブラウザでの立方体表示、resize後のprojection更新は保証しないため、headless契約確定後のブラウザ確認項目として残します。

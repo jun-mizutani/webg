@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// Tween.js       2026/04/21
+// Tween.js       2026/07/25
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // ---------------------------------------------
@@ -79,6 +79,7 @@ const writeValue = (target, key, value) => {
 };
 
 export default class Tween {
+  // `easing`のマップを現在の入力と状態から求め、呼び出し元へ返す
   static getEasingMap() {
     return {
       linear: (t) => t,
@@ -248,6 +249,7 @@ export default class Tween {
     return this;
   }
 
+  // `resume`は選択中の音声またはアニメーションの再生状態を更新する
   resume() {
     this.paused = false;
     return this;

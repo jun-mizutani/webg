@@ -1,5 +1,5 @@
 // ---------------------------------------------
-//  CapsuleCollider.js  2026/05/07
+//  CapsuleCollider.js  2026/07/25
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // ---------------------------------------------
@@ -109,6 +109,7 @@ export default class CapsuleCollider extends Collider {
       this._subVec3(bestSegmentPoint, bestBoxPoint)
     );
 
+    // `testT`は入力条件や交差状態を比較し、判定結果を返す
     const testT = (t) => {
       const segmentPoint = this._addVec3(pointA, this._scaleVec3(ab, t));
       const boxPoint = this._closestPointOnAabb(segmentPoint, aabb);
@@ -249,6 +250,7 @@ export default class CapsuleCollider extends Collider {
     const localOrigin = this._subVec3(rayOrigin, capsule.center);
     const candidates = [];
 
+    // `sphere`の交差結果を対象へ追加し、後続処理から参照できるようにする
     const addSphereHit = (sphereCenter) => {
       const originToCenter = this._subVec3(rayOrigin, sphereCenter);
       const b = this._dotVec3(originToCenter, rayDir);

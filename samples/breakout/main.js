@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// samples/breakout/main.js  2026/04/10
+// samples/breakout/main.js  2026/07/25
 //   breakout sample
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -51,6 +51,7 @@ const makeBox = (centerX, centerY, width, height) => ({
   maxy: centerY + height * 0.5
 });
 
+// `circleIntersectsBox`は入力条件や交差状態を比較し、判定結果を返す
 const circleIntersectsBox = (cx, cy, radius, box) => {
   const closestX = clamp(cx, box.minx, box.maxx);
   const closestY = clamp(cy, box.miny, box.maxy);
@@ -59,6 +60,7 @@ const circleIntersectsBox = (cx, cy, radius, box) => {
   return (dx * dx + dy * dy) <= radius * radius;
 };
 
+// `box`の形状を生成し、後続処理で利用できる状態にする
 const createBoxShape = (gpu, width, height, depth, color, material = {}) => {
   // breakout の 2D 盤面に合わせて、任意寸法の箱を 1 つ作る
   // `Primitive.cube()` は正方体向けなので、パドルや壁のような長方形は
@@ -68,6 +70,7 @@ const createBoxShape = (gpu, width, height, depth, color, material = {}) => {
   const hy = height * 0.5;
   const hz = depth * 0.5;
 
+  // `face`を対象へ追加し、後続処理から参照できるようにする
   const addFace = (points) => {
     const [p0, p1, p2] = points;
     const ux = p1[0] - p0[0];
@@ -124,6 +127,7 @@ const createBoxShape = (gpu, width, height, depth, color, material = {}) => {
   return shape;
 };
 
+// `ball`の形状を生成し、後続処理で利用できる状態にする
 const createBallShape = (gpu) => {
   const shape = new Shape(gpu);
   shape.applyPrimitiveAsset(Primitive.sphere(BALL.radius, 18, 24, shape.getPrimitiveOptions()));
@@ -144,6 +148,7 @@ const createBallShape = (gpu) => {
   return shape;
 };
 
+// `wall`の形状を生成し、後続処理で利用できる状態にする
 const createWallShape = (gpu, width, height, depth, color, collisionShape) => {
   const shape = createBoxShape(gpu, width, height, depth, color, {
     ambient: 0.18,
@@ -154,6 +159,7 @@ const createWallShape = (gpu, width, height, depth, color, collisionShape) => {
   return shape;
 };
 
+// `brick`の形状を生成し、後続処理で利用できる状態にする
 const createBrickShape = (gpu, color) => {
   const shape = createBoxShape(gpu, BRICK.width, BRICK.height, BRICK.depth, color, {
     ambient: 0.28,
@@ -174,6 +180,7 @@ const createBrickShape = (gpu, color) => {
   return shape;
 };
 
+// `paddle`の形状を生成し、後続処理で利用できる状態にする
 const createPaddleShape = (gpu) => {
   const shape = createBoxShape(gpu, PADDLE.width, PADDLE.height, PADDLE.depth, [1.0, 0.54, 0.18, 1.0], {
     ambient: 0.18,
@@ -194,6 +201,7 @@ const createPaddleShape = (gpu) => {
   return shape;
 };
 
+// `backdrop`の形状を生成し、後続処理で利用できる状態にする
 const createBackdropShape = (gpu) => {
   const shape = createBoxShape(gpu, 22.4, 25.0, 0.7, [0.11, 0.13, 0.17, 1.0], {
     ambient: 0.10,
@@ -211,6 +219,7 @@ const colorPalette = [
   [0.30, 0.78, 0.98, 1.0]
 ];
 
+// このインスタンスの初期化段階で、必要な状態と資源を準備して処理を開始する
 const start = async () => {
   const app = new WebgApp({
     document,
@@ -259,6 +268,7 @@ const start = async () => {
     initialState: "title"
   });
 
+  // シーンの進行段階を現在の入力と実行状態に合わせて更新する
   const syncScenePhase = (phase = gsm.currentStateId ?? gsm.initialState ?? "title") => {
     app.setScenePhase(phase, {
       force: true
@@ -266,6 +276,7 @@ const start = async () => {
     return phase;
   };
 
+  // ゲームの進行段階を受け取り、現在の設定と後続処理へ反映する
   const setGamePhase = (phase, options = {}) => {
     const result = gsm.setState(phase, options);
     syncScenePhase();
@@ -522,6 +533,7 @@ const start = async () => {
     minScale: 0.76
   });
 
+  // ゲームのHUDの描画段階で、必要な描画命令と表示内容を記録する
   const renderGameHud = () => {
     app.message.setLines("gamehud-left", [
       `score: ${state.score}`,
@@ -542,6 +554,7 @@ const start = async () => {
     });
   };
 
+  // 段階を初期状態へ戻し、前回の状態を残さない
   const resetLevel = () => {
     state.paddleX = 0.0;
     state.ballX = 0.0;
@@ -573,6 +586,7 @@ const start = async () => {
     });
   };
 
+  // `serveBall`は現在の進行状態に必要な要素を生成または配置する
   const serveBall = () => {
     const launchX = clamp(state.paddleX * 0.20, -1.2, 1.2);
     const launchY = 1.0;
@@ -589,6 +603,7 @@ const start = async () => {
     });
   };
 
+  // ボールをパドルへ付けて開始待ちの状態にする
   const attachBallToPaddle = () => {
     state.ballAttached = true;
     state.ballVx = 0.0;
@@ -599,6 +614,7 @@ const start = async () => {
     ballNode.setPosition(state.ballX, state.ballY, 0.0);
   };
 
+  // 結果を受け取り、現在の設定と後続処理へ反映する
   const setResult = (kind, message) => {
     state.resultKind = kind;
     state.resultMessage = message;
@@ -611,6 +627,7 @@ const start = async () => {
     });
   };
 
+  // `after`の`life`の`lost`を初期状態へ戻し、前回の状態を残さない
   const resetAfterLifeLost = () => {
     state.combo = 0;
     renderGameHud();
@@ -707,6 +724,7 @@ const start = async () => {
 
   syncScenePhase("title");
 
+  // `paddle`を入力値に従って変更し、関連する状態を同期する
   const movePaddle = (dt) => {
     const left = app.getAction("left");
     const right = app.getAction("right");
@@ -721,6 +739,7 @@ const start = async () => {
     }
   };
 
+  // `bounceBallOnWall`は衝突状態を評価し、位置、速度、接触情報を更新する
   const bounceBallOnWall = (wallId) => {
     if (wallId === "wall_left") {
       state.ballX = BOARD.left + BALL.radius + 0.36;
@@ -734,6 +753,7 @@ const start = async () => {
     }
   };
 
+  // `bounceBallOnPaddle`は衝突状態を評価し、位置、速度、接触情報を更新する
   const bounceBallOnPaddle = () => {
     const offset = clamp((state.ballX - state.paddleX) / (PADDLE.width * 0.5), -1.0, 1.0);
     const vx = offset * BALL.speed * 0.90;
@@ -755,6 +775,7 @@ const start = async () => {
     });
   };
 
+  // `hitBrick`は衝突状態を評価し、位置、速度、接触情報を更新する
   const hitBrick = (brick) => {
     if (!brick || brick.alive === false) return;
     brick.alive = false;
@@ -782,6 +803,7 @@ const start = async () => {
     }
   };
 
+  // `collisions`を受け取った段階で、対応する状態更新と処理を実行する
   const handleCollisions = () => {
     const floorHit = (state.ballY - BALL.radius) <= BOARD.bottom;
     const paddleBox = makeBox(state.paddleX, PADDLE.y, PADDLE.width, PADDLE.height);
@@ -833,6 +855,7 @@ const start = async () => {
     }
   };
 
+  // ボールを移動し、途中で発生した衝突を順に解決する
   const moveBallAndResolve = (dt) => {
     const totalDistance = Math.hypot(state.ballVx * dt, state.ballVy * dt);
     const steps = Math.max(1, Math.ceil(totalDistance / 0.12));
@@ -866,6 +889,7 @@ const start = async () => {
     }
   };
 
+  // HUDを現在の入力と実行状態に合わせて更新する
   const updateHud = () => {
     renderGameHud();
     app.message.setLines("status", [

@@ -219,7 +219,7 @@ When asking an AI tool to generate or modify code using `webg`, it is recommende
 
 - `book/付録A_コーディングAIの皆さまへ.md`
 - `book/AppendixA_For_Coding_AI.md`
-- `book/付録B_API一覧.md`
+- `book/付録C_API一覧.md`
 - Relevant examples under `samples/`
 - Relevant validation pages under `unittest/`
 

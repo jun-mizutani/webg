@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>compute_postprocess</title>
+  <link rel="icon" href="data:," />
+  <!-- 2026/06/19 -->
+  <style>
+
+:root {
+  color-scheme: light;
+  --bg: #eef3f8;
+  --paper: rgba(255, 255, 255, 0.94);
+  --line: #c8d5e4;
+  --ink: #17324a;
+  --muted: #5c748b;
+  --accent: #1566ab;
+  --accent-soft: #dfeefe;
+  --code-bg: #f3f7fb;
+  --shadow: rgba(29, 52, 79, 0.10);
+}
+* { box-sizing: border-box; }
+html, body {
+  margin: 0;
+  min-height: 100%;
+}
+body {
+  background:
+    radial-gradient(circle at top left, rgba(21, 102, 171, 0.12), transparent 24%),
+    radial-gradient(circle at top right, rgba(255, 191, 118, 0.10), transparent 22%),
+    linear-gradient(180deg, #f8fbfd 0%, var(--bg) 100%);
+  color: var(--ink);
+  font: 16px/1.78 "Avenir Next", "Hiragino Sans", "Yu Gothic", sans-serif;
+}
+.page {
+  width: min(1080px, calc(100% - 28px));
+  margin: 0 auto;
+  padding: 24px 0 56px;
+}
+.hero,
+.doc {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  box-shadow: 0 22px 52px var(--shadow);
+}
+.hero {
+  padding: 22px 24px;
+  margin-bottom: 18px;
+}
+.hero h1 {
+  margin: 0 0 8px;
+  font-size: clamp(2rem, 4vw, 3rem);
+  line-height: 1.08;
+}
+.hero p {
+  margin: 0;
+  color: var(--muted);
+}
+.doc {
+  padding: 28px;
+}
+.doc > :first-child {
+  margin-top: 0;
+}
+h1, h2, h3, h4, h5, h6 {
+  line-height: 1.25;
+  margin: 1.45em 0 0.55em;
+}
+h1 {
+  font-size: 2.2rem;
+}
+h2 {
+  padding-bottom: 0.28em;
+  border-bottom: 1px solid var(--line);
+  font-size: 1.48rem;
+}
+h3 {
+  font-size: 1.14rem;
+}
+p, ul, ol, table, pre, blockquote {
+  margin: 0 0 1em;
+}
+ul, ol {
+  padding-left: 1.4em;
+}
+li + li {
+  margin-top: 0.26em;
+}
+a {
+  color: var(--accent);
+  text-decoration: none;
+}
+a:hover {
+  text-decoration: underline;
+}
+img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  border-radius: 16px;
+  border: 1px solid var(--line);
+  box-shadow: 0 12px 32px rgba(29, 52, 79, 0.08);
+  margin: 1.1em 0 1.4em;
+}
+code {
+  padding: 0.12em 0.38em;
+  border-radius: 0.45em;
+  background: var(--code-bg);
+  border: 1px solid #dbe6f1;
+  font: 0.92em/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+pre {
+  padding: 14px 16px;
+  overflow-x: auto;
+  border-radius: 14px;
+  background: #0f1720;
+  color: #ecf5ff;
+}
+pre code {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #ffffff;
+}
+th, td {
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  text-align: left;
+  vertical-align: top;
+}
+th {
+  background: #f5f9fc;
+}
+hr {
+  border: 0;
+  border-top: 1px solid var(--line);
+  margin: 1.5em 0;
+}
+blockquote {
+  padding: 0.3em 0 0.3em 1em;
+  border-left: 4px solid #c9dbef;
+  color: var(--muted);
+}
+@media (max-width: 720px) {
+  .page {
+    width: min(100% - 18px, 1080px);
+    padding-top: 16px;
+  }
+  .hero,
+  .doc {
+    border-radius: 18px;
+  }
+  .doc {
+    padding: 20px;
+  }
+}
+
+  </style>
+</head>
+<body>
+  <main class="page">
+    <section class="hero">
+      <h1>compute_postprocess</h1>
+    </section>
+    <article class="doc">
+<h1>compute_postprocess</h1>
+<p><a href="index.en.html">English</a> | 日本語</p>
+<p><img src="./compute_postprocess.jpg" alt="compute_postprocess" /></p>
+<h2>概要</h2>
+<ul><li>第20章のポストプロセス描画フローを、fragment shader の FullscreenPass ではなく Compute Shader で加工するサンプルです。</li><li>webg core は変更せず、WebgApp から取得した WebGPU device と Screen.createRenderTarget() だけで compute pass を組み込みます。</li><li>3D scene を offscreen RenderTarget へ描画し、compute shader がその color texture を読み、storage texture へ書き出します。</li><li>最後に FullscreenPass で compute 出力 texture を canvas へ表示し、操作説明は Help Panel、現在値の変更は CommandPalette にまとめます。</li></ul>
+<h2>実行方法</h2>
+<ul><li>実行ファイルは <a href="./compute_postprocess.html">./compute_postprocess.html</a> です</li><li>WebGPU に対応したブラウザで開き、必要に応じて help panel と CommandPalette と合わせて確認してください</li></ul>
+<h2>使用している webg 機能</h2>
+<ul><li>WebgApp(autoDrawScene: false): 3D scene の描画先と postprocess の順序を sample 側で制御する</li><li>RenderTarget: scene color/depth と compute output の texture を保持する</li><li>FullscreenPass: compute shader が書き込んだ storage texture を canvas へコピーする</li><li>Shape / Primitive: postprocess の見え方を確認するための標準的な 3D scene を作る</li><li>buildHelpPanelOptions() + showOverlayPanel(): 操作説明を左上の折りたたみパネルへ表示する</li></ul>
+<h2>確認ポイント</h2>
+<ul><li>3D scene が一度 offscreen target に描かれ、その後 compute pass を経由して表示されることを確認します</li><li>C で Compute Postprocess の ON / OFF を切り替え、同じ scene のまま後処理だけが変化することを確認します</li><li>V で view を composite / scene / output へ切り替え、元 scene と compute 出力を比較します</li><li>1 / 2 で黒線 + 暖色ハイライトの edge、3 / 4 で局所コントラストを強める sharpness、5 / 6 で白い vignette、7 / 8 で赤青の chromatic offset を変えたとき、CommandPalette の数値と画面の変化が一致することを確認します</li><li>M で mode を film / edge / heat に切り替え、同じ compute shader 内の分岐で見え方を変えられることを確認します</li><li>viewport サイズを変えても scene target と compute output が screen サイズへ追従することを確認します</li></ul>
+<h2>操作方法</h2>
+<ul><li>ドラッグ / 矢印キー: オービットカメラ回転</li><li>ホイール / [ / ]: ズーム</li><li>C: compute postprocess の ON / OFF</li><li>V: composite / scene / output 表示切り替え</li><li>M: film / edge / heat mode の切り替え</li><li>1 / 2: edge strength を下げる / 上げる</li><li>3 / 4: sharpness を下げる / 上げる</li><li>5 / 6: white vignette を下げる / 上げる</li><li>7 / 8: chromatic offset を 1px ずつ下げる / 上げる</li><li>Space: scene animation の一時停止 / 再開</li><li>R: パラメータを初期値へ戻す</li></ul>
+    </article>
+  </main>
+</body>
+</html>

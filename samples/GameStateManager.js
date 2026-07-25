@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// GameStateManager.js 2026/04/12
+// GameStateManager.js 2026/07/25
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // ---------------------------------------------
@@ -19,6 +19,7 @@ export default class GameStateManager {
     this.paused = false;
   }
 
+  // 状態を検証し、後続処理が扱える共通形式へ整える
   normalizeState(def) {
     if (!def || typeof def !== "object") {
       throw new Error("state definition must be an object");
@@ -41,6 +42,7 @@ export default class GameStateManager {
     };
   }
 
+  // 遷移を検証し、後続処理が扱える共通形式へ整える
   normalizeTransition(stateId, def, index) {
     if (!def || typeof def !== "object") {
       throw new Error(`transition[${index}] in state "${stateId}" must be an object`);
@@ -62,6 +64,7 @@ export default class GameStateManager {
     };
   }
 
+  // 状態を対象へ追加し、後続処理から参照できるようにする
   addState(def) {
     const state = this.normalizeState(def);
     this.states.set(state.id, state);
@@ -71,6 +74,7 @@ export default class GameStateManager {
     return this.getState(state.id);
   }
 
+  // 状態を現在の入力と状態から求め、呼び出し元へ返す
   getState(id) {
     const state = this.states.get(String(id ?? "").trim());
     return state
@@ -81,6 +85,7 @@ export default class GameStateManager {
       : null;
   }
 
+  // `variables`を受け取り、現在の設定と後続処理へ反映する
   setVariables(object) {
     if (!object || typeof object !== "object") return;
     Object.assign(this.variables, object);
@@ -90,6 +95,7 @@ export default class GameStateManager {
     this.variables[String(name)] = value;
   }
 
+  // 現在のゲーム状態を複製して返す
   getCurrentState() {
     return this.currentState ? {
       ...this.currentState,
@@ -101,6 +107,7 @@ export default class GameStateManager {
     return this.currentTransition ? { ...this.currentTransition } : null;
   }
 
+  // 遷移を現在の入力と状態から求め、呼び出し元へ返す
   resolveTransition(context, nowMs) {
     const state = this.currentState;
     if (!state) return null;
@@ -119,6 +126,7 @@ export default class GameStateManager {
     return null;
   }
 
+  // `playStateTarget`は選択中の音声またはアニメーションの再生状態を更新する
   playStateTarget(state, context, options = {}) {
     if (typeof state.onEnter === "function") {
       state.onEnter({
@@ -131,6 +139,7 @@ export default class GameStateManager {
     return options;
   }
 
+  // 状態を受け取り、現在の設定と後続処理へ反映する
   setState(id, options = {}) {
     const stateId = String(id ?? "").trim();
     const nextState = this.states.get(stateId);
@@ -172,6 +181,7 @@ export default class GameStateManager {
     return this.getCurrentState();
   }
 
+  // このインスタンスを現在の入力と実行状態に合わせて更新する
   update(context = {}, deltaMs = null) {
     if (this.paused) {
       this.setVariables(context);
@@ -239,6 +249,7 @@ export default class GameStateManager {
     this.paused = false;
   }
 
+  // このインスタンスを初期状態へ戻し、前回の状態を残さない
   reset() {
     this.currentStateId = null;
     this.currentState = null;

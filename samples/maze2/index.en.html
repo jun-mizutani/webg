@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>maze2 (sci-fi tube edition)</title>
+  <link rel="icon" href="data:," />
+  <!-- 2026/06/19 -->
+  <style>
+
+:root {
+  color-scheme: light;
+  --bg: #eef3f8;
+  --paper: rgba(255, 255, 255, 0.94);
+  --line: #c8d5e4;
+  --ink: #17324a;
+  --muted: #5c748b;
+  --accent: #1566ab;
+  --accent-soft: #dfeefe;
+  --code-bg: #f3f7fb;
+  --shadow: rgba(29, 52, 79, 0.10);
+}
+* { box-sizing: border-box; }
+html, body {
+  margin: 0;
+  min-height: 100%;
+}
+body {
+  background:
+    radial-gradient(circle at top left, rgba(21, 102, 171, 0.12), transparent 24%),
+    radial-gradient(circle at top right, rgba(255, 191, 118, 0.10), transparent 22%),
+    linear-gradient(180deg, #f8fbfd 0%, var(--bg) 100%);
+  color: var(--ink);
+  font: 16px/1.78 "Avenir Next", "Hiragino Sans", "Yu Gothic", sans-serif;
+}
+.page {
+  width: min(1080px, calc(100% - 28px));
+  margin: 0 auto;
+  padding: 24px 0 56px;
+}
+.hero,
+.doc {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  box-shadow: 0 22px 52px var(--shadow);
+}
+.hero {
+  padding: 22px 24px;
+  margin-bottom: 18px;
+}
+.hero h1 {
+  margin: 0 0 8px;
+  font-size: clamp(2rem, 4vw, 3rem);
+  line-height: 1.08;
+}
+.hero p {
+  margin: 0;
+  color: var(--muted);
+}
+.doc {
+  padding: 28px;
+}
+.doc > :first-child {
+  margin-top: 0;
+}
+h1, h2, h3, h4, h5, h6 {
+  line-height: 1.25;
+  margin: 1.45em 0 0.55em;
+}
+h1 {
+  font-size: 2.2rem;
+}
+h2 {
+  padding-bottom: 0.28em;
+  border-bottom: 1px solid var(--line);
+  font-size: 1.48rem;
+}
+h3 {
+  font-size: 1.14rem;
+}
+p, ul, ol, table, pre, blockquote {
+  margin: 0 0 1em;
+}
+ul, ol {
+  padding-left: 1.4em;
+}
+li + li {
+  margin-top: 0.26em;
+}
+a {
+  color: var(--accent);
+  text-decoration: none;
+}
+a:hover {
+  text-decoration: underline;
+}
+img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  border-radius: 16px;
+  border: 1px solid var(--line);
+  box-shadow: 0 12px 32px rgba(29, 52, 79, 0.08);
+  margin: 1.1em 0 1.4em;
+}
+code {
+  padding: 0.12em 0.38em;
+  border-radius: 0.45em;
+  background: var(--code-bg);
+  border: 1px solid #dbe6f1;
+  font: 0.92em/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+pre {
+  padding: 14px 16px;
+  overflow-x: auto;
+  border-radius: 14px;
+  background: #0f1720;
+  color: #ecf5ff;
+}
+pre code {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #ffffff;
+}
+th, td {
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  text-align: left;
+  vertical-align: top;
+}
+th {
+  background: #f5f9fc;
+}
+hr {
+  border: 0;
+  border-top: 1px solid var(--line);
+  margin: 1.5em 0;
+}
+blockquote {
+  padding: 0.3em 0 0.3em 1em;
+  border-left: 4px solid #c9dbef;
+  color: var(--muted);
+}
+@media (max-width: 720px) {
+  .page {
+    width: min(100% - 18px, 1080px);
+    padding-top: 16px;
+  }
+  .hero,
+  .doc {
+    border-radius: 18px;
+  }
+  .doc {
+    padding: 20px;
+  }
+}
+
+  </style>
+</head>
+<body>
+  <main class="page">
+    <section class="hero">
+      <h1>maze2 (sci-fi tube edition)</h1>
+    </section>
+    <article class="doc">
+<h1>maze2 (sci-fi tube edition)</h1>
+<p>English | <a href="index.html">日本語</a></p>
+<p><img src="./maze2.jpg" alt="maze2" /></p>
+<h2>Overview</h2>
+<p><code>maze2</code> is a walk-through maze with a 4 m wall-center pitch and ceiling height. Structural slopes at the wall/floor and wall/ceiling corners produce an octagonal corridor section. At an L corner, quadrilateral miter bridges directly join the end edges of perpendicular rails, closing the joint without extending an unnecessary surface across the opening. Rendering, collision, and radar geometry share the same logical wall boundaries so doors and junctions remain traversable.</p>
+<p>Rendering uses <code>ComputeEffectPipeline</code>. The G-buffer, Deferred Shading, SSR, Bloom, and geometry edge stages share the same <code>CameraFrame</code> finalized by <code>WebgApp</code> immediately before drawing.<br />Each cell has a thin longitudinal ceiling panel centered at <code>y = 3.95m</code>, with a point Local Light for corridor illumination below it at <code>y = 3.70m</code>.<br />The point Local Light illuminates all directions with a radius of <code>7.2m</code> and an intensity of <code>5.2</code>, lighting the corridor below while producing a strong direct reflection on the fixture underside about <code>0.2375m</code> above the light.<br />The structural ceiling uses a <code>roughness</code> of <code>0.55</code> to broaden and weaken narrow specular highlights from the point lights.<br />Because the Shadow Map is disabled, geometry between a point light and an illuminated surface does not occlude the light.<br />The fixture-wide <code>emissive</code> value is reduced to <code>0.10</code>; the main high-dynamic-range highlight instead comes from direct lighting on the underside with <code>specular = 0.80</code> and <code>roughness = 0.10</code>.<br />White lights account for 60% of cells, while green, orange, and red each account for 13.3%.<br />Up to 64 nearby lights are evaluated.<br />SSR is applied to the floor, walls, slopes, and ceiling.<br />Bloom uses <code>threshold = 0.60</code>, <code>softKnee = 0.40</code>, <code>strength = 1.10</code>, and <code>1/32 Weight = 0.80</code>, producing a broad glow from the underside HDR reflection rather than from fixture-wide self-emission.<br />The Shadow Map and SSAO effects remain disabled.</p>
+<p>Detailed geometry rules are documented in <a href="./maze2_spec.md">maze2_spec.md</a>.</p>
+<h2>How to Run</h2>
+<ul><li>Open <a href="./maze2.html">./maze2.html</a></li><li>Use a browser with WebGPU support</li><li>Use drag and keyboard controls on desktop and the on-screen touch controls on coarse-pointer devices</li><li>Open the Command Palette with double tap, double click, or the <code>/</code> key</li></ul>
+<h2>webg Features Used</h2>
+<ul><li><code>WebgApp</code>: combines initialization, the render loop, CameraFrame, HUD, Help Panel, and GPU timing</li><li><code>EyeRig</code>: provides the first-person view direction and movement basis</li><li><code>Shape</code>: combines floors, walls, slopes, rails, ceilings, and light panels into grouped GPU meshes</li><li><code>ComputeEffectPipeline</code>: runs the G-buffer, Deferred Lighting, SSR, Bloom, and geometry edge stages with one CameraFrame</li><li><code>FullscreenPass</code>: presents the pipeline's final display texture on the canvas</li><li><code>CommandPalette</code>: changes low-frequency settings such as SSR intensity and geometry edges</li><li><code>Diagnostics</code>: reports triangle count, collision segments, active lights, and GPU timing through the HUD and reports</li><li>Sample-side <code>CollisionWorld</code>: resolves a cylindrical player against logical wall segments in the XZ plane</li></ul>
+<h2>Implementation Flow</h2>
+<p><code>main.js</code> builds a 15 by 15 cell maze from a fixed seed, overlays rooms and doors, and finalizes traversable logical wall boundaries. It then creates grouped floor, slope, wall, rail, and ceiling meshes and collision segments from the same boundaries. The radar reads those collision segments, so visible walls, movement constraints, and radar lines are not generated from separate rules.</p>
+<p>During each update, input produces first-person movement and <code>CollisionWorld</code> pushes the player cylinder out of wall segments. Nearby lights are selected again only after the camera has moved a configured distance, and at most 64 lights are sent to Deferred Lighting. The HUD and radar use the position after collision resolution.</p>
+<p>For rendering, <code>ComputeEffectPipeline.renderScene()</code> uses the <code>cameraFrame</code> received by <code>onBeforeDraw</code>, and <code>encode()</code> receives the same frame in <code>onAfterDraw3d</code>. The completed texture is presented through <code>beginPresentPass()</code> and <code>FullscreenPass</code>, followed by <code>clearDepthBuffer()</code> to restore the depth-enabled HUD pass. Shadow Map and SSAO remain disabled; SSR, Bloom, and geometry edges are enabled according to their settings.</p>
+<h2>Controls</h2>
+<ul><li>Horizontal drag: rotate heading and view</li><li>Vertical drag: temporarily look up or down</li><li><code>W</code> / <code>S</code>: move forward / backward</li><li><code>A</code> / <code>Left Arrow</code>: turn right; <code>D</code> / <code>Right Arrow</code>: turn left</li><li><code>Shift</code>: run</li><li><code>5</code> / <code>6</code>: decrease / increase SSR intensity</li><li><code>0</code>: reset to position <code>[5.8319, 0.0, 2.3017]</code>, eye height <code>1.60m</code>, and yaw <code>31.5°</code></li><li><code>K</code>: screenshot</li><li>Double tap / double click or <code>/</code>: command palette</li><li><code>Edge</code> in the CommandPalette: toggle geometry edges</li></ul>
+<h2>Verification</h2>
+<ul><li>Straight corridors show an octagonal floor-to-ceiling section</li><li>Doors, corners, junctions, and rooms remain traversable without wall leaks</li><li>A strong reflection appears at the center of each fixture underside and produces a broad Bloom glow</li><li>Toggling SSR changes the floor and metal rail reflections</li><li>Three-way and wider junction floors use a blue-green color that distinguishes them from regular corridors</li><li>The HUD reports triangles, collision segments, active lights, and GPU timing</li><li>The radar covers a 12 m radius</li></ul>
+<h2>Files</h2>
+<ul><li><code>maze2.html</code>: demo page</li><li><code>main.js</code>: maze generation, grouped meshes, first-person controls, deferred lighting, SSR, and geometry edges</li><li><code>CollisionWorld.js</code>: cylindrical player collision against logical wall segments</li><li><code>maze2_spec.md</code>: detailed geometry, maze-generation, collision, and lighting specification</li><li><code>maze2.txt</code>: Japanese overview used by the sample index</li></ul>
+    </article>
+  </main>
+</body>
+</html>

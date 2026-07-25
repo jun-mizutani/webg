@@ -1,0 +1,21 @@
+# TransparencyPass Roughness駆動Pyramid Frost契約テスト
+
+## 目的
+
+ComputeEffectPipelineの透明描画が、利用側に追加Render Passを要求せず、Shape materialのroughnessを透明surface越しの背景ぼかしへ反映することを確認します。
+
+## 確認項目
+
+1. 透明合成前のHDR sceneから1/2、1/4、1/8画像ピラミッドを作る
+2. 透明triangleのroughnessをAlphaとは独立した画面maskへmax blendする
+3. roughness 0.04をぼかしなし、1.0を1/8 Levelとして隣接Level間を補間する
+4. Frost背景合成後に透明surface色とSpecularをAlpha Blendする
+5. Roughness Maskは透明triangle sortを使わずmaterial単位で一括描画する
+6. resizeとdestroyがmask、Pyramid、composite resourceを追跡する
+7. 旧Frost blur radius / iterationsを明示的に拒否する
+
+## 実行方法
+
+```sh
+node headless_tests/core/transparency_pass/frost_contracts.js
+```

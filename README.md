@@ -219,7 +219,7 @@ AI に `webg` を使ったコード生成や修正を依頼する場合は、以
 
 - `book/付録A_コーディングAIの皆さまへ.md`
 - `book/AppendixA_For_Coding_AI.md`
-- `book/付録B_API一覧.md`
+- `book/付録C_API一覧.md`
 - 関連する `samples/` 配下の実装例
 - 関連する `unittest/` 配下の検証用ページ
 

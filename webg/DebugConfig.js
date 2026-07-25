@@ -1,11 +1,12 @@
 // ---------------------------------------------
-//  DebugConfig.js 2026/04/30
+//  DebugConfig.js 2026/07/25
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // ---------------------------------------------
 
 export default class DebugConfig {
 
+  // `flags`を生成し、後続処理で利用できる状態にする
   static createFlags(mode) {
     if (mode === "release") {
       return {

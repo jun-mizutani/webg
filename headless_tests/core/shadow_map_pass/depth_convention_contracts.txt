@@ -1,0 +1,35 @@
+# Shadow Map生成側の通常Z単体テスト
+
+## 目的
+
+方向光とスポット光のShadow Map生成が、通常カメラのReverse-Zへ暗黙に追従せず、`SHADOW_STANDARD_Z` を意図的に使用することを確認する。Shadow Mapではnear depth 0、far・未描画領域1、clear value 1、`less`比較、`depth32float`を一体の契約として扱う
+
+通常Zを採用する理由は、ライトごとに有限near/farへ範囲を限定でき、方向光の正射影は深度分布が線形で、反転だけによる精度改善が小さいためである。またcamera Reverse-Z移行とShadow Mapのbias・Percentage-Closer Filteringの変更を同時に行わず、問題の原因を分離する
+
+## 確認項目
+
+1. 方向光正射影がnearを0、farを1、中間距離を線形な中間値へ投影する
+2. spot透視投影が `SHADOW_STANDARD_Z` の独立参照式と複数距離で一致する
+3. depth textureとpipeline formatが `depth32float` である
+4. pipeline compareが `less`、depth writeが有効である
+5. render pass clear valueが1である
+6. ShadowMapPass自身とbinding resourceから `SHADOW_STANDARD_Z` identityを確認できる
+7. 旧 `depthFormat` optionを渡した場合、固定値へ無視して続行せず例外になる
+8. directional frustum-fitがReverse-Z投影行列からnear/farを通常Zの式で逆算せず、CameraFrameのnear、far、vfov、aspectを直接使用する
+9. 有限far 120を正しく使用し、無限farでは有限`fitFar`の明示を要求する
+
+## 実行方法
+
+```sh
+node --experimental-default-type=module headless_tests/core/shadow_map_pass/headless_probe.js
+```
+
+## 結果
+
+2026-07-13にCameraFrameを使用するfrustum-fit境界値検査を追加して実行し、全項目が成功した。表示文字列は次のとおり
+
+```text
+shadow_map_pass_depth_convention_contracts: all Shadow Map generation contracts passed
+```
+
+この段階ではShadow Map生成側だけをOKとする。ComputeShadowPassとComputeSpotShadowPassがcamera Reverse-ZとShadow通常Zを同時に正しく読む契約は、後続のresolve側テストで別に確認する

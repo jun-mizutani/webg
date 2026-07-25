@@ -149,7 +149,6 @@ app.showOverlayPanel(buildHelpPanelOptions({
 
 app.start({
   onUpdate: ({ deltaSec }) => {
-    orbit.update(deltaSec);
     node.rotateY(0.8);
     app.message.setLines("status", [
       `depth=${info.depth} tetra=${info.tetraCount}`,

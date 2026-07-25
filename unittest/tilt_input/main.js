@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// unittest/tilt_input/main.js  2026/05/20
+// unittest/tilt_input/main.js  2026/07/25
 //   tilt input vector visualization unittest
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -23,6 +23,7 @@ const options = {
   keySpeed: 1.8
 };
 
+// `box`の形状を生成し、後続処理で利用できる状態にする
 const createBoxShape = (gpu, size, material) => {
   const [sx, sy, sz] = size.map((v) => Number(v) * 0.5);
   const vertices = [
@@ -49,6 +50,7 @@ const createBoxShape = (gpu, size, material) => {
   return shape;
 };
 
+// 投影を受け取り、現在の設定と後続処理へ反映する
 const setProjection = (screen, shader) => {
   const proj = new Matrix();
   const fov = screen.getRecommendedFov(45.0);
@@ -78,6 +80,7 @@ const makeTiltState = () => ({
 
 const applyDeadZone = (value) => Math.abs(value) < options.deadZone ? 0.0 : value;
 
+// `device`の対象を現在の入力と実行状態に合わせて更新する
 const updateDeviceTarget = (state) => {
   const x = (state.rawGamma - state.neutralGamma) / options.maxDegrees;
   const y = (state.rawBeta - state.neutralBeta) / options.maxDegrees;
@@ -85,6 +88,7 @@ const updateDeviceTarget = (state) => {
   state.targetY = applyDeadZone(clamp(y, -1.0, 1.0));
 };
 
+// `emulation`を初期状態へ戻し、前回の状態を残さない
 const resetEmulation = (state) => {
   state.source = "emulate";
   state.emuX = 0.0;
@@ -93,6 +97,7 @@ const resetEmulation = (state) => {
   state.targetY = 0.0;
 };
 
+// `calibrateDevice`は受け取った値を処理し、後続処理で利用する状態または結果を生成する
 const calibrateDevice = (state) => {
   state.neutralBeta = state.rawBeta;
   state.neutralGamma = state.rawGamma;
@@ -102,6 +107,7 @@ const calibrateDevice = (state) => {
   }
 };
 
+// `emulated`の`tilt`を受け取り、現在の設定と後続処理へ反映する
 const setEmulatedTilt = (state, x, y) => {
   state.source = "emulate";
   state.emuX = applyDeadZone(clamp(x, -1.0, 1.0));
@@ -110,12 +116,14 @@ const setEmulatedTilt = (state, x, y) => {
   state.targetY = state.emuY;
 };
 
+// `pad`を対象へ追加し、後続処理から参照できるようにする
 const attachPad = (state) => {
   const pad = document.getElementById("tiltPad");
   const dot = document.getElementById("tiltDot");
   const vector = document.getElementById("tiltVector");
   let pointerId = null;
 
+  // `from`のイベントを現在の入力と実行状態に合わせて更新する
   const updateFromEvent = (ev) => {
     const rect = pad.getBoundingClientRect();
     const cx = rect.left + rect.width * 0.5;
@@ -139,6 +147,7 @@ const attachPad = (state) => {
     updateFromEvent(ev);
     ev.preventDefault();
   });
+  // このインスタンスが保持する資源と参照を安全に解放する
   const release = (ev) => {
     if (pointerId === ev.pointerId) {
       pointerId = null;
@@ -163,6 +172,7 @@ const attachPad = (state) => {
   };
 };
 
+// `keyboard`を対象へ追加し、後続処理から参照できるようにする
 const attachKeyboard = (state) => {
   const keys = new Set();
   document.addEventListener("keydown", (ev) => {
@@ -196,12 +206,14 @@ const attachKeyboard = (state) => {
   };
 };
 
+// `device`の`buttons`を対象へ追加し、後続処理から参照できるようにする
 const attachDeviceButtons = (state) => {
   const deviceButton = document.getElementById("deviceButton");
   const calibrateButton = document.getElementById("calibrateButton");
   const resetButton = document.getElementById("resetButton");
   const emulateButton = document.getElementById("emulateButton");
 
+  // `orientation`を受け取った段階で、対応する状態更新と処理を実行する
   const onOrientation = (ev) => {
     state.source = "device";
     state.rawAlpha = Number(ev.alpha ?? 0.0);
@@ -214,6 +226,7 @@ const attachDeviceButtons = (state) => {
     updateDeviceTarget(state);
   };
 
+  // `device`の初期化段階で、必要な状態と資源を準備して処理を開始する
   const startDevice = async () => {
     if (!state.available) {
       state.permission = "unavailable";
@@ -249,6 +262,7 @@ const attachDeviceButtons = (state) => {
   });
 };
 
+// このインスタンスの初期化段階で、必要な状態と資源を準備して処理を開始する
 const start = async ({ screen, gpu, setStatus, setViewportLayout, startLoop }) => {
   const shader = new SmoothShader(gpu);
   await shader.init();

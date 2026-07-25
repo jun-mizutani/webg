@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// samples/cube4/main.js  2026/04/30
+// samples/cube4/main.js  2026/07/25
 //   cube4
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -115,6 +115,7 @@ const materialKey = (material = {}) => JSON.stringify({
   flat_shading: material.flat_shading ?? 0
 });
 
+// `showStartError`は必要な画面要素を準備し、表示状態を更新する
 const showStartError = (error) => {
   const existing = document.getElementById("start-error");
   if (existing) existing.remove();
@@ -138,6 +139,7 @@ const showStartError = (error) => {
   document.body.appendChild(panel);
 };
 
+// 形状の色を受け取り、現在の設定と後続処理へ反映する
 const setShapeColor = (shape, color, material = {}) => {
   shape.setMaterial("smooth-shader", {
     has_bone: 0,
@@ -151,6 +153,7 @@ const setShapeColor = (shape, color, material = {}) => {
   });
 };
 
+// `cube`の形状を生成し、後続処理で利用できる状態にする
 const createCubeShape = (gpu, color, size = BOARD.cell * 0.90, material = {}) => {
   const shape = new Shape(gpu);
   shape.applyPrimitiveAsset(Primitive.cube(size, shape.getPrimitiveOptions()));
@@ -159,6 +162,7 @@ const createCubeShape = (gpu, color, size = BOARD.cell * 0.90, material = {}) =>
   return shape;
 };
 
+// `beveled`の`box`の`params`を検証し、後続処理が扱える共通形式へ整える
 const validateBeveledBoxParams = (width, height, depth, bevel) => {
   const values = { width, height, depth, bevel };
   for (const [name, value] of Object.entries(values)) {
@@ -404,6 +408,7 @@ const createSharedLiteBevelBoxShape = (gpu, width, height, depth, bevel, color, 
   const { hx, hy, hz, ix, iy, iz } = computeLiteBevelBoxDims(width, height, depth, bevel);
 
   const vertexMap = new Map();
+  // `shared`の頂点を対象へ追加し、後続処理から参照できるようにする
   const addSharedVertex = (x, y, z) => {
     const key = `${x.toFixed(6)},${y.toFixed(6)},${z.toFixed(6)}`;
     const existing = vertexMap.get(key);
@@ -413,6 +418,7 @@ const createSharedLiteBevelBoxShape = (gpu, width, height, depth, bevel, color, 
     return index;
   };
 
+  // `face`を対象へ追加し、後続処理から参照できるようにする
   const addFace = (pts) => {
     const n = pts.length;
     const cx = pts.reduce((sum, p) => sum + p[0], 0) / n;
@@ -481,6 +487,7 @@ const createSharedLiteBevelBoxShape = (gpu, width, height, depth, bevel, color, 
   return shape;
 };
 
+// `shared`の`block`の形状の`source`を現在の入力と状態から求め、呼び出し元へ返す
 const getSharedBlockShapeSource = (gpu, options = {}) => {
   const size = options.size ?? BOARD.cell * 0.90;
   const bevel = options.bevel ?? BOARD.cell * 0.12;
@@ -512,6 +519,7 @@ const getSharedBlockShapeSource = (gpu, options = {}) => {
   return sourceShape;
 };
 
+// `cuboid`の形状を生成し、後続処理で利用できる状態にする
 const createCuboidShape = (gpu, width, height, depth, color, material = {}) => {
   const shape = new Shape(gpu);
   shape.applyPrimitiveAsset(Primitive.cuboid(width, height, depth, shape.getPrimitiveOptions()));
@@ -520,12 +528,14 @@ const createCuboidShape = (gpu, width, height, depth, color, material = {}) => {
   return shape;
 };
 
+// ワイヤーフレームの`layer`の`wall`の形状を生成し、後続処理で利用できる状態にする
 const createWireframeLayerWallShape = (gpu, width, height, depth, color, material = {}) => {
   const shape = createCuboidShape(gpu, width, height, depth, color, material);
   shape.setWireframe(true);
   return shape;
 };
 
+// `slot`を生成し、後続処理で利用できる状態にする
 const createSlot = (space, name, gpu, options = {}, parentNode = null) => {
   const node = space.addNode(parentNode, name);
   // block 表示側では source shape を 1 回だけ作り、各 slot へ instance を配る
@@ -555,6 +565,7 @@ const createSlot = (space, name, gpu, options = {}, parentNode = null) => {
   };
 };
 
+// `slot`を対象の状態または描画設定へ反映する
 const applySlot = (slot, visible, position, color, material = {}, scale = 1.0) => {
   if (!slot) return;
   if (!visible) {
@@ -587,6 +598,7 @@ const applySlot = (slot, visible, position, color, material = {}, scale = 1.0) =
   }
 };
 
+// `slot`の形状を現在の入力と実行状態に合わせて更新する
 const rebuildSlotShape = (slot) => {
   if (!slot?.node || !slot?.gpu) return;
   const sourceShape = getSharedBlockShapeSource(slot.gpu, slot.sourceOptions ?? {});
@@ -599,6 +611,7 @@ const rebuildSlotShape = (slot) => {
   slot.shape = nextShape;
 };
 
+// `forEachBlockSlot`は受け取った値を処理し、後続処理で利用する状態または結果を生成する
 const forEachBlockSlot = (runtime, callback) => {
   for (let y = 0; y < runtime.lockedSlots.length; y++) {
     for (let z = 0; z < runtime.lockedSlots[y].length; z++) {
@@ -619,6 +632,7 @@ const forEachBlockSlot = (runtime, callback) => {
   }
 };
 
+// `cycleBlockShapeMode`は現在状態から対象を選択し、結果を返すまたは選択を切り替える
 const cycleBlockShapeMode = (runtime) => {
   const currentIndex = BLOCK_SHAPE_MODES.indexOf(currentBlockShapeMode);
   const nextIndex = (currentIndex + 1) % BLOCK_SHAPE_MODES.length;
@@ -634,12 +648,14 @@ const emptyLayer = () =>
 const createBoard = () =>
   Array.from({ length: BOARD.height }, () => emptyLayer());
 
+// `hideSlotSet`は必要な画面要素を準備し、表示状態を更新する
 const hideSlotSet = (slots) => {
   for (let i = 0; i < slots.length; i++) {
     applySlot(slots[i], false);
   }
 };
 
+// `cell`を入力値に従って変更し、関連する状態を同期する
 const rotateCell = ([x, y, z], axis) => {
   if (axis === "x") return [x, -z, y];
   if (axis === "y") return [z, y, -x];
@@ -647,6 +663,7 @@ const rotateCell = ([x, y, z], axis) => {
 };
 
 const rotateCells = (cells, axis) => cells.map((cell) => rotateCell(cell, axis));
+// `point`の`euler`を入力値に従って変更し、関連する状態を同期する
 const rotatePointEuler = (point, yawDeg, pitchDeg, rollDeg) => {
   const yaw = yawDeg * Math.PI / 180.0;
   const pitch = pitchDeg * Math.PI / 180.0;
@@ -668,6 +685,7 @@ const rotatePointEuler = (point, yawDeg, pitchDeg, rollDeg) => {
   return [x, y, z];
 };
 
+// `extents`を現在の入力と状態から求め、呼び出し元へ返す
 const getExtents = (cells) => {
   const xs = cells.map((cell) => cell[0]);
   const ys = cells.map((cell) => cell[1]);
@@ -682,6 +700,7 @@ const getExtents = (cells) => {
   };
 };
 
+// `piece`を現在の入力と状態から求め、呼び出し元へ返す
 const choosePiece = (bag) => {
   if (bag.length === 0) {
     const next = PIECES.map((piece) => piece);
@@ -706,6 +725,7 @@ const worldFromGrid = (x, y, z) => [
 ];
 
 const getOrbitYawDeg = () => Number.isFinite(orbit?.orbit?.yaw) ? orbit.orbit.yaw : 0.0;
+// `playSe`は選択中の音声またはアニメーションの再生状態を更新する
 const playSe = (name) => {
   try {
     audio?.playSe(name);
@@ -714,6 +734,7 @@ const playSe = (name) => {
   }
 };
 
+// カメラの`relative`の`move`を現在の入力と状態から求め、呼び出し元へ返す
 const resolveCameraRelativeMove = (direction) => {
   const rad = getOrbitYawDeg() * Math.PI / 180.0;
   const forward = [-Math.sin(rad), -Math.cos(rad)];
@@ -732,6 +753,7 @@ const resolveCameraRelativeMove = (direction) => {
   return [0, 0, basis[1] >= 0.0 ? 1 : -1];
 };
 
+// `demo`の`gallery`を生成し、後続処理で利用できる状態にする
 const createDemoGallery = (space, gpu) => {
   const boardWidth = BOARD.width * BOARD.cell;
   const boardDepth = BOARD.depth * BOARD.cell;
@@ -817,6 +839,7 @@ const createDemoGallery = (space, gpu) => {
   });
 };
 
+// `demo`の`gallery`を現在の入力と実行状態に合わせて更新する
 const updateDemoGallery = (gallery, visible, timeSec) => {
   if (!Array.isArray(gallery)) return;
   for (let i = 0; i < gallery.length; i++) {
@@ -852,6 +875,7 @@ const updateDemoGallery = (gallery, visible, timeSec) => {
   }
 };
 
+// 実行状態を生成し、後続処理で利用できる状態にする
 const makeRuntime = (space, gpu) => {
   const lockedSlots = [];
   for (let y = 0; y < BOARD.height; y++) {
@@ -936,6 +960,7 @@ const getCellsInWorld = (piece) =>
 const isInsideBoard = (x, y, z) =>
   x >= 0 && x < BOARD.width && y >= 0 && y < BOARD.height && z >= 0 && z < BOARD.depth;
 
+// `place`の条件を判定し、結果を真偽値で返す
 const canPlace = (runtime, cells) => {
   for (let i = 0; i < cells.length; i++) {
     const [x, y, z] = cells[i];
@@ -945,6 +970,7 @@ const canPlace = (runtime, cells) => {
   return true;
 };
 
+// `spawn`の位置を入力値から計算し、後続処理で使える結果を返す
 const computeSpawnPosition = (cells) => {
   const extents = getExtents(cells);
   let x = Math.floor((BOARD.width - 1) * 0.5);
@@ -959,6 +985,7 @@ const computeSpawnPosition = (cells) => {
   return { x, y, z };
 };
 
+// `high`の`score`を現在の入力と実行状態に合わせて更新する
 const updateHighScore = (runtime) => {
   if (runtime.score > runtime.highScore) {
     runtime.highScore = runtime.score;
@@ -966,6 +993,7 @@ const updateHighScore = (runtime) => {
   }
 };
 
+// `spawnPiece`は現在の進行状態に必要な要素を生成または配置する
 const spawnPiece = (runtime) => {
   runtime.active = runtime.next ?? choosePiece(runtime.bag);
   runtime.next = choosePiece(runtime.bag);
@@ -981,6 +1009,7 @@ const spawnPiece = (runtime) => {
   }
 };
 
+// `restartGame`はゲームまたは計測の進行段階を次の状態へ更新する
 const restartGame = (runtime) => {
   runtime.board = createBoard();
   runtime.bag = [];
@@ -999,6 +1028,7 @@ const restartGame = (runtime) => {
   app.pushToast("Restarted", { durationMs: 1000 });
 };
 
+// `beginGame`は処理周期の開始または終了に必要な状態を更新する
 const beginGame = (runtime) => {
   if (runtime.started || runtime.gameOver) return;
   runtime.started = true;
@@ -1011,6 +1041,7 @@ const beginGame = (runtime) => {
   playSe("ui_ok");
 };
 
+// `tryMove`は入力に従って位置または姿勢を更新し、表示状態へ反映する
 const tryMove = (runtime, dx, dy, dz) => {
   if (!runtime.active || runtime.gameOver) return false;
   const candidate = {
@@ -1026,6 +1057,7 @@ const tryMove = (runtime, dx, dy, dz) => {
   return true;
 };
 
+// `tryRotate`は入力に従って位置または姿勢を更新し、表示状態へ反映する
 const tryRotate = (runtime, axis) => {
   if (!runtime.active || runtime.gameOver) return false;
   const rotated = rotateCells(runtime.active.cells, axis);
@@ -1057,6 +1089,7 @@ const tryRotate = (runtime, axis) => {
   return false;
 };
 
+// `lockPiece`は現在の進行状態に必要な要素を生成または配置する
 const lockPiece = (runtime) => {
   if (!runtime.active) return;
   const worldCells = getCellsInWorld(runtime.active);
@@ -1105,6 +1138,7 @@ const lockPiece = (runtime) => {
   spawnPiece(runtime);
 };
 
+// `hardDrop`は受け取った値を処理し、後続処理で利用する状態または結果を生成する
 const hardDrop = (runtime) => {
   if (!runtime.active || runtime.gameOver) return;
   let steps = 0;
@@ -1116,6 +1150,7 @@ const hardDrop = (runtime) => {
   lockPiece(runtime);
 };
 
+// `ghost`の`cells`を入力値から計算し、後続処理で使える結果を返す
 const computeGhostCells = (runtime) => {
   if (!runtime.active) return [];
   let offset = 0;
@@ -1129,6 +1164,7 @@ const computeGhostCells = (runtime) => {
   return offset > 0 ? cells : [];
 };
 
+// `layer`の`blocks`を現在の入力と状態から求め、呼び出し元へ返す
 const countLayerBlocks = (layer) => {
   let count = 0;
   for (let z = 0; z < BOARD.depth; z++) {
@@ -1139,6 +1175,7 @@ const countLayerBlocks = (layer) => {
   return count;
 };
 
+// `scoreForClearedLayer`は座標または数値を計算し、後続処理で使う結果を返す
 const scoreForClearedLayer = (fillCount) => {
   if (fillCount >= LAYER_CELL_COUNT) return 520;
   const ratio = (fillCount - LAYER_CLEAR_COUNT) / Math.max(1, LAYER_CELL_COUNT - LAYER_CLEAR_COUNT);
@@ -1146,6 +1183,7 @@ const scoreForClearedLayer = (fillCount) => {
   return Math.round(120 + clamped * 180);
 };
 
+// `board`の描画段階で、必要な描画命令と表示内容を記録する
 const renderBoard = (runtime) => {
   for (let y = 0; y < BOARD.height; y++) {
     for (let z = 0; z < BOARD.depth; z++) {
@@ -1242,6 +1280,7 @@ const renderBoard = (runtime) => {
   runtime.dirtyVisuals = false;
 };
 
+// HUDを現在の入力と実行状態に合わせて更新する
 const updateHud = (runtime) => {
   // cube4 では Text.js ベースの固定 HUD を常時重ねるため、
   // WebgApp 標準の guide/status は空にして表示領域を競合させない
@@ -1249,6 +1288,7 @@ const updateHud = (runtime) => {
   app.message.setLines("guide", [], HUD_GUIDE_OPTIONS);
 };
 
+// `decor`を生成し、後続処理で利用できる状態にする
 const createDecor = (space, gpu) => {
   const center = worldFromGrid((BOARD.width - 1) * 0.5, 0.0, (BOARD.depth - 1) * 0.5);
   const boardWidth = BOARD.width * BOARD.cell;
@@ -1307,6 +1347,7 @@ const createDecor = (space, gpu) => {
   return { beaconNode, center, boardHeight };
 };
 
+// 周回視点の初期化段階で、必要な状態と資源を準備して処理を開始する
 const setupOrbit = () => {
   orbit = app.createOrbitEyeRig({
     target: [0.0, BASE_Y + BOARD.height * BOARD.cell * 0.42, 0.0],
@@ -1624,6 +1665,7 @@ const installTouchControls = (runtime) => {
   return touchRoot;
 };
 
+// 入力を対象へ追加し、後続処理から参照できるようにする
 const attachInput = (runtime) => {
   app.attachInput({
     onKeyDown: (key, ev) => {
@@ -1633,6 +1675,7 @@ const attachInput = (runtime) => {
   installTouchControls(runtime);
 };
 
+// このインスタンスの初期化段階で、必要な状態と資源を準備して処理を開始する
 const start = async () => {
   app = new WebgApp({
     document,
@@ -1675,7 +1718,6 @@ const start = async () => {
 
   app.start({
     onUpdate: ({ deltaSec }) => {
-      orbit.update(deltaSec);
       updateDemoGallery(runtime.demoGallery, !runtime.started, app.runtimeElapsedSec);
       decor.beaconNode.rotateY(36.0 * deltaSec);
       decor.beaconNode.setPosition(

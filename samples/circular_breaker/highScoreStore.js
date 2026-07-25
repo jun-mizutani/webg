@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// samples/circular_breaker/highScoreStore.js  2026/03/26
+// samples/circular_breaker/highScoreStore.js  2026/07/25
 //   circular_breaker sample
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -31,6 +31,7 @@ export const createHighScoreStore = ({
   loadProgress,
   saveProgress
 } = {}) => {
+  // `high`の`scores`を読み込み、検証済みのデータとして後続処理へ渡す
   const loadHighScores = () => {
     try {
       if (typeof loadProgress === "function") {
@@ -45,6 +46,7 @@ export const createHighScoreStore = ({
     }
   };
 
+  // `high`の`scores`を指定された形式または保存先へ出力する
   const saveHighScores = (list) => {
     const top5 = normalizeScoreList(list);
     try {
@@ -60,6 +62,7 @@ export const createHighScoreStore = ({
     }
   };
 
+  // `high`の`score`を対象へ追加し、後続処理から参照できるようにする
   const addHighScore = (score) => {
     const list = loadHighScores();
     list.push({

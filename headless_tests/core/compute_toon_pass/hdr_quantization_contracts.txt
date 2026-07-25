@@ -1,0 +1,35 @@
+# Toon線形High Dynamic Range量子化単体テスト
+
+## 目的
+
+ComputeToonPassをTone Map前の線形High Dynamic Range処理として移行する。従来の0から1へclampして段階化する方式を廃止し、1.0を超える照明と反射の輝度を維持したまま明暗を段階化できることを確認する
+
+## 方法
+
+正の輝度を `floor(log2(intensity))` により2倍ごとのexposure intervalへ分ける。各interval内の0から1位置だけを `levels` 段階へ量子化し、元のexposure scaleへ戻す。このため5前後の輝度は5前後の段階値となり、1へ飽和しない
+
+`gamma` はinterval内のband配置を調整する。`floor` は1未満のshadowだけを持ち上げ、1以上のHigh Dynamic Range輝度には適用しない。parameterはCPUで検証し、shader内のsafeGammaやlevels fallbackは使用しない
+
+## 確認項目
+
+1. sceneとoutputは `rgba16float` である
+2. 0、1未満、1を超える複数輝度の数値結果が参照式と一致する
+3. 1.0を超える輝度を0から1へclampしない
+4. 色比率を保つscale方式を維持する
+5. 1未満だけにshadow floorを適用する
+6. shader内でgammaやlevelsを自動補正しない
+7. 旧 `rgba8unorm` sceneとoutputを拒否する
+
+## 実行方法
+
+```sh
+node headless_tests/core/compute_toon_pass/headless_probe.js
+```
+
+## 結果
+
+2026-07-12に実行し、全項目が成功した。表示文字列は次のとおり
+
+```text
+compute_toon_pass_hdr_quantization_contracts: all HDR band contracts passed
+```

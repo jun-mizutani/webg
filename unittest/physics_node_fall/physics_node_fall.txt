@@ -25,5 +25,5 @@ physics_node_fall
 
 実装確認の見方
 - `PhysicsSpace.js` や `PhysicsNode.js` の落下、接地、sleep の流れを見るときは、このページで最小シーンを確認できます。
-- `PhysicsNode` 単体 API の規約は `unittest/physics_node_contracts` が担当し、このページは world を通した落下シーンの確認を担当します。
-- plane collider と box collider の組み合わせ、および box-box の OBB 解決を目視できます。問い合わせ系と OBB dispatch は `physics_space_contracts` の raycast / raycastAll / queryAabb / overlapSphere 確認を参照してください。
+- `PhysicsNode` 単体 API の規約は `headless_tests/core/physics_node` が担当し、このページは world を通した落下シーンの確認を担当します。
+- plane collider と box collider の組み合わせ、および box-box の OBB 解決を目視できます。問い合わせ系と OBB dispatch は `headless_tests/core/physics_space` の raycast / raycastAll / queryAabb / overlapSphere 確認を参照してください。

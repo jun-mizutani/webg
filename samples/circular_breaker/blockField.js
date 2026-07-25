@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// samples/circular_breaker/blockField.js  2026/04/10
+// samples/circular_breaker/blockField.js  2026/07/25
 //   circular_breaker sample
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -106,6 +106,7 @@ const createBlockPrototypes = ({ gpu, blockTexture, blockNormalTexture }) => {
   };
 };
 
+// `textured`の`block`の材質を対象の状態または描画設定へ反映する
 const applyTexturedBlockMaterial = (shape) => {
   shape.updateMaterial({
     ambient: 0.12,
@@ -118,6 +119,7 @@ const applyTexturedBlockMaterial = (shape) => {
   });
 };
 
+// `flat`の`block`の材質を対象の状態または描画設定へ反映する
 const applyFlatBlockMaterial = (shape) => {
   shape.updateMaterial({
     ambient: 0.12,
@@ -253,6 +255,7 @@ export const applyHardBlockDamageAppearance = (block, options = {}) => {
   }
 };
 
+// `block`の`type`の`for`のステージを現在の入力と状態から求め、呼び出し元へ返す
 const chooseBlockTypeForStage = (index, level, supplyIndex) => {
   if (index === supplyIndex) return "supply";
   if (((index + level) % 11) === 0) return "bomb";
@@ -308,6 +311,7 @@ export const resetBlocksForStage = ({
   return locksOpen;
 };
 
+// 使用可能状態の`blocks`を現在の入力と状態から求め、呼び出し元へ返す
 export const countAliveBlocks = (blocks = []) => {
   let alive = 0;
   for (let i = 0; i < blocks.length; i++) {

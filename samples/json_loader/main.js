@@ -1,11 +1,14 @@
 // ---------------------------------------------
-// samples/json_loader/main.js  2026/04/20
+// samples/json_loader/main.js  2026/07/25
 //   json_loader sample
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // ---------------------------------------------
 import WebgApp from "../../webg/WebgApp.js";
 import { buildErrorPanelOptions, buildHelpPanelOptions } from "../../webg/OverlayPanelPresets.js";
+import CommandPalette, {
+  getDefaultCommandPaletteCss
+} from "../../webg/CommandPalette.js";
 import SmoothShader from "../../webg/SmoothShader.js";
 import Diagnostics from "../../webg/Diagnostics.js";
 
@@ -53,7 +56,10 @@ let viewerSize = {
 };
 let screenshotName = "";
 let wireframe = false;
+let palette = null;
+let lastHelpText = "";
 
+// 診断情報の統計情報を現在の入力と実行状態に合わせて更新する
 function refreshDiagnosticsStats() {
   app.mergeDiagnosticsStats({
     clipCount: clipNames.length,
@@ -66,6 +72,7 @@ function refreshDiagnosticsStats() {
   });
 }
 
+// 検査情報のレポートを生成し、後続処理で利用できる状態にする
 function makeProbeReport(frameCount) {
   const selectedState = getSelectedClipState();
   const report = app.createProbeReport("runtime-probe");
@@ -85,6 +92,7 @@ function makeProbeReport(frameCount) {
   return report;
 }
 
+// 周回視点の状態をアプリケーションのカメラへ同期する
 function syncOrbitStateToAppCamera() {
   if (!app?.camera || !orbit?.orbit) {
     return;
@@ -97,11 +105,13 @@ function syncOrbitStateToAppCamera() {
   app.camera.pitch = orbit.orbit.pitch;
 }
 
+// `pan`の`unit`を現在の入力と状態から求め、呼び出し元へ返す
 function getPanUnit(size = viewerSize) {
   const maxSize = Math.max(1.0e-6, Number(size?.max) || 10.0);
   return maxSize * 0.05;
 }
 
+// `vec3`を検証し、後続処理が扱える共通形式へ整える
 function normalizeVec3(vec) {
   const x = Number(vec?.[0] ?? 0.0);
   const y = Number(vec?.[1] ?? 0.0);
@@ -110,6 +120,7 @@ function normalizeVec3(vec) {
   return [x / length, y / length, z / length];
 }
 
+// 周回視点の画面の`basis`を現在の入力と状態から求め、呼び出し元へ返す
 function getOrbitScreenBasis() {
   const eyeMatrix = app.eye.getWorldMatrix();
   return {
@@ -118,6 +129,7 @@ function getOrbitScreenBasis() {
   };
 }
 
+// `panOrbitByScreenStep`は入力に従って位置または姿勢を更新し、表示状態へ反映する
 function panOrbitByScreenStep(stepX = 0.0, stepY = 0.0) {
   if (!orbit?.orbit) {
     return;
@@ -137,6 +149,7 @@ function panOrbitByScreenStep(stepX = 0.0, stepY = 0.0) {
   syncOrbitStateToAppCamera();
 }
 
+// `stepOrbitByButtons`は受け取った値を処理し、後続処理で利用する状態または結果を生成する
 function stepOrbitByButtons({ yaw = 0.0, pitch = 0.0, zoom = 1.0 } = {}) {
   if (!orbit?.orbit) {
     return;
@@ -156,6 +169,7 @@ function stepOrbitByButtons({ yaw = 0.0, pitch = 0.0, zoom = 1.0 } = {}) {
   syncOrbitStateToAppCamera();
 }
 
+// `takeViewerScreenshot`は現在のキャンバス画像を取得し、指定形式で保存する
 function takeViewerScreenshot() {
   const file = app.takeScreenshot({
     prefix: "json_view"
@@ -166,6 +180,7 @@ function takeViewerScreenshot() {
   });
 }
 
+// ワイヤーフレームの状態を対象の状態または描画設定へ反映する
 function applyWireframeState() {
   const shapes = runtime?.shapes ?? [];
   for (let i = 0; i < shapes.length; i++) {
@@ -173,6 +188,7 @@ function applyWireframeState() {
   }
 }
 
+// ワイヤーフレームの有効状態を切り替え、表示と処理へ反映する
 function toggleWireframe() {
   wireframe = !wireframe;
   applyWireframeState();
@@ -181,6 +197,7 @@ function toggleWireframe() {
   });
 }
 
+// 読み込んだ形状の範囲から周回視点を初期化する
 function configureOrbitFromShapes(shapeList) {
   // 読み込んだ JSON の shape bbox から、モデル確認向けの距離を決める
   const size = app.getShapeSize(shapeList);
@@ -199,6 +216,7 @@ function configureOrbitFromShapes(shapeList) {
   syncOrbitStateToAppCamera();
 }
 
+// カメラの`lift`を入力値に従って変更し、関連する状態を同期する
 function moveCameraLift(step) {
   orbitLift += step;
   orbit.setTarget(
@@ -209,6 +227,7 @@ function moveCameraLift(step) {
   syncOrbitStateToAppCamera();
 }
 
+// `triangles`を現在の入力と状態から求め、呼び出し元へ返す
 function countTriangles(shapeList) {
   let total = 0;
   for (let i = 0; i < shapeList.length; i++) {
@@ -217,6 +236,7 @@ function countTriangles(shapeList) {
   return total;
 }
 
+// 明示的なテクスチャ設定を実行時の形状へ反映する
 function applyExplicitTextureFlagsToRuntimeShapes(runtime) {
   const shapes = runtime?.shapes ?? [];
   for (let i = 0; i < shapes.length; i++) {
@@ -233,12 +253,14 @@ function applyExplicitTextureFlagsToRuntimeShapes(runtime) {
   }
 }
 
+// クリップの名前の一覧を現在の入力と状態から求め、呼び出し元へ返す
 function formatClipNameList(names, maxCount = 3) {
   if (!Array.isArray(names) || names.length === 0) return "-";
   if (names.length <= maxCount) return names.join(", ");
   return `${names.slice(0, maxCount).join(", ")} ... +${names.length - maxCount}`;
 }
 
+// 選択中のクリップの行を生成し、後続処理で利用できる状態にする
 function buildSelectedClipLines() {
   if (!clipInfo) {
     return [`selectedClip=${selectedClipIndex + 1}/${clipNames.length || 0} -`];
@@ -250,57 +272,52 @@ function buildSelectedClipLines() {
   ];
 }
 
-function updateHudRows() {
+// 状態表示の行を生成し、後続処理で利用できる状態にする
+function buildStatusLines() {
   const selectedState = getSelectedClipState();
-  app.setHudRows([
-    { line: "json loader" },
-    {
-      label: "File",
-      value: MODEL_ASSET_FILE.replace(/^.*\//, ""),
-      note: `tris=${totalTriangles} clips=${clipNames.length}`
-    },
-    {
-      label: "Model",
-      value: `nodes=${runtime?.nodes?.length ?? 0} shapes=${runtime?.shapes?.length ?? 0}`,
-      note: `anim=${runtime?.getAnimationNames?.().length ?? 0}`
-    },
-    {
-      label: "Orbit",
-      value: `yaw=${orbit.orbit.yaw.toFixed(1)} pitch=${orbit.orbit.pitch.toFixed(1)}`,
-      note: `dist=${orbit.orbit.distance.toFixed(1)}`
-    },
-    {
-      label: "Target",
-      value: `${orbit.orbit.target[0].toFixed(2)}, ${orbit.orbit.target[1].toFixed(2)}, ${orbit.orbit.target[2].toFixed(2)}`,
-      note: `panStep=${getPanUnit().toFixed(3)}`
-    },
-    {
-      label: "Anim",
-      value: selectedState.label,
-      note: paused ? "global pause=on" : "global pause=off"
-    },
-    {
-      label: "Clip",
-      value: clipInfo?.id ?? "-",
-      note: `${selectedClipIndex + 1}/${clipNames.length || 0}`
-    },
-    {
-      label: "Wire",
-      value: wireframe ? "on" : "off",
-      note: `shot=${screenshotName || "-"}`
-    },
-    {
-      line: "Drag/Arrow orbit  Shift+Drag/Arrow pan  [/] zoom  Space pause  4/5 clip  W wire  S shot  D json  R reset"
-    }
-  ], {
-    anchor: "top-left",
-    x: 0,
-    y: 0,
-    color: [0.92, 0.96, 1.0],
-    minScale: 0.82
-  });
+  return [
+    "json_loader",
+    "CommandPalette: double tap canvas or press /",
+    "Drag/Arrow: orbit  Shift+Drag/Arrow: pan  [ / ] or wheel: zoom",
+    "",
+    `File: ${MODEL_ASSET_FILE.replace(/^.*\//, "")}  tris=${totalTriangles} clips=${clipNames.length}`,
+    `Model: nodes=${runtime?.nodes?.length ?? 0} shapes=${runtime?.shapes?.length ?? 0} animations=${runtime?.getAnimationNames?.().length ?? 0}`,
+    `Orbit: yaw=${orbit.orbit.yaw.toFixed(1)} pitch=${orbit.orbit.pitch.toFixed(1)} dist=${orbit.orbit.distance.toFixed(1)}`,
+    `Target: ${orbit.orbit.target[0].toFixed(2)}, ${orbit.orbit.target[1].toFixed(2)}, ${orbit.orbit.target[2].toFixed(2)}  panStep=${getPanUnit().toFixed(3)}`,
+    `Animation: ${selectedState.label}  globalPause=${paused ? "on" : "off"}`,
+    `Clip: ${selectedClipIndex + 1}/${clipNames.length || 0} ${clipInfo?.id ?? "-"}`,
+    `Wireframe: ${wireframe ? "on" : "off"}  screenshot=${screenshotName || "-"}`
+  ];
 }
 
+// ヘルプのパネルを現在の入力と実行状態に合わせて更新する
+function updateHelpPanel() {
+  const panel = app?.getOverlayPanel?.("jsonLoaderHelp");
+  if (!panel || !orbit?.orbit) {
+    return;
+  }
+  const lines = [
+    ...buildStatusLines(),
+    "",
+    ...app.getDebugKeyGuideLines()
+  ];
+  const nextText = lines.join("\n");
+  if (nextText === lastHelpText) {
+    return;
+  }
+  app.updateOverlayPanel("jsonLoaderHelp", { lines });
+  lastHelpText = nextText;
+}
+
+// `after`のコマンドを現在の入力と実行状態に合わせて更新する
+function refreshAfterCommand() {
+  palette?.render();
+  refreshDiagnosticsStats();
+  updateHelpPanel();
+  app.requestRender();
+}
+
+// 選択中のクリップの識別子を現在の入力と状態から求め、呼び出し元へ返す
 function getSelectedClipId() {
   if (clipNames.length === 0) {
     return null;
@@ -308,11 +325,13 @@ function getSelectedClipId() {
   return clipNames[selectedClipIndex] ?? null;
 }
 
+// 選択中のクリップの`info`を現在の入力と状態から求め、呼び出し元へ返す
 function getSelectedClipInfo() {
   const clipId = getSelectedClipId();
   return clipId ? modelAsset.getClipInfo(clipId) : null;
 }
 
+// 選択中のクリップの状態を現在の入力と状態から求め、呼び出し元へ返す
 function getSelectedClipState() {
   // 選択中 clip の runtime Animation 状態を HUD 用に整形する
   const clipId = getSelectedClipId();
@@ -341,6 +360,7 @@ function getSelectedClipState() {
   };
 }
 
+// クリップを現在の入力と状態から求め、呼び出し元へ返す
 function selectClip(step) {
   // 複数 clip を持つ asset でも、選択対象をずらしながら
   // restart/pause/resume の対象 clip を切り替えられるようにする
@@ -353,6 +373,7 @@ function selectClip(step) {
   return true;
 }
 
+// `replaySelectedClip`は選択中の音声またはアニメーションの再生状態を更新する
 function replaySelectedClip() {
   // 選択中 clip を先頭姿勢から再始動する
   const clipId = getSelectedClipId();
@@ -368,6 +389,7 @@ function replaySelectedClip() {
   return true;
 }
 
+// `pauseSelectedClip`は選択中の音声またはアニメーションの再生状態を更新する
 function pauseSelectedClip() {
   // 選択中 clip だけを個別 pause helper で停止する
   const clipId = getSelectedClipId();
@@ -378,6 +400,7 @@ function pauseSelectedClip() {
   return animation !== null;
 }
 
+// `resumeSelectedClip`は選択中の音声またはアニメーションの再生状態を更新する
 function resumeSelectedClip() {
   // 選択中 clip だけを個別 resume helper で再開する
   const clipId = getSelectedClipId();
@@ -388,6 +411,68 @@ function resumeSelectedClip() {
   return animation !== null;
 }
 
+// コマンドの操作パレットの初期化段階で、必要な状態と資源を準備して処理を開始する
+function installCommandPalette() {
+  palette = new CommandPalette({
+    document,
+    container: document.body,
+    viewport: app.screen.canvas,
+    title: "JSON Loader",
+    pageRows: 5,
+    pageRowsByPage: [5],
+    closeOnCommand: false,
+    onChange: (id, value) => {
+      if (id === "pause-all") {
+        paused = value;
+        runtime.setAnimationsPaused(paused);
+      } else if (id === "wireframe") {
+        wireframe = value;
+        applyWireframeState();
+      }
+      refreshAfterCommand();
+    },
+    onCommand: (id) => {
+      if (id === "replay") replaySelectedClip();
+      else if (id === "pause-clip") pauseSelectedClip();
+      else if (id === "resume-clip") resumeSelectedClip();
+      else if (id === "prev-clip") selectClip(-1);
+      else if (id === "next-clip") selectClip(1);
+      else if (id === "target-up") moveCameraLift(orbitLiftStep);
+      else if (id === "target-down") moveCameraLift(-orbitLiftStep);
+      else if (id === "reset-view") configureOrbitFromShapes(runtime.shapes);
+      else if (id === "screenshot") takeViewerScreenshot();
+      else if (id === "download-json") model.downloadJSON(DOWNLOAD_FILE);
+      refreshAfterCommand();
+    },
+    commands: [
+      // 1ページ目
+      { type: "toggle", id: "pause-all", label: "Pause", detail: "all", value: () => paused },
+      { id: "replay", label: "Replay", detail: "clip" },
+      { id: "pause-clip", label: "Pause", detail: "clip" },
+      { id: "palette-next", label: "Next", detail: "page", pageSwitch: true },
+      { id: "resume-clip", label: "Resume", detail: "clip" },
+      { id: "prev-clip", label: "Prev", detail: "clip" },
+      { id: "next-clip", label: "Next", detail: "clip" },
+      { type: "toggle", id: "wireframe", label: "Wire", detail: "mesh", value: () => wireframe },
+      { id: "target-up", label: "Target", detail: "up" },
+      { id: "target-down", label: "Target", detail: "down" },
+      { id: "reset-view", label: "Reset", detail: "view" },
+      { id: "screenshot", label: "Shot", detail: "png" },
+      { id: "download-json", label: "JSON", detail: "download" },
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+    ]
+  });
+  palette.attachToCanvas(app.screen.canvas, { key: "/" });
+  palette.setStyle(getDefaultCommandPaletteCss());
+}
+
+// このインスタンスの初期化段階で、必要な状態と資源を準備して処理を開始する
 async function start() {
   app = new WebgApp({
     document,
@@ -406,22 +491,10 @@ async function start() {
       mode: DEBUG_MODE,
       system: "json_loader",
       source: MODEL_ASSET_FILE,
-      guideLines: GUIDE_LINES,
-      guideOptions: {
-        anchor: "top-left",
-        x: 0,
-        y: 0,
-        width: 44,
-        wrap: true
-      },
       probeDefaultAfterFrames: 1
     }
   });
   await app.init();
-  app.showOverlayPanel(buildHelpPanelOptions({
-    id: "jsonLoaderHelp",
-    lines: [...GUIDE_LINES, ...app.getDebugKeyGuideLines()]
-  }));
 
   orbit = app.createOrbitEyeRig({
     target: [...DEFAULT_ORBIT.target],
@@ -455,6 +528,14 @@ async function start() {
     collect: () => makeProbeReport(app.screen.getFrameCount())
   });
   app.configureDebugKeyInput();
+  app.showOverlayPanel(buildHelpPanelOptions({
+    id: "jsonLoaderHelp",
+    collapsed: true,
+    lines: buildStatusLines()
+  }));
+  lastHelpText = buildStatusLines().join("\n");
+  installCommandPalette();
+  refreshAfterCommand();
 
   app.attachInput({
     onKeyDown: async (key, ev) => {
@@ -482,22 +563,19 @@ async function start() {
       } else if (key === "r") {
         configureOrbitFromShapes(runtime.shapes);
       }
+      refreshAfterCommand();
     }
   });
 
   app.start({
-    onUpdate: ({ deltaSec }) => {
-      orbit.update(deltaSec);
-      syncOrbitStateToAppCamera();
-
+    onUpdate: () => {
       if (!paused) {
         runtime.playAllAnimations();
       }
 
       refreshDiagnosticsStats();
       app.updateDebugProbe();
-      updateHudRows();
-      app.setControlRows([]);
+      updateHelpPanel();
     }
   });
 }

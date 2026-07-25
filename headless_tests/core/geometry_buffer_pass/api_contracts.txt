@@ -1,0 +1,22 @@
+GeometryBufferPass headless contracts
+
+実行方法:
+
+node headless_tests/core/geometry_buffer_pass/headless_probe.js
+
+確認内容:
+
+- material modeがcolor、normal、sample可能depthを同じ寸法で生成する
+- attachment 0をalbedo resourceとして公開し、lit modeは明示的に拒否する
+- material objectがalbedo、specular、roughness、metallic、emissiveをGPU uniformへ詰める
+- Shape colorとbase color textureを個別にsRGBから線形色へ変換してから乗算する
+- clearColorを表示用sRGBから線形背景値へ変換する
+- albedoを `rgba8unorm-srgb` に保存し、暗部の8 bit精度と線形sampleを両立する
+- entryのmaterial更新、表示状態、削除、GPU buffer破棄が明示的に行われる
+- renderSpaceが標準SpaceからShapeを収集し、Shape colorをG-buffer materialとして使う
+- sceneから外れたShapeのUniform Bufferを破棄する
+- Shapeのtexture、normal map、Skeletonを標準surface設定から解決する
+- 機能有効時にtexture、normal_texture、Skeletonが不足すれば例外にする
+- 未対応のcolor modeとnormal空間を既定値へ補正せず例外にする
+- projection parameterがnear、far、tan(vfov/2)、aspectの順になる
+- WGSL共通snippetがnormal decode、depth線形化、view-space位置復元を提供する

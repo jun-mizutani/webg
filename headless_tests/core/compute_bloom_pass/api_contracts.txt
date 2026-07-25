@@ -1,0 +1,19 @@
+# ComputeBloomPass Pyramid API test
+
+## 目的
+
+`webg/ComputeBloomPass.js` のextract、5段画像ピラミッド、progressive upsample、scene合成の順序と公開値を実GPUなしで確認します。
+
+## 確認内容
+
+- `threshold`、`softKnee`、`strength`、5段のWeight、`filterRadius`の既定値と検証範囲
+- 旧small / medium / large設定を暗黙変換せず拒否すること
+- full-resolution `rgba16float` sceneを要求すること
+- 1/32からfull resolutionまで隣接Levelを順にupsampleすること
+- resize時にPyramidと全再構成targetを更新すること
+
+## 実行
+
+```sh
+node headless_tests/core/compute_bloom_pass/api_contracts.js
+```

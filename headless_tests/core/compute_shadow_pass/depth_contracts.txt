@@ -1,0 +1,34 @@
+# Shadow resolveのReverse-Z・通常Z二契約単体テスト
+
+## 目的
+
+ComputeShadowPassとComputeSpotShadowPassが、camera G-buffer depthをReverse-Zとして復元し、Shadow Map depthを通常Zとして比較することを確認する。同じ `depth32float` 形式でも意味が異なるため、Shadow Map resourceは `SHADOW_STANDARD_Z` identityを必須とする
+
+巨大World座標では、GPU上でview-space位置へcamera World平行移動を加え、light viewで再び引く処理を行わない。JavaScript倍精度で `viewToLightClip = lightViewProjection * cameraWorld` を先に合成し、小さなview-space位置からlight clipへ直接変換する
+
+## 確認項目
+
+1. camera背景は `isGBufferBackgroundDepth(cameraDepth)` によりdepth 0と判定する
+2. Shadow Map通常Zの可視判定はbias適用後の `receiverDepth <= storedDepth` を維持する
+3. WGSLからcameraWorldによるWorld位置復元を除去し、`viewToLightClip` を使用する
+4. 原点付近と100億offsetで、同じ相対配置の `viewToLightClip` が1e-6以内で一致する
+5. 方向光をCamera Frameのview-space方向へ変換する
+6. spot lightの巨大World位置をCamera Frameで小さいview-space位置へ変換する
+7. finite camera farは実値、infinite farは0 sentinelとして位置復元uniformへ渡す
+8. camera Reverse-Z resourceをShadow Map入力として渡すと例外になる
+
+## 実行方法
+
+```sh
+node headless_tests/core/compute_shadow_pass/headless_probe.js
+```
+
+## 結果
+
+2026-07-12に実行し、全項目が成功した。表示文字列は次のとおり
+
+```text
+compute_shadow_pass_depth_contracts: all mixed depth and camera-relative contracts passed
+```
+
+Shadow resolveは後続変更で完成色生成からvisibility供給へ責務分離した。このテストは責務変更後も、camera Reverse-Z、Shadow通常Z、camera-relative行列という深度・座標基盤が維持されることを確認する

@@ -1,0 +1,17 @@
+単体テスト: frame_timer
+
+概要
+- `webg/FrameTimer.js` のframe間隔、GPU時間、JavaScript時間、負荷計算を、DOMや実GPUを使わずに確認するheadless testです
+- ping-pong resource管理は責任を分離し、`unittest/ping_pong_resources`で検証します
+
+このテストで使う機能
+- `FrameTimer`: 1 frameの間隔、Compute PassとRender PassのGPU時間、JavaScript処理時間から負荷目安を計算する
+
+確認ポイント
+- `JavaScript processing time / frame interval * 100`でJS loadが計算されることを確認します
+- `GPU total = GPU compute + GPU render`と`GPU load = GPU total / frame interval * 100`が成立することを確認します
+- timestamp counterが逆転した異常sampleを平均へ混ぜず破棄することを確認します
+- timestamp-query非対応環境でGPU時間を0などの代替値にせず、取得不能を明示することを確認します
+
+実行方法
+- `node headless_tests/core/frame_timer/headless_probe.js`

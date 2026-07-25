@@ -1,0 +1,18 @@
+サンプル: compute_pass_binding
+
+概要
+- `webg/ComputePass.js` のコアAPIを、headless GPUDeviceで検証するtestです
+- WGSLと同じbinding番号、resourceの意味を示すname、WebGPU resource種別をJavaScript側へ明示する契約を確認します
+
+確認ポイント
+- binding定義がbinding番号順へ整理されることを確認します
+- binding番号重複、name重複、未対応typeを例外として検出します
+- dispatch寸法を決めるbindingが複数になる曖昧な定義を拒否します
+- Storage BufferとDepth Textureが期待するWebGPU layout entryへ変換されることを確認します
+- resource基準または明示された1次元から3次元のdispatch寸法をworkgroup数へ変換します
+- `timestampWrites`をCompute Pass descriptorへ渡します
+- Uniform配列長がWGSL layoutと完全一致しない場合は例外にします
+- `destroy()`が内部Uniform Bufferを破棄し、破棄後のencodeを拒否します
+
+実行方法
+- `node headless_tests/core/compute_pass/headless_probe.js`
