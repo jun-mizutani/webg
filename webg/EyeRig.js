@@ -10,6 +10,8 @@
 // - `setAngles()` は base/rod 側の向き、`setLookAngles()` は eye の独立視線を表す
 // - pointer 入力は mouse / pen / touch を同じ入口で扱い、
 //   orbit / follow では 1本指回転、2本指平行移動、pinch zoom を使えるようにする
+import Matrix from "./Matrix.js";
+import Quat from "./Quat.js";
 import util from "./util.js";
 
 export default class EyeRig {
@@ -179,6 +181,12 @@ export default class EyeRig {
         0.01,
         { min: 0.0 }
       ),
+      rotationInputMode: util.readEnumOption(
+        [{ value: options.orbit?.rotationInputMode, label: "options.orbit.rotationInputMode" }],
+        "orbit.rotationInputMode",
+        "camera-view",
+        ["euler", "camera-view"]
+      ),
       pitchMin: util.readFiniteOption(
         [{ value: options.orbit?.pitchMin, label: "options.orbit.pitchMin" }],
         "orbit.pitchMin",
@@ -222,6 +230,7 @@ export default class EyeRig {
         )
       }
     };
+    this.setupOrbitQuaternionState();
 
     this.firstPerson = {
       position: util.readVec3Option(
@@ -552,6 +561,126 @@ export default class EyeRig {
     this.apply(true);
   }
 
+  createQuatFromEuler(yaw, pitch, roll) {
+    const quat = new Quat();
+    quat.eulerToQuat(yaw, pitch, roll);
+    quat.normalize();
+    return quat;
+  }
+
+  createQuatFromAxisAngle(axis, degree) {
+    const unit = this.normalizeVector(axis);
+    const quat = new Quat();
+    const halfRad = degree * Math.PI / 180.0 * 0.5;
+    const sinHalf = Math.sin(halfRad);
+    quat.q[0] = Math.cos(halfRad);
+    quat.q[1] = unit[0] * sinHalf;
+    quat.q[2] = unit[1] * sinHalf;
+    quat.q[3] = unit[2] * sinHalf;
+    quat.normalize();
+    return quat;
+  }
+
+  eulerFromQuat(quat) {
+    const matrix = new Matrix();
+    matrix.setByQuat(quat);
+    return matrix.matToEuler();
+  }
+
+  setupOrbitQuaternionState() {
+    const state = this.orbit;
+    state._syncingEulerMirror = false;
+    state._attitudeDirty = false;
+    state._lookDirty = false;
+
+    const defineTrackedAngle = (key, dirtyKey) => {
+      const hiddenKey = `_${key}`;
+      state[hiddenKey] = util.readFiniteNumber(state[key], `orbit.${key}`);
+      Object.defineProperty(state, key, {
+        configurable: true,
+        enumerable: true,
+        get() {
+          return this[hiddenKey];
+        },
+        set: (value) => {
+          state[hiddenKey] = util.readFiniteNumber(value, `orbit.${key}`);
+          if (!state._syncingEulerMirror) {
+            state[dirtyKey] = true;
+          }
+        }
+      });
+    };
+
+    defineTrackedAngle("yaw", "_attitudeDirty");
+    defineTrackedAngle("pitch", "_attitudeDirty");
+    defineTrackedAngle("roll", "_attitudeDirty");
+    defineTrackedAngle("lookYaw", "_lookDirty");
+    defineTrackedAngle("lookPitch", "_lookDirty");
+    defineTrackedAngle("lookRoll", "_lookDirty");
+
+    state.attitudeQuat = this.createQuatFromEuler(state.yaw, state.pitch, state.roll);
+    state.lookQuat = this.createQuatFromEuler(state.lookYaw, state.lookPitch, state.lookRoll);
+  }
+
+  syncOrbitQuatsFromEuler() {
+    const state = this.orbit;
+    if (state._attitudeDirty) {
+      state.attitudeQuat = this.createQuatFromEuler(state.yaw, state.pitch, state.roll);
+      state._attitudeDirty = false;
+    }
+    if (state._lookDirty) {
+      state.lookQuat = this.createQuatFromEuler(state.lookYaw, state.lookPitch, state.lookRoll);
+      state._lookDirty = false;
+    }
+  }
+
+  syncOrbitEulerFromQuats() {
+    const state = this.orbit;
+    const [yaw, pitch, roll] = this.eulerFromQuat(state.attitudeQuat);
+    const [lookYaw, lookPitch, lookRoll] = this.eulerFromQuat(state.lookQuat);
+    state._syncingEulerMirror = true;
+    state.yaw = yaw;
+    state.pitch = pitch;
+    state.roll = roll;
+    state.lookYaw = lookYaw;
+    state.lookPitch = lookPitch;
+    state.lookRoll = lookRoll;
+    state._syncingEulerMirror = false;
+    state._attitudeDirty = false;
+    state._lookDirty = false;
+  }
+
+  applyOrbitRotationByViewDelta(yawDegree, pitchDegree) {
+    const state = this.orbit;
+    this.syncOrbitQuatsFromEuler();
+    if (Math.abs(yawDegree) <= 1.0e-9 && Math.abs(pitchDegree) <= 1.0e-9) {
+      return false;
+    }
+    const eyeMatrix = this.eyeNode?.getWorldMatrix?.() ?? null;
+    if (!eyeMatrix) {
+      return false;
+    }
+    const upAxis = this.normalizeVector(eyeMatrix.mul3x3Vector([0.0, 1.0, 0.0]));
+    const rightAxis = this.normalizeVector(eyeMatrix.mul3x3Vector([1.0, 0.0, 0.0]));
+    if (
+      Math.hypot(upAxis[0], upAxis[1], upAxis[2]) <= 1.0e-8
+      || Math.hypot(rightAxis[0], rightAxis[1], rightAxis[2]) <= 1.0e-8
+    ) {
+      return false;
+    }
+    const next = state.attitudeQuat.clone();
+    if (Math.abs(yawDegree) > 1.0e-9) {
+      next.lmulQuat(this.createQuatFromAxisAngle(upAxis, yawDegree));
+    }
+    if (Math.abs(pitchDegree) > 1.0e-9) {
+      next.lmulQuat(this.createQuatFromAxisAngle(rightAxis, pitchDegree));
+    }
+    next.normalize();
+    state.attitudeQuat = next;
+    this.syncOrbitEulerFromQuats();
+    return true;
+  }
+
   static fromNodes(baseNode, eyeNode, options = {}) {
     let rodNode = options.rodNode ?? null;
     if (!rodNode && eyeNode?.getParent) {
@@ -716,6 +845,18 @@ export default class EyeRig {
     return this;
   }
 
+  rotateOrbitByViewDelta(yawDegree, pitchDegree) {
+    if (this.type !== "orbit") {
+      return this;
+    }
+    this.applyOrbitRotationByViewDelta(
+      util.readFiniteNumber(yawDegree, "orbitViewDelta.yaw"),
+      util.readFiniteNumber(pitchDegree, "orbitViewDelta.pitch")
+    );
+    this.apply();
+    return this;
+  }
+
   setEyeHeight(height) {
     this.firstPerson.eyeHeight = util.readFiniteNumber(height, "eyeHeight");
     if (this.type === "first-person") this.apply();
@@ -767,12 +908,13 @@ export default class EyeRig {
 
     if (this.type === "orbit") {
       const state = this.orbit;
+      this.syncOrbitQuatsFromEuler();
       this.baseNode.setPosition(state.target[0], state.target[1], state.target[2]);
       this.baseNode.setAttitude(0.0, 0.0, 0.0);
       this.rodNode.setPosition(0.0, 0.0, 0.0);
-      this.rodNode.setAttitude(state.yaw, state.pitch, state.roll);
+      this.rodNode.setQuat(state.attitudeQuat);
       this.eyeNode.setPosition(0.0, 0.0, state.distance);
-      this.eyeNode.setAttitude(state.lookYaw, state.lookPitch, state.lookRoll);
+      this.eyeNode.setQuat(state.lookQuat);
       return this;
     }
 
@@ -834,21 +976,31 @@ export default class EyeRig {
         changed = true;
       }
     } else {
-      if (this.input.has(state.keyMap.left)) {
-        state.yaw -= state.keyRotateSpeed * dt;
-        changed = true;
-      }
-      if (this.input.has(state.keyMap.right)) {
-        state.yaw += state.keyRotateSpeed * dt;
-        changed = true;
-      }
-      if (this.input.has(state.keyMap.up)) {
-        state.pitch = this.clamp(state.pitch + state.keyRotateSpeed * dt, state.pitchMin, state.pitchMax);
-        changed = true;
-      }
-      if (this.input.has(state.keyMap.down)) {
-        state.pitch = this.clamp(state.pitch - state.keyRotateSpeed * dt, state.pitchMin, state.pitchMax);
-        changed = true;
+      if (state.rotationInputMode === "camera-view") {
+        let yawDelta = 0.0;
+        let pitchDelta = 0.0;
+        if (this.input.has(state.keyMap.left)) yawDelta -= state.keyRotateSpeed * dt;
+        if (this.input.has(state.keyMap.right)) yawDelta += state.keyRotateSpeed * dt;
+        if (this.input.has(state.keyMap.up)) pitchDelta += state.keyRotateSpeed * dt;
+        if (this.input.has(state.keyMap.down)) pitchDelta -= state.keyRotateSpeed * dt;
+        changed = this.applyOrbitRotationByViewDelta(yawDelta, pitchDelta) || changed;
+      } else {
+        if (this.input.has(state.keyMap.left)) {
+          state.yaw -= state.keyRotateSpeed * dt;
+          changed = true;
+        }
+        if (this.input.has(state.keyMap.right)) {
+          state.yaw += state.keyRotateSpeed * dt;
+          changed = true;
+        }
+        if (this.input.has(state.keyMap.up)) {
+          state.pitch = this.clamp(state.pitch + state.keyRotateSpeed * dt, state.pitchMin, state.pitchMax);
+          changed = true;
+        }
+        if (this.input.has(state.keyMap.down)) {
+          state.pitch = this.clamp(state.pitch - state.keyRotateSpeed * dt, state.pitchMin, state.pitchMax);
+          changed = true;
+        }
       }
     }
     if (this.input.has(state.keyMap.zoomIn)) {
@@ -1363,12 +1515,16 @@ export default class EyeRig {
         this.follow.pitchMax
       );
     } else {
-      this.orbit.yaw += dx * dragRotateSpeed;
-      this.orbit.pitch = this.clamp(
-        this.orbit.pitch + dy * dragRotateSpeed,
-        this.orbit.pitchMin,
-        this.orbit.pitchMax
-      );
+      if (this.orbit.rotationInputMode === "camera-view") {
+        this.applyOrbitRotationByViewDelta(dx * dragRotateSpeed, dy * dragRotateSpeed);
+      } else {
+        this.orbit.yaw += dx * dragRotateSpeed;
+        this.orbit.pitch = this.clamp(
+          this.orbit.pitch + dy * dragRotateSpeed,
+          this.orbit.pitchMin,
+          this.orbit.pitchMax
+        );
+      }
     }
     this.apply();
     ev.preventDefault();

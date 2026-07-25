@@ -1,29 +1,29 @@
 サンプル: camera_controller
 
 概要
-- `CameraRig` の `base / rod / carriage / mount / camera` 構成を前提に、`orbit` と `first-person` を同じ scene で比較するサンプルです。
-- `CameraRig` 自体は state holder と node 構成に専念し、drag / wheel / keyboard の入力変換はサンプル側へ置く構成にしています。
-- orbit では `carriage` が距離、`mount` が PAN、`rod` が主回転を担当し、first-person では `mount` が eye height、`camera` が視線 pitch を担当する違いを HUD で追えるようにしています。
+- CameraRig の base / rod / carriage / mount / camera 構成を前提に、orbit と first-person を同じ scene で比較するサンプルです。
+- CameraRig 自体は state holder と node 構成に専念し、ドラッグ / ホイール / キーボードの入力変換はサンプル側へ置く構成にしています。
+- orbit では carriage が距離、mount が PAN、rod が主回転を担当し、first-person では mount が eye height、camera が視線 pitch を担当する違いを HUD で追えるようにしています。
 
-このサンプルで使うwebg機能
-- `WebgApp`: 起動、描画ループ、HUD 表示、入力 lower-case 規約の共通化
-- `CameraRig`: orbit / first-person の state と 5 ノード構成の保持
-- `Shape` / `Node`: 床、塔、ターゲットキャラクタ、進行方向マーカーの構築
-- `Message`: 画面上の操作ガイド表示
+このサンプルで使う webg 機能
+- WebgApp: 起動、描画ループ、HUD 表示、入力 lower-case 規約の共通化
+- CameraRig: orbit / first-person の state と 5 ノード構成の保持
+- Shape / Node: 床、塔、ターゲットキャラクタ、進行方向マーカーの構築
+- Message: 画面上の操作ガイド表示
 
 確認ポイント
-- orbit では `rod` の yaw / pitch、`carriage` の距離、`mount` の X / Y が別々に変化し、責務が混ざらないことを HUD の `base / rod / carriage / mount / camera` 表示で確認します。
-- first-person では `base` が移動し、`mount` の Y に eye height が入り、`camera` の pitch が独立に変わることを確認します。
-- `CameraRig` 本体は screen drag から PAN 量を計算せず、サンプル側が決めた単位で `setPan()` / `addPan()` 相当の state 更新を行っていることを確認します。
+- orbit では rod の yaw / pitch、carriage の距離、mount の X / Y が別々に変化し、責務が混ざらないことを HUD の base / rod / carriage / mount / camera 表示で確認します。
+- first-person では base が移動し、mount の Y に eye height が入り、camera の pitch が独立に変わることを確認します。
+- CameraRig 本体は screen ドラッグから PAN 量を計算せず、サンプル側が決めた単位で setPan() / addPan() 相当の state 更新を行っていることを確認します。
 - moving target は scene の見え方確認用であり、camera helper 自体は target 追従機能を持たないことを確認します。
 
 操作説明
-- `1`: orbit view へ切替
-- `2`: first-person view へ切替
-- `P`: moving target の移動を一時停止 / 再開
-- `R`: 現在の view mode の姿勢を初期値へ戻す
-- orbit: ドラッグまたは `Arrow` キーで rod 回転
-- orbit: `Shift + Drag` または `Shift + Arrow` で mount を carriage 平面上で移動
-- orbit: ホイールまたは `[` / `]` で距離変更
+- 1: orbit view へ切り替え
+- 2: first-person view へ切り替え
+- P: moving target の移動を一時停止 / 再開
+- R: 現在の view mode の姿勢を初期値へ戻す
+- orbit: ドラッグまたは Arrow キーで rod 回転
+- orbit: Shift + Drag または Shift + Arrow で mount を carriage 平面上で移動
+- orbit: ホイールまたは [ / ] で距離変更
 - first-person: ドラッグで視線回転
-- first-person: `W` / `A` / `S` / `D` で移動、`Q` / `E` で下降 / 上昇、`Shift` で加速
+- first-person: W / A / S / D で移動、Q / E で下降 / 上昇、Shift で加速

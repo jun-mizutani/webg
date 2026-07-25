@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// samples/webgmodeler/math3d.js  2026/04/29
+// samples/webgmodeler/math3d.js  2026/05/24
 //   webgmodeler small math helpers
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -22,6 +22,19 @@ export function readVec3(value, label) {
     readFiniteNumber(value[0], `${label}[0]`),
     readFiniteNumber(value[1], `${label}[1]`),
     readFiniteNumber(value[2], `${label}[2]`)
+  ];
+}
+
+// 4 要素の数値配列を quaternion [x, y, z, w] として読み取り、各要素を検証する
+export function readQuatXyzw(value, label) {
+  if (!Array.isArray(value) || value.length < 4) {
+    throw new Error(`${label} must be an array with at least 4 numbers`);
+  }
+  return [
+    readFiniteNumber(value[0], `${label}[0]`),
+    readFiniteNumber(value[1], `${label}[1]`),
+    readFiniteNumber(value[2], `${label}[2]`),
+    readFiniteNumber(value[3], `${label}[3]`)
   ];
 }
 

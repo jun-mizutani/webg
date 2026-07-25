@@ -26,7 +26,7 @@ pre { background: #f6f8fa; border: 1px solid #d0d7de; padding: 12px; overflow-x:
 </div>
 <h2>個別目次</h2>
 <ol>
-<li><a href='#mmodeler'>mmodeler</a>: command palette を中心にしたスマホ・タブレット向け 3D modeler</li>
+<li><a href='#mmodeler'>mmodeler</a>: double tap / long press と command palette を中心にしたスマホ・タブレット向け 3D modeler</li>
 <li><a href='#cube4'>cube4</a>: テトラキューブを3次元空間で積み上げるゲーム</li>
 <li><a href='#circular_breaker'>circular_breaker</a>: 円形 stage のブロック崩し風ゲーム</li>
 <li><a href='#physics_bounce'>physics_bounce</a>: 物理エンジンのデモ</li>
@@ -66,177 +66,213 @@ pre { background: #f6f8fa; border: 1px solid #d0d7de; padding: 12px; overflow-x:
 サンプル: mmodeler
 
 概要
-- `samples/mmodeler` は、スマホやタブレットで使う mobile profile を canvas 内の操作と command palette で成立させることを目標にした 3D modeler です
-- desktop 版の横長 panel や多数の button は使わず、camera 操作、選択、transform、低頻度 command を gesture と 4x4 palette へ寄せています
-- mobile 画面で扱いやすいよう、常時表示する UI を絞り、編集 command を double tap で開く palette に集約しています
-- Object / Edit mode の切り替え、頂点 / face / object の選択、複数選択、`G/R/S/E` の transform、削除、loop cut、undo / redo、読み込み / 保存の主要フローを mobile profile で扱います
+- mmodeler は、スマートフォンやタブレットのタッチ操作に最適化した Blender 風の 3D modeler です
+- カメラ操作、選択、移動、回転、押し出し、ループカット、細分化、プリミティブ追加、ファイルの保存／読込を、タップ、ダブルタップ、長押し、ドラッグで操作できます
 
-mobile 操作体系の仕様
-- 基本思想は「canvas 上の 1 本指 drag は camera」「短い tap は遅延確定の選択」「double tap は command 展開」「長押しは mode 切り替え」です。同じ canvas drag に camera と command 判定を重ねると、pointermove の時点で camera が動いた後に command 判定が遅れて成立してしまうため、現在の実装では command を double tap palette へ集約しています
-- camera は `EyeRig` の touch 対応を使い、通常時は 1 本指 drag で orbit、2 本指 drag で pan、pinch で zoom を行います。これにより mobile 固有の camera helper を別実装せず、既存 scene 制御と同じ数値系を使います
-- 選択系は短い tap を主入口にします。Object Mode では object、Edit Mode では現在 tool に応じて vertex または face を選びます。Add Vertex tool では tap 位置へ頂点を追加します
-- mode 切り替えは long press を使います。対象がある位置で long press すると Object / Edit mode をトグルします。空き領域での long press は画面全体の browser zoom と混ざるリスクがあるため、mobile では camera fit を割り当てません
-- command 実行は double tap を使います。polygon / vertex / object 上で double tap すると 4x4 の command palette が開きます。このとき pointer 下の geometry は自動選択せず、未選択状態なら未選択のままにします。palette は 3 枚構成で、`Next` を押すたびに 1 -> 2 -> 3 -> 1 の順で循環します。1 枚目には `G/R/S/E`、loop cut、selection tool、Add、Del、projection、undo / redo、Mirror、wireframe を置きます。2 枚目には select all / invert、origin、screenshot、new scene、座標表示、load / save、複数 object を 1 object へ統合する `Join` などを置きます。3 枚目には primitive object の追加と primitive の分割数を置きます
+mobile 操作体系
+- 1 本指ドラッグ: 通常時は camera orbit。box select 準備中は矩形 preview
+- 2 本指ドラッグ: camera pan
+- pinch: camera zoom
+- 短い tap: Object Mode では object、Edit Mode では現在 tool に応じて vertex または face を選択。Add Vertex tool では tap 位置へ頂点を追加
+- 画面左上の ↑: Shift 相当の追加選択 toggle。active の間は tap 選択を続けられ、選択済みの vertex / face をもう一度 tap すると選択解除
+- double tap on geometry: 現在の選択状態を維持したまま 4x4 の command palette を開く。double tap だけでは pointer 下の geometry を自動選択しません
+- double tap on empty with geometry: box select を準備し、次のドラッグで矩形 preview、tap で複数選択を確定
+- double tap on empty scene: command palette を開く。頂点が 1 つもない状態では囲む対象がないため、Load や primitive 追加を呼び出せるようにします
+- long press on hit: Object / Edit Mode を切り替え
+- long press on empty: 状態表示のみ。camera や選択状態は変更しません
+
+command palette の基本
+- command palette は double tap で表示される 4x4 の grid menu です。Next で 4 枚の page を循環します
+- palette を開くとき、保留中の single tap 選択は破棄します。これにより、palette 表示後に 1 回目 tap の選択処理が遅れて走り、操作対象が変わることを防ぎます
+- 選択中や toggle 中の command は控えめな active 色で示します。選択が前提の command は、対象がない場合は無効になります
 - command palette は double tap した点を覆い隠さないよう、tap 位置が画面中心より右上なら右上、左下なら左下のように、画面中心から見た象限方向へずらして表示します。その方向に余地がない場合は対角側を試し、最終的には画面内へ収まる位置へ寄せます
-- 図形が存在する状態で empty 上を double tap した場合は box select を準備し、続けて drag した矩形内の対象を選択します。2 回目の tap を押したまま drag する操作と、double tap 後に改めて drag する操作の両方を受け付けます。頂点が 1 つもない状態では囲む対象がないため、empty double tap は command palette を開き、Load や primitive 追加を呼び出せるようにします
-- command palette の `Add` は追加系の文脈 command です。Edit Mode で 3 個または 4 個の頂点を選択しているときは face を作成し、それ以外では Add Vertex tool へ切り替えます。キートップは状態で変えず、選択中やトグル中の command は控えめな active 色で示します
-- `G/R/S/E/Del` など選択が前提の command は、選択対象がない場合は無効になり、実行されても何も変更しません。Load、New、projection、view、select all など、未選択でも意味がある command はそのまま使えます
-- transform は palette から `G/R/S/E` を選んだあと、1 本指 drag で preview、pointerup で確定するフローです。`G/R/S/E` を選んだ直後に command palette は閉じ、canvas drag を妨げない状態へ戻ります。transform 中だけ右上に小さな axis chooser (`Free / X / Y / Z`) が表示され、何も押さなければ `Free` のまま変形します。たとえば `G` の後に右上の `X` を押すと `GX` 相当の X 軸移動になり、`S` の後に `Y` を押すと Y 軸方向だけを scale します。`Free` を押すと axis constraint を解除します
-- loop cut は Edit Mode で四角 face を選択して `L / loop` を実行します。選択 face を開始点にして隣接する四角面へカットを伝播し、各四角面の対辺の中点をつないで 2 枚の四角面へ分割します。隣り合う 2 枚以上の face を選ぶと共有辺から loop 方向を確定できます。単独の四角面では `L / loop` で方向選択 preview に入り、pointer に近い辺に応じて preview 線が切り替わり、次の tap で確定します
-- 低頻度 command と object 作成 command は command palette の 2 枚目以降へまとめます。読み込み、gzip 圧縮済み JSON / GLB 保存、new scene、projection 切り替え、undo / redo、screenshot、primitive 追加、object 統合などを double tap から呼び出せるため、画面下端の ribbon を表示せずに横持ち画面を広く使えます
-- X mirror が ON のときは、command palette の `M / mirror` button が控えめな active 表示になります。OFF のときは通常色に戻ります
-- 視点切り替えの `X/-X/Y/-Y/Z/-Z` は view dock として常時表示します。縦長画面では画面上部、横長画面では右端へ配置し、command palette を開かなくても 6 方向の view を直接選べるようにします
-- 常時見える UI は canvas、status、view dock を中心にし、command は double tap 時だけ表示する grid command menu へ絞ります。詳細な debug 情報は `status` や diagnostics に残しつつ、普段の mobile 画面では重ね表示しません
+- Edit Mode へ入った直後の選択 tool は Face です。command palette でも Face が active 表示になり、必要な場合だけ Vert へ切り替えます
+- X mirror が ON のときは、command palette の M / mirror ボタンが控えめな active 表示になります。OFF のときは通常色に戻ります
+- 視点切り替えの X/-X/Y/-Y/Z/-Z は view dock として常時表示します。縦長画面では画面上部、横長画面では右端へ配置し、command palette を開かなくても 6 方向の view を直接選べるようにします
+- 常時見える UI は canvas、status、view dock を中心にし、command は double tap 時だけ表示する grid command menu へ絞ります。詳細な debug 情報は status や diagnostics に残しつつ、普段の mobile 画面では重ね表示しません
+
+主な編集 command
+- G/R/S/E/GG は、選択後に 1 本指ドラッグで preview します。pointerup は確定ではなくドラッグ segment の終了です。目的の位置になったら短い tap で確定します
+- X/Y/Z/N は transform command を選ぶ前に押す軸制限 option です。N は Edit Mode で選択 face の平均法線方向、または vertex 選択時に選択 vertex 周辺 face の平均法線方向に制限します。もう一度押すと Free に戻ります
+- GG は、選択 vertex が 2 つの隣接 vertex に挟まれた中点である場合、その元 edge の直線上で slide します。任意の接続 edge 上を動く command ではありません
+- Cut は Edit Mode で四角 face を選択して使います。選択 face を開始点に隣接する四角面へ cut を伝播し、各四角面を 2 枚の四角面へ分割します。単独 face では緑の preview 線で方向を選び、tap で確定します。X mirror が ON の場合は、source 側で決まった cut 方向を mirror face 上の対応 edge へ写し、左右を同じ command で分割します
+- Chain は、選択 vertex から隣接 edge の方向を preview し、quad 面だけでつながる vertex chain を tap で確定選択します。UV 球の緯線のような曲線 loop もたどりますが、立方体の 90 度角や三角面、五角面に当たると停止します
+- Loop は Select Loop です。loop cut で作成された中点 vertex から、左右の polygon 内で対辺側にある中点 vertex へ選択を広げます。Cut の後に Loop で中点列を選び、そのまま GG で形を調整できます
+- Add は Edit Mode で 3 個または 4 個の頂点を選択しているときは face 作成、それ以外では Add Vertex tool へ切り替えます
+- Subd は quad-only mesh を 1 段階 subdivision します。三角面や非 quad を含む mesh では実行しません
+- Catm は Catmull-Clark subdivision です。non-manifold edge や分岐した boundary など、smoothing の解釈が曖昧な形状では実行しません
+- 選択済み vertex は赤い marker で表示され、両端の vertex が選択済みの edge も赤く表示されます
 
 入力判断フロー
-- mmodeler の mobile profile では、command 呼び出しを double tap に集約します。canvas 上の 1 本指 drag は通常時は camera orbit として扱い、速く横へ動かしても command palette や page 切り替えにはしません
+- mmodeler の mobile profile では、command 呼び出しを double tap に集約します。canvas 上の 1 本指ドラッグは通常時は camera orbit として扱い、速く横へ動かしても command palette や page 切り替えにはしません
 - 短い tap は single tap か double tap かを判断するため、すぐには選択へ確定しません。pointerup 後に短い猶予を置き、その間に 2 回目の tap、long press、palette 表示、box select 開始が来なかった場合だけ single tap 選択として実行します。これにより double tap で palette を開く前に、1 回目の tap が選択解除や active object 変更を起こすことを防ぎます
-- single tap として確定した場合は、Object Mode では object、Edit Mode では現在 tool に応じて vertex / face を選びます。Add Vertex tool では tap 位置へ頂点を追加します。移動距離が大きい操作は tap ではなく drag として扱い、通常時は camera、box select 準備中は矩形選択に回します
+- single tap として確定した場合は、Object Mode では object、Edit Mode では現在 tool に応じて vertex / face を選びます。Add Vertex tool では tap 位置へ頂点を追加します。移動距離が大きい操作は tap ではなくドラッグとして扱い、通常時は camera、box select 準備中は矩形選択に回します
+- 画面左上の ↑ が active の間、single tap 選択は PC の Shift キーと同じ追加選択として扱います。追加選択中に選択済み vertex / face を tap すると、その要素だけを選択から外します
 - geometry 上で double tap した場合は command palette を開きます。このとき pointer 下の geometry は自動選択せず、既存選択があればその選択状態を維持します。未選択状態でも command palette を開けるため、Load、New、primitive 追加など選択なしで意味を持つ command を呼び出せます
 - command palette を開くときは、保留中の single tap 選択を破棄します。これにより、palette 表示後に 1 回目 tap の選択処理が遅れて走り、操作対象が変わることを防ぎます
-- 図形が存在する状態で empty 上を double tap した場合は `boxSelectArmed` になり、次の drag を矩形選択として扱います。この状態では camera orbit を止め、矩形選択を確定した後に camera orbit を再開します。頂点が 1 つもない状態の empty double tap は `boxSelectArmed` にせず、command palette を開きます
+- 図形が存在する状態で empty 上を double tap した場合は boxSelectArmed になり、次のドラッグを矩形選択 preview として扱います。この状態では camera orbit を止めます。ドラッグ後の pointerup では矩形を表示したまま確定待ちに入り、tap で選択を確定して camera orbit を再開します。確定前に範囲が違うと感じた場合は、もう一度ドラッグして矩形を作り直せます。boxSelectArmed や preview 確定待ちの状態で再度 double tap すると矩形選択を解除します。頂点が 1 つもない状態の empty double tap は boxSelectArmed にせず、command palette を開きます
 - canvas 上で long press した場合は、対象があれば Object / Edit mode を切り替えます。空き領域では状態表示だけを行い、camera や選択状態は変更しません。long press が成立した場合も保留中の single tap 選択は破棄します
-- transform 中は `transformController` が pointer を優先して受け取ります。touch pointer では pointerdown で確定せず、pointermove で preview、pointerup で確定します。これによりスマホでも `G/R/S/E` 後に drag で形状を動かせます
-- DebugDock の `mobileLastGesture` には、double tap、long press、box select、transform などの入力状態が記録されます。camera 操作と command 実行を分けているため、canvas drag が command として誤判定されないことを diagnostics から確認できます
+- transform 中は transformController が pointer を優先して受け取ります。タッチ pointer では pointermove で preview し、pointerup は segment 終了として次のドラッグの基準を更新します。確定は短い tap で行うため、スマホでも G/R/S/E/GG 後に ドラッグ、ドラッグ、tap のように複数回に分けて形状を動かせます
+- DebugDock の mobileLastGesture には、double tap、long press、box select、transform などの入力状態が記録されます。camera 操作と command 実行を分けているため、canvas ドラッグが command として誤判定されないことを diagnostics から確認できます
 
-画面内ジェスチャー一覧
+操作説明
 - tap on canvas: double tap 判定時間の後、現在 mode / tool に応じて object / vertex / face を選択、または Add Vertex tool なら頂点を追加
+- tap ↑ button: Shift 相当の追加選択 mode を ON / OFF
 - double tap on geometry: 現在の選択状態を維持したまま grid command menu を開く
-- double tap on empty with geometry: box select を準備し、次の drag を複数選択へ使う
+- double tap on empty with geometry: box select を準備し、次のドラッグで矩形 preview、tap で複数選択を確定。準備中または preview 中の double tap は cancel
 - double tap on empty scene: command palette を開く
 - long press on hit: Object / Edit mode を切り替え
 - long press on empty: 状態表示だけを行い、camera や選択状態は変更しない
-- drag after `G/R/S/E`: command palette を閉じた canvas 上で transform preview
-- tap `Free / X / Y / Z` during transform: Free 変形または world X/Y/Z 軸制限を選ぶ
-- pointerup during transform: transform を確定
-- tap during loop cut preview: pointer に近い辺を開始辺として loop cut を確定
-- tap view dock `X/-X/Y/-Y/Z/-Z`: 6 方向の view を直接選ぶ
-- 1 finger drag on canvas: 通常時は orbit camera。box select 準備中は矩形選択
-- 2 finger drag on canvas: pan camera
+- ドラッグ after G/R/S/E/GG: command palette を閉じた canvas 上で transform preview。pointerup は segment 終了
+- 2 本指回転: view roll。camera target や距離は保ったまま、画面中心を軸に視野そのものを回転します。2 本指 gesture 中は通常の orbit drag を一時停止し、指を離すと orbit 操作へ戻ります
+- tap X / Y / Z on command palette: transform command を選ぶ前に軸制限 option を指定
+- tap during transform: transform を確定
+- tap during loop cut preview: 現在表示中の preview 方向で loop cut を確定
+- tap view dock X/-X/Y/-Y/Z/-Z: 6 方向の view を直接選ぶ。2 本指回転で傾けた view roll も 0 に戻ります
+- 1 本指ドラッグ on canvas: 通常時は orbit camera。box select 準備中は矩形 preview
+- 2 本指ドラッグ on canvas: pan camera
 - pinch on canvas: zoom camera
 
 1st command palette の意味
-- 1 枚目は基本編集 command を集めています。表示上の行は `G / E / Add / v`、`R / L / Del / f`、`S / GG / Pr / Ud`、`Next / M / W / Rd` の順です
-- `G`: move
-- `E`: extrude
-- `Add`: Add Vertex tool。3/4 頂点選択時は face 作成
-- `v`: Vertex Select
-- `R`: rotate
-- `L`: loop cut
-- `Del`: delete selection
-- `f`: Face Select
-- `S`: scale
-- `GG`: Edge Slide。選択 vertex を隣接 edge の直線上で同じ比率だけ slide
-- `Pr`: projection。透視投影と orthogonal view を切り替える
-- `Ud`: undo
-- `Next`: 2nd command palette へ切り替え
-- `M`: X mirror
-- `W`: wireframe。Object / Edit Mode の mesh wireframe 表示を切り替える。Edit Mode で ON の間は、wireframe として見えている裏側の vertex も選択対象にする
-- `Rd`: redo
+- 1 枚目は基本編集 command と transform 軸制限 option を集めています。表示上の行は G / E / Vert / X、R / GG / Face / Y、S / Cut / Undo / Z、Next / Chain / Redo / N の順です
+- G: move
+- E: extrude
+- Vert: Vertex Select
+- X: transform の world X 軸制限。もう一度押すと Free
+- R: rotate
+- GG: Edge Slide。選択 vertex が 2 つの隣接 vertex に挟まれた中点である場合、その元 edge の直線上で slide
+- Face: Face Select
+- Y: transform の world Y 軸制限。もう一度押すと Free
+- S: scale
+- Cut: loop cut
+- Undo: undo
+- Z: transform の world Z 軸制限。もう一度押すと Free
+- Next: 2nd command palette へ切り替え
+- Chain: Chain Select。選択 vertex から隣接 edge の方向を preview し、quad 面だけでつながる vertex chain を tap で確定選択する。立方体の 90 度角では停止する
+- Redo: redo
+- N: Edit Mode で選択 face の平均法線方向、または vertex 選択時に選択 vertex 周辺 face の平均法線方向に transform を制限。もう一度押すと Free
 - 視点切り替えは常時表示の view dock から行う
 
 view dock の意味
-- `X`: side view
-- `-X`: reverse side view
-- `Y`: up view
-- `-Y`: reverse up view
-- `Z`: front view
-- `-Z`: reverse front view
-
-transform axis chooser の意味
-- `Free`: axis constraint を使わない。`G` は画面平面移動、`R` は視線方向軸回転、`S` は uniform scale、`E` は face normal 方向押し出しとして preview する
-- `X`: `G/R/S/E` の移動、回転、拡大縮小、押し出し方向を world X 軸へ制限する
-- `Y`: `G/R/S/E` の移動、回転、拡大縮小、押し出し方向を world Y 軸へ制限する
-- `Z`: `G/R/S/E` の移動、回転、拡大縮小、押し出し方向を world Z 軸へ制限する
+- X: side view
+- -X: reverse side view
+- Y: up view
+- -Y: reverse up view
+- Z: front view
+- -Z: reverse front view
+- view dock button を押すと、camera target と距離は維持したまま、view roll は 0 に戻ります
 
 2nd command palette の意味
-- 2 枚目は選択、file 操作、scene 操作を集めています。表示上の行は `A / O / - / Load`、`I / Ss / - / Json`、`H / N / - / Glb`、`Next / Join / Vcood / Tab` の順です
-- `A`: select all
-- `O`: Origin
-- `-`: 未割り当て。今後 command を追加するときの予約枠
-- `Load`: file load
-- `I`: invert selection
-- `Ss`: screenshot
-- `Json`: gzip 圧縮済み ModelAsset JSON (`.json.gz`) save
-- `H`: select X&lt;0
-- `N`: new scene
-- `Glb`: GLB save
-- `Next`: 3rd command palette へ切り替え
-- `Join`: Object Mode で選択中の 2 個以上の object を 1 object へ統合
-- `Vcood`: selected vertex coordinates
-- `Tab`: Edit / Object Mode 切り替え
+- 2 枚目は選択、細分化、表示切り替えを集めています。表示上の行は Catm / A / Add / Pr、Subd / Inv / Del / Wire、M / Half / - / Smooth、Next / Loop / - / Lens の順です
+- Catm: Catmull-Clark subdivision。active mesh 全体を smoothing ありで細分化
+- A: select all
+- Add: Add Vertex tool。3/4 頂点選択時は face 作成
+- Pr: projection。透視投影と orthogonal view を切り替える
+- Subd: quad-only mesh を 1 段階 subdivision
+- Inv: invert selection
+- Del: delete selection
+- Wire: Object / Edit Mode の mesh wireframe 表示を切り替える。Edit Mode で ON の間は、wireframe として見えている裏側の vertex も選択対象にする
+- M: X mirror
+- Half: select X&lt;0
+- Smooth: 共有頂点構造を変えず、SmoothShader の flat_shading を切り替えて smooth shading 表示にする
+- Lens: camera focal length preset を切り替える
+- Next: 3rd command palette へ切り替え
+- Loop: Select Loop。loop cut で作成された中点 vertex から、左右の polygon 内で対辺側にある中点 vertex へ選択を広げる。元 edge の colinear 方向ではなく、cut line の方向をたどる
 
 3rd command palette の意味
-- 3 枚目は primitive 追加と primitive の分割数を集めています。表示上の行は `Cube / Torus / Ball / DCone`、`Cyl / Cone / Plane / -`、`3 / 4 / 8 / 12`、`Next / 16 / 24 / 32` の順です
-- `Cube`: cube object を scene に追加
-- `Torus`: torus object を scene に追加
-- `Ball`: sphere object を scene に追加
-- `DCone`: double cone object を scene に追加
-- `Cyl`: cylinder object を scene に追加
-- `Cone`: cone object を scene に追加
-- `Plane`: plane object を scene に追加
-- `-`: 未割り当て。今後 command を追加するときの予約枠
-- `3` / `4` / `8` / `12` / `16` / `24` / `32`: Ball、Torus、Cyl、Cone、DCone の分割数を選ぶ。どれか 1 つが active 表示になり、初期値は `12`
-- `Next`: 1st command palette へ戻る
+- 3 枚目は file 操作、scene 操作、object 操作を集めています。表示上の行は Load / O / - / Cood、Json / Shot / - / Info、Glb / Join / - / -、Next / - / - / New の順です
+- Load: file load
+- O: Origin
+- Cood: selected vertex coordinate overlay。Edit Mode で選択中の vertex 座標を表示し、単一 vertex 選択時は X / Y / Z を直接入力して更新できる
+- Info: active object の bounding box size、vertex / polygon count、origin を一時 overlay に表示し、tap で閉じる
+- Json: gzip 圧縮済み ModelAsset JSON (.json.gz) save
+- Shot: screenshot
+- Glb: GLB save
+- Join: Object Mode で選択中の 2 個以上の object を 1 object へ統合
+- New: new scene
+- Next: 4th command palette へ切り替え
+
+4th command palette の意味
+- 4 枚目は primitive 追加と primitive の分割数を集めています。表示上の行は Cube / Torus / Ball / DCone、Cyl / Cone / Plane / -、3 / 4 / 8 / 12、Next / 16 / 24 / 32 の順です
+- Cube: cube object を scene に追加
+- Torus: torus object を scene に追加
+- Ball: sphere object を scene に追加
+- DCone: double cone object を scene に追加
+- Cyl: cylinder object を scene に追加
+- Cone: cone object を scene に追加
+- Plane: plane object を scene に追加
+- 3 / 4 / 8 / 12 / 16 / 24 / 32: Ball、Torus、Cyl、Cone、DCone の分割数を選ぶ。どれか 1 つが active 表示になり、初期値は 12
+- Next: 1st command palette へ戻る
 
 選択状態の方針
 - mobile では geometry 上の double tap を command palette 表示に使い、double tap だけで geometry を選択しません。これにより、未選択でも使える command を呼び出すための状態を保てます
-- empty 上の double tap は矩形選択の開始に使います。geometry 上で command、empty 上で範囲選択という役割分担にすることで、camera drag との衝突を避けます
-- 複数選択は `A` select all、`I` invert selection、`H` select X&lt;0 などの command を中心に扱います。face / vertex の混在選択は desktop 版と同じく mode / tool ごとに分け、同時編集対象を曖昧にしません
+- empty 上の double tap は矩形選択の開始に使います。geometry 上で command、empty 上で範囲選択という役割分担にすることで、camera ドラッグとの衝突を避けます
+- 矩形選択はドラッグ終了時点では確定せず、矩形を表示したまま確認できます。tap で確定するまで再ドラッグで修正できるため、スマホで指に隠れていた終点を確認してから選択を変えられます
+- 複数選択は A select all、I invert selection、H select X&lt;0 などの command を中心に扱います。face / vertex の混在選択は desktop 版と同じく mode / tool ごとに分け、同時編集対象を曖昧にしません
+- 画面左上の ↑ toggle は、細かい vertex / face を連続して選ぶための mobile 用 Shift です。状態は status とボタンの active 表示で確認できます
 
 このサンプルで使う webg 機能
-- `WebgApp`: embedded canvas、Screen / Shader / Space / Input / Message の初期化
-- `EyeRig`: 1 本指 orbit、2 本指 pan、pinch zoom を含む touch camera
-- `Touch.attachSurface()`: double tap、long press を gesture として検出。mmodeler では command palette 表示と mode 切り替えに使います
-- `ModelAsset`: 編集結果の保存形式、読み込み済み asset の mesh 取り出し、gzip 圧縮済み JSON download
-- `WebgApp.loadModel()`: glTF / GLB / Collada を ModelAsset へ正規化する入口
-- `Overlay2DRenderer`: Edit Mode の頂点 marker overlay
-- `EdgeWireframeOverlayRenderer`: Edit Mode の edge overlay
-- `Space.raycast()`: object / face pick
+- WebgApp: embedded canvas、Screen / Shader / Space / Input / Message の初期化
+- EyeRig: 1 本指 orbit、2 本指 pan、pinch zoom を含むタッチ camera
+- Touch.attachSurface(): double tap、long press を gesture として検出。mmodeler では command palette 表示と mode 切り替えに使います
+- ModelAsset: 編集結果の保存形式、読み込み済み asset の mesh 取り出し、gzip 圧縮済み JSON download
+- WebgApp.loadModel(): glTF / GLB / Collada を ModelAsset へ正規化する入口
+- Overlay2DRenderer: Edit Mode の頂点 marker overlay
+- EdgeWireframeOverlayRenderer: Edit Mode の edge overlay
+- Space.raycast(): object / face pick
 
 Blender との ModelAsset JSON 受け渡し
-- `samples/mmodeler/blender_modelasset_io.py` は、mmodeler の `.json` / `.json.gz` 保存データを Blender と受け渡しするための Blender アドオンです
-- Blender の `Edit &gt; Preferences &gt; Add-ons &gt; Install...` から `samples/mmodeler/blender_modelasset_io.py` を選び、`Webg ModelAsset JSON I/O` を有効化します
-- 有効化後は `File &gt; Import &gt; Webg ModelAsset JSON (.json)` と `File &gt; Export &gt; Webg ModelAsset JSON (.json)` が追加されます。対象形式は `.json` と `.json.gz` です
-- mmodeler から Blender へ渡す場合は、mmodeler の `Json` で `mmodeler_modelasset.json.gz` を保存し、Blender 側で Import します
-- Blender から mmodeler へ戻す場合は、Blender 側で mesh object を選択して Export し、mmodeler の `Load` で書き出した `.json` または `.json.gz` を読み込みます
-- Export オプションの `Export as .json.gz` を ON にすると gzip 圧縮済み `.json.gz`、OFF にすると通常の `.json` を書き出します。保存名に `.json` や `.json.gz` が既に付いていても、二重拡張子にならないよう正規化します
+- samples/mmodeler/blender_modelasset_io.py は、mmodeler の .json / .json.gz 保存データを Blender と受け渡しするための Blender アドオンです
+- Blender の Edit &gt; Preferences &gt; Add-ons &gt; Install... から samples/mmodeler/blender_modelasset_io.py を選び、Webg ModelAsset JSON I/O を有効化します
+- 有効化後は File &gt; Import &gt; Webg ModelAsset JSON (.json) と File &gt; Export &gt; Webg ModelAsset JSON (.json) が追加されます。対象形式は .json と .json.gz です
+- mmodeler から Blender へ渡す場合は、mmodeler の Json で ma_YYYYMMDD_HHMMSS.json.gz 形式のファイルを保存し、Blender 側で Import します
+- Blender から mmodeler へ戻す場合は、Blender 側で mesh object を選択して Export し、mmodeler の Load で書き出した .json または .json.gz を読み込みます
+- Export オプションの Export as .json.gz を ON にすると gzip 圧縮済み .json.gz、OFF にすると通常の .json を書き出します。保存名に .json や .json.gz が既に付いていても、二重拡張子にならないよう正規化します
 - Import / Export では既定で Blender の Z-up と ModelAsset の Y-up を相互変換します。軸変換を行いたくない検証では、Import / Export オプションの axis conversion を OFF にします
-- このアドオンは mesh geometry、material の基本色、`polygonLoops` を中心に扱います。複雑な rig、animation、一般的な 3D ツール連携を優先する場合は GLB / glTF 経路を使います
+- このアドオンは mesh geometry、material の基本色、polygonLoops を中心に扱います。複雑な rig、animation、一般的な 3D ツール連携を優先する場合は GLB / glTF 経路を使います
 
 読み込み時の段階表示
-- `.json.gz` を読み込むと、status/message に `loading &lt;file&gt;: decompressing`、`loading &lt;file&gt;: parsing`、`loading &lt;file&gt;: importing` の順で表示します。iPhone Safari などで固まる場合に、gzip 展開、JSON parse、editor への取り込みのどこで止まったかを見分けるための表示です
+- .json.gz を読み込むと、status/message に loading &lt;file&gt;: decompressing、loading &lt;file&gt;: parsing、loading &lt;file&gt;: importing の順で表示します。iPhone Safari などで固まる場合に、gzip 展開、JSON parse、editor への取り込みのどこで止まったかを見分けるための表示です
 - 各段階表示の直後に 1 frame 待ってから重い処理へ入ります。これにより、JSON parse などの同期処理で browser が固まった場合でも、直前の段階名が画面へ反映されやすくなります
-- `.json` は gzip 展開がないため `parsing` から始まり、その後 `importing` へ進みます。glTF / GLB / Collada は loader の stage 表示を使い、ModelAsset 化後に `importing` へ進みます
+- .json は gzip 展開がないため parsing から始まり、その後 importing へ進みます。glTF / GLB / Collada は loader の stage 表示を使い、ModelAsset 化後に importing へ進みます
 
 確認ポイント
 - 起動直後に full-screen canvas が広く見え、canvas 外 panel や上部 HUD がないことを確認します
 - tap で object / vertex / face を選択できることを確認します
-- selection 上の double tap で command palette が開き、`Next` で 1st / 2nd / 3rd の 3 枚が循環することを確認します
-- active 状態の command は控えめな色、`Next` は赤系の色で表示されることを確認します
-- Edit Mode で隣り合う四角 face を選択し、`L / loop` で選択範囲外の隣接四角面にもカットが伝播し、中点 vertex が共有されることを確認します
-- Edit Mode で四角 face を 1 枚だけ選択し、`L / loop` 後に pointer を face の各辺へ近づけると preview 線が切り替わり、tap でその方向の loop cut が確定することを確認します
-- Edit Mode で 3 個または 4 個の頂点を選択したとき、`Add` の tap で面を作成できることを確認します
-- 1st palette の `W` で Object / Edit Mode の mesh wireframe 表示が切り替わり、Edit Mode では見えている裏側の vertex も選択できることを確認します
-- 1st palette の `Pr` で透視投影と orthogonal view が切り替わることを確認します
-- 1st palette の `GG` を選んだあと、drag で選択 vertex が隣接 edge の直線上を同じ比率で slide し、pointerup で確定できることを確認します
-- 2nd palette の `Vcood` で選択 vertex の座標が message に表示されることを確認します
-- Object Mode で複数 object を選択し、2nd palette の `Join` で 1 object へ統合できることを確認します
-- 3rd palette の `Cube` / `Torus` / `Ball` / `DCone` / `Cyl` / `Cone` / `Plane` で既存 object を残したまま primitive object を追加できることを確認します
-- 3rd palette の分割数 button を押すと active 表示が切り替わり、その後に追加する Ball / Torus / Cyl / Cone / DCone の分割数へ反映されることを確認します
-- `G/R/S/E` を選んだあと command palette が閉じ、1 本指 drag で Free preview が動き、pointerup で確定できることを確認します
-- `G/R/S/E` を選んだ直後に右上の `Free / X / Y / Z` axis chooser が表示され、たとえば `G` -&gt; `X` で X 軸方向だけへ移動でき、`Free` で軸制限を解除できることを確認します
+- 画面左上の ↑ を ON にして、vertex / face を連続 tap で追加選択でき、選択済み要素をもう一度 tap すると外れることを確認します
+- selection 上の double tap で command palette が開き、Next で 1st / 2nd / 3rd / 4th の 4 枚が循環することを確認します
+- active 状態の command は控えめな色、Next は赤系の色で表示されることを確認します
+- Edit Mode で隣り合う四角 face を選択し、Cut で選択範囲外の隣接四角面にもカットが伝播し、中点 vertex が共有されることを確認します
+- Edit Mode で四角 face を 1 枚だけ選択し、Cut 後にドラッグで pointer を face の各辺へ近づけると緑の preview 線が切り替わり、短い tap で表示中の方向の loop cut が確定することを確認します。preview 中に長押しや mode 切り替え操作をしても Object Mode へ移らず、確定または Escape cancel を求める message が出ることを確認します
+- X mirror が ON の状態で片側の四角 face を Cut すると、反対側の mirror face も対応する方向で loop cut されることを確認します
+- 任意の分岐 vertex や UV 球の緯線上の vertex を Vertex Select で選択し、1st palette の Chain で preview 線を選んで tap すると、quad 面だけでつながる vertex chain が選択され、三角面や五角面では停止することを確認します
+- loop cut で作成された中点 vertex を Vertex Select で選択し、2nd palette の Loop で左右の polygon の対辺中点へ選択が広がることを確認します
+- Loop で選択された中点列の edge が赤く表示されることを確認します
+- Edit Mode で 3 個または 4 個の頂点を選択したとき、Add の tap で面を作成できることを確認します
+- 2nd palette の Wire で Object / Edit Mode の mesh wireframe 表示が切り替わり、Edit Mode では見えている裏側の vertex も選択できることを確認します
+- 2nd palette の Smooth で mesh の smooth shading 表示が切り替わることを確認します
+- 2nd palette の Pr で透視投影と orthogonal view が切り替わることを確認します
+- 2nd palette の Subd と Catm が対象 mesh の条件を満たすときだけ実行されることを確認します
+- 1st palette の GG を選んだあと、ドラッグで選択 vertex が元 edge の直線上を slide し、複数回ドラッグしたあと tap で確定できることを確認します
+- 3rd palette の Cood で coordinate overlay が開き、単一 vertex 選択時は X / Y / Z を入力して Apply で座標を更新できることを確認します
+- Object Mode で複数 object を選択し、3rd palette の Join で 1 object へ統合できることを確認します
+- 4th palette の Cube / Torus / Ball / DCone / Cyl / Cone / Plane で既存 object を残したまま primitive object を追加できることを確認します
+- 4th palette の分割数ボタンを押すと active 表示が切り替わり、その後に追加する Ball / Torus / Cyl / Cone / DCone の分割数へ反映されることを確認します
+- G/R/S/E を選んだあと command palette が閉じ、1 本指ドラッグで preview が動き、pointerup では状態が保持され、短い tap で確定できることを確認します
+- 1st palette の X/Y/Z を押してから G/R/S/E を選ぶと、選んだ world 軸方向だけへ transform preview が制限されることを確認します
 - 未選択状態で polygon 上を double tap しても、その polygon / face / vertex が自動選択されず、未選択のまま command palette が開くことを確認します
-- canvas 上の 1 本指 drag は速く動かしても camera orbit として動作し、command が誤実行されないことを確認します
-- 2nd palette から load / save / projection / undo / redo / screenshot / new scene などが実行できることを確認します
-- X mirror が ON のとき、palette 上の `M / mirror` button が active 色に変わることを確認します
-- 図形が存在する状態で empty 上を double tap したあと drag すると、camera が回らず box select が動作することを確認します
+- canvas 上の 1 本指ドラッグは速く動かしても camera orbit として動作し、command が誤実行されないことを確認します
+- 3rd palette から load / save / screenshot / new scene などが実行できることを確認します
+- X mirror が ON のとき、palette 上の M / mirror ボタンが active 色に変わることを確認します
+- 図形が存在する状態で empty 上を double tap したあとドラッグすると、camera が回らず box select preview が表示され、tap で確定するまで矩形が残ることを確認します
+- boxSelectArmed または box select preview 表示中にもう一度 double tap すると、矩形選択が解除され camera orbit が戻ることを確認します
 - 全 object を削除して頂点が 1 つもない状態では、empty double tap で command palette が開き、primitive 追加や Load を選べることを確認します
-- 1 本指 drag orbit、2 本指 drag pan、pinch zoom が scene 上で動くことを確認します
+- 1 本指ドラッグで orbit、2 本指ドラッグで pan、pinch zoom が scene 上で動くことを確認します
 
 補足
 - このサンプルは mobile profile の構成であり、スマホやタブレット上での command palette 操作を優先しています
 - 編集データ、pick、transform、保存形式は同じ画面内で一貫して扱い、mobile 専用に別仕様の geometry を持たないようにしています
+
 </pre>
 </section>
 
@@ -248,24 +284,24 @@ Blender との ModelAsset JSON 受け渡し
 サンプル: cube4
 
 概要
-- `webg` ベースで作った 3D falling-block game です
+- webg ベースで作った 3D falling-block game です
 - 6x6x10 の立体盤面へ polycube を落とし、一定以上埋まった layer を消しながら score を伸ばします
-- `WebgApp` を入口にし、`Shape` / `Primitive` で床・ブロック・層ごとのワイヤーフレーム壁を構築しています
-- camera は `EyeRig` の orbit 構成で、移動入力は camera yaw 基準で `x / z` 方向へ補正しています
+- WebgApp を入口にし、Shape / Primitive で床・ブロック・層ごとのワイヤーフレーム壁を構築しています
+- camera は EyeRig の orbit 構成で、移動入力は camera yaw 基準で x / z 方向へ補正しています
 - 開始前は自動落下せず、全ブロック種の回転デモを見ながら操作を確認できます
-- ゲーム中は HUD を `score / level / layer` の 1 行へ絞り、開始前と game over 時だけ操作ガイドを表示します
+- ゲーム中は HUD を score / level / layer の 1 行へ絞り、開始前と game over 時だけ操作ガイドを表示します
 - ghost 表示、next piece 表示、high score 保存、スクリーンショット、効果音、BGM を含む構成です
 - layer clear は全面一致ではなく、1 層 36 マス中 29 マス以上で成立し、占有率に応じて得点が変わります
 
 このサンプルで使うwebg機能
-- `WebgApp`: Screen / Shader / Space / Input / Message / progress 保存の標準初期化
-- `EyeRig(type="orbit")`: 盤面全体を見る orbit camera
-- `Shape` / `Primitive`: ブロック、床、台座、層ごとのワイヤーフレーム壁を生成
-- `Shape.createInstance()`: block 形状の shared resource を再利用し、slot ごとに色と材質だけを切り替える
-- `Shape.setWireframe(true)`: 層壁をポリゴン辺ループの wireframe として表示
-- `Message`: status と guide の HUD 表示
-- `GameAudioSynth`: SE と BGM の再生
-- `takeScreenshot()`: 画面キャプチャ保存
+- WebgApp: Screen / Shader / Space / Input / Message / progress 保存の標準初期化
+- EyeRig(type="orbit"): 盤面全体を見る orbit camera
+- Shape / Primitive: ブロック、床、台座、層ごとのワイヤーフレーム壁を生成
+- Shape.createInstance(): block 形状の shared resource を再利用し、slot ごとに色と材質だけを切り替える
+- Shape.setWireframe(true): 層壁をポリゴン辺ループの wireframe として表示
+- Message: status と guide の HUD 表示
+- GameAudioSynth: SE と BGM の再生
+- takeScreenshot(): 画面キャプチャ保存
 
 確認ポイント
 - 立体盤面の周囲に、各層を囲うワイヤーフレーム壁が見え、ブロックがどの高さにあるか把握しやすいことを確認します
@@ -278,46 +314,46 @@ Blender との ModelAsset JSON 受け渡し
 
 形状と描画負荷の見方
 
-このサンプルは、多数の block を表示しながら `Shape.createInstance()` による mesh 共有の効果も確認できる構成です。diagnostics の `vertexCount`、`triangleCount`、`nodeCount`、`shapeCount`、`meshCount` を見ると、同じ見た目でも shape の作り方によって GPU へ渡す頂点数や mesh 数が大きく変わることが分かります。以下は block shape 構成ごとの代表値です。
+このサンプルは、多数の block を表示しながら Shape.createInstance() による mesh 共有の効果も確認できる構成です。diagnostics の vertexCount、triangleCount、nodeCount、shapeCount、meshCount を見ると、同じ見た目でも shape の作り方によって GPU へ渡す頂点数や mesh 数が大きく変わることが分かります。以下は block shape 構成ごとの代表値です。
 
 - bevel 1段
-  `vertexCount=42112`
-  `triangleCount=17824`
-  `nodeCount=429`
-  `shapeCount=417`
-  `meshCount=408`
+  vertexCount=42112
+  triangleCount=17824
+  nodeCount=429
+  shapeCount=417
+  meshCount=408
 - bevel 3段
-  `vertexCount=84128`
-  `triangleCount=37216`
-  `nodeCount=429`
-  `shapeCount=417`
-  `meshCount=408`
+  vertexCount=84128
+  triangleCount=37216
+  nodeCount=429
+  shapeCount=417
+  meshCount=408
 - bevel 3段 + 共有頂点
-  `vertexCount=23932`
-  `triangleCount=37216`
-  `nodeCount=429`
-  `shapeCount=417`
-  `meshCount=408`
+  vertexCount=23932
+  triangleCount=37216
+  nodeCount=429
+  shapeCount=417
+  meshCount=408
 - bevel 3段 + 共有頂点 + instance化
-  `vertexCount=391`
-  `triangleCount=508`
-  `nodeCount=429`
-  `shapeCount=417`
-  `meshCount=9`
+  vertexCount=391
+  triangleCount=508
+  nodeCount=429
+  shapeCount=417
+  meshCount=9
 
-bevel を 1段から 3段へ増やすと triangle 数と vertex 数が増えますが、共有頂点化によって triangle 数を保ったまま vertex 数を大きく減らせます。さらに `Shape.createInstance()` で shared resource を再利用すると、scene にぶら下がる `shapeCount` や `nodeCount` はそのままでも、実際に build される mesh 数と頂点数を大幅に減らせます。
+bevel を 1段から 3段へ増やすと triangle 数と vertex 数が増えますが、共有頂点化によって triangle 数を保ったまま vertex 数を大きく減らせます。さらに Shape.createInstance() で shared resource を再利用すると、scene にぶら下がる shapeCount や nodeCount はそのままでも、実際に build される mesh 数と頂点数を大幅に減らせます。
 
 操作説明
 - 矢印キー: camera 向き基準で移動
-- `A` / `S` / `D`: X / Y / Z 軸回転
-- `X`: 1 step down
-- `Space`: hard drop
-- `P`: pause
-- `R`: restart
-- `K`: screenshot
-- `B`: block shape mode 切替
-- `T`: desktop で touch controls の表示 / 非表示を切替
-- touch ボタン: `RX` / `RY` / `RZ` / `⬇`、`←` / `→` / `↑` / `↓`、`R`
+- A / S / D: X / Y / Z 軸回転
+- X: 1 step down
+- Space: hard drop
+- P: pause
+- R: restart
+- K: screenshot
+- B: block shape mode 切替
+- T: desktop で touch controls の表示 / 非表示を切替
+- touch ボタン: RX / RY / RZ / ⬇、← / → / ↑ / ↓、R
 </pre>
 </section>
 <section class='sample'>
@@ -327,14 +363,14 @@ bevel を 1段から 3段へ増やすと triangle 数と vertex 数が増えま�
 サンプル: collisions
 
 概要
-- `space.checkCollisions()` で軸平行境界ボックス重なり判定（AABB, 広域）の候補を取り、サンプル内の球 vs mesh 距離判定で詳細衝突を検証するサンプルです。
+- space.checkCollisions() で軸平行境界ボックス重なり判定（AABB, 広域）の候補を取り、サンプル内の球 vs mesh 距離判定で詳細衝突を検証するサンプルです。
 - 衝突状態を青（非衝突）、緑（AABB のみ）、赤（詳細衝突）で色分けし、広域判定と詳細判定の差を同時に比較できるようにしています。
 
 このサンプルで使うwebg機能
-- `Space.checkCollisions`: AABB の衝突候補ペア検出
-- `Shape.getBoundingBox` / メッシュ参照: サンプル内の球 vs mesh 詳細判定の補助
-- `Shape.updateMaterial`: 状態に応じた色変更
-- `Node`: 移動体・カメラ軌道制御
+- Space.checkCollisions: AABB の衝突候補ペア検出
+- Shape.getBoundingBox / メッシュ参照: サンプル内の球 vs mesh 詳細判定の補助
+- Shape.updateMaterial: 状態に応じた色変更
+- Node: 移動体・カメラ軌道制御
 
 確認ポイント
 - AABB 候補だけの green hit と、球 vs mesh 距離判定まで通った red hit で、ヒット対象がどのように変わるかを比較します
@@ -342,9 +378,9 @@ bevel を 1段から 3段へ増やすと triangle 数と vertex 数が増えま�
 - カメラ角度を変えても誤判定が増えないかを確認し、判定そのものが表示依存になっていないことを検証します
 
 操作説明
-- `ArrowLeft` / `ArrowRight`: カメラを水平オービット
-- `ArrowUp` / `ArrowDown`: カメラを上下オービット
-- タッチUI（coarse pointer端末）: 左側 `← / ↑`、右側 `↓ / →` の2グループで同じ操作ができます
+- ArrowLeft / ArrowRight: カメラを水平オービット
+- ArrowUp / ArrowDown: カメラを上下オービット
+- タッチUI（coarse pointer端末）: 左側 ← / ↑、右側 ↓ / → の2グループで同じ操作ができます
 </pre>
 </section>
 
@@ -359,42 +395,42 @@ bevel を 1段から 3段へ増やすと triangle 数と vertex 数が増えま�
 - ゲーム実装時の「複数Shape再利用」「ノード更新」「入力反映」の参考実装として使えます。
 - キャンバスはPC/スマホともにブラウザのviewport全体へ追従して表示されます。
 - 縦長画面ではFOVを自動調整して視野を確保します。
-- gameplay 中の短い状態表示は `drawHud()` の canvas HUD へまとめ、画面上の情報をゲーム進行に必要な表示へ絞っています。
+- gameplay 中の短い状態表示は drawHud() の canvas HUD へまとめ、画面上の情報をゲーム進行に必要な表示へ絞っています。
 
 このサンプルで使うwebg機能
-- app 側 `GameStateManager`: `intro / play / pause / stage-clear / result` の top-level phase 管理
-- `Space` / `Node`: ゲームオブジェクト管理
-- `Shape`: 床・壁・ブロック・パドル・パック生成
-- `SmoothShader`: 法線マップ付き/無しブロック描画を 1 本で扱う標準材質
-- `ParticleEmitter`: ブロック破壊時の spark effect をまとめて管理
-- `Texture`: ブロック用の手続きテクスチャ生成
-- `Message`: `drawHud()` から描く gameplay 専用 HUD
-- `Touch`: `← / → / A / D / R` の固定ボタン
-- `GameAudioSynth`: melody preset と SE catalog を使った BGM/SE再生
+- app 側 GameStateManager: intro / play / pause / stage-clear / result の top-level phase 管理
+- Space / Node: ゲームオブジェクト管理
+- Shape: 床・壁・ブロック・パドル・パック生成
+- SmoothShader: 法線マップ付き/無しブロック描画を 1 本で扱う標準材質
+- ParticleEmitter: ブロック破壊時の spark effect をまとめて管理
+- Texture: ブロック用の手続きテクスチャ生成
+- Message: drawHud() から描く gameplay 専用 HUD
+- Touch: ← / → / A / D / R の固定ボタン
+- GameAudioSynth: melody preset と SE catalog を使った BGM/SE再生
 
 確認ポイント
 - パドル移動と回転に対してパックの反射方向が安定して更新されるかを確認し、衝突応答ロジックの基礎品質を検証します
-- パックを `paddleNode` ローカルZ正側へ入れた瞬間に `PACK` 残数が1減ること、領域に留まり続けても追加減算されないことを確認します
-- `PACK` が 0 になったフレームでゲーム終了し、終了HUDにハイスコア上位5件が表示されることを確認します
-- 緑色の補給ブロック（法線/テクスチャ無し、`SmoothShader` の単色経路）を破壊したときに `PACK` 残数が1増える演出が出ることを確認します
-- ブロック破壊時にスコアや進捗表示（`(現数/目標数)`）が即時更新されるかを確認し、`drawHud()` による gameplay HUD 連携が正しいことを確認します
+- パックを paddleNode ローカルZ正側へ入れた瞬間に PACK 残数が1減ること、領域に留まり続けても追加減算されないことを確認します
+- PACK が 0 になったフレームでゲーム終了し、終了HUDにハイスコア上位5件が表示されることを確認します
+- 緑色の補給ブロック（法線/テクスチャ無し、SmoothShader の単色経路）を破壊したときに PACK 残数が1増える演出が出ることを確認します
+- ブロック破壊時にスコアや進捗表示（(現数/目標数)）が即時更新されるかを確認し、drawHud() による gameplay HUD 連携が正しいことを確認します
 - SE/BGM がゲーム状態に応じて再生されるか（BGM preset, 通知SE, 衝突SE）が整理されているかを確認します
 
 操作説明
-- `ArrowLeft` / `ArrowRight`: パドルを長軸方向に移動
-- `A` / `D`: パドルを回転
-- `R`: プレイ中はパック位置をリセット、ゲーム終了後はゲームを再スタート
-- `K`: 一時停止のON/OFF
-- `O`: ゲームオーバーを強制
-- `P`: スクリーンショット保存
-- `Q` / `W`: diagnostics を text / json で probe 表示
-- `C` / `V`: diagnostics を text / json で clipboard copy
-- `J` / `L`: diagnostics を text / json で console log
-- `F` / `G`: diagnostics を text / json で保存
-- `M`: debug / release 表示切替
-- `Enter` / `Space` / クリック: ステージ開始待機中の開始トリガ
-- スマホ（coarse pointer）では画面下にタッチボタン `← / → / A / D / R` を表示
-- スマホUIに pause / debug / diagnostics 系の `K / O / P / Q / W / C / V / J / L / F / G / M` は表示しない
+- ArrowLeft / ArrowRight: パドルを長軸方向に移動
+- A / D: パドルを回転
+- R: プレイ中はパック位置をリセット、ゲーム終了後はゲームを再スタート
+- K: 一時停止のON/OFF
+- O: ゲームオーバーを強制
+- P: スクリーンショット保存
+- Q / W: diagnostics を text / json で probe 表示
+- C / V: diagnostics を text / json で clipboard copy
+- J / L: diagnostics を text / json で console log
+- F / G: diagnostics を text / json で保存
+- M: debug / release 表示切替
+- Enter / Space / クリック: ステージ開始待機中の開始トリガ
+- スマホ（coarse pointer）では画面下にタッチボタン ← / → / A / D / R を表示
+- スマホUIに pause / debug / diagnostics 系の K / O / P / Q / W / C / V / J / L / F / G / M は表示しない
 </pre>
 </section>
 
@@ -405,40 +441,40 @@ bevel を 1段から 3段へ増やすと triangle 数と vertex 数が増えま�
 サンプル: physics_bounce
 
 概要
-- `PhysicsSpace` の中で複数の sphere が床、壁、球同士で反発しながら跳ねる見え方を確認する sample です
-- `WebgApp` を使って起動、HUD、入力、camera 操作をまとめ、物理本体の構成は `PhysicsNode` と `Collider` の組み合わせとして追えるようにしています
-- 球は shared `ShapeResource` を使う instance shape で描画し、`?count=1000` まで増やしても「物理 body は個別、描画 mesh は共有」という構成を確認しやすくしています
-- 床は `PlaneCollider`、壁は `BoxCollider`、球は `SphereCollider` とし、`plane-sphere`、`sphere-sphere`、`sphere-box` の反発差を同じ arena の中で比較できます
-- `Space` キーで球を追加投入し、既存の球群に途中から衝突させることで、単発の落下だけでなく混み合った反発の見え方も確認できます
+- PhysicsSpace の中で複数の sphere が床、壁、球同士で反発しながら跳ねる見え方を確認する sample です
+- WebgApp を使って起動、HUD、入力、camera 操作をまとめ、物理本体の構成は PhysicsNode と Collider の組み合わせとして追えるようにしています
+- 球は shared ShapeResource を使う instance shape で描画し、?count=1000 まで増やしても「物理 body は個別、描画 mesh は共有」という構成を確認しやすくしています
+- 床は PlaneCollider、壁は BoxCollider、球は SphereCollider とし、plane-sphere、sphere-sphere、sphere-box の反発差を同じ arena の中で比較できます
+- Space キーで球を追加投入し、既存の球群に途中から衝突させることで、単発の落下だけでなく混み合った反発の見え方も確認できます
 
 このサンプルで使う webg 機能
-- `WebgApp`: Screen、Shader、Space、Input、Message の初期化をまとめる
-- `PhysicsSpace`: 重力、固定タイムステップ、反発、摩擦、sleep を管理する
-- `PhysicsNode`: dynamic body と static body の配置、および速度リセットを行う
-- `SphereCollider`、`PlaneCollider`、`BoxCollider`: 球、床、壁の衝突形状を構成する
-- `Shape` と `Primitive`: sphere、床、壁の mesh を作る
-- `EyeRig`: orbit camera と pointer / keyboard による視点操作を担当する
+- WebgApp: Screen、Shader、Space、Input、Message の初期化をまとめる
+- PhysicsSpace: 重力、固定タイムステップ、反発、摩擦、sleep を管理する
+- PhysicsNode: dynamic body と static body の配置、および速度リセットを行う
+- SphereCollider、PlaneCollider、BoxCollider: 球、床、壁の衝突形状を構成する
+- Shape と Primitive: sphere、床、壁の mesh を作る
+- EyeRig: orbit camera と pointer / keyboard による視点操作を担当する
 
 確認ポイント
 - 球が床で跳ね返るとき、反発係数の差によって跳ね返り高さが変わることを確認します
 - 球同士の接触が起きた瞬間だけ赤く flash し、床 contact だけでは赤くならないことを確認します
 - shared sphere resource の参照数が HUD に表示され、球数が増えても球 mesh を共通化していることを確認できます
 - drag、Shift + drag、wheel で camera を動かしても、arena 全体の反発の流れを見失いにくいことを確認します
-- `?count=` で球数を増減したとき、軽い確認から高密度の反発確認まで同じ sample で扱えることを確認します
+- ?count= で球数を増減したとき、軽い確認から高密度の反発確認まで同じ sample で扱えることを確認します
 
 操作説明
 - drag: orbit camera
 - Shift + drag: pan
-- wheel / `[` / `]`: zoom
-- `Space`: 球を 5 個追加する
-- `P`: 一時停止 / 再開
-- `R`: 球を初期状態へ戻す
-- `?count=240` のように URL へ付けると、初期球数を変更できます
+- wheel / [ / ]: zoom
+- Space: 球を 5 個追加する
+- P: 一時停止 / 再開
+- R: 球を初期状態へ戻す
+- ?count=240 のように URL へ付けると、初期球数を変更できます
 
 実装確認の見方
 - 反発、摩擦、sphere-sphere 接触、sphere-box 接触の挙動を見るときは、このサンプルで跳ね返り高さ、赤い contact flash、壁際の反応を確認できます
-- `shared sphere resource refs` は描画 mesh の共有が維持されているかを見る目安です
-- `PhysicsSpace` の契約確認そのものは `unittest/physics_space_contracts` が担当し、このサンプルは見え方と相互作用の確認を担当します
+- shared sphere resource refs は描画 mesh の共有が維持されているかを見る目安です
+- PhysicsSpace の契約確認そのものは unittest/physics_space_contracts が担当し、このサンプルは見え方と相互作用の確認を担当します
 </pre>
 </section>
 
@@ -449,19 +485,19 @@ bevel を 1段から 3段へ増やすと triangle 数と vertex 数が増えま�
 サンプル: physics_collider
 
 概要
-- `BoxCollider` を持つ複数の body が、回転しながら落下し、空中や床上で接触し、押し合いながら落ち着いていく見え方を確認するサンプルです
-- `WebgApp` を使って起動、HUD、入力、camera 操作をまとめつつ、物理 world 自体は `PhysicsSpace` と `PhysicsNode` を直接組んでいるため、実装の追跡もしやすい構成です
-- `1 unit = 1m` を前提に、1.2m x 1.2m の浅い arena へ最大 0.10m 程度の box を投入し、卓上の小物を落とすようなスケール感で挙動を確認できます
+- BoxCollider を持つ複数の body が、回転しながら落下し、空中や床上で接触し、押し合いながら落ち着いていく見え方を確認するサンプルです
+- WebgApp を使って起動、HUD、入力、camera 操作をまとめつつ、物理 world 自体は PhysicsSpace と PhysicsNode を直接組んでいるため、実装の追跡もしやすい構成です
+- 1 unit = 1m を前提に、1.2m x 1.2m の浅い arena へ最大 0.10m 程度の box を投入し、卓上の小物を落とすようなスケール感で挙動を確認できます
 - 立方体だけでなく beam、plate、column、deep block を混ぜることで、OBB の向き変化、辺接触、面接触、sleep island の見え方を比較しやすくしています
-- `Space` キーで box を追加投入し、密度を上げた状態でも回転付き contact がどう落ち着くかを確認できます
+- Space キーで box を追加投入し、密度を上げた状態でも回転付き contact がどう落ち着くかを確認できます
 
 このサンプルで使う webg 機能
-- `WebgApp`: Screen、Shader、Space、Input、Message の初期化をまとめる
-- `PhysicsSpace`: 固定タイムステップ、重力、反発、摩擦、sleep island を管理する
-- `PhysicsNode`: dynamic / kinematic / static の切替、および姿勢と速度の初期化を行う
-- `BoxCollider` と `PlaneCollider`: 回転付き box と床 plane の接触を構成する
-- `Shape` と `Primitive.cuboid()`: 各 body、床、壁の mesh を作る
-- `EyeRig`: orbit camera による俯瞰視点の確認を担当する
+- WebgApp: Screen、Shader、Space、Input、Message の初期化をまとめる
+- PhysicsSpace: 固定タイムステップ、重力、反発、摩擦、sleep island を管理する
+- PhysicsNode: dynamic / kinematic / static の切替、および姿勢と速度の初期化を行う
+- BoxCollider と PlaneCollider: 回転付き box と床 plane の接触を構成する
+- Shape と Primitive.cuboid(): 各 body、床、壁の mesh を作る
+- EyeRig: orbit camera による俯瞰視点の確認を担当する
 
 確認ポイント
 - 長い beam や平たい plate が、見た目の回転と collider の向きがずれずに落下することを確認します
@@ -473,16 +509,16 @@ bevel を 1段から 3段へ増やすと triangle 数と vertex 数が増えま�
 操作説明
 - drag: orbit camera
 - Shift + drag: pan
-- wheel / `[` / `]`: zoom
-- `Space`: box を 4 個追加する
-- `P`: 一時停止 / 再開
-- `R`: 位置、姿勢、速度を初期状態へ戻す
-- `?count=60` のように URL へ付けると、初期 body 数を変更できます
+- wheel / [ / ]: zoom
+- Space: box を 4 個追加する
+- P: 一時停止 / 再開
+- R: 位置、姿勢、速度を初期状態へ戻す
+- ?count=60 のように URL へ付けると、初期 body 数を変更できます
 
 実装確認の見方
-- 見え方ではなく solver の数値を追いたい場合は `unittest/physics_collider/headless_probe.js` を `node` で実行してください
-- `headless_probe.js` は standing beam や cube corner balance の数値調査に使います。このサンプルは画面上の相互作用確認、headless probe は数値診断という役割分担です
-- `PhysicsSpace` の契約確認は `unittest/physics_space_contracts` が担当し、このサンプルは回転付き box 接触の見え方を担当します
+- 見え方ではなく solver の数値を追いたい場合は unittest/physics_collider/headless_probe.js を node で実行してください
+- headless_probe.js は standing beam や cube corner balance の数値調査に使います。このサンプルは画面上の相互作用確認、headless probe は数値診断という役割分担です
+- PhysicsSpace の契約確認は unittest/physics_space_contracts が担当し、このサンプルは回転付き box 接触の見え方を担当します
 </pre>
 </section>
 
@@ -492,43 +528,43 @@ bevel を 1段から 3段へ増やすと triangle 数と vertex 数が増えま�
 サンプル: janken
 
 概要
-- `samples/gltf_loader/hand.glb` の手モデルと `AnimationState` を使って、ジャンケンを行うサンプルです。
+- samples/gltf_loader/hand.glb の手モデルと AnimationState を使って、ジャンケンを行うサンプルです。
 - 手を 2 つ同時に表示し、左側は user、右側は app が担当します。
-- user は `G` / `C` / `P` で手を決め、app 側は同じ frame で乱数から手を決めます。
-- 画面下には touch ボタンも表示し、PC でも `G` / `C` / `P` を直接押して操作できます。
-- `hand.glb` は 1 回だけ build し、その runtime から player / cpu の 2 hand を `instantiate()` しているため、geometry / GPU buffer は共有しつつ animation runtime は別々に進みます。
-- 各 hand は独立した `Action` と `AnimationState` を持ち、同じ asset を使っても別々に animation を再生できます。
-- 操作ガイドと現在状態は `app.message.setLines()` でそろえ、勝敗だけを 2 倍スケールの短い `Message` で中央表示します。
+- user は G / C / P で手を決め、app 側は同じ frame で乱数から手を決めます。
+- 画面下には touch ボタンも表示し、PC でも G / C / P を直接押して操作できます。
+- hand.glb は 1 回だけ build し、その runtime から player / cpu の 2 hand を instantiate() しているため、geometry / GPU buffer は共有しつつ animation runtime は別々に進みます。
+- 各 hand は独立した Action と AnimationState を持ち、同じ asset を使っても別々に animation を再生できます。
+- 操作ガイドと現在状態は app.message.setLines() でそろえ、勝敗だけを 2 倍スケールの短い Message で中央表示します。
 - 2 つの hand は少し引いた距離からやや見上げ気味に見えるようにし、左右に約 30 度ロールさせています。
-- ジャンケンの手遷移は `entryDurationMs = 250` にそろえ、0.25 秒程度で次の手へ移る設定です。
+- ジャンケンの手遷移は entryDurationMs = 250 にそろえ、0.25 秒程度で次の手へ移る設定です。
 
 このサンプルで使うwebg機能
-- `WebgApp`: Screen / Shader / Space / Input / Message をまとめて初期化し、`app.message.setLines()` と `loadModel(..., { format: "gltf", instantiate: false })` で shared runtime を 1 回 build したあと、`runtime.instantiate()` で 2 hand を起こす
-- `Action`: hand の key 区間を `N0` / `N2` / `N5` の action として再生する
-- `Message`: 勝敗結果の短い ASCII title を大きく中央表示する
+- WebgApp: Screen / Shader / Space / Input / Message をまとめて初期化し、app.message.setLines() と loadModel(..., { format: "gltf", instantiate: false }) で shared runtime を 1 回 build したあと、runtime.instantiate() で 2 hand を起こす
+- Action: hand の key 区間を N0 / N2 / N5 の action として再生する
+- Message: 勝敗結果の短い ASCII title を大きく中央表示する
 
 確認ポイント
-- `G` は hand の `N0=12-13`, `C` は `N2=4-5`, `P` は `N5=10-11` に対応する pose になっていることを確認します。
+- G は hand の N0=12-13, C は N2=4-5, P は N5=10-11 に対応する pose になっていることを確認します。
 - 同じ手を連続で入力しても self-transition により animation が再始動することを確認します。
-- guide は画面下、status は画面上へ分かれ、勝敗だけが中央の大きな `Message` で表示されることを確認します。
+- guide は画面下、status は画面上へ分かれ、勝敗だけが中央の大きな Message で表示されることを確認します。
 
 操作説明
-- `G`: グーを出す
-- `C`: チョキを出す
-- `P`: パーを出す
-- `Space`: round と表示を初期状態へ戻す
-- touch ボタン: `G` / `C` / `P` を PC と mobile の両方で表示し、keyboard と同じ key 名で扱う
+- G: グーを出す
+- C: チョキを出す
+- P: パーを出す
+- Space: round と表示を初期状態へ戻す
+- touch ボタン: G / C / P を PC と mobile の両方で表示し、keyboard と同じ key 名で扱う
 
 補足
 - このサンプルでは hand asset の pose 対応を次のように使います
-  - グー: hand の `N0=12-13`
-  - チョキ: hand の `N2=4-5`
-  - パー: hand の `N5=10-11`
-- `AnimationState` は再生品質自体を変えるものではなく、どの hand action を始めるかを整理するために使っています
-- `janken` では入力イベントごとに `AnimationState.setState(..., force: true)` を呼び、同じ手でも action を再始動できる構成にしています
-- 2 つの hand は `runtime.instantiate()` で別々に生成しているため、同じ mesh resource を共有していても `Skeleton` と `Animation` の runtime 状態は別です
-- 現在の `hand.glb` では、`G` は `N0` の `12-13`、`C` は `N2` の `4-5`、`P` は `N5` の `10-11` を使います
-- `idle` を「グーからパーへの遷移の 10% 程度をゆっくり再生する形」で安定して作るには、現行の integer key 範囲だけを持つ pattern 定義より、idle 専用 key または中間 pose を別に持つ方が自然です
+  - グー: hand の N0=12-13
+  - チョキ: hand の N2=4-5
+  - パー: hand の N5=10-11
+- AnimationState は再生品質自体を変えるものではなく、どの hand action を始めるかを整理するために使っています
+- janken では入力イベントごとに AnimationState.setState(..., force: true) を呼び、同じ手でも action を再始動できる構成にしています
+- 2 つの hand は runtime.instantiate() で別々に生成しているため、同じ mesh resource を共有していても Skeleton と Animation の runtime 状態は別です
+- 現在の hand.glb では、G は N0 の 12-13、C は N2 の 4-5、P は N5 の 10-11 を使います
+- idle を「グーからパーへの遷移の 10% 程度をゆっくり再生する形」で安定して作るには、現行の integer key 範囲だけを持つ pattern 定義より、idle 専用 key または中間 pose を別に持つ方が自然です
 </pre>
 </section>
 
@@ -539,31 +575,31 @@ bevel を 1段から 3段へ増やすと triangle 数と vertex 数が増えま�
 サンプル: breakout
 
 概要
-- `webg` のゲーム向け基礎機能を使って、3D 表現を取り入れたシンプルなブロック崩しを作るサンプルです。
-- `WebgApp` を入口にして、入力、HUD、scene phase、ゲーム状態管理、表示メッセージを 1 本の処理フローへまとめています。
-- 盤面は `title / play / pause / result` の 4 状態で進み、入力の押下、残りブロック数、残り時間、残りライフによって自然に切り替わります。
+- webg のゲーム向け基礎機能を使って、3D 表現を取り入れたシンプルなブロック崩しを作るサンプルです。
+- WebgApp を入口にして、入力、HUD、scene phase、ゲーム状態管理、表示メッセージを 1 本の処理フローへまとめています。
+- 盤面は title / play / pause / result の 4 状態で進み、入力の押下、残りブロック数、残り時間、残りライフによって自然に切り替わります。
 - 見た目は 2D に近いですが、Paddle / Ball / Brick / Wall を 3D shape として生成し、2D 的な座標管理と組み合わせてゲームを構成しています。
-- `Message` 系 HUD で score / combo / time / lives / phase / ball 状態を表示し、画面上の情報だけでゲーム進行を追えるようにしています。
-- `Touch` による左右移動ボタンと Start / Pause / R ボタンを用意し、キーボード入力とタッチ入力の両方で同じゲーム操作を行えるようにしています。
+- Message 系 HUD で score / combo / time / lives / phase / ball 状態を表示し、画面上の情報だけでゲーム進行を追えるようにしています。
+- Touch による左右移動ボタンと Start / Pause / R ボタンを用意し、キーボード入力とタッチ入力の両方で同じゲーム操作を行えるようにしています。
 
 このサンプルで使う webg 機能
-- `WebgApp`: Screen / Shader / Space / Input / Message / HUD / debug tools をまとめて初期化する
-- app 側 `GameStateManager`: `title / play / pause / result` の状態遷移を整理する
-- `InputController`: キーボードやタッチ入力から得た正規化済みキー名を action 名へ束ねる
-- `Touch`: 左右移動と `launch / pause / restart` をタッチボタンで入力する
-- `Shape`: Paddle / Brick / Wall / Backdrop などの任意サイズの box 形状を作る
-- `Primitive`: Ball の球メッシュを生成する
-- `Space`: 各 shape を node として配置し、表示用の 3D シーンを構成する
-- `Message`: guide / control rows / game HUD / status 表示を画面に出す
-- `Toast`: serve / pause / miss / result などの一時的な状態通知を表示する
+- WebgApp: Screen / Shader / Space / Input / Message / HUD / debug tools をまとめて初期化する
+- app 側 GameStateManager: title / play / pause / result の状態遷移を整理する
+- InputController: キーボードやタッチ入力から得た正規化済みキー名を action 名へ束ねる
+- Touch: 左右移動と launch / pause / restart をタッチボタンで入力する
+- Shape: Paddle / Brick / Wall / Backdrop などの任意サイズの box 形状を作る
+- Primitive: Ball の球メッシュを生成する
+- Space: 各 shape を node として配置し、表示用の 3D シーンを構成する
+- Message: guide / control rows / game HUD / status 表示を画面に出す
+- Toast: serve / pause / miss / result などの一時的な状態通知を表示する
 
 実装上の特徴
-- 入力は `app.registerActionMap()` で `left / right / launch / pause / restart` にまとめています。
-- `left` は `ArrowLeft / A`、`right` は `ArrowRight / D` に対応します。
-- `launch` は `Enter / Space`、`pause` は `P / Esc`、`restart` は `R` に対応します。
-- タッチボタンの `← / →` は hold 入力として扱い、Paddle の左右移動に使います。
-- タッチボタンの `Start / Pause / R` は action 入力として扱い、それぞれ `launch / pause / restart` に対応します。
-- Ball / Paddle / Brick / Wall には collision shape も設定していますが、このサンプルのゲーム判定自体は、`makeBox()` と `circleIntersectsBox()` を使ったサンプル側の 2D 判定で行っています。
+- 入力は app.registerActionMap() で left / right / launch / pause / restart にまとめています。
+- left は ArrowLeft / A、right は ArrowRight / D に対応します。
+- launch は Enter / Space、pause は P / Esc、restart は R に対応します。
+- タッチボタンの ← / → は hold 入力として扱い、Paddle の左右移動に使います。
+- タッチボタンの Start / Pause / R は action 入力として扱い、それぞれ launch / pause / restart に対応します。
+- Ball / Paddle / Brick / Wall には collision shape も設定していますが、このサンプルのゲーム判定自体は、makeBox() と circleIntersectsBox() を使ったサンプル側の 2D 判定で行っています。
 - Ball の移動は 1 フレームを複数の小ステップに分割して進め、速い移動でも壁やブロックをすり抜けにくいようにしています。
 - Paddle 反射では、Ball が Paddle のどの位置に当たったかに応じて反射方向を変えています。
 - Brick に当たると 1 個だけ消え、score と combo が更新されます。
@@ -571,43 +607,43 @@ bevel を 1段から 3段へ増やすと triangle 数と vertex 数が増えま�
 - bricks が全消しになると clear、lives が 0 になると game over、time が 0 になると time up として result に入ります。
 
 確認ポイント
-- `Enter` / `Space` で title から play に入り、Ball が Paddle から打ち出されることを確認します。
-- `ArrowLeft` / `ArrowRight` / `A` / `D` で Paddle が即時に動き、タッチボタンの `←` / `→` でも同じ動きになることを確認します。
-- `P` / `Esc` で pause に入り、`Enter` / `Space` または `P` / `Esc` で play に戻れることを確認します。
+- Enter / Space で title から play に入り、Ball が Paddle から打ち出されることを確認します。
+- ArrowLeft / ArrowRight / A / D で Paddle が即時に動き、タッチボタンの ← / → でも同じ動きになることを確認します。
+- P / Esc で pause に入り、Enter / Space または P / Esc で play に戻れることを確認します。
 - play 中に Ball が Paddle に当たると、当たった位置に応じて反射方向が変わることを確認します。
 - Brick に Ball が当たると 1 個だけ消え、score と combo が更新されることを確認します。
 - 左右壁と天井で Ball が反射することを確認します。
 - Ball が床側へ落ちると lives が減り、残り lives がある場合は Ball が Paddle 上へ戻ることを確認します。
-- bricks が全消し、lives が 0、または time が 0 になると result に入り、`R` で title へ戻れることを確認します。
-- タッチボタンの `Start / Pause / R` でも、キーボードと同じように開始、停止、再開、リスタートができることを確認します。
+- bricks が全消し、lives が 0、または time が 0 になると result に入り、R で title へ戻れることを確認します。
+- タッチボタンの Start / Pause / R でも、キーボードと同じように開始、停止、再開、リスタートができることを確認します。
 - HUD に score / combo / time / lives / phase / ball 状態が表示され、ゲームの進行状態を追えることを確認します。
 
 操作説明
-- `ArrowLeft` / `A`: Paddle を左へ動かす
-- `ArrowRight` / `D`: Paddle を右へ動かす
-- `Enter` / `Space`: title から開始、pause から再開、play 中のサーブ待機状態から Ball を打ち出す
-- `P` / `Esc`: pause、または pause から再開
-- `R`: result から title へ戻る
-- タッチボタン `←`: Paddle を左へ動かす
-- タッチボタン `→`: Paddle を右へ動かす
-- タッチボタン `Start`: `launch` action を発生させる
-- タッチボタン `Pause`: `pause` action を発生させる
-- タッチボタン `R`: `restart` action を発生させる
+- ArrowLeft / A: Paddle を左へ動かす
+- ArrowRight / D: Paddle を右へ動かす
+- Enter / Space: title から開始、pause から再開、play 中のサーブ待機状態から Ball を打ち出す
+- P / Esc: pause、または pause から再開
+- R: result から title へ戻る
+- タッチボタン ←: Paddle を左へ動かす
+- タッチボタン →: Paddle を右へ動かす
+- タッチボタン Start: launch action を発生させる
+- タッチボタン Pause: pause action を発生させる
+- タッチボタン R: restart action を発生させる
 
 状態遷移
-- `title`: 初期状態です。レベルを初期化し、開始入力を待ちます。
-- `play`: 実際にゲームが進行する状態です。Paddle 移動、Ball 移動、反射、Brick 破壊、残り時間の更新を行います。
-- `pause`: 一時停止状態です。ゲーム進行は止まりますが、Paddle の移動入力は確認できるようにしています。
-- `result`: 終了状態です。clear / game over / time up の結果を表示し、restart 入力を待ちます。
+- title: 初期状態です。レベルを初期化し、開始入力を待ちます。
+- play: 実際にゲームが進行する状態です。Paddle 移動、Ball 移動、反射、Brick 破壊、残り時間の更新を行います。
+- pause: 一時停止状態です。ゲーム進行は止まりますが、Paddle の移動入力は確認できるようにしています。
+- result: 終了状態です。clear / game over / time up の結果を表示し、restart 入力を待ちます。
 
 補足
 - このサンプルは、ゲーム向け API の最小確認として、見た目の派手さよりも state / input / HUD / collision 判定の流れを追いやすいことを優先しています。
-- Ball は `Primitive.sphere()` で作成し、Paddle / Brick / Wall / Backdrop はサンプル内の `createBoxShape()` で任意サイズの box mesh として作成しています。
-- Ball には `sphere`、Paddle / Brick / Wall には `aabb` の collision shape を設定しています。
-- ただし、ゲーム進行に使う衝突判定は `Space.stepCollisions()` の `enter` 結果ではなく、サンプル側の `circleIntersectsBox()` による 2D 的な簡易判定です。
-- `Space` には node と collision body を登録していますが、このサンプルでは主に「3D シーン上にゲーム要素を配置する基盤」として使っています。
-- `result` 画面は clear / game over / time up を同じ phase へまとめ、終了理由だけを文言で切り替える構成にしています。
-- 入力処理では、生の `event.key` を直接扱うのではなく、`WebgApp` / `InputController` 側で正規化されたキー名と action 名を使う前提にしています。
+- Ball は Primitive.sphere() で作成し、Paddle / Brick / Wall / Backdrop はサンプル内の createBoxShape() で任意サイズの box mesh として作成しています。
+- Ball には sphere、Paddle / Brick / Wall には aabb の collision shape を設定しています。
+- ただし、ゲーム進行に使う衝突判定は Space.stepCollisions() の enter 結果ではなく、サンプル側の circleIntersectsBox() による 2D 的な簡易判定です。
+- Space には node と collision body を登録していますが、このサンプルでは主に「3D シーン上にゲーム要素を配置する基盤」として使っています。
+- result 画面は clear / game over / time up を同じ phase へまとめ、終了理由だけを文言で切り替える構成にしています。
+- 入力処理では、生の event.key を直接扱うのではなく、WebgApp / InputController 側で正規化されたキー名と action 名を使う前提にしています。
 </pre>
 </section>
 
@@ -618,68 +654,68 @@ bevel を 1段から 3段へ増やすと triangle 数と vertex 数が増えま�
 サンプル: collada_loader
 
 概要
-- `main.js` 内で指定した Collada (`.dae`) ファイルを読み込み、`ModelAsset` に正規化してから表示するサンプルです。
-- `WebgApp.loadModel()` から Collada facade を呼び、parse から `ModelAsset` / runtime 生成までを共通入口で扱うサンプルです。
-- 読み込んだ `ModelAsset` は `D` キーで JSON ファイルとしてダウンロードできます。
-- Blender から Collada (`.dae`) を export する場合も、Y-up で出力したファイルを前提とします。
+- main.js 内で指定した Collada (.dae) ファイルを読み込み、ModelAsset に正規化してから表示するサンプルです。
+- WebgApp.loadModel() から Collada facade を呼び、parse から ModelAsset / runtime 生成までを共通入口で扱うサンプルです。
+- 読み込んだ ModelAsset は D キーで JSON ファイルとしてダウンロードできます。
+- Blender から Collada (.dae) を export する場合も、Y-up で出力したファイルを前提とします。
 - loader の model origin policy は、スキニングモデルでは skeleton root、非スキニングモデルでは mesh node を原点とします。
 
 このサンプルで使うwebg機能
-- `WebgApp`: 標準初期化、描画ループ、HelpPanel と HUD 表示
-- `WebgApp.loadModel`: Collada facade の高レベル入口
-- `ModelLoader`: DAE の text load / parse / `ModelAsset` 化 / build / instantiate をまとめる
-- `ModelAsset`: データ表現の保持と JSON ダウンロード
-- `ModelAsset.getClipNames`: build 前の clip 一覧確認
-- `ModelBuilder`: `ModelAsset` から `Shape` / `Skeleton` / `Animation` を構築
-- `ModelBuilder.animationMap`: clip id から runtime Animation を引く
-- `build()` 結果 helper: `instantiate()` / `createNodeTree()` / `bindAnimationBindings()` / `getAnimation()` / `getAnimationNames()` / `startAllAnimations()` / `playAllAnimations()` / `setAnimationsPaused()`
-- `EyeRig(type="orbit")`: バウンディングボックス基準のオービット視点
+- WebgApp: 標準初期化、描画ループ、HelpPanel と HUD 表示
+- WebgApp.loadModel: Collada facade の高レベル入口
+- ModelLoader: DAE の text load / parse / ModelAsset 化 / build / instantiate をまとめる
+- ModelAsset: データ表現の保持と JSON ダウンロード
+- ModelAsset.getClipNames: build 前の clip 一覧確認
+- ModelBuilder: ModelAsset から Shape / Skeleton / Animation を構築
+- ModelBuilder.animationMap: clip id から runtime Animation を引く
+- build() 結果 helper: instantiate() / createNodeTree() / bindAnimationBindings() / getAnimation() / getAnimationNames() / startAllAnimations() / playAllAnimations() / setAnimationsPaused()
+- EyeRig(type="orbit"): バウンディングボックス基準のオービット視点
 
 処理フロー
-- sample は `WebgApp.loadModel(COLLADA_FILE, { format: "collada" ... })` を呼び、loader の共通入口から Collada facade へ入ります。
-- `ModelLoader` は DAE text を読み込み、`ColladaShape` に parse と正規化を委ねます。
-- `ColladaShape` は mesh / skeleton / animation / node を `ModelAsset` 形式へまとめます。
-- その後 `ModelBuilder` が `Shape` / `Skeleton` / `Animation` / `Node` を組み立て、sample はその build 結果を `runtime` として扱います。
-- glTF と違って Collada loader 側には static bake 計画はありませんが、最終的な runtime helper は共通の `ModelBuilder` を通ります。
+- sample は WebgApp.loadModel(COLLADA_FILE, { format: "collada" ... }) を呼び、loader の共通入口から Collada facade へ入ります。
+- ModelLoader は DAE text を読み込み、ColladaShape に parse と正規化を委ねます。
+- ColladaShape は mesh / skeleton / animation / node を ModelAsset 形式へまとめます。
+- その後 ModelBuilder が Shape / Skeleton / Animation / Node を組み立て、sample はその build 結果を runtime として扱います。
+- glTF と違って Collada loader 側には static bake 計画はありませんが、最終的な runtime helper は共通の ModelBuilder を通ります。
 
 ダウンロードした JSON の見方
-- `meta.source` は `Collada`、`meta.upAxis` は `Y` になっている前提です。
-- `meshes[]` は Collada mesh を `ModelAsset` 共通 geometry へ変換した結果です。
-- `nodes[].animationBindings` と `animations[].targetSkeleton` を見ると、どの clip がどの skeleton に接続されているかを確認できます。
-- `skeletons[].jointOrder` は skin weight が参照する joint 順を固定するための情報で、builder 復元時にも使われます。
-- `animations[].tracks[].joint` と `skeletons[].joints[].name` を見比べると、track 名と復元 bone 名が一致しているかを確認できます。
+- meta.source は Collada、meta.upAxis は Y になっている前提です。
+- meshes[] は Collada mesh を ModelAsset 共通 geometry へ変換した結果です。
+- nodes[].animationBindings と animations[].targetSkeleton を見ると、どの clip がどの skeleton に接続されているかを確認できます。
+- skeletons[].jointOrder は skin weight が参照する joint 順を固定するための情報で、builder 復元時にも使われます。
+- animations[].tracks[].joint と skeletons[].joints[].name を見比べると、track 名と復元 bone 名が一致しているかを確認できます。
 
 確認ポイント
-- `COLLADA_FILE` で指定した DAE が shape / skeleton / animation へ正しく変換されるかを確認します
+- COLLADA_FILE で指定した DAE が shape / skeleton / animation へ正しく変換されるかを確認します
 - 固定 HUD に file / model / orbit / target / anim / clip0 / wireframe 状態が表示され、viewer として必要な状態を画面上で追えることを確認します
-- sample 内では facade の戻り値 `runtime` を使い、`animationMap` 直参照ではなく `getAnimation()` / `getAnimationNames()` を使って接続確認できることを確認します
-- `1` キーで先頭 clip を `restartAnimation(clipId)` により名前指定で再始動できることを確認します
-- `2` / `3` キーで先頭 clip を `pauseAnimation(clipId)` / `resumeAnimation(clipId)` により個別停止・再開できることを確認します
+- sample 内では facade の戻り値 runtime を使い、animationMap 直参照ではなく getAnimation() / getAnimationNames() を使って接続確認できることを確認します
+- 1 キーで先頭 clip を restartAnimation(clipId) により名前指定で再始動できることを確認します
+- 2 / 3 キーで先頭 clip を pauseAnimation(clipId) / resumeAnimation(clipId) により個別停止・再開できることを確認します
 - カメラ距離がモデルのバウンディングボックスから自動設定され、モデル全体が初期表示で見切れないことを確認します
-- `D` キーで出力した JSON を `json_loader` で再読込しても表示できることを確認します
-- `Shift + Arrow` と `Shift + Drag` で camera target を平行移動でき、細部を中央へ寄せて確認できることを確認します
-- `W` で wireframe、`S` で screenshot、`R` で初期 framing へ戻ることを確認します
+- D キーで出力した JSON を json_loader で再読込しても表示できることを確認します
+- Shift + Arrow と Shift + Drag で camera target を平行移動でき、細部を中央へ寄せて確認できることを確認します
+- W で wireframe、S で screenshot、R で初期 framing へ戻ることを確認します
 - HelpPanel に操作説明がまとまり、固定 HUD と役割を分けて読めることを確認します
 - Blender export 時の up-axis 設定が Y-up でない DAE は loader の想定外とし、その場合の向きずれは asset 側の問題として扱います
 
 AI / 利用者向けの読み取りポイント
-- 「読み込みは成功したが clip が見えない」ときは、`animations[]` と `nodes[].animationBindings` を先に見ます。
-- 「skeleton はあるのに動かない」ときは、`skeletons[].jointOrder` と `animations[].tracks[].joint` の対応を見ます。
-- 「どの node が元 DAE のどの mesh か分からない」ときは、`nodes[].colladaMeshIndex` を使います。
+- 「読み込みは成功したが clip が見えない」ときは、animations[] と nodes[].animationBindings を先に見ます。
+- 「skeleton はあるのに動かない」ときは、skeletons[].jointOrder と animations[].tracks[].joint の対応を見ます。
+- 「どの node が元 DAE のどの mesh か分からない」ときは、nodes[].colladaMeshIndex を使います。
 - 「表示位置だけが怪しい」ときは、loader の model origin policy と camera 初期位置を疑い、bbox 基準の framing と PAN の動きを合わせて確認します。
 
 操作説明
 - ドラッグ / 矢印キー: オービットカメラ回転
-- `Shift` + ドラッグ / 矢印キー: カメラ target の平行移動
-- ホイール / `[` / `]`: ズーム
-- `Space`: アニメーション一時停止
-- `1`: 先頭 clip を再生し直す
-- `2`: 先頭 clip を一時停止
-- `3`: 先頭 clip を再開
-- `W`: wireframe 切り替え
-- `S`: screenshot 保存
-- `D`: `ModelAsset` JSON をダウンロード
-- `R`: カメラをバウンディングボックス基準の初期位置へ戻す
+- Shift + ドラッグ / 矢印キー: カメラ target の平行移動
+- ホイール / [ / ]: ズーム
+- Space: アニメーション一時停止
+- 1: 先頭 clip を再生し直す
+- 2: 先頭 clip を一時停止
+- 3: 先頭 clip を再開
+- W: wireframe 切り替え
+- S: screenshot 保存
+- D: ModelAsset JSON をダウンロード
+- R: カメラをバウンディングボックス基準の初期位置へ戻す
 </pre>
 </section>
 
@@ -690,46 +726,46 @@ AI / 利用者向けの読み取りポイント
 サンプル: embedded_glb_viewer
 
 概要
-- `WebgApp` の `layoutMode: "embedded"` と `fixedCanvasSize` を使い、本文の途中へ埋め込んだ canvas の中で `.glb` ビューアを動かすサンプルです
-- `input[type=file]` で選んだ単体 `.glb` を `WebgApp.loadModel()` から読み込み、`EyeRig(type="orbit")` の drag / pinch / keyboard 操作と、viewer 側の touch orbit / zoom button で見回せるようにしています
+- WebgApp の layoutMode: "embedded" と fixedCanvasSize を使い、本文の途中へ埋め込んだ canvas の中で .glb ビューアを動かすサンプルです
+- input[type=file] で選んだ単体 .glb を WebgApp.loadModel() から読み込み、EyeRig(type="orbit") の drag / pinch / keyboard 操作と、viewer 側の touch orbit / zoom button で見回せるようにしています
 - 読み込んだモデルは、バウンディングボックス中心がワールド原点へ来るように配置し、camera の target も原点から始めます
-- `Load bundled sample` を押すと同梱の `samples/gltf_loader/hand.glb` をそのまま表示できるため、手元のモデルが無い状態でも embedded viewer の挙動をすぐ確認できます
-- touch controls は `InputController.installTouchControls()` で追加し、`← / → / ↑ / ↓ / + / -` を orbit / zoom の step action として、`R / || / W / S` を viewer action として接続しています
-- `W` キー、DOM の `W` button、touch の `W` で、表示中 shape 全体を wireframe 表示へ一括切り替えできます
-- PAN は `EyeRig` の標準操作にそろえ、`Shift + Drag`、`Shift + Arrow`、2 本指 drag で target を screen 方向へ移動できます
-- 読み込み中は `showOverlayPanel({ format: "pre", ... })` で stage と経過時間を canvas 上へ出し、右側 status には file 名、triangle 数、clip 数、camera 状態、error をまとめて表示します
+- Load bundled sample を押すと同梱の samples/gltf_loader/hand.glb をそのまま表示できるため、手元のモデルが無い状態でも embedded viewer の挙動をすぐ確認できます
+- touch controls は InputController.installTouchControls() で追加し、← / → / ↑ / ↓ / + / - を orbit / zoom の step action として、R / || / W / S を viewer action として接続しています
+- W キー、DOM の W button、touch の W で、表示中 shape 全体を wireframe 表示へ一括切り替えできます
+- PAN は EyeRig の標準操作にそろえ、Shift + Drag、Shift + Arrow、2 本指 drag で target を screen 方向へ移動できます
+- 読み込み中は showOverlayPanel({ format: "pre", ... }) で stage と経過時間を canvas 上へ出し、右側 status には file 名、triangle 数、clip 数、camera 状態、error をまとめて表示します
 
 このサンプルで使うwebg機能
-- `WebgApp`: Screen / Shader / Space / Input / Message / overlay の標準初期化
-- `EyeRig(type="orbit")`: drag / wheel / pinch / keyboard によるオービットカメラ
-- `WebgApp.loadModel(..., { format: "gltf" })`: glTF / GLB ローダー経路
-- `InputController.installTouchControls()`: coarse pointer 向けの touch buttons
-- `WebgApp.showOverlayPanel()`: 読み込み中 stage 表示
-- `WebgApp.takeScreenshot()`: 現在の canvas の保存
+- WebgApp: Screen / Shader / Space / Input / Message / overlay の標準初期化
+- EyeRig(type="orbit"): drag / wheel / pinch / keyboard によるオービットカメラ
+- WebgApp.loadModel(..., { format: "gltf" }): glTF / GLB ローダー経路
+- InputController.installTouchControls(): coarse pointer 向けの touch buttons
+- WebgApp.showOverlayPanel(): 読み込み中 stage 表示
+- WebgApp.takeScreenshot(): 現在の canvas の保存
 
 確認ポイント
-- `Choose GLB` から `.glb` を選ぶと、その場で読み込みが始まり、読み込み完了後にモデルが表示されることを確認します
-- `Load bundled sample` で `hand.glb` が表示され、animation を持つモデルでは `Space` または touch の `||` で pause / resume できることを確認します
-- 読み込み直後にモデルの中心がワールド原点へ来て、HUD の target が `0, 0, 0` から始まることを確認します
-- drag、pinch、`Arrow`、`[ ]`、touch の `← / → / ↑ / ↓ / + / -` が同じ orbit camera を操作し、touch button は 1 tap ごとに確実に反応することを確認します
-- `Shift + Drag`、`Shift + Arrow`、2 本指 drag で、view の target が screen 方向へ自然に平行移動することを確認します
-- `W` を切り替えると、表示中モデル全体が solid / wireframe で切り替わることを確認します
-- `R` または `Reset view` で camera がフレーミング初期値へ戻ることを確認します
-- `S` または touch の `S` で現在の canvas が保存されることを確認します
+- Choose GLB から .glb を選ぶと、その場で読み込みが始まり、読み込み完了後にモデルが表示されることを確認します
+- Load bundled sample で hand.glb が表示され、animation を持つモデルでは Space または touch の || で pause / resume できることを確認します
+- 読み込み直後にモデルの中心がワールド原点へ来て、HUD の target が 0, 0, 0 から始まることを確認します
+- drag、pinch、Arrow、[ ]、touch の ← / → / ↑ / ↓ / + / - が同じ orbit camera を操作し、touch button は 1 tap ごとに確実に反応することを確認します
+- Shift + Drag、Shift + Arrow、2 本指 drag で、view の target が screen 方向へ自然に平行移動することを確認します
+- W を切り替えると、表示中モデル全体が solid / wireframe で切り替わることを確認します
+- R または Reset view で camera がフレーミング初期値へ戻ることを確認します
+- S または touch の S で現在の canvas が保存されることを確認します
 
 操作説明
-- `Choose GLB`: ローカルの `.glb` ファイルを選択
-- `Load bundled sample`: 同梱 `hand.glb` を読み込む
+- Choose GLB: ローカルの .glb ファイルを選択
+- Load bundled sample: 同梱 hand.glb を読み込む
 - drag: orbit camera
 - 2 本指 drag: camera 平行移動
-- pinch / wheel / `[ ]` / touch `+ -`: zoom
-- `Arrow` / touch `← → ↑ ↓`: orbit camera
-- `Shift + Drag` / `Shift + Arrow`: camera 平行移動
-- `W` / DOM `W` / touch `W`: wireframe 切り替え
-- `R` / touch `R`: camera reset
-- `Space` / touch `||`: animation pause / resume
-- `S` / DOM `S` / touch `S`: screenshot 保存
-- `Clear`: 現在モデルを隠して placeholder 表示へ戻す
+- pinch / wheel / [ ] / touch + -: zoom
+- Arrow / touch ← → ↑ ↓: orbit camera
+- Shift + Drag / Shift + Arrow: camera 平行移動
+- W / DOM W / touch W: wireframe 切り替え
+- R / touch R: camera reset
+- Space / touch ||: animation pause / resume
+- S / DOM S / touch S: screenshot 保存
+- Clear: 現在モデルを隠して placeholder 表示へ戻す
 </pre>
 </section>
 
@@ -740,76 +776,76 @@ AI / 利用者向けの読み取りポイント
 サンプル: gltf_loader
 
 概要
-- `main.js` 内で指定した glTF / GLB ファイルを読み込み、`ModelAsset` に正規化してから表示するサンプルです。
-- `WebgApp.loadModel()` から glTF facade を呼び、内部で `ModelAsset` と runtime が組み立てられる流れを確認できます。
-- 読み込んだ `ModelAsset` は `D` キーで JSON ファイルとしてダウンロードできます。
+- main.js 内で指定した glTF / GLB ファイルを読み込み、ModelAsset に正規化してから表示するサンプルです。
+- WebgApp.loadModel() から glTF facade を呼び、内部で ModelAsset と runtime が組み立てられる流れを確認できます。
+- 読み込んだ ModelAsset は D キーで JSON ファイルとしてダウンロードできます。
 - static な親 node transform が付いた glTF では、importer 側で skinned mesh 用の親回転 / 親スケールを bake し、runtime 側へ複雑さを持ち込まない方針です。
 - Blender から glTF / GLB を export する場合は、Y-up で出力したファイルを前提とします。
 - loader の model origin policy は、スキニングモデルでは skeleton root、非スキニングモデルでは mesh node を原点とします。
 
 このサンプルで使うwebg機能
-- `WebgApp`: 標準初期化、描画ループ、HelpPanel と HUD 表示
-- `WebgApp.loadModel`: glTF facade の高レベル入口
-- `ModelLoader`: glTF / GLB を `ModelAsset` へ正規化し build / instantiate をまとめる
-- `ModelAsset`: 検証済みデータの保持と JSON ダウンロード
-- `ModelAsset.getClipNames`: build 前の clip 一覧確認
-- `ModelBuilder`: `ModelAsset` から `Shape` / `Skeleton` / `Animation` を構築
-- `ModelBuilder.animationMap`: clip id から runtime Animation を引く
-- `build()` 結果 helper: `instantiate()` / `createNodeTree()` / `bindAnimationBindings()` / `getAnimation()` / `getAnimationNames()` / `restartAnimation()` / `pauseAnimation()` / `resumeAnimation()` / `startAllAnimations()` / `playAllAnimations()` / `setAnimationsPaused()`
-- `EyeRig(type="orbit")`: world bbox 基準のオービット視点
+- WebgApp: 標準初期化、描画ループ、HelpPanel と HUD 表示
+- WebgApp.loadModel: glTF facade の高レベル入口
+- ModelLoader: glTF / GLB を ModelAsset へ正規化し build / instantiate をまとめる
+- ModelAsset: 検証済みデータの保持と JSON ダウンロード
+- ModelAsset.getClipNames: build 前の clip 一覧確認
+- ModelBuilder: ModelAsset から Shape / Skeleton / Animation を構築
+- ModelBuilder.animationMap: clip id から runtime Animation を引く
+- build() 結果 helper: instantiate() / createNodeTree() / bindAnimationBindings() / getAnimation() / getAnimationNames() / restartAnimation() / pauseAnimation() / resumeAnimation() / startAllAnimations() / playAllAnimations() / setAnimationsPaused()
+- EyeRig(type="orbit"): world bbox 基準のオービット視点
 
 処理フロー
-- sample は `WebgApp.loadModel(GLTF_FILE, { format: "gltf" ... })` を呼び、loader の format 判定から glTF facade へ入ります。
-- `ModelLoader` は file を読み込み、`GltfShape` に parse と正規化を委ねます。
-- `GltfShape` は material / mesh / skeleton / animation / node を `ModelAsset` 形式へそろえます。
-- このとき、static な親 node transform を持つ glTF では `buildStaticBakePlans()` が走り、skinned mesh には親回転 / 親スケールを mesh / skeleton / animation へ bake します。
+- sample は WebgApp.loadModel(GLTF_FILE, { format: "gltf" ... }) を呼び、loader の format 判定から glTF facade へ入ります。
+- ModelLoader は file を読み込み、GltfShape に parse と正規化を委ねます。
+- GltfShape は material / mesh / skeleton / animation / node を ModelAsset 形式へそろえます。
+- このとき、static な親 node transform を持つ glTF では buildStaticBakePlans() が走り、skinned mesh には親回転 / 親スケールを mesh / skeleton / animation へ bake します。
 - non-skinned mesh では static uniform scale を geometry bake で処理する経路も残しつつ、runtime node 側でも uniform scale を扱えます。
-- `ModelBuilder` は `ModelAsset` から runtime の `Shape` / `Skeleton` / `Animation` / `Node` を組み立てます。
+- ModelBuilder は ModelAsset から runtime の Shape / Skeleton / Animation / Node を組み立てます。
 
 ダウンロードした JSON の見方
-- `meta.source` は `glTF`、`meta.upAxis` は `Y` になっている前提です。
-- `meshes[].meta.staticBake` は importer が static bake を適用した mesh だけに現れます。
-- `meshes[].meta.bakedNodeIndex` は、どの glTF node の transform を geometry へ反映したかを見るための index です。
-- `skeletons[].meta.staticBake` は、skinned mesh の root joint 側へ親 transform bake を入れた場合に記録されます。
-- `nodes[].matrix` は runtime 側へ残した structural transform で、skinned bake 済み node では identity になります。
-- `nodes[].animationBindings` と `animations[].targetSkeleton` を見ると、どの clip がどの skeleton に接続されているかを追えます。
-- `gltfNodeIndex` と `gltfSkinIndex` を見ると、JSON 上の node と元 glTF の node / skin の対応を後から追跡できます。
+- meta.source は glTF、meta.upAxis は Y になっている前提です。
+- meshes[].meta.staticBake は importer が static bake を適用した mesh だけに現れます。
+- meshes[].meta.bakedNodeIndex は、どの glTF node の transform を geometry へ反映したかを見るための index です。
+- skeletons[].meta.staticBake は、skinned mesh の root joint 側へ親 transform bake を入れた場合に記録されます。
+- nodes[].matrix は runtime 側へ残した structural transform で、skinned bake 済み node では identity になります。
+- nodes[].animationBindings と animations[].targetSkeleton を見ると、どの clip がどの skeleton に接続されているかを追えます。
+- gltfNodeIndex と gltfSkinIndex を見ると、JSON 上の node と元 glTF の node / skin の対応を後から追跡できます。
 
 確認ポイント
-- `GLTF_FILE` で指定したファイルが読み込まれ、shape / skeleton / animation が正しく構築されるかを確認します
+- GLTF_FILE で指定したファイルが読み込まれ、shape / skeleton / animation が正しく構築されるかを確認します
 - facade 1 回の呼び出しで、glTF の node 復元と animation binding が他形式と同じ共通 helper で行えることを確認します
 - skinned mesh を含む glTF でも、static な親回転や uniform scale が importer 側で bake され、static mesh と skinned mesh の向きが大きく食い違わないことを確認します
-- `D` キーで保存した `ModelAsset` JSON に `staticBake` meta が残り、どの node / skeleton へ bake が適用されたかを後から確認できることを確認します
-- raw glTF の animation sampler に `CUBICSPLINE` が入っている場合は、中間値を抜いて `LINEAR` に変換され、固定パネルと `animationInterpolation=LINEAR converted=CUBICSPLINE-&gt;LINEAR:...` が表示されることを確認します
-- 大きい glTF / GLB を読み込むときでも、起動中は固定パネルに `stage=...` が表示され、少なくともどの段階まで進んだかを確認できることを確認します
-- Rigify 系モデルでは `required=...` に加えて `helperWeighted=...`、`helperAncestor=...`、`helperPruned=...` を見ることで、helper 骨が実際に weight で使われているのか、親子関係維持のために残っているだけなのか、あるいは importer が焼き込んで削除できたのかを判断できることを確認します
+- D キーで保存した ModelAsset JSON に staticBake meta が残り、どの node / skeleton へ bake が適用されたかを後から確認できることを確認します
+- raw glTF の animation sampler に CUBICSPLINE が入っている場合は、中間値を抜いて LINEAR に変換され、固定パネルと animationInterpolation=LINEAR converted=CUBICSPLINE-&gt;LINEAR:... が表示されることを確認します
+- 大きい glTF / GLB を読み込むときでも、起動中は固定パネルに stage=... が表示され、少なくともどの段階まで進んだかを確認できることを確認します
+- Rigify 系モデルでは required=... に加えて helperWeighted=...、helperAncestor=...、helperPruned=... を見ることで、helper 骨が実際に weight で使われているのか、親子関係維持のために残っているだけなのか、あるいは importer が焼き込んで削除できたのかを判断できることを確認します
 - 固定 HUD に file / model / orbit / target / anim / clip0 / interpolation / wireframe 状態が表示され、viewer として必要な状態を画面上で追えることを確認します
-- `1` キーで先頭 clip を `restartAnimation(clipId)` により名前指定で再始動できることを確認します
-- `2` / `3` キーで先頭 clip を `pauseAnimation(clipId)` / `resumeAnimation(clipId)` により個別停止・再開できることを確認します
+- 1 キーで先頭 clip を restartAnimation(clipId) により名前指定で再始動できることを確認します
+- 2 / 3 キーで先頭 clip を pauseAnimation(clipId) / resumeAnimation(clipId) により個別停止・再開できることを確認します
 - glTF node の親 transform を含む world bbox に応じてカメラ距離が自動設定され、初期表示でモデル全体が見えるかを確認します
-- `D` キーで出力した JSON を `json_loader` に渡して再表示できることを確認します
-- `Shift + Arrow` と `Shift + Drag` で camera target を平行移動でき、細部を中央へ寄せて確認できることを確認します
-- `W` で wireframe、`S` で screenshot、`R` で初期 framing へ戻ることを確認します
+- D キーで出力した JSON を json_loader に渡して再表示できることを確認します
+- Shift + Arrow と Shift + Drag で camera target を平行移動でき、細部を中央へ寄せて確認できることを確認します
+- W で wireframe、S で screenshot、R で初期 framing へ戻ることを確認します
 - HelpPanel に操作説明がまとまり、固定 HUD と役割を分けて読めることを確認します
 
 AI / 利用者向けの読み取りポイント
-- 「表示は合っているが scale がどこで反映されたか分からない」ときは、まず `meshes[].meta.staticBake` と `nodes[].matrix` を見ます。
-- 「animation はあるが再生されない」ときは、`animations[].targetSkeleton` と `nodes[].animationBindings` の対応を見ます。
-- 「clip が再生されない」ときは、runtime HUD の `Anim` / `Clip0` 表示と JSON の binding を見比べます。
-- 「親 node を持つ skinned mesh の向きが怪しい」ときは、`skeletons[].meta.staticBake` が入っているか、対象 asset が scale animation / non-uniform scale を含んでいないかを確認します。
+- 「表示は合っているが scale がどこで反映されたか分からない」ときは、まず meshes[].meta.staticBake と nodes[].matrix を見ます。
+- 「animation はあるが再生されない」ときは、animations[].targetSkeleton と nodes[].animationBindings の対応を見ます。
+- 「clip が再生されない」ときは、runtime HUD の Anim / Clip0 表示と JSON の binding を見比べます。
+- 「親 node を持つ skinned mesh の向きが怪しい」ときは、skeletons[].meta.staticBake が入っているか、対象 asset が scale animation / non-uniform scale を含んでいないかを確認します。
 
 操作説明
 - ドラッグ / 矢印キー: オービットカメラ回転
-- `Shift` + ドラッグ / 矢印キー: カメラ target の平行移動
-- ホイール / `[` / `]`: ズーム
-- `Space`: アニメーション一時停止
-- `1`: 先頭 clip を再生し直す
-- `2`: 先頭 clip を一時停止
-- `3`: 先頭 clip を再開
-- `W`: wireframe 切り替え
-- `S`: screenshot 保存
-- `D`: `ModelAsset` JSON をダウンロード
-- `R`: カメラをバウンディングボックス基準の初期位置へ戻す
+- Shift + ドラッグ / 矢印キー: カメラ target の平行移動
+- ホイール / [ / ]: ズーム
+- Space: アニメーション一時停止
+- 1: 先頭 clip を再生し直す
+- 2: 先頭 clip を一時停止
+- 3: 先頭 clip を再開
+- W: wireframe 切り替え
+- S: screenshot 保存
+- D: ModelAsset JSON をダウンロード
+- R: カメラをバウンディングボックス基準の初期位置へ戻す
 </pre>
 </section>
 <section class='sample'>
@@ -820,49 +856,49 @@ AI / 利用者向けの読み取りポイント
 サンプル: json_loader
 
 概要
-- `main.js` 内で指定した `ModelAsset` JSON ファイルを読み込み、そのまま表示するサンプルです。
-- `gltf_loader` や `collada_loader` が `D` キーで出力した JSON を、ファイル名を合わせてこのサンプルで再表示できます。
-- `WebgApp.loadModel()` から JSON facade を呼び、形式差を意識せず `ModelAsset` と runtime を得るサンプルです。
-- 現在の検証用 `modelasset.json` には、同じ元 clip を複製して `ArmatureAction_skeleton_0` と `ArmatureAction_skeleton_0_copy` の 2 clip を入れてあります。
+- main.js 内で指定した ModelAsset JSON ファイルを読み込み、そのまま表示するサンプルです。
+- gltf_loader や collada_loader が D キーで出力した JSON を、ファイル名を合わせてこのサンプルで再表示できます。
+- WebgApp.loadModel() から JSON facade を呼び、形式差を意識せず ModelAsset と runtime を得るサンプルです。
+- 現在の検証用 modelasset.json には、同じ元 clip を複製して ArmatureAction_skeleton_0 と ArmatureAction_skeleton_0_copy の 2 clip を入れてあります。
 
 このサンプルで使うwebg機能
-- `WebgApp`: 標準初期化、描画ループ、HelpPanel と HUD 表示
-- `WebgApp.loadModel`: JSON facade の高レベル入口
-- `ModelLoader`: JSON load / validate / build / instantiate をまとめる
-- `ModelAsset.load`: JSON ファイルをロード
-- `ModelAsset.getClipNames`: JSON に含まれる clip 一覧確認
-- `ModelAsset.build`: JSON から `Shape` / `Skeleton` / `Animation` を構築
-- `ModelBuilder.animationMap`: clip id から runtime Animation を引く
-- `build()` 結果 helper: `instantiate()` / `createNodeTree()` / `bindAnimationBindings()` / `getAnimation()` / `getAnimationNames()` / `startAllAnimations()` / `playAllAnimations()` / `setAnimationsPaused()`
-- `EyeRig(type="orbit")`: バウンディングボックス基準のオービット視点
+- WebgApp: 標準初期化、描画ループ、HelpPanel と HUD 表示
+- WebgApp.loadModel: JSON facade の高レベル入口
+- ModelLoader: JSON load / validate / build / instantiate をまとめる
+- ModelAsset.load: JSON ファイルをロード
+- ModelAsset.getClipNames: JSON に含まれる clip 一覧確認
+- ModelAsset.build: JSON から Shape / Skeleton / Animation を構築
+- ModelBuilder.animationMap: clip id から runtime Animation を引く
+- build() 結果 helper: instantiate() / createNodeTree() / bindAnimationBindings() / getAnimation() / getAnimationNames() / startAllAnimations() / playAllAnimations() / setAnimationsPaused()
+- EyeRig(type="orbit"): バウンディングボックス基準のオービット視点
 
 確認ポイント
-- `MODEL_ASSET_FILE` で指定した JSON が validator を通過し、そのまま描画できることを確認します
+- MODEL_ASSET_FILE で指定した JSON が validator を通過し、そのまま描画できることを確認します
 - 固定 HUD に file / model / orbit / target / anim / clip / wireframe 状態が表示され、viewer として必要な状態を画面上で追えることを確認します
-- sample 内では facade の戻り値 `runtime` を使って node 復元と animation binding を共通化し、`animationMap` 直参照ではなく `getAnimation()` / `getAnimationNames()` を使って接続確認できることを確認します
-- `4` / `5` キーで対象 clip を切り替え、`1` / `2` / `3` が現在選択中 clip に対して動作することを確認します
-- `4` / `5` キーで `ArmatureAction_skeleton_0` と `ArmatureAction_skeleton_0_copy` を切り替えられることを確認します
-- `1` キーで選択中 clip を `restartAnimation(clipId)` により名前指定で再始動できることを確認します
-- `2` / `3` キーで選択中 clip を `pauseAnimation(clipId)` / `resumeAnimation(clipId)` により個別停止・再開できることを確認します
+- sample 内では facade の戻り値 runtime を使って node 復元と animation binding を共通化し、animationMap 直参照ではなく getAnimation() / getAnimationNames() を使って接続確認できることを確認します
+- 4 / 5 キーで対象 clip を切り替え、1 / 2 / 3 が現在選択中 clip に対して動作することを確認します
+- 4 / 5 キーで ArmatureAction_skeleton_0 と ArmatureAction_skeleton_0_copy を切り替えられることを確認します
+- 1 キーで選択中 clip を restartAnimation(clipId) により名前指定で再始動できることを確認します
+- 2 / 3 キーで選択中 clip を pauseAnimation(clipId) / resumeAnimation(clipId) により個別停止・再開できることを確認します
 - カメラ距離がバウンディングボックスのサイズに応じて自動設定され、モデル全体を見失わないことを確認します
-- `Shift + Arrow` と `Shift + Drag` で camera target を平行移動でき、細部を中央へ寄せて確認できることを確認します
-- `W` で wireframe、`S` で screenshot、`R` で初期 framing へ戻ることを確認します
+- Shift + Arrow と Shift + Drag で camera target を平行移動でき、細部を中央へ寄せて確認できることを確認します
+- W で wireframe、S で screenshot、R で初期 framing へ戻ることを確認します
 - HelpPanel に操作説明がまとまり、固定 HUD と役割を分けて読めることを確認します
 
 操作説明
 - ドラッグ / 矢印キー: オービットカメラ回転
-- `Shift` + ドラッグ / 矢印キー: カメラ target の平行移動
-- ホイール / `[` / `]`: ズーム
-- `Space`: アニメーション一時停止
-- `1`: 選択中 clip を再生し直す
-- `2`: 選択中 clip を一時停止
-- `3`: 選択中 clip を再開
-- `4`: 前の clip を選択
-- `5`: 次の clip を選択
-- `W`: wireframe 切り替え
-- `S`: screenshot 保存
-- `D`: 現在の JSON を再ダウンロード
-- `R`: カメラをバウンディングボックス基準の初期位置へ戻す
+- Shift + ドラッグ / 矢印キー: カメラ target の平行移動
+- ホイール / [ / ]: ズーム
+- Space: アニメーション一時停止
+- 1: 選択中 clip を再生し直す
+- 2: 選択中 clip を一時停止
+- 3: 選択中 clip を再開
+- 4: 前の clip を選択
+- 5: 次の clip を選択
+- W: wireframe 切り替え
+- S: screenshot 保存
+- D: 現在の JSON を再ダウンロード
+- R: カメラをバウンディングボックス基準の初期位置へ戻す
 </pre>
 </section>
 
@@ -874,53 +910,53 @@ AI / 利用者向けの読み取りポイント
 
 概要
 - 3D 空間の原点に X / Y / Z の基準軸を置き、座標系の向きとスケール感を確認する教育用 sample です
-- `WebgApp` で起動をまとめ、`EyeRig` の orbit camera と `WebgApp.updateProjection()` による投影更新を同じ画面で見比べられるようにしています
-- `projectionFar` を 160 に絞り、`samples/dof` と同じく depth buffer の精度を読みやすい範囲へ合わせています
-- `-` / `=` で FOV を動かし、`[` / `]` や wheel で camera 距離を変えることで、projection matrix が見え方をどう変えるかを追いやすくしています
+- WebgApp で起動をまとめ、EyeRig の orbit camera と WebgApp.updateProjection() による投影更新を同じ画面で見比べられるようにしています
+- projectionFar を 160 に絞り、samples/dof と同じく depth buffer の精度を読みやすい範囲へ合わせています
+- - / = で FOV を動かし、[ / ] や wheel で camera 距離を変えることで、projection matrix が見え方をどう変えるかを追いやすくしています
 - camera の world 座標を FOV の近くに表示し、視点位置と見え方の関係を同時に確認しやすくしています
 - 背景と fog を少しグレー寄りにして、HUD は黒で重ねることで、軸と四角錐の色を読みやすくしています
 - 赤い X、緑の Y、青の Z は少し太めにして、白背景でも軸そのものが埋もれにくいようにしています
 - 赤い X、緑の Y、青の Z に加えて、はっきりした色の小さな四角錐を Z 軸の正負方向へ広い範囲に並べ、横方向はより密にして座標軸に近い面で奥行きと遠近法を確認しやすくしています
-- `F` で fog を切り替え、`D` で DOF を切り替えると、同じ scene でも depth cue の出方がどう変わるかを確認しやすくしています
-- `V` で composite / scene / depth / focusMask / blurA / blurB を切り替え、focus mask と blur の段階を目視比較しやすくしています
+- F で fog を切り替え、D で DOF を切り替えると、同じ scene でも depth cue の出方がどう変わるかを確認しやすくしています
+- V で composite / scene / depth / focusMask / blurA / blurB を切り替え、focus mask と blur の段階を目視比較しやすくしています
 - blur radius を大きめにし、focus range を 8 前後まで狭めることで、focus 面から外れた部分のにじみ方がよりはっきり分かるようにしています
-- `maxBlurMix` を高めにして、焦点が合っている場合と外れている場合の差が見えやすいようにしています
-- `5` / `6` で focus range を変え、焦点の合う距離帯そのものを調整しやすくしています
-- `1` / `2` で sharpness width、`3` / `4` で sharpness power を変え、`focusRange` に対する曲線の形を比べやすくしています
+- maxBlurMix を高めにして、焦点が合っている場合と外れている場合の差が見えやすいようにしています
+- 5 / 6 で focus range を変え、焦点の合う距離帯そのものを調整しやすくしています
+- 1 / 2 で sharpness width、3 / 4 で sharpness power を変え、focusRange に対する曲線の形を比べやすくしています
 - DOF の焦点は常に原点へ合わせ、camera を動かしても center sphere が sharp に見えることを確認しやすくしています
 - 軸と四角錐の grid は水平にそろえ、傾きによる見え方の混乱を避けやすくしています
 - 原点は小さな球にして、座標軸の交点を軽く見せています
-- 操作説明と教育用の補足は `buildHelpPanelOptions()` と `showOverlayPanel()` を使って左上の畳める help panel へまとめ、現在値は canvas HUD 側へ分けています
+- 操作説明と教育用の補足は buildHelpPanelOptions() と showOverlayPanel() を使って左上の畳める help panel へまとめ、現在値は canvas HUD 側へ分けています
 
 このサンプルで使うwebg機能
-- `buildHelpPanelOptions()` + `showOverlayPanel()`: 左上の help panel を標準形式で生成し、操作説明と補足説明の表示 / 非表示を切り替える
-- `EyeRig`: orbit camera と pointer / keyboard 入力をまとめる
-- `Shape` / `Primitive`: axis arrow、origin sphere、四角錐列の生成
-- `WebgApp.updateProjection()`: viewAngle と viewport aspect から projection matrix を更新する入口
-- `Message`: current value と control rows の表示
+- buildHelpPanelOptions() + showOverlayPanel(): 左上の help panel を標準形式で生成し、操作説明と補足説明の表示 / 非表示を切り替える
+- EyeRig: orbit camera と pointer / keyboard 入力をまとめる
+- Shape / Primitive: axis arrow、origin sphere、四角錐列の生成
+- WebgApp.updateProjection(): viewAngle と viewport aspect から projection matrix を更新する入口
+- Message: current value と control rows の表示
 
 確認ポイント
 - X / Y / Z の色と向きが想定どおりかを確認し、座標系の読み方を他の sample とそろえます
 - camera orbit と FOV 変更で、同じ scene でも見え方が大きく変わることを確認します
 - origin sphere と Z 方向に広げた四角錐の列が残ることで、軸だけよりも奥行きがつかみやすく、水平な grid との比較もしやすいことを確認します
-- 左上の help panel に座標軸の補足と操作説明が表示され、`Hide Help` を押すと `Show Help` button だけが残り、`Show Help` で再表示できることを確認します
+- 左上の help panel に座標軸の補足と操作説明が表示され、Hide Help を押すと Show Help button だけが残り、Show Help で再表示できることを確認します
 - fog と DOF を切り替えると、奥行きの強調方法がどう変わるかを確認します
 - HUD 文字を少し大きめに戻し、白背景でも案内が読みやすいことを確認します
 
 操作説明
-- 左上 help panel の `Hide Help` / `Show Help`: 操作説明本文の表示 / 非表示
+- 左上 help panel の Hide Help / Show Help: 操作説明本文の表示 / 非表示
 - drag: orbit camera
 - arrow keys: orbit camera
-- wheel / `[ ]`: camera 距離
-- `-` / `=`: FOV
-- `F`: fog の ON / OFF
-- `D`: DOF の ON / OFF
-- `5` / `6`: focus range を狭める / 広げる
-- `1` / `2`: sharpness width を下げる / 上げる
-- `3` / `4`: sharpness power を下げる / 上げる
-- `V`: DOF debug view を `composite / scene / depth / focusMask / blurA / blurB` で切り替え
-- blur radius と `maxBlurMix` を大きめにした状態で、focus 外のにじみ方を比較します
-- `r`: camera、FOV、fog、DOF を reset
+- wheel / [ ]: camera 距離
+- - / =: FOV
+- F: fog の ON / OFF
+- D: DOF の ON / OFF
+- 5 / 6: focus range を狭める / 広げる
+- 1 / 2: sharpness width を下げる / 上げる
+- 3 / 4: sharpness power を下げる / 上げる
+- V: DOF debug view を composite / scene / depth / focusMask / blurA / blurB で切り替え
+- blur radius と maxBlurMix を大きめにした状態で、focus 外のにじみ方を比較します
+- r: camera、FOV、fog、DOF を reset
 </pre>
 </section>
 
@@ -931,49 +967,49 @@ AI / 利用者向けの読み取りポイント
 サンプル: animation_state
 
 概要
-- `samples/gltf_loader/hand.glb` の手を読み込み、各指ポーズの action 自体は `Action` で再生しつつ、「今どの action を選ぶか」は `AnimationState` が決める構成を確認できます。
-- `1` - `6` で desired state を切り替えるだけで、対応する action が始まる構成にしてあり、状態制御と action 再生の役割分担を追いやすくしています。
-- 操作説明は `buildHelpPanelOptions()` と `showOverlayPanel()` を使って左上の畳める help panel へ出し、現在状態は canvas HUD 側へ分けて表示します。
+- samples/gltf_loader/hand.glb の手を読み込み、各指ポーズの action 自体は Action で再生しつつ、「今どの action を選ぶか」は AnimationState が決める構成を確認できます。
+- 1 - 6 で desired state を切り替えるだけで、対応する action が始まる構成にしてあり、状態制御と action 再生の役割分担を追いやすくしています。
+- 操作説明は buildHelpPanelOptions() と showOverlayPanel() を使って左上の畳める help panel へ出し、現在状態は canvas HUD 側へ分けて表示します。
 
 このサンプルで使うwebg機能
-- `WebgApp`: Screen / Shader / Space / Input / Message をまとめて初期化し、`loadModel(..., { format: "gltf" })` で hand.glb を読み込む
-- `Skeleton` / `Bone`: ボーン表示と回転
-- `Action`: 指ポーズの pattern / action 再生を担当
-- `AnimationState`: desired state と遷移条件から、どの action を開始するかを決める最小 state machine
+- WebgApp: Screen / Shader / Space / Input / Message をまとめて初期化し、loadModel(..., { format: "gltf" }) で hand.glb を読み込む
+- Skeleton / Bone: ボーン表示と回転
+- Action: 指ポーズの pattern / action 再生を担当
+- AnimationState: desired state と遷移条件から、どの action を開始するかを決める最小 state machine
 - 各 pose の action は単発再生で扱い、state が変わるまで最後に到達した pose を表示し続けます
-- `buildHelpPanelOptions()` + `showOverlayPanel()`: 左上の help panel を標準形式で生成し、操作説明の表示 / 非表示を切り替える
-- `Message`: HUD と状態表示
+- buildHelpPanelOptions() + showOverlayPanel(): 左上の help panel を標準形式で生成し、操作説明の表示 / 非表示を切り替える
+- Message: HUD と状態表示
 
 確認ポイント
-- 左上の help panel に操作説明が表示され、`Hide Help` を押すと `Show Help` button だけが残り、`Show Help` で再表示できることを確認します。
+- 左上の help panel に操作説明が表示され、Hide Help を押すと Show Help button だけが残り、Show Help で再表示できることを確認します。
 - HUD に desired state / current state / current action / current pattern / transition が表示され、状態遷移と action 再生の役割分担を画面上から追えることを確認します。
-- `P` で auto cycle を有効にすると、一定時間ごとに desired state が変わり、state machine が連続して action を切り替えることを確認します。
-- 現在の `hand.glb` では、`0:レスト`, `1:グー`, `2-3:1本伸ばす`, `4-5:チョキ`, `6-7:3本伸ばす`, `8-9:4本伸ばす`, `10-11:パー`, `12-13:グー` の保持区間に対応します。
+- P で auto cycle を有効にすると、一定時間ごとに desired state が変わり、state machine が連続して action を切り替えることを確認します。
+- 現在の hand.glb では、0:レスト, 1:グー, 2-3:1本伸ばす, 4-5:チョキ, 6-7:3本伸ばす, 8-9:4本伸ばす, 10-11:パー, 12-13:グー の保持区間に対応します。
 
 操作説明
-- 左上 help panel の `Hide Help` / `Show Help`: 操作説明本文の表示 / 非表示
-- `W` / `S`: モデルを X 軸回転
-- `A` / `D`: モデルを Y 軸回転
-- `Z` / `X`: モデルを Z 軸回転
-- `J`: ボーン一覧を console 出力
-- `E` / `R`: 選択中ボーンを X 軸回転
-- `Y` / `U`: 選択中ボーンを Y 軸回転
-- `C` / `V`: 選択中ボーンを Z 軸回転
-- `N` / `M`: メッシュ選択を前後切替
-- `O` / `I`: 選択メッシュの非表示 / 表示
-- `9` / `0`: ボーン表示 / 非表示
-- `1` - `5`: desired state を pose1 - pose5 に変更
-- `6`: desired state を pose0 に変更
-- `/`: 次の desired state へ進む
-- `@`: 現在 state を再始動
-- `P`: auto cycle の ON / OFF
-- `7` / `8`: 描画 ON / OFF
-- `K`: 遅延描画モード ON
-- `Q`: sample 停止
+- 左上 help panel の Hide Help / Show Help: 操作説明本文の表示 / 非表示
+- W / S: モデルを X 軸回転
+- A / D: モデルを Y 軸回転
+- Z / X: モデルを Z 軸回転
+- J: ボーン一覧を console 出力
+- E / R: 選択中ボーンを X 軸回転
+- Y / U: 選択中ボーンを Y 軸回転
+- C / V: 選択中ボーンを Z 軸回転
+- N / M: メッシュ選択を前後切替
+- O / I: 選択メッシュの非表示 / 表示
+- 9 / 0: ボーン表示 / 非表示
+- 1 - 5: desired state を pose1 - pose5 に変更
+- 6: desired state を pose0 に変更
+- /: 次の desired state へ進む
+- @: 現在 state を再始動
+- P: auto cycle の ON / OFF
+- 7 / 8: 描画 ON / OFF
+- K: 遅延描画モード ON
+- Q: sample 停止
 
 補足
-- `AnimationState` は clip データを持たず、既存 `Action` を controller として受ける薄い制御層です
-- このサンプルでは `state.action -&gt; Action.start(actionId)` の接続だけを使い、cross-fade や blend は扱いません
+- AnimationState は clip データを持たず、既存 Action を controller として受ける薄い制御層です
+- このサンプルでは state.action -&gt; Action.start(actionId) の接続だけを使い、cross-fade や blend は扱いません
 </pre>
 </section>
 
@@ -984,36 +1020,36 @@ AI / 利用者向けの読み取りポイント
 サンプル: billboard
 
 概要
-- `Billboard` クラスで、常に camera 正面を向く particle 表現を描画するサンプルです
-- `Texture.buildProceduralBillboardTexture` で生成した手続き texture を使い、smoke と debris の 2 系統を切り替えて比較できます
+- Billboard クラスで、常に camera 正面を向く particle 表現を描画するサンプルです
+- Texture.buildProceduralBillboardTexture で生成した手続き texture を使い、smoke と debris の 2 系統を切り替えて比較できます
 - 背景には小さめの sphere と床を置き、world light と地面 shadow billboard で particle の奥行き関係も読みやすくしています
 
 このサンプルで使うwebg機能
-- `Billboard`: インスタンス型ビルボード描画
-- `BillboardShader`: 位置・スケール・色を持つ粒子描画シェーダ
-- `Texture`: 円形マスク + ノイズ合成の手続きテクスチャ生成
-- `Space` / `Node` / `Shape` / `SmoothShader`: 背景3Dシーンの描画
-- `Billboard.drawGround`: 地面へ寝かせる shadow billboard 描画
+- Billboard: インスタンス型ビルボード描画
+- BillboardShader: 位置・スケール・色を持つ粒子描画シェーダ
+- Texture: 円形マスク + ノイズ合成の手続きテクスチャ生成
+- Space / Node / Shape / SmoothShader: 背景3Dシーンの描画
+- Billboard.drawGround: 地面へ寝かせる shadow billboard 描画
 
 確認ポイント
 - particle が camera 回転に追従して常に正面を向くことを確認し、billboard の向き計算が正しいかを検証します
-- `1` / `2` で smoke と debris を切り替えたとき、同じ particle 更新式でも texture の性格だけで見えが大きく変わることを確認します
-- `-` / `=` で centerBoost を変えたとき、中心部の濃さと edge の見え方がどう変わるかを確認します
+- 1 / 2 で smoke と debris を切り替えたとき、同じ particle 更新式でも texture の性格だけで見えが大きく変わることを確認します
+- - / = で centerBoost を変えたとき、中心部の濃さと edge の見え方がどう変わるかを確認します
 - 同じ particle 数で mesh 方式より頂点数を抑えられる構成として、実運用の effect 基盤に使えることを確認します
 - sphere に highlight が入り、camera を回しても lighting の向きが自然に見えることを確認します
 - particle の真下に薄い shadow billboard が落ち、高さに応じて影の濃さが変わることを確認します
 
 操作説明
-- `Space`: 粒子バーストを生成
-- `1`: smoke texture へ切り替え
-- `2`: debris texture へ切り替え
-- `[` / `]`: 粒子サイズを縮小/拡大
-- `-` / `=`: 現在 mode の centerBoost を下げる/上げる
-- `ArrowLeft` / `ArrowRight`: カメラ水平回転
-- `ArrowUp` / `ArrowDown`: カメラ上下回転
-- `R`: カメラ角度をリセット
-- `C`: 粒子を全消去
-- スマホ（coarse pointer）では画面下にタッチボタン `← / → / ↑ / ↓ / BURST / 1 / 2 / C / [ / ] / - / +` を表示
+- Space: 粒子バーストを生成
+- 1: smoke texture へ切り替え
+- 2: debris texture へ切り替え
+- [ / ]: 粒子サイズを縮小/拡大
+- - / =: 現在 mode の centerBoost を下げる/上げる
+- ArrowLeft / ArrowRight: カメラ水平回転
+- ArrowUp / ArrowDown: カメラ上下回転
+- R: カメラ角度をリセット
+- C: 粒子を全消去
+- スマホ（coarse pointer）では画面下にタッチボタン ← / → / ↑ / ↓ / BURST / 1 / 2 / C / [ / ] / - / + を表示
 </pre>
 </section>
 
@@ -1024,56 +1060,56 @@ AI / 利用者向けの読み取りポイント
 サンプル: bloom
 
 概要
-- `BloomPass` を使って、3D scene を一度 offscreen `RenderTarget` へ描いてから bloom 合成して canvas へ戻すサンプルです。
+- BloomPass を使って、3D scene を一度 offscreen RenderTarget へ描いてから bloom 合成して canvas へ戻すサンプルです。
 - PBR や shadow map を入れる前でも、postprocess を別レイヤとして独立に追加できることを確認するための最小実装です。
-- `WebgApp` は起動と HUD 表示に使いつつ、3D scene 本体は `autoDrawScene: false` で offscreen 描画へ切り替えています。
-- 操作説明は `buildHelpPanelOptions()` と `showOverlayPanel()` を使って左上へまとめ、不要なときは本文を畳んで `Show Help` button だけを残せるようにしています。
+- WebgApp は起動と HUD 表示に使いつつ、3D scene 本体は autoDrawScene: false で offscreen 描画へ切り替えています。
+- 操作説明は buildHelpPanelOptions() と showOverlayPanel() を使って左上へまとめ、不要なときは本文を畳んで Show Help button だけを残せるようにしています。
 - 中央球の specular highlight だけでなく、暖色 / 青 / ピンクの強い emissive 小球も置き、色付き glow が背景側へどう広がるかも見やすくしています。
 
 このサンプルで使うwebg機能
-- `buildHelpPanelOptions()` + `showOverlayPanel()`: 左上の help panel を標準形式で生成し、操作説明の表示 / 非表示を切り替える
-- `EyeRig(type="orbit")`: シーン全体を見回すオービット視点
-- `RenderTarget`: 3D scene の描画先となる offscreen color/depth texture
-- `WebgApp.light.mode = "world-node"`: カメラ固定ではなく world 空間に置いた light を使うフロー
-- `Shape`: glow object と floor の形状生成
-- `Message`: bloom parameter の current value を canvas HUD 上へ並べる表示
+- buildHelpPanelOptions() + showOverlayPanel(): 左上の help panel を標準形式で生成し、操作説明の表示 / 非表示を切り替える
+- EyeRig(type="orbit"): シーン全体を見回すオービット視点
+- RenderTarget: 3D scene の描画先となる offscreen color/depth texture
+- WebgApp.light.mode = "world-node": カメラ固定ではなく world 空間に置いた light を使うフロー
+- Shape: glow object と floor の形状生成
+- Message: bloom parameter の current value を canvas HUD 上へ並べる表示
 
 確認ポイント
 - 3D scene が直接 canvas ではなく offscreen target に描かれ、その後 bloom 合成を経て表示されることを確認します
 - 中央球と周囲の bright orb の周辺ににじみが出て、単なる blur ではなく明るい部分だけが広がることを確認します
 - 画面上部奥の暖色 / 青 / ピンクの emissive 球の周囲にも glow が出て、背景色の暗い領域へ色付き bloom が乗ることを確認します
-- 左上の help panel に操作説明が表示され、`Hide Help` を押すと `Show Help` button だけが残り、`Show Help` で再表示できることを確認します
-- canvas HUD は `Strength: 1.25 [3] - [4] +` のような 1 行 1 parameter 表示で、現在値と操作を同じ行で読めることを確認します
-- `B` で bloom の ON / OFF を切り替えたとき、同じ scene のまま postprocess の有無だけが変化することを確認します
-- `1` / `2` で threshold、`3` / `4` で strength、`5` / `6` で blur iteration、`7` / `8` で blur radius を変えたとき、画面上の見えと HUD の数値が一致することを確認します
-- `A` / `S` で `extractIntensity` を変えたとき、色付き emissive と highlight が extract view へどれだけ強く回るかを確認します
-- `U` で blur quality を `full / half` へ切り替えたとき、にじみの見え方と blur target サイズがどう変わるかを確認します
-- `Q` / `W` で `softKnee`、`A` / `S` で `extractIntensity`、`T` / `Y` で `exposure`、`G` で tone map mode を切り替えたとき、抽出境界と最終合成の見え方がどう変わるかを確認します
-- HUD の `Tone Map` と `Exposure` の row で、bloom 合成後の色を tone mapping していることを確認します
-- threshold 境界だけが急に切り替わるのではなく、`softKnee` により highlight 周辺が少し滑らかに抽出されることを確認します
-- bloom extract は `luma` だけでなく `max(rgb)` も強めに使うため、青やピンクの強い emissive が extract view に乗りやすいことを確認します
-- `V` で `composite / scene / extract / extractHeat / blurA / blurB` を切り替え、extract そのものの色と、gain を heat 表示した状態を切り分けて確認できることを確認します
-- viewport サイズが変わっても `BloomPass.resizeToScreen()` により offscreen target が追従し、ぼけの位置ずれや解像度崩れが起きないことを確認します
+- 左上の help panel に操作説明が表示され、Hide Help を押すと Show Help button だけが残り、Show Help で再表示できることを確認します
+- canvas HUD は Strength: 1.25 [3] - [4] + のような 1 行 1 parameter 表示で、現在値と操作を同じ行で読めることを確認します
+- B で bloom の ON / OFF を切り替えたとき、同じ scene のまま postprocess の有無だけが変化することを確認します
+- 1 / 2 で threshold、3 / 4 で strength、5 / 6 で blur iteration、7 / 8 で blur radius を変えたとき、画面上の見えと HUD の数値が一致することを確認します
+- A / S で extractIntensity を変えたとき、色付き emissive と highlight が extract view へどれだけ強く回るかを確認します
+- U で blur quality を full / half へ切り替えたとき、にじみの見え方と blur target サイズがどう変わるかを確認します
+- Q / W で softKnee、A / S で extractIntensity、T / Y で exposure、G で tone map mode を切り替えたとき、抽出境界と最終合成の見え方がどう変わるかを確認します
+- HUD の Tone Map と Exposure の row で、bloom 合成後の色を tone mapping していることを確認します
+- threshold 境界だけが急に切り替わるのではなく、softKnee により highlight 周辺が少し滑らかに抽出されることを確認します
+- bloom extract は luma だけでなく max(rgb) も強めに使うため、青やピンクの強い emissive が extract view に乗りやすいことを確認します
+- V で composite / scene / extract / extractHeat / blurA / blurB を切り替え、extract そのものの色と、gain を heat 表示した状態を切り分けて確認できることを確認します
+- viewport サイズが変わっても BloomPass.resizeToScreen() により offscreen target が追従し、ぼけの位置ずれや解像度崩れが起きないことを確認します
 - カメラだけを回してもハイライト位置が完全には追従せず、world 固定 light が使われていることを確認します
-- 幅が狭いときは canvas HUD が `Strength: 1.25 [3] [4]` のような compact 表記へ切り替わり、それでも足りないときだけ font scale が下がることを確認します
+- 幅が狭いときは canvas HUD が Strength: 1.25 [3] [4] のような compact 表記へ切り替わり、それでも足りないときだけ font scale が下がることを確認します
 
 操作説明
-- 左上 help panel の `Hide Help` / `Show Help`: 操作説明本文の表示 / 非表示
+- 左上 help panel の Hide Help / Show Help: 操作説明本文の表示 / 非表示
 - ドラッグ / 矢印キー: オービットカメラ回転
-- ホイール / `[` / `]`: ズーム
-- `B`: bloom の ON / OFF
-- `1` / `2`: threshold を下げる / 上げる
-- `3` / `4`: bloom strength を下げる / 上げる
-- `5` / `6`: blur iteration を減らす / 増やす
-- `7` / `8`: blur radius を減らす / 増やす
-- `U`: blur quality を `full / half` で切り替える
-- `Q` / `W`: `softKnee` を下げる / 上げる
-- `A` / `S`: `extractIntensity` を下げる / 上げる
-- `T` / `Y`: `exposure` を下げる / 上げる
-- `G`: tone map mode を `off / reinhard / aces` で切り替える
-- `V`: `composite / scene / extract / extractHeat / blurA / blurB` 表示切り替え
-- `Space`: orb 回転の一時停止 / 再開
-- `R`: bloom パラメータを初期値へ戻す
+- ホイール / [ / ]: ズーム
+- B: bloom の ON / OFF
+- 1 / 2: threshold を下げる / 上げる
+- 3 / 4: bloom strength を下げる / 上げる
+- 5 / 6: blur iteration を減らす / 増やす
+- 7 / 8: blur radius を減らす / 増やす
+- U: blur quality を full / half で切り替える
+- Q / W: softKnee を下げる / 上げる
+- A / S: extractIntensity を下げる / 上げる
+- T / Y: exposure を下げる / 上げる
+- G: tone map mode を off / reinhard / aces で切り替える
+- V: composite / scene / extract / extractHeat / blurA / blurB 表示切り替え
+- Space: orb 回転の一時停止 / 再開
+- R: bloom パラメータを初期値へ戻す
 </pre>
 </section>
 
@@ -1084,65 +1120,65 @@ AI / 利用者向けの読み取りポイント
 サンプル: dof
 
 概要
-- `DofPass` を使って、3D scene を一度 offscreen `RenderTarget` へ描いたあと、depth を参照して focus 面だけ sharp に残す最小の被写界深度サンプルです。
-- `SeparableBlurPass` を bloom 以外でも再利用できることを確認するための sample です。
-- `WebgApp` は起動と HUD 表示に使い、3D scene 本体は `autoDrawScene: false` で postprocess 経由の描画に切り替えています。
+- DofPass を使って、3D scene を一度 offscreen RenderTarget へ描いたあと、depth を参照して focus 面だけ sharp に残す最小の被写界深度サンプルです。
+- SeparableBlurPass を bloom 以外でも再利用できることを確認するための sample です。
+- WebgApp は起動と HUD 表示に使い、3D scene 本体は autoDrawScene: false で postprocess 経由の描画に切り替えています。
 - 床は置かず、近距離 / 焦点付近 / 遠距離に小さめの球を多めに配置し、focus 面の移動を見分けやすくしています。
-- 現在の `focusDistance` には十字状の小さな guide を 3D scene 内へ置き、debug view を開かなくても focus 面の位置を追いやすくしています。
-- 球の geometry は unit sphere を 1 回だけ作り、各 node は `Shape` instance と uniform scale で半径差を表す構成にしているため、色だけを変えつつ mesh build の重複を避けています。
-- 操作説明は `buildHelpPanelOptions()` と `showOverlayPanel()` を使って左上の畳める help panel へ出し、現在値は canvas HUD 側へ分けて表示します。
+- 現在の focusDistance には十字状の小さな guide を 3D scene 内へ置き、debug view を開かなくても focus 面の位置を追いやすくしています。
+- 球の geometry は unit sphere を 1 回だけ作り、各 node は Shape instance と uniform scale で半径差を表す構成にしているため、色だけを変えつつ mesh build の重複を避けています。
+- 操作説明は buildHelpPanelOptions() と showOverlayPanel() を使って左上の畳める help panel へ出し、現在値は canvas HUD 側へ分けて表示します。
 
 このサンプルで使うwebg機能
-- `WebgApp`: Screen / Shader / Space / Input / Message の初期化と HUD 表示
-- `buildHelpPanelOptions()` + `showOverlayPanel()`: 左上の help panel を標準形式で生成し、操作説明の表示 / 非表示を切り替える
-- `Shape.createInstance()`: unit sphere の shared resource を再利用し、色違いの球を individual material + node scale で並べる
-- `RenderTarget(sampleDepth=true)`: 3D scene の color と depth を後段 pass から読めるようにする offscreen 描画先
-- `EyeRig(type="orbit")`: depth 配置を見回すオービット視点
+- WebgApp: Screen / Shader / Space / Input / Message の初期化と HUD 表示
+- buildHelpPanelOptions() + showOverlayPanel(): 左上の help panel を標準形式で生成し、操作説明の表示 / 非表示を切り替える
+- Shape.createInstance(): unit sphere の shared resource を再利用し、色違いの球を individual material + node scale で並べる
+- RenderTarget(sampleDepth=true): 3D scene の color と depth を後段 pass から読めるようにする offscreen 描画先
+- EyeRig(type="orbit"): depth 配置を見回すオービット視点
 
 インスタンス化の観測結果
 - インスタンス化前
-  `vertexCount=12252`
-  `triangleCount=22436`
-  `boneCount=0`
-  `nodeCount=27`
-  `shapeCount=23`
-  `meshCount=23`
+  vertexCount=12252
+  triangleCount=22436
+  boneCount=0
+  nodeCount=27
+  shapeCount=23
+  meshCount=23
 - インスタンス化後
-  `vertexCount=681`
-  `triangleCount=1156`
-  `boneCount=0`
-  `nodeCount=27`
-  `shapeCount=23`
-  `meshCount=4`
-- `shapeCount` が変わらないのは、scene に置いている球の個数そのものは同じだからです
-- `meshCount`、`vertexCount`、`triangleCount` が大きく減るのは、unit sphere の geometry を 1 回だけ build し、その shared resource を複数の `Shape` instance が再利用するためです
+  vertexCount=681
+  triangleCount=1156
+  boneCount=0
+  nodeCount=27
+  shapeCount=23
+  meshCount=4
+- shapeCount が変わらないのは、scene に置いている球の個数そのものは同じだからです
+- meshCount、vertexCount、triangleCount が大きく減るのは、unit sphere の geometry を 1 回だけ build し、その shared resource を複数の Shape instance が再利用するためです
 
 確認ポイント
-- `B` で DOF の ON / OFF を切り替えると、focus 面から外れた球ほど blur されることを確認します
+- B で DOF の ON / OFF を切り替えると、focus 面から外れた球ほど blur されることを確認します
 - カメラを回したときも床で視界が隠れず、複数の小球が前後の層として見えることを確認します
-- `1` / `2` で `focusDistance` を動かしたとき、sharp に見える深度帯が前後へ移動することを確認します
-- `1` / `2` で `focusDistance` を動かしたとき、3D scene 内の十字 guide も同じ距離へ前後移動することを確認します
-- 左上の help panel に操作説明が表示され、`Hide Help` を押すと `Show Help` button だけが残り、`Show Help` で再表示できることを確認します
-- `3` / `4` で `focusRange` を動かしたとき、sharp に残る範囲が狭く / 広く変わることを確認します
-- `5` / `6` で blur radius を変えたとき、focus 外のにじみ方がどう変わるかを確認します
-- `7` / `8` で `maxBlurMix` を変えたとき、blur を scene にどこまで強く混ぜるかが変化することを確認します
-- `U` で `full / half` blur quality を切り替えたとき、blur target サイズと見え方の違いを確認します
-- `V` で `composite / scene / depth / focusMask / blurA / blurB` を切り替え、depth の分布と focus 面の mask を直接確認できることを確認します
-  `focusMask` は手前ぼけを暖色、focus 帯を明るい色、奥ぼけを寒色で表示します
+- 1 / 2 で focusDistance を動かしたとき、sharp に見える深度帯が前後へ移動することを確認します
+- 1 / 2 で focusDistance を動かしたとき、3D scene 内の十字 guide も同じ距離へ前後移動することを確認します
+- 左上の help panel に操作説明が表示され、Hide Help を押すと Show Help button だけが残り、Show Help で再表示できることを確認します
+- 3 / 4 で focusRange を動かしたとき、sharp に残る範囲が狭く / 広く変わることを確認します
+- 5 / 6 で blur radius を変えたとき、focus 外のにじみ方がどう変わるかを確認します
+- 7 / 8 で maxBlurMix を変えたとき、blur を scene にどこまで強く混ぜるかが変化することを確認します
+- U で full / half blur quality を切り替えたとき、blur target サイズと見え方の違いを確認します
+- V で composite / scene / depth / focusMask / blurA / blurB を切り替え、depth の分布と focus 面の mask を直接確認できることを確認します
+  focusMask は手前ぼけを暖色、focus 帯を明るい色、奥ぼけを寒色で表示します
 
 操作説明
-- 左上 help panel の `Hide Help` / `Show Help`: 操作説明本文の表示 / 非表示
+- 左上 help panel の Hide Help / Show Help: 操作説明本文の表示 / 非表示
 - ドラッグ / 矢印キー: オービットカメラ回転
-- ホイール / `[` / `]`: ズーム
-- `B`: DOF の ON / OFF
-- `1` / `2`: focus distance を下げる / 上げる
-- `3` / `4`: focus range を狭める / 広げる
-- `5` / `6`: blur radius を下げる / 上げる
-- `7` / `8`: max blur を下げる / 上げる
-- `Q` / `W`: blur iteration を減らす / 増やす
-- `U`: blur quality を `full / half` で切り替える
-- `V`: `composite / scene / depth / focusMask / blurA / blurB` 表示切り替え
-- `R`: DOF パラメータを初期値へ戻す
+- ホイール / [ / ]: ズーム
+- B: DOF の ON / OFF
+- 1 / 2: focus distance を下げる / 上げる
+- 3 / 4: focus range を狭める / 広げる
+- 5 / 6: blur radius を下げる / 上げる
+- 7 / 8: max blur を下げる / 上げる
+- Q / W: blur iteration を減らす / 増やす
+- U: blur quality を full / half で切り替える
+- V: composite / scene / depth / focusMask / blurA / blurB 表示切り替え
+- R: DOF パラメータを初期値へ戻す
 </pre>
 </section>
 
@@ -1154,30 +1190,30 @@ AI / 利用者向けの読み取りポイント
 
 概要
 - 複数のスキンメッシュ（触手）を同時にアニメーションし、ボーン変形と法線マップの見え方を確認するサンプルです。
-- `SmoothShader` を使った「スキニング + 法線マップ」の実運用例として構成しています。
+- SmoothShader を使った「スキニング + 法線マップ」の実運用例として構成しています。
 
 このサンプルで使うwebg機能
-- `WebgApp`: Screen / Shader / Space / Camera / Input / Message の標準初期化
-- `Skeleton` / `Bone`: ボーン階層と姿勢更新
-- `Shape` + ウェイト: スキニング対象メッシュ
-- `SmoothShader`: ボーン変形対応の法線マップ付きライティング
-- `Texture`: 手続きノイズから高さマップと法線マップを生成
-- `WebgApp.setGuideLines` / `setStatusLines`: 操作説明と runtime 状態表示
-- `Touch`: モバイル向けの回転 / action ボタン
+- WebgApp: Screen / Shader / Space / Camera / Input / Message の標準初期化
+- Skeleton / Bone: ボーン階層と姿勢更新
+- Shape + ウェイト: スキニング対象メッシュ
+- SmoothShader: ボーン変形対応の法線マップ付きライティング
+- Texture: 手続きノイズから高さマップと法線マップを生成
+- WebgApp.setGuideLines / setStatusLines: 操作説明と runtime 状態表示
+- Touch: モバイル向けの回転 / action ボタン
 
 確認ポイント
 - 触手がボーン階層に追従して連続的に変形するかを確認し、ウェイト設定と姿勢更新が破綻していないかを検証します
-- 法線マップあり/なしで陰影の密度が変化するかを確認し、`SmoothShader` の導入効果を見積もります
+- 法線マップあり/なしで陰影の密度が変化するかを確認し、SmoothShader の導入効果を見積もります
 - ボーン表示を有効化したときに、可視ボーンの向きと実際のメッシュ変形方向が一致するかを確認します
 - guide は画面下、status は画面上に分けてあり、表示の役割を分離した sample としても確認します
 
 操作説明
-- `ArrowUp` / `ArrowDown`: クリーチャ全体をX軸方向に回転
-- `ArrowLeft` / `ArrowRight`: クリーチャ全体をY軸方向に回転
-- `Q` / `E`: クリーチャ全体をZ軸方向に回転
-- `B`: ボーン表示のON/OFF
-- `P`: 一時停止のON/OFF
-- `S`: スクリーンショット保存
+- ArrowUp / ArrowDown: クリーチャ全体をX軸方向に回転
+- ArrowLeft / ArrowRight: クリーチャ全体をY軸方向に回転
+- Q / E: クリーチャ全体をZ軸方向に回転
+- B: ボーン表示のON/OFF
+- P: 一時停止のON/OFF
+- S: スクリーンショット保存
 </pre>
 </section>
 
@@ -1188,32 +1224,32 @@ AI / 利用者向けの読み取りポイント
 サンプル: camera_controller
 
 概要
-- `CameraRig` の `base / rod / carriage / mount / camera` 構成を前提に、`orbit` と `first-person` を同じ scene で比較するサンプルです。
-- `CameraRig` 自体は state holder と node 構成に専念し、drag / wheel / keyboard の入力変換はサンプル側へ置く構成にしています。
-- orbit では `carriage` が距離、`mount` が PAN、`rod` が主回転を担当し、first-person では `mount` が eye height、`camera` が視線 pitch を担当する違いを HUD で追えるようにしています。
+- CameraRig の base / rod / carriage / mount / camera 構成を前提に、orbit と first-person を同じ scene で比較するサンプルです。
+- CameraRig 自体は state holder と node 構成に専念し、drag / wheel / keyboard の入力変換はサンプル側へ置く構成にしています。
+- orbit では carriage が距離、mount が PAN、rod が主回転を担当し、first-person では mount が eye height、camera が視線 pitch を担当する違いを HUD で追えるようにしています。
 
 このサンプルで使うwebg機能
-- `WebgApp`: 起動、描画ループ、HUD 表示、入力 lower-case 規約の共通化
-- `CameraRig`: orbit / first-person の state と 5 ノード構成の保持
-- `Shape` / `Node`: 床、塔、ターゲットキャラクタ、進行方向マーカーの構築
-- `Message`: 画面上の操作ガイド表示
+- WebgApp: 起動、描画ループ、HUD 表示、入力 lower-case 規約の共通化
+- CameraRig: orbit / first-person の state と 5 ノード構成の保持
+- Shape / Node: 床、塔、ターゲットキャラクタ、進行方向マーカーの構築
+- Message: 画面上の操作ガイド表示
 
 確認ポイント
-- orbit では `rod` の yaw / pitch、`carriage` の距離、`mount` の X / Y が別々に変化し、責務が混ざらないことを HUD の `base / rod / carriage / mount / camera` 表示で確認します。
-- first-person では `base` が移動し、`mount` の Y に eye height が入り、`camera` の pitch が独立に変わることを確認します。
-- `CameraRig` 本体は screen drag から PAN 量を計算せず、サンプル側が決めた単位で `setPan()` / `addPan()` 相当の state 更新を行っていることを確認します。
+- orbit では rod の yaw / pitch、carriage の距離、mount の X / Y が別々に変化し、責務が混ざらないことを HUD の base / rod / carriage / mount / camera 表示で確認します。
+- first-person では base が移動し、mount の Y に eye height が入り、camera の pitch が独立に変わることを確認します。
+- CameraRig 本体は screen drag から PAN 量を計算せず、サンプル側が決めた単位で setPan() / addPan() 相当の state 更新を行っていることを確認します。
 - moving target は scene の見え方確認用であり、camera helper 自体は target 追従機能を持たないことを確認します。
 
 操作説明
-- `1`: orbit view へ切替
-- `2`: first-person view へ切替
-- `P`: moving target の移動を一時停止 / 再開
-- `R`: 現在の view mode の姿勢を初期値へ戻す
-- orbit: ドラッグまたは `Arrow` キーで rod 回転
-- orbit: `Shift + Drag` または `Shift + Arrow` で mount を carriage 平面上で移動
-- orbit: ホイールまたは `[` / `]` で距離変更
+- 1: orbit view へ切替
+- 2: first-person view へ切替
+- P: moving target の移動を一時停止 / 再開
+- R: 現在の view mode の姿勢を初期値へ戻す
+- orbit: ドラッグまたは Arrow キーで rod 回転
+- orbit: Shift + Drag または Shift + Arrow で mount を carriage 平面上で移動
+- orbit: ホイールまたは [ / ] で距離変更
 - first-person: ドラッグで視線回転
-- first-person: `W` / `A` / `S` / `D` で移動、`Q` / `E` で下降 / 上昇、`Shift` で加速
+- first-person: W / A / S / D で移動、Q / E で下降 / 上昇、Shift で加速
 </pre>
 </section>
 
@@ -1224,41 +1260,41 @@ AI / 利用者向けの読み取りポイント
 サンプル: fog_cube
 
 概要
-- shader 側に追加した fog を、`WebgApp` ベースの sample で一通り試すためのサンプルです。
-- `mode`, `near`, `far`, `density`, `fog color` をキー操作で切り替え、複数の距離に並んだ cube 群にどう効くかを確認できます。
+- shader 側に追加した fog を、WebgApp ベースの sample で一通り試すためのサンプルです。
+- mode, near, far, density, fog color をキー操作で切り替え、複数の距離に並んだ cube 群にどう効くかを確認できます。
 - 複数距離に並んだ cube 群と床、壁を使い、fog の見え方だけを集中的に確認できる構成です。
 
 このサンプルで使うwebg機能
-- `WebgApp`: fog 設定、HUD、入力、camera rig をまとめて初期化
-- `EyeRig(type="orbit")`: ドラッグ、矢印キー、ホイールで視点を調整
-- `Primitive`: floor、wall、cube、pillar の形状を `ModelAsset` として生成
-- `Shape.setMaterial("smooth-shader", ...)`: 各 object に fog が掛かる標準材質を適用
-- `Shape.setWireframe()`: 一部 cube または scene 全体を wireframe 表示に切り替え、wireframe でも fog が効くことを確認
-- `Message`: 操作ガイドと fog 状態の表示
+- WebgApp: fog 設定、HUD、入力、camera rig をまとめて初期化
+- EyeRig(type="orbit"): ドラッグ、矢印キー、ホイールで視点を調整
+- Primitive: floor、wall、cube、pillar の形状を ModelAsset として生成
+- Shape.setMaterial("smooth-shader", ...): 各 object に fog が掛かる標準材質を適用
+- Shape.setWireframe(): 一部 cube または scene 全体を wireframe 表示に切り替え、wireframe でも fog が効くことを確認
+- Message: 操作ガイドと fog 状態の表示
 
 確認ポイント
-- `1` / `2` / `3` で `off / linear / exp` を切り替えたとき、遠距離の cube と床がどのように消えていくかを比較します。
-- `Q` / `W` で `near`、`A` / `S` で `far` を変え、linear fog の開始位置と終端位置が想定どおり動くかを確認します。
-- `Z` / `X` で `density` を変え、exp fog の減衰の強さが滑らかに変化するかを確認します。
-- `C` で fog color を切り替えたとき、背景色と fog 色が揃って scene 全体の空気感が変わることを確認します。暗い青系だけでなく、白い霧のような preset も含まれます。
-- `4` で一部の cube だけを wireframe 表示にし、`5` で scene 全体を wireframe 表示にします。wireframe の線も通常描画と同じ fog 設定で遠景に溶け込むことを確認します。
+- 1 / 2 / 3 で off / linear / exp を切り替えたとき、遠距離の cube と床がどのように消えていくかを比較します。
+- Q / W で near、A / S で far を変え、linear fog の開始位置と終端位置が想定どおり動くかを確認します。
+- Z / X で density を変え、exp fog の減衰の強さが滑らかに変化するかを確認します。
+- C で fog color を切り替えたとき、背景色と fog 色が揃って scene 全体の空気感が変わることを確認します。暗い青系だけでなく、白い霧のような preset も含まれます。
+- 4 で一部の cube だけを wireframe 表示にし、5 で scene 全体を wireframe 表示にします。wireframe の線も通常描画と同じ fog 設定で遠景に溶け込むことを確認します。
 - orbit camera を動かしても、object 単位ではなく view 距離ベースで fog が掛かり続けることを確認します。
 
 操作説明
 - ドラッグ / 矢印キー: オービットカメラ回転
-- ホイール / `[` / `]`: ズーム
-- `1`: fog off
-- `2`: linear fog
-- `3`: exp fog
-- `0`: solid 表示へ戻す
-- `4`: 一部 cube の wireframe 表示を切替
-- `5`: scene 全体の wireframe 表示を切替
-- `Q` / `W`: fog near を減少 / 増加
-- `A` / `S`: fog far を減少 / 増加
-- `Z` / `X`: fog density を減少 / 増加
-- `C`: fog color preset を切替
-- `Space`: object の回転と上下動を一時停止
-- `R`: camera と fog を初期値へ戻す
+- ホイール / [ / ]: ズーム
+- 1: fog off
+- 2: linear fog
+- 3: exp fog
+- 0: solid 表示へ戻す
+- 4: 一部 cube の wireframe 表示を切替
+- 5: scene 全体の wireframe 表示を切替
+- Q / W: fog near を減少 / 増加
+- A / S: fog far を減少 / 増加
+- Z / X: fog density を減少 / 増加
+- C: fog color preset を切替
+- Space: object の回転と上下動を一時停止
+- R: camera と fog を初期値へ戻す
 </pre>
 </section>
 
@@ -1270,27 +1306,27 @@ AI / 利用者向けの読み取りポイント
 
 概要
 - 球体を複数配置し、色・テクスチャ・回転・カメラ操作をまとめて確認するサンプルです。
-- `Shape.referShape` を使ったメッシュ再利用の基本パターンも含みます。
+- Shape.referShape を使ったメッシュ再利用の基本パターンも含みます。
 
 このサンプルで使うwebg機能
-- `Shape.sphere` / `Shape.referShape`
-- `Texture` と `shaderParameter` 設定
-- `Space` / `Node`: 階層回転とカメラ制御
-- `Screen.screenShot`, HUD表示
+- Shape.sphere / Shape.referShape
+- Texture と shaderParameter 設定
+- Space / Node: 階層回転とカメラ制御
+- Screen.screenShot, HUD表示
 
 確認ポイント
-- `referShape` で複製した球体が同一メッシュを共有しつつ個別の姿勢更新ができるかを確認します
+- referShape で複製した球体が同一メッシュを共有しつつ個別の姿勢更新ができるかを確認します
 - カメラ回転とズームが破綻せず、複数球体を安定して観察できるかを確認します
 - 形状切替やスクリーンショット保存が描画ループ中に安全に実行できるかを確認します
 
 操作説明
-- `Q`: 終了
-- `P`: スクリーンショット保存
-- `W` / `S`: カメラをX軸回転
-- `A` / `D`: カメラをY軸回転
-- `Z` / `X`: ズームイン / ズームアウト
-- `1` - `9`: 表示形状の切替
-- `H`: ヘルプ表示のON/OFF
+- Q: 終了
+- P: スクリーンショット保存
+- W / S: カメラをX軸回転
+- A / D: カメラをY軸回転
+- Z / X: ズームイン / ズームアウト
+- 1 - 9: 表示形状の切替
+- H: ヘルプ表示のON/OFF
 </pre>
 </section>
 
@@ -1301,30 +1337,30 @@ AI / 利用者向けの読み取りポイント
 サンプル: detouch
 
 概要
-- ノードの親子関係を実行中に `attach` / `detach` で切り替えるサンプルです。
+- ノードの親子関係を実行中に attach / detach で切り替えるサンプルです。
 - 「見た目の位置を保ったまま親を差し替える」階層操作を、実際の動きと HUD の両方から学ぶための教材サンプルです。
 
 このサンプルで使うwebg機能
-- `WebgApp`: Screen / Shader / Space / Camera / Input / Message の標準初期化
-- `Node.attach` / `Node.detach`
-- `Node.getWorldPosition` / `getWorldAttitude`
-- `WebgApp.setGuideLines` / `setStatusLines`: 階層状態と姿勢表示
-- `Texture` + `SmoothShader`: 球の可視化
-- `InputController` / `Touch`: キー入力とタッチ入力を同じ操作へ束ねる
+- WebgApp: Screen / Shader / Space / Camera / Input / Message の標準初期化
+- Node.attach / Node.detach
+- Node.getWorldPosition / getWorldAttitude
+- WebgApp.setGuideLines / setStatusLines: 階層状態と姿勢表示
+- Texture + SmoothShader: 球の可視化
+- InputController / Touch: キー入力とタッチ入力を同じ操作へ束ねる
 
 確認ポイント
 - 左右の回転アームの先端に対して球の親を切り替えても、球の見た目位置と姿勢が急に飛ばないことを確認し、ワールド座標保持の実装を観察します
-- `sphere parent`、`world h/p/b`、`local h/p/b` の status 表示を見比べ、親変更後に local 値は変わっても見た目の world 側が保たれることを確認します
-- `detach/attach right` と `exchange parent` の違いを見比べ、親を `null` に外す場合と別親へつなぎ替える場合の処理フロー差を確認します
+- sphere parent、world h/p/b、local h/p/b の status 表示を見比べ、親変更後に local 値は変わっても見た目の world 側が保たれることを確認します
+- detach/attach right と exchange parent の違いを見比べ、親を null に外す場合と別親へつなぎ替える場合の処理フロー差を確認します
 
 操作説明
-- `W` / `Z`: カメラのピッチ回転
-- `A` / `S`: カメラのヨー回転
-- `F` / `G`: ズームイン / ズームアウト
-- `D`: 右先端ノードとの detach/attach 切替
-- `Space`: 球オブジェクトの親ノードを左右で入れ替え
-- `Q`: アニメーション停止
-- `X`: アニメーション再開
+- W / Z: カメラのピッチ回転
+- A / S: カメラのヨー回転
+- F / G: ズームイン / ズームアウト
+- D: 右先端ノードとの detach/attach 切替
+- Space: 球オブジェクトの親ノードを左右で入れ替え
+- Q: アニメーション停止
+- X: アニメーション再開
 </pre>
 </section>
 
@@ -1336,32 +1372,32 @@ AI / 利用者向けの読み取りポイント
 サンプル: high_level
 
 概要
-- `README.md` の「標準の使い方」にある `WebgApp` 例を、すぐ実行して確認できる sample として切り出したものです
-- `WebgApp` を入口にして、`Screen`、shader、`Space`、camera rig、`InputController`、`Message` をまとめて初期化します
-- README の最小例をそのまま確認しやすいように、camera 操作用として `EyeRig(type="orbit")` を加えています
-- object は毎 frame 自動回転しつつ、mouse drag / wheel / arrow key / `[ ]` と、touch の 1本指 drag / 2本指 drag / pinch で camera を動かせるため、`WebgApp` で組んだ最小 3D app の感触をすぐ確認できます
-- `S` キーで `WebgApp.takeScreenshot()` を呼び、`high_level_YYYYMMDD_HHMMSS.png` 形式で canvas を保存できます
+- README.md の「標準の使い方」にある WebgApp 例を、すぐ実行して確認できる sample として切り出したものです
+- WebgApp を入口にして、Screen、shader、Space、camera rig、InputController、Message をまとめて初期化します
+- README の最小例をそのまま確認しやすいように、camera 操作用として EyeRig(type="orbit") を加えています
+- object は毎 frame 自動回転しつつ、mouse drag / wheel / arrow key / [ ] と、touch の 1本指 drag / 2本指 drag / pinch で camera を動かせるため、WebgApp で組んだ最小 3D app の感触をすぐ確認できます
+- S キーで WebgApp.takeScreenshot() を呼び、high_level_YYYYMMDD_HHMMSS.png 形式で canvas を保存できます
 
 このサンプルで使うwebg機能
-- `WebgApp`: Screen / Shader / Space / Camera / Input / Message をまとめて初期化する
-- `WebgApp.takeScreenshot`: `Screen` を直接触らずにスクリーンショット保存を予約する
-- `EyeRig`: orbit camera の mouse / touch / keyboard 操作を追加する
-- `Shape`: primitive を GPU buffer と材質へまとめる
-- `Primitive`: 立方体 mesh を作る
-- `Message`: guide lines と status lines を canvas HUD へ出す
+- WebgApp: Screen / Shader / Space / Camera / Input / Message をまとめて初期化する
+- WebgApp.takeScreenshot: Screen を直接触らずにスクリーンショット保存を予約する
+- EyeRig: orbit camera の mouse / touch / keyboard 操作を追加する
+- Shape: primitive を GPU buffer と材質へまとめる
+- Primitive: 立方体 mesh を作る
+- Message: guide lines と status lines を canvas HUD へ出す
 
 確認ポイント
 - 起動直後に青い立方体が中央へ表示され、左上の status と左下の guide が重なることを確認します
-- 立方体が自動回転し、`WebgApp.start()` だけで更新と描画が回ることを確認します
-- drag と wheel で orbit camera が動き、touch では 1本指 drag で回転、2本指 drag で平行移動、pinch で zoom でき、arrow key と `[ ]` でも同じ camera が動くことを確認します
+- 立方体が自動回転し、WebgApp.start() だけで更新と描画が回ることを確認します
+- drag と wheel で orbit camera が動き、touch では 1本指 drag で回転、2本指 drag で平行移動、pinch で zoom でき、arrow key と [ ] でも同じ camera が動くことを確認します
 
 操作説明
 - drag: orbit camera
 - 2本指 drag: camera を平行移動
 - pinch / wheel: zoom
 - arrow keys: orbit camera
-- `[` / `]`: zoom
-- `S`: screenshot 保存
+- [ / ]: zoom
+- S: screenshot 保存
 </pre>
 </section>
 <section class='sample'>
@@ -1371,25 +1407,25 @@ AI / 利用者向けの読み取りポイント
 サンプル: low_level
 
 概要
-- `README.md` の「標準の使い方」にある low-level 例を、そのまま実行しやすい sample として切り出したものです
-- `Screen`、`SmoothShader`、`Space`、`Shape`、`Primitive` を直接つなぎ、`WebgApp` を使わずに最小構成の 3D 表示を作ります
+- README.md の「標準の使い方」にある low-level 例を、そのまま実行しやすい sample として切り出したものです
+- Screen、SmoothShader、Space、Shape、Primitive を直接つなぎ、WebgApp を使わずに最小構成の 3D 表示を作ります
 - 起動時に WebGPU と shader を初期化し、projection matrix を設定してから、立方体 1 個だけを scene に置いています
 - object は毎 frame 少しずつ回転するため、辺と面の向きが変わり、立体感と light の当たり方をそのまま確認できます
 - resize と orientationchange に合わせて canvas size と projection を更新するので、PC とスマホで縦横比が崩れにくい構成です
 
 このサンプルで使うwebg機能
-- `Screen`: canvas と WebGPU 初期化を担当する
-- `SmoothShader`: 最小の立体表示で使う標準 shader
-- `Matrix`: projection matrix を作る
-- `Space`: scene graph と draw 順序を保持する
-- `Shape`: primitive を GPU buffer と材質へまとめる
-- `Primitive`: 立方体 mesh を作る
+- Screen: canvas と WebGPU 初期化を担当する
+- SmoothShader: 最小の立体表示で使う標準 shader
+- Matrix: projection matrix を作る
+- Space: scene graph と draw 順序を保持する
+- Shape: primitive を GPU buffer と材質へまとめる
+- Primitive: 立方体 mesh を作る
 
 確認ポイント
 - 起動直後に青い立方体が中央へ表示され、黒寄りの背景の上で自動回転することを確認します
 - 立方体が Y と X の両方へ少しずつ回ることで、辺の向きと光の当たり方が変化することを確認します
 - browser window の resize やスマホの回転後も立方体がつぶれず、縦横比が保たれることを確認します
-- `WebgApp` を使わなくても、`Screen -&gt; shader -&gt; projection -&gt; Space -&gt; Shape -&gt; draw` の順で最小表示が成立することを確認します
+- WebgApp を使わなくても、Screen -&gt; shader -&gt; projection -&gt; Space -&gt; Shape -&gt; draw の順で最小表示が成立することを確認します
 
 操作説明
 - このサンプルは操作なしで自動再生します
@@ -1402,19 +1438,19 @@ AI / 利用者向けの読み取りポイント
 サンプル: lowlevel_terrain
 
 概要
-- `WebgApp` で camera と HUD を整え、terrain mesh そのものは `Shape` の low-level API だけで作る sample です
-- `value noise` と `fbm` を使って高さを決め、共有頂点の grid に対して `addPlane()` で quad を張り、連続した地形を 1 枚の mesh として構築します
+- WebgApp で camera と HUD を整え、terrain mesh そのものは Shape の low-level API だけで作る sample です
+- value noise と fbm を使って高さを決め、共有頂点の grid に対して addPlane() で quad を張り、連続した地形を 1 枚の mesh として構築します
 - mesh と同じ height field から高さ帯 texture も生成し、海辺、草地、岩場、雪線のような色の変化を 1 枚の procedural texture として与えます
 - steep な段差には簡易 erosion 風 smoothing をかけ、急な崖を少しだけ崩して自然な尾根と斜面へ寄せています
 - 中心を高く、外周を低くする falloff を入れているため、島状の silhouette が分かりやすく出ます
 - orbit と zoom で近くから法線、遠くから輪郭を見比べると、low-level terrain 生成の意図を確認しやすい構成です
-- `Q` / `E` で camera 距離、`-` / `=` で terrain の起伏量をその場で変えられるため、同じ topology で見え方がどう変わるかを比較できます
+- Q / E で camera 距離、- / = で terrain の起伏量をその場で変えられるため、同じ topology で見え方がどう変わるかを比較できます
 
 このサンプルで使うwebg機能
-- `WebgApp`: 起動、camera、HUD、input、fog の初期化
-- `EyeRig`: orbit camera と zoom
-- `Shape.addVertexUV()`: grid 上の頂点を並べる
-- `Shape.addPlane()`: quad を 2 三角形へ分けて追加する
+- WebgApp: 起動、camera、HUD、input、fog の初期化
+- EyeRig: orbit camera と zoom
+- Shape.addVertexUV(): grid 上の頂点を並べる
+- Shape.addPlane(): quad を 2 三角形へ分けて追加する
 
 確認ポイント
 - 起動直後に島状の地形が見え、orbit camera で上空と斜めから観察できることを確認します
@@ -1423,17 +1459,17 @@ AI / 利用者向けの読み取りポイント
 - 共有頂点で法線を作っているため、地形表面が連続して smooth に見えることを確認します
 - erosion 風 smoothing により、ノイズだけの terrain よりも steep な段差が少し和らいでいることを確認します
 - zoom を寄せると山肌の傾き、引くと全体の silhouette と falloff の効き方が分かることを確認します
-- `-` / `=` で右上の `heightScale` と地形の起伏量が一緒に変わることを確認します
+- - / = で右上の heightScale と地形の起伏量が一緒に変わることを確認します
 
 操作説明
 - drag: orbit camera
 - 2本指 drag: camera を平行移動
 - pinch / wheel: zoom
 - arrow keys: orbit camera
-- `[` / `]`: zoom
-- `Q` / `E`: camera 距離を近づける / 遠ざける
-- `-` / `=`: terrain の起伏量を下げる / 上げる
-- `R`: 既定 view へ戻す
+- [ / ]: zoom
+- Q / E: camera 距離を近づける / 遠ざける
+- - / =: terrain の起伏量を下げる / 上げる
+- R: 既定 view へ戻す
 </pre>
 </section>
 <section class='sample'>
@@ -1443,32 +1479,32 @@ AI / 利用者向けの読み取りポイント
 サンプル: model_shape
 
 概要
-- `Primitive.js` が返す `ModelAsset` を `ModelValidator` で検証し、`ModelBuilder` で `Shape` に変換して表示するサンプルです。
-- 法線マップ付きで複数形状を並べますが、形状生成経路を `Shape` 直書きではなく `Primitive -&gt; ModelAsset -&gt; validate -&gt; build` に揃えている点が主な特徴です。
-- `WebgApp.js` を使って、初期化、メッセージ表示、ループを高レベル API でまとめています。
+- Primitive.js が返す ModelAsset を ModelValidator で検証し、ModelBuilder で Shape に変換して表示するサンプルです。
+- 法線マップ付きで複数形状を並べますが、形状生成経路を Shape 直書きではなく Primitive -&gt; ModelAsset -&gt; validate -&gt; build に揃えている点が主な特徴です。
+- WebgApp.js を使って、初期化、メッセージ表示、ループを高レベル API でまとめています。
 
 このサンプルで使うwebg機能
-- `WebgApp`: 標準初期化、描画ループ、操作ガイド表示
-- `Primitive`: 基本プリミティブを `ModelAsset` として生成
-- `ModelAsset`: データ表現の共通入口
-- `ModelValidator`: geometry / animation / node などの整合検証
-- `ModelBuilder`: `ModelAsset` から `Shape` 群を構築
-- `SmoothShader`: 通常テクスチャ + 法線マップ描画
-- `Texture.buildNormalMapFromHeightMap`: 同一画像から法線マップ生成
+- WebgApp: 標準初期化、描画ループ、操作ガイド表示
+- Primitive: 基本プリミティブを ModelAsset として生成
+- ModelAsset: データ表現の共通入口
+- ModelValidator: geometry / animation / node などの整合検証
+- ModelBuilder: ModelAsset から Shape 群を構築
+- SmoothShader: 通常テクスチャ + 法線マップ描画
+- Texture.buildNormalMapFromHeightMap: 同一画像から法線マップ生成
 
 確認ポイント
-- `Primitive` が返した `ModelAsset` をそのまま validator に通せることを確認します
-- `ModelBuilder` を経由して生成した `Shape` でも、法線マップ付き描画が成立することを確認します
-- `shapes` と比べて、見え方の差より `Primitive -&gt; ModelAsset -&gt; validate -&gt; build` の処理フローを追う sample であることを確認します
+- Primitive が返した ModelAsset をそのまま validator に通せることを確認します
+- ModelBuilder を経由して生成した Shape でも、法線マップ付き描画が成立することを確認します
+- shapes と比べて、見え方の差より Primitive -&gt; ModelAsset -&gt; validate -&gt; build の処理フローを追う sample であることを確認します
 - ワイヤーフレーム切替や法線マップON/OFFで、生成経路が変わっても表示制御が破綻しないことを確認します
 
 操作説明
 - ドラッグ / 矢印キー: オービットカメラ回転
-- ホイール / `[` / `]`: ズーム
-- `Space`: 回転の一時停止
-- `N`: 法線マップ ON/OFF
-- `W`: ワイヤーフレーム ON/OFF
-- `R`: カメラを初期位置へ戻す
+- ホイール / [ / ]: ズーム
+- Space: 回転の一時停止
+- N: 法線マップ ON/OFF
+- W: ワイヤーフレーム ON/OFF
+- R: カメラを初期位置へ戻す
 </pre>
 </section>
 <section class='sample'>
@@ -1478,18 +1514,18 @@ AI / 利用者向けの読み取りポイント
 サンプル: proctex
 
 概要
-- `WebgApp` を土台に、Texture.js の手続きハイトマップ生成と法線マップ生成を同時に確認するサンプルです。
+- WebgApp を土台に、Texture.js の手続きハイトマップ生成と法線マップ生成を同時に確認するサンプルです。
 - 同一ハイトマップを「カラー用テクスチャ」と「法線マップ」の両方に使い、
-  `Shape.mapCube` に貼り付けた立方体を画面中央でゆっくり回転表示します。
-- `WebgApp` の入力と HUD を使い、キー操作ガイドと現在パラメータを同じ画面で追えるようにしています。
+  Shape.mapCube に貼り付けた立方体を画面中央でゆっくり回転表示します。
+- WebgApp の入力と HUD を使い、キー操作ガイドと現在パラメータを同じ画面で追えるようにしています。
 
 このサンプルで使うwebg機能
-- `Texture.makeProceduralHeightMapPixels`: 手続きハイトマップ生成
-- `Texture.buildNormalMapFromHeightMap`: ハイトマップから法線マップ生成
-- `Shape.mapCube`: UV展開済み立方体
-- `SmoothShader`: テクスチャ + 法線マップ描画
-- `InputController` / `Touch`: キー入力とタッチボタン入力の共通化
-- `WebgApp` の HUD: 操作ガイドと現在パラメータの表示
+- Texture.makeProceduralHeightMapPixels: 手続きハイトマップ生成
+- Texture.buildNormalMapFromHeightMap: ハイトマップから法線マップ生成
+- Shape.mapCube: UV展開済み立方体
+- SmoothShader: テクスチャ + 法線マップ描画
+- InputController / Touch: キー入力とタッチボタン入力の共通化
+- WebgApp の HUD: 操作ガイドと現在パラメータの表示
 
 確認ポイント
 - テクスチャON/OFF、法線マップON/OFFで見え方が即時に切り替わることを確認します。
@@ -1498,23 +1534,23 @@ AI / 利用者向けの読み取りポイント
 - PC でも touch ボタンが表示され、同じキー操作をそのまま押せることを確認します。
 
 操作説明
-- `T`: テクスチャON/OFF
-- `N`: 法線マップON/OFF
-- `P`: パターン切替（noise / dots）
-- `C`: シェーダ `color` プリセット切替
-- `[` / `]`: scale 減少 / 増加
-- `,` / `.`: bias 減少 / 増加
-- `;` / `'`: contrast 減少 / 増加
-- `K` / `L`: seed 減少 / 増加
-- `U` / `J`: normal strength 増加 / 減少
-- `I`: invertHeight ON/OFF
-- `Y`: invertY ON/OFF
-- `R`: 現在パラメータで強制再生成（通常は自動再生成される）
+- T: テクスチャON/OFF
+- N: 法線マップON/OFF
+- P: パターン切替（noise / dots）
+- C: シェーダ color プリセット切替
+- [ / ]: scale 減少 / 増加
+- , / .: bias 減少 / 増加
+- ; / ': contrast 減少 / 増加
+- K / L: seed 減少 / 増加
+- U / J: normal strength 増加 / 減少
+- I: invertHeight ON/OFF
+- Y: invertY ON/OFF
+- R: 現在パラメータで強制再生成（通常は自動再生成される）
 - touch ボタンも同じキー割り当てで表示され、PC でもそのまま確認できます
 
 再生成の仕様
-- `P`/`[`/`]`/`,`/`.`/`;`/`'`/`K`/`L`/`I`/`Y` は変更時に自動で再生成されます。
-- `R` は「同じパラメータのまま再生成を明示的に実行したい時」に使います。
+- P/[/]/,/./;/'/K/L/I/Y は変更時に自動で再生成されます。
+- R は「同じパラメータのまま再生成を明示的に実行したい時」に使います。
 </pre>
 </section>
 <section class='sample'>
@@ -1524,45 +1560,45 @@ AI / 利用者向けの読み取りポイント
 サンプル: scene
 
 概要
-- `Scene JSON` を `SceneAsset.load()` で読み込み、`WebgApp.validateScene()` と `WebgApp.loadScene()` を通してそのまま表示するサンプルです。
-- 1 つの scene 定義の中に `camera`, `primitives`, `models`, `hud`, `input mapping` をまとめ、JavaScript 側では action handler だけを実装する構成にしています。
-- 画面上には `OverlayPanel` ベースの DOM UI も重ねてあり、Scene JSON の action を button からも起動できるようにしています。これにより、scene 側の input 定義と JavaScript 側 handler のつながりを見比べやすくしています。
+- Scene JSON を SceneAsset.load() で読み込み、WebgApp.validateScene() と WebgApp.loadScene() を通してそのまま表示するサンプルです。
+- 1 つの scene 定義の中に camera, primitives, models, hud, input mapping をまとめ、JavaScript 側では action handler だけを実装する構成にしています。
+- 画面上には OverlayPanel ベースの DOM UI も重ねてあり、Scene JSON の action を button からも起動できるようにしています。これにより、scene 側の input 定義と JavaScript 側 handler のつながりを見比べやすくしています。
 
 このサンプルで使うwebg機能
-- `WebgApp`: 標準初期化、描画ループ、Scene JSON 読み込み
-- `SceneAsset.load`: Scene JSON ファイルのロード
-- `WebgApp.validateScene`: Scene JSON の妥当性検証
-- `WebgApp.loadScene`: scene を現在の app 上へ配置
-- `SceneLoader`: camera / hud / primitives / models / input mapping の復元
-- `SceneValidator`: path 付き schema validation
-- `ModelAsset`: scene 内 model の中間表現
-- `ModelBuilder`: scene 内の model / primitive を runtime shape 群へ変換
-- `EyeRig(type="orbit")`: scene 全体を見回す視点操作
-- `Message`: Scene JSON 内 `hud.guideLines` / `hud.statusLines` を HUD として表示
+- WebgApp: 標準初期化、描画ループ、Scene JSON 読み込み
+- SceneAsset.load: Scene JSON ファイルのロード
+- WebgApp.validateScene: Scene JSON の妥当性検証
+- WebgApp.loadScene: scene を現在の app 上へ配置
+- SceneLoader: camera / hud / primitives / models / input mapping の復元
+- SceneValidator: path 付き schema validation
+- ModelAsset: scene 内 model の中間表現
+- ModelBuilder: scene 内の model / primitive を runtime shape 群へ変換
+- EyeRig(type="orbit"): scene 全体を見回す視点操作
+- Message: Scene JSON 内 hud.guideLines / hud.statusLines を HUD として表示
 
 確認ポイント
-- `scene.json` の validator が通り、`camera`, `hud`, `primitives`, `models`, `input` をまとめて読み込めることを確認します。
-- `scene.json` の `hud.guideLines` / `hud.statusLines` は、各行を `x / y / text / color` を持つ object で明示する形式になっていることを確認します。
-- floor primitive と marker primitive が表示され、primitive 定義が `SceneLoader` 経由で配置できることを確認します。
-- `../json_loader/modelasset.json` を読み込んだモデルが同じ scene 内に表示され、scene 側からも `ModelAsset` の既存経路を再利用できることを確認します。
-- 左側 `OverlayPanel` の action button から `pause / replay / floor wire / reset / download` を実行でき、キーボードと同じ処理フローが呼ばれることを確認します。
-- `p`, `1`, `2`, `r`, `d` の action が `sceneRuntime.createInputHandler()` 経由で JavaScript 側 handler へ届き、Scene JSON の input mapping が metadata として使えることを確認します。
-- `p` で scene 内 model の animation 一括 pause / resume が切り替わることを確認します。
-- `1` で model animation が先頭から再始動することを確認します。
-- `2` で floor primitive の wireframe 表示が切り替わることを確認します。
-- `r` でオービットカメラが scene 定義の初期角度と距離へ戻ることを確認します。
-- `d` で現在の Scene JSON を再ダウンロードでき、scene export の最小入口として使えることを確認します。
-- 右側 `OverlayPanel` に、scene file, entry 数, primitive 数, model 数, action 名一覧, validator warnings 数が表示され、Scene JSON 読み込み状況を画面上から追えることを確認します。
+- scene.json の validator が通り、camera, hud, primitives, models, input をまとめて読み込めることを確認します。
+- scene.json の hud.guideLines / hud.statusLines は、各行を x / y / text / color を持つ object で明示する形式になっていることを確認します。
+- floor primitive と marker primitive が表示され、primitive 定義が SceneLoader 経由で配置できることを確認します。
+- ../json_loader/modelasset.json を読み込んだモデルが同じ scene 内に表示され、scene 側からも ModelAsset の既存経路を再利用できることを確認します。
+- 左側 OverlayPanel の action button から pause / replay / floor wire / reset / download を実行でき、キーボードと同じ処理フローが呼ばれることを確認します。
+- p, 1, 2, r, d の action が sceneRuntime.createInputHandler() 経由で JavaScript 側 handler へ届き、Scene JSON の input mapping が metadata として使えることを確認します。
+- p で scene 内 model の animation 一括 pause / resume が切り替わることを確認します。
+- 1 で model animation が先頭から再始動することを確認します。
+- 2 で floor primitive の wireframe 表示が切り替わることを確認します。
+- r でオービットカメラが scene 定義の初期角度と距離へ戻ることを確認します。
+- d で現在の Scene JSON を再ダウンロードでき、scene export の最小入口として使えることを確認します。
+- 右側 OverlayPanel に、scene file, entry 数, primitive 数, model 数, action 名一覧, validator warnings 数が表示され、Scene JSON 読み込み状況を画面上から追えることを確認します。
 
 操作説明
 - ドラッグ / 矢印キー: オービットカメラ回転
-- ホイール / `[` / `]`: ズーム
-- 画面左上 button: `Pause Scene`, `Replay Model`, `Floor Wire`, `Reset Camera`, `Download Scene JSON`
-- `P`: scene animation の pause / resume
-- `1`: model animation の再始動
-- `2`: floor wireframe の切り替え
-- `R`: カメラを初期位置へ戻す
-- `D`: 現在の Scene JSON をダウンロード
+- ホイール / [ / ]: ズーム
+- 画面左上 button: Pause Scene, Replay Model, Floor Wire, Reset Camera, Download Scene JSON
+- P: scene animation の pause / resume
+- 1: model animation の再始動
+- 2: floor wireframe の切り替え
+- R: カメラを初期位置へ戻す
+- D: 現在の Scene JSON をダウンロード
 </pre>
 </section>
 <section class='sample'>
@@ -1574,31 +1610,31 @@ AI / 利用者向けの読み取りポイント
 概要
 - primitive 系 sample 群の中では、texture / image normal / procedural normal の見え方比較を 1 本へ寄せる主入口です。
 - 「texture を貼った見え」「法線マップの差」「wireframe」を同じ構図のまま切り替えて比較できます。
-- `Message` は 3x3 配置の番号ラベルだけに使い、操作説明と状態表示は `WebgApp` 側の標準 HUD に寄せています。
+- Message は 3x3 配置の番号ラベルだけに使い、操作説明と状態表示は WebgApp 側の標準 HUD に寄せています。
 
 このサンプルで使うwebg機能
-- `Primitive`: sphere / cone / donut / cube などの基本形状生成
-- `Shape.setWireframe`: ワイヤーフレーム表示切替
-- `Texture`: `num256.png` の読み込み
-- `Texture.buildNormalMapFromProceduralHeight`: noise/dots 法線生成
-- `SmoothShader`: texture + normal map と wireframe を同じ入口で扱う描画。flat shading も同じ shader 側の機能として切り替えられる
-- `Message`: 3x3 配置の primitive 番号ラベルだけを重ねる
+- Primitive: sphere / cone / donut / cube などの基本形状生成
+- Shape.setWireframe: ワイヤーフレーム表示切替
+- Texture: num256.png の読み込み
+- Texture.buildNormalMapFromProceduralHeight: noise/dots 法線生成
+- SmoothShader: texture + normal map と wireframe を同じ入口で扱う描画。flat shading も同じ shader 側の機能として切り替えられる
+- Message: 3x3 配置の primitive 番号ラベルだけを重ねる
 
 確認ポイント
-- `C` / `T` / `I` / `N` / `D` で surface mode を切り替えたとき、同じ geometry のまま texture / image normal / procedural normal の差だけが変わることを確認します
-- `T` で texture 比較、`I` で image normal 比較、`N` / `D` で procedural normal 比較が同じ sample 内で読めることを確認します
-- `1` - `9` のワイヤーフレーム切替でトポロジが想定どおりかを確認し、surface mode を変えても線表示が破綻しないことを確認します
+- C / T / I / N / D で surface mode を切り替えたとき、同じ geometry のまま texture / image normal / procedural normal の差だけが変わることを確認します
+- T で texture 比較、I で image normal 比較、N / D で procedural normal 比較が同じ sample 内で読めることを確認します
+- 1 - 9 のワイヤーフレーム切替でトポロジが想定どおりかを確認し、surface mode を変えても線表示が破綻しないことを確認します
 - cube / cuboid / mapCube を含む 9 形状で、texture と normal の両方が極端に破綻せず比較できることを確認します
 
 操作説明
-- `C`: solid color 表示
-- `T`: texture 表示
-- `I`: image normal 表示
-- `N`: noise normal 表示
-- `D`: dots normal 表示
-- `1` - `9`: 対応シェイプのワイヤーフレームON/OFF
-- `Space`: 回転の一時停止 / 再開
-- touch ボタン: `C/T/I/N/D` と `1-9`、`Pause` を keyboard と同じ key 名で扱う
+- C: solid color 表示
+- T: texture 表示
+- I: image normal 表示
+- N: noise normal 表示
+- D: dots normal 表示
+- 1 - 9: 対応シェイプのワイヤーフレームON/OFF
+- Space: 回転の一時停止 / 再開
+- touch ボタン: C/T/I/N/D と 1-9、Pause を keyboard と同じ key 名で扱う
 </pre>
 </section>
 <section class='sample'>
@@ -1609,28 +1645,28 @@ AI / 利用者向けの読み取りポイント
 
 概要
 - ウェイト分布や回転軸を切り替えながら、スキニング変形を詳細に観察する教材向けサンプルです。
-- `static`、`soft`、`hard`、`weight view` を切り替え、同じ形状でスキニングの見え方だけを比較できます。
+- static、soft、hard、weight view を切り替え、同じ形状でスキニングの見え方だけを比較できます。
 
 このサンプルで使うwebg機能
-- `WebgApp`: 画面表示、入力、操作案内の初期化
-- `Skeleton` / `Shape.addVertexWeight`
-- `SmoothShader`: static / skinned / weight_debug の共通入口
-- `Space.drawBones`: ボーン描画
+- WebgApp: 画面表示、入力、操作案内の初期化
+- Skeleton / Shape.addVertexWeight
+- SmoothShader: static / skinned / weight_debug の共通入口
+- Space.drawBones: ボーン描画
 - その場で比較できる live mode 切替
 
 確認ポイント
 - hard/soft ウェイト切替時に曲げ境界の連続性がどのように変化するかを確認し、用途別の重み設計を検討します
 - 軸切替と回転操作に対して変形が期待どおりに起きるかを確認し、ローカル軸解釈の誤りを検出します
-- `S` / `W` / `V` を押した瞬間に表示が切り替わり、static / soft / hard / weight debug を往復比較しやすいことを確認します
+- S / W / V を押した瞬間に表示が切り替わり、static / soft / hard / weight debug を往復比較しやすいことを確認します
 
 操作説明
-- `S`: staticモード切替
-- `W`: 重みモード hard/soft 切替
-- `V`: ウェイト可視化ON/OFF
-- `X` / `Y` / `Z`: オブジェクト回転軸を選択
-- `J` / `L`: 選択中軸でオブジェクト回転
-- `R`: オブジェクト回転をリセット
-- `Space`: bone animation の一時停止 / 再開
+- S: staticモード切替
+- W: 重みモード hard/soft 切替
+- V: ウェイト可視化ON/OFF
+- X / Y / Z: オブジェクト回転軸を選択
+- J / L: 選択中軸でオブジェクト回転
+- R: オブジェクト回転をリセット
+- Space: bone animation の一時停止 / 再開
 </pre>
 </section>
 <section class='sample'>
@@ -1642,57 +1678,57 @@ AI / 利用者向けの読み取りポイント
 最終更新: 2026-05-14 JST
 
 概要
-- `AudioSynth` と `GameAudioSynth` を使い、SE と BGM を同じ画面で調整しながら確認するサンプルです。
-- `Audio Start` で AudioContext を開始し、`Play SE`、`Next SE`、`Audition All`、`BGM Start` を使って音を鳴らし、その場で volume、delay、reverb、envelope、melody を調整できます。
+- AudioSynth と GameAudioSynth を使い、SE と BGM を同じ画面で調整しながら確認するサンプルです。
+- Audio Start で AudioContext を開始し、Play SE、Next SE、Audition All、BGM Start を使って音を鳴らし、その場で volume、delay、reverb、envelope、melody を調整できます。
 - 「何を鳴らすか」と「どう聞こえるように整えるか」を 1 画面で往復しながら確認できる構成です。
 
 画面の見方
 
-画面は `System`、`Sound Effects`、`Background Music` の 3 つに分かれています。順番に見ると、まず AudioContext を起こし、そのあと SE を調整し、最後に melody、BPM、BGM envelope、BGM reverb を直接動かして BGM の細かな輪郭を整える流れになっています。
+画面は System、Sound Effects、Background Music の 3 つに分かれています。順番に見ると、まず AudioContext を起こし、そのあと SE を調整し、最後に melody、BPM、BGM envelope、BGM reverb を直接動かして BGM の細かな輪郭を整える流れになっています。
 
-`System` では `Audio Start` と `Master Vol` を扱います。`Audio Start` は browser の制約に合わせて user gesture の後に AudioContext を開始するためのボタンです。`Master Vol` は全体音量の基準です。ここを最初に整えると、SE と BGM の相対バランスを見やすくなります。
+System では Audio Start と Master Vol を扱います。Audio Start は browser の制約に合わせて user gesture の後に AudioContext を開始するためのボタンです。Master Vol は全体音量の基準です。ここを最初に整えると、SE と BGM の相対バランスを見やすくなります。
 
-`Sound Effects` では、`Sound Effect` で鳴らす効果音を選び、`Play SE` で再生します。`Next SE` は catalog を 1 件ずつ進めて、`Audition All` は全件を順番に鳴らして差を聞き比べるためのボタンです。`SE Profiles` はその効果音が使う envelope profile の一覧、`Editing Profile` は今 slider で編集している profile 名です。`SE Vol`、`SE Delay`、`SE Reverb`、`SE Reverb Kind`、`SE Reverb Length`、`SE Reverb Decay`、`SE Envelope`、`SE Attack`、`SE Decay`、`SE Sustain`、`SE Release` を使うと、同じ効果音でも輪郭や空間感をかなり細かく変えられます。
+Sound Effects では、Sound Effect で鳴らす効果音を選び、Play SE で再生します。Next SE は catalog を 1 件ずつ進めて、Audition All は全件を順番に鳴らして差を聞き比べるためのボタンです。SE Profiles はその効果音が使う envelope profile の一覧、Editing Profile は今 slider で編集している profile 名です。SE Vol、SE Delay、SE Reverb、SE Reverb Kind、SE Reverb Length、SE Reverb Decay、SE Envelope、SE Attack、SE Decay、SE Sustain、SE Release を使うと、同じ効果音でも輪郭や空間感をかなり細かく変えられます。
 
-`Background Music` では、`BGM Start` と `BGM Stop`、`BGM Vol`、`BPM`、`Melody`、`BGM Delay`、`BGM Reverb`、`BGM Reverb Kind`、`BGM Reverb Length`、`BGM Reverb Decay`、`BGM Attack`、`BGM Decay`、`BGM Sustain`、`BGM Release` を扱います。BGM は melody と BPM で進行そのものが変わるので、SE とは少し違って、時間の流れを聞きながら調整するのが向いています。
+Background Music では、BGM Start と BGM Stop、BGM Vol、BPM、Melody、BGM Delay、BGM Reverb、BGM Reverb Kind、BGM Reverb Length、BGM Reverb Decay、BGM Attack、BGM Decay、BGM Sustain、BGM Release を扱います。BGM は melody と BPM で進行そのものが変わるので、SE とは少し違って、時間の流れを聞きながら調整するのが向いています。
 
 このサンプルで使うwebg機能
-- `GameAudioSynth`: ゲーム向けの効果音 catalog と melody preset をまとめて扱う
-- `AudioSynth`: SE/BGM の envelope、delay、reverb、IR 設定を担当する
+- GameAudioSynth: ゲーム向けの効果音 catalog と melody preset をまとめて扱う
+- AudioSynth: SE/BGM の envelope、delay、reverb、IR 設定を担当する
 
 確認ポイント
 
-最初にやることは `Audio Start` です。これで音を出せる状態にしてから、`Sound Effect` と `Play SE` で短い効果音を確認し、`BGM Start` でメロディを流します。音の輪郭を見たいときは `SE Envelope`、空間感を見たいときは `SE Reverb Kind` と `SE Reverb Length` と `SE Reverb Decay`、BGM の流れを見たいときは `Melody` と `BPM` を動かします。
+最初にやることは Audio Start です。これで音を出せる状態にしてから、Sound Effect と Play SE で短い効果音を確認し、BGM Start でメロディを流します。音の輪郭を見たいときは SE Envelope、空間感を見たいときは SE Reverb Kind と SE Reverb Length と SE Reverb Decay、BGM の流れを見たいときは Melody と BPM を動かします。
 
-このサンプルでは、`SE Dry` / `SE Reverb Max` と `BGM Dry` / `BGM Wet` という比較用の固定ボタンも用意しています。slider の中間値だけだと違いが分かりにくいときは、いったん極端な状態に振ってから戻すと、変化の方向がつかみやすくなります。
+このサンプルでは、SE Dry / SE Reverb Max と BGM Dry / BGM Wet という比較用の固定ボタンも用意しています。slider の中間値だけだと違いが分かりにくいときは、いったん極端な状態に振ってから戻すと、変化の方向がつかみやすくなります。
 
-`SE Reverb Kind` と `BGM Reverb Kind` は `room`、`hall`、`plate` を切り替えます。これは単に残響を増やすボタンではなく、残響の性格そのものを変える設定です。`Length` は IR の長さ、`Decay` は減衰の早さを表します。短めで締まった room から、長く広がる hall まで、連続的に聞き比べることができます。
+SE Reverb Kind と BGM Reverb Kind は room、hall、plate を切り替えます。これは単に残響を増やすボタンではなく、残響の性格そのものを変える設定です。Length は IR の長さ、Decay は減衰の早さを表します。短めで締まった room から、長く広がる hall まで、連続的に聞き比べることができます。
 
-`SE Envelope` は、選んだ効果音が使う envelope profile を切り替える場所です。profile 名は `percussion`、`brass`、`woodwind`、`organ`、`piano`、`guitar` のような楽器カテゴリになっており、打撃音、吹奏感、持続音、弦を弾いた音のような時間変化を比較できます。`SE Attack`、`SE Decay`、`SE Sustain`、`SE Release` を動かすと、次に鳴るその profile の音が変わります。短い効果音は差が分かりにくいことがあるので、`tail_probe` を選ぶと、前半の輪郭音と後半の余韻の両方で違いを聞き取りやすくなります。
+SE Envelope は、選んだ効果音が使う envelope profile を切り替える場所です。profile 名は percussion、brass、woodwind、organ、piano、guitar のような楽器カテゴリになっており、打撃音、吹奏感、持続音、弦を弾いた音のような時間変化を比較できます。SE Attack、SE Decay、SE Sustain、SE Release を動かすと、次に鳴るその profile の音が変わります。短い効果音は差が分かりにくいことがあるので、tail_probe を選ぶと、前半の輪郭音と後半の余韻の両方で違いを聞き取りやすくなります。
 
-`BGM Envelope` は、BGM の一音一音の立ち上がりと余韻を決めます。`BGM Attack`、`BGM Decay`、`BGM Sustain`、`BGM Release` を動かすと、同じ melody でも印象が変わります。`BPM` は進む速さ、`Melody` は旋律の形を変えるので、BGM は「何を鳴らすか」と「どう進むか」を別々に見ると調整しやすいです。BGM 側の reverb は SE より少し強めの hall 既定にしてあるので、`Audition All` で melody を流したときに、フレーズの尾が長めに残る感触を先に掴みやすくしています。
+BGM Envelope は、BGM の一音一音の立ち上がりと余韻を決めます。BGM Attack、BGM Decay、BGM Sustain、BGM Release を動かすと、同じ melody でも印象が変わります。BPM は進む速さ、Melody は旋律の形を変えるので、BGM は「何を鳴らすか」と「どう進むか」を別々に見ると調整しやすいです。BGM 側の reverb は SE より少し強めの hall 既定にしてあるので、Audition All で melody を流したときに、フレーズの尾が長めに残る感触を先に掴みやすくしています。
 
-まず `Audio Start` を押して、`Play SE`、`Next SE`、`Audition All`、`BGM Start` が有効になることを確認します。次に `Sound Effect` を切り替え、`SE Profiles` と `Editing Profile` が選んだ音に合わせて変わることを確認します。そのうえで `SE Attack`、`SE Decay`、`SE Sustain`、`SE Release` と `SE Reverb` を動かし、同じ効果音を鳴らし直して差を聞き比べます。
+まず Audio Start を押して、Play SE、Next SE、Audition All、BGM Start が有効になることを確認します。次に Sound Effect を切り替え、SE Profiles と Editing Profile が選んだ音に合わせて変わることを確認します。そのうえで SE Attack、SE Decay、SE Sustain、SE Release と SE Reverb を動かし、同じ効果音を鳴らし直して差を聞き比べます。
 
-`Audition All` を押したときは、catalog 全体が順番に鳴ることを確認します。途中で止めたくなったら同じボタンを押して止められます。`Next SE` は 1 件ずつ進むので、気になった効果音をもう 1 度鳴らしたいときに便利です。
+Audition All を押したときは、catalog 全体が順番に鳴ることを確認します。途中で止めたくなったら同じボタンを押して止められます。Next SE は 1 件ずつ進むので、気になった効果音をもう 1 度鳴らしたいときに便利です。
 
-`SE Reverb Kind` を `room`、`hall`、`plate` で切り替えると、同じ wet 量でも反射の質感が変わります。`SE Reverb Length` と `SE Reverb Decay` を変えると、残響の長さと落ち方が変わります。`tail_probe` を選ぶと、短い効果音よりも envelope と reverb tail の違いが追いやすくなります。
+SE Reverb Kind を room、hall、plate で切り替えると、同じ wet 量でも反射の質感が変わります。SE Reverb Length と SE Reverb Decay を変えると、残響の長さと落ち方が変わります。tail_probe を選ぶと、短い効果音よりも envelope と reverb tail の違いが追いやすくなります。
 
-BGM 側では `Melody` を変えながら `BPM` と `BGM Envelope` を調整し、同じ音源でも印象がどう変わるかを確認します。`BGM Reverb Kind`、`BGM Reverb Length`、`BGM Reverb Decay` を動かすと、同じ旋律でも空間の広がり方が変わることが分かります。初期値は hall 寄りで少し強めにしてあるので、まずはそのまま鳴らしてから dry 側へ戻すと差が分かりやすいです。
+BGM 側では Melody を変えながら BPM と BGM Envelope を調整し、同じ音源でも印象がどう変わるかを確認します。BGM Reverb Kind、BGM Reverb Length、BGM Reverb Decay を動かすと、同じ旋律でも空間の広がり方が変わることが分かります。初期値は hall 寄りで少し強めにしてあるので、まずはそのまま鳴らしてから dry 側へ戻すと差が分かりやすいです。
 
 ## 操作説明
 
 このサンプルはキーボード入力ではなく、画面上の UI ボタンと slider で操作します。
 
-`Audio Start` は AudioContext の開始、`BGM Start` / `BGM Stop` は BGM の開始と停止、`Play SE` は選択中の効果音を 1 回鳴らすボタンです。`SE Dry` / `SE Reverb Max` と `BGM Dry` / `BGM Wet` は比較用の固定状態へ切り替えるボタンです。
+Audio Start は AudioContext の開始、BGM Start / BGM Stop は BGM の開始と停止、Play SE は選択中の効果音を 1 回鳴らすボタンです。SE Dry / SE Reverb Max と BGM Dry / BGM Wet は比較用の固定状態へ切り替えるボタンです。
 
 ## つまずきやすい点
 
-`Audio Start` を押していないと、音は鳴りません。これは browser の制約に合わせた動きです。まず AudioContext を開始してから、他のボタンを押してください。
+Audio Start を押していないと、音は鳴りません。これは browser の制約に合わせた動きです。まず AudioContext を開始してから、他のボタンを押してください。
 
-`SE Reverb` と `SE Reverb Kind` は別の設定です。`SE Reverb` は残響の量、`Kind` は残響の性格です。BGM 側も同じで、`BGM Reverb` は量、`BGM Reverb Kind` は性格です。
+SE Reverb と SE Reverb Kind は別の設定です。SE Reverb は残響の量、Kind は残響の性格です。BGM 側も同じで、BGM Reverb は量、BGM Reverb Kind は性格です。
 
-`SE Attack` や `BGM Attack` は秒、`SE Sustain` や `BGM Sustain` は比率です。単位が違うので、slider を動かすときは表示値も一緒に見ると分かりやすいです。
+SE Attack や BGM Attack は秒、SE Sustain や BGM Sustain は比率です。単位が違うので、slider を動かすときは表示値も一緒に見ると分かりやすいです。
 
 関連文書
 
@@ -1702,7 +1738,7 @@ BGM 側では `Melody` を変えながら `BPM` と `BGM Envelope` を調整し�
 - [samples/sound/main.js](./main.js)
 - [samples/sound/index.html](./index.html)
 
-`18_サウンドの設計.md` は実装の詳しい説明、`01_はじめに.md` はプロジェクト全体の入口です。この `sound.txt` は、sample の画面をどう触るかに集中した案内として読むと分かりやすくなります。
+18_サウンドの設計.md は実装の詳しい説明、01_はじめに.md はプロジェクト全体の入口です。この sound.txt は、sample の画面をどう触るかに集中した案内として読むと分かりやすくなります。
 </pre>
 </section>
 <section class='sample'>
@@ -1714,55 +1750,55 @@ BGM 側では `Melody` を変えながら `BPM` と `BGM Envelope` を調整し�
 最終更新: 2026-05-14 JST
 
 概要
-- `ToneSynth` だけを使い、単音または3和音で波形、envelope、reverb の違いを確認するサンプルです。
-- `AudioSynth` や `GameAudioSynth` の SE catalog / BGM 機能を通さず、`ToneSynth.playTone()` が受け取る最小の音響パラメータを直接操作します。
-- `sine`、`triangle`、`square`、`sawtooth` の波形、`percussion`、`brass`、`woodwind`、`organ`、`piano`、`guitar` の envelope profile、`room`、`hall`、`plate` の reverb impulse を同じ画面で切り替えられます。
+- ToneSynth だけを使い、単音または3和音で波形、envelope、reverb の違いを確認するサンプルです。
+- AudioSynth や GameAudioSynth の SE catalog / BGM 機能を通さず、ToneSynth.playTone() が受け取る最小の音響パラメータを直接操作します。
+- sine、triangle、square、sawtooth の波形、percussion、brass、woodwind、organ、piano、guitar の envelope profile、room、hall、plate の reverb impulse を同じ画面で切り替えられます。
 
 画面の見方
 
-画面は `Play`、`Envelope`、`Reverb`、`What To Listen For` に分かれています。まず `Audio Start` を押して AudioContext を開始し、`Play` で root、wave、mode、gain を選びます。`Envelope` では発音の立ち上がりと減衰を調整し、`Reverb` では残響量と空間の種類を調整します。
+画面は Play、Envelope、Reverb、What To Listen For に分かれています。まず Audio Start を押して AudioContext を開始し、Play で root、wave、mode、gain を選びます。Envelope では発音の立ち上がりと減衰を調整し、Reverb では残響量と空間の種類を調整します。
 
-`Hold Single` は押している間だけ現在の root を鳴らします。`Hold Triad` は押している間だけ root、3rd、5th の3音を同時に鳴らします。ボタンを離すと、選択中 envelope の release で音が止まります。`Mode` が `minor` のときは minor triad、それ以外のときは major triad を鳴らすので、同じ波形と envelope が単音と和音でどう違って聞こえるかを比較できます。
+Hold Single は押している間だけ現在の root を鳴らします。Hold Triad は押している間だけ root、3rd、5th の3音を同時に鳴らします。ボタンを離すと、選択中 envelope の release で音が止まります。Mode が minor のときは minor triad、それ以外のときは major triad を鳴らすので、同じ波形と envelope が単音と和音でどう違って聞こえるかを比較できます。
 
 このサンプルで使うwebg機能
-- `ToneSynth`: 単音の再生、停止、envelope preset、reverb impulse、volume 調整を担当します。
-- `ToneSynth.playTone()`: 周波数、wave type、profile、gain、pan を指定して1 voice を鳴らします。duration を `null` にすることで、ボタンを離すまで sustain します。
-- `ToneSynth.setSeEnvelopePreset()`: 現在選択中の envelope profile を slider の値で更新します。
-- `ToneSynth.setSeReverb()` と `ToneSynth.setSeReverbImpulse()`: 残響量と impulse response の性格を切り替えます。
+- ToneSynth: 単音の再生、停止、envelope preset、reverb impulse、volume 調整を担当します。
+- ToneSynth.playTone(): 周波数、wave type、profile、gain、pan を指定して1 voice を鳴らします。duration を null にすることで、ボタンを離すまで sustain します。
+- ToneSynth.setSeEnvelopePreset(): 現在選択中の envelope profile を slider の値で更新します。
+- ToneSynth.setSeReverb() と ToneSynth.setSeReverbImpulse(): 残響量と impulse response の性格を切り替えます。
 
 確認ポイント
 
-最初に `Audio Start` を押し、`Hold Single` を押している間だけ単音が鳴り、離すと release で止まることを確認します。次に `Wave` を `sine` から `triangle`、`square`、`sawtooth` へ切り替えると、同じ envelope でも倍音の量によって明るさや硬さが変わることが分かります。
+最初に Audio Start を押し、Hold Single を押している間だけ単音が鳴り、離すと release で止まることを確認します。次に Wave を sine から triangle、square、sawtooth へ切り替えると、同じ envelope でも倍音の量によって明るさや硬さが変わることが分かります。
 
-`Envelope` の `Profile` を切り替えると、同じ root と wave でも時間変化が変わります。`percussion` はほとんど sustain しない短い打撃音、`organ` はほぼ一定に鳴り続ける持続音、`piano` と `guitar` は押し続けてもすぐ減衰する撥弦/打弦系の音、`brass` と `woodwind` は立ち上がりが遅く、押し続けると息の持続が見える音として比較しやすくしています。`Attack`、`Decay`、`Sustain`、`Release` を動かすと、選択中 profile の次の発音から変化します。
+Envelope の Profile を切り替えると、同じ root と wave でも時間変化が変わります。percussion はほとんど sustain しない短い打撃音、organ はほぼ一定に鳴り続ける持続音、piano と guitar は押し続けてもすぐ減衰する撥弦/打弦系の音、brass と woodwind は立ち上がりが遅く、押し続けると息の持続が見える音として比較しやすくしています。Attack、Decay、Sustain、Release を動かすと、選択中 profile の次の発音から変化します。
 
-`Reverb` では `Dry`、`Room`、`Hall`、`Plate` を切り替えて、残響が音の輪郭に与える影響を確認します。短い envelope では reverb tail が特に目立ち、長い envelope では原音と残響の重なり方が変わって聞こえます。
+Reverb では Dry、Room、Hall、Plate を切り替えて、残響が音の輪郭に与える影響を確認します。短い envelope では reverb tail が特に目立ち、長い envelope では原音と残響の重なり方が変わって聞こえます。
 
-`Hold Triad` を押すと、単音では分かりにくい reverb のにじみや、square / sawtooth の倍音の混み方を確認しやすくなります。和音では各 voice の pan を少し分けているため、左右の広がりも聞き取れます。
+Hold Triad を押すと、単音では分かりにくい reverb のにじみや、square / sawtooth の倍音の混み方を確認しやすくなります。和音では各 voice の pan を少し分けているため、左右の広がりも聞き取れます。
 
 操作説明
 
-- `Audio Start`: AudioContext を開始します。
-- `Hold Single`: 押している間だけ root の単音を鳴らします。
-- `Hold Triad`: 押している間だけ major または minor の3和音を鳴らします。
-- `Stop All`: 現在鳴っている tone を短い release で停止します。
-- `Root`: 基準音を選びます。
-- `Wave`: OscillatorNode の波形を選びます。
-- `Mode`: 単音、major triad、minor triad を選びます。
-- `Tone Gain`: `playTone()` に渡す voice gain を調整します。
-- `Profile`: envelope preset を選びます。
-- `Attack` / `Decay` / `Sustain` / `Release`: 選択中 profile の ADSR を調整します。
-- `Reverb Mix`: convolver への send と return の量をまとめて調整します。
-- `Kind` / `Length` / `Decay`: reverb impulse の性格、長さ、落ち方を調整します。
-- `Dry` / `Room` / `Hall` / `Plate`: 代表的な reverb 設定へ切り替えます。
+- Audio Start: AudioContext を開始します。
+- Hold Single: 押している間だけ root の単音を鳴らします。
+- Hold Triad: 押している間だけ major または minor の3和音を鳴らします。
+- Stop All: 現在鳴っている tone を短い release で停止します。
+- Root: 基準音を選びます。
+- Wave: OscillatorNode の波形を選びます。
+- Mode: 単音、major triad、minor triad を選びます。
+- Tone Gain: playTone() に渡す voice gain を調整します。
+- Profile: envelope preset を選びます。
+- Attack / Decay / Sustain / Release: 選択中 profile の ADSR を調整します。
+- Reverb Mix: convolver への send と return の量をまとめて調整します。
+- Kind / Length / Decay: reverb impulse の性格、長さ、落ち方を調整します。
+- Dry / Room / Hall / Plate: 代表的な reverb 設定へ切り替えます。
 
 つまずきやすい点
 
-`Audio Start` を押していないと音は鳴りません。これは browser の自動再生制限に合わせた動きです。
+Audio Start を押していないと音は鳴りません。これは browser の自動再生制限に合わせた動きです。
 
-`Tone Gain` は1 voice あたりの音量の基準です。3和音では音が重なるため、サンプル側で各 voice の gain を少し下げ、単音との音量差が大きくなりすぎないようにしています。
+Tone Gain は1 voice あたりの音量の基準です。3和音では音が重なるため、サンプル側で各 voice の gain を少し下げ、単音との音量差が大きくなりすぎないようにしています。
 
-`Reverb Mix` が大きい状態で `Release` を長くすると、原音と残響が重なって輪郭がぼやけやすくなります。まず `Dry` で envelope の形を確認し、そのあと `Room`、`Hall`、`Plate` を切り替えると違いを追いやすくなります。
+Reverb Mix が大きい状態で Release を長くすると、原音と残響が重なって輪郭がぼやけやすくなります。まず Dry で envelope の形を確認し、そのあと Room、Hall、Plate を切り替えると違いを追いやすくなります。
 
 関連文書
 

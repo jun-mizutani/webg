@@ -53,6 +53,7 @@ pre { background: #f6f8fa; border: 1px solid #d0d7de; padding: 12px; overflow-x:
 <li><a href='#smooth_shader'>smooth_shader</a>: SmoothShader の static / skinned / normal map / flat 経路を確認する</li>
 <li><a href='#textdemo'>textdemo</a>: 低水準 Text 表示を確認する</li>
 <li><a href='#theme'>theme</a>: WebgApp UI theme 切替を確認する</li>
+<li><a href='#tilt_input'>tilt_input</a>: deviceorientation と PC エミュレーションの傾きベクトルを可視化する</li>
 <li><a href='#touch'>touch</a>: Touch の hold / action ボタン通知を確認する</li>
 <li><a href='#tween'>tween</a>: Tween の補間と update 挙動を確認する</li>
 <li><a href='#translucent'>translucent</a>: FrostedGlassPass の曇りガラス表現を確認する</li>
@@ -1071,6 +1072,28 @@ raycast
 関連文書
 - [14_UI表示の設計.md](../../book/14_UI表示の設計.md)
 - [15_HUDとオーバーレイの設計.md](../../book/15_HUDとオーバーレイの設計.md)
+</pre>
+</section>
+<section class='sample'>
+<h2 id='tilt_input'>tilt_input</h2>
+<p>URL: <a href='./tilt_input/index.html'>./tilt_input/index.html</a></p>
+<pre>
+サンプル: tilt_input
+
+概要
+- スマホの deviceorientation と PC 上のエミュレーション入力を、同じ tiltX / tiltY ベクトルとして可視化する unittest です。
+- まだ webg コア API にはせず、この unittest 内のローカル実装として傾き入力の仕様を確認します。
+- 物理エンジンとの接続は行わず、入力値、キャリブレーション、スムージング、2D pad / 3D marker の見え方だけを確認します。
+
+操作説明
+- PC: pad をドラッグすると仮想傾きになります。
+- PC: Arrow / WASD で仮想傾きを増減します。
+- `R`: エミュレーション値をゼロに戻します。
+- `C`: 現在の raw deviceorientation を neutral として保存します。
+- Device: 実機で deviceorientation permission を要求し、許可されれば実センサーを入力源にします。
+- Calibrate: 現在姿勢を neutral にします。
+- Reset: エミュレーション入力をゼロへ戻します。
+- Emulate: 入力源を PC エミュレーションへ戻します。
 </pre>
 </section>
 <section class='sample'>

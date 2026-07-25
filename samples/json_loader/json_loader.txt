@@ -1,46 +1,46 @@
 サンプル: json_loader
 
 概要
-- `main.js` 内で指定した `ModelAsset` JSON ファイルを読み込み、そのまま表示するサンプルです。
-- `gltf_loader` や `collada_loader` が `D` キーで出力した JSON を、ファイル名を合わせてこのサンプルで再表示できます。
-- `WebgApp.loadModel()` から JSON facade を呼び、形式差を意識せず `ModelAsset` と runtime を得るサンプルです。
-- 現在の検証用 `modelasset.json` には、同じ元 clip を複製して `ArmatureAction_skeleton_0` と `ArmatureAction_skeleton_0_copy` の 2 clip を入れてあります。
+- main.js 内で指定した ModelAsset JSON ファイルを読み込み、そのまま表示するサンプルです。
+- gltf_loader や collada_loader が D キーで出力した JSON を、ファイル名を合わせてこのサンプルで再表示できます。
+- WebgApp.loadModel() から JSON facade を呼び、形式差を意識せず ModelAsset と runtime を得るサンプルです。
+- 現在の検証用 modelasset.json には、同じ元 clip を複製して ArmatureAction_skeleton_0 と ArmatureAction_skeleton_0_copy の 2 clip を入れてあります。
 
-このサンプルで使うwebg機能
-- `WebgApp`: 標準初期化、描画ループ、HelpPanel と HUD 表示
-- `WebgApp.loadModel`: JSON facade の高レベル入口
-- `ModelLoader`: JSON load / validate / build / instantiate をまとめる
-- `ModelAsset.load`: JSON ファイルをロード
-- `ModelAsset.getClipNames`: JSON に含まれる clip 一覧確認
-- `ModelAsset.build`: JSON から `Shape` / `Skeleton` / `Animation` を構築
-- `ModelBuilder.animationMap`: clip id から runtime Animation を引く
-- `build()` 結果 helper: `instantiate()` / `createNodeTree()` / `bindAnimationBindings()` / `getAnimation()` / `getAnimationNames()` / `startAllAnimations()` / `playAllAnimations()` / `setAnimationsPaused()`
-- `EyeRig(type="orbit")`: バウンディングボックス基準のオービット視点
+このサンプルで使う webg 機能
+- WebgApp: 標準初期化、描画ループ、HelpPanel と HUD 表示
+- WebgApp.loadModel: JSON facade の高レベル入口
+- ModelLoader: JSON load / validate / build / instantiate をまとめる
+- ModelAsset.load: JSON ファイルをロード
+- ModelAsset.getClipNames: JSON に含まれる clip 一覧確認
+- ModelAsset.build: JSON から Shape / Skeleton / Animation を構築
+- ModelBuilder.animationMap: clip id から runtime Animation を引く
+- build() 結果 helper: instantiate() / createNodeTree() / bindAnimationBindings() / getAnimation() / getAnimationNames() / startAllAnimations() / playAllAnimations() / setAnimationsPaused()
+- EyeRig(type="orbit"): バウンディングボックス基準のオービット視点
 
 確認ポイント
-- `MODEL_ASSET_FILE` で指定した JSON が validator を通過し、そのまま描画できることを確認します
+- MODEL_ASSET_FILE で指定した JSON が validator を通過し、そのまま描画できることを確認します
 - 固定 HUD に file / model / orbit / target / anim / clip / wireframe 状態が表示され、viewer として必要な状態を画面上で追えることを確認します
-- sample 内では facade の戻り値 `runtime` を使って node 復元と animation binding を共通化し、`animationMap` 直参照ではなく `getAnimation()` / `getAnimationNames()` を使って接続確認できることを確認します
-- `4` / `5` キーで対象 clip を切り替え、`1` / `2` / `3` が現在選択中 clip に対して動作することを確認します
-- `4` / `5` キーで `ArmatureAction_skeleton_0` と `ArmatureAction_skeleton_0_copy` を切り替えられることを確認します
-- `1` キーで選択中 clip を `restartAnimation(clipId)` により名前指定で再始動できることを確認します
-- `2` / `3` キーで選択中 clip を `pauseAnimation(clipId)` / `resumeAnimation(clipId)` により個別停止・再開できることを確認します
+- サンプル内では facade の戻り値 runtime を使って node 復元と animation binding を共通化し、animationMap 直参照ではなく getAnimation() / getAnimationNames() を使って接続確認できることを確認します
+- 4 / 5 キーで対象 clip を切り替え、1 / 2 / 3 が現在選択中 clip に対して動作することを確認します
+- 4 / 5 キーで ArmatureAction_skeleton_0 と ArmatureAction_skeleton_0_copy を切り替えられることを確認します
+- 1 キーで選択中 clip を restartAnimation(clipId) により名前指定で再始動できることを確認します
+- 2 / 3 キーで選択中 clip を pauseAnimation(clipId) / resumeAnimation(clipId) により個別停止・再開できることを確認します
 - カメラ距離がバウンディングボックスのサイズに応じて自動設定され、モデル全体を見失わないことを確認します
-- `Shift + Arrow` と `Shift + Drag` で camera target を平行移動でき、細部を中央へ寄せて確認できることを確認します
-- `W` で wireframe、`S` で screenshot、`R` で初期 framing へ戻ることを確認します
+- Shift + Arrow と Shift + Drag で camera target を平行移動でき、細部を中央へ寄せて確認できることを確認します
+- W で wireframe、S で screenshot、R で初期 framing へ戻ることを確認します
 - HelpPanel に操作説明がまとまり、固定 HUD と役割を分けて読めることを確認します
 
 操作説明
 - ドラッグ / 矢印キー: オービットカメラ回転
-- `Shift` + ドラッグ / 矢印キー: カメラ target の平行移動
-- ホイール / `[` / `]`: ズーム
-- `Space`: アニメーション一時停止
-- `1`: 選択中 clip を再生し直す
-- `2`: 選択中 clip を一時停止
-- `3`: 選択中 clip を再開
-- `4`: 前の clip を選択
-- `5`: 次の clip を選択
-- `W`: wireframe 切り替え
-- `S`: screenshot 保存
-- `D`: 現在の JSON を再ダウンロード
-- `R`: カメラをバウンディングボックス基準の初期位置へ戻す
+- Shift + ドラッグ / 矢印キー: カメラ target の平行移動
+- ホイール / [ / ]: ズーム
+- Space: アニメーション一時停止
+- 1: 選択中 clip を再生し直す
+- 2: 選択中 clip を一時停止
+- 3: 選択中 clip を再開
+- 4: 前の clip を選択
+- 5: 次の clip を選択
+- W: wireframe 切り替え
+- S: screenshot 保存
+- D: 現在の JSON を再ダウンロード
+- R: カメラをバウンディングボックス基準の初期位置へ戻す

@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// samples/webgmodeler/modelerConfig.js  2026/04/29
+// samples/webgmodeler/modelerConfig.js  2026/05/25
 //   webgmodeler sample configuration
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -24,7 +24,7 @@ export const DEFAULT_OBJECT_ID = 1;
 
 export const DEFAULT_CAMERA = {
   target: [0.0, 0.8, 0.0],
-  distance: 12.0,
+  distance: 10.0,
   yaw: 28.0,
   pitch: -18.0
 };
@@ -42,10 +42,10 @@ export const INITIAL_ORBIT_BINDINGS = {
 export const MATERIAL = {
   mesh: {
     color: [0.70, 0.84, 0.96, 1.0],
-    ambient: 0.62,
-    specular: 0.26,
-    power: 24.0,
-    emissive: 0.08,
+    ambient: 0.34,
+    specular: 0.34,
+    power: 18.0,
+    emissive: 0.04,
     flat_shading: 1,
     use_texture: 0,
     has_bone: 0
@@ -53,10 +53,10 @@ export const MATERIAL = {
   selectedFace: {
     color: [1.0, 0.82, 0.32, 1.0],
     addColor: [0.20, 0.12, 0.02, 0.0],
-    ambient: 0.70,
-    specular: 0.18,
-    power: 18.0,
-    emissive: 0.10,
+    ambient: 0.42,
+    specular: 0.26,
+    power: 14.0,
+    emissive: 0.05,
     flat_shading: 1,
     use_texture: 0,
     has_bone: 0
@@ -64,10 +64,10 @@ export const MATERIAL = {
   selectedObject: {
     color: [0.70, 0.84, 0.96, 1.0],
     addColor: [0.16, 0.12, 0.02, 0.0],
-    ambient: 0.66,
-    specular: 0.28,
-    power: 24.0,
-    emissive: 0.10,
+    ambient: 0.36,
+    specular: 0.38,
+    power: 18.0,
+    emissive: 0.05,
     flat_shading: 1,
     use_texture: 0,
     has_bone: 0

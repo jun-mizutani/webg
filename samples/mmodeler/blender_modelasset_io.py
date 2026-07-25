@@ -178,6 +178,13 @@ def transform_col_major_point(matrix, point):
     )
 
 
+def matrix_reverses_winding(matrix, label):
+    determinant = float(matrix.to_3x3().determinant())
+    if not math.isfinite(determinant):
+        raise ValueError(f"{label} matrix determinant must be finite")
+    return determinant < 0.0
+
+
 def matrix_from_transform(transform):
     if not isinstance(transform, dict):
         return identity_col_major_matrix()
@@ -310,6 +317,7 @@ def mesh_to_modelasset_geometry(obj, depsgraph, apply_modifiers, convert_axes):
     mesh = source.to_mesh()
     try:
         world = obj.matrix_world
+        reverse_winding = matrix_reverses_winding(world, obj.name)
         vertices = []
         for vertex in mesh.vertices:
             point = world @ vertex.co
@@ -321,6 +329,10 @@ def mesh_to_modelasset_geometry(obj, depsgraph, apply_modifiers, convert_axes):
             loop = list(polygon.vertices)
             if len(loop) < 3:
                 continue
+            if reverse_winding:
+                # 負 scale や Mirror を含む world matrix を頂点へ焼き込むと座標系の handedness が反転する
+                # Blender 上で外向きの面を ModelAsset でも外向きに保つため、出力 loop の順序も反転する
+                loop.reverse()
             polygon_loops.append(loop)
             for index in range(1, len(loop) - 1):
                 indices.extend([loop[0], loop[index], loop[index + 1]])

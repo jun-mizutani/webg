@@ -149,8 +149,8 @@
     }
 
     .palette-button.active {
-      border-color: rgba(248, 212, 118, 0.48);
-      background: rgba(86, 74, 42, 0.48);
+      border-color: rgb(255, 255, 255);
+      background: rgba(75, 167, 10, 0.489);
       color: #fff5cf;
       box-shadow:
         0 0 0 1px rgba(255, 232, 160, 0.10) inset,
@@ -159,12 +159,36 @@
 
     .palette-button.page-switch {
       border-color: rgba(255, 132, 116, 0.66);
-      background: rgba(108, 32, 32, 0.62);
+      background: rgba(255, 1, 1, 0.594);
       color: #fff3f0;
     }
 
     .palette-button.page-switch small {
       color: rgba(255, 211, 204, 0.86);
+    }
+
+    .palette-button.axis-x,
+    .palette-button.axis-x small {
+      color: #ff1010;
+      background: rgba(100, 100, 100, 0.40);
+    }
+
+    .palette-button.axis-y,
+    .palette-button.axis-y small {
+      color: #5050ff;
+      background: rgba(100, 100, 100, 0.40);
+    }
+
+    .palette-button.axis-z,
+    .palette-button.axis-z small {
+      color: #19ff10;
+      background: rgba(100, 100, 100, 0.40);
+    }
+
+    .palette-button.axis-n,
+    .palette-button.axis-n small {
+      color: #fff0a8;
+      background: rgba(100, 100, 100, 0.40);
     }
 
     .view-dock {
@@ -203,41 +227,23 @@
       color: #fff5cf;
     }
 
-    @media (orientation: landscape) {
-      .view-dock {
-        left: auto;
-        right: calc(var(--safe-right) + 10px);
-        top: 50%;
-        grid-template-columns: 42px;
-        transform: translateY(-50%);
-      }
-    }
-
-    .axis-chooser {
+    .selection-shift-button {
       position: absolute;
-      right: calc(var(--safe-right) + 10px);
+      left: calc(var(--safe-left) + 10px);
       top: calc(var(--safe-top) + 10px);
       z-index: 18;
-      display: none;
-      grid-template-columns: repeat(4, 42px);
-      gap: 6px;
-      pointer-events: auto;
-    }
-
-    .axis-chooser.open {
-      display: grid;
-    }
-
-    .axis-button {
-      width: 42px;
-      height: 42px;
-      border: 1px solid rgba(118, 238, 154, 0.50);
+      width: 44px;
+      height: 38px;
+      border: 1px solid rgba(255, 90, 148, 0.50);
       border-radius: 10px;
-      background: rgba(12, 32, 28, 0.58);
-      color: #edfff4;
-      font-weight: 800;
+      background: rgba(255, 30, 106, 0.30);
+      color: rgba(255, 245, 250, 0.94);
+      font-weight: 900;
       line-height: 1;
-      box-shadow: 0 8px 16px rgba(0, 0, 0, 0.16);
+      box-shadow:
+        0 0 0 1px rgba(255, 255, 255, 0.08) inset,
+        0 0 12px rgba(255, 30, 106, 0.20),
+        0 8px 16px rgba(0, 0, 0, 0.16);
       backdrop-filter: blur(10px);
       touch-action: manipulation;
       user-select: none;
@@ -246,13 +252,144 @@
       -webkit-tap-highlight-color: transparent;
     }
 
-    .axis-button.active {
-      border-color: rgba(146, 255, 178, 0.92);
-      background: rgba(31, 132, 70, 0.80);
-      color: #f5fff8;
+    .selection-shift-button.active {
+      border-color: rgba(255, 255, 255, 0.88);
+      background: rgba(255, 30, 106, 0.72);
+      color: #ffffff;
       box-shadow:
-        0 0 0 1px rgba(206, 255, 220, 0.18) inset,
-        0 8px 18px rgba(28, 172, 82, 0.24);
+        0 0 0 2px rgba(255, 255, 255, 0.20) inset,
+        0 0 18px rgba(255, 30, 106, 0.42),
+        0 8px 16px rgba(0, 0, 0, 0.22);
+    }
+
+    .coordinate-overlay,
+    .info-overlay {
+      position: absolute;
+      right: calc(var(--safe-right) + 12px);
+      bottom: calc(var(--safe-bottom) + 48px);
+      z-index: 22;
+      display: none;
+      width: min(300px, calc(100vw - var(--safe-left) - var(--safe-right) - 24px));
+      box-sizing: border-box;
+      padding: 12px;
+      border: 1px solid rgba(138, 202, 255, 0.24);
+      border-radius: 16px;
+      background: rgba(7, 18, 29, 0.92);
+      color: var(--ink);
+      box-shadow: 0 18px 36px rgba(0, 0, 0, 0.32);
+      backdrop-filter: blur(14px);
+      pointer-events: auto;
+      touch-action: manipulation;
+      user-select: text;
+      -webkit-user-select: text;
+      -webkit-touch-callout: default;
+    }
+
+    .coordinate-overlay.open,
+    .info-overlay.open {
+      display: block;
+    }
+
+    .coordinate-overlay h2,
+    .info-overlay h2 {
+      margin: 0 0 4px;
+      font-size: 13px;
+      line-height: 1.25;
+      letter-spacing: 0.04em;
+    }
+
+    .coordinate-overlay p,
+    .info-overlay p {
+      margin: 0 0 10px;
+      color: var(--sub);
+      font-size: 11px;
+      line-height: 1.35;
+    }
+
+    .info-grid {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 7px 10px;
+      align-items: baseline;
+      font-size: 12px;
+      line-height: 1.3;
+    }
+
+    .info-grid span {
+      color: var(--sub);
+      font-weight: 700;
+    }
+
+    .info-grid strong {
+      color: var(--ink);
+      font-weight: 800;
+      overflow-wrap: anywhere;
+    }
+
+    .coordinate-row {
+      display: grid;
+      grid-template-columns: 24px 1fr;
+      align-items: center;
+      gap: 8px;
+      margin-top: 7px;
+    }
+
+    .coordinate-row label {
+      font-weight: 800;
+      color: var(--accent);
+      text-align: center;
+    }
+
+    .coordinate-row input {
+      min-width: 0;
+      box-sizing: border-box;
+      width: 100%;
+      padding: 8px 9px;
+      border: 1px solid rgba(138, 202, 255, 0.24);
+      border-radius: 10px;
+      background: rgba(0, 0, 0, 0.26);
+      color: var(--ink);
+      font-size: 13px;
+      touch-action: manipulation;
+      user-select: text;
+      -webkit-user-select: text;
+      -webkit-touch-callout: default;
+    }
+
+    .coordinate-row input:disabled {
+      opacity: 0.42;
+    }
+
+    .coordinate-actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-top: 12px;
+    }
+
+    .coordinate-actions button {
+      height: 36px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: rgba(20, 44, 62, 0.78);
+      color: var(--ink);
+      font-weight: 800;
+      touch-action: manipulation;
+    }
+
+    .coordinate-actions .primary {
+      border-color: rgba(81, 183, 255, 0.58);
+      background: rgba(31, 143, 216, 0.58);
+    }
+
+    @media (orientation: landscape) {
+      .view-dock {
+        left: auto;
+        right: calc(var(--safe-right) + 10px);
+        top: 50%;
+        grid-template-columns: 42px;
+        transform: translateY(-50%);
+      }
     }
 
     .hidden-controls {
@@ -287,6 +424,7 @@
         <button class="view-button" type="button" data-view-action="view-z">Z</button>
         <button class="view-button" type="button" data-view-action="view-z-reverse">-Z</button>
       </div>
+      <button class="selection-shift-button" id="mobileSelectionShift" type="button" aria-label="Shift selection" aria-pressed="false">↑</button>
 
       <div class="command-palette" id="mobilePalette">
         <button class="palette-button" type="button" data-slot="0"></button>
@@ -307,11 +445,39 @@
         <button class="palette-button" type="button" data-slot="15"></button>
       </div>
 
-      <div class="axis-chooser" id="mobileAxisChooser" aria-label="Transform axis constraint">
-        <button class="axis-button" type="button" data-axis="free">Free</button>
-        <button class="axis-button" type="button" data-axis="x">X</button>
-        <button class="axis-button" type="button" data-axis="y">Y</button>
-        <button class="axis-button" type="button" data-axis="z">Z</button>
+      <div class="coordinate-overlay" id="coordinateOverlay" aria-label="Coordinate editor">
+        <h2 id="coordinateOverlayTitle">Vertex coordinates</h2>
+        <p id="coordinateOverlayHint">Select one vertex to edit X / Y / Z.</p>
+        <div class="coordinate-row">
+          <label for="coordinateX">X</label>
+          <input id="coordinateX" data-coordinate-axis="x" type="number" inputmode="decimal" step="any" />
+        </div>
+        <div class="coordinate-row">
+          <label for="coordinateY">Y</label>
+          <input id="coordinateY" data-coordinate-axis="y" type="number" inputmode="decimal" step="any" />
+        </div>
+        <div class="coordinate-row">
+          <label for="coordinateZ">Z</label>
+          <input id="coordinateZ" data-coordinate-axis="z" type="number" inputmode="decimal" step="any" />
+        </div>
+        <div class="coordinate-actions">
+          <button class="primary" id="coordinateOverlayApply" type="button">Apply</button>
+          <button id="coordinateOverlayClose" type="button">Close</button>
+        </div>
+      </div>
+
+      <div class="info-overlay" id="objectInfoOverlay" aria-label="Object info">
+        <h2 id="objectInfoTitle">Object info</h2>
+        <p>Tap to close</p>
+        <div class="info-grid">
+          <span>Bounds</span><strong id="objectInfoBounds">-</strong>
+          <span>Vertices</span><strong id="objectInfoVertices">-</strong>
+          <span>Polygons</span><strong id="objectInfoPolygons">-</strong>
+          <span>Origin</span><strong id="objectInfoOrigin">-</strong>
+          <span>Lens</span><strong id="objectInfoFocalLength">-</strong>
+          <span>Orbit dist</span><strong id="objectInfoOrbitDistance">-</strong>
+          <span>Origin dist</span><strong id="objectInfoCameraDistance">-</strong>
+        </div>
       </div>
 
       <div class="mobile-status" id="mobileStatus">object / select | ready</div>

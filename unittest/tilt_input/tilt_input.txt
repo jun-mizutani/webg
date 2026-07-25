@@ -1,0 +1,34 @@
+サンプル: tilt_input
+
+概要
+- スマホの deviceorientation と PC 上のエミュレーション入力を、同じ tiltX / tiltY ベクトルとして可視化する unittest です。
+- まだ webg コア API にはせず、この unittest 内のローカル実装として傾き入力の仕様を確認します。
+- 物理エンジンとの接続は行わず、入力値、キャリブレーション、スムージング、2D pad / 3D marker の見え方だけを確認します。
+
+このサンプルで使うwebg機能
+- `UnitTestApp`: Screen 初期化、viewport 追従、status 表示
+- `Space`: 3D 可視化用の board / marker / cursor node
+- `Shape`: addVertex / addPlane による簡易 box 形状
+- `SmoothShader`: 傾き marker の基本描画
+
+確認ポイント
+- PC では pad drag、Arrow / WASD で tiltX / tiltY が変化することを確認します。
+- Device ボタンで `deviceorientation` を有効化できる端末では、実センサー値から tiltX / tiltY が更新されることを確認します。
+- Calibrate で現在姿勢を neutral として保存し、以後は neutral からの差分が tiltX / tiltY になることを確認します。
+- status に source、permission、raw alpha/beta/gamma、neutral、tiltX/tiltY が表示されることを確認します。
+- 2D pad の dot / vector と、3D board 上の marker が同じ方向へ動くことを確認します。
+
+操作説明
+- PC: pad をドラッグすると仮想傾きになります。
+- PC: Arrow / WASD で仮想傾きを増減します。
+- `R`: エミュレーション値をゼロに戻します。
+- `C`: 現在の raw deviceorientation を neutral として保存します。
+- Device: 実機で deviceorientation permission を要求し、許可されれば実センサーを入力源にします。
+- Calibrate: 現在姿勢を neutral にします。
+- Reset: エミュレーション入力をゼロへ戻します。
+- Emulate: 入力源を PC エミュレーションへ戻します。
+
+実装確認の見方
+- この unittest のローカル tilt state は、将来 `webg/TiltInput.js` へ移動する前の試作です。
+- コア化前に、座標系、dead zone、smoothing、permission、calibration の API 名と挙動をここで確認します。
+- 物理連携はこのページでは扱いません。まず入力ベクトルが安定して読めるかだけを確認します。

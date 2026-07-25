@@ -1,10 +1,10 @@
 // ---------------------------------------------
-// samples/webgmodeler/glbExporter.js  2026/05/16
+// samples/webgmodeler/glbExporter.js  2026/05/24
 //   webgmodeler minimal GLB exporter
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // ---------------------------------------------
-import { readVec3 } from "./math3d.js";
+import { readFiniteNumber, readQuatXyzw, readVec3 } from "./math3d.js";
 
 // GLB の各 chunk が 4 byte 境界に揃うよう byte length を切り上げる
 function align4(value) {
@@ -36,12 +36,20 @@ export function buildGlbFromGeometry({
   nodeName = "webgmodeler_node",
   meshName = "webgmodeler_mesh",
   materialName = "webgmodeler_mat",
-  nodeTranslation = [0.0, 0.0, 0.0]
+  nodeTranslation = [0.0, 0.0, 0.0],
+  nodeRotation = [0.0, 0.0, 0.0, 1.0],
+  nodeScale = 1.0
 }) {
   if (!Array.isArray(vertices) || vertices.length === 0 || !Array.isArray(faces) || faces.length === 0) {
     throw new Error("GLB export requires vertices and faces");
   }
   const translation = readVec3(nodeTranslation, "GLB nodeTranslation");
+  const rotation = readQuatXyzw(nodeRotation, "GLB nodeRotation");
+  const scaleValue = readFiniteNumber(nodeScale, "GLB nodeScale");
+  if (Math.abs(scaleValue) <= 1.0e-8) {
+    throw new Error("GLB nodeScale must be non-zero");
+  }
+  const scale = [scaleValue, scaleValue, scaleValue];
   const idToIndex = new Map();
   const positions = new Float32Array(vertices.length * 3);
   const min = [Number.POSITIVE_INFINITY, Number.POSITIVE_INFINITY, Number.POSITIVE_INFINITY];
@@ -94,7 +102,9 @@ export function buildGlbFromGeometry({
     nodes: [{
       mesh: 0,
       name: nodeName,
-      translation
+      translation,
+      rotation,
+      scale
     }],
     meshes: [
       {

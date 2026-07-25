@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// samples/mmodeler/main.js  2026/05/17
+// samples/mmodeler/main.js  2026/05/26
 //   mmodeler sample
 //   Sections:
 //   - webg app subclasses and shaders
@@ -12,11 +12,22 @@
 // ---------------------------------------------
 import WebgApp from "../../webg/WebgApp.js";
 import SmoothShader from "../../webg/SmoothShader.js";
-import Shape from "../../webg/Shape.js";
 import ModelAsset from "../../webg/ModelAsset.js";
 import Matrix from "../../webg/Matrix.js";
+import Quat from "../../webg/Quat.js";
 import Diagnostics from "../../webg/Diagnostics.js";
-import Touch from "../../webg/Touch.js";
+import BoxSelectSession from "./BoxSelectSession.js";
+import CommandPalette, { getCommandActionLabel } from "./CommandPalette.js";
+import EditModeController from "./EditModeController.js";
+import ModelerCommandDispatcher from "./ModelerCommandDispatcher.js";
+import ModelerImportExport from "./ModelerImportExport.js";
+import MobileInputController from "./MobileInputController.js";
+import ModelerPicking, { intersectRayPlane } from "./ModelerPicking.js";
+import { buildPrimitiveObject as buildModelerPrimitiveObject } from "./ModelerPrimitiveFactory.js";
+import ModelerRenderer from "./ModelerRenderer.js";
+import ModelerScene from "./ModelerScene.js";
+import ObjectModeController from "./ObjectModeController.js";
+import ViewController from "./ViewController.js";
 import {
   DEFAULT_CAMERA,
   DEFAULT_OBJECT_ID,
@@ -38,11 +49,10 @@ import {
   mul3,
   normalize3,
   readFiniteNumber,
+  readQuatXyzw,
   readVec3,
   sub3
 } from "./math3d.js";
-import { buildGlbFromGeometry } from "./glbExporter.js";
-import { createEditOperations } from "./editOperations.js";
 import { createTransformController } from "./transformController.js";
 import Overlay2DRenderer from "./overlay2dRenderer.js";
 import EdgeWireframeOverlayRenderer from "./edgeWireframeOverlayRenderer.js";
@@ -65,6 +75,24 @@ class ModelerSmoothShader extends SmoothShader {
 }
 
 class ModelerWebgApp extends WebgApp {
+  // mmodeler の透視投影だけ、編集対象に寄せた depth range を使う。
+  // 正射影は従来の range を維持し、projection mode 切り替え時の見え方を不用意に変えない。
+  updateProjection(viewAngle = this.viewAngle) {
+    const proj = new Matrix();
+    const vfov = this.screen.getRecommendedFov(viewAngle);
+    proj.makeProjectionMatrix(
+      PERSPECTIVE_PROJECTION_NEAR,
+      PERSPECTIVE_PROJECTION_FAR,
+      vfov,
+      this.screen.getAspect()
+    );
+    this.projectionMatrix = proj;
+    if (this.shader?.setProjectionMatrix) {
+      this.shader.setProjectionMatrix(proj);
+    }
+    return proj;
+  }
+
   // webg コアの WebgApp は透視投影を標準入口にしている。
   // webgmodeler ではコアを変更せず、サンプル専用 subclass で正射影行列だけを追加する。
   updateOrthographicProjection(viewHeight) {
@@ -79,8 +107,8 @@ class ModelerWebgApp extends WebgApp {
     const halfWidth = halfHeight * aspect;
     const proj = new Matrix();
     proj.makeProjectionMatrixOrtho(
-      this.projectionNear,
-      this.projectionFar,
+      ORTHOGRAPHIC_PROJECTION_NEAR,
+      ORTHOGRAPHIC_PROJECTION_FAR,
       halfWidth,
       halfHeight
     );
@@ -90,6 +118,7 @@ class ModelerWebgApp extends WebgApp {
     }
     return proj;
   }
+
 }
 
 class SelectedFaceOverlayShader extends ModelerSmoothShader {
@@ -97,7 +126,10 @@ class SelectedFaceOverlayShader extends ModelerSmoothShader {
   constructor(gpu) {
     // 選択面は通常 mesh の後に重ねるため、depth buffer を更新しない
     // 同一深度の面を通すため depthCompare は less-equal にする
+    // 通常 mesh は裏面確認のため両面描画するが、選択面 overlay は背面まで色を出すと
+    // 反対側の face が選択されているように見えるため、overlay だけ back-face culling を有効にする
     super(gpu, {
+      cullMode: "back",
       depthWriteEnabled: false,
       depthCompare: "less-equal"
     });
@@ -106,7 +138,7 @@ class SelectedFaceOverlayShader extends ModelerSmoothShader {
     // bias が距離に対して極端に変わらないようにする
     this.wgslSrc = this.wgslSrc.replace(
       "output.position = u.projMatrix * pos4;",
-      "output.position = u.projMatrix * pos4;\n        output.position.z = max(0.0, output.position.z - 0.00045 * output.position.w);"
+      `output.position = u.projMatrix * pos4;\n        output.position.z = max(0.0, output.position.z - ${SELECTED_FACE_Z_BIAS_PERSPECTIVE.toFixed(8)} * output.position.w);`
     );
   }
 }
@@ -156,9 +188,23 @@ const ui = {
   mobilePalette: null,
   mobilePaletteTitle: null,
   mobilePaletteButtons: [],
-  mobileAxisChooser: null,
-  mobileAxisButtons: [],
-  mobileViewButtons: []
+  mobileViewButtons: [],
+  mobileSelectionShift: null,
+  coordinateOverlay: null,
+  coordinateOverlayTitle: null,
+  coordinateOverlayHint: null,
+  coordinateOverlayFields: [],
+  coordinateOverlayApply: null,
+  coordinateOverlayClose: null,
+  objectInfoOverlay: null,
+  objectInfoTitle: null,
+  objectInfoBounds: null,
+  objectInfoVertices: null,
+  objectInfoPolygons: null,
+  objectInfoOrigin: null,
+  objectInfoFocalLength: null,
+  objectInfoOrbitDistance: null,
+  objectInfoCameraDistance: null
 };
 
 const SAMPLE_NAME = "mmodeler";
@@ -178,107 +224,16 @@ const MOBILE_RIBBON_PAGES = [
   }
 ];
 
-const MOBILE_ACTION_LABELS = {
-  "load": { label: "Load", detail: "file" },
-  "save-json": { label: "Json", detail: "gz" },
-  "save-glb": { label: "Glb", detail: "save" },
-  "new-scene": { label: "N", detail: "new" },
-  "toggle-projection": { label: "Pr", detail: "ortho" },
-  "toggle-x-mirror": { label: "M", detail: "mirror" },
-  "undo": { label: "Ud", detail: "undo" },
-  "redo": { label: "Rd", detail: "redo" },
-  "screenshot": { label: "Ss", detail: "shot" },
-  "move": { label: "G", detail: "move" },
-  "rotate": { label: "R", detail: "rotate" },
-  "scale": { label: "S", detail: "scale" },
-  "extrude": { label: "E", detail: "extrude" },
-  "loop-cut": { label: "L", detail: "loop" },
-  "delete": { label: "Del", detail: "delete" },
-  "origin-world": { label: "O", detail: "origin" },
-  "mode-object": { label: "1", detail: "object" },
-  "mode-edit": { label: "Tab", detail: "edit" },
-  "tool-face": { label: "f", detail: "face" },
-  "tool-vertex": { label: "v", detail: "vertex" },
-  "tool-add": { label: "Add", detail: "vertex" },
-  "select-all": { label: "A", detail: "all" },
-  "invert-selection": { label: "I", detail: "invert" },
-  "select-x-negative": { label: "H", detail: "X<0" },
-  "view-vertex": { label: "Vcood", detail: "" },
-  "object-wireframe": { label: "W", detail: "wire" },
-  "edge-slide": { label: "GG", detail: "slide" },
-  "add-cube": { label: "Cube", detail: "add" },
-  "add-torus": { label: "Torus", detail: "add" },
-  "add-plane": { label: "Plane", detail: "add" },
-  "add-sphere": { label: "Ball", detail: "add" },
-  "add-cylinder": { label: "Cyl", detail: "add" },
-  "add-cone": { label: "Cone", detail: "add" },
-  "add-double-cone": { label: "DCone", detail: "add" },
-  "join-objects": { label: "Join", detail: "object" },
-  "primitive-segments-3": { label: "3", detail: "seg" },
-  "primitive-segments-4": { label: "4", detail: "seg" },
-  "primitive-segments-8": { label: "8", detail: "seg" },
-  "primitive-segments-12": { label: "12", detail: "seg" },
-  "primitive-segments-16": { label: "16", detail: "seg" },
-  "primitive-segments-24": { label: "24", detail: "seg" },
-  "primitive-segments-32": { label: "32", detail: "seg" },
-  "undefined": { label: "-", detail: "" },
-  "palette-next": { label: "Next", detail: "page" },
-  "view-x": { label: "X", detail: "view" },
-  "view-x-reverse": { label: "-X", detail: "view" },
-  "view-y": { label: "Y", detail: "view" },
-  "view-y-reverse": { label: "-Y", detail: "view" },
-  "view-z": { label: "Z", detail: "view" },
-  "view-z-reverse": { label: "-Z", detail: "view" }
-};
-
-const mobileUiState = {
-  paletteOpen: false,
-  paletteKind: "selection",
-  palettePage: 0,
-  ribbonPageIndex: 0,
-  boxSelectArmed: false,
-  touch: null,
-  gestureAttached: false,
-  lastGesture: "-",
-  lastGesturePointer: "-",
-  lastAction: "",
-  lastActionTime: 0,
-  lastEmptyTapTime: 0,
-  lastEmptyTapX: 0,
-  lastEmptyTapY: 0,
-  lastEmptyTapPointerType: "",
-  lastCanvasTapTime: 0,
-  lastCanvasTapX: 0,
-  lastCanvasTapY: 0,
-  lastCanvasTapPointerType: "",
-  pendingCanvasTapTimer: null,
-  pendingCanvasTapEvent: null,
-  primitiveSegments: 12,
-  viewAxis: "z",
-  viewFlip: false,
-  flickPointer: null,
-  lastFlickPointerId: null,
-  lastFlickTime: 0,
-  suppressMobileButtonPointerId: null,
-  suppressMobileButtonUntil: 0,
-  suppressCanvasPointerId: null,
-  suppressCanvasPointerUntil: 0,
-  suppressAxisClickUntil: 0
-};
-
-const MOBILE_TOUCH_FLICK_MAX_MS = 650.0;
-const MOBILE_TOUCH_FLICK_MIN_SPEED_PX_PER_MS = 0.18;
-const MOBILE_MOUSE_FLICK_MAX_MS = 900.0;
-const MOBILE_MOUSE_FLICK_MIN_SPEED_PX_PER_MS = 0.08;
-const MOBILE_FLICK_HORIZONTAL_DOMINANCE = 1.15;
 const MOBILE_GESTURE_DEBUG_VERSION = "2026-05-17-empty-scene-palette-v1";
 
+const mobileInput = new MobileInputController({
+  isMobileProfile: IS_MOBILE_PROFILE,
+  ribbonPages: MOBILE_RIBBON_PAGES
+});
+
 let app = null;
-let meshNode = null;
-let selectedFaceNode = null;
-let markerRoot = null;
-let gridRoot = null;
 let orbit = null;
+let modelerRenderer = null;
 let selectedFaceShader = null;
 let overlay2d = null;
 let edgeOverlay = null;
@@ -288,30 +243,52 @@ let overlayEdgeCacheDirty = true;
 let overlayEdgeUploadDirty = true;
 let markerOverlayDirty = true;
 let markerOverlayCameraKey = "";
+let coordinateOverlayLastTouchAction = "";
+let coordinateOverlayLastTouchTime = 0;
 let overlayAlpha = 0.65;
 let overlayMarkerColor = [0.0, 0.0, 0.0];
 let overlayEdgeColor = [0.0, 0.0, 0.0];
-let objectWireframe = false;
-let lightBackground = false;
-let visiblePickOnly = true;
 let xMirrorEdit = false;
-const explicitXMirrorVertexPairs = new Map();
 let importedAsset = null;
 let importedMeshes = [];
 let lastSavedName = "-";
-let selectionRectEl = null;
 let detachModelerKeyBridge = null;
 let detachTransformPointerBridge = null;
-let editOperations = null;
+let commandPalette = null;
+let boxSelectSession = null;
+let editModeController = null;
+let modelerImportExport = null;
+let modelerCommandDispatcher = null;
+let modelerPicking = null;
+let objectModeController = null;
 let transformController = null;
 
 const VIEW_ANGLE_PRESETS = [50.0, 40.0, 32.0, 24.0, 18.0, 12.0, 6.0];
-let viewAnglePresetIndex = 0;
+// 24 degree は 35mm full-frame 短辺換算で約 56mm になり、
+// mobile の初期表示で極端な広角にならず形状確認しやすい
+let viewAnglePresetIndex = 3;
+const ORTHOGRAPHIC_PROJECTION_NEAR = 0.05;
+const ORTHOGRAPHIC_PROJECTION_FAR = 1000.0;
+const PERSPECTIVE_PROJECTION_NEAR = ORTHOGRAPHIC_PROJECTION_NEAR;
+const PERSPECTIVE_PROJECTION_FAR = ORTHOGRAPHIC_PROJECTION_FAR;
+const Z_BIAS_REFERENCE_PERSPECTIVE_NEAR = 0.05;
+const Z_BIAS_REFERENCE_PERSPECTIVE_FAR = 1000.0;
 const PROJECTION_MODE_PERSPECTIVE = "perspective";
 const PROJECTION_MODE_ORTHOGRAPHIC = "orthographic";
-let projectionMode = PROJECTION_MODE_PERSPECTIVE;
+const viewController = new ViewController({
+  perspectiveMode: PROJECTION_MODE_PERSPECTIVE,
+  orthographicMode: PROJECTION_MODE_ORTHOGRAPHIC,
+  initialProjectionMode: PROJECTION_MODE_PERSPECTIVE,
+  initialObjectWireframe: false,
+  initialLightBackground: false,
+  initialVisiblePickOnly: true,
+  initialViewAxis: "z",
+  initialViewFlip: false
+});
 let projectionUpdateKey = "";
 const MIN_CAMERA_DISTANCE = 0.03;
+const UNRESTRICTED_ORBIT_PITCH_DEGREES = 1000000.0;
+const NORMALIZED_ORBIT_PITCH_DEGREES = 180.0;
 const FIT_MIN_DISTANCE_RATIO = 0.02;
 const MIN_WHEEL_ZOOM_STEP = 0.03;
 const FIT_WHEEL_ZOOM_RATIO = 0.04;
@@ -322,10 +299,14 @@ const EDGE_Z_BIAS_PERSPECTIVE = 0.00028;
 const EDGE_Z_BIAS_ORTHOGRAPHIC = 0.00002;
 const MARKER_Z_BIAS_PERSPECTIVE = 0.00035;
 const MARKER_Z_BIAS_ORTHOGRAPHIC = 0.00002;
+const GUIDE_Z_BIAS_PERSPECTIVE = 0.00008;
+const SELECTED_FACE_Z_BIAS_BASE = 0.00045;
+const SELECTED_FACE_Z_BIAS_PERSPECTIVE = SELECTED_FACE_Z_BIAS_BASE * getPerspectiveDepthCoefficientZBiasScale();
 const Z_BIAS_REFERENCE_VIEW_ANGLE = 50.0;
 const WIREFRAME_OVERLAY_MARKER_COLOR = [0.92, 1.0, 1.0];
 const WIREFRAME_OVERLAY_EDGE_COLOR = [0.72, 0.96, 1.0];
 const WIREFRAME_OVERLAY_SELECTED_EDGE_COLOR = [1.0, 1.0, 0.82];
+const SELECTED_VERTEX_EDGE_COLOR = [0.95, 0.08, 0.08];
 const BACKGROUND_DARK_COLOR = [0.07, 0.11, 0.15, 1.0];
 const BACKGROUND_LIGHT_COLOR = [0.42, 0.45, 0.48, 1.0];
 const VISIBLE_PICK_GRID_COLS = 48;
@@ -359,14 +340,6 @@ const canvasClick = {
   lastY: 0.0,
   additive: false,
   allowRectangle: true
-};
-
-const loopCutPreview = {
-  active: false,
-  faceId: null,
-  cutEdgeIndex: 0,
-  lastClientX: 0.0,
-  lastClientY: 0.0
 };
 
 const rawInputDebug = {
@@ -428,29 +401,13 @@ const rawInputButtonHistory = [];
 // --- editor model state
 // ------------------------------------------------------------
 
-// 編集状態:
-// - vertex.id / face.id は削除後も意味が変わらない識別子として使う
-// - face.indices は vertex id の配列であり、三角形または四角形だけを許可する
-// - selectedVertices / selectedFaces は id の Set として保持し、UI 操作の基準にする
-const editor = {
+// mmodeler の scene state を保持する
+// 詳細な field の意味は ModelerScene.js に集約し、main.js は scene 操作の接続役へ寄せていく
+const editor = new ModelerScene({
   mode: EDITOR_MODE_OBJECT,
-  objects: [],
-  selectedObjectIds: new Set(),
-  activeObjectId: null,
   nextObjectId: DEFAULT_OBJECT_ID,
-  vertices: [],
-  faces: [],
-  selectedVertices: new Set(),
-  selectedFaces: new Set(),
-  lastSelectedVertexId: null,
-  nextVertexId: 1,
-  nextFaceId: 1,
-  tool: TOOL_SELECT_VERTEX,
-  dirty: false,
-  lastMessage: "ready",
-  undoStack: [],
-  redoStack: []
-};
+  tool: TOOL_SELECT_FACE
+});
 
 // ------------------------------------------------------------
 // --- focus, projection, and camera helpers
@@ -500,11 +457,32 @@ function getFocalLengthLabel() {
 }
 
 function getProjectionLabel() {
-  return projectionMode === PROJECTION_MODE_ORTHOGRAPHIC ? "Ortho" : "Persp";
+  return viewController.getProjectionLabel();
 }
 
-// Perspective の clip-space zBias は望遠側ほど効きすぎて見えやすい。
-// 短辺 FOV の tan 比で弱めると、画面上の見え方の変化に合わせて bias も小さくできる。
+// Perspective projection の NDC depth は near / far から決まる係数に比例して変化する
+// projection range を調整したときも overlay bias の見え方を基準値へ寄せるため、
+// 基準 projection と現在 projection の depth coefficient 比を zBias に掛けて安定させる
+function getPerspectiveDepthCoefficientZBiasScale() {
+  const current = getPerspectiveDepthCoefficient(PERSPECTIVE_PROJECTION_NEAR, PERSPECTIVE_PROJECTION_FAR);
+  const reference = getPerspectiveDepthCoefficient(Z_BIAS_REFERENCE_PERSPECTIVE_NEAR, Z_BIAS_REFERENCE_PERSPECTIVE_FAR);
+  if (!Number.isFinite(current) || current <= 0.0 || !Number.isFinite(reference) || reference <= 0.0) {
+    throw new Error(`webgmodeler zBias depth scale requires valid coefficients: current=${current} reference=${reference}`);
+  }
+  return current / reference;
+}
+
+function getPerspectiveDepthCoefficient(near, far) {
+  const n = Number(near);
+  const f = Number(far);
+  if (!Number.isFinite(n) || !Number.isFinite(f) || n <= 0.0 || f <= n) {
+    throw new Error(`webgmodeler zBias depth coefficient requires 0 < near < far: near=${near} far=${far}`);
+  }
+  return Math.abs(f * n / (n - f));
+}
+
+// Perspective の clip-space zBias は望遠側ほど効きすぎて見えやすい
+// FOV scale と depth coefficient scale を掛け合わせ、焦点距離と near/far の変更の両方に追従させる
 function getPerspectiveZBiasScale() {
   const viewAngle = Number(app?.viewAngle ?? VIEW_ANGLE_PRESETS[viewAnglePresetIndex]);
   if (!Number.isFinite(viewAngle) || viewAngle <= 0.0 || viewAngle >= 180.0) {
@@ -515,27 +493,56 @@ function getPerspectiveZBiasScale() {
   if (!Number.isFinite(currentTan) || currentTan <= 0.0 || !Number.isFinite(referenceTan) || referenceTan <= 0.0) {
     throw new Error(`webgmodeler zBias scale produced invalid tangent: current=${currentTan} reference=${referenceTan}`);
   }
-  return currentTan / referenceTan;
+  return (currentTan / referenceTan) * getPerspectiveDepthCoefficientZBiasScale();
 }
 
 function getEdgeOverlayZBias() {
-  if (projectionMode === PROJECTION_MODE_ORTHOGRAPHIC) {
+  if (viewController.projectionMode === PROJECTION_MODE_ORTHOGRAPHIC) {
     return EDGE_Z_BIAS_ORTHOGRAPHIC;
   }
   return EDGE_Z_BIAS_PERSPECTIVE * getPerspectiveZBiasScale();
 }
 
 function getMarkerOverlayZBias() {
-  if (projectionMode === PROJECTION_MODE_ORTHOGRAPHIC) {
+  if (viewController.projectionMode === PROJECTION_MODE_ORTHOGRAPHIC) {
     return MARKER_Z_BIAS_ORTHOGRAPHIC;
   }
   return MARKER_Z_BIAS_PERSPECTIVE * getPerspectiveZBiasScale();
 }
 
+function getGuideOverlayZBias() {
+  if (viewController.projectionMode === PROJECTION_MODE_ORTHOGRAPHIC) {
+    return 0.0;
+  }
+  return GUIDE_Z_BIAS_PERSPECTIVE * getPerspectiveZBiasScale();
+}
+
+// edit mesh の頂点・面が変わったときは edge cache と marker 投影を作り直す
+function markEditOverlayGeometryDirty() {
+  overlayEdgeCacheDirty = true;
+  overlayEdgeUploadDirty = true;
+  markerOverlayDirty = true;
+}
+
+// 選択状態や edge 色だけが変わったときは edge buffer の再 upload と marker 再描画だけでよい
+function markEditOverlayVisualDirty() {
+  overlayEdgeUploadDirty = true;
+  markerOverlayDirty = true;
+}
+
+// marker 色や camera 変化など、screen-space marker だけを再投影したい場合の印
+function markMarkerOverlayDirty() {
+  markerOverlayDirty = true;
+}
+
+// edge overlay の色や alpha だけが変わったとき、line-list geometry は再計算せず色付き buffer だけ作り直す
+function markEdgeOverlayUploadDirty() {
+  overlayEdgeUploadDirty = true;
+}
+
 function markProjectionDependentsDirty() {
   selectedFaceShader?.setProjectionMatrix?.(app.projectionMatrix);
-  markerOverlayDirty = true;
-  overlayEdgeUploadDirty = true;
+  markEditOverlayVisualDirty();
 }
 
 function getOrthographicViewHeight() {
@@ -563,7 +570,7 @@ function readPositiveRecommendedFov(viewAngle, label) {
 }
 
 function adjustPerspectiveDistanceForViewAngle(oldViewAngle, newViewAngle) {
-  if (!app || !orbit || projectionMode !== PROJECTION_MODE_PERSPECTIVE) {
+  if (!app || !orbit || viewController.projectionMode !== PROJECTION_MODE_PERSPECTIVE) {
     return;
   }
   const distance = Number(orbit.orbit.distance);
@@ -584,7 +591,7 @@ function adjustPerspectiveDistanceForViewAngle(oldViewAngle, newViewAngle) {
 // Orthographic では orbit distance を表示高さの計算に使うため、
 // viewAngle 変更時に distance を逆補正して画面上の拡大率を保つ
 function adjustOrthographicDistanceForViewAngle(oldViewAngle, newViewAngle) {
-  if (!app || !orbit || projectionMode !== PROJECTION_MODE_ORTHOGRAPHIC) {
+  if (!app || !orbit || viewController.projectionMode !== PROJECTION_MODE_ORTHOGRAPHIC) {
     return;
   }
   const distance = Number(orbit.orbit.distance);
@@ -609,7 +616,7 @@ function makeProjectionUpdateKey() {
   const distance = Number(orbit?.orbit?.distance);
   const aspect = app.screen.getAspect();
   return [
-    projectionMode,
+    viewController.projectionMode,
     Number(app.viewAngle).toFixed(6),
     Number(app.projectionNear).toFixed(6),
     Number(app.projectionFar).toFixed(6),
@@ -626,7 +633,7 @@ function applyModelerProjection(options = {}) {
   if (options.force !== true && projectionUpdateKey === nextProjectionKey) {
     return false;
   }
-  if (projectionMode === PROJECTION_MODE_ORTHOGRAPHIC) {
+  if (viewController.projectionMode === PROJECTION_MODE_ORTHOGRAPHIC) {
     app.updateOrthographicProjection(getOrthographicViewHeight());
   } else {
     app.updateProjection(app.viewAngle);
@@ -666,31 +673,11 @@ function cycleViewAnglePreset(direction = 1) {
 }
 
 function toggleProjectionMode() {
-  projectionMode = projectionMode === PROJECTION_MODE_ORTHOGRAPHIC
-    ? PROJECTION_MODE_PERSPECTIVE
-    : PROJECTION_MODE_ORTHOGRAPHIC;
-  applyModelerProjection({
-    force: true,
-    announce: true
-  });
+  viewController.runToggleProjectionCommand();
 }
 
 function setMobileAxisView(axis, reversed = false) {
-  const normalized = String(axis ?? "").toLowerCase();
-  const presetKey = normalized === "x"
-    ? "3"
-    : normalized === "y"
-      ? "7"
-      : normalized === "z"
-        ? "1"
-        : null;
-  if (!presetKey) {
-    return false;
-  }
-  mobileUiState.viewAxis = normalized;
-  mobileUiState.viewFlip = reversed === true;
-  updateMobileRibbon();
-  return setOrbitViewPreset(presetKey, mobileUiState.viewFlip);
+  return viewController.runSetMobileAxisViewCommand(axis, reversed);
 }
 
 // ------------------------------------------------------------
@@ -865,9 +852,23 @@ function cacheUi() {
   ui.mobilePalette = document.getElementById("mobilePalette");
   ui.mobilePaletteTitle = document.getElementById("mobilePaletteTitle");
   ui.mobilePaletteButtons = Array.from(document.querySelectorAll(".palette-button"));
-  ui.mobileAxisChooser = document.getElementById("mobileAxisChooser");
-  ui.mobileAxisButtons = Array.from(document.querySelectorAll(".axis-button"));
   ui.mobileViewButtons = Array.from(document.querySelectorAll("[data-view-action]"));
+  ui.mobileSelectionShift = document.getElementById("mobileSelectionShift");
+  ui.coordinateOverlay = document.getElementById("coordinateOverlay");
+  ui.coordinateOverlayTitle = document.getElementById("coordinateOverlayTitle");
+  ui.coordinateOverlayHint = document.getElementById("coordinateOverlayHint");
+  ui.coordinateOverlayFields = Array.from(document.querySelectorAll("[data-coordinate-axis]"));
+  ui.coordinateOverlayApply = document.getElementById("coordinateOverlayApply");
+  ui.coordinateOverlayClose = document.getElementById("coordinateOverlayClose");
+  ui.objectInfoOverlay = document.getElementById("objectInfoOverlay");
+  ui.objectInfoTitle = document.getElementById("objectInfoTitle");
+  ui.objectInfoBounds = document.getElementById("objectInfoBounds");
+  ui.objectInfoVertices = document.getElementById("objectInfoVertices");
+  ui.objectInfoPolygons = document.getElementById("objectInfoPolygons");
+  ui.objectInfoOrigin = document.getElementById("objectInfoOrigin");
+  ui.objectInfoFocalLength = document.getElementById("objectInfoFocalLength");
+  ui.objectInfoOrbitDistance = document.getElementById("objectInfoOrbitDistance");
+  ui.objectInfoCameraDistance = document.getElementById("objectInfoCameraDistance");
   if (ui.overlayAlpha) {
     overlayAlpha = readFiniteNumber(ui.overlayAlpha.value, overlayAlpha);
   }
@@ -880,69 +881,38 @@ function cacheUi() {
 }
 
 function getMobileToolLabel() {
-  if (editor.mode === EDITOR_MODE_OBJECT) {
+  const mode = getRenderableEditorMode();
+  const tool = getRenderableEditorTool();
+  if (mode === EDITOR_MODE_OBJECT) {
     return "Object";
   }
-  if (editor.tool === TOOL_SELECT_VERTEX) {
+  if (tool === TOOL_SELECT_VERTEX) {
     return "Vertex";
   }
-  if (editor.tool === TOOL_SELECT_FACE) {
+  if (tool === TOOL_SELECT_FACE) {
     return "Face";
   }
-  if (editor.tool === TOOL_ADD_VERTEX) {
+  if (tool === TOOL_ADD_VERTEX) {
     return "Add";
   }
-  return editor.tool;
+  return tool;
 }
 
 function getMobileRibbonActionLabel(action) {
-  return MOBILE_ACTION_LABELS[action] ?? { label: action, detail: "" };
-}
-
-// ユーザー指定の command palette は 4x4 の表示行をそのまま配列化する
-// CSS grid は row-major で button を配置するため、ここでは画面上の行順を直接保持する
-function paletteRows(rows) {
-  return rows.flatMap((row) => row);
-}
-
-const MOBILE_COMMAND_PALETTES = [
-  paletteRows([
-    ["move", "extrude", "tool-add", "tool-vertex"],
-    ["rotate", "loop-cut", "delete", "tool-face"],
-    ["scale", "edge-slide", "toggle-projection", "undo"],
-    ["palette-next", "toggle-x-mirror", "object-wireframe", "redo"]
-  ]),
-  paletteRows([
-    ["select-all", "origin-world", "undefined", "load"],
-    ["invert-selection", "screenshot", "undefined", "save-json"],
-    ["select-x-negative", "new-scene", "undefined", "save-glb"],
-    ["palette-next", "join-objects", "view-vertex", "mode-edit"]
-  ]),
-  paletteRows([
-    ["add-cube", "add-torus", "add-sphere", "add-double-cone"],
-    ["add-cylinder", "add-cone", "add-plane", "undefined"],
-    ["primitive-segments-3", "primitive-segments-4", "primitive-segments-8", "primitive-segments-12"],
-    ["palette-next", "primitive-segments-16", "primitive-segments-24", "primitive-segments-32"]
-  ])
-];
-
-// mobile palette の Add は「追加」系の文脈 action として使う
-// Edit Mode で 3/4 頂点が選択されている場合は面作成、それ以外は Add Vertex tool へ切り替える
-function canMakeFaceFromMobileSelection() {
-  return editor.mode === EDITOR_MODE_EDIT
-      && (editor.selectedVertices.size === 3 || editor.selectedVertices.size === 4);
+  return getCommandActionLabel(action);
 }
 
 // command palette は未選択状態でも開けるため、選択が前提の command だけを個別に無効化する
 // long press 自体では hit した polygon / vertex を選択せず、利用者が作った選択状態を保つ
 function hasMobileSelectionForAction(action) {
-  if (editor.mode === EDITOR_MODE_OBJECT) {
+  if (getRenderableEditorMode() === EDITOR_MODE_OBJECT) {
     return editor.selectedObjectIds.size > 0;
   }
+  const editMesh = getRenderableEditMeshState();
   if (action === "extrude") {
-    return editor.selectedFaces.size > 0;
+    return editMesh.selectedFaces.size > 0;
   }
-  return editor.selectedVertices.size > 0 || editor.selectedFaces.size > 0;
+  return editMesh.selectedVertices.size > 0 || editMesh.selectedFaces.size > 0;
 }
 
 function isMobileActionEnabled(action) {
@@ -952,14 +922,21 @@ function isMobileActionEnabled(action) {
   if (String(action ?? "").startsWith("primitive-segments-")) {
     return true;
   }
+  if (action === "axis-x" || action === "axis-y" || action === "axis-z") {
+    return true;
+  }
+  if (action === "axis-normal") {
+    return getRenderableEditorMode() === EDITOR_MODE_EDIT
+      && editModeController?.canUseNormalAxisConstraint?.() === true;
+  }
   if (action === "move" || action === "rotate" || action === "scale" || action === "extrude" || action === "delete") {
     return hasMobileSelectionForAction(action);
   }
   if (action === "join-objects") {
-    return editor.mode === EDITOR_MODE_OBJECT && editor.selectedObjectIds.size >= 2;
+    return getRenderableEditorMode() === EDITOR_MODE_OBJECT && editor.selectedObjectIds.size >= 2;
   }
   if (action === "save-json" || action === "save-glb") {
-    return editor.vertices.length > 0 && (action !== "save-glb" || editor.faces.length > 0);
+    return hasActiveGeometryForSave({ requireFaces: action === "save-glb" });
   }
   if (action === "undo") {
     return editor.undoStack.length > 0;
@@ -968,16 +945,39 @@ function isMobileActionEnabled(action) {
     return editor.redoStack.length > 0;
   }
   if (action === "edge-slide") {
-    return editor.mode === EDITOR_MODE_EDIT && getActiveVertexObjects().length > 0;
+    return getRenderableEditorMode() === EDITOR_MODE_EDIT && getActiveVertexObjects().length > 0;
+  }
+  if (action === "chain-select" || action === "select-loop") {
+    return getRenderableEditorMode() === EDITOR_MODE_EDIT && getActiveVertexObjects().length > 0;
+  }
+  if (action === "subdivide") {
+    const editMesh = getRenderableEditMeshState();
+    return getRenderableEditorMode() === EDITOR_MODE_EDIT
+      && editMesh.faces.length > 0
+      && editMesh.faces.every((face) => face.indices.length === 4);
+  }
+  if (action === "catmull-clark") {
+    const editMesh = getRenderableEditMeshState();
+    return getRenderableEditorMode() === EDITOR_MODE_EDIT
+      && editMesh.faces.length > 0;
+  }
+  if (action === "view-vertex") {
+    return getRenderableEditorMode() === EDITOR_MODE_EDIT && getActiveVertexObjects().length > 0;
+  }
+  if (action === "object-info") {
+    return getActiveObject() !== null;
   }
   if (action === "object-wireframe") {
+    return true;
+  }
+  if (action === "object-smooth-shading") {
     return true;
   }
   if (action === "origin-world") {
     return editor.selectedObjectIds.size > 0 || editor.activeObjectId !== null;
   }
   if (action === "loop-cut") {
-    return editor.mode === EDITOR_MODE_EDIT
+    return getRenderableEditorMode() === EDITOR_MODE_EDIT
         && getSelectedFaceObjects().some((face) => face.indices.length === 4);
   }
   return true;
@@ -990,26 +990,30 @@ function isMobileActionActive(action) {
     return xMirrorEdit;
   }
   if (action === "object-wireframe") {
-    return objectWireframe;
+    return viewController.objectWireframe;
   }
-  if (action === "mode-edit") {
-    return editor.mode === EDITOR_MODE_EDIT;
+  if (action === "object-smooth-shading") {
+    return viewController.objectSmoothShading;
   }
   if (action === "tool-vertex") {
-    return editor.mode === EDITOR_MODE_EDIT && editor.tool === TOOL_SELECT_VERTEX;
+    return getRenderableEditorMode() === EDITOR_MODE_EDIT && getRenderableEditorTool() === TOOL_SELECT_VERTEX;
   }
   if (action === "tool-face") {
-    return editor.mode === EDITOR_MODE_EDIT && editor.tool === TOOL_SELECT_FACE;
+    return getRenderableEditorMode() === EDITOR_MODE_EDIT && getRenderableEditorTool() === TOOL_SELECT_FACE;
+  }
+  if (action === "axis-x" || action === "axis-y" || action === "axis-z" || action === "axis-normal") {
+    const axis = action === "axis-normal" ? "n" : action.slice(-1);
+    return mobileInput.transformAxisConstraint === axis;
   }
   if (action === "view-x" || action === "view-y" || action === "view-z"
       || action === "view-x-reverse" || action === "view-y-reverse" || action === "view-z-reverse") {
     const reversed = action.endsWith("-reverse");
     const axis = reversed ? action.slice(5, 6) : action.slice(-1);
-    return mobileUiState.viewAxis === axis && mobileUiState.viewFlip === reversed;
+    return viewController.isMobileAxisViewActive(axis, reversed);
   }
   if (String(action ?? "").startsWith("primitive-segments-")) {
     const segments = Number(String(action).slice("primitive-segments-".length));
-    return mobileUiState.primitiveSegments === segments;
+    return mobileInput.primitiveSegments === segments;
   }
   return false;
 }
@@ -1018,18 +1022,19 @@ function updateMobileRibbon() {
   if (!IS_MOBILE_PROFILE) {
     return;
   }
-  const mode = editor.mode === EDITOR_MODE_EDIT ? "edit" : "object";
+  const mode = getRenderableEditorMode() === EDITOR_MODE_EDIT ? "edit" : "object";
   const tool = getMobileToolLabel().toLowerCase();
-  const box = mobileUiState.boxSelectArmed ? " | box select armed" : "";
+  const box = mobileInput.boxSelectArmed ? " | box select armed" : "";
+  const shift = mobileInput.selectionShiftActive ? " | shift" : "";
   if (ui.mobileStatus) {
-    ui.mobileStatus.textContent = `${mode} / ${tool} | ${editor.lastMessage || "ready"}${box}`;
+    ui.mobileStatus.textContent = `${mode} / ${tool} | ${editor.lastMessage || "ready"}${box}${shift}`;
   }
-  const page = MOBILE_RIBBON_PAGES[mobileUiState.ribbonPageIndex] ?? MOBILE_RIBBON_PAGES[0];
+  const page = mobileInput.currentRibbonPage;
   if (ui.mobileRibbonName) {
     ui.mobileRibbonName.textContent = page.name;
   }
   if (ui.mobileRibbonHint) {
-    ui.mobileRibbonHint.textContent = `${mode} / ${tool} | ${editor.lastMessage || "ready"}${box}`;
+    ui.mobileRibbonHint.textContent = `${mode} / ${tool} | ${editor.lastMessage || "ready"}${box}${shift}`;
   }
   for (let i = 0; i < ui.mobileRibbonButtons.length; i++) {
     const button = ui.mobileRibbonButtons[i];
@@ -1048,7 +1053,14 @@ function updateMobileRibbon() {
     button.classList.toggle("active", active);
     button.setAttribute("aria-pressed", active ? "true" : "false");
   }
-  renderMobileAxisChooser();
+  if (ui.mobileSelectionShift) {
+    ui.mobileSelectionShift.classList.toggle("active", mobileInput.selectionShiftActive);
+    ui.mobileSelectionShift.setAttribute("aria-pressed", mobileInput.selectionShiftActive ? "true" : "false");
+  }
+}
+
+function toggleMobileSelectionShift() {
+  mobileInput.toggleSelectionShift();
 }
 
 function setMobileOrbitEnabled(enabled) {
@@ -1057,729 +1069,196 @@ function setMobileOrbitEnabled(enabled) {
   }
 }
 
+function normalizeSignedDegrees(degrees, limit = NORMALIZED_ORBIT_PITCH_DEGREES) {
+  const numeric = Number(degrees);
+  if (!Number.isFinite(numeric)) {
+    return 0.0;
+  }
+  const fullTurn = limit * 2.0;
+  const wrapped = ((numeric + limit) % fullTurn + fullTurn) % fullTurn - limit;
+  return wrapped === -limit && numeric > 0.0 ? limit : wrapped;
+}
+
+function normalizeOrbitPitchForModeler() {
+  if (!orbit?.orbit || orbit.orbit.rotationInputMode === "camera-view") {
+    return false;
+  }
+  const normalizedPitch = normalizeSignedDegrees(orbit.orbit.pitch);
+  if (Math.abs(normalizedPitch - orbit.orbit.pitch) <= 1.0e-9) {
+    return false;
+  }
+  orbit.orbit.pitch = normalizedPitch;
+  orbit.apply?.(true);
+  app?.syncCameraFromEyeRig?.(orbit);
+  return true;
+}
+
 function closeMobilePalette() {
-  mobileUiState.paletteOpen = false;
-  if (ui.mobilePalette) {
-    ui.mobilePalette.classList.remove("open");
-  }
+  commandPalette?.close();
 }
 
-function closeMobileAxisChooser() {
-  if (ui.mobileAxisChooser) {
-    ui.mobileAxisChooser.classList.remove("open");
-  }
+// coordinate overlay を閉じ、canvas 操作へ戻れるようにする
+function closeCoordinateOverlay() {
+  ui.coordinateOverlay?.classList.remove("open");
+  focusModelerCanvas();
 }
 
-function renderMobileAxisChooser() {
-  if (!IS_MOBILE_PROFILE || !ui.mobileAxisChooser) {
+function closeObjectInfoOverlay() {
+  ui.objectInfoOverlay?.classList.remove("open");
+  focusModelerCanvas();
+}
+
+// iPhone Safari では touchstart / touchend の preventDefault により click が発火しない場合がある
+// coordinate overlay の操作部品だけは Safari guard の対象外にし、button は touchend / pointerup でも実行する
+function isCoordinateOverlayControl(target) {
+  return target?.closest?.(".coordinate-overlay input, .coordinate-overlay button") !== null;
+}
+
+function runCoordinateOverlayButtonAction(action, ev = null) {
+  ev?.preventDefault?.();
+  ev?.stopPropagation?.();
+  action();
+}
+
+function runCoordinateOverlayButtonTouchAction(name, action, ev) {
+  const elapsed = performance.now() - coordinateOverlayLastTouchTime;
+  if (coordinateOverlayLastTouchAction === name && elapsed >= 0.0 && elapsed < 120.0) {
+    ev?.preventDefault?.();
+    ev?.stopPropagation?.();
     return;
   }
-  const transformState = transformController?.state ?? null;
-  if (!transformState?.active) {
-    closeMobileAxisChooser();
-    return;
-  }
-  ui.mobileAxisChooser.classList.add("open");
-  const activeAxis = transformState.axisConstraint ?? "free";
-  for (const button of ui.mobileAxisButtons) {
-    const axis = button.dataset.axis ?? "free";
-    const active = axis === activeAxis;
-    button.classList.toggle("active", active);
-    button.setAttribute("aria-pressed", active ? "true" : "false");
-  }
+  coordinateOverlayLastTouchAction = name;
+  coordinateOverlayLastTouchTime = performance.now();
+  runCoordinateOverlayButtonAction(action, ev);
 }
 
-// command palette の表示中心を決める
-// CSS の translate(-50%, -50%) により left/top は palette の中心点として解釈される
-// tap 位置をそのまま中心にすると、ユーザーが指定した geometry や empty 位置を palette が完全に覆ってしまう
-// そのため、tap 位置が canvas 中心から見て右上なら右上、左下なら左下というように、tap 位置から外側へずらした候補を作る
-// 最初の候補が画面外へはみ出す場合は対角側、その次に残りの斜め方向を試し、どれも入らない場合だけ画面内へ clamp する
-function chooseMobilePaletteCenter(rect, localX, localY, halfWidth, halfHeight) {
-  const margin = 12.0;
-  const gap = 18.0;
-  const minCenterX = halfWidth + margin;
-  const maxCenterX = rect.width - halfWidth - margin;
-  const minCenterY = halfHeight + margin;
-  const maxCenterY = rect.height - halfHeight - margin;
-  const directionX = localX >= rect.width * 0.5 ? 1.0 : -1.0;
-  const directionY = localY >= rect.height * 0.5 ? 1.0 : -1.0;
-  const candidates = [
-    [directionX, directionY],
-    [-directionX, -directionY],
-    [directionX, -directionY],
-    [-directionX, directionY]
-  ];
-
-  for (const [sx, sy] of candidates) {
-    const centerX = localX + sx * (halfWidth + gap);
-    const centerY = localY + sy * (halfHeight + gap);
-    if (centerX >= minCenterX && centerX <= maxCenterX
-        && centerY >= minCenterY && centerY <= maxCenterY) {
-      return { x: centerX, y: centerY };
-    }
+function shouldSuppressCoordinateOverlayClick(name) {
+  const elapsed = performance.now() - coordinateOverlayLastTouchTime;
+  if (coordinateOverlayLastTouchAction === name && elapsed >= 0.0 && elapsed < 420.0) {
+    coordinateOverlayLastTouchAction = "";
+    coordinateOverlayLastTouchTime = 0.0;
+    return true;
   }
-
-  return {
-    x: Math.max(minCenterX, Math.min(maxCenterX, localX + directionX * (halfWidth + gap))),
-    y: Math.max(minCenterY, Math.min(maxCenterY, localY + directionY * (halfHeight + gap)))
-  };
+  return false;
 }
 
 // command palette を開く
-// double tap や空 scene の操作から呼ばれ、まず保留中の single tap 選択を破棄する
-// その後、tap 位置を隠さない中心点を計算して palette を配置し、1 枚目の command page を描画する
+// double tap や空 scene の操作から呼ばれ、表示位置と page 描画は CommandPalette に任せる
 function openMobilePalette(kind, clientX, clientY) {
-  if (!IS_MOBILE_PROFILE || !ui.mobilePalette) {
-    return;
-  }
-  cancelPendingMobileCanvasTap();
-  mobileUiState.paletteOpen = true;
-  mobileUiState.paletteKind = kind;
-  mobileUiState.palettePage = 0;
-  const rect = app.screen.canvas.getBoundingClientRect();
-  const paletteHalfWidth = 132;
-  const paletteHalfHeight = 108;
-  const localX = clientX - rect.left;
-  const localY = clientY - rect.top;
-  const center = chooseMobilePaletteCenter(rect, localX, localY, paletteHalfWidth, paletteHalfHeight);
-  ui.mobilePalette.style.left = `${center.x}px`;
-  ui.mobilePalette.style.top = `${center.y}px`;
-  ui.mobilePalette.classList.add("open");
-  renderMobilePalette();
+  closeCoordinateOverlay();
+  closeObjectInfoOverlay();
+  mobileInput.clearTransformAxis();
+  commandPalette?.open(kind, clientX, clientY);
 }
 
 // scene 上に選択や矩形選択の対象になる頂点があるかを確認する
 // empty double tap は通常は矩形選択の準備に使うが、object が全削除された状態では囲む対象がない
 // その場合は Load / primitive 追加 / New Scene などを呼び出せる command palette を開く
 function hasAnyModelerVertices() {
-  if (editor.vertices.length > 0) {
+  const editMesh = getRenderableEditMeshState();
+  if (editMesh.vertices.length > 0) {
     return true;
   }
   return editor.objects.some((object) => Array.isArray(object.vertices) && object.vertices.length > 0);
 }
 
-// 現在表示中の command palette page に対応する action 配列を返す
-// palettePage は Next button で更新されるため、範囲外になった場合は 1 枚目へ戻して安全に描画する
-function getMobilePaletteActions() {
-  return MOBILE_COMMAND_PALETTES[mobileUiState.palettePage] ?? MOBILE_COMMAND_PALETTES[0];
-}
-
 // command palette の 4x4 button 表示を現在 page の action に合わせて更新する
-// 各 button には実行 action、表示 label、active 表示、page switch 表示、disabled 状態をまとめて反映する
-// 未割り当て slot は `undefined` action として表示し、空 action は button 自体を隠す
+// 表示処理の本体は CommandPalette が持ち、main.js 側は状態変更後の再描画入口だけを残す
 function renderMobilePalette() {
-  if (!IS_MOBILE_PROFILE) {
-    return;
-  }
-  const actions = getMobilePaletteActions();
-  for (let i = 0; i < ui.mobilePaletteButtons.length; i++) {
-    const button = ui.mobilePaletteButtons[i];
-    const action = actions[i] ?? "";
-    const label = getMobileRibbonActionLabel(action);
-    const active = isMobileActionActive(action);
-    const pageSwitch = action === "palette-next";
-    button.dataset.action = action;
-    button.innerHTML = action ? `${label.label}<small>${label.detail}</small>` : "";
-    button.disabled = !action || !isMobileActionEnabled(action);
-    button.classList.toggle("active", active);
-    button.classList.toggle("page-switch", pageSwitch);
-    button.setAttribute("aria-pressed", active ? "true" : "false");
-    button.style.visibility = action ? "visible" : "hidden";
-  }
+  commandPalette?.render();
 }
 
-// transform 中の軸制限 chooser を処理する
-// `G/R/S/E` の直後だけ有効で、Free / X / Y / Z の選択を transformController へ反映する
-// transform が始まっていない場合は chooser を閉じ、誤操作で軸状態だけが残らないようにする
-function executeMobileAxisChoice(axis) {
-  if (!transformController?.state?.active) {
-    closeMobileAxisChooser();
-    return;
-  }
-  const normalized = axis === "x" || axis === "y" || axis === "z" ? axis : null;
-  setTransformAxis(normalized);
-  renderMobileAxisChooser();
+// command palette 上で transform 開始前の軸制限 option を切り替える
+// transform 開始後に別 UI へ指や mouse を移動すると、tap confirm や preview 変更と競合するため、
+// axis は `G/R/S/E/GG` を押す前に palette 上で確定しておく
+function setPaletteTransformAxis(axis) {
+  mobileInput.toggleTransformAxis(axis);
 }
 
-// empty double tap 後に矩形選択を準備する
-// camera orbit と矩形選択 drag が同じ 1 本指操作を奪い合わないよう、準備中は mobile orbit を止める
-// double tap の 2 回目 pointerup と canvasClick が重なった場合は、進行中の tracking を矩形選択用へ切り替える
-function armMobileBoxSelect() {
-  if (!IS_MOBILE_PROFILE) {
+// palette で事前選択した軸制限を、transform session 開始直後の controller へ反映する
+function applyPaletteTransformAxisConstraint() {
+  const axis = mobileInput.transformAxisConstraint;
+  if (axis === "n" && getRenderableEditorMode() !== EDITOR_MODE_EDIT) {
     return;
   }
-  cancelPendingMobileCanvasTap();
-  mobileUiState.boxSelectArmed = true;
-  if (canvasClick.active) {
-    // empty double tap の確定 pointerup が canvasClick と重なった場合、
-    // pointerdown 時点では boxSelectArmed が false だったため、
-    // 現在進行中の click tracking を矩形選択へ切り替える
-    canvasClick.additive = true;
-    canvasClick.allowRectangle = true;
+  if (axis === "x" || axis === "y" || axis === "z" || axis === "n") {
+    setTransformAxis(axis);
   }
-  setMobileOrbitEnabled(false);
-  closeMobilePalette();
-  setMessage("box select armed: drag to add selection");
-}
-
-// 矩形選択準備を解除し、通常の camera orbit を再開する
-// 矩形選択が確定した後、または別の command へ移った後に呼び、boxSelectArmed が残り続けないようにする
-function disarmMobileBoxSelect() {
-  if (!IS_MOBILE_PROFILE) {
-    return;
-  }
-  mobileUiState.boxSelectArmed = false;
-  setMobileOrbitEnabled(true);
-}
-
-// empty 位置で single tap した事実を記録する
-// Touch の doubletap callback は pointerup 後に発火するため、2 回目 tap を押したまま drag する操作を拾いにくい
-// そこで canvas pointerdown 側でも「直前が empty tap だったか」を見られるよう、時刻・座標・pointerType を保存する
-function rememberMobileEmptyTap(ev) {
-  if (!IS_MOBILE_PROFILE) {
-    return;
-  }
-  const now = typeof performance !== "undefined" ? performance.now() : Date.now();
-  mobileUiState.lastEmptyTapTime = now;
-  mobileUiState.lastEmptyTapX = Number(ev?.clientX ?? 0.0);
-  mobileUiState.lastEmptyTapY = Number(ev?.clientY ?? 0.0);
-  mobileUiState.lastEmptyTapPointerType = String(ev?.pointerType ?? "");
 }
 
 // mobile の短い tap を記録する
 // 次の pointerdown が近い時刻・近い座標・同じ pointerType なら double tap 候補として扱う
 // 2 回目 pointerdown の段階で通常 click tracking を始めないための基準値として使う
 function rememberMobileCanvasTap(ev) {
-  if (!IS_MOBILE_PROFILE) {
-    return;
-  }
-  const now = typeof performance !== "undefined" ? performance.now() : Date.now();
-  mobileUiState.lastCanvasTapTime = now;
-  mobileUiState.lastCanvasTapX = Number(ev?.clientX ?? 0.0);
-  mobileUiState.lastCanvasTapY = Number(ev?.clientY ?? 0.0);
-  mobileUiState.lastCanvasTapPointerType = String(ev?.pointerType ?? "");
+  mobileInput.rememberCanvasTap(ev);
 }
 
 // 保留中の mobile single tap 選択を破棄する
 // double tap、long press、palette 表示、box select 開始が成立した場合、
 // 1 回目 tap の選択処理が後から走ると操作対象が変わるため、timer と保存 event を必ず消す
 function cancelPendingMobileCanvasTap() {
-  if (mobileUiState.pendingCanvasTapTimer !== null) {
-    clearTimeout(mobileUiState.pendingCanvasTapTimer);
-  }
-  mobileUiState.pendingCanvasTapTimer = null;
-  mobileUiState.pendingCanvasTapEvent = null;
-}
-
-// 後で single tap 選択を実行するため、PointerEvent から必要な値だけを取り出す
-// DOM Event を timer 後にそのまま使うと、環境によって状態が変わったり参照が読みにくくなる
-// handleCanvasClick が参照する座標・button・modifier・preventDefault だけを持つ軽い object にする
-function makeCanvasClickSnapshot(ev) {
-  return {
-    clientX: Number(ev?.clientX ?? 0.0),
-    clientY: Number(ev?.clientY ?? 0.0),
-    button: Number(ev?.button ?? 0),
-    pointerId: Number(ev?.pointerId ?? -1),
-    pointerType: String(ev?.pointerType ?? ""),
-    shiftKey: ev?.shiftKey === true,
-    ctrlKey: ev?.ctrlKey === true,
-    altKey: ev?.altKey === true,
-    metaKey: ev?.metaKey === true,
-    preventDefault: () => {}
-  };
+  mobileInput.cancelPendingTap();
 }
 
 // mobile の single tap 選択を double tap 判定時間だけ遅延させる
 // 2 回目 tap や long press が来なかった場合だけ、保存した snapshot を handleCanvasClick へ渡して通常選択を確定する
 // desktop profile では操作感を変えないため、従来通り即時に handleCanvasClick を呼ぶ
 function scheduleMobileCanvasTap(ev) {
-  if (!IS_MOBILE_PROFILE) {
-    handleCanvasClick(ev);
-    return;
-  }
-  cancelPendingMobileCanvasTap();
-  const snapshot = makeCanvasClickSnapshot(ev);
-  mobileUiState.pendingCanvasTapEvent = snapshot;
-  mobileUiState.pendingCanvasTapTimer = setTimeout(() => {
-    const pending = mobileUiState.pendingCanvasTapEvent;
-    mobileUiState.pendingCanvasTapTimer = null;
-    mobileUiState.pendingCanvasTapEvent = null;
-    if (!pending || transformController?.state?.active || mobileUiState.paletteOpen || mobileUiState.boxSelectArmed) {
-      return;
-    }
-    handleCanvasClick(pending);
-  }, 340);
+  mobileInput.scheduleCanvasTap(ev, handleCanvasClick);
 }
 
-// empty double tap から、そのまま指を離さず drag したかを pointerdown 時点で判定する
-// Touch の doubletap callback は pointerup 後に発火するため、2 回目の tap を押したまま drag する操作は callback だけでは拾えない
-// 直前の empty tap と時間・距離・pointerType が近く、現在位置も empty なら、矩形選択を開始してよいと判断する
-// 図形が 1 つもない場合は矩形選択対象がないため false にし、empty scene の double tap は command palette 側へ任せる
-function shouldStartMobileBoxSelectFromDoubleTapDown(ev) {
-  if (!IS_MOBILE_PROFILE || mobileUiState.boxSelectArmed || transformController?.state?.active) {
-    return false;
-  }
-  if (!hasAnyModelerVertices()) {
-    return false;
-  }
-  const now = typeof performance !== "undefined" ? performance.now() : Date.now();
-  if ((now - mobileUiState.lastEmptyTapTime) > 320.0) {
-    return false;
-  }
-  if (String(ev?.pointerType ?? "") !== mobileUiState.lastEmptyTapPointerType) {
-    return false;
-  }
-  const distance = Math.hypot(
-    Number(ev?.clientX ?? 0.0) - mobileUiState.lastEmptyTapX,
-    Number(ev?.clientY ?? 0.0) - mobileUiState.lastEmptyTapY
-  );
-  if (distance > 24.0) {
-    return false;
-  }
-  const hit = inspectGestureTarget(ev.clientX, ev.clientY);
-  return hit.kind === "empty";
+function isMobileCanvasDoubleTapCandidate(ev) {
+  return mobileInput.isCanvasDoubleTapCandidate(ev);
 }
 
-// double tap の 2 回目を通常の click selection として処理しないための判定
-// 直前の canvas tap と近い位置で 2 回目 pointerdown が来た場合は、single tap ではなく double tap 候補として扱う
-// この時点で canvasClick を開始しないことで、pointerup 側の handleCanvasClick が選択解除や active object 変更を起こすのを防ぐ
-// empty + 図形ありの組み合わせは box select の開始として shouldStartMobileBoxSelectFromDoubleTapDown が先に処理する
-function shouldSuppressMobileClickForDoubleTapDown(ev) {
-  if (!IS_MOBILE_PROFILE || mobileUiState.boxSelectArmed || transformController?.state?.active) {
-    return false;
-  }
-  const now = typeof performance !== "undefined" ? performance.now() : Date.now();
-  if ((now - mobileUiState.lastCanvasTapTime) > 320.0) {
-    return false;
-  }
-  if (String(ev?.pointerType ?? "") !== mobileUiState.lastCanvasTapPointerType) {
-    return false;
-  }
-  const distance = Math.hypot(
-    Number(ev?.clientX ?? 0.0) - mobileUiState.lastCanvasTapX,
-    Number(ev?.clientY ?? 0.0) - mobileUiState.lastCanvasTapY
-  );
-  if (distance > 24.0) {
-    return false;
-  }
-  const hit = inspectGestureTarget(ev.clientX, ev.clientY);
-  if (hit.kind === "empty" && hasAnyModelerVertices()) {
-    return false;
-  }
-  return true;
-}
-
-// mobile ribbon の page index を左右へ循環させる
-// 現在の UI では command palette が主操作なので通常は使わないが、
-// 旧 ribbon gesture 経路が残っている場合でも page 範囲外へ出ないよう modulo で正規化する
-function cycleMobileRibbonPage(step) {
-  const count = MOBILE_RIBBON_PAGES.length;
-  mobileUiState.ribbonPageIndex = (mobileUiState.ribbonPageIndex + step + count) % count;
-  updateMobileRibbon();
-  setMessage(`ribbon: ${MOBILE_RIBBON_PAGES[mobileUiState.ribbonPageIndex].name.toLowerCase()}`);
-}
-
-// リボン上の左右 flick だけを page 切替 shortcut として受け入れる
-// canvas 上の一本指 drag は camera orbit の基本操作なので、速度に関係なく flick と兼用しない
-function shouldAcceptMobileFlickShortcut(gesture) {
-  if (transformController?.state?.active || mobileUiState.boxSelectArmed) {
-    return false;
-  }
-  if (gesture.direction !== "left" && gesture.direction !== "right") {
-    return false;
-  }
-  const elapsedMs = Number(gesture.elapsedMs);
-  const distance = Number(gesture.distance);
-  const dx = Number(gesture.dx);
-  const dy = Number(gesture.dy);
-  const isMousePointer = String(gesture.pointerType ?? "") === "mouse";
-  const maxMs = isMousePointer ? MOBILE_MOUSE_FLICK_MAX_MS : MOBILE_TOUCH_FLICK_MAX_MS;
-  const minSpeed = isMousePointer ? MOBILE_MOUSE_FLICK_MIN_SPEED_PX_PER_MS : MOBILE_TOUCH_FLICK_MIN_SPEED_PX_PER_MS;
-  if (!Number.isFinite(elapsedMs) || elapsedMs <= 0.0) {
-    return false;
-  }
-  if (!Number.isFinite(distance) || distance <= 0.0) {
-    return false;
-  }
-  if (!Number.isFinite(dx) || !Number.isFinite(dy)) {
-    return false;
-  }
-  const absX = Math.abs(dx);
-  const absY = Math.abs(dy);
-  if (absX < absY * MOBILE_FLICK_HORIZONTAL_DOMINANCE) {
-    return false;
-  }
-  return elapsedMs <= maxMs
-      && (distance / elapsedMs) >= minSpeed;
-}
-
-// pointer 診断で flick / camera drag の境界を読み取りやすくするため、
-// gesture の時間と速度を短い文字列にまとめる
-function formatMobileGestureMotion(gesture) {
-  const elapsedMs = Number(gesture.elapsedMs);
-  const distance = Number(gesture.distance);
-  if (!Number.isFinite(elapsedMs) || elapsedMs <= 0.0
-      || !Number.isFinite(distance) || distance < 0.0) {
-    return "";
-  }
-  const speed = distance / elapsedMs;
-  return ` ${Math.round(elapsedMs)}ms ${speed.toFixed(2)}px/ms`;
-}
-
-// mmodeler のリボン切替として受け入れた flick を一箇所で実行する
-// pointerup 後に同じリボン button の click / pointerup action が続かないよう、
-// 短時間だけ mobile button activation も抑制する
-function executeMobileFlickShortcut(gesture, source) {
-  const now = typeof performance !== "undefined" ? performance.now() : Date.now();
-  if (mobileUiState.lastFlickPointerId === gesture.pointerId
-      && (now - mobileUiState.lastFlickTime) < 120.0) {
-    return true;
-  }
-  mobileUiState.lastFlickPointerId = gesture.pointerId;
-  mobileUiState.lastFlickTime = now;
-  mobileUiState.lastGesture = `flick:${gesture.direction || "-"}:${source}${formatMobileGestureMotion(gesture)}`;
-  mobileUiState.lastGesturePointer = gesture.pointerType || "-";
-  mobileUiState.suppressMobileButtonPointerId = Number.isInteger(gesture.pointerId) ? gesture.pointerId : null;
-  mobileUiState.suppressMobileButtonUntil = now + 320.0;
-  suppressNextCanvasPointer(gesture.pointerId);
-  if (mobileUiState.paletteOpen) {
-    closeMobilePalette();
-  }
-  if (gesture.direction === "left") {
-    cycleMobileRibbonPage(1);
-  } else if (gesture.direction === "right") {
-    cycleMobileRibbonPage(-1);
-  }
-  return true;
-}
-
-// mmodeler のリボン切替は、camera orbit と同じ canvas drag へ割り当てない
-// `.mobile-ribbon` 上で始まった横 flick だけを window の pointerup まで追跡する
-function installMobileRawFlickHandlers(canvas) {
-  const isMobileRibbonTarget = (target) => {
-    if (typeof target?.closest !== "function") {
-      return false;
-    }
-    return Boolean(target.closest(".mobile-ribbon"));
-  };
-  const begin = (ev) => {
-    if (!IS_MOBILE_PROFILE || transformController?.state?.active || mobileUiState.boxSelectArmed) {
-      mobileUiState.flickPointer = null;
-      return;
-    }
-    if (!isMobileRibbonTarget(ev.target)) {
-      mobileUiState.flickPointer = null;
-      return;
-    }
-    if (String(ev.pointerType ?? "") !== "touch" && ev.button !== 0) {
-      mobileUiState.flickPointer = null;
-      return;
-    }
-    const now = typeof performance !== "undefined" ? performance.now() : Date.now();
-    mobileUiState.flickPointer = {
-      pointerId: ev.pointerId,
-      pointerType: String(ev.pointerType ?? ""),
-      startX: ev.clientX,
-      startY: ev.clientY,
-      lastX: ev.clientX,
-      lastY: ev.clientY,
-      startTime: now
-    };
-    const targetName = ev.target?.tagName ? String(ev.target.tagName).toLowerCase() : "-";
-    mobileUiState.lastGesture = `rawstart:${mobileUiState.flickPointer.pointerType || "-"}:${targetName}`;
-    mobileUiState.lastGesturePointer = mobileUiState.flickPointer.pointerType || "-";
-  };
-  const move = (ev) => {
-    const state = mobileUiState.flickPointer;
-    if (!state || ev.pointerId !== state.pointerId) {
-      return;
-    }
-    state.lastX = ev.clientX;
-    state.lastY = ev.clientY;
-  };
-  const end = (ev) => {
-    const state = mobileUiState.flickPointer;
-    if (!state || ev.pointerId !== state.pointerId) {
-      return;
-    }
-    mobileUiState.flickPointer = null;
-    const now = typeof performance !== "undefined" ? performance.now() : Date.now();
-    const x = ev.clientX;
-    const y = ev.clientY;
-    const dx = x - state.startX;
-    const dy = y - state.startY;
-    const distance = Math.hypot(dx, dy);
-    const direction = Math.abs(dx) >= Math.abs(dy)
-      ? (dx >= 0.0 ? "right" : "left")
-      : (dy >= 0.0 ? "down" : "up");
-    const gesture = {
-      direction,
-      x,
-      y,
-      startX: state.startX,
-      startY: state.startY,
-      dx,
-      dy,
-      distance,
-      elapsedMs: now - state.startTime,
-      pointerType: state.pointerType,
-      pointerId: state.pointerId
-    };
-    if (!shouldAcceptMobileFlickShortcut(gesture)) {
-      mobileUiState.lastGesture = `rawdrag:${gesture.direction || "-"}${formatMobileGestureMotion(gesture)}`;
-      mobileUiState.lastGesturePointer = gesture.pointerType || "-";
-      return;
-    }
-    executeMobileFlickShortcut(gesture, "raw");
-    if (ev.cancelable !== false) {
-      ev.preventDefault();
-    }
-  };
-  const cancel = (ev) => {
-    const state = mobileUiState.flickPointer;
-    if (state && ev.pointerId === state.pointerId) {
-      mobileUiState.flickPointer = null;
-      mobileUiState.lastGesture = "rawcancel";
-      mobileUiState.lastGesturePointer = state.pointerType || "-";
-    }
-  };
-  window.addEventListener("pointerdown", begin, true);
-  window.addEventListener("pointermove", move, true);
-  window.addEventListener("pointerup", end, true);
-  window.addEventListener("pointercancel", cancel, true);
+function handleMobileCanvasDoubleTap(ev) {
+  mobileInput.handleCanvasDoubleTap(ev, { canvasClick });
 }
 
 // リボン flick と同じ pointerup / click で button action が発火すると、
 // page 切替と command 実行が同時に起きて操作が読みにくくなる
 // flick 確定直後の button activation はここで明示的に抑制する
 function shouldSuppressMobileButtonActivation(ev = null) {
-  const now = typeof performance !== "undefined" ? performance.now() : Date.now();
-  if (now > mobileUiState.suppressMobileButtonUntil) {
-    mobileUiState.suppressMobileButtonPointerId = null;
-    mobileUiState.suppressMobileButtonUntil = 0;
-    return false;
-  }
-  if (mobileUiState.suppressMobileButtonPointerId === null) {
-    return true;
-  }
-  return ev?.pointerId === mobileUiState.suppressMobileButtonPointerId;
+  return mobileInput.shouldSuppressMobileButtonActivation(ev);
 }
 
 function suppressNextCanvasPointer(pointerId = null, durationMs = 520) {
-  const now = typeof performance !== "undefined" ? performance.now() : Date.now();
-  mobileUiState.suppressCanvasPointerId = Number.isInteger(pointerId) ? pointerId : null;
-  mobileUiState.suppressCanvasPointerUntil = now + durationMs;
+  mobileInput.suppressNextCanvasPointer(pointerId, durationMs);
 }
 
 function shouldSuppressCanvasPointer(ev) {
-  const now = typeof performance !== "undefined" ? performance.now() : Date.now();
-  if (now > mobileUiState.suppressCanvasPointerUntil) {
-    mobileUiState.suppressCanvasPointerId = null;
-    mobileUiState.suppressCanvasPointerUntil = 0;
-    return false;
-  }
-  if (mobileUiState.suppressCanvasPointerId === null) {
-    return true;
-  }
-  return ev.pointerId === mobileUiState.suppressCanvasPointerId;
+  return mobileInput.shouldSuppressCanvasPointer(ev);
 }
 
 function inspectGestureTarget(clientX, clientY) {
   if (!app?.screen?.canvas) {
     return { kind: "empty" };
   }
-  const ray = makeRayFromMouse(app.screen.canvas, clientX, clientY);
-  if (editor.mode === EDITOR_MODE_OBJECT) {
-    const objectHit = pickObjectFace(ray);
-    return objectHit ? { kind: "object", ...objectHit } : { kind: "empty" };
+  const mode = getRenderableEditorMode();
+  const tool = getRenderableEditorTool();
+  const pick = modelerPicking.pickAtClientPoint(clientX, clientY, {
+    includeObjectFace: mode === EDITOR_MODE_OBJECT,
+    includeVertex: mode !== EDITOR_MODE_OBJECT && tool === TOOL_SELECT_VERTEX,
+    includeSelectableFace: mode !== EDITOR_MODE_OBJECT
+  });
+  if (mode === EDITOR_MODE_OBJECT) {
+    return pick.objectFaceHit ? { kind: "object", ...pick.objectFaceHit } : { kind: "empty" };
   }
-  if (editor.tool === TOOL_SELECT_VERTEX) {
-    const marker = pickVertexByRayDistance(ray) ?? pickVertexMarker(ray);
-    if (marker) {
-      return { kind: "vertex", vertexId: marker.vertexId };
+  if (tool === TOOL_SELECT_VERTEX) {
+    if (pick.vertexHit) {
+      return { kind: "vertex", vertexId: pick.vertexHit.vertexId };
     }
   }
-  const faceHit = pickSelectableFace(ray);
-  return faceHit ? { kind: "face", ...faceHit } : { kind: "empty" };
+  return pick.selectableFaceHit ? { kind: "face", ...pick.selectableFaceHit } : { kind: "empty" };
 }
 
-function executeMobileAction(action) {
-  const now = typeof performance !== "undefined" ? performance.now() : Date.now();
-  if (mobileUiState.lastAction === action && (now - mobileUiState.lastActionTime) < 280) {
-    return;
+// command palette / ribbon / view button から届く mmodeler command id を dispatcher へ渡す
+// 実際の分類は ModelerCommandDispatcher が担当し、main.js 側は event handler からの入口だけを残す
+function dispatchModelerCommand(action) {
+  if (!modelerCommandDispatcher) {
+    throw new Error("ModelerCommandDispatcher is not initialized");
   }
-  mobileUiState.lastAction = action;
-  mobileUiState.lastActionTime = now;
-  if (action === "palette-next") {
-    mobileUiState.palettePage = (mobileUiState.palettePage + 1) % MOBILE_COMMAND_PALETTES.length;
-    renderMobilePalette();
-    setMessage(`command palette ${mobileUiState.palettePage + 1}`);
-    return;
-  }
-  if (String(action ?? "").startsWith("primitive-segments-")) {
-    const segments = Number(String(action).slice("primitive-segments-".length));
-    if (![3, 4, 8, 12, 16, 24, 32].includes(segments)) {
-      throw new Error(`invalid primitive segment count: ${action}`);
-    }
-    mobileUiState.primitiveSegments = segments;
-    renderMobilePalette();
-    setMessage(`primitive segments ${segments}`);
-    return;
-  }
-  closeMobilePalette();
-  if (!action) {
-    return;
-  }
-  if (action === "undefined") {
-    setMessage("undefined command slot");
-    return;
-  }
-  if (!isMobileActionEnabled(action)) {
-    return;
-  }
-  if (action === "load") {
-    ui.fileInput?.click();
-    setMessage("open file picker");
-    return;
-  }
-  if (action === "save-json") {
-    saveModelAssetJsonGz().catch((err) => {
-      console.error(err);
-      setMessage(`save failed: ${err?.message ?? err}`);
-    });
-    return;
-  }
-  if (action === "save-glb") {
-    saveGlb();
-    return;
-  }
-  if (action === "new-scene") {
-    createInitialModel();
-    setMessage("new model");
-    return;
-  }
-  if (action === "add-cube" || action === "add-plane" || action === "add-sphere"
-      || action === "add-cylinder" || action === "add-cone"
-      || action === "add-torus" || action === "add-double-cone") {
-    addPrimitiveObject(action.slice(4));
-    return;
-  }
-  if (action === "join-objects") {
-    joinSelectedObjects();
-    return;
-  }
-  if (action === "toggle-projection") {
-    toggleProjectionMode();
-    return;
-  }
-  if (action === "toggle-x-mirror") {
-    toggleXMirrorEdit();
-    return;
-  }
-  if (action === "view-vertex") {
-    showSelectedVertexCoordinates();
-    return;
-  }
-  if (action === "object-wireframe") {
-    toggleObjectWireframe();
-    return;
-  }
-  if (action === "undo") {
-    undo();
-    return;
-  }
-  if (action === "redo") {
-    redo();
-    return;
-  }
-  if (action === "screenshot") {
-    takeModelerScreenshot();
-    return;
-  }
-  if (action === "view-x" || action === "view-y" || action === "view-z"
-      || action === "view-x-reverse" || action === "view-y-reverse" || action === "view-z-reverse") {
-    const reversed = action.endsWith("-reverse");
-    const axis = reversed ? action.slice(5, 6) : action.slice(-1);
-    setMobileAxisView(axis, reversed);
-    return;
-  }
-  if (action === "move") {
-    if (setTransformMode("move")) {
-      renderMobileAxisChooser();
-    }
-    return;
-  }
-  if (action === "rotate") {
-    if (setTransformMode("rotate")) {
-      renderMobileAxisChooser();
-    }
-    return;
-  }
-  if (action === "scale") {
-    if (setTransformMode("scale")) {
-      renderMobileAxisChooser();
-    }
-    return;
-  }
-  if (action === "extrude") {
-    if (setTransformMode("extrude")) {
-      renderMobileAxisChooser();
-    }
-    return;
-  }
-  if (action === "loop-cut") {
-    loopCutSelectedFaces();
-    return;
-  }
-  if (action === "delete") {
-    deleteSelected();
-    return;
-  }
-  if (action === "origin-world") {
-    moveSelectedObjectsToWorldOrigin();
-    return;
-  }
-  if (action === "invert-selection") {
-    invertSelectionForCurrentMode();
-    return;
-  }
-  if (action === "select-x-negative") {
-    selectXNegativeForCurrentMode();
-    return;
-  }
-  if (action === "edge-slide") {
-    if (setTransformMode("edge-slide")) {
-      renderMobileAxisChooser();
-    }
-    return;
-  }
-  if (action === "mode-object") {
-    setEditorMode(EDITOR_MODE_OBJECT);
-    return;
-  }
-  if (action === "mode-edit") {
-    setEditorMode(isEditMode() ? EDITOR_MODE_OBJECT : EDITOR_MODE_EDIT);
-    return;
-  }
-  if (action === "tool-face") {
-    setTool(TOOL_SELECT_FACE);
-    return;
-  }
-  if (action === "tool-vertex") {
-    setTool(TOOL_SELECT_VERTEX);
-    return;
-  }
-  if (action === "tool-add") {
-    if (canMakeFaceFromMobileSelection()) {
-      makeFaceFromSelection();
-      return;
-    }
-    setTool(TOOL_ADD_VERTEX);
-    return;
-  }
-  if (action === "select-all") {
-    selectAllForCurrentMode();
-  }
+  modelerCommandDispatcher.dispatch(action);
 }
 
 function installMobileOverlayHandlers() {
@@ -1793,7 +1272,7 @@ function installMobileOverlayHandlers() {
         if (shouldSuppressMobileButtonActivation(ev)) {
           return;
         }
-        executeMobileAction(button.dataset.action);
+        dispatchModelerCommand(button.dataset.action);
       }
     });
     button.addEventListener("click", (ev) => {
@@ -1801,7 +1280,7 @@ function installMobileOverlayHandlers() {
         ev.preventDefault();
         return;
       }
-      executeMobileAction(button.dataset.action);
+      dispatchModelerCommand(button.dataset.action);
     });
   }
   for (const button of ui.mobilePaletteButtons) {
@@ -1811,7 +1290,7 @@ function installMobileOverlayHandlers() {
         if (shouldSuppressMobileButtonActivation(ev)) {
           return;
         }
-        executeMobileAction(button.dataset.action);
+        dispatchModelerCommand(button.dataset.action);
       }
     });
     button.addEventListener("click", (ev) => {
@@ -1819,24 +1298,7 @@ function installMobileOverlayHandlers() {
         ev.preventDefault();
         return;
       }
-      executeMobileAction(button.dataset.action);
-    });
-  }
-  for (const button of ui.mobileAxisButtons) {
-    button.addEventListener("pointerup", (ev) => {
-      if (ev.pointerType === "touch") {
-        ev.preventDefault();
-        mobileUiState.suppressAxisClickUntil = (typeof performance !== "undefined" ? performance.now() : Date.now()) + 350.0;
-        executeMobileAxisChoice(button.dataset.axis);
-      }
-    });
-    button.addEventListener("click", (ev) => {
-      const now = typeof performance !== "undefined" ? performance.now() : Date.now();
-      if (now < mobileUiState.suppressAxisClickUntil) {
-        ev.preventDefault();
-        return;
-      }
-      executeMobileAxisChoice(button.dataset.axis);
+      dispatchModelerCommand(button.dataset.action);
     });
   }
   for (const button of ui.mobileViewButtons) {
@@ -1846,7 +1308,7 @@ function installMobileOverlayHandlers() {
         if (shouldSuppressMobileButtonActivation(ev)) {
           return;
         }
-        executeMobileAction(button.dataset.viewAction);
+        dispatchModelerCommand(button.dataset.viewAction);
       }
     });
     button.addEventListener("click", (ev) => {
@@ -1854,87 +1316,36 @@ function installMobileOverlayHandlers() {
         ev.preventDefault();
         return;
       }
-      executeMobileAction(button.dataset.viewAction);
+      dispatchModelerCommand(button.dataset.viewAction);
     });
   }
+  ui.mobileSelectionShift?.addEventListener("pointerup", (ev) => {
+    if (ev.pointerType === "touch") {
+      ev.preventDefault();
+      ev.stopPropagation();
+      if (shouldSuppressMobileButtonActivation(ev)) {
+        return;
+      }
+      toggleMobileSelectionShift();
+    }
+  });
+  ui.mobileSelectionShift?.addEventListener("click", (ev) => {
+    if (shouldSuppressMobileButtonActivation(ev)) {
+      ev.preventDefault();
+      return;
+    }
+    toggleMobileSelectionShift();
+  });
 }
 
 function installMobileGestureHandlers() {
-  if (!IS_MOBILE_PROFILE || !app?.screen?.canvas) {
-    return;
-  }
-  app.screen.canvas.style.touchAction = "none";
-  mobileUiState.touch?.detach?.();
-  mobileUiState.gestureAttached = false;
-  const touch = new Touch(document, {
-    touchDeviceOnly: false
+  mobileInput.installSurfaceGestures(app?.screen?.canvas, {
+    setEditorMode,
+    isEditMode,
+    editModeName: EDITOR_MODE_EDIT,
+    objectModeName: EDITOR_MODE_OBJECT,
+    editModeController
   });
-  mobileUiState.touch = touch.attachSurface(app.screen.canvas, {
-    // PC ブラウザでの開発・デバッグでも long press / flick を確認できるよう、
-    // coarse pointer 判定による listener 未登録を避け、mouse pointer も gesture 入力として受け付ける
-    touchDeviceOnly: false,
-    touchOnly: false,
-    cancelOnPointerLeave: false,
-    longPressTime: 360,
-    minDistance: 56,
-    onDoubleTap: (gesture) => {
-      cancelPendingMobileCanvasTap();
-      mobileUiState.lastGesture = "doubletap";
-      mobileUiState.lastGesturePointer = gesture.pointerType || "-";
-      if (transformController?.state?.active) {
-        return;
-      }
-      const hit = inspectGestureTarget(gesture.x, gesture.y);
-      if (hit.kind === "empty") {
-        // double tap は pointerup で確定するため、同じ pointerup が通常クリック選択として続かないよう短時間だけ抑制する
-        // 次の drag まで抑制が残ると矩形選択を始められないので、同一 event 用の短い抑制に留める
-        if (hasAnyModelerVertices()) {
-          suppressNextCanvasPointer(gesture.pointerId, 80);
-          armMobileBoxSelect();
-        } else {
-          suppressNextCanvasPointer(gesture.pointerId);
-          openMobilePalette("empty-scene", gesture.x, gesture.y);
-          setMessage("command palette");
-        }
-        return;
-      }
-      const hasObjectSelection = editor.selectedObjectIds.size > 0;
-      const hasEditSelection = editor.selectedVertices.size > 0 || editor.selectedFaces.size > 0;
-      if ((editor.mode === EDITOR_MODE_OBJECT && hasObjectSelection)
-          || (editor.mode === EDITOR_MODE_EDIT && hasEditSelection)) {
-        suppressNextCanvasPointer(gesture.pointerId);
-        openMobilePalette("selection", gesture.x, gesture.y);
-        setMessage("command palette");
-        return;
-      }
-      // 未選択状態で command palette を開く場合も、pointer 下の object / face / vertex は選択しない
-      // Load / New / projection / view など、選択なしで意味を持つ command を呼び出せるようにする
-      suppressNextCanvasPointer(gesture.pointerId);
-      openMobilePalette("selection", gesture.x, gesture.y);
-      setMessage("command palette");
-    },
-    onLongPress: (gesture) => {
-      cancelPendingMobileCanvasTap();
-      mobileUiState.lastGesture = "longpress";
-      mobileUiState.lastGesturePointer = gesture.pointerType || "-";
-      if (transformController?.state?.active) {
-        return;
-      }
-      suppressNextCanvasPointer(gesture.pointerId);
-      disarmMobileBoxSelect();
-      const hit = inspectGestureTarget(gesture.x, gesture.y);
-      if (hit.kind === "empty") {
-        // empty の長押しはブラウザの拡大 gesture と誤認されると画面全体の scale が崩れるため、
-        // mobile では camera fit を割り当てず、状態確認だけに留める
-        setMessage("empty long press");
-        return;
-      }
-      setEditorMode(isEditMode() ? EDITOR_MODE_OBJECT : EDITOR_MODE_EDIT);
-    },
-    onFlick: null
-  });
-  mobileUiState.gestureAttached = Boolean(mobileUiState.touch);
-  installMobileRawFlickHandlers(app.screen.canvas);
 }
 
 function installSafariCalloutGuards() {
@@ -1942,9 +1353,15 @@ function installSafariCalloutGuards() {
     return;
   }
   const preventDefault = (ev) => {
+    if (isCoordinateOverlayControl(ev.target)) {
+      return;
+    }
     ev.preventDefault();
   };
   const preventDefaultCapture = (ev) => {
+    if (isCoordinateOverlayControl(ev.target)) {
+      return;
+    }
     ev.preventDefault();
   };
   const canvas = app.screen.canvas;
@@ -1961,10 +1378,15 @@ function installSafariCalloutGuards() {
     ui.mobileRibbonHint,
     ui.mobilePalette,
     ui.mobilePaletteTitle,
-    ui.mobileAxisChooser,
+    ui.coordinateOverlay,
+    ui.coordinateOverlayTitle,
+    ui.coordinateOverlayHint,
+    ui.coordinateOverlayApply,
+    ui.coordinateOverlayClose,
+    ui.mobileSelectionShift,
     ...ui.mobileViewButtons,
     ...ui.mobilePaletteButtons,
-    ...ui.mobileAxisButtons,
+    ...ui.coordinateOverlayFields,
     ...ui.mobileRibbonButtons
   ].filter(Boolean);
   for (const target of guardTargets) {
@@ -2011,8 +1433,6 @@ function updateStatus() {
     ? `all objects (${importedMeshes.length})`
     : importedMeshes.find((entry) => entry.index === Number(meshValue))?.label ?? "-";
   const transformState = transformController?.state ?? { mode: null, active: false };
-  const faceIds = Array.from(editor.selectedFaces).join(", ") || "-";
-  const vertexIds = Array.from(editor.selectedVertices).join(", ") || "-";
   const objectIds = Array.from(editor.selectedObjectIds).join(", ") || "-";
   const activeObject = getActiveObject();
   const orbitKeyMap = orbit?.orbit?.keyMap ?? INITIAL_ORBIT_BINDINGS.orbitKeyMap;
@@ -2026,23 +1446,29 @@ function updateStatus() {
   const orbitTarget = orbit?.orbit?.target ?? [NaN, NaN, NaN];
   const pointerDebug = getPointerDebugSnapshot();
   const rawInput = getRawInputDebugSnapshot();
+  const editMesh = getRenderableEditMeshState();
+  const faceIds = Array.from(editMesh.selectedFaces).join(", ") || "-";
+  const vertexIds = Array.from(editMesh.selectedVertices).join(", ") || "-";
+  const mode = getRenderableEditorMode();
+  const tool = getRenderableEditorTool();
   const lines = [
     SAMPLE_NAME,
-    `mode=${editor.mode}`,
+    `mode=${mode}`,
     `activeObject=${activeObject ? `${activeObject.id}:${activeObject.name}` : "-"}`,
     `objects=${editor.objects.length}`,
     `selectedObjects=${editor.selectedObjectIds.size} [${objectIds}]`,
-    `objectWireframe=${objectWireframe ? "on" : "off"}`,
-    `tool=${editor.tool}`,
-    `vertices=${editor.vertices.length} faces=${editor.faces.length}`,
-    `selectedVertices=${editor.selectedVertices.size} [${vertexIds}]`,
-    `selectedFaces=${editor.selectedFaces.size} [${faceIds}]`,
+    `objectWireframe=${viewController.objectWireframe ? "on" : "off"}`,
+    `objectSmooth=${viewController.objectSmoothShading ? "on" : "off"}`,
+    `tool=${tool}`,
+    `vertices=${editMesh.vertices.length} faces=${editMesh.faces.length}`,
+    `selectedVertices=${editMesh.selectedVertices.size} [${vertexIds}]`,
+    `selectedFaces=${editMesh.selectedFaces.size} [${faceIds}]`,
     `lastVertex=${getLastSelectedVertexLabel()}`,
     `meshSelect=${meshName}`,
     `undo=${editor.undoStack.length} redo=${editor.redoStack.length}`,
     `xMirror=${xMirrorEdit ? "on" : "off"}`,
-    `background=${lightBackground ? "light" : "dark"}`,
-    `visiblePick=${visiblePickOnly ? "visible only" : "through"}`,
+    `background=${viewController.lightBackground ? "light" : "dark"}`,
+    `visiblePick=${viewController.visiblePickOnly ? "visible only" : "through"}`,
     `visiblePickStats=${visiblePickStats.mode} candidates=${visiblePickStats.candidates} selected=${visiblePickStats.selected} gridFaces=${visiblePickStats.gridFaces} filledCells=${visiblePickStats.gridCells} avgFaces=${visiblePickStats.avgFacesPerFilledCell.toFixed(1)} maxFaces=${visiblePickStats.maxFacesPerCell}`,
     `overlayAlpha=${overlayAlpha.toFixed(2)}`,
     `overlayMarker=${rgbToHexColor(overlayMarkerColor)} overlayEdge=${rgbToHexColor(overlayEdgeColor)}`,
@@ -2066,8 +1492,8 @@ function updateStatus() {
       { line: SAMPLE_NAME },
       { label: "Proj", value: getProjectionLabel() },
       { label: "Lens", value: getFocalLengthLabel() },
-      { label: "V/F", value: `${editor.vertices.length}/${editor.faces.length}` },
-      { label: "Selected", value: `o${editor.selectedObjectIds.size} v${editor.selectedVertices.size} f${editor.selectedFaces.size}` },
+      { label: "V/F", value: `${editMesh.vertices.length}/${editMesh.faces.length}` },
+      { label: "Selected", value: `o${editor.selectedObjectIds.size} v${editMesh.selectedVertices.size} f${editMesh.selectedFaces.size}` },
       { label: "Vertex", value: getLastSelectedVertexLabel() },
       { label: "Msg", value: editor.lastMessage }
     ], {
@@ -2089,25 +1515,28 @@ function setDisabled(control, disabled) {
 
 // mode や選択状態から各コマンド button を実行可能か更新する
 function updateCommandAvailability() {
-  const selectedVertexCount = editor.selectedVertices.size;
-  const selectedFaceCount = editor.selectedFaces.size;
+  const editMesh = getRenderableEditMeshState();
+  const mode = getRenderableEditorMode();
+  const tool = getRenderableEditorTool();
+  const selectedVertexCount = editMesh.selectedVertices.size;
+  const selectedFaceCount = editMesh.selectedFaces.size;
   const editMode = isEditMode();
   for (const button of ui.modeButtons) {
-    button.setAttribute("aria-pressed", button.dataset.mode === editor.mode ? "true" : "false");
+    button.setAttribute("aria-pressed", button.dataset.mode === mode ? "true" : "false");
   }
   for (const button of ui.toolButtons) {
-    button.setAttribute("aria-pressed", button.dataset.tool === editor.tool ? "true" : "false");
+    button.setAttribute("aria-pressed", button.dataset.tool === tool ? "true" : "false");
     button.disabled = !editMode;
   }
   if (ui.objectWireframe) {
-    ui.objectWireframe.setAttribute("aria-pressed", objectWireframe ? "true" : "false");
+    ui.objectWireframe.setAttribute("aria-pressed", viewController.objectWireframe ? "true" : "false");
     ui.objectWireframe.disabled = false;
   }
   if (ui.lightBackground) {
-    ui.lightBackground.setAttribute("aria-pressed", lightBackground ? "true" : "false");
+    ui.lightBackground.setAttribute("aria-pressed", viewController.lightBackground ? "true" : "false");
   }
   if (ui.visiblePickOnly) {
-    ui.visiblePickOnly.setAttribute("aria-pressed", visiblePickOnly ? "true" : "false");
+    ui.visiblePickOnly.setAttribute("aria-pressed", viewController.visiblePickOnly ? "true" : "false");
   }
   if (ui.xMirrorEdit) {
     ui.xMirrorEdit.setAttribute("aria-pressed", xMirrorEdit ? "true" : "false");
@@ -2125,16 +1554,16 @@ function updateCommandAvailability() {
   // DOM control の disabled 状態を null 安全に切り替える
   setDisabled(ui.useMesh, !importedAsset || importedMeshes.length === 0);
   // DOM control の disabled 状態を null 安全に切り替える
-  setDisabled(ui.saveJson, editor.vertices.length === 0);
+  setDisabled(ui.saveJson, !hasActiveGeometryForSave());
   // DOM control の disabled 状態を null 安全に切り替える
-  setDisabled(ui.saveJsonGz, editor.vertices.length === 0);
+  setDisabled(ui.saveJsonGz, !hasActiveGeometryForSave());
   // DOM control の disabled 状態を null 安全に切り替える
-  setDisabled(ui.saveGlb, editor.vertices.length === 0 || editor.faces.length === 0);
+  setDisabled(ui.saveGlb, !hasActiveGeometryForSave({ requireFaces: true }));
 }
 
 // 最後のユーザー向け message を保存し status を更新する
 function setMessage(message) {
-  editor.lastMessage = String(message ?? "");
+  editor.setMessage(message);
   // editor / camera / diagnostics の現在状態を DOM status と HUD へ反映する
   updateStatus();
 }
@@ -2149,17 +1578,39 @@ function waitForStatusPaint() {
 // --- undo and redo snapshots
 // ------------------------------------------------------------
 
-// undo は編集データと選択状態だけを保存する
+// undo / redo 用に Edit Mode 側の snapshot state を取得する
+// EditModeController 未初期化は起動順の破損なので、古い editor field へ黙って戻さず明示的に止める
+function createEditMeshSnapshot() {
+  if (!editModeController) {
+    throw new Error("EditModeController is not initialized");
+  }
+  return editModeController.createEditMeshSnapshot();
+}
+
+// snapshot から Edit Mode 側の state だけを復元する
+// object list や active object の接続は restoreSnapshot() 側で済ませてから呼ぶ
+function restoreEditMeshSnapshot(snapshot) {
+  if (!editModeController) {
+    throw new Error("EditModeController is not initialized");
+  }
+  editModeController.restoreEditMeshSnapshot(snapshot);
+}
+
+// undo は scene 全体と Edit Mode session の状態を保存する
 // Shape や Node は表示キャッシュなので履歴に入れず、復元後に rebuildScene() で作り直す
 function makeSnapshot() {
-  // 現在の editor.vertices / faces を active object へ書き戻す
+  // Edit Mode session があれば active object へ明示的に反映してから object list を保存する
   commitActiveObject();
+  const editSnapshot = createEditMeshSnapshot();
   return {
-    mode: editor.mode,
+    mode: editSnapshot.mode,
+    tool: editSnapshot.tool,
     objects: editor.objects.map((object) => ({
       id: object.id,
       name: object.name,
       origin: getObjectOrigin(object),
+      rotation: getObjectRotation(object),
+      scale: getObjectScale(object),
       vertices: object.vertices.map((vertex) => ({
         id: vertex.id,
         position: [...vertex.position]
@@ -2174,22 +1625,24 @@ function makeSnapshot() {
     selectedObjectIds: Array.from(editor.selectedObjectIds),
     activeObjectId: editor.activeObjectId,
     nextObjectId: editor.nextObjectId,
-    selectedVertices: Array.from(editor.selectedVertices),
-    selectedFaces: Array.from(editor.selectedFaces),
-    lastSelectedVertexId: editor.lastSelectedVertexId,
-    explicitXMirrorVertexPairs: Array.from(explicitXMirrorVertexPairs.entries()),
-    nextVertexId: editor.nextVertexId,
-    nextFaceId: editor.nextFaceId
+    selectedVertices: editSnapshot.selectedVertices,
+    selectedFaces: editSnapshot.selectedFaces,
+    lastSelectedVertexId: editSnapshot.lastSelectedVertexId,
+    explicitXMirrorVertexPairs: editSnapshot.explicitXMirrorVertexPairs,
+    nextVertexId: editSnapshot.nextVertexId,
+    nextFaceId: editSnapshot.nextFaceId
   };
 }
 
 // snapshot から editor 全体を復元し scene を再構築する
 function restoreSnapshot(snapshot) {
   if (Array.isArray(snapshot.objects)) {
-    editor.objects = snapshot.objects.map((object) => ({
+    const objects = snapshot.objects.map((object) => ({
       id: object.id,
       name: object.name,
       origin: readVec3(object.origin ?? [0.0, 0.0, 0.0], `snapshot object ${object.id} origin`),
+      rotation: getObjectRotation(object),
+      scale: getObjectScale(object),
       vertices: object.vertices.map((vertex) => ({
         id: vertex.id,
         position: readVec3(vertex.position, `snapshot object ${object.id} vertex ${vertex.id}`)
@@ -2201,58 +1654,112 @@ function restoreSnapshot(snapshot) {
       nextVertexId: object.nextVertexId,
       nextFaceId: object.nextFaceId
     }));
-    editor.mode = snapshot.mode ?? EDITOR_MODE_OBJECT;
-    editor.selectedObjectIds = new Set(snapshot.selectedObjectIds ?? []);
-    editor.activeObjectId = snapshot.activeObjectId ?? editor.objects[0]?.id ?? null;
-    editor.nextObjectId = snapshot.nextObjectId ?? Math.max(DEFAULT_OBJECT_ID, ...editor.objects.map((object) => object.id)) + 1;
-    const active = getActiveObject() ?? editor.objects[0] ?? null;
-    if (active) {
-      editor.activeObjectId = active.id;
-      editor.vertices = active.vertices;
-      editor.faces = active.faces;
-      editor.nextVertexId = active.nextVertexId;
-      editor.nextFaceId = active.nextFaceId;
+    const activeObjectId = objects.some((object) => object.id === snapshot.activeObjectId)
+      ? snapshot.activeObjectId
+      : objects[0]?.id ?? null;
+    if (activeObjectId !== null) {
+      replaceObjectsAndActivate(objects, activeObjectId, {
+        selectedObjectIds: snapshot.selectedObjectIds ?? [activeObjectId],
+        mode: snapshot.mode ?? EDITOR_MODE_OBJECT
+      });
+      editor.nextObjectId = snapshot.nextObjectId ?? editor.nextObjectId;
     } else {
-      editor.vertices = [];
-      editor.faces = [];
-      editor.nextVertexId = 1;
-      editor.nextFaceId = 1;
+      editModeController?.discardEditSession(snapshot.mode ?? EDITOR_MODE_OBJECT);
+      editor.objects = [];
+      editor.selectedObjectIds = new Set();
+      editor.activeObjectId = null;
+      editor.nextObjectId = snapshot.nextObjectId ?? DEFAULT_OBJECT_ID;
+      editor.clearEditableMesh();
     }
+    const active = getActiveObject();
+    restoreEditMeshSnapshot({
+      mode: snapshot.mode ?? EDITOR_MODE_OBJECT,
+      tool: snapshot.tool,
+      selectedVertices: snapshot.selectedVertices ?? [],
+      selectedFaces: snapshot.selectedFaces ?? [],
+      lastSelectedVertexId: snapshot.lastSelectedVertexId ?? null,
+      nextVertexId: active?.nextVertexId ?? 1,
+      nextFaceId: active?.nextFaceId ?? 1,
+      explicitXMirrorVertexPairs: snapshot.explicitXMirrorVertexPairs ?? []
+    });
   } else {
-    editor.vertices = snapshot.vertices.map((vertex) => ({
+    const vertices = snapshot.vertices.map((vertex) => ({
       id: vertex.id,
       position: readVec3(vertex.position, `snapshot vertex ${vertex.id}`)
     }));
-    editor.faces = snapshot.faces.map((face) => ({
+    const faces = snapshot.faces.map((face) => ({
       id: face.id,
       indices: [...face.indices]
     }));
-    editor.nextVertexId = snapshot.nextVertexId;
-    editor.nextFaceId = snapshot.nextFaceId;
+    const object = {
+      id: DEFAULT_OBJECT_ID,
+      name: SAMPLE_NAME,
+      origin: [0.0, 0.0, 0.0],
+      rotation: [0.0, 0.0, 0.0, 1.0],
+      scale: 1.0,
+      vertices,
+      faces,
+      nextVertexId: snapshot.nextVertexId,
+      nextFaceId: snapshot.nextFaceId
+    };
+    editor.replaceObjectsAndActivate([object], object.id, {
+      selectedObjectIds: [object.id],
+      mode: snapshot.mode ?? EDITOR_MODE_OBJECT
+    });
+    restoreEditMeshSnapshot({
+      mode: snapshot.mode ?? EDITOR_MODE_OBJECT,
+      tool: snapshot.tool,
+      selectedVertices: snapshot.selectedVertices ?? [],
+      selectedFaces: snapshot.selectedFaces ?? [],
+      lastSelectedVertexId: snapshot.lastSelectedVertexId ?? null,
+      nextVertexId: snapshot.nextVertexId,
+      nextFaceId: snapshot.nextFaceId,
+      explicitXMirrorVertexPairs: snapshot.explicitXMirrorVertexPairs ?? []
+    });
   }
-  editor.selectedVertices = new Set(snapshot.selectedVertices);
-  editor.selectedFaces = new Set(snapshot.selectedFaces);
-  editor.lastSelectedVertexId = snapshot.lastSelectedVertexId ?? null;
-  explicitXMirrorVertexPairs.clear();
-  for (const [sourceId, mirrorId] of snapshot.explicitXMirrorVertexPairs ?? []) {
-    explicitXMirrorVertexPairs.set(sourceId, mirrorId);
-  }
-  editor.dirty = true;
+  editor.markDirty();
   // mesh / selected face / marker の表示をまとめて再構築する
   rebuildScene();
 }
 
 // 現在状態を undo stack へ積み、redo stack を破棄する
 function pushUndo(label) {
-  editor.undoStack.push(makeSnapshot());
-  if (editor.undoStack.length > 80) {
-    editor.undoStack.shift();
+  editor.pushUndoSnapshot(makeSnapshot(), label);
+}
+
+// transform preview は開始時に undo を 1 件積み、失敗・cancel・無変更確定ではその 1 件だけを戻す
+// undo stack の深さも transaction に含め、別の履歴を誤って取り除かないよう境界を明示する
+function beginTransformTransaction(label) {
+  const startSnapshot = makeSnapshot();
+  const wasDirty = editor.dirty;
+  const undoDepth = editor.undoStack.length;
+  editor.pushUndoSnapshot(startSnapshot, label);
+  return {
+    startSnapshot,
+    undoDepth,
+    wasDirty
+  };
+}
+
+// transform 開始後に作った preview / extrusion を開始時 snapshot へ戻す
+// undo の取り消しとは分け、表示と geometry の巻き戻しが必要な場面だけで呼ぶ
+function restoreTransformStartSnapshot(transaction) {
+  if (!transaction) {
+    return;
   }
-  editor.redoStack = [];
-  editor.dirty = true;
-  if (label) {
-    editor.lastMessage = label;
+  restoreSnapshot(transaction.startSnapshot);
+}
+
+// transform 開始時に積んだ undo entry と dirty state を transaction 境界まで戻す
+// 変形開始後に失敗した場合や、preview だけで確定しなかった場合に履歴を汚さないための処理
+function rollbackTransformTransaction(transaction) {
+  if (!transaction) {
+    return;
   }
+  while (editor.undoStack.length > transaction.undoDepth) {
+    editor.undoStack.pop();
+  }
+  editor.dirty = transaction.wasDirty;
 }
 
 // undo stack から前状態を復元し、現在状態を redo stack へ退避する
@@ -2262,8 +1769,8 @@ function undo() {
     setMessage("undo stack is empty");
     return;
   }
-  editor.redoStack.push(makeSnapshot());
-  const snapshot = editor.undoStack.pop();
+  editor.pushRedoSnapshot(makeSnapshot());
+  const snapshot = editor.popUndoSnapshot();
   // snapshot から editor 全体を復元し scene を再構築する
   restoreSnapshot(snapshot);
   // 最後のユーザー向け message を保存し status を更新する
@@ -2277,8 +1784,8 @@ function redo() {
     setMessage("redo stack is empty");
     return;
   }
-  editor.undoStack.push(makeSnapshot());
-  const snapshot = editor.redoStack.pop();
+  editor.pushUndoSnapshotForRedo(makeSnapshot());
+  const snapshot = editor.popRedoSnapshot();
   // snapshot から editor 全体を復元し scene を再構築する
   restoreSnapshot(snapshot);
   // 最後のユーザー向け message を保存し status を更新する
@@ -2292,24 +1799,28 @@ function redo() {
 // vertex id から vertex object を引く
 // 見つからない id は参照整合性の破損なので、呼び出し側が先に検証する
 function getVertexById(id) {
-  return editor.vertices.find((vertex) => vertex.id === id) ?? null;
+  const editMesh = getRenderableEditMeshState();
+  return editMesh.vertices.find((vertex) => vertex.id === id) ?? null;
 }
 
 // active object の face id から face を取得する
 function getFaceById(id) {
-  return editor.faces.find((face) => face.id === id) ?? null;
+  const editMesh = getRenderableEditMeshState();
+  return editMesh.faces.find((face) => face.id === id) ?? null;
 }
 
 // 選択 vertex id を実際の vertex object 配列へ変換する
 function getSelectedVertexObjects() {
-  return Array.from(editor.selectedVertices)
+  const editMesh = getRenderableEditMeshState();
+  return Array.from(editMesh.selectedVertices)
     .map((id) => getVertexById(id))
     .filter((vertex) => vertex !== null);
 }
 
 // 選択 face id を実際の face object 配列へ変換する
 function getSelectedFaceObjects() {
-  return Array.from(editor.selectedFaces)
+  const editMesh = getRenderableEditMeshState();
+  return Array.from(editMesh.selectedFaces)
     .map((id) => getFaceById(id))
     .filter((face) => face !== null);
 }
@@ -2318,8 +1829,9 @@ function getSelectedFaceObjects() {
 // face 選択後に Move / Scale / Extrude を自然に使うための「操作対象」決定であり、
 // データの欠落を補う処理ではない
 function getActiveVertexIds() {
-  if (editor.selectedVertices.size > 0) {
-    return Array.from(editor.selectedVertices);
+  const editMesh = getRenderableEditMeshState();
+  if (editMesh.selectedVertices.size > 0) {
+    return Array.from(editMesh.selectedVertices);
   }
   const ids = new Set();
   for (const face of getSelectedFaceObjects()) {
@@ -2332,7 +1844,8 @@ function getActiveVertexIds() {
 
 // 表示上強調する vertex id を明示選択と選択 face から求める
 function getHighlightedVertexIds() {
-  const ids = new Set(editor.selectedVertices);
+  const editMesh = getRenderableEditMeshState();
+  const ids = new Set(editMesh.selectedVertices);
   for (const face of getSelectedFaceObjects()) {
     for (const id of face.indices) {
       ids.add(id);
@@ -2344,10 +1857,11 @@ function getHighlightedVertexIds() {
 // HUD へ表示する最後の直接選択 vertex を取得する
 // 選択解除や Shift で選択から外れた場合は古い座標を出さない
 function getLastSelectedVertex() {
-  if (editor.lastSelectedVertexId === null || !editor.selectedVertices.has(editor.lastSelectedVertexId)) {
+  const editMesh = getRenderableEditMeshState();
+  if (editMesh.lastSelectedVertexId === null || !editMesh.selectedVertices.has(editMesh.lastSelectedVertexId)) {
     return null;
   }
-  return getVertexById(editor.lastSelectedVertexId);
+  return getVertexById(editMesh.lastSelectedVertexId);
 }
 
 // HUD へ収めやすい短い vertex 座標表示を作る
@@ -2360,8 +1874,180 @@ function getLastSelectedVertexLabel() {
   return `v${vertex.id} (${coords})`;
 }
 
-// command palette の V から、選択 vertex の座標を status/message へ表示する
-// 複数選択時は先頭数件に絞り、詳細すぎる文字列で message 表示を埋めないようにする
+function formatInfoVec3(values) {
+  return values.map((value) => Number(value).toFixed(3)).join(", ");
+}
+
+function formatInfoDistance(value) {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) {
+    return "-";
+  }
+  const absValue = Math.abs(numeric);
+  if (absValue >= 100.0) {
+    return numeric.toFixed(1);
+  }
+  if (absValue >= 10.0) {
+    return numeric.toFixed(2);
+  }
+  return numeric.toFixed(3);
+}
+
+// Info overlay では object 情報と一緒に現在 camera の見え方も確認できるようにする
+// 焦点距離は status / diagnostics と同じ 35mm full-frame 換算を使い、
+// orbit distance は EyeRig の target から camera eye までの距離、
+// origin distance は world 原点から現在 eye 位置までの距離として表示する
+function getCameraInfoForOverlay() {
+  const eyePosition = app?.eye?.getWorldPosition?.() ?? null;
+  const cameraDistance = Array.isArray(eyePosition) && eyePosition.length >= 3
+    ? Math.hypot(Number(eyePosition[0]), Number(eyePosition[1]), Number(eyePosition[2]))
+    : NaN;
+  return {
+    focalLength: getFocalLengthLabel(),
+    orbitDistance: Number(orbit?.orbit?.distance),
+    cameraDistance
+  };
+}
+
+// 座標 overlay の input へ現在の vertex position を反映する
+// 表示用の丸めは使わず、入力欄には編集対象の実数値をそのまま入れる
+function setCoordinateOverlayValues(vertex) {
+  const axes = ["x", "y", "z"];
+  for (let i = 0; i < axes.length; i++) {
+    const field = ui.coordinateOverlayFields.find((input) => input.dataset.coordinateAxis === axes[i]);
+    if (field) {
+      field.value = String(vertex.position[i]);
+      field.disabled = false;
+    }
+  }
+}
+
+// 座標 overlay の入力欄を無効にする
+// 複数選択時に誤って一部の vertex だけを書き換えないよう、表示だけに切り替える
+function disableCoordinateOverlayFields() {
+  for (const field of ui.coordinateOverlayFields) {
+    field.value = "";
+    field.disabled = true;
+  }
+}
+
+// coordinate overlay の入力値を単一選択 vertex へ反映する
+// 不正な数値は readFiniteNumber() が例外にし、message に理由を出して geometry は変更しない
+function applyCoordinateOverlayInput() {
+  const vertices = getActiveVertexObjects();
+  if (vertices.length !== 1) {
+    setMessage("select one vertex before editing coordinates");
+    return;
+  }
+  const vertex = vertices[0];
+  try {
+    const nextPosition = [
+      readFiniteNumber(ui.coordinateOverlayFields.find((input) => input.dataset.coordinateAxis === "x")?.value, "coordinate X"),
+      readFiniteNumber(ui.coordinateOverlayFields.find((input) => input.dataset.coordinateAxis === "y")?.value, "coordinate Y"),
+      readFiniteNumber(ui.coordinateOverlayFields.find((input) => input.dataset.coordinateAxis === "z")?.value, "coordinate Z")
+    ];
+    if (vertex.position.every((value, index) => value === nextPosition[index])) {
+      setMessage(`v${vertex.id} coordinate unchanged`);
+      return;
+    }
+    pushUndo(`edit v${vertex.id} coordinates`);
+    vertex.position = nextPosition;
+    rebuildScene();
+    setCoordinateOverlayValues(vertex);
+    setMessage(`updated v${vertex.id} coordinates`);
+  } catch (err) {
+    console.error(err);
+    setMessage(`coordinate edit failed: ${err?.message ?? err}`);
+  }
+}
+
+function computeBoundsInfoForPositions(positions) {
+  if (!Array.isArray(positions) || positions.length === 0) {
+    return {
+      min: [0.0, 0.0, 0.0],
+      max: [0.0, 0.0, 0.0],
+      size: [0.0, 0.0, 0.0]
+    };
+  }
+  const min = [Number.POSITIVE_INFINITY, Number.POSITIVE_INFINITY, Number.POSITIVE_INFINITY];
+  const max = [Number.NEGATIVE_INFINITY, Number.NEGATIVE_INFINITY, Number.NEGATIVE_INFINITY];
+  for (const position of positions) {
+    const p = readVec3(position, "object info position");
+    for (let i = 0; i < 3; i++) {
+      if (p[i] < min[i]) min[i] = p[i];
+      if (p[i] > max[i]) max[i] = p[i];
+    }
+  }
+  return {
+    min,
+    max,
+    size: [
+      max[0] - min[0],
+      max[1] - min[1],
+      max[2] - min[2]
+    ]
+  };
+}
+
+function getActiveObjectInfo() {
+  const object = getActiveObject();
+  if (!object) {
+    return null;
+  }
+  const editMesh = getRenderableEditorMode() === EDITOR_MODE_EDIT
+    ? getRenderableEditMeshState()
+    : null;
+  const vertices = editMesh?.vertices ?? object.vertices ?? [];
+  const faces = editMesh?.faces ?? object.faces ?? [];
+  const worldPositions = vertices.map((vertex) => localToWorldPosition(object, vertex.position));
+  return {
+    object,
+    bounds: computeBoundsInfoForPositions(worldPositions),
+    vertexCount: vertices.length,
+    polygonCount: faces.length,
+    origin: getObjectOrigin(object)
+  };
+}
+
+function showActiveObjectInfo() {
+  const info = getActiveObjectInfo();
+  if (!info) {
+    setMessage("no active object");
+    return;
+  }
+  closeMobilePalette();
+  closeCoordinateOverlay();
+  if (ui.objectInfoTitle) {
+    ui.objectInfoTitle.textContent = `${info.object.name ?? "Object"} #${info.object.id}`;
+  }
+  if (ui.objectInfoBounds) {
+    ui.objectInfoBounds.textContent = formatInfoVec3(info.bounds.size);
+  }
+  if (ui.objectInfoVertices) {
+    ui.objectInfoVertices.textContent = String(info.vertexCount);
+  }
+  if (ui.objectInfoPolygons) {
+    ui.objectInfoPolygons.textContent = String(info.polygonCount);
+  }
+  if (ui.objectInfoOrigin) {
+    ui.objectInfoOrigin.textContent = formatInfoVec3(info.origin);
+  }
+  const cameraInfo = getCameraInfoForOverlay();
+  if (ui.objectInfoFocalLength) {
+    ui.objectInfoFocalLength.textContent = cameraInfo.focalLength;
+  }
+  if (ui.objectInfoOrbitDistance) {
+    ui.objectInfoOrbitDistance.textContent = formatInfoDistance(cameraInfo.orbitDistance);
+  }
+  if (ui.objectInfoCameraDistance) {
+    ui.objectInfoCameraDistance.textContent = formatInfoDistance(cameraInfo.cameraDistance);
+  }
+  ui.objectInfoOverlay?.classList.add("open");
+  setMessage(`object info: ${info.vertexCount} vertices, ${info.polygonCount} polygons`);
+}
+
+// command palette の Vcood から、表示と入力を兼ねた座標 overlay を開く
+// 最初の実装では単一 vertex の直接編集に限定し、複数選択は情報表示だけにする
 function showSelectedVertexCoordinates() {
   if (!isEditMode()) {
     setMessage("switch to edit mode before viewing vertices");
@@ -2372,68 +2058,31 @@ function showSelectedVertexCoordinates() {
     setMessage("select vertices before viewing coordinates");
     return;
   }
-  const entries = vertices.slice(0, 4).map((vertex) => {
-    const p = vertex.position.map((value) => Number(value).toFixed(3)).join(",");
-    return `v${vertex.id}(${p})`;
-  });
-  const suffix = vertices.length > entries.length ? ` ... +${vertices.length - entries.length}` : "";
-  setMessage(`${entries.join(" ")}${suffix}`);
-}
-
-// Edge Slide 用に、選択 vertex ごとのスライド先 edge を決める
-// 明示的な edge selection はまだ持たないため、各 vertex に接続する辺のうち画面横方向に最も近いものを使う
-// 複数 vertex でも drag 量から得た同じ比率を各 edge 上へ適用する
-function getEdgeSlideTargets(vertices) {
-  if (!Array.isArray(vertices) || vertices.length === 0) {
-    return [];
+  closeMobilePalette();
+  closeObjectInfoOverlay();
+  const firstVertex = vertices[0];
+  const firstPosition = firstVertex.position.map((value) => Number(value).toFixed(3)).join(", ");
+  if (ui.coordinateOverlayTitle) {
+    ui.coordinateOverlayTitle.textContent = vertices.length === 1
+      ? `Vertex v${firstVertex.id}`
+      : `${vertices.length} vertices selected`;
   }
-  const basis = getCameraScreenBasis();
-  const selectedIds = new Set(vertices.map((vertex) => vertex.id));
-  const neighborIdsByVertexId = new Map();
-  const addNeighbor = (a, b) => {
-    if (!neighborIdsByVertexId.has(a)) {
-      neighborIdsByVertexId.set(a, new Set());
-    }
-    neighborIdsByVertexId.get(a).add(b);
-  };
-  for (const face of editor.faces) {
-    for (let i = 0; i < face.indices.length; i++) {
-      const a = face.indices[i];
-      const b = face.indices[(i + 1) % face.indices.length];
-      addNeighbor(a, b);
-      addNeighbor(b, a);
-    }
+  if (ui.coordinateOverlayHint) {
+    ui.coordinateOverlayHint.textContent = vertices.length === 1
+      ? "Edit X / Y / Z, then Apply"
+      : `First: v${firstVertex.id} (${firstPosition}). Select one vertex to edit coordinates.`;
   }
-  const targets = [];
-  for (const vertex of vertices) {
-    const neighbors = Array.from(neighborIdsByVertexId.get(vertex.id) ?? [])
-      .map((id) => getVertexById(id))
-      .filter((neighbor) => neighbor !== null);
-    let best = null;
-    for (const neighbor of neighbors) {
-      const edge = sub3(neighbor.position, vertex.position);
-      const len = length3(edge);
-      if (len <= 1.0e-9) {
-        continue;
-      }
-      const dir = mul3(edge, 1.0 / len);
-      const score = Math.abs(dot3(dir, basis.right));
-      const selectedPenalty = selectedIds.has(neighbor.id) ? 0.1 : 0.0;
-      const rank = score - selectedPenalty;
-      if (!best || rank > best.rank) {
-        best = {
-          vertex,
-          start: [...vertex.position],
-          end: [...neighbor.position],
-          rank
-        };
-      }
-    }
-    if (best) {
-      targets.push(best);
-    }
+  if (vertices.length === 1) {
+    setCoordinateOverlayValues(firstVertex);
+  } else {
+    disableCoordinateOverlayFields();
   }
-  return targets;
+  ui.coordinateOverlay?.classList.add("open");
+  setMessage(vertices.length === 1 ? `editing v${firstVertex.id} coordinates` : `${vertices.length} vertices selected`);
+  if (vertices.length === 1) {
+    ui.coordinateOverlayFields[0]?.focus();
+    ui.coordinateOverlayFields[0]?.select();
+  }
 }
 
 // transform 対象 vertex id を vertex object 配列へ変換する
@@ -2445,7 +2094,7 @@ function getActiveVertexObjects() {
 
 // Object Mode で選択中 object 群の全 vertex object を集める
 function getSelectedObjectVertexObjects() {
-  // 現在の editor.vertices / faces を active object へ書き戻す
+  // Edit Mode session が残っている場合は、Object Mode 対象を読む前に active object へ反映する
   commitActiveObject();
   const vertices = [];
   for (const object of editor.objects) {
@@ -2467,7 +2116,7 @@ function getTransformTargetObjects() {
 
 // mode と transform 種類に応じて操作対象 vertex object を決める
 function getTransformTargetVertexObjects(mode) {
-  if (editor.mode === EDITOR_MODE_OBJECT) {
+  if (getRenderableEditorMode() === EDITOR_MODE_OBJECT) {
     return mode === "extrude" ? [] : getSelectedObjectVertexObjects();
   }
   return getActiveVertexObjects();
@@ -2487,18 +2136,71 @@ function computeCenter(vertices) {
   return [sum[0] / vertices.length, sum[1] / vertices.length, sum[2] / vertices.length];
 }
 
-// object transform はまず origin translation として扱う
+// object transform は mesh data とは別の object state として保持する
 // editor vertices は object local 座標で保持し、描画 / pick / export 時だけ world と変換する
 function getObjectOrigin(object) {
   return readVec3(object?.origin ?? [0.0, 0.0, 0.0], `object ${object?.id ?? "-"} origin`);
 }
 
+function getObjectRotation(object) {
+  const rotation = readQuatXyzw(object?.rotation ?? [0.0, 0.0, 0.0, 1.0], `object ${object?.id ?? "-"} rotation`);
+  const len = Math.hypot(rotation[0], rotation[1], rotation[2], rotation[3]);
+  if (!Number.isFinite(len) || len <= 1.0e-9) {
+    throw new Error(`object ${object?.id ?? "-"} rotation must be a non-zero quaternion`);
+  }
+  return [
+    rotation[0] / len,
+    rotation[1] / len,
+    rotation[2] / len,
+    rotation[3] / len
+  ];
+}
+
+function getObjectScale(object) {
+  const scale = readFiniteNumber(object?.scale ?? 1.0, `object ${object?.id ?? "-"} scale`);
+  if (Math.abs(scale) <= 1.0e-8) {
+    throw new Error(`object ${object?.id ?? "-"} scale must be non-zero`);
+  }
+  return scale;
+}
+
+function quatFromObjectRotation(object) {
+  const rotation = getObjectRotation(object);
+  const quat = new Quat();
+  quat.q = [rotation[3], rotation[0], rotation[1], rotation[2]];
+  quat.normalize();
+  return quat;
+}
+
+function matrixFromObjectRotation(object) {
+  const matrix = new Matrix();
+  matrix.setByQuat(quatFromObjectRotation(object));
+  return matrix;
+}
+
 function localToWorldPosition(object, position) {
-  return add3(readVec3(position, "local position"), getObjectOrigin(object));
+  const scale = getObjectScale(object);
+  const rotated = matrixFromObjectRotation(object).mul3x3Vector(mul3(readVec3(position, "local position"), scale));
+  return add3(rotated, getObjectOrigin(object));
 }
 
 function worldToLocalPosition(object, position) {
-  return sub3(readVec3(position, "world position"), getObjectOrigin(object));
+  const scale = getObjectScale(object);
+  const rel = sub3(readVec3(position, "world position"), getObjectOrigin(object));
+  const inverse = quatFromObjectRotation(object);
+  inverse.conjugate();
+  const matrix = new Matrix();
+  matrix.setByQuat(inverse);
+  return mul3(matrix.mul3x3Vector(rel), 1.0 / scale);
+}
+
+function worldToLocalDirection(object, direction) {
+  const scale = getObjectScale(object);
+  const inverse = quatFromObjectRotation(object);
+  inverse.conjugate();
+  const matrix = new Matrix();
+  matrix.setByQuat(inverse);
+  return mul3(matrix.mul3x3Vector(readVec3(direction, "world direction")), 1.0 / scale);
 }
 
 function getObjectWorldVertices(object) {
@@ -2512,255 +2214,18 @@ function makeObjectLocalRay(ray, object) {
   if (!object) {
     return ray;
   }
-  const origin = getObjectOrigin(object);
   return {
     ...ray,
-    origin: sub3(ray.origin, origin),
-    near: ray.near ? sub3(ray.near, origin) : ray.near,
-    far: ray.far ? sub3(ray.far, origin) : ray.far
+    origin: worldToLocalPosition(object, ray.origin),
+    dir: worldToLocalDirection(object, ray.dir),
+    near: ray.near ? worldToLocalPosition(object, ray.near) : ray.near,
+    far: ray.far ? worldToLocalPosition(object, ray.far) : ray.far
   };
 }
 
 // ------------------------------------------------------------
 // --- X mirror editing
 // ------------------------------------------------------------
-
-// X Mirror 用の位置許容差を model size から決める
-// 読み込み model の scale が大きく違っても、同じ相対精度で対称頂点を探せるようにする
-function getXMirrorTolerance() {
-  return Math.max(getEditorBounds().size * 1.0e-4, 1.0e-5);
-}
-
-// X=0 平面を境にした対称位置を返す
-// モデラーでの X Mirror として扱うため、X 符号だけを反転し、Y/Z は維持する
-function makeXMirrorPosition(position) {
-  return [-position[0], position[1], position[2]];
-}
-
-// 指定 vertex の X Mirror 対応頂点を active object 内から探す
-// 同じ vertex 自身や今回の直接編集対象は除外し、対称相手を上書きして操作意図が競合しないようにする
-function findXMirrorVertex(vertex, referencePosition, excludedVertexIds = new Set()) {
-  if (!vertex) {
-    return null;
-  }
-  const tolerance = getXMirrorTolerance();
-  const target = makeXMirrorPosition(referencePosition);
-  let best = null;
-  let bestDistanceSq = Infinity;
-  for (const candidate of editor.vertices) {
-    if (candidate.id === vertex.id || excludedVertexIds.has(candidate.id)) {
-      continue;
-    }
-    const dx = candidate.position[0] - target[0];
-    const dy = candidate.position[1] - target[1];
-    const dz = candidate.position[2] - target[2];
-    if (Math.abs(dx) > tolerance || Math.abs(dy) > tolerance || Math.abs(dz) > tolerance) {
-      continue;
-    }
-    const distanceSq = dx * dx + dy * dy + dz * dz;
-    if (distanceSq < bestDistanceSq) {
-      best = candidate;
-      bestDistanceSq = distanceSq;
-    }
-  }
-  return best;
-}
-
-// X Mirror が有効なとき、直接編集した vertex の結果を対称側の既存 vertex へ反映する
-// 新しい vertex / face は作らないため、対称相手が存在しない場合は何も補完しない
-function makeXMirrorEditPairs(sourceVertices, initialPositions = null) {
-  if (!xMirrorEdit || !isEditMode() || !Array.isArray(sourceVertices) || sourceVertices.length === 0) {
-    return [];
-  }
-  const sourceIds = new Set(sourceVertices.map((vertex) => vertex.id));
-  const pairs = [];
-  for (const vertex of sourceVertices) {
-    const explicitMirrorId = explicitXMirrorVertexPairs.get(vertex.id);
-    const explicitMirror = explicitMirrorId === undefined || sourceIds.has(explicitMirrorId)
-      ? null
-      : getVertexById(explicitMirrorId);
-    if (explicitMirror) {
-      pairs.push({
-        sourceId: vertex.id,
-        mirrorId: explicitMirror.id
-      });
-      continue;
-    }
-    const referencePosition = initialPositions?.get?.(vertex) ?? vertex.position;
-    const mirror = findXMirrorVertex(vertex, referencePosition, sourceIds);
-    if (mirror) {
-      pairs.push({
-        sourceId: vertex.id,
-        mirrorId: mirror.id
-      });
-    }
-  }
-  return pairs;
-}
-
-// X Mirror が有効なとき、直接編集した vertex の結果を対称側の既存 vertex へ反映する
-// drag preview では最初に見つけた対応関係を使い続け、移動後の mirror 位置で再探索しない
-function applyXMirrorEdit(sourceVertices, initialPositions = null, mirrorPairs = null) {
-  if (!xMirrorEdit || !isEditMode() || !Array.isArray(sourceVertices) || sourceVertices.length === 0) {
-    return {
-      updated: 0,
-      missing: 0
-    };
-  }
-  if (Array.isArray(mirrorPairs)) {
-    let updated = 0;
-    for (const pair of mirrorPairs) {
-      const source = getVertexById(pair.sourceId);
-      const mirror = getVertexById(pair.mirrorId);
-      if (!source || !mirror) {
-        continue;
-      }
-      mirror.position = makeXMirrorPosition(source.position);
-      updated += 1;
-    }
-    return {
-      updated,
-      missing: sourceVertices.length - updated
-    };
-  }
-  const sourceIds = new Set(sourceVertices.map((vertex) => vertex.id));
-  let updated = 0;
-  let missing = 0;
-  for (const vertex of sourceVertices) {
-    const referencePosition = initialPositions?.get?.(vertex) ?? vertex.position;
-    const mirror = findXMirrorVertex(vertex, referencePosition, sourceIds);
-    if (!mirror) {
-      missing += Math.abs(referencePosition[0]) > getXMirrorTolerance() ? 1 : 0;
-      continue;
-    }
-    mirror.position = makeXMirrorPosition(vertex.position);
-    updated += 1;
-  }
-  return {
-    updated,
-    missing
-  };
-}
-
-// X Mirror 表示用に、選択 vertex の反対側にある既存 vertex id を集める
-// 選択済み vertex は赤表示を優先するため、mirror marker には含めない
-function getXMirrorSelectedVertexIds() {
-  const ids = new Set();
-  if (!xMirrorEdit || !isEditMode() || editor.selectedVertices.size === 0) {
-    return ids;
-  }
-  const selectedIds = new Set(editor.selectedVertices);
-  for (const id of selectedIds) {
-    const vertex = getVertexById(id);
-    if (!vertex) {
-      continue;
-    }
-    const explicitMirrorId = explicitXMirrorVertexPairs.get(vertex.id);
-    if (explicitMirrorId !== undefined && !selectedIds.has(explicitMirrorId) && getVertexById(explicitMirrorId)) {
-      ids.add(explicitMirrorId);
-      continue;
-    }
-    const mirror = findXMirrorVertex(vertex, vertex.position, selectedIds);
-    if (mirror && !selectedIds.has(mirror.id)) {
-      ids.add(mirror.id);
-    }
-  }
-  return ids;
-}
-
-// X Mirror 押し出し用に、選択 face と対称位置にある既存 face を探す
-// X=0 上の vertex は同じ vertex を使い、片側だけにある vertex は既存の反対側 vertex を要求する
-function findXMirrorFace(face, excludedFaceIds = new Set()) {
-  if (!face) {
-    return null;
-  }
-  const mirroredIds = [];
-  for (const vertexId of face.indices) {
-    const vertex = getVertexById(vertexId);
-    if (!vertex) {
-      return null;
-    }
-    if (Math.abs(vertex.position[0]) <= getXMirrorTolerance()) {
-      mirroredIds.push(vertex.id);
-      continue;
-    }
-    const mirror = findXMirrorVertex(vertex, vertex.position);
-    if (!mirror) {
-      return null;
-    }
-    mirroredIds.push(mirror.id);
-  }
-  const sourceKey = [...face.indices].sort((a, b) => a - b).join(":");
-  const mirrorKey = [...mirroredIds].sort((a, b) => a - b).join(":");
-  if (sourceKey === mirrorKey) {
-    return null;
-  }
-  for (const candidate of editor.faces) {
-    if (candidate.id === face.id || excludedFaceIds.has(candidate.id) || candidate.indices.length !== mirroredIds.length) {
-      continue;
-    }
-    const candidateKey = [...candidate.indices].sort((a, b) => a - b).join(":");
-    if (candidateKey === mirrorKey) {
-      return {
-        face: candidate,
-        vertexPairs: face.indices
-          .map((sourceId, index) => ({
-            sourceId,
-            mirrorId: mirroredIds[index]
-          }))
-          .filter((pair) => pair.sourceId !== pair.mirrorId)
-      };
-    }
-  }
-  return null;
-}
-
-// X Mirror が有効な押し出しでは、選択 face の反対側 face も同じ region extrude 対象へ含める
-// mirror 側から派生する新規 vertex を通常選択に混ぜないよう、base vertex の対応関係も返す
-function getXMirrorExtrusionFaces(faces) {
-  const empty = {
-    faces,
-    mirrorFaceIds: new Set(),
-    vertexPairs: []
-  };
-  if (!xMirrorEdit || !isEditMode() || !Array.isArray(faces) || faces.length === 0) {
-    return empty;
-  }
-  const result = [...faces];
-  const includedFaceIds = new Set(result.map((face) => face.id));
-  const mirrorFaceIds = new Set();
-  const vertexPairs = [];
-  for (const face of faces) {
-    const mirrorInfo = findXMirrorFace(face, includedFaceIds);
-    if (!mirrorInfo) {
-      continue;
-    }
-    result.push(mirrorInfo.face);
-    includedFaceIds.add(mirrorInfo.face.id);
-    mirrorFaceIds.add(mirrorInfo.face.id);
-    vertexPairs.push(...mirrorInfo.vertexPairs);
-  }
-  return {
-    faces: result,
-    mirrorFaceIds,
-    vertexPairs
-  };
-}
-
-// 通常選択 vertex と X Mirror 対応 vertex の id pair を明示的に登録する
-// 押し出しで新しく生成した mirror 側 vertex は既存位置探索では見つけにくいため、派生元から対応を引き継ぐ
-function addExplicitXMirrorVertexPairs(pairs) {
-  if (!Array.isArray(pairs) || pairs.length === 0) {
-    return;
-  }
-  for (const pair of pairs) {
-    if (!Number.isInteger(pair?.sourceId) || !Number.isInteger(pair?.mirrorId) || pair.sourceId === pair.mirrorId) {
-      continue;
-    }
-    explicitXMirrorVertexPairs.set(pair.sourceId, pair.mirrorId);
-    explicitXMirrorVertexPairs.set(pair.mirrorId, pair.sourceId);
-  }
-}
 
 // ------------------------------------------------------------
 // --- geometry topology and winding
@@ -2856,7 +2321,8 @@ function shouldFlipLoopAwayFromOrigin(vertexIds) {
 // 隣接 face の共有辺と逆向きになるよう新規 loop の向きを調整する
 function orientLoopByAdjacentFaces(vertexIds) {
   let score = 0;
-  for (const face of editor.faces) {
+  const editMesh = getRenderableEditMeshState();
+  for (const face of editMesh.faces) {
     for (let i = 0; i < vertexIds.length; i++) {
       const a = vertexIds[i];
       const b = vertexIds[(i + 1) % vertexIds.length];
@@ -2881,10 +2347,11 @@ function orientLoopByAdjacentFaces(vertexIds) {
 
 // 全 face の winding を connected component ごとにできるだけ一貫させる
 function orientAllFacesConsistently() {
+  const editMesh = getRenderableEditMeshState();
   const edgeMap = new Map();
   // 共有辺を向きに依存しない key として扱い、隣接 face を探索しやすくする
   const edgeKey = (a, b) => a < b ? `${a}:${b}` : `${b}:${a}`;
-  for (const face of editor.faces) {
+  for (const face of editMesh.faces) {
     for (let i = 0; i < face.indices.length; i++) {
       const a = face.indices[i];
       const b = face.indices[(i + 1) % face.indices.length];
@@ -2896,7 +2363,7 @@ function orientAllFacesConsistently() {
   }
 
   const visited = new Set();
-  for (const seed of editor.faces) {
+  for (const seed of editMesh.faces) {
     if (visited.has(seed.id)) {
       continue;
     }
@@ -2950,93 +2417,40 @@ function computeSelectionNormal() {
 // --- ModelAsset and scene rebuild
 // ------------------------------------------------------------
 
-// 編集データから ModelAsset を組み立てる
-// faces は三角形または四角形だけを許可し、四角形は表示用 indices へ扇形分解する
-function buildModelAssetFromGeometry(vertices = editor.vertices, faces = editor.faces, name = SAMPLE_NAME, origin = [0.0, 0.0, 0.0]) {
-  const idToIndex = new Map();
-  const positions = [];
-  for (let i = 0; i < vertices.length; i++) {
-    const vertex = vertices[i];
-    idToIndex.set(vertex.id, i);
-    positions.push(vertex.position[0], vertex.position[1], vertex.position[2]);
-  }
+// 保存 / export 対象として使う active object geometry を取得する
+// Edit Mode 中の内部 session は commit 境界で active object へ反映してから保存対象にする
+function getActiveGeometryForSave() {
+  commitActiveObject();
+  const object = getActiveObject();
+  return {
+    object,
+    vertices: object?.vertices ?? [],
+    faces: object?.faces ?? []
+  };
+}
 
-  const indices = [];
-  const polygonLoops = [];
-  for (const face of faces) {
-    if (face.indices.length !== 3 && face.indices.length !== 4) {
-      throw new Error(`face ${face.id} must have 3 or 4 vertices`);
-    }
-    const loop = face.indices.map((vertexId) => {
-      if (!idToIndex.has(vertexId)) {
-        throw new Error(`face ${face.id} references missing vertex ${vertexId}`);
-      }
-      return idToIndex.get(vertexId);
-    });
-    polygonLoops.push(loop);
-    for (let i = 0; i < loop.length - 2; i++) {
-      indices.push(loop[0], loop[i + 1], loop[i + 2]);
-    }
-  }
-
-  return ModelAsset.fromData({
-    version: "1.0",
-    type: "webg-model-asset",
-    meta: {
-      name,
-      generator: "samples/mmodeler",
-      source: "editor",
-      unitScale: 1.0,
-      upAxis: "Y"
-    },
-    materials: [
-      {
-        id: "webgmodeler_mat",
-        shaderParams: { ...MATERIAL.mesh }
-      }
-    ],
-    meshes: [
-      {
-        id: "webgmodeler_mesh",
-        name: `${name}_mesh`,
-        material: "webgmodeler_mat",
-        geometry: {
-          vertexCount: vertices.length,
-          polygonCount: indices.length / 3,
-          positions,
-          uvs: new Array(vertices.length * 2).fill(0.0),
-          indices,
-          polygonLoops
-        }
-      }
-    ],
-    skeletons: [],
-    animations: [],
-    nodes: [
-      {
-        id: "webgmodeler_node",
-        name: "webgmodeler_node",
-        parent: null,
-        mesh: "webgmodeler_mesh",
-        transform: {
-          translation: readVec3(origin, `${name} origin`),
-          rotation: [0.0, 0.0, 0.0, 1.0],
-          scale: [1.0, 1.0, 1.0]
-        }
-      }
-    ]
-  });
+function hasActiveGeometryForSave({ requireFaces = false } = {}) {
+  const editMesh = getRenderableEditorMode() === EDITOR_MODE_EDIT
+    ? getRenderableEditMeshState()
+    : null;
+  const object = getActiveObject();
+  const vertices = editMesh?.vertices ?? object?.vertices ?? [];
+  const faces = editMesh?.faces ?? object?.faces ?? [];
+  return vertices.length > 0 && (!requireFaces || faces.length > 0);
 }
 
 // active object の編集データから保存用 ModelAsset を作る
 function buildModelAssetFromEditor() {
-  const object = getActiveObject();
-  return buildModelAssetFromGeometry(
-    editor.vertices,
-    editor.faces,
-    object?.name ?? SAMPLE_NAME,
-    getObjectOrigin(object)
-  );
+  const { object, vertices, faces } = getActiveGeometryForSave();
+  return modelerImportExport.createModelAssetFromGeometry({
+    vertices,
+    faces,
+    name: object?.name ?? SAMPLE_NAME,
+    origin: getObjectOrigin(object),
+    rotation: getObjectRotation(object),
+    scale: getObjectScale(object),
+    material: MATERIAL.mesh
+  });
 }
 
 // 選択 face だけの overlay geometry を作る
@@ -3090,104 +2504,43 @@ function buildSelectedFaceAsset() {
   });
 }
 
-// ModelAsset から Shape を生成し material と shader を設定する
-function makeShapeFromAsset(asset, materialParams, shader = null) {
-  const shape = new Shape(app.getGPU());
-  if (shader) {
-    shape.shader = shader;
-  }
-  shape.applyPrimitiveAsset(asset);
-  shape.endShape();
-  shape.setMaterial("smooth-shader", materialParams);
-  return shape;
-}
-
-// 既存 Shape の geometry resource を共有する表示 instance を作る
-function makeShapeInstance(baseShape, materialParams = null, shader = null) {
-  const shape = new Shape(app.getGPU());
-  if (shader) {
-    shape.shader = shader;
-  }
-  shape.referShape(baseShape);
-  shape.copyShaderParamsFromShape(baseShape);
-  if (materialParams) {
-    shape.setMaterial("smooth-shader", materialParams);
-  }
-  return shape;
-}
-
-// scene graph から node subtree を shape 破棄込みで取り除く
-function removeNodeTree(node) {
-  if (node) {
-    app.space.removeNodeTree(node, { destroyShapes: true });
-  }
-}
-
 // 全 object の mesh Shape を編集データから再構築する
 function rebuildMeshShape() {
-  // 現在の editor.vertices / faces を active object へ書き戻す
+  // Edit Mode session の変更を active object へ反映し、object list から表示 mesh を再構築する
   commitActiveObject();
-  // scene graph から node subtree を shape 破棄込みで取り除く
-  removeNodeTree(meshNode);
-  meshNode = null;
-  if (editor.objects.length === 0) {
-    return;
-  }
-  meshNode = app.space.addNode(null, "webgmodeler-objects");
-  for (const object of editor.objects) {
-    if (object.faces.length === 0) {
-      continue;
-    }
-    const asset = buildModelAssetFromGeometry(object.vertices, object.faces, object.name, [0.0, 0.0, 0.0]);
-    const selectedObject = editor.mode === EDITOR_MODE_OBJECT
-      && editor.selectedObjectIds.has(object.id);
-    const shape = makeShapeFromAsset(asset, selectedObject ? MATERIAL.selectedObject : MATERIAL.mesh);
-    // Wireframe 表示は Shape が保持する polygonLoops から線を作る
-    // Edit Mode でも mesh 本体を wireframe 化し、選択 vertex / selected face / edge overlay は別 pass として重ねる
-    // これにより奥の形状を確認しながら、既存の選択強調を維持できる
-    if (objectWireframe) {
-      shape.setWireframe(true);
-    }
-    const node = app.space.addNode(meshNode, `object-${object.id}`);
-    const origin = getObjectOrigin(object);
-    node.setPosition(origin[0], origin[1], origin[2]);
-    node.webgmodelerKind = "object";
-    node.webgmodelerObjectId = object.id;
-    node.addShape(shape);
-  }
+  modelerRenderer.rebuildMeshShapes({
+    objects: editor.objects,
+    selectedObjectIds: editor.selectedObjectIds,
+    objectModeActive: getRenderableEditorMode() === EDITOR_MODE_OBJECT,
+    objectWireframe: viewController.objectWireframe,
+    objectSmoothShading: viewController.objectSmoothShading,
+    getObjectOrigin,
+    getObjectRotation,
+    getObjectScale
+  });
 }
 
 // Edit Mode の選択 face overlay Shape を再構築する
 function rebuildSelectedFaceShape() {
-  // scene graph から node subtree を shape 破棄込みで取り除く
-  removeNodeTree(selectedFaceNode);
-  selectedFaceNode = null;
-  if (!isEditMode()) {
-    return;
-  }
-  const asset = buildSelectedFaceAsset();
-  if (!asset) {
-    return;
-  }
-  const shape = makeShapeFromAsset(asset, MATERIAL.selectedFace, selectedFaceShader);
-  selectedFaceNode = app.space.addNode(null, "webgmodeler-selected-faces");
-  const origin = getObjectOrigin(getActiveObject());
-  selectedFaceNode.setPosition(origin[0], origin[1], origin[2]);
-  selectedFaceNode.addShape(shape);
+  const editModeActive = isEditMode();
+  modelerRenderer.rebuildSelectedFaceShape({
+    editModeActive,
+    asset: editModeActive ? buildSelectedFaceAsset() : null,
+    origin: getObjectOrigin(getActiveObject()),
+    rotation: getObjectRotation(getActiveObject()),
+    scale: getObjectScale(getActiveObject()),
+    shader: selectedFaceShader
+  });
 }
 
 // 旧 3D marker node を使わないため marker root を空に保つ
 function rebuildMarkers() {
-  // scene graph から node subtree を shape 破棄込みで取り除く
-  removeNodeTree(markerRoot);
-  markerRoot = null;
+  modelerRenderer.rebuildMarkers();
 }
 
 // mesh / selected face / marker の表示をまとめて再構築する
 function rebuildScene() {
-  overlayEdgeCacheDirty = true;
-  overlayEdgeUploadDirty = true;
-  markerOverlayDirty = true;
+  markEditOverlayGeometryDirty();
   // 全 object の mesh Shape を編集データから再構築する
   rebuildMeshShape();
   // Edit Mode の選択 face overlay Shape を再構築する
@@ -3198,17 +2551,41 @@ function rebuildScene() {
   updateStatus();
 }
 
+// 頂点・面・object geometry が変わらない選択操作では mesh 本体を作り直さない
+// 多頂点 model で single tap selection の応答を保つため、選択 face / marker / edge overlay だけ更新する
+function refreshSelectionVisuals() {
+  markEditOverlayVisualDirty();
+  rebuildSelectedFaceShape();
+  updateStatus();
+}
+
 // ------------------------------------------------------------
 // --- edit overlays and viewport projection
 // ------------------------------------------------------------
 
 // vertex id から vertex object を引く Map を作る
-function buildVertexLookup(vertices = editor.vertices) {
+function buildVertexLookup(vertices = getRenderableEditMeshState().vertices) {
   const lookup = new Map();
   for (const vertex of vertices) {
     lookup.set(vertex.id, vertex);
   }
   return lookup;
+}
+
+// Edit Mode の overlay / hit test / status が読む mesh state を取得する
+// Edit Mode 中は EditModeController の内部 session、Object Mode や初期化中は scene 互換 field を返す
+function getRenderableEditMeshState() {
+  return editModeController?.getRenderableEditMeshState?.() ?? editor;
+}
+
+// mode の読み取り元を renderable edit state に集める
+function getRenderableEditorMode() {
+  return getRenderableEditMeshState().mode;
+}
+
+// tool の読み取り元を renderable edit state に集める
+function getRenderableEditorTool() {
+  return getRenderableEditMeshState().tool;
 }
 
 // 行列を丸めた文字列 key にして camera 変化検出へ使う
@@ -3234,37 +2611,28 @@ function makeUndirectedEdgeKey(a, b) {
 
 // edge overlay の line-list 頂点を geometry から再構築する
 function rebuildEdgeOverlayBuffer() {
-  if (!edgeOverlay) {
-    return;
-  }
-  edgeOverlay.clear();
-  const object = getActiveObject();
-  const vertexLookup = buildVertexLookup();
-  for (const edge of getUniqueOverlayEdges()) {
-    const va = vertexLookup.get(edge.a);
-    const vb = vertexLookup.get(edge.b);
-    if (!va || !vb) {
-      continue;
-    }
-    edgeOverlay.addLine(
-      localToWorldPosition(object, va.position),
-      localToWorldPosition(object, vb.position),
-      getOverlayEdgeColor(edge)
-    );
-  }
+  const editMesh = getRenderableEditMeshState();
+  modelerRenderer.rebuildEdgeOverlayBuffer({
+    edgeOverlay,
+    edges: getUniqueOverlayEdges(),
+    editMesh,
+    object: getActiveObject(),
+    buildVertexLookup,
+    localToWorldPosition,
+    getEdgeColor: getOverlayEdgeColor
+  });
   overlayEdgeUploadDirty = false;
 }
 
-// vertex marker overlay を現在 camera で再投影して buffer を作り直す
-function rebuildMarkerOverlayBuffer(viewProjection, canvas, markerRadiusX, markerRadiusY) {
-  if (!overlay2d) {
-    return;
-  }
-  overlay2d.clear();
+// marker overlay 再投影結果を renderer へ渡す描画 data にまとめる
+// active object や edit mesh は renderer へ渡さず、screen-space marker の配列に変換して境界を小さく保つ
+function makeMarkerOverlayRenderData(viewProjection, markerRadiusX, markerRadiusY) {
+  const markers = [];
   const highlightedVertexIds = getHighlightedVertexIds();
-  const xMirrorVertexIds = getXMirrorSelectedVertexIds();
+  const xMirrorVertexIds = editModeController.getXMirrorSelectedVertexIds();
   const object = getActiveObject();
-  for (const vertex of editor.vertices) {
+  const editMesh = getRenderableEditMeshState();
+  for (const vertex of editMesh.vertices) {
     const p = projectWorldToNdc(viewProjection, localToWorldPosition(object, vertex.position), getMarkerOverlayZBias());
     if (!p) {
       continue;
@@ -3274,104 +2642,132 @@ function rebuildMarkerOverlayBuffer(viewProjection, canvas, markerRadiusX, marke
       : xMirrorVertexIds.has(vertex.id)
         ? "mirror"
         : "default";
-    overlay2d.addMarker(
-      p[0],
-      p[1],
-      p[2],
-      markerRadiusX,
-      markerRadiusY,
-      // 選択状態に応じて marker overlay の色と alpha を決める
-      getOverlayMarkerColor(markerKind)
-    );
+    markers.push({
+      x: p[0],
+      y: p[1],
+      z: p[2],
+      radiusX: markerRadiusX,
+      radiusY: markerRadiusY,
+      color: getOverlayMarkerColor(markerKind)
+    });
   }
-  markerOverlayDirty = false;
+  return {
+    overlay2d,
+    markers
+  };
 }
 
 // Edit Mode の edge と marker overlay を scene 描画後に重ねる
 function drawEditOverlayPass() {
-  if (!overlay2d || !isEditMode() || !app?.eye || !app?.projectionMatrix) {
+  if (!overlay2d || !isEditMode()) {
     return;
   }
-  app.eye.setWorldMatrix();
-  const view = new Matrix();
-  view.makeView(app.eye.worldMatrix);
-  const viewProjection = app.projectionMatrix.clone();
-  viewProjection.mul_(view);
-  const canvas = app.screen.canvas;
+  const viewState = modelerRenderer.makeOverlayViewProjection();
+  if (!viewState?.canvas) {
+    return;
+  }
+  const canvas = viewState.canvas;
   const markerRadiusPx = 2.5;
   const markerRadiusX = markerRadiusPx * 2.0 / Math.max(1, canvas.width);
   const markerRadiusY = markerRadiusPx * 2.0 / Math.max(1, canvas.height);
-  const cameraKey = makeMarkerOverlayCameraKey(viewProjection, canvas);
+  const cameraKey = makeMarkerOverlayCameraKey(viewState.viewProjectionMatrix, canvas);
   const rebuildMarkers = markerOverlayDirty || markerOverlayCameraKey !== cameraKey;
 
-  if (edgeOverlay) {
-    edgeOverlay.zBias = getEdgeOverlayZBias();
-    edgeOverlay.setMatrices(app.projectionMatrix, view);
-    if (overlayEdgeUploadDirty) {
-      // edge overlay の line-list 頂点を geometry から再構築する
-      rebuildEdgeOverlayBuffer();
-    }
-    edgeOverlay.draw();
-  }
+  modelerRenderer.drawEdgeOverlayLines({
+    edgeOverlay,
+    viewState,
+    zBias: getEdgeOverlayZBias(),
+    rebuildBuffer: overlayEdgeUploadDirty,
+    rebuild: rebuildEdgeOverlayBuffer
+  });
 
+  modelerRenderer.drawMarkerOverlay({
+    overlay2d,
+    rebuildMarkers,
+    markerOverlayRenderData: rebuildMarkers
+      ? makeMarkerOverlayRenderData(viewState.viewProjectionMatrix, markerRadiusX, markerRadiusY)
+      : null
+  });
   if (rebuildMarkers) {
-    // vertex marker overlay を現在 camera で再投影して buffer を作り直す
-    rebuildMarkerOverlayBuffer(viewProjection, canvas, markerRadiusX, markerRadiusY);
     markerOverlayCameraKey = cameraKey;
+    markerOverlayDirty = false;
   }
-  overlay2d.draw();
+}
+
+// 床 grid とワールド軸、または編集 preview を line-list overlay として描く
+// preview は edit edge と同じ位置に重なることがあるため、描画順を分けて最後に重ねる
+function makeGuideOverlayLines({ includeBaseGuides = true, includeEditPreviews = true } = {}) {
+  const lines = [];
+  const half = 6;
+  const divisions = 12;
+  const y = -0.012;
+  if (includeBaseGuides) {
+    for (let z = 0; z <= divisions; z++) {
+      const p = -half + (z / divisions) * half * 2.0;
+      lines.push({ a: [-half, y, p], b: [half, y, p], color: [0.34, 0.42, 0.48, 0.34] });
+    }
+    for (let x = 0; x <= divisions; x++) {
+      const p = -half + (x / divisions) * half * 2.0;
+      lines.push({ a: [p, y, -half], b: [p, y, half], color: [0.34, 0.42, 0.48, 0.34] });
+    }
+    lines.push({ a: [-half, 0.0, 0.0], b: [half, 0.0, 0.0], color: [0.94, 0.12, 0.10, 0.95] });
+    lines.push({ a: [0.0, -half, 0.0], b: [0.0, half, 0.0], color: [0.12, 0.34, 1.0, 0.95] });
+    lines.push({ a: [0.0, 0.0, -half], b: [0.0, 0.0, half], color: [0.10, 0.78, 0.22, 0.95] });
+  }
+  if (!includeEditPreviews) {
+    return lines;
+  }
+  const loopCutGuideLine = editModeController.getLoopCutPreviewGuideLine();
+  const activeObject = getActiveObject();
+  if (loopCutGuideLine && activeObject) {
+    const pa = localToWorldPosition(activeObject, loopCutGuideLine.a);
+    const pb = localToWorldPosition(activeObject, loopCutGuideLine.b);
+    lines.push({ a: pa, b: pb, color: [0.10, 1.0, 0.24, 1.0] });
+  }
+  const chainSelectGuideLines = editModeController.getChainSelectPreviewGuideLines();
+  if (chainSelectGuideLines.length > 0 && activeObject) {
+    for (const guideLine of chainSelectGuideLines) {
+      const pa = localToWorldPosition(activeObject, guideLine.a);
+      const pb = localToWorldPosition(activeObject, guideLine.b);
+      lines.push({ a: pa, b: pb, color: [0.10, 1.0, 0.24, 1.0] });
+    }
+  }
+  return lines;
 }
 
 // 床 grid とワールド軸を line-list overlay として描く
 // X=赤、Y=青、Z=緑。補助線なので Shape の wireframe ではなく専用線描画を使う。
 function drawGuideOverlayPass() {
-  if (!guideOverlay || !app?.eye || !app?.projectionMatrix) {
-    return;
-  }
-  app.eye.setWorldMatrix();
-  const view = new Matrix();
-  view.makeView(app.eye.worldMatrix);
-  guideOverlay.zBias = projectionMode === PROJECTION_MODE_ORTHOGRAPHIC ? 0.0 : 0.00008;
-  guideOverlay.setMatrices(app.projectionMatrix, view);
-  guideOverlay.clear();
-  const half = 6;
-  const divisions = 12;
-  const y = -0.012;
-  for (let z = 0; z <= divisions; z++) {
-    const p = -half + (z / divisions) * half * 2.0;
-    guideOverlay.addLine([-half, y, p], [half, y, p], [0.34, 0.42, 0.48, 0.34]);
-  }
-  for (let x = 0; x <= divisions; x++) {
-    const p = -half + (x / divisions) * half * 2.0;
-    guideOverlay.addLine([p, y, -half], [p, y, half], [0.34, 0.42, 0.48, 0.34]);
-  }
-  guideOverlay.addLine([-half, 0.0, 0.0], [half, 0.0, 0.0], [0.94, 0.12, 0.10, 0.95]);
-  guideOverlay.addLine([0.0, -half, 0.0], [0.0, half, 0.0], [0.12, 0.34, 1.0, 0.95]);
-  guideOverlay.addLine([0.0, 0.0, -half], [0.0, 0.0, half], [0.10, 0.78, 0.22, 0.95]);
-  if (loopCutPreview.active) {
-    const face = getFaceById(loopCutPreview.faceId);
-    const object = getActiveObject();
-    if (face && face.indices.length === 4 && object) {
-      const edgeIndex = loopCutPreview.cutEdgeIndex;
-      const oppositeIndex = (edgeIndex + 2) % 4;
-      const a0 = getVertexById(face.indices[edgeIndex]);
-      const a1 = getVertexById(face.indices[(edgeIndex + 1) % 4]);
-      const b0 = getVertexById(face.indices[oppositeIndex]);
-      const b1 = getVertexById(face.indices[(oppositeIndex + 1) % 4]);
-      if (a0 && a1 && b0 && b1) {
-        const pa = localToWorldPosition(object, mul3(add3(a0.position, a1.position), 0.5));
-        const pb = localToWorldPosition(object, mul3(add3(b0.position, b1.position), 0.5));
-        guideOverlay.addLine(pa, pb, [1.0, 0.82, 0.16, 1.0]);
-      }
-    }
-  }
-  guideOverlay.draw();
+  const viewState = modelerRenderer.makeOverlayViewProjection();
+  modelerRenderer.drawGuideOverlayLines({
+    guideOverlay,
+    viewState,
+    zBias: getGuideOverlayZBias(),
+    lines: makeGuideOverlayLines({
+      includeBaseGuides: true,
+      includeEditPreviews: false
+    })
+  });
+}
+
+// loop cut / Chain Select などの編集 preview は edit edge overlay の後に描く
+// Chain Select は既存 edge と完全に重なるため、黒い edit edge に隠れない描画順にする
+function drawEditPreviewOverlayPass() {
+  const viewState = modelerRenderer.makeOverlayViewProjection();
+  modelerRenderer.drawGuideOverlayLines({
+    guideOverlay,
+    viewState,
+    zBias: getGuideOverlayZBias(),
+    lines: makeGuideOverlayLines({
+      includeBaseGuides: false,
+      includeEditPreviews: true
+    })
+  });
 }
 
 // 旧 grid shape が残っている場合だけ取り除く。現在の grid / axis は line-list overlay で描く。
 function buildGrid() {
-  removeNodeTree(gridRoot);
-  gridRoot = null;
+  modelerRenderer.clearGridRoot();
 }
 
 // vertex 群の bounding box と中心と代表 size を計算する
@@ -3408,20 +2804,20 @@ function computeBoundsForVertices(vertices) {
 
 // 全 object を含む editor 全体の bounds を取得する
 function getEditorBounds() {
-  // 現在の editor.vertices / faces を active object へ書き戻す
+  // bounds は object list を読むため、Edit Mode session があれば active object へ反映してから集計する
   commitActiveObject();
   const vertices = editor.objects.length > 0
     ? editor.objects.flatMap((object) => getObjectWorldVertices(object))
-    : editor.vertices;
+    : getRenderableEditMeshState().vertices;
   return computeBoundsForVertices(vertices);
 }
 
 // active object だけの bounds を取得する
 function getActiveObjectBounds() {
-  // 現在の editor.vertices / faces を active object へ書き戻す
+  // active object bounds は committed object data から計算する
   commitActiveObject();
   const object = getActiveObject();
-  return computeBoundsForVertices(object ? getObjectWorldVertices(object) : editor.vertices);
+  return computeBoundsForVertices(object ? getObjectWorldVertices(object) : getRenderableEditMeshState().vertices);
 }
 
 // active object と camera 距離から 3D marker 判定用半径を決める
@@ -3444,7 +2840,7 @@ function getOverlayMarkerColor(kind = "default") {
   if (kind === "mirror") {
     return [0.0, 0.85, 1.0, Math.max(overlayAlpha, 0.88)];
   }
-  if (objectWireframe) {
+  if (viewController.objectWireframe) {
     // Wireframe 編集時は mesh の線と重なっても未選択頂点を追いやすいよう明るく表示する
     return [
       WIREFRAME_OVERLAY_MARKER_COLOR[0],
@@ -3563,7 +2959,8 @@ function getUniqueOverlayEdges() {
     return overlayEdgeCache;
   }
   const edges = new Map();
-  for (const face of editor.faces) {
+  const editMesh = getRenderableEditMeshState();
+  for (const face of editMesh.faces) {
     for (let i = 0; i < face.indices.length; i++) {
       const a = face.indices[i];
       const b = face.indices[(i + 1) % face.indices.length];
@@ -3585,9 +2982,18 @@ function getUniqueOverlayEdges() {
 
 // 選択 face 境界かどうかで edge overlay の色を決める
 function getOverlayEdgeColor(edge) {
-  const selectedFace = Array.from(edge.faceIds).some((id) => editor.selectedFaces.has(id));
+  const editMesh = getRenderableEditMeshState();
+  if (editMesh.selectedVertices.has(edge.a) && editMesh.selectedVertices.has(edge.b)) {
+    return [
+      SELECTED_VERTEX_EDGE_COLOR[0],
+      SELECTED_VERTEX_EDGE_COLOR[1],
+      SELECTED_VERTEX_EDGE_COLOR[2],
+      Math.max(overlayAlpha, 0.92)
+    ];
+  }
+  const selectedFace = Array.from(edge.faceIds).some((id) => editMesh.selectedFaces.has(id));
   if (selectedFace) {
-    if (objectWireframe) {
+    if (viewController.objectWireframe) {
       // Wireframe 編集時は選択 face の境界を通常の黒線より明るくし、線の重なりから見失いにくくする
       return [
         WIREFRAME_OVERLAY_SELECTED_EDGE_COLOR[0],
@@ -3598,7 +3004,7 @@ function getOverlayEdgeColor(edge) {
     }
     return [0.0, 0.0, 0.0, Math.max(overlayAlpha, 0.92)];
   }
-  if (objectWireframe) {
+  if (viewController.objectWireframe) {
     // Wireframe 編集時は通常 edge も明るい色へ寄せ、裏側の線と頂点を確認しやすくする
     return [
       WIREFRAME_OVERLAY_EDGE_COLOR[0],
@@ -3613,7 +3019,7 @@ function getOverlayEdgeColor(edge) {
 // editor bounds に合わせて orbit camera の target と距離を調整する
 function fitCameraToEditor() {
   const bounds = getEditorBounds();
-  const distance = Math.max(4.0, bounds.size * 2.8);
+  const distance = Math.max(DEFAULT_CAMERA.distance, bounds.size * 2.8);
   orbit.setTarget(bounds.center[0], bounds.center[1], bounds.center[2]);
   orbit.orbit.minDistance = Math.max(MIN_CAMERA_DISTANCE, bounds.size * FIT_MIN_DISTANCE_RATIO);
   orbit.orbit.maxDistance = Math.max(32.0, bounds.size * 12.0);
@@ -3637,10 +3043,13 @@ function setOrbitViewPreset(key, reversed = false) {
     return true;
   }
   orbit.setAngles(preset.yaw, preset.pitch, 0.0);
+  // view dock の X/-X/Y/-Y/Z/-Z は標準方向へ戻す操作なので、
+  // 2 本指 view roll で傾けた eye 側の roll も同時にリセットする
+  orbit.setLookAngles(0.0, 0.0, 0.0);
   // box select などで orbit が一時停止していても、view preset は即座に camera node へ反映する
   orbit.apply?.(true);
   app.syncCameraFromEyeRig(orbit);
-  markerOverlayDirty = true;
+  markMarkerOverlayDirty();
   // 最後のユーザー向け message を保存し status を更新する
   setMessage(`view ${preset.label}`);
   return true;
@@ -3652,39 +3061,28 @@ function setOrbitViewPreset(key, reversed = false) {
 
 // activeObjectId に対応する object を取得する
 function getActiveObject() {
-  return editor.objects.find((object) => object.id === editor.activeObjectId) ?? null;
+  return editor.getActiveObject();
 }
 
-// 現在の editor.vertices / faces を active object へ書き戻す
+// Edit Mode session の mesh を active object へ反映する
+// session が無い起動初期や Object Mode では、ModelerScene の互換 edit buffer を commit する
 function commitActiveObject() {
-  const object = getActiveObject();
-  if (!object) {
+  if (editModeController) {
+    editModeController.commitEditMeshState();
     return;
   }
-  object.vertices = editor.vertices;
-  object.faces = editor.faces;
-  object.nextVertexId = editor.nextVertexId;
-  object.nextFaceId = editor.nextFaceId;
+  editor.commitActiveObject();
 }
 
 // 指定 object を active にし、編集配列をその object へ接続する
-function activateObject(id, { clearEditSelection = true } = {}) {
-  // 現在の editor.vertices / faces を active object へ書き戻す
-  commitActiveObject();
-  const object = editor.objects.find((entry) => entry.id === id) ?? null;
-  if (!object) {
-    return false;
-  }
-  editor.activeObjectId = object.id;
-  editor.vertices = object.vertices;
-  editor.faces = object.faces;
-  editor.nextVertexId = object.nextVertexId;
-  editor.nextFaceId = object.nextFaceId;
-  if (clearEditSelection) {
-    // edit selection の vertex / face を空にする
-    clearSelection();
-  }
-  return true;
+function activateObject(id, {
+  clearEditSelection = true,
+  commitCurrent = true
+} = {}) {
+  return editor.activateObject(id, {
+    clearEditSelection,
+    commitCurrent
+  });
 }
 
 // import などで object 一覧を丸ごと差し替えて active object を設定する
@@ -3695,7 +3093,7 @@ function replaceObjectsAndActivate(objects, activeObjectId, {
   // import / new scene のように editor.objects 全体を差し替える場面では、
   // 差し替え前の activeObjectId が新しい object id と偶然一致することがある
   // その状態で activateObject() を直接呼ぶと、activateObject() 冒頭の
-  // commitActiveObject() が古い editor.vertices / faces を新しい object へ
+  // commitActiveObject() が古い edit buffer を新しい object へ
   // 書き戻してしまうhand.glb を読み込んでも cube が残って見えた原因がこれである
   //
   // ここでは一度 activeObjectId を null にして、古い編集バッファを commit しない
@@ -3707,282 +3105,41 @@ function replaceObjectsAndActivate(objects, activeObjectId, {
   if (!active) {
     throw new Error(`replaceObjectsAndActivate missing active object ${activeObjectId}`);
   }
-  editor.objects = objects.map((object) => ({
+  const normalizedObjects = objects.map((object) => ({
     ...object,
-    origin: readVec3(object.origin ?? [0.0, 0.0, 0.0], `object ${object.id} origin`)
+    origin: readVec3(object.origin ?? [0.0, 0.0, 0.0], `object ${object.id} origin`),
+    rotation: getObjectRotation(object),
+    scale: getObjectScale(object)
   }));
-  editor.nextObjectId = Math.max(...objects.map((object) => object.id)) + 1;
-  editor.selectedObjectIds = new Set(selectedObjectIds);
-  editor.mode = mode;
-  editor.activeObjectId = null;
-  editor.vertices = [];
-  editor.faces = [];
-  editor.nextVertexId = 1;
-  editor.nextFaceId = 1;
-  // 指定 object を active にし、編集配列をその object へ接続する
-  activateObject(activeObjectId);
+  editModeController?.discardEditSession(mode);
+  editor.replaceObjectsAndActivate(normalizedObjects, activeObjectId, {
+    selectedObjectIds,
+    mode
+  });
 }
 
 // 現在 mode が Edit Mode か判定する
 function isEditMode() {
-  return editor.mode === EDITOR_MODE_EDIT;
+  return getRenderableEditorMode() === EDITOR_MODE_EDIT;
 }
 
 // 現在の編集配列から単一 object 状態を作り直す
 function resetObjectState(name = "Cube") {
-  const id = DEFAULT_OBJECT_ID;
-  editor.objects = [{
-    id,
-    name: String(name || "Object"),
-    origin: [0.0, 0.0, 0.0],
-    vertices: editor.vertices,
-    faces: editor.faces,
-    nextVertexId: editor.nextVertexId,
-    nextFaceId: editor.nextFaceId
-  }];
-  editor.nextObjectId = id + 1;
-  editor.activeObjectId = id;
-  editor.selectedObjectIds = new Set([id]);
+  editor.resetObjectState(name, DEFAULT_OBJECT_ID);
 }
 
-// primitive 追加で使う頂点配列と face 配列を作る
-// 既存 object を置き換えず、1 primitive を 1 object として scene へ足すための local geometry を返す
-function readMobilePrimitiveSegments() {
-  const segments = Number(mobileUiState.primitiveSegments);
-  if (![3, 4, 8, 12, 16, 24, 32].includes(segments)) {
-    throw new Error(`invalid mobile primitive segment count: ${segments}`);
-  }
-  return segments;
-}
-
-function makePrimitiveGeometry(kind) {
-  const normalized = String(kind ?? "").trim().toLowerCase();
-  const segments = readMobilePrimitiveSegments();
-  if (normalized === "cube") {
-    return {
-      name: "Cube",
-      vertices: [
-        [-1.0, 0.0, -1.0],
-        [1.0, 0.0, -1.0],
-        [1.0, 0.0, 1.0],
-        [-1.0, 0.0, 1.0],
-        [-1.0, 2.0, -1.0],
-        [1.0, 2.0, -1.0],
-        [1.0, 2.0, 1.0],
-        [-1.0, 2.0, 1.0]
-      ],
-      faces: [
-        [1, 2, 3, 4],
-        [5, 6, 7, 8],
-        [1, 2, 6, 5],
-        [2, 3, 7, 6],
-        [3, 4, 8, 7],
-        [4, 1, 5, 8]
-      ]
-    };
-  }
-  if (normalized === "plane") {
-    return {
-      name: "Plane",
-      vertices: [
-        [-1.0, 0.0, -1.0],
-        [1.0, 0.0, -1.0],
-        [1.0, 0.0, 1.0],
-        [-1.0, 0.0, 1.0]
-      ],
-      faces: [[1, 2, 3, 4]]
-    };
-  }
-  if (normalized === "sphere") {
-    const vertices = [[0.0, 2.0, 0.0]];
-    const faces = [];
-    const longitudeSegments = segments;
-    const latitudeSegments = Math.max(3, Math.floor(segments / 2));
-    const ringVertexId = (lat, lon) => 2 + (lat - 1) * longitudeSegments + (lon % longitudeSegments);
-    for (let lat = 1; lat < latitudeSegments; lat++) {
-      const theta = Math.PI * lat / latitudeSegments;
-      const y = 1.0 + Math.cos(theta);
-      const ringRadius = Math.sin(theta);
-      for (let lon = 0; lon < longitudeSegments; lon++) {
-        const phi = 2.0 * Math.PI * lon / longitudeSegments;
-        vertices.push([
-          Math.cos(phi) * ringRadius,
-          y,
-          Math.sin(phi) * ringRadius
-        ]);
-      }
-    }
-    const bottomId = vertices.length + 1;
-    vertices.push([0.0, 0.0, 0.0]);
-    for (let lon = 0; lon < longitudeSegments; lon++) {
-      const nextLon = (lon + 1) % longitudeSegments;
-      faces.push([1, ringVertexId(1, nextLon), ringVertexId(1, lon)]);
-    }
-    for (let lat = 1; lat < latitudeSegments - 1; lat++) {
-      for (let lon = 0; lon < longitudeSegments; lon++) {
-        const nextLon = (lon + 1) % longitudeSegments;
-        faces.push([
-          ringVertexId(lat, lon),
-          ringVertexId(lat, nextLon),
-          ringVertexId(lat + 1, nextLon),
-          ringVertexId(lat + 1, lon)
-        ]);
-      }
-    }
-    for (let lon = 0; lon < longitudeSegments; lon++) {
-      const nextLon = (lon + 1) % longitudeSegments;
-      faces.push([ringVertexId(latitudeSegments - 1, lon), ringVertexId(latitudeSegments - 1, nextLon), bottomId]);
-    }
-    return { name: "Sphere", vertices, faces };
-  }
-  if (normalized === "torus") {
-    const vertices = [];
-    const faces = [];
-    const ringSegments = segments;
-    const tubeSegments = Math.max(3, Math.floor(segments / 2));
-    const majorRadius = 0.78;
-    const tubeRadius = 0.28;
-    const vertexId = (ring, tube) => (ring % ringSegments) * tubeSegments + (tube % tubeSegments) + 1;
-    for (let ring = 0; ring < ringSegments; ring++) {
-      const ringAngle = 2.0 * Math.PI * ring / ringSegments;
-      for (let tube = 0; tube < tubeSegments; tube++) {
-        const tubeAngle = 2.0 * Math.PI * tube / tubeSegments;
-        const radius = majorRadius + Math.cos(tubeAngle) * tubeRadius;
-        vertices.push([
-          Math.cos(ringAngle) * radius,
-          1.0 + Math.sin(tubeAngle) * tubeRadius,
-          Math.sin(ringAngle) * radius
-        ]);
-      }
-    }
-    for (let ring = 0; ring < ringSegments; ring++) {
-      for (let tube = 0; tube < tubeSegments; tube++) {
-        faces.push([
-          vertexId(ring, tube),
-          vertexId(ring + 1, tube),
-          vertexId(ring + 1, tube + 1),
-          vertexId(ring, tube + 1)
-        ]);
-      }
-    }
-    return { name: "Torus", vertices, faces };
-  }
-  if (normalized === "cylinder" || normalized === "cone" || normalized === "double-cone") {
-    const vertices = [];
-    const faces = [];
-    const bottomCenterId = 1;
-    const topCenterId = 2;
-    vertices.push([0.0, 0.0, 0.0]);
-    vertices.push([0.0, 2.0, 0.0]);
-    for (let i = 0; i < segments; i++) {
-      const angle = 2.0 * Math.PI * i / segments;
-      vertices.push([Math.cos(angle), 0.0, Math.sin(angle)]);
-    }
-    if (normalized === "cylinder") {
-      for (let i = 0; i < segments; i++) {
-        const angle = 2.0 * Math.PI * i / segments;
-        vertices.push([Math.cos(angle), 2.0, Math.sin(angle)]);
-      }
-    } else if (normalized === "double-cone") {
-      vertices[0] = [0.0, 0.0, 0.0];
-      vertices[1] = [0.0, 2.0, 0.0];
-      for (let i = 0; i < segments; i++) {
-        const angle = 2.0 * Math.PI * i / segments;
-        vertices[i + 2] = [Math.cos(angle), 1.0, Math.sin(angle)];
-      }
-    }
-    for (let i = 0; i < segments; i++) {
-      const next = (i + 1) % segments;
-      const bottomA = 3 + i;
-      const bottomB = 3 + next;
-      if (normalized === "cone") {
-        faces.push([bottomCenterId, bottomB, bottomA]);
-        faces.push([bottomA, bottomB, topCenterId]);
-      } else if (normalized === "double-cone") {
-        faces.push([bottomCenterId, bottomB, bottomA]);
-        faces.push([bottomA, bottomB, topCenterId]);
-      } else {
-        const topA = 3 + segments + i;
-        const topB = 3 + segments + next;
-        faces.push([bottomCenterId, bottomB, bottomA]);
-        faces.push([bottomA, bottomB, topB, topA]);
-        faces.push([topCenterId, topA, topB]);
-      }
-    }
-    return {
-      name: normalized === "cone"
-        ? "Cone"
-        : normalized === "double-cone"
-          ? "DoubleCone"
-          : "Cylinder",
-      vertices,
-      faces
-    };
-  }
-  throw new Error(`unknown primitive kind: ${kind}`);
-}
-
-// primitive geometry を新しい object として scene に追加する
-// New Scene や import と違い、既存 object は残したまま active object だけ新規 primitive へ切り替える
-function addPrimitiveObject(kind) {
-  const geometry = makePrimitiveGeometry(kind);
-  // 現在状態を undo stack へ積み、redo stack を破棄する
-  pushUndo(`add ${geometry.name}`);
-  // 現在の editor.vertices / faces を active object へ書き戻す
-  commitActiveObject();
-  const objectId = editor.nextObjectId++;
-  const vertices = geometry.vertices.map((position, index) => ({
-    id: index + 1,
-    position: readVec3(position, `${geometry.name} vertex ${index + 1}`)
-  }));
-  const faces = geometry.faces.map((indices, index) => ({
-    id: index + 1,
-    indices: [...indices]
-  }));
-  const object = {
-    id: objectId,
-    name: geometry.name,
-    origin: [0.0, 0.0, 0.0],
-    vertices,
-    faces,
-    nextVertexId: vertices.length + 1,
-    nextFaceId: faces.length + 1
-  };
-  editor.objects.push(object);
-  editor.mode = EDITOR_MODE_OBJECT;
-  editor.selectedObjectIds = new Set([objectId]);
-  // 指定 object を active にし、編集配列をその object へ接続する
-  activateObject(objectId);
-  // 全 face の winding を connected component ごとにできるだけ一貫させる
-  orientAllFacesConsistently();
-  // 現在の editor.vertices / faces を active object へ書き戻す
-  commitActiveObject();
-  // mesh / selected face / marker の表示をまとめて再構築する
-  rebuildScene();
-  // 最後のユーザー向け message を保存し status を更新する
-  setMessage(`added ${geometry.name}`);
+function buildPrimitiveObject(kind, objectId) {
+  return buildModelerPrimitiveObject(kind, objectId, {
+    segments: mobileInput.primitiveSegments
+  });
 }
 
 // Object Mode の object 選択を追加または置換する
 function selectObject(id, additive = false) {
-  const object = editor.objects.find((entry) => entry.id === id);
-  if (!object) {
-    return false;
+  if (!objectModeController) {
+    throw new Error("ObjectModeController is not initialized");
   }
-  if (!additive) {
-    editor.selectedObjectIds.clear();
-  }
-  if (additive && editor.selectedObjectIds.has(id)) {
-    editor.selectedObjectIds.delete(id);
-    if (editor.activeObjectId === id) {
-      editor.activeObjectId = editor.selectedObjectIds.values().next().value ?? null;
-    }
-  } else {
-    editor.selectedObjectIds.add(id);
-    // 指定 object を active にし、編集配列をその object へ接続する
-    activateObject(id);
-  }
-  return true;
+  return objectModeController.selectObject(id, additive);
 }
 
 // 入力 mode 名を有効な editor mode へ正規化する
@@ -3997,28 +3154,39 @@ function normalizeEditorMode(mode) {
 // Object / Edit Mode を切り替えて表示と選択状態を更新する
 function setEditorMode(mode) {
   const normalized = normalizeEditorMode(mode);
-  if (editor.mode === normalized) {
+  if (getRenderableEditorMode() === normalized) {
     // editor / camera / diagnostics の現在状態を DOM status と HUD へ反映する
     updateStatus();
     return;
   }
+  if (editModeController?.getLoopCutPreview().active) {
+    setMessage("confirm or cancel loop cut before switching mode");
+    return;
+  }
+  if (editModeController?.getChainSelectPreview().active) {
+    setMessage("confirm or cancel Chain Select before switching mode");
+    return;
+  }
   // transformController の cancel を UI へ中継する
   cancelTransformMode();
-  editor.mode = normalized;
+  closeCoordinateOverlay();
   if (normalized === EDITOR_MODE_OBJECT) {
+    editModeController.exitEditMode();
     // edit selection の vertex / face を空にする
     clearSelection();
-    if (editor.activeObjectId !== null) {
-      editor.selectedObjectIds = new Set([editor.activeObjectId]);
-    }
+    editor.selectActiveObjectOnly();
   } else {
     // Edit Mode では vertex marker / edge overlay / selected face overlay が主役になる
     // Object Wireframe を残すと通常 mesh が line-list 化され、overlay の見え方と役割が混ざるため解除する
-    objectWireframe = false;
+    viewController.disableObjectWireframe();
     if (!getActiveObject() && editor.objects.length > 0) {
       // Object Mode の object 選択を追加または置換する
       selectObject(editor.objects[0].id, false);
     }
+    editModeController.enterEditMode({
+      object: getActiveObject(),
+      tool: TOOL_SELECT_FACE
+    });
   }
   // mesh / selected face / marker の表示をまとめて再構築する
   rebuildScene();
@@ -4040,65 +3208,26 @@ function normalizeToolName(tool) {
 
 // Edit Mode の選択 / 追加 tool を切り替える
 function setTool(tool) {
-  editor.tool = normalizeToolName(tool);
-  if (!isEditMode()) {
-    // Object / Edit Mode を切り替えて表示と選択状態を更新する
-    setEditorMode(EDITOR_MODE_EDIT);
-    return;
+  if (!editModeController) {
+    throw new Error("EditModeController is not initialized");
   }
-  // 最後のユーザー向け message を保存し status を更新する
-  setMessage(`tool ${editor.tool}`);
+  editModeController.setTool(tool);
 }
 
 // 編集データへ新しい vertex を追加して id を返す
 function addVertex(position) {
-  const id = editor.nextVertexId++;
-  editor.vertices.push({
-    id,
-    position: readVec3(position, `vertex ${id}`)
-  });
-  return id;
+  if (!editModeController) {
+    throw new Error("EditModeController is not initialized");
+  }
+  return editModeController.addVertex(position);
 }
 
 // 編集データへ新しい face を追加して id を返す
 function addFace(vertexIds) {
-  if (!Array.isArray(vertexIds) || (vertexIds.length !== 3 && vertexIds.length !== 4)) {
-    throw new Error("addFace requires 3 or 4 vertex ids");
+  if (!editModeController) {
+    throw new Error("EditModeController is not initialized");
   }
-  const unique = new Set(vertexIds);
-  if (unique.size !== vertexIds.length) {
-    throw new Error("face vertices must be unique");
-  }
-  for (const id of vertexIds) {
-    if (!getVertexById(id)) {
-      throw new Error(`face references missing vertex ${id}`);
-    }
-  }
-  const id = editor.nextFaceId++;
-  editor.faces.push({
-    id,
-    indices: [...vertexIds]
-  });
-  return id;
-}
-
-// 隣接面や原点基準で向きを安定させて face を追加する
-function addFaceWithStableOrientation(vertexIds) {
-  return addFace(orientLoopByAdjacentFaces(vertexIds));
-}
-
-// 指定方向に法線が向くよう頂点順を調整して face を追加する
-function addFaceOrientedToDirection(vertexIds, targetDirection) {
-  let orientedIds = [...vertexIds];
-  if (length3(targetDirection) > 1.0e-9) {
-    const normal = computeNormalForVertexIds(orientedIds);
-    if (dot3(normal, targetDirection) < 0.0) {
-      orientedIds = reverseVertexLoop(orientedIds);
-    }
-  } else {
-    orientedIds = orientLoopByAdjacentFaces(orientedIds);
-  }
-  return addFace(orientedIds);
+  return editModeController.addFace(vertexIds);
 }
 
 // 選択頂点から新しい face を作るときは、現在の視点から見た画面上の並びを使う
@@ -4143,16 +3272,9 @@ function orderVertexIdsForFaceFromView(vertexIds) {
 
 // 起動時の初期 cube object を作り scene と camera を初期化する
 function createInitialModel() {
-  editor.vertices = [];
-  editor.faces = [];
-  editor.selectedVertices = new Set();
-  editor.selectedFaces = new Set();
-  editor.lastSelectedVertexId = null;
-  explicitXMirrorVertexPairs.clear();
-  editor.nextVertexId = 1;
-  editor.nextFaceId = 1;
-  editor.undoStack = [];
-  editor.redoStack = [];
+  editModeController?.discardEditSession(EDITOR_MODE_OBJECT);
+  editor.clearEditableMesh();
+  editor.resetHistory();
   // 編集データへ新しい vertex を追加して id を返す
   addVertex([-1.0, 0.0, -1.0]);
   // 編集データへ新しい vertex を追加して id を返す
@@ -4172,22 +3294,19 @@ function createInitialModel() {
   // 編集データへ新しい face を追加して id を返す
   addFace([1, 2, 3, 4]);
   // 編集データへ新しい face を追加して id を返す
-  addFace([5, 6, 7, 8]);
+  addFace([5, 8, 7, 6]);
   // 編集データへ新しい face を追加して id を返す
-  addFace([1, 2, 6, 5]);
+  addFace([1, 5, 6, 2]);
   // 編集データへ新しい face を追加して id を返す
-  addFace([2, 3, 7, 6]);
+  addFace([2, 6, 7, 3]);
   // 編集データへ新しい face を追加して id を返す
-  addFace([3, 4, 8, 7]);
+  addFace([3, 7, 8, 4]);
   // 編集データへ新しい face を追加して id を返す
-  addFace([4, 1, 5, 8]);
-  // 全 face の winding を connected component ごとにできるだけ一貫させる
-  orientAllFacesConsistently();
+  addFace([4, 8, 5, 1]);
   // 現在の編集配列から単一 object 状態を作り直す
   resetObjectState("Cube");
-  editor.mode = EDITOR_MODE_OBJECT;
-  editor.dirty = false;
-  editor.lastMessage = "new model";
+  editor.markClean();
+  editor.setMessage("new model");
   // mesh / selected face / marker の表示をまとめて再構築する
   rebuildScene();
   // editor bounds に合わせて orbit camera の target と距離を調整する
@@ -4196,116 +3315,20 @@ function createInitialModel() {
 
 // edit selection の vertex / face を空にする
 function clearSelection() {
-  editor.selectedVertices.clear();
-  editor.selectedFaces.clear();
-  editor.lastSelectedVertexId = null;
-}
-
-// 選択 face の構成 vertex を selectedVertices へ同期する
-function syncSelectedVerticesFromSelectedFaces() {
-  editor.selectedVertices.clear();
-  for (const face of getSelectedFaceObjects()) {
-    for (const id of face.indices) {
-      editor.selectedVertices.add(id);
-    }
-  }
-  if (editor.lastSelectedVertexId !== null && !editor.selectedVertices.has(editor.lastSelectedVertexId)) {
-    editor.lastSelectedVertexId = null;
-  }
-}
-
-// 全頂点が選択された face を selectedFaces へ同期する
-function syncSelectedFacesFromSelectedVertices() {
-  editor.selectedFaces.clear();
-  if (editor.selectedVertices.size < 3) {
-    return;
-  }
-  for (const face of editor.faces) {
-    if (face.indices.every((id) => editor.selectedVertices.has(id))) {
-      editor.selectedFaces.add(face.id);
-    }
-  }
-}
-
-// selectedVertices の中で最後に並ぶ vertex id を取り直す
-// Array.prototype.findLast() に依存せず、mobile Safari の差異を避けるため後ろから明示的に走査する
-function getLastSelectedVertexIdFromGeometry() {
-  for (let i = editor.vertices.length - 1; i >= 0; i--) {
-    const id = editor.vertices[i].id;
-    if (editor.selectedVertices.has(id)) {
-      return id;
-    }
-  }
-  return null;
-}
-
-// vertex を選択または Shift 追加選択で切り替える
-function selectVertex(id, additive = false) {
-  if (!additive) {
-    // edit selection の vertex / face を空にする
-    clearSelection();
-  }
-  if (editor.selectedVertices.has(id) && additive) {
-    editor.selectedVertices.delete(id);
-    if (editor.lastSelectedVertexId === id) {
-      editor.lastSelectedVertexId = null;
-    }
-  } else {
-    editor.selectedVertices.add(id);
-    editor.lastSelectedVertexId = id;
-  }
-  // 全頂点が選択された face を selectedFaces へ同期する
-  syncSelectedFacesFromSelectedVertices();
-}
-
-// face を選択または Shift 追加選択で切り替え、構成 vertex も同期する
-function selectFace(id, additive = false) {
-  if (!additive) {
-    // edit selection の vertex / face を空にする
-    clearSelection();
-  }
-  const face = getFaceById(id);
-  if (!face) {
-    return;
-  }
-  if (editor.selectedFaces.has(id) && additive) {
-    editor.selectedFaces.delete(id);
-  } else {
-    editor.selectedFaces.add(id);
-  }
-  // 選択 face の構成 vertex を selectedVertices へ同期する
-  syncSelectedVerticesFromSelectedFaces();
+  editModeController.clearSelection();
 }
 
 // Object Mode / Edit Mode に応じた全選択を行う
 function selectAllForCurrentMode() {
   // transformController の cancel を UI へ中継する
   cancelTransformMode();
-  if (editor.mode === EDITOR_MODE_OBJECT) {
-    // 現在の editor.vertices / faces を active object へ書き戻す
-    commitActiveObject();
-    editor.selectedObjectIds = new Set(editor.objects.map((object) => object.id));
-    if (!getActiveObject() && editor.objects.length > 0) {
-      // 指定 object を active にし、編集配列をその object へ接続する
-      activateObject(editor.objects[0].id);
-    }
-    // mesh / selected face / marker の表示をまとめて再構築する
-    rebuildScene();
-    // 最後のユーザー向け message を保存し status を更新する
-    setMessage(`selected all objects (${editor.selectedObjectIds.size})`);
+  cancelLoopCutPreview();
+  cancelChainSelectPreview();
+  if (getRenderableEditorMode() === EDITOR_MODE_OBJECT) {
+    objectModeController.selectAllObjects();
     return;
   }
-
-  editor.selectedVertices = new Set(editor.vertices.map((vertex) => vertex.id));
-  editor.lastSelectedVertexId = editor.vertices.length > 0
-    ? editor.vertices[editor.vertices.length - 1].id
-    : null;
-  // 全頂点が選択された face を selectedFaces へ同期する
-  syncSelectedFacesFromSelectedVertices();
-  // mesh / selected face / marker の表示をまとめて再構築する
-  rebuildScene();
-  // 最後のユーザー向け message を保存し status を更新する
-  setMessage(`selected all vertices (${editor.selectedVertices.size})`);
+  editModeController.selectAll();
 }
 
 // 現在 mode / tool の単位で選択状態を反転する
@@ -4313,43 +3336,12 @@ function selectAllForCurrentMode() {
 function invertSelectionForCurrentMode() {
   cancelTransformMode();
   cancelLoopCutPreview();
-  if (editor.mode === EDITOR_MODE_OBJECT) {
-    commitActiveObject();
-    const next = new Set();
-    for (const object of editor.objects) {
-      if (!editor.selectedObjectIds.has(object.id)) {
-        next.add(object.id);
-      }
-    }
-    editor.selectedObjectIds = next;
-    rebuildScene();
-    setMessage(`inverted objects (${editor.selectedObjectIds.size})`);
+  cancelChainSelectPreview();
+  if (getRenderableEditorMode() === EDITOR_MODE_OBJECT) {
+    objectModeController.invertObjectSelection();
     return;
   }
-  if (editor.tool === TOOL_SELECT_FACE) {
-    const next = new Set();
-    for (const face of editor.faces) {
-      if (!editor.selectedFaces.has(face.id)) {
-        next.add(face.id);
-      }
-    }
-    editor.selectedFaces = next;
-    syncSelectedVerticesFromSelectedFaces();
-    rebuildScene();
-    setMessage(`inverted faces (${editor.selectedFaces.size})`);
-    return;
-  }
-  const next = new Set();
-  for (const vertex of editor.vertices) {
-    if (!editor.selectedVertices.has(vertex.id)) {
-      next.add(vertex.id);
-    }
-  }
-  editor.selectedVertices = next;
-  editor.lastSelectedVertexId = getLastSelectedVertexIdFromGeometry();
-  syncSelectedFacesFromSelectedVertices();
-  rebuildScene();
-  setMessage(`inverted vertices (${editor.selectedVertices.size})`);
+  editModeController.invertSelection();
 }
 
 // X<0 側の要素を現在 mode / tool に合わせて選択する
@@ -4357,104 +3349,26 @@ function invertSelectionForCurrentMode() {
 function selectXNegativeForCurrentMode() {
   cancelTransformMode();
   cancelLoopCutPreview();
-  if (editor.mode === EDITOR_MODE_OBJECT) {
-    commitActiveObject();
-    editor.selectedObjectIds = new Set(
-      editor.objects
-        .filter((object) => getObjectOrigin(object)[0] < 0.0)
-        .map((object) => object.id)
-    );
-    rebuildScene();
-    setMessage(`selected X<0 objects (${editor.selectedObjectIds.size})`);
+  cancelChainSelectPreview();
+  if (getRenderableEditorMode() === EDITOR_MODE_OBJECT) {
+    objectModeController.selectXNegativeObjects();
     return;
   }
-  if (editor.tool === TOOL_SELECT_FACE) {
-    editor.selectedFaces = new Set(
-      editor.faces
-        .filter((face) => (getFaceCenterFromVertices(face, editor.vertices)?.[0] ?? Infinity) < 0.0)
-        .map((face) => face.id)
-    );
-    syncSelectedVerticesFromSelectedFaces();
-    rebuildScene();
-    setMessage(`selected X<0 faces (${editor.selectedFaces.size})`);
-    return;
-  }
-  editor.selectedVertices = new Set(
-    editor.vertices
-      .filter((vertex) => vertex.position[0] < 0.0)
-      .map((vertex) => vertex.id)
-  );
-  editor.lastSelectedVertexId = getLastSelectedVertexIdFromGeometry();
-  syncSelectedFacesFromSelectedVertices();
-  rebuildScene();
-  setMessage(`selected X<0 vertices (${editor.selectedVertices.size})`);
+  editModeController.selectXNegative();
 }
 
-// editOperations の削除処理を UI から呼び出す薄い wrapper
+// Edit Mode の削除処理を controller から呼び出す薄い wrapper
 function deleteSelected() {
-  if (editor.mode === EDITOR_MODE_OBJECT) {
-    deleteSelectedObjects();
+  if (getRenderableEditorMode() === EDITOR_MODE_OBJECT) {
+    objectModeController.deleteSelectedObjects();
     return;
   }
-  editOperations.deleteSelected();
+  editModeController.deleteSelected();
 }
 
-// Object Mode で選択 object を削除する
-// active object の編集配列を object 一覧へ書き戻してから削除し、残った object を新しい active にする
-function deleteSelectedObjects() {
-  if (editor.mode !== EDITOR_MODE_OBJECT) {
-    setMessage("switch to object mode before deleting objects");
-    return;
-  }
-  if (editor.selectedObjectIds.size === 0) {
-    setMessage("select objects before deleting objects");
-    return;
-  }
-  pushUndo("delete objects");
-  commitActiveObject();
-  const removedIds = new Set(editor.selectedObjectIds);
-  editor.objects = editor.objects.filter((object) => !removedIds.has(object.id));
-  editor.selectedObjectIds.clear();
-  editor.activeObjectId = null;
-  editor.vertices = [];
-  editor.faces = [];
-  editor.nextVertexId = 1;
-  editor.nextFaceId = 1;
-  if (editor.objects.length > 0) {
-    const nextObject = editor.objects[0];
-    editor.selectedObjectIds = new Set([nextObject.id]);
-    // 指定 object を active にし、編集配列をその object へ接続する
-    activateObject(nextObject.id);
-  }
-  // edit selection の vertex / face を空にする
-  clearSelection();
-  // mesh / selected face / marker の表示をまとめて再構築する
-  rebuildScene();
-  // 最後のユーザー向け message を保存し status を更新する
-  setMessage(`deleted ${removedIds.size} object(s)`);
-}
-
-// Object Mode で選択中の複数 object を 1 object へ統合する
-// 各 object の local 頂点を world 座標へ変換してから、origin が world 原点の新しい object へ詰め直す
-function joinSelectedObjects() {
-  if (editor.mode !== EDITOR_MODE_OBJECT) {
-    setMessage("switch to object mode before joining objects");
-    return;
-  }
-  if (editor.selectedObjectIds.size < 2) {
-    setMessage("select at least 2 objects to join");
-    return;
-  }
-  const selectedIds = new Set(editor.selectedObjectIds);
-  const selectedObjects = editor.objects.filter((object) => selectedIds.has(object.id));
-  if (selectedObjects.length < 2) {
-    setMessage("select at least 2 objects to join");
-    return;
-  }
-  // 現在状態を undo stack へ積み、redo stack を破棄する
-  pushUndo("join objects");
-  // 現在の editor.vertices / faces を active object へ書き戻す
-  commitActiveObject();
+// 複数 object の geometry を world 原点 origin の単一 object へ詰め替える
+// ObjectModeController は操作手順を担当し、この helper は頂点 ID / face ID の再採番だけを担当する
+function buildJoinedObject(selectedObjects, joinedId) {
   const vertices = [];
   const faces = [];
   let nextVertexId = 1;
@@ -4483,80 +3397,29 @@ function joinSelectedObjects() {
       });
     }
   }
-  const joinedId = editor.nextObjectId++;
-  const joinedObject = {
+  return {
     id: joinedId,
     name: "Joined",
     origin: [0.0, 0.0, 0.0],
+    rotation: [0.0, 0.0, 0.0, 1.0],
+    scale: 1.0,
     vertices,
     faces,
     nextVertexId,
     nextFaceId
   };
-  editor.objects = [
-    ...editor.objects.filter((object) => !selectedIds.has(object.id)),
-    joinedObject
-  ];
-  editor.nextObjectId = Math.max(...editor.objects.map((object) => object.id)) + 1;
-  editor.selectedObjectIds = new Set([joinedId]);
-  editor.activeObjectId = null;
-  editor.vertices = [];
-  editor.faces = [];
-  editor.nextVertexId = 1;
-  editor.nextFaceId = 1;
-  // 指定 object を active にし、編集配列をその object へ接続する
-  activateObject(joinedId);
-  // mesh / selected face / marker の表示をまとめて再構築する
-  rebuildScene();
-  // 最後のユーザー向け message を保存し status を更新する
-  setMessage(`joined ${selectedObjects.length} objects`);
-}
-
-// 選択 object 群の local 原点をワールド原点へ移動する
-// 頂点は object local のまま保持し、object transform の origin だけを変更する
-function moveSelectedObjectsToWorldOrigin() {
-  commitActiveObject();
-  const selectedIds = editor.selectedObjectIds.size > 0
-    ? new Set(editor.selectedObjectIds)
-    : new Set(editor.activeObjectId !== null ? [editor.activeObjectId] : []);
-  const objects = editor.objects.filter((object) => selectedIds.has(object.id));
-  if (objects.length === 0) {
-    setMessage("select object before origin reset");
-    return;
-  }
-  if (objects.every((object) => length3(getObjectOrigin(object)) <= 1.0e-9)) {
-    setMessage("object origin already at world origin");
-    return;
-  }
-  pushUndo("move object to world origin");
-  for (const object of objects) {
-    object.origin = [0.0, 0.0, 0.0];
-  }
-  const active = getActiveObject();
-  if (active) {
-    editor.vertices = active.vertices;
-    editor.faces = active.faces;
-    editor.nextVertexId = active.nextVertexId;
-    editor.nextFaceId = active.nextFaceId;
-  }
-  rebuildScene();
-  setMessage(`moved ${objects.length} object(s) to world origin`);
 }
 
 // mesh 本体を Wireframe shader に切り替える
 // Edit Mode でも object 全体の面ループを Shape.setWireframe() で表示し、edge overlay や選択 marker と併用する
 function toggleObjectWireframe() {
-  objectWireframe = !objectWireframe;
-  // mesh / selected face / marker の表示をまとめて再構築する
-  rebuildScene();
-  // 最後のユーザー向け message を保存し status を更新する
-  setMessage(`wireframe ${objectWireframe ? "on" : "off"}`);
+  viewController.runToggleObjectWireframeCommand();
 }
 
 // viewport の clear color を暗色 / 明るいグレーで切り替える
 // app.clearColor と Screen 側の実際の clear color を同時に更新し、次 frame から背景へ反映する
 function applyBackgroundColor() {
-  const color = lightBackground ? BACKGROUND_LIGHT_COLOR : BACKGROUND_DARK_COLOR;
+  const color = viewController.lightBackground ? BACKGROUND_LIGHT_COLOR : BACKGROUND_DARK_COLOR;
   if (app) {
     app.clearColor = [...color];
     app.screen?.setClearColor?.(app.clearColor);
@@ -4564,94 +3427,47 @@ function applyBackgroundColor() {
 }
 
 function toggleLightBackground() {
-  lightBackground = !lightBackground;
-  applyBackgroundColor();
-  // 最後のユーザー向け message を保存し status を更新する
-  setMessage(`background ${lightBackground ? "light gray" : "dark"}`);
+  viewController.runToggleLightBackgroundCommand();
 }
 
 // Edit Mode のクリック / 矩形選択で、手前から見える要素だけを選ぶか切り替える
 function toggleVisiblePickOnly() {
-  visiblePickOnly = !visiblePickOnly;
-  // 最後のユーザー向け message を保存し status を更新する
-  setMessage(`visible pick ${visiblePickOnly ? "only" : "through"}`);
+  viewController.runToggleVisiblePickOnlyCommand();
 }
 
 // X=0 平面を境にした対称編集を切り替える
 // 既存の対称頂点へ位置を反映するだけで、新しい頂点や face は自動生成しない
-function toggleXMirrorEdit() {
-  xMirrorEdit = !xMirrorEdit;
-  markerOverlayDirty = true;
-  // 最後のユーザー向け message を保存し status を更新する
-  setMessage(`X mirror edit ${xMirrorEdit ? "on" : "off"}`);
-}
-
-// editOperations の face 作成処理を UI / keyboard から呼び出す薄い wrapper
-function makeFaceFromSelection(size = null) {
-  editOperations.makeFaceFromSelection(size);
-}
-
-// editOperations の extrusion 作成処理を transform から呼べるよう中継する
-function createExtrusion(distance) {
-  return editOperations.createExtrusion(distance);
-}
-
-// editOperations の即時 extrude 処理を呼び出す
-function extrudeSelectedFaces() {
-  editOperations.extrudeSelectedFaces();
-}
-
-// editOperations の face 反転処理を呼び出す
-function flipSelectedFaces() {
-  editOperations.flipSelectedFaces();
-}
-
 // loop cut の方向選択 preview を終了する
 // 確定時だけでなく、選択変更や Esc でも表示を消せるよう状態を 1 箇所で戻す
 function cancelLoopCutPreview(message = "") {
-  if (!loopCutPreview.active) {
+  const canceled = editModeController.cancelLoopCutPreview();
+  if (!canceled) {
     return false;
   }
-  loopCutPreview.active = false;
-  loopCutPreview.faceId = null;
-  loopCutPreview.cutEdgeIndex = 0;
   if (message) {
     setMessage(message);
   }
   return true;
 }
 
-// 単独 face の loop cut は、pointer に近い辺で方向が変わる preview 操作として扱う
-// 2 枚以上の face が選ばれている場合は共有辺から方向を推定できるため即実行する
-function loopCutSelectedFaces() {
-  const faces = getSelectedFaceObjects();
-  if (faces.length === 1 && faces[0].indices.length === 4) {
-    loopCutPreview.active = true;
-    loopCutPreview.faceId = faces[0].id;
-    setMessage("loop cut preview: move pointer near an edge, tap to confirm");
-    return;
-  }
-  cancelLoopCutPreview();
-  editOperations.loopCutSelectedFaces();
-}
-
 // preview 中の pointer 位置から、選択 face のどの辺が最も近いかを求める
 // 画面上の距離で選ぶことで、透視投影や正射影の違いを気にせず直感的に切り替えられる
 function updateLoopCutPreviewFromPointer(clientX, clientY) {
+  const loopCutPreview = editModeController.getLoopCutPreview();
   if (!loopCutPreview.active) {
     return false;
   }
-  const face = getFaceById(loopCutPreview.faceId);
+  const face = editModeController.getFaceById(loopCutPreview.faceId);
   const object = getActiveObject();
   const viewProjection = getCurrentViewProjectionMatrix();
   if (!face || face.indices.length !== 4 || !object || !viewProjection) {
     cancelLoopCutPreview("loop cut preview canceled");
     return false;
   }
-  let best = null;
+  const screenEdges = [];
   for (let i = 0; i < 4; i++) {
-    const a = getVertexById(face.indices[i]);
-    const b = getVertexById(face.indices[(i + 1) % 4]);
+    const a = editModeController.getVertexById(face.indices[i]);
+    const b = editModeController.getVertexById(face.indices[(i + 1) % 4]);
     if (!a || !b) {
       continue;
     }
@@ -4660,255 +3476,75 @@ function updateLoopCutPreviewFromPointer(clientX, clientY) {
     if (!pa || !pb) {
       continue;
     }
-    const dx = pb.x - pa.x;
-    const dy = pb.y - pa.y;
-    const denom = dx * dx + dy * dy;
-    const t = denom > 1.0e-9
-      ? Math.max(0.0, Math.min(1.0, ((clientX - pa.x) * dx + (clientY - pa.y) * dy) / denom))
-      : 0.0;
-    const cx = pa.x + dx * t;
-    const cy = pa.y + dy * t;
-    const dist2 = (clientX - cx) * (clientX - cx) + (clientY - cy) * (clientY - cy);
-    if (!best || dist2 < best.dist2) {
-      best = { edgeIndex: i, dist2 };
-    }
+    screenEdges.push({ edgeIndex: i, a: pa, b: pb });
   }
-  if (!best) {
-    return false;
-  }
-  loopCutPreview.cutEdgeIndex = best.edgeIndex;
-  loopCutPreview.lastClientX = clientX;
-  loopCutPreview.lastClientY = clientY;
-  return true;
+  return editModeController.updateLoopCutPreviewEdgeFromScreenEdges(clientX, clientY, screenEdges);
 }
 
 // preview で選ばれている辺を使って loop cut を確定する
 // 確定時は通常の edit operation と同じ undo / rebuild / message の流れへ渡す
 function confirmLoopCutPreview() {
-  if (!loopCutPreview.active) {
+  return editModeController.confirmLoopCutPreview();
+}
+
+// Chain Select preview を終了する
+// preview 中は通常の tap selection を行わないため、確定または cancel の入口を明示しておく
+function cancelChainSelectPreview(message = "") {
+  const canceled = editModeController.cancelChainSelectPreview();
+  if (!canceled) {
     return false;
   }
-  const cutEdgeIndex = loopCutPreview.cutEdgeIndex;
-  cancelLoopCutPreview();
-  editOperations.loopCutSelectedFaces({ cutEdgeIndex });
+  if (message) {
+    setMessage(message);
+  }
   return true;
+}
+
+// Chain Select の方向候補を screen 座標へ投影し、pointer に近い方向を preview として選ぶ
+// seed vertex は edit session 側の頂点を使い、active object 側の古い mesh を参照しない
+function updateChainSelectPreviewFromPointer(clientX, clientY) {
+  const preview = editModeController.getChainSelectPreview();
+  if (!preview.active) {
+    return false;
+  }
+  const seed = editModeController.getVertexById(preview.seedVertexId);
+  const object = getActiveObject();
+  const viewProjection = getCurrentViewProjectionMatrix();
+  if (!seed || !object || !viewProjection) {
+    cancelChainSelectPreview("Chain Select preview canceled");
+    return false;
+  }
+  const seedPoint = projectWorldToClient(viewProjection, localToWorldPosition(object, seed.position));
+  if (!seedPoint) {
+    return false;
+  }
+  const directions = [];
+  for (const neighborId of editModeController.buildNeighborIdsByVertexId().get(seed.id) ?? []) {
+    const neighbor = editModeController.getVertexById(neighborId);
+    if (!neighbor) {
+      continue;
+    }
+    const neighborPoint = projectWorldToClient(viewProjection, localToWorldPosition(object, neighbor.position));
+    if (!neighborPoint) {
+      continue;
+    }
+    directions.push({
+      neighborId,
+      seed: seedPoint,
+      neighbor: neighborPoint
+    });
+  }
+  return editModeController.updateChainSelectPreviewFromScreenDirections(clientX, clientY, directions);
+}
+
+// preview で選ばれている方向の vertex 列を選択として確定する
+function confirmChainSelectPreview() {
+  return editModeController.confirmChainSelectPreview();
 }
 
 // ------------------------------------------------------------
 // --- picking and rectangle selection
 // ------------------------------------------------------------
-
-// canvas 上の client 座標を NDC 座標へ変換する
-function cssToNdc(canvas, clientX, clientY) {
-  const rect = canvas.getBoundingClientRect();
-  const x = ((clientX - rect.left) / rect.width) * 2.0 - 1.0;
-  const y = 1.0 - ((clientY - rect.top) / rect.height) * 2.0;
-  return [x, y];
-}
-
-// mouse client 座標から world 空間の pick ray を作る
-function makeRayFromMouse(canvas, clientX, clientY) {
-  app.eye.setWorldMatrix();
-  const view = new Matrix();
-  view.makeView(app.eye.worldMatrix);
-  const [nx, ny] = cssToNdc(canvas, clientX, clientY);
-  const invVp = app.projectionMatrix.clone();
-  invVp.mul_(view);
-  invVp.inverse_strict();
-  const near = invVp.mulVector([nx, ny, -1.0]);
-  const far = invVp.mulVector([nx, ny, 1.0]);
-  if (projectionMode === PROJECTION_MODE_ORTHOGRAPHIC) {
-    return {
-      origin: near,
-      dir: sub3(far, near),
-      near,
-      far,
-      ndc: [nx, ny],
-      client: { x: clientX, y: clientY },
-      projectionMode
-    };
-  }
-  const eyePos = app.eye.getWorldPosition();
-  return {
-    origin: eyePos,
-    dir: sub3(far, eyePos),
-    near,
-    far,
-    ndc: [nx, ny],
-    client: { x: clientX, y: clientY },
-    projectionMode
-  };
-}
-
-// pick ray と plane の交点を求める
-function intersectRayPlane(ray, point, normal) {
-  const n = normalize3(normal, "plane normal");
-  const denom = dot3(ray.dir, n);
-  if (Math.abs(denom) < 1.0e-8) {
-    return null;
-  }
-  const t = dot3(sub3(point, ray.origin), n) / denom;
-  if (!Number.isFinite(t)) {
-    throw new Error(`ray-plane intersection produced invalid t: ${t}`);
-  }
-  return add3(ray.origin, mul3(ray.dir, t));
-}
-
-// Moller-Trumbore で ray と triangle の交差を調べる
-// face pick は編集データを直接見るため、Shape の AABB hit より正確な面選択になる
-function intersectRayTriangle(ray, p0, p1, p2) {
-  const eps = 1.0e-8;
-  const edge1 = sub3(p1, p0);
-  const edge2 = sub3(p2, p0);
-  const h = cross3(ray.dir, edge2);
-  const a = dot3(edge1, h);
-  if (Math.abs(a) < eps) {
-    return null;
-  }
-  const f = 1.0 / a;
-  const s = sub3(ray.origin, p0);
-  const u = f * dot3(s, h);
-  if (u < 0.0 || u > 1.0) {
-    return null;
-  }
-  const q = cross3(s, edge1);
-  const v = f * dot3(ray.dir, q);
-  if (v < 0.0 || u + v > 1.0) {
-    return null;
-  }
-  const t = f * dot3(edge2, q);
-  if (t <= eps) {
-    return null;
-  }
-  return {
-    t,
-    point: add3(ray.origin, mul3(ray.dir, t))
-  };
-}
-
-// 任意の vertex 配列から id 一致の vertex を探す
-function getVertexByIdFromList(vertices, id) {
-  return vertices.find((vertex) => vertex.id === id) ?? null;
-}
-
-// face の法線を任意の vertex 配列から計算する
-// active object 以外も object 選択で扱うため、editor.vertices 固定の computeFaceNormal() とは分ける
-function computeFaceNormalFromVertices(face, vertices) {
-  if (!face || face.indices.length < 3) {
-    return null;
-  }
-  const v0 = getVertexByIdFromList(vertices, face.indices[0]);
-  const v1 = getVertexByIdFromList(vertices, face.indices[1]);
-  const v2 = getVertexByIdFromList(vertices, face.indices[2]);
-  if (!v0 || !v1 || !v2) {
-    throw new Error(`face ${face?.id ?? "-"} contains missing vertex for normal`);
-  }
-  const normal = cross3(
-    sub3(v1.position, v0.position),
-    sub3(v2.position, v0.position)
-  );
-  const len = length3(normal);
-  if (!Number.isFinite(len) || len <= 1.0e-8) {
-    return null;
-  }
-  return [normal[0] / len, normal[1] / len, normal[2] / len];
-}
-
-// ray から見て face の表側がこちらを向いているか判定する
-// WebGPU の frontFace と同じく、編集データの頂点順から得た法線を表側として扱う
-function isFaceFrontFacingRay(face, vertices, ray) {
-  const normal = computeFaceNormalFromVertices(face, vertices);
-  if (!normal) {
-    return false;
-  }
-  return dot3(normal, ray.dir) < -1.0e-8;
-}
-
-// 指定 object 内で ray に最も近く当たる face を探す
-function pickFaceInObject(ray, object, options = {}) {
-  const localRay = makeObjectLocalRay(ray, object);
-  const visibleOnly = options.visibleOnly === true;
-  const ignoreFaceId = options.ignoreFaceId ?? null;
-  const ignoreVertexId = options.ignoreVertexId ?? null;
-  const faces = Array.isArray(options.faces) ? options.faces : object.faces;
-  let best = null;
-  for (const face of faces) {
-    if (face.id === ignoreFaceId || (ignoreVertexId !== null && face.indices.includes(ignoreVertexId))) {
-      continue;
-    }
-    if (visibleOnly && !isFaceFrontFacingRay(face, object.vertices, localRay)) {
-      continue;
-    }
-    const verts = face.indices.map((id) => getVertexByIdFromList(object.vertices, id));
-    if (verts.some((vertex) => vertex === null)) {
-      throw new Error(`object ${object.id} face ${face.id} contains missing vertex`);
-    }
-    const triangles = face.indices.length === 3
-      ? [[0, 1, 2]]
-      : [[0, 1, 2], [0, 2, 3]];
-    for (const tri of triangles) {
-      const hit = intersectRayTriangle(
-        localRay,
-        verts[tri[0]].position,
-        verts[tri[1]].position,
-        verts[tri[2]].position
-      );
-      if (hit && (!best || hit.t < best.t)) {
-        best = {
-          ...hit,
-          objectId: object.id,
-          faceId: face.id
-        };
-      }
-    }
-  }
-  return best;
-}
-
-// active object 内で ray に当たる face を探す
-function pickFace(ray, options = {}) {
-  const object = getActiveObject();
-  if (!object) {
-    return null;
-  }
-  return pickFaceInObject(ray, object, options);
-}
-
-// face tool のクリック選択で使う face hit を取得する
-// visible pick が有効なときはまず手前向きの候補を優先するが、
-// mobile / PC mouse の編集確認では face winding や視点条件の影響で
-// visible 判定だけに失敗すると操作そのものが詰まるため、
-// visible 候補が見つからない場合だけ同じ ray で通常 hit を確認する
-function pickSelectableFace(ray) {
-  const visibleHit = pickFace(ray, {
-    visibleOnly: visiblePickOnly
-  });
-  if (visibleHit || !visiblePickOnly) {
-    return visibleHit;
-  }
-  return pickFace(ray, {
-    visibleOnly: false
-  });
-}
-
-// 全 object から ray に最も近く当たる object face を探す
-function pickObjectFace(ray) {
-  let best = null;
-  for (const object of editor.objects) {
-    const hit = pickFaceInObject(ray, object);
-    if (hit && (!best || hit.t < best.t)) {
-      best = hit;
-    }
-  }
-  return best;
-}
-
-// 旧 marker Node pick の入口を残し、現在は null を返す
-function pickVertexMarker(ray) {
-  // vertex marker は 2D overlay pass で描くため、Space 上には marker Node を作らない
-  // 頂点選択は pickVertexByRayDistance() が主経路なので、旧 marker Node raycast は使わない
-  return null;
-}
 
 // camera の right / up / forward 方向を world 空間で取得する
 function getCameraScreenBasis() {
@@ -4921,277 +3557,9 @@ function getCameraScreenBasis() {
   };
 }
 
-// world point が ray 上でどの距離にあるかを求める
-// occlusion 判定では、手前の face hit と候補点の ray 方向距離を比較する
-function getPointRayDistance(ray, point) {
-  const denom = dot3(ray.dir, ray.dir);
-  if (!Number.isFinite(denom) || denom <= 0.0) {
-    throw new Error(`point visibility requires non-zero ray direction: ${denom}`);
-  }
-  const t = dot3(sub3(point, ray.origin), ray.dir) / denom;
-  if (!Number.isFinite(t)) {
-    throw new Error(`point visibility produced invalid ray distance: ${t}`);
-  }
-  return t;
-}
-
-// 候補点より手前に active object の面があるか調べる
-// ignoreFaceId / ignoreVertexId は、候補自身を構成する面で自己遮蔽しないための除外指定
-function isPointOccludedByActiveObject(point, ray, options = {}) {
-  const object = getActiveObject();
-  if (!object || object.faces.length === 0) {
-    return false;
-  }
-  const localRay = makeObjectLocalRay(ray, object);
-  const candidateFaces = Array.isArray(options.faces) ? options.faces : null;
-  if (candidateFaces && candidateFaces.length === 0) {
-    return false;
-  }
-  const hit = pickFaceInObject(ray, object, {
-    ignoreFaceId: options.ignoreFaceId ?? null,
-    ignoreVertexId: options.ignoreVertexId ?? null,
-    faces: candidateFaces
-  });
-  if (!hit) {
-    return false;
-  }
-  const pointT = getPointRayDistance(localRay, point);
-  const rayLength = length3(localRay.dir);
-  if (!Number.isFinite(rayLength) || rayLength <= 0.0) {
-    throw new Error(`point occlusion requires positive ray length: ${rayLength}`);
-  }
-  const tolerance = Math.max(getActiveObjectBounds().size * 1.0e-4, 1.0e-5) / rayLength;
-  return hit.t < pointT - tolerance;
-}
-
-// face の投影 bbox を grid 化し、候補点の近くにある face だけを遮蔽判定へ渡す
-// Visible Pick の矩形選択では候補頂点ごとに全 face を raycast すると重くなるため、screen-space で粗く絞る
-function makeVisibleOcclusionGrid(viewProjection) {
-  if (!viewProjection) {
-    return null;
-  }
-  const rect = app.screen.canvas.getBoundingClientRect();
-  const cols = VISIBLE_PICK_GRID_COLS;
-  const rows = VISIBLE_PICK_GRID_ROWS;
-  const cells = Array.from({ length: cols * rows }, () => []);
-  const pad = VISIBLE_PICK_GRID_PADDING_PX;
-  const object = getActiveObject();
-  let faceCount = 0;
-  const addFaceToCells = (face, bounds) => {
-    const left = Math.max(rect.left, bounds.left - pad);
-    const right = Math.min(rect.right, bounds.right + pad);
-    const top = Math.max(rect.top, bounds.top - pad);
-    const bottom = Math.min(rect.bottom, bounds.bottom + pad);
-    if (right < rect.left || left > rect.right || bottom < rect.top || top > rect.bottom) {
-      return;
-    }
-    const col0 = Math.max(0, Math.min(cols - 1, Math.floor(((left - rect.left) / rect.width) * cols)));
-    const col1 = Math.max(0, Math.min(cols - 1, Math.floor(((right - rect.left) / rect.width) * cols)));
-    const row0 = Math.max(0, Math.min(rows - 1, Math.floor(((top - rect.top) / rect.height) * rows)));
-    const row1 = Math.max(0, Math.min(rows - 1, Math.floor(((bottom - rect.top) / rect.height) * rows)));
-    for (let row = row0; row <= row1; row++) {
-      for (let col = col0; col <= col1; col++) {
-        cells[row * cols + col].push(face);
-      }
-    }
-  };
-  for (const face of editor.faces) {
-    faceCount += 1;
-    const projected = face.indices
-      .map((id) => getVertexById(id))
-      .filter((vertex) => vertex !== null)
-      .map((vertex) => projectWorldToClient(viewProjection, localToWorldPosition(object, vertex.position)))
-      .filter((point) => point !== null);
-    if (projected.length === 0) {
-      addFaceToCells(face, {
-        left: rect.left,
-        right: rect.right,
-        top: rect.top,
-        bottom: rect.bottom
-      });
-      continue;
-    }
-    if (projected.length !== face.indices.length) {
-      addFaceToCells(face, {
-        left: rect.left,
-        right: rect.right,
-        top: rect.top,
-        bottom: rect.bottom
-      });
-      continue;
-    }
-    const bounds = projected.reduce((acc, point) => ({
-      left: Math.min(acc.left, point.x),
-      right: Math.max(acc.right, point.x),
-      top: Math.min(acc.top, point.y),
-      bottom: Math.max(acc.bottom, point.y)
-    }), {
-      left: Infinity,
-      right: -Infinity,
-      top: Infinity,
-      bottom: -Infinity
-    });
-    addFaceToCells(face, bounds);
-  }
-  let filledCellCount = 0;
-  let totalCellFaces = 0;
-  let maxFacesPerCell = 0;
-  for (const cell of cells) {
-    if (cell.length === 0) {
-      continue;
-    }
-    filledCellCount += 1;
-    totalCellFaces += cell.length;
-    maxFacesPerCell = Math.max(maxFacesPerCell, cell.length);
-  }
-  return {
-    rect,
-    cols,
-    rows,
-    cells,
-    faceCount,
-    filledCellCount,
-    avgFacesPerFilledCell: filledCellCount > 0 ? totalCellFaces / filledCellCount : 0.0,
-    maxFacesPerCell
-  };
-}
-
-// 候補点の screen cell に入っている face だけを返す
-// grid がない場合は null を返し、従来どおり全 face 判定へ戻す
-function getVisibleOcclusionFaces(clientPoint, context = null) {
-  const grid = context?.occlusionGrid ?? null;
-  if (!grid || !clientPoint) {
-    return null;
-  }
-  const { rect, cols, rows, cells } = grid;
-  if (clientPoint.x < rect.left || clientPoint.x > rect.right || clientPoint.y < rect.top || clientPoint.y > rect.bottom) {
-    return [];
-  }
-  const col = Math.max(0, Math.min(cols - 1, Math.floor(((clientPoint.x - rect.left) / rect.width) * cols)));
-  const row = Math.max(0, Math.min(rows - 1, Math.floor(((clientPoint.y - rect.top) / rect.height) * rows)));
-  return cells[row * cols + col];
-}
-
-// 1 回の選択処理内で使い回す可視性判定用の情報を作る
-// vertex ごとに隣接 face を毎回全探索すると多頂点 model で重くなるため、先に表へまとめる
-function makeVisiblePickContext(viewProjection = null) {
-  const adjacentFacesByVertexId = new Map();
-  for (const face of editor.faces) {
-    for (const vertexId of face.indices) {
-      let faces = adjacentFacesByVertexId.get(vertexId);
-      if (!faces) {
-        faces = [];
-        adjacentFacesByVertexId.set(vertexId, faces);
-      }
-      faces.push(face);
-    }
-  }
-  return {
-    adjacentFacesByVertexId,
-    occlusionGrid: makeVisibleOcclusionGrid(viewProjection)
-  };
-}
-
-// vertex が現在視点から選択可能な表側に属しているか判定する
-// 孤立頂点は所属 face がないため、手前の面に隠れていなければ選択可能とする
-function isVertexFrontFacingRay(vertex, ray, context = null) {
-  const adjacentFaces = context?.adjacentFacesByVertexId?.get(vertex.id)
-    ?? editor.faces.filter((face) => face.indices.includes(vertex.id));
-  if (adjacentFaces.length === 0) {
-    return true;
-  }
-  return adjacentFaces.some((face) => isFaceFrontFacingRay(face, editor.vertices, ray));
-}
-
-// Visible Pick が有効なとき、裏側または面の奥に隠れた vertex を選択候補から外す
-function isVertexSelectableFromView(vertex, ray, context = null) {
-  if (!visiblePickOnly) {
-    return true;
-  }
-  if (objectWireframe) {
-    // Wireframe 表示では裏側の edge / vertex も編集対象として見えている
-    // 表向き face / occlusion の制限を残すと、見えている頂点を選べない状態になるため vertex pick は通す
-    return true;
-  }
-  const localRay = makeObjectLocalRay(ray, getActiveObject());
-  if (!isVertexFrontFacingRay(vertex, localRay, context)) {
-    return false;
-  }
-  const candidateFaces = getVisibleOcclusionFaces(ray.client, context);
-  return !isPointOccludedByActiveObject(vertex.position, ray, {
-    ignoreVertexId: vertex.id,
-    faces: candidateFaces
-  });
-}
-
-// Visible Pick が有効なとき、裏向きまたは手前の面に隠れた face center を選択候補から外す
-function isFaceSelectableFromView(face, ray, context = null) {
-  if (!visiblePickOnly) {
-    return true;
-  }
-  const localRay = makeObjectLocalRay(ray, getActiveObject());
-  if (!isFaceFrontFacingRay(face, editor.vertices, localRay)) {
-    return false;
-  }
-  const center = getFaceCenterFromVertices(face, editor.vertices);
-  if (!center) {
-    return false;
-  }
-  const candidateFaces = getVisibleOcclusionFaces(ray.client, context);
-  return !isPointOccludedByActiveObject(center, ray, {
-    ignoreFaceId: face.id,
-    faces: candidateFaces
-  });
-}
-
-// ray と vertex の最短距離からクリック対象 vertex を探す
-function pickVertexByRayDistance(ray) {
-  const object = getActiveObject();
-  const localRay = makeObjectLocalRay(ray, object);
-  const candidates = [];
-  const dir = normalize3(localRay.dir, "vertex pick ray");
-  const threshold = Math.max(getMarkerRadius() * 2.4, getActiveObjectBounds().size * 0.018);
-  for (const vertex of editor.vertices) {
-    const rel = sub3(vertex.position, localRay.origin);
-    const t = dot3(rel, dir);
-    if (t < 0.0) {
-      continue;
-    }
-    const closest = add3(localRay.origin, mul3(dir, t));
-    const distance = length3(sub3(vertex.position, closest));
-    if (distance > threshold) {
-      continue;
-    }
-    candidates.push({
-      vertex,
-      vertexId: vertex.id,
-      distance,
-      t
-    });
-  }
-  candidates.sort((a, b) => (a.distance - b.distance) || (a.t - b.t));
-  if (!visiblePickOnly) {
-    setVisiblePickSelectionStats("click-vertex", candidates.length, candidates.length > 0 ? 1 : 0);
-    return candidates[0] ?? null;
-  }
-  const context = makeVisiblePickContext(getCurrentViewProjectionMatrix());
-  for (const candidate of candidates) {
-    if (isVertexSelectableFromView(candidate.vertex, ray, context)) {
-      setVisiblePickSelectionStats("click-vertex", candidates.length, 1, context);
-      return {
-        vertexId: candidate.vertexId,
-        distance: candidate.distance,
-        t: candidate.t
-      };
-    }
-  }
-  setVisiblePickSelectionStats("click-vertex", candidates.length, 0, context);
-  return null;
-}
-
 // Shift が押されているかを見て追加選択か判定する
 function isAdditiveSelectionEvent(ev) {
-  return ev.shiftKey === true || app.input.has("shift");
+  return ev.shiftKey === true || app.input.has("shift") || mobileInput.selectionShiftActive;
 }
 
 // 左ドラッグ矩形選択は modifier なしの左ドラッグだけで開始する
@@ -5215,141 +3583,87 @@ function isPlainLeftDragSelectionEvent(ev) {
 
 // 左クリックを mode / tool に応じた選択または頂点追加として処理する
 function handleCanvasClick(ev) {
-  const ray = makeRayFromMouse(app.screen.canvas, ev.clientX, ev.clientY);
+  const mode = getRenderableEditorMode();
+  const tool = getRenderableEditorTool();
+  const pick = modelerPicking.pickAtClientPoint(ev.clientX, ev.clientY, {
+    includeObjectFace: mode === EDITOR_MODE_OBJECT,
+    includeActiveFace: mode !== EDITOR_MODE_OBJECT && tool === TOOL_ADD_VERTEX,
+    includeVertex: mode !== EDITOR_MODE_OBJECT && tool === TOOL_SELECT_VERTEX,
+    includeSelectableFace: mode !== EDITOR_MODE_OBJECT && tool === TOOL_SELECT_FACE
+  });
+  const ray = pick.ray;
 
-  if (editor.mode === EDITOR_MODE_OBJECT) {
-    const faceHit = pickObjectFace(ray);
-    if (faceHit && selectObject(faceHit.objectId, isAdditiveSelectionEvent(ev))) {
-      // mesh / selected face / marker の表示をまとめて再構築する
-      rebuildScene();
-      // 最後のユーザー向け message を保存し status を更新する
-      setMessage(`selected object ${getActiveObject()?.name ?? editor.activeObjectId}`);
+  if (mode === EDITOR_MODE_OBJECT) {
+    const faceHit = pick.objectFaceHit;
+    if (faceHit && objectModeController.selectObjectFromPick(faceHit.objectId, isAdditiveSelectionEvent(ev))) {
       return;
     }
     if (!isAdditiveSelectionEvent(ev)) {
-      editor.selectedObjectIds.clear();
-      // mesh / selected face / marker の表示をまとめて再構築する
-      rebuildScene();
-      // 最後のユーザー向け message を保存し status を更新する
-      setMessage("object selection cleared");
+      objectModeController.clearObjectSelectionFromPick();
     }
     return;
   }
 
-  if (editor.tool === TOOL_ADD_VERTEX) {
+  if (tool === TOOL_ADD_VERTEX) {
     const localRay = makeObjectLocalRay(ray, getActiveObject());
-    const faceHit = pickFace(ray);
+    const faceHit = pick.activeFaceHit;
     const planeHit = faceHit?.point
       ?? intersectRayPlane(localRay, [0.0, 0.0, 0.0], [0.0, 1.0, 0.0])
-      ?? intersectRayPlane(localRay, worldToLocalPosition(getActiveObject(), orbit.orbit.target), getCameraScreenBasis().forward);
+      ?? intersectRayPlane(
+        localRay,
+        worldToLocalPosition(getActiveObject(), orbit.orbit.target),
+        worldToLocalDirection(getActiveObject(), getCameraScreenBasis().forward)
+      );
     if (!planeHit) {
       // 最後のユーザー向け message を保存し status を更新する
       setMessage("could not place vertex from this view");
       ev.preventDefault();
       return;
     }
-    // 現在状態を undo stack へ積み、redo stack を破棄する
-    pushUndo("add vertex");
-    const id = addVertex(planeHit);
-    // vertex を選択または Shift 追加選択で切り替える
-    selectVertex(id, false);
-    // mesh / selected face / marker の表示をまとめて再構築する
-    rebuildScene();
-    // 最後のユーザー向け message を保存し status を更新する
-    setMessage(`added vertex ${id}`);
+    editModeController.addVertexFromPick(planeHit, isAdditiveSelectionEvent(ev));
     return;
   }
 
-  const marker = editor.tool === TOOL_SELECT_VERTEX
-    ? (pickVertexByRayDistance(ray) ?? pickVertexMarker(ray))
-    : null;
-  if (editor.tool === TOOL_SELECT_VERTEX && marker) {
-    // vertex を選択または Shift 追加選択で切り替える
-    selectVertex(marker.vertexId, isAdditiveSelectionEvent(ev));
-    // mesh / selected face / marker の表示をまとめて再構築する
-    rebuildScene();
-    // 最後のユーザー向け message を保存し status を更新する
-    setMessage(`selected vertex ${marker.vertexId}`);
+  const marker = tool === TOOL_SELECT_VERTEX ? pick.vertexHit : null;
+  if (tool === TOOL_SELECT_VERTEX && marker) {
+    editModeController.selectVertexFromPick(marker.vertexId, isAdditiveSelectionEvent(ev));
     return;
   }
 
-  if (editor.tool === TOOL_SELECT_FACE) {
-    const faceHit = pickSelectableFace(ray);
+  if (tool === TOOL_SELECT_FACE) {
+    const faceHit = pick.selectableFaceHit;
     if (faceHit) {
-      // face を選択または Shift 追加選択で切り替え、構成 vertex も同期する
-      selectFace(faceHit.faceId, isAdditiveSelectionEvent(ev));
-      // mesh / selected face / marker の表示をまとめて再構築する
-      rebuildScene();
-      // 最後のユーザー向け message を保存し status を更新する
-      setMessage(`selected face ${faceHit.faceId} with vertices`);
+      editModeController.selectFaceFromPick(faceHit.faceId, isAdditiveSelectionEvent(ev));
       return;
     }
   }
 
   if (!isAdditiveSelectionEvent(ev)) {
-    // edit selection の vertex / face を空にする
-    clearSelection();
-    // mesh / selected face / marker の表示をまとめて再構築する
-    rebuildScene();
-    // 最後のユーザー向け message を保存し status を更新する
-    setMessage("selection cleared");
+    editModeController.clearSelectionFromPick();
   }
 }
 
 // 左クリック / 矩形選択 tracking 状態を初期化する
-function resetCanvasClick() {
+// mobile の box select preview 待ちでは、pointercancel や tap confirm の微小 move で
+// 確認用の矩形が消えないよう、session が残っている間は preview 表示を保持する
+function resetCanvasClick({ forceHidePreview = false } = {}) {
   canvasClick.active = false;
   canvasClick.pointerId = null;
-  // 矩形選択表示を非表示にする
-  hideSelectionRect();
-}
-
-// 矩形選択表示用 DOM 要素を必要に応じて作成する
-function ensureSelectionRectElement() {
-  if (selectionRectEl?.isConnected) {
-    return selectionRectEl;
-  }
-  const canvas = app?.screen?.canvas ?? null;
-  const parent = canvas?.parentElement ?? null;
-  if (!canvas || !parent) {
-    return null;
-  }
-  selectionRectEl = document.createElement("div");
-  selectionRectEl.className = "selection-rect";
-  parent.appendChild(selectionRectEl);
-  return selectionRectEl;
-}
-
-// 矩形選択表示を非表示にする
-function hideSelectionRect() {
-  if (selectionRectEl) {
-    selectionRectEl.style.display = "none";
+  if (forceHidePreview || !boxSelectSession?.isAwaitingConfirm) {
+    // 矩形選択表示を非表示にする
+    boxSelectSession?.hideRect();
   }
 }
 
 // ドラッグ開始点と現在点から矩形選択 DOM の位置と大きさを更新する
 function updateSelectionRectElement() {
-  const el = ensureSelectionRectElement();
-  const canvas = app?.screen?.canvas ?? null;
-  if (!el || !canvas) {
-    return;
-  }
-  const canvasRect = canvas.getBoundingClientRect();
   const dragRect = makeClientRect(
     canvasClick.startX,
     canvasClick.startY,
     canvasClick.lastX,
     canvasClick.lastY
   );
-  const left = Math.max(canvasRect.left, dragRect.left) - canvasRect.left;
-  const top = Math.max(canvasRect.top, dragRect.top) - canvasRect.top;
-  const right = Math.min(canvasRect.right, dragRect.right) - canvasRect.left;
-  const bottom = Math.min(canvasRect.bottom, dragRect.bottom) - canvasRect.top;
-  el.style.display = "block";
-  el.style.left = `${Math.max(0, left)}px`;
-  el.style.top = `${Math.max(0, top)}px`;
-  el.style.width = `${Math.max(0, right - left)}px`;
-  el.style.height = `${Math.max(0, bottom - top)}px`;
+  boxSelectSession?.showRect(dragRect);
 }
 
 // 現在の左ドラッグが矩形選択表示を出す距離に達したか判定する
@@ -5360,151 +3674,42 @@ function shouldShowSelectionRect() {
   if (!canvasClick.allowRectangle) {
     return false;
   }
-  if (editor.mode === EDITOR_MODE_EDIT && editor.tool === TOOL_ADD_VERTEX) {
+  if (getRenderableEditorMode() === EDITOR_MODE_EDIT && getRenderableEditorTool() === TOOL_ADD_VERTEX) {
     return false;
   }
   const distance = Math.hypot(canvasClick.lastX - canvasClick.startX, canvasClick.lastY - canvasClick.startY);
   return distance > 4.0;
 }
 
-// face を構成する vertex の平均位置を face center として求める
-function getFaceCenterFromVertices(face, vertices) {
-  const points = face.indices
-    .map((id) => getVertexByIdFromList(vertices, id))
-    .filter((vertex) => vertex !== null)
-    .map((vertex) => vertex.position);
-  if (points.length === 0) {
-    return null;
-  }
-  const sum = points.reduce((acc, point) => add3(acc, point), [0.0, 0.0, 0.0]);
-  return mul3(sum, 1.0 / points.length);
-}
-
-// object の vertex または face center が矩形内に入るか判定する
-function objectIntersectsClientRect(object, viewProjection, rect) {
-  for (const vertex of object.vertices) {
-    if (clientPointInRect(projectWorldToClient(viewProjection, localToWorldPosition(object, vertex.position)), rect)) {
-      return true;
-    }
-  }
-  for (const face of object.faces) {
-    const center = getFaceCenterFromVertices(face, object.vertices);
-    if (center && clientPointInRect(projectWorldToClient(viewProjection, localToWorldPosition(object, center)), rect)) {
-      return true;
-    }
-  }
-  return false;
+// mobile の矩形選択 preview を tap で確定する
+// 確定できた場合は mobile の armed 状態も解除し、通常 camera 操作へ戻す
+function confirmBoxSelectPreview() {
+  return mobileInput.confirmBoxSelectPreview({ resetCanvasClick });
 }
 
 // 現在 mode / tool に応じて client 矩形内の object / vertex / face を選択する
 function selectByClientRect(rect, additive = false) {
   const viewProjection = getCurrentViewProjectionMatrix();
   resetVisiblePickStats("box");
-  if (editor.mode === EDITOR_MODE_OBJECT) {
-    // 現在の editor.vertices / faces を active object へ書き戻す
+  const mode = getRenderableEditorMode();
+  const tool = getRenderableEditorTool();
+  if (mode === EDITOR_MODE_OBJECT) {
+    // Object Mode selection は object list を読むため、先に Edit Mode session を active object へ反映する
     commitActiveObject();
-    const selectedIds = editor.objects
-      .filter((object) => objectIntersectsClientRect(object, viewProjection, rect))
-      .map((object) => object.id);
-    if (!additive) {
-      editor.selectedObjectIds.clear();
-    }
-    for (const id of selectedIds) {
-      editor.selectedObjectIds.add(id);
-    }
-    if (selectedIds.length > 0) {
-      // 指定 object を active にし、編集配列をその object へ接続する
-      activateObject(selectedIds[0], { clearEditSelection: true });
-      for (const id of selectedIds) {
-        editor.selectedObjectIds.add(id);
-      }
-    }
-    // mesh / selected face / marker の表示をまとめて再構築する
-    rebuildScene();
-    // 最後のユーザー向け message を保存し status を更新する
-    setMessage(`box selected objects ${selectedIds.length}`);
-    return selectedIds.length;
+    const { selectedIds } = modelerPicking.collectObjectRectCandidates(rect, viewProjection);
+    return objectModeController.selectObjectsByIdsFromBox(selectedIds, additive);
   }
 
-  if (editor.tool === TOOL_SELECT_VERTEX) {
-    const object = getActiveObject();
-    const selectedVertexEntries = editor.vertices
-      .map((vertex) => {
-        const projected = projectWorldToClient(viewProjection, localToWorldPosition(object, vertex.position));
-        return {
-          vertex,
-          projected
-        };
-      })
-      .filter((entry) => clientPointInRect(entry.projected, rect));
-    const context = visiblePickOnly ? makeVisiblePickContext(viewProjection) : null;
-    const selectedIds = selectedVertexEntries
-      .filter((entry) => {
-        if (!visiblePickOnly) {
-          return true;
-        }
-        const ray = makeRayFromMouse(app.screen.canvas, entry.projected.x, entry.projected.y);
-        return isVertexSelectableFromView(entry.vertex, ray, context);
-      })
-      .map((entry) => entry.vertex.id);
-    setVisiblePickSelectionStats("box-vertex", selectedVertexEntries.length, selectedIds.length, context);
-    if (!additive) {
-      // edit selection の vertex / face を空にする
-      clearSelection();
-    }
-    for (const id of selectedIds) {
-      editor.selectedVertices.add(id);
-    }
-    if (selectedIds.length > 0) {
-      editor.lastSelectedVertexId = selectedIds[selectedIds.length - 1];
-    }
-    // 全頂点が選択された face を selectedFaces へ同期する
-    syncSelectedFacesFromSelectedVertices();
-    // mesh / selected face / marker の表示をまとめて再構築する
-    rebuildScene();
-    // 最後のユーザー向け message を保存し status を更新する
-    setMessage(`box selected vertices ${selectedIds.length}`);
-    return selectedIds.length;
+  if (tool === TOOL_SELECT_VERTEX) {
+    const { candidateCount, selectedIds, context } = modelerPicking.collectVertexRectCandidates(rect, viewProjection);
+    setVisiblePickSelectionStats("box-vertex", candidateCount, selectedIds.length, context);
+    return editModeController.selectVerticesByIdsFromBox(selectedIds, additive);
   }
 
-  if (editor.tool === TOOL_SELECT_FACE) {
-    const object = getActiveObject();
-    const selectedFaces = editor.faces
-      .map((face) => {
-        const center = getFaceCenterFromVertices(face, editor.vertices);
-        const projected = center ? projectWorldToClient(viewProjection, localToWorldPosition(object, center)) : null;
-        return {
-          face,
-          center,
-          projected
-        };
-      })
-      .filter((entry) => entry.center && clientPointInRect(entry.projected, rect));
-    const context = visiblePickOnly ? makeVisiblePickContext(viewProjection) : null;
-    const selectedIds = selectedFaces
-      .filter((entry) => {
-        if (!visiblePickOnly) {
-          return true;
-        }
-        const ray = makeRayFromMouse(app.screen.canvas, entry.projected.x, entry.projected.y);
-        return isFaceSelectableFromView(entry.face, ray, context);
-      })
-      .map((entry) => entry.face.id);
-    setVisiblePickSelectionStats("box-face", selectedFaces.length, selectedIds.length, context);
-    if (!additive) {
-      // edit selection の vertex / face を空にする
-      clearSelection();
-    }
-    for (const id of selectedIds) {
-      editor.selectedFaces.add(id);
-    }
-    // 選択 face の構成 vertex を selectedVertices へ同期する
-    syncSelectedVerticesFromSelectedFaces();
-    // mesh / selected face / marker の表示をまとめて再構築する
-    rebuildScene();
-    // 最後のユーザー向け message を保存し status を更新する
-    setMessage(`box selected faces ${selectedIds.length}`);
-    return selectedIds.length;
+  if (tool === TOOL_SELECT_FACE) {
+    const { candidateCount, selectedIds, context } = modelerPicking.collectFaceRectCandidates(rect, viewProjection);
+    setVisiblePickSelectionStats("box-face", candidateCount, selectedIds.length, context);
+    return editModeController.selectFacesByIdsFromBox(selectedIds, additive);
   }
   return 0;
 }
@@ -5624,7 +3829,7 @@ function handleCanvasPointerDown(ev) {
   }
   // DOM UI から操作後も keyboard / pointer 入力が canvas へ戻るよう focus を整える
   focusModelerCanvas();
-  if (mobileUiState.paletteOpen) {
+  if (commandPalette?.isOpen) {
     closeMobilePalette();
   }
   if (ev.button !== 0) {
@@ -5632,29 +3837,12 @@ function handleCanvasPointerDown(ev) {
     resetCanvasClick();
     return;
   }
-  if (shouldStartMobileBoxSelectFromDoubleTapDown(ev)) {
+  if (isMobileCanvasDoubleTapCandidate(ev)) {
+    // empty/object の判定が重い場合でも、1 回目 tap の選択 timer が先に走らないよう先に破棄する
     cancelPendingMobileCanvasTap();
-    armMobileBoxSelect();
-    canvasClick.active = true;
-    canvasClick.pointerId = ev.pointerId;
-    canvasClick.startX = ev.clientX;
-    canvasClick.startY = ev.clientY;
-    canvasClick.lastX = ev.clientX;
-    canvasClick.lastY = ev.clientY;
-    canvasClick.additive = true;
-    canvasClick.allowRectangle = true;
-    ev.preventDefault();
-    return;
-  }
-  if (shouldSuppressMobileClickForDoubleTapDown(ev)) {
-    cancelPendingMobileCanvasTap();
-    // ここで canvasClick を開始しないことで、double tap の 2 回目が
-    // 通常クリック選択として selection / active object を変えてしまうことを防ぐ
-    resetCanvasClick();
-    ev.preventDefault();
-    return;
   }
   updateLoopCutPreviewFromPointer(ev.clientX, ev.clientY);
+  updateChainSelectPreviewFromPointer(ev.clientX, ev.clientY);
   // 編集用の pick は pointerdown では実行しない
   // pointerdown の時点で scene を再生成すると、短いクリックと選択後の drag 操作を区別しにくい
   // 編集操作は左クリックの pointerup で確定し、中ボタン camera 操作とは入力ボタンで分ける
@@ -5664,10 +3852,10 @@ function handleCanvasPointerDown(ev) {
   canvasClick.startY = ev.clientY;
   canvasClick.lastX = ev.clientX;
   canvasClick.lastY = ev.clientY;
-  canvasClick.additive = mobileUiState.boxSelectArmed ? true : isAdditiveSelectionEvent(ev);
+  canvasClick.additive = mobileInput.boxSelectArmed ? true : isAdditiveSelectionEvent(ev);
   // mobile profile では通常時の左ドラッグを orbit camera に使うため、
   // 矩形選択は empty double tap で boxSelectArmed になった後だけ許可する
-  canvasClick.allowRectangle = mobileUiState.boxSelectArmed ? true : (!IS_MOBILE_PROFILE && isPlainLeftDragSelectionEvent(ev));
+  canvasClick.allowRectangle = mobileInput.boxSelectArmed ? true : (!IS_MOBILE_PROFILE && isPlainLeftDragSelectionEvent(ev));
 }
 
 // 左ドラッグ中の位置更新と矩形表示更新を行う
@@ -5675,6 +3863,7 @@ function handleCanvasPointerMove(ev) {
   // DebugDock 用に直近の raw pointer / mouse event 情報を記録する
   updateRawInputDebug("canvas", ev);
   updateLoopCutPreviewFromPointer(ev.clientX, ev.clientY);
+  updateChainSelectPreviewFromPointer(ev.clientX, ev.clientY);
   if (!canvasClick.active) {
     return;
   }
@@ -5686,9 +3875,9 @@ function handleCanvasPointerMove(ev) {
   if (shouldShowSelectionRect()) {
     // ドラッグ開始点と現在点から矩形選択 DOM の位置と大きさを更新する
     updateSelectionRectElement();
-  } else {
+  } else if (!boxSelectSession?.isAwaitingConfirm) {
     // 矩形選択表示を非表示にする
-    hideSelectionRect();
+    boxSelectSession?.hideRect();
   }
 }
 
@@ -5699,8 +3888,7 @@ function handleCanvasPointerUp(ev) {
   if (shouldSuppressCanvasPointer(ev)) {
     ev.preventDefault();
     resetCanvasClick();
-    mobileUiState.suppressCanvasPointerId = null;
-    mobileUiState.suppressCanvasPointerUntil = 0;
+    mobileInput.clearCanvasSuppression();
     return;
   }
   if (!canvasClick.active) {
@@ -5715,35 +3903,54 @@ function handleCanvasPointerUp(ev) {
   const allowRectangle = canvasClick.allowRectangle;
   // 左クリック / 矩形選択 tracking 状態を初期化する
   resetCanvasClick();
-  updateLoopCutPreviewFromPointer(ev.clientX, ev.clientY);
+  const loopCutPreviewActive = editModeController.getLoopCutPreview().active;
+  const chainSelectPreviewActive = editModeController.getChainSelectPreview().active;
+  if (!loopCutPreviewActive || moveDistance > 4.0) {
+    updateLoopCutPreviewFromPointer(ev.clientX, ev.clientY);
+  }
+  if (!chainSelectPreviewActive || moveDistance > 4.0) {
+    updateChainSelectPreviewFromPointer(ev.clientX, ev.clientY);
+  }
   if (moveDistance > 4.0) {
-    if (allowRectangle && !(editor.mode === EDITOR_MODE_EDIT && editor.tool === TOOL_ADD_VERTEX)) {
-      // 現在 mode / tool に応じて client 矩形内の object / vertex / face を選択する
-      selectByClientRect(dragRect, additive);
-      if (mobileUiState.boxSelectArmed) {
-        disarmMobileBoxSelect();
+    if (allowRectangle && !(getRenderableEditorMode() === EDITOR_MODE_EDIT && getRenderableEditorTool() === TOOL_ADD_VERTEX)) {
+      if (IS_MOBILE_PROFILE && mobileInput.boxSelectArmed) {
+        // mobile では pointerup を確定にせず、指で隠れていた終点を確認できる preview として保持する
+        boxSelectSession?.holdPreview(dragRect, additive);
+      } else {
+        // desktop では従来通り drag 終了時点で矩形内の object / vertex / face を選択する
+        selectByClientRect(dragRect, additive);
       }
       ev.preventDefault();
     }
+    return;
+  }
+  if (IS_MOBILE_PROFILE && isMobileCanvasDoubleTapCandidate(ev)) {
+    handleMobileCanvasDoubleTap(ev);
+    ev.preventDefault();
     return;
   }
   if (confirmLoopCutPreview()) {
     ev.preventDefault();
     return;
   }
-  if (mobileUiState.boxSelectArmed) {
+  if (confirmChainSelectPreview()) {
+    ev.preventDefault();
+    return;
+  }
+  if (confirmBoxSelectPreview()) {
+    ev.preventDefault();
+    return;
+  }
+  if (mobileInput.boxSelectArmed) {
     // empty double tap 直後に pointer を離しただけなら、box select 準備を維持する
-    // これにより、「double tap で準備し、次の drag で矩形選択」できる
+    // preview 作成後の短い tap は confirmBoxSelectPreview() で確定済みなので、
+    // ここではまだ矩形が存在しない準備状態だけを維持する
     setMessage("box select armed: drag to add selection");
     ev.preventDefault();
     return;
   }
   if (IS_MOBILE_PROFILE && moveDistance <= 4.0) {
-    const hit = inspectGestureTarget(ev.clientX, ev.clientY);
     rememberMobileCanvasTap(ev);
-    if (hit.kind === "empty") {
-      rememberMobileEmptyTap(ev);
-    }
   }
   // mobile では single tap か double tap かを判定する短い猶予を置いてから選択を確定する
   // desktop profile は従来通り即時に click selection を実行する
@@ -5792,31 +3999,25 @@ function getTransformModeLabel(mode) {
 function setTransformMode(mode) {
   const started = transformController.setTransformMode(mode);
   if (started) {
+    applyPaletteTransformAxisConstraint();
     closeMobilePalette();
-    renderMobileAxisChooser();
   }
   return started;
 }
 
 // transformController の軸制限を UI へ中継する
 function setTransformAxis(axis) {
-  const changed = transformController.setTransformAxis(axis);
-  renderMobileAxisChooser();
-  return changed;
+  return transformController.setTransformAxis(axis);
 }
 
 // transformController の cancel を UI へ中継する
 function cancelTransformMode() {
-  const cancelled = transformController.cancelTransformMode();
-  closeMobileAxisChooser();
-  return cancelled;
+  return transformController.cancelTransformMode();
 }
 
 // transformController の confirm を UI へ中継する
 function confirmTransformMode() {
-  const confirmed = transformController.confirmTransformMode();
-  closeMobileAxisChooser();
-  return confirmed;
+  return transformController.confirmTransformMode();
 }
 
 // transformController の preview 更新を UI へ中継する
@@ -5829,24 +4030,24 @@ function installTransformPointerBridge(canvas) {
   return transformController.installTransformPointerBridge(canvas);
 }
 
-// keyboard 補助移動を editOperations へ中継する
+// keyboard 補助移動を EditModeController へ中継する
 function moveActiveVerticesBy(delta, label) {
-  return editOperations.moveActiveVerticesBy(delta, label);
+  return editModeController.moveActiveVerticesBy(delta, label);
 }
 
-// screen 平面 keyboard 移動を editOperations へ中継する
+// screen 平面 keyboard 移動を EditModeController へ中継する
 function moveSelectionByScreenKeys(stepX, stepY) {
-  return editOperations.moveSelectionByScreenKeys(stepX, stepY);
+  return editModeController.moveSelectionByScreenKeys(stepX, stepY);
 }
 
-// 法線方向 keyboard 移動を editOperations へ中継する
+// 法線方向 keyboard 移動を EditModeController へ中継する
 function moveSelectionByNormalKey(direction) {
-  return editOperations.moveSelectionByNormalKey(direction);
+  return editModeController.moveSelectionByNormalKey(direction);
 }
 
-// keyboard scale を editOperations へ中継する
+// keyboard scale を EditModeController へ中継する
 function scaleSelectionByKeyboard(factor) {
-  return editOperations.scaleSelectionByKeyboard(factor);
+  return editModeController.scaleSelectionByKeyboard(factor);
 }
 
 // mode / tool / transform / camera / edit 操作用 keyboard handler を登録する
@@ -5874,7 +4075,7 @@ function installKeyboardHandlers() {
     else if (plainKey && key === "s") setTransformMode("scale");
     else if (plainKey && key === "e") setTransformMode("extrude");
     else if (plainKey && transformController?.state?.active && (key === "x" || key === "y" || key === "z")) setTransformAxis(key);
-    else if (plainKey && key === "c") loopCutSelectedFaces();
+    else if (plainKey && key === "c") editModeController.runLoopCutCommand();
     else if (plainKey && key === "j") moveSelectionByScreenKeys(-1.0, 0.0);
     else if (plainKey && key === "l") moveSelectionByScreenKeys(1.0, 0.0);
     else if (plainKey && key === "i") moveSelectionByScreenKeys(0.0, 1.0);
@@ -5883,7 +4084,7 @@ function installKeyboardHandlers() {
     else if (plainKey && key === "o") moveSelectionByNormalKey(1.0);
     else if (plainKey && key === "n") scaleSelectionByKeyboard(0.92);
     else if (plainKey && key === "m") scaleSelectionByKeyboard(1.08);
-    else if (plainKey && key === "f") makeFaceFromSelection();
+    else if (plainKey && key === "f") editModeController.makeFaceFromSelection();
     else if (plainKey && key === "p") toggleProjectionMode();
     else if (plainKey && key === "v") cycleViewAnglePreset(ev.shiftKey ? -1 : 1);
     else if (plainKey && key === "w") toggleObjectWireframe();
@@ -5897,11 +4098,14 @@ function installKeyboardHandlers() {
     else if (key === "escape" && cancelLoopCutPreview("loop cut preview canceled")) {
       // loop cut preview cancel handled above
     }
+    else if (key === "escape" && cancelChainSelectPreview("Chain Select preview canceled")) {
+      // Chain Select preview cancel handled above
+    }
     else if (key === "escape") {
       // edit selection の vertex / face を空にする
       clearSelection();
-      // mesh / selected face / marker の表示をまとめて再構築する
-      rebuildScene();
+      // 選択だけの変更なので mesh 本体は再生成せず overlay だけ更新する
+      refreshSelectionVisuals();
       // 最後のユーザー向け message を保存し status を更新する
       setMessage("selection cleared");
     } else {
@@ -5915,115 +4119,9 @@ function installKeyboardHandlers() {
 // --- import and export
 // ------------------------------------------------------------
 
-// 読み込み file 名から json / gltf / dae などの形式を判定する
-function detectFileFormat(file) {
-  const name = String(file?.name ?? "").toLowerCase();
-  if (name.endsWith(".json") || name.endsWith(".json.gz")) return "json";
-  if (name.endsWith(".gltf") || name.endsWith(".glb")) return "gltf";
-  if (name.endsWith(".dae")) return "collada";
-  throw new Error(`unsupported file extension: ${file?.name ?? "(unknown)"}`);
-}
-
-// ModelAsset node 定義から transform matrix を作る
-function matrixFromNodeDef(node) {
-  const matrix = new Matrix();
-  if (Array.isArray(node?.matrix) && node.matrix.length >= 16) {
-    matrix.setBulk(node.matrix);
-    return matrix;
-  }
-  const transform = node?.transform ?? {};
-  const t = Array.isArray(transform.translation) ? transform.translation : [0, 0, 0];
-  const r = Array.isArray(transform.rotation) ? transform.rotation : [0, 0, 0, 1];
-  const s = Array.isArray(transform.scale) ? transform.scale : [1, 1, 1];
-  const x = Number(r[0] ?? 0);
-  const y = Number(r[1] ?? 0);
-  const z = Number(r[2] ?? 0);
-  const w = Number(r[3] ?? 1);
-  const sx = Number(s[0] ?? 1);
-  const sy = Number(s[1] ?? 1);
-  const sz = Number(s[2] ?? 1);
-  matrix.setBulk([
-    (1 - 2 * y * y - 2 * z * z) * sx,
-    (2 * x * y + 2 * w * z) * sx,
-    (2 * x * z - 2 * w * y) * sx,
-    0,
-    (2 * x * y - 2 * w * z) * sy,
-    (1 - 2 * x * x - 2 * z * z) * sy,
-    (2 * y * z + 2 * w * x) * sy,
-    0,
-    (2 * x * z + 2 * w * y) * sz,
-    (2 * y * z - 2 * w * x) * sz,
-    (1 - 2 * x * x - 2 * y * y) * sz,
-    0,
-    Number(t[0] ?? 0),
-    Number(t[1] ?? 0),
-    Number(t[2] ?? 0),
-    1
-  ]);
-  return matrix;
-}
-
-// node 親子関係をたどって world matrix を cache 付きで解決する関数を作る
-function buildWorldMatrixResolver(nodes) {
-  const nodeById = new Map(nodes.map((node) => [node.id, node]));
-  const cache = new Map();
-  // node index から親 chain を含む world matrix を再帰的に解決する
-  const resolve = (node) => {
-    if (!node) {
-      return new Matrix();
-    }
-    if (cache.has(node.id)) {
-      return cache.get(node.id).clone();
-    }
-    const local = matrixFromNodeDef(node);
-    const parent = node.parent ? nodeById.get(node.parent) : null;
-    const world = parent ? resolve(parent) : new Matrix();
-    world.mul_(local);
-    cache.set(node.id, world.clone());
-    return world;
-  };
-  return resolve;
-}
-
-// ModelAsset の mesh node から import 候補 entry を作る
-function makeImportEntries(asset) {
-  const data = asset.getData();
-  const meshes = Array.isArray(data?.meshes) ? data.meshes : [];
-  const nodes = Array.isArray(data?.nodes) ? data.nodes : [];
-  const meshById = new Map(meshes.map((mesh, index) => [mesh.id, { mesh, index }]));
-  const resolveWorldMatrix = buildWorldMatrixResolver(nodes);
-  const entries = [];
-  for (let i = 0; i < nodes.length; i++) {
-    const node = nodes[i];
-    if (!node?.mesh || !meshById.has(node.mesh)) {
-      continue;
-    }
-    const meshEntry = meshById.get(node.mesh);
-    entries.push({
-      index: entries.length,
-      meshIndex: meshEntry.index,
-      mesh: meshEntry.mesh,
-      node,
-      worldMatrix: resolveWorldMatrix(node),
-      label: `${entries.length}: ${node.name ?? node.id ?? "node"} / ${meshEntry.mesh.name ?? meshEntry.mesh.id ?? "mesh"} v=${meshEntry.mesh.geometry?.vertexCount ?? Math.floor((meshEntry.mesh.geometry?.positions?.length ?? 0) / 3)}`
-    });
-  }
-  if (entries.length > 0) {
-    return entries;
-  }
-  return meshes.map((mesh, index) => ({
-    index,
-    meshIndex: index,
-    mesh,
-    node: null,
-    worldMatrix: new Matrix(),
-    label: `${index}: ${mesh.name ?? mesh.id ?? "mesh"} v=${mesh.geometry?.vertexCount ?? Math.floor((mesh.geometry?.positions?.length ?? 0) / 3)}`
-  }));
-}
-
 // import 候補 entry を mesh select UI へ反映する
 function populateMeshSelect(asset) {
-  importedMeshes = makeImportEntries(asset);
+  importedMeshes = modelerImportExport.makeImportEntries(asset);
   ui.meshSelect.innerHTML = "";
   if (importedMeshes.length > 1) {
     const allOption = document.createElement("option");
@@ -6052,50 +4150,19 @@ async function loadModelFile(file) {
   if (!file) {
     return;
   }
-  const format = detectFileFormat(file);
   const fileLabel = String(file.name ?? "(unknown)");
   // 最後のユーザー向け message を保存し status を更新する
   setMessage(`loading ${fileLabel}`);
   await waitForStatusPaint();
-  let asset = null;
-  if (format === "json") {
-    if (ModelAsset.isGzipSource(file.name)) {
-      // iPhone Safari で .json.gz 読み込みが固まる場合に備え、gzip 展開と JSON parse のどちらで止まるか見えるよう段階表示する
-      setMessage(`loading ${fileLabel}: decompressing`);
+  const loaded = await modelerImportExport.loadModelAssetFile(file, {
+    loadModel: (url, options) => app.loadModel(url, options),
+    onStage: async (stage, context) => {
+      // iPhone Safari で .json.gz 読み込みが固まる場合に備え、どの段階で止まるか見えるよう段階表示する
+      setMessage(`loading ${context.fileLabel}: ${stage}`);
       await waitForStatusPaint();
-      const text = await ModelAsset.decompressGzipBlobToText(file);
-      setMessage(`loading ${fileLabel}: parsing`);
-      await waitForStatusPaint();
-      asset = ModelAsset.fromJSON(text);
-    } else {
-      setMessage(`loading ${fileLabel}: parsing`);
-      await waitForStatusPaint();
-      const text = await file.text();
-      asset = ModelAsset.fromJSON(text);
     }
-  } else {
-    const url = URL.createObjectURL(file);
-    try {
-      // GLB / glTF / Collada は embedded_glb_viewer と同じ WebgApp.loadModel()
-      // 経路でいったん ModelAsset へ正規化する特に GLB は skinned mesh や
-      // static transform の bake を loader 側へ任せる必要があるため、
-      // webgmodeler 側で skin 解析を無効化しない編集データへ変換する時点で
-      // skin / animation は使わないが、positions は viewer と同じ正規化済み mesh を読む
-      const loaded = await app.loadModel(url, {
-        format,
-        instantiate: false,
-        validate: true,
-        startAnimations: false,
-        onStage: (stage) => {
-          // 最後のユーザー向け message を保存し status を更新する
-          setMessage(`loading ${fileLabel}: ${stage}`);
-        }
-      });
-      asset = loaded.asset;
-    } finally {
-      URL.revokeObjectURL(url);
-    }
-  }
+  });
+  const asset = loaded.asset;
   setMessage(`loading ${fileLabel}: importing`);
   await waitForStatusPaint();
   asset.assertValid();
@@ -6130,99 +4197,22 @@ function importSelectedMesh() {
     setMessage("selected mesh is not available");
     return;
   }
-  const object = buildEditorObjectFromImportEntry(entry, DEFAULT_OBJECT_ID);
+  const object = modelerImportExport.buildEditorObjectFromImportEntry(entry, DEFAULT_OBJECT_ID);
   // 現在状態を undo stack へ積み、redo stack を破棄する
   pushUndo("import mesh");
   // import などで object 一覧を丸ごと差し替えて active object を設定する
   replaceObjectsAndActivate([object], object.id);
-  // 全 face の winding を connected component ごとにできるだけ一貫させる
-  orientAllFacesConsistently();
-  // 現在の editor.vertices / faces を active object へ書き戻す
+  // 外部 asset の polygonLoops / indices は exporter が決めた面順を正として扱う
+  // 原点基準の自動補正を import 直後に掛けると、複数 object や原点外の部品で正しい winding を反転し得る
   commitActiveObject();
-  editor.undoStack = [];
-  editor.redoStack = [];
-  editor.dirty = false;
+  editor.resetHistory();
+  editor.markClean();
   // mesh / selected face / marker の表示をまとめて再構築する
   rebuildScene();
   // editor bounds に合わせて orbit camera の target と距離を調整する
   fitCameraToEditor();
   // 最後のユーザー向け message を保存し status を更新する
   setMessage(`imported ${entry.label}`);
-}
-
-// import entry の geometry を editor object 形式へ変換する
-function buildEditorObjectFromImportEntry(entry, objectId) {
-  const geometry = entry.mesh.geometry;
-  if (!geometry || !Array.isArray(geometry.positions) || !Array.isArray(geometry.indices)) {
-    throw new Error(`mesh ${entry.label} does not contain editable positions and indices`);
-  }
-  const vertices = [];
-  const faces = [];
-  let nextVertexId = 1;
-  let nextFaceId = 1;
-  const worldMatrix = entry.worldMatrix ?? new Matrix();
-  for (let i = 0; i + 2 < geometry.positions.length; i += 3) {
-    const position = worldMatrix.mulVector([
-      // 入力値を有限数として読み取り、不正値なら分かりやすい error にする
-      readFiniteNumber(geometry.positions[i], `positions[${i}]`),
-      // 入力値を有限数として読み取り、不正値なら分かりやすい error にする
-      readFiniteNumber(geometry.positions[i + 1], `positions[${i + 1}]`),
-      // 入力値を有限数として読み取り、不正値なら分かりやすい error にする
-      readFiniteNumber(geometry.positions[i + 2], `positions[${i + 2}]`)
-    ]);
-    vertices.push({
-      id: nextVertexId++,
-      position: readVec3(position, `object ${objectId} vertex ${nextVertexId - 1}`)
-    });
-  }
-  const loops = Array.isArray(geometry.polygonLoops) && geometry.polygonLoops.length > 0
-    ? geometry.polygonLoops
-    : [];
-  if (loops.length > 0) {
-    for (let i = 0; i < loops.length; i++) {
-      const loop = loops[i];
-      if (!Array.isArray(loop) || (loop.length !== 3 && loop.length !== 4)) {
-        throw new Error(`polygonLoops[${i}] must be a triangle or quad for this initial modeler`);
-      }
-      const indices = loop.map((vertexIndex) => {
-        const id = Number(vertexIndex) + 1;
-        if (!vertices.some((vertex) => vertex.id === id)) {
-          throw new Error(`polygonLoops[${i}] references missing vertex index ${vertexIndex}`);
-        }
-        return id;
-      });
-      faces.push({
-        id: nextFaceId++,
-        indices
-      });
-    }
-  } else {
-    for (let i = 0; i + 2 < geometry.indices.length; i += 3) {
-      faces.push({
-        id: nextFaceId++,
-        indices: [
-          Number(geometry.indices[i]) + 1,
-          Number(geometry.indices[i + 1]) + 1,
-          Number(geometry.indices[i + 2]) + 1
-        ]
-      });
-    }
-  }
-  const origin = typeof worldMatrix.getPosition === "function"
-    ? readVec3(worldMatrix.getPosition(), `object ${objectId} origin`)
-    : [0.0, 0.0, 0.0];
-  for (const vertex of vertices) {
-    vertex.position = sub3(vertex.position, origin);
-  }
-  return {
-    id: objectId,
-    name: entry.node?.name ?? entry.mesh.name ?? entry.mesh.id ?? `Object ${objectId}`,
-    origin,
-    vertices,
-    faces,
-    nextVertexId,
-    nextFaceId
-  };
 }
 
 // 読み込み済み asset の全 mesh entry を複数 object として取り込む
@@ -6234,22 +4224,20 @@ function importAllMeshes() {
   }
   // 現在状態を undo stack へ積み、redo stack を破棄する
   pushUndo("import all meshes");
-  const objects = importedMeshes.map((entry, index) => buildEditorObjectFromImportEntry(entry, DEFAULT_OBJECT_ID + index));
+  const objects = importedMeshes.map((entry, index) => modelerImportExport.buildEditorObjectFromImportEntry(entry, DEFAULT_OBJECT_ID + index));
   // import などで object 一覧を丸ごと差し替えて active object を設定する
   replaceObjectsAndActivate(objects, objects[0].id);
   for (const object of objects) {
     // 指定 object を active にし、編集配列をその object へ接続する
     activateObject(object.id);
-    // 全 face の winding を connected component ごとにできるだけ一貫させる
-    orientAllFacesConsistently();
-    // 現在の editor.vertices / faces を active object へ書き戻す
+    // 外部 asset の面順は object ごとに保存対象へそのまま反映する
+    // 編集中に新規 face を作る場合の orientation 補助とは分けて考える
     commitActiveObject();
   }
   // 指定 object を active にし、編集配列をその object へ接続する
   activateObject(objects[0].id);
-  editor.undoStack = [];
-  editor.redoStack = [];
-  editor.dirty = false;
+  editor.resetHistory();
+  editor.markClean();
   // mesh / selected face / marker の表示をまとめて再構築する
   rebuildScene();
   // editor bounds に合わせて orbit camera の target と距離を調整する
@@ -6261,11 +4249,9 @@ function importAllMeshes() {
 // active object を ModelAsset JSON として保存する
 function saveModelAssetJson() {
   const asset = buildModelAssetFromEditor();
-  asset.assertValid();
-  const filename = "mmodeler_modelasset.json";
-  asset.downloadJSON(filename, 2);
+  const filename = modelerImportExport.saveModelAssetJson(asset);
   lastSavedName = filename;
-  editor.dirty = false;
+  editor.markClean();
   // 最後のユーザー向け message を保存し status を更新する
   setMessage(`saved ${filename}`);
 }
@@ -6273,49 +4259,74 @@ function saveModelAssetJson() {
 // active object を gzip 圧縮済み ModelAsset JSON として保存する
 async function saveModelAssetJsonGz() {
   const asset = buildModelAssetFromEditor();
-  asset.assertValid();
-  const filename = "mmodeler_modelasset.json.gz";
-  await asset.downloadJSONGz(filename, 2);
+  const filename = await modelerImportExport.saveModelAssetJsonGz(asset);
   lastSavedName = filename;
-  editor.dirty = false;
+  editor.markClean();
   // 最後のユーザー向け message を保存し status を更新する
   setMessage(`saved ${filename}`);
-}
-
-// active object の geometry から GLB binary を作る
-function buildGlbFromEditor() {
-  const object = getActiveObject();
-  return buildGlbFromGeometry({
-    vertices: editor.vertices,
-    faces: editor.faces,
-    materialColor: MATERIAL.mesh.color,
-    nodeTranslation: getObjectOrigin(object)
-  });
-}
-
-// Blob を一時 URL にして browser download を開始する
-function downloadBlob(blob, filename) {
-  const url = URL.createObjectURL(blob);
-  const anchor = document.createElement("a");
-  anchor.href = url;
-  anchor.download = filename;
-  anchor.style.display = "none";
-  document.body.appendChild(anchor);
-  anchor.click();
-  document.body.removeChild(anchor);
-  setTimeout(() => URL.revokeObjectURL(url), 0);
 }
 
 // active object を GLB file として保存する
 function saveGlb() {
-  const glb = buildGlbFromEditor();
-  const filename = "mmodeler.glb";
-  // Blob を一時 URL にして browser download を開始する
-  downloadBlob(new Blob([glb], { type: "model/gltf-binary" }), filename);
+  const { object, vertices, faces } = getActiveGeometryForSave();
+  const filename = modelerImportExport.saveGlbFromGeometry({
+    vertices,
+    faces,
+    materialColor: MATERIAL.mesh.color,
+    nodeTranslation: getObjectOrigin(object),
+    nodeRotation: getObjectRotation(object),
+    nodeScale: getObjectScale(object)
+  });
   lastSavedName = filename;
-  editor.dirty = false;
+  editor.markClean();
   // 最後のユーザー向け message を保存し status を更新する
   setMessage(`saved ${filename}`);
+}
+
+// file operation の失敗を console と status message の両方へ出す
+// handler ごとに catch 文を重複させると message 表記がずれやすいため、入口をここへ集める
+function reportFileOperationFailure(label, err) {
+  console.error(err);
+  setMessage(`${label} failed: ${err?.message ?? err}`);
+}
+
+// Promise を返す file operation を実行し、失敗時の message を統一する
+async function runAsyncFileOperation(label, operation) {
+  try {
+    await operation();
+  } catch (err) {
+    reportFileOperationFailure(label, err);
+  }
+}
+
+// 同期的な file operation を実行し、失敗時の message を統一する
+function runFileOperation(label, operation) {
+  try {
+    operation();
+  } catch (err) {
+    reportFileOperationFailure(label, err);
+  }
+}
+
+// palette / ribbon / DOM button から file picker を開くための共通入口
+function openModelFilePicker() {
+  if (!ui.fileInput) {
+    throw new Error("file input is not available");
+  }
+  ui.fileInput.click();
+}
+
+// file input の現在選択を読み込み、同じ file を再選択できるよう最後に value を戻す
+async function loadSelectedModelFile() {
+  const file = ui.fileInput.files?.[0] ?? null;
+  try {
+    await loadModelFile(file);
+  } finally {
+    // embedded_glb_viewer と同じく value を戻し、同じ GLB を再選択した場合も
+    // change event が発火するようにするこれは失敗後の再試行を確実にするための
+    // UI 状態リセットであり、ロード失敗を隠す fallback ではない
+    ui.fileInput.value = "";
+  }
 }
 
 // 現在の canvas 内容を次の present 後に PNG として保存する
@@ -6343,20 +4354,7 @@ function installDomHandlers() {
     button.addEventListener("click", () => setTool(button.dataset.tool));
   }
   ui.fileInput.addEventListener("change", () => {
-    const file = ui.fileInput.files?.[0] ?? null;
-    // file input から ModelAsset / glTF / GLB / Collada を読み込む
-    loadModelFile(file)
-      .catch((err) => {
-        console.error(err);
-        // 最後のユーザー向け message を保存し status を更新する
-        setMessage(`load failed: ${err?.message ?? err}`);
-      })
-      .finally(() => {
-        // embedded_glb_viewer と同じく value を戻し、同じ GLB を再選択した場合も
-        // change event が発火するようにするこれは失敗後の再試行を確実にするための
-        // UI 状態リセットであり、ロード失敗を隠す fallback ではない
-        ui.fileInput.value = "";
-      });
+    runAsyncFileOperation("load", loadSelectedModelFile);
   });
   ui.useMesh.addEventListener("click", () => {
     try {
@@ -6369,37 +4367,16 @@ function installDomHandlers() {
     }
   });
   ui.saveJson.addEventListener("click", () => {
-    try {
-      // JSON 保存口は配布や転送時のサイズを抑えるため gzip 圧縮済み JSON を出力する
-      saveModelAssetJsonGz().catch((err) => {
-        console.error(err);
-        setMessage(`save failed: ${err?.message ?? err}`);
-      });
-    } catch (err) {
-      console.error(err);
-      // 最後のユーザー向け message を保存し status を更新する
-      setMessage(`save failed: ${err?.message ?? err}`);
-    }
+    // JSON 保存口は配布や転送時のサイズを抑えるため gzip 圧縮済み JSON を出力する
+    runAsyncFileOperation("save", saveModelAssetJsonGz);
   });
   ui.saveJsonGz.addEventListener("click", async () => {
-    try {
-      // active object を gzip 圧縮済み ModelAsset JSON として保存する
-      await saveModelAssetJsonGz();
-    } catch (err) {
-      console.error(err);
-      // 最後のユーザー向け message を保存し status を更新する
-      setMessage(`save failed: ${err?.message ?? err}`);
-    }
+    // active object を gzip 圧縮済み ModelAsset JSON として保存する
+    await runAsyncFileOperation("save", saveModelAssetJsonGz);
   });
   ui.saveGlb.addEventListener("click", () => {
-    try {
-      // active object を GLB file として保存する
-      saveGlb();
-    } catch (err) {
-      console.error(err);
-      // 最後のユーザー向け message を保存し status を更新する
-      setMessage(`glb export failed: ${err?.message ?? err}`);
-    }
+    // active object を GLB file として保存する
+    runFileOperation("glb export", saveGlb);
   });
   ui.screenshot?.addEventListener("click", () => {
     try {
@@ -6420,30 +4397,88 @@ function installDomHandlers() {
   ui.objectWireframe?.addEventListener("click", toggleObjectWireframe);
   ui.lightBackground?.addEventListener("click", toggleLightBackground);
   ui.visiblePickOnly?.addEventListener("click", toggleVisiblePickOnly);
-  ui.xMirrorEdit?.addEventListener("click", toggleXMirrorEdit);
-  ui.makeFace?.addEventListener("click", () => makeFaceFromSelection());
-  ui.flipFaces?.addEventListener("click", flipSelectedFaces);
-  ui.loopCutFaces?.addEventListener("click", loopCutSelectedFaces);
+  ui.xMirrorEdit?.addEventListener("click", () => editModeController.toggleXMirrorEdit());
+  ui.makeFace?.addEventListener("click", () => editModeController.makeFaceFromSelection());
+  ui.flipFaces?.addEventListener("click", () => editModeController.flipSelectedFaces());
+  ui.loopCutFaces?.addEventListener("click", () => editModeController.runLoopCutCommand());
   ui.undo.addEventListener("click", undo);
   ui.redo.addEventListener("click", redo);
+  ui.coordinateOverlayApply?.addEventListener("pointerup", (ev) => {
+    if (ev.pointerType === "touch") {
+      runCoordinateOverlayButtonTouchAction("apply", applyCoordinateOverlayInput, ev);
+    }
+  });
+  ui.coordinateOverlayApply?.addEventListener("touchend", (ev) => {
+    runCoordinateOverlayButtonTouchAction("apply", applyCoordinateOverlayInput, ev);
+  }, { passive: false });
+  ui.coordinateOverlayApply?.addEventListener("click", (ev) => {
+    if (shouldSuppressCoordinateOverlayClick("apply")) {
+      ev.preventDefault();
+      return;
+    }
+    runCoordinateOverlayButtonAction(applyCoordinateOverlayInput, ev);
+  });
+  ui.coordinateOverlayClose?.addEventListener("pointerup", (ev) => {
+    if (ev.pointerType === "touch") {
+      runCoordinateOverlayButtonTouchAction("close", closeCoordinateOverlay, ev);
+    }
+  });
+  ui.coordinateOverlayClose?.addEventListener("touchend", (ev) => {
+    runCoordinateOverlayButtonTouchAction("close", closeCoordinateOverlay, ev);
+  }, { passive: false });
+  ui.coordinateOverlayClose?.addEventListener("click", (ev) => {
+    if (shouldSuppressCoordinateOverlayClick("close")) {
+      ev.preventDefault();
+      return;
+    }
+    runCoordinateOverlayButtonAction(closeCoordinateOverlay, ev);
+  });
+  ui.coordinateOverlay?.addEventListener("pointerdown", (ev) => ev.stopPropagation());
+  ui.coordinateOverlay?.addEventListener("pointerup", (ev) => ev.stopPropagation());
+  ui.coordinateOverlay?.addEventListener("click", (ev) => ev.stopPropagation());
+  ui.coordinateOverlay?.addEventListener("keydown", (ev) => {
+    ev.stopPropagation();
+    if (ev.key === "Enter") {
+      ev.preventDefault();
+      applyCoordinateOverlayInput();
+    } else if (ev.key === "Escape") {
+      ev.preventDefault();
+      closeCoordinateOverlay();
+    }
+  });
+  ui.objectInfoOverlay?.addEventListener("pointerdown", (ev) => ev.stopPropagation());
+  ui.objectInfoOverlay?.addEventListener("pointerup", (ev) => {
+    ev.preventDefault();
+    ev.stopPropagation();
+    closeObjectInfoOverlay();
+  });
+  ui.objectInfoOverlay?.addEventListener("touchend", (ev) => {
+    ev.preventDefault();
+    ev.stopPropagation();
+    closeObjectInfoOverlay();
+  }, { passive: false });
+  ui.objectInfoOverlay?.addEventListener("click", (ev) => {
+    ev.preventDefault();
+    ev.stopPropagation();
+    closeObjectInfoOverlay();
+  });
   ui.overlayAlpha?.addEventListener("input", () => {
     overlayAlpha = readFiniteNumber(ui.overlayAlpha.value, overlayAlpha);
-    markerOverlayDirty = true;
-    overlayEdgeUploadDirty = true;
+    markEditOverlayVisualDirty();
     if (ui.overlayAlphaValue) {
       ui.overlayAlphaValue.textContent = overlayAlpha.toFixed(2);
     }
   });
   ui.overlayMarkerColor?.addEventListener("input", () => {
     overlayMarkerColor = hexColorToRgb(ui.overlayMarkerColor.value, overlayMarkerColor);
-    markerOverlayDirty = true;
+    markMarkerOverlayDirty();
     if (ui.overlayMarkerColorValue) {
       ui.overlayMarkerColorValue.textContent = rgbToHexColor(overlayMarkerColor);
     }
   });
   ui.overlayEdgeColor?.addEventListener("input", () => {
     overlayEdgeColor = hexColorToRgb(ui.overlayEdgeColor.value, overlayEdgeColor);
-    overlayEdgeUploadDirty = true;
+    markEdgeOverlayUploadDirty();
     if (ui.overlayEdgeColorValue) {
       ui.overlayEdgeColorValue.textContent = rgbToHexColor(overlayEdgeColor);
     }
@@ -6458,19 +4493,21 @@ function installDomHandlers() {
 function refreshDiagnosticsStats() {
   const rawInput = getRawInputDebugSnapshot();
   const pointerDebug = getPointerDebugSnapshot();
+  const editMesh = getRenderableEditMeshState();
   app.mergeDiagnosticsStats({
-    vertexCount: editor.vertices.length,
-    faceCount: editor.faces.length,
-    selectedVertexCount: editor.selectedVertices.size,
-    selectedFaceCount: editor.selectedFaces.size,
+    vertexCount: editMesh.vertices.length,
+    faceCount: editMesh.faces.length,
+    selectedVertexCount: editMesh.selectedVertices.size,
+    selectedFaceCount: editMesh.selectedFaces.size,
     selectedObjectCount: editor.selectedObjectIds.size,
     objectCount: editor.objects.length,
     importedMeshCount: importedMeshes.length,
     importedAssetLoaded: importedAsset ? "yes" : "no",
-    editorMode: editor.mode,
-    objectWireframe: objectWireframe ? "on" : "off",
+    editorMode: getRenderableEditorMode(),
+    objectWireframe: viewController.objectWireframe ? "on" : "off",
+    objectSmoothShading: viewController.objectSmoothShading ? "on" : "off",
     xMirrorEdit: xMirrorEdit ? "on" : "off",
-    visiblePick: visiblePickOnly ? "visible only" : "through",
+    visiblePick: viewController.visiblePickOnly ? "visible only" : "through",
     visiblePickMode: visiblePickStats.mode,
     visiblePickCandidates: visiblePickStats.candidates,
     visiblePickSelected: visiblePickStats.selected,
@@ -6479,9 +4516,11 @@ function refreshDiagnosticsStats() {
     visiblePickAvgFacesPerCell: visiblePickStats.avgFacesPerFilledCell.toFixed(1),
     visiblePickMaxFacesPerCell: visiblePickStats.maxFacesPerCell,
     projection: getProjectionLabel(),
+    projectionNear: Number(app.projectionNear).toFixed(4),
+    projectionFar: Number(app.projectionFar).toFixed(1),
     focalLength: getFocalLengthLabel(),
     activeObjectId: editor.activeObjectId ?? "-",
-    tool: editor.tool,
+    tool: getRenderableEditorTool(),
     dirty: editor.dirty ? "yes" : "no",
     rawInput: rawInput.text,
     rawInputHistory: rawInput.historyText,
@@ -6494,12 +4533,14 @@ function refreshDiagnosticsStats() {
     rawInputInsideCanvas: rawInput.insideCanvas,
     mobileProfile: IS_MOBILE_PROFILE ? "yes" : "no",
     mobileGestureDebugVersion: MOBILE_GESTURE_DEBUG_VERSION,
-    mobileGestureAttached: mobileUiState.gestureAttached ? "yes" : "no",
-    mobileLastGesture: mobileUiState.lastGesture,
-    mobileLastGesturePointer: mobileUiState.lastGesturePointer,
-    mobileFlickTracking: mobileUiState.flickPointer ? "active" : "idle",
-    mobilePaletteOpen: mobileUiState.paletteOpen ? "yes" : "no",
-    mobileBoxSelectArmed: mobileUiState.boxSelectArmed ? "yes" : "no",
+    mobileGestureAttached: mobileInput.gestureAttached ? "yes" : "no",
+    mobileLastGesture: mobileInput.lastGesture,
+    mobileLastGesturePointer: mobileInput.lastGesturePointer,
+    mobileFlickTracking: mobileInput.flickPointer ? "active" : "idle",
+    mobilePaletteOpen: commandPalette?.isOpen ? "yes" : "no",
+    mobileSelectionShift: mobileInput.selectionShiftActive ? "on" : "off",
+    mobileBoxSelectArmed: mobileInput.boxSelectArmed ? "yes" : "no",
+    mobileBoxSelectPreview: boxSelectSession?.isAwaitingConfirm ? "yes" : "no",
     eyeRigPointer: pointerDebug.text,
     eyeRigPointerHistory: pointerDebug.historyText,
     eyeRigPointerAction: pointerDebug.action,
@@ -6516,16 +4557,17 @@ function makeProbeReport(frameCount) {
   const report = app.createProbeReport("runtime-probe");
   const rawInput = getRawInputDebugSnapshot();
   const pointerDebug = getPointerDebugSnapshot();
-  Diagnostics.addDetail(report, `tool=${editor.tool}`);
-  Diagnostics.addDetail(report, `mode=${editor.mode}`);
-  Diagnostics.addDetail(report, `objectWireframe=${objectWireframe ? "on" : "off"}`);
+  const editMesh = getRenderableEditMeshState();
+  Diagnostics.addDetail(report, `tool=${getRenderableEditorTool()}`);
+  Diagnostics.addDetail(report, `mode=${getRenderableEditorMode()}`);
+  Diagnostics.addDetail(report, `objectWireframe=${viewController.objectWireframe ? "on" : "off"}`);
   Diagnostics.addDetail(report, `xMirrorEdit=${xMirrorEdit ? "on" : "off"}`);
-  Diagnostics.addDetail(report, `visiblePick=${visiblePickOnly ? "visible only" : "through"}`);
+  Diagnostics.addDetail(report, `visiblePick=${viewController.visiblePickOnly ? "visible only" : "through"}`);
   Diagnostics.addDetail(report, `visiblePickStats=${visiblePickStats.mode} candidates=${visiblePickStats.candidates} selected=${visiblePickStats.selected} gridFaces=${visiblePickStats.gridFaces} filledCells=${visiblePickStats.gridCells} avgFaces=${visiblePickStats.avgFacesPerFilledCell.toFixed(1)} maxFaces=${visiblePickStats.maxFacesPerCell}`);
   Diagnostics.addDetail(report, `projection=${getProjectionLabel()}`);
   Diagnostics.addDetail(report, `focalLength=${getFocalLengthLabel()}`);
-  Diagnostics.addDetail(report, `vertices=${editor.vertices.length}`);
-  Diagnostics.addDetail(report, `faces=${editor.faces.length}`);
+  Diagnostics.addDetail(report, `vertices=${editMesh.vertices.length}`);
+  Diagnostics.addDetail(report, `faces=${editMesh.faces.length}`);
   Diagnostics.addDetail(report, `rawInput=${rawInput.text}`);
   Diagnostics.addDetail(report, `rawInputHistory=${rawInput.historyText}`);
   Diagnostics.addDetail(report, `rawInputButtonHistory=${rawInput.buttonHistoryText}`);
@@ -6533,18 +4575,18 @@ function makeProbeReport(frameCount) {
   Diagnostics.addDetail(report, `eyeRigPointerHistory=${pointerDebug.historyText}`);
   Diagnostics.mergeStats(report, {
     frameCount,
-    vertexCount: editor.vertices.length,
-    faceCount: editor.faces.length,
-    selectedVertexCount: editor.selectedVertices.size,
-    selectedFaceCount: editor.selectedFaces.size,
+    vertexCount: editMesh.vertices.length,
+    faceCount: editMesh.faces.length,
+    selectedVertexCount: editMesh.selectedVertices.size,
+    selectedFaceCount: editMesh.selectedFaces.size,
     selectedObjectCount: editor.selectedObjectIds.size,
     objectCount: editor.objects.length,
     importedMeshCount: importedMeshes.length,
     importedAssetLoaded: importedAsset ? "yes" : "no",
-    editorMode: editor.mode,
-    objectWireframe: objectWireframe ? "on" : "off",
+    editorMode: getRenderableEditorMode(),
+    objectWireframe: viewController.objectWireframe ? "on" : "off",
     xMirrorEdit: xMirrorEdit ? "on" : "off",
-    visiblePick: visiblePickOnly ? "visible only" : "through",
+    visiblePick: viewController.visiblePickOnly ? "visible only" : "through",
     visiblePickMode: visiblePickStats.mode,
     visiblePickCandidates: visiblePickStats.candidates,
     visiblePickSelected: visiblePickStats.selected,
@@ -6555,10 +4597,11 @@ function makeProbeReport(frameCount) {
     projection: getProjectionLabel(),
     focalLength: getFocalLengthLabel(),
     activeObjectId: editor.activeObjectId ?? "-",
-    mobileGestureAttached: mobileUiState.gestureAttached ? "yes" : "no",
-    mobileLastGesture: mobileUiState.lastGesture,
-    mobileLastGesturePointer: mobileUiState.lastGesturePointer,
-    mobilePaletteOpen: mobileUiState.paletteOpen ? "yes" : "no",
+    mobileGestureAttached: mobileInput.gestureAttached ? "yes" : "no",
+    mobileLastGesture: mobileInput.lastGesture,
+    mobileLastGesturePointer: mobileInput.lastGesturePointer,
+    mobilePaletteOpen: commandPalette?.isOpen ? "yes" : "no",
+    mobileSelectionShift: mobileInput.selectionShiftActive ? "on" : "off",
     rawInput: rawInput.text,
     rawInputHistory: rawInput.historyText,
     rawInputButtonHistory: rawInput.buttonHistoryText,
@@ -6605,14 +4648,14 @@ async function start() {
     },
     clearColor: BACKGROUND_DARK_COLOR,
     viewAngle: VIEW_ANGLE_PRESETS[viewAnglePresetIndex],
-    projectionNear: 0.05,
-    projectionFar: 1000.0,
+    projectionNear: PERSPECTIVE_PROJECTION_NEAR,
+    projectionFar: PERSPECTIVE_PROJECTION_FAR,
     messageFontTexture: "../../webg/font512.png",
     light: {
-      mode: "world-node",
-      nodeName: "modelerLight",
-      position: [80.0, 140.0, 120.0],
-      attitude: [0.0, 0.0, 0.0],
+      // mmodeler は形状確認を優先するため、光源は world 固定ではなく視点上方に固定する。
+      // 裏側へ回り込んでも camera 側から陰影が入り、Object Mode の立体感を保てる。
+      mode: "eye-fixed",
+      position: [30.0, 80.0, 120.0, 1.0],
       type: 1.0
     },
     camera: {
@@ -6628,7 +4671,166 @@ async function start() {
       probeDefaultAfterFrames: 1
     }
   });
+  modelerImportExport = new ModelerImportExport({
+    filenamePrefix: "ma",
+    documentRef: document,
+    urlApi: URL
+  });
+  modelerRenderer = new ModelerRenderer({
+    app,
+    modelerImportExport,
+    material: MATERIAL
+  });
+  // iPhone Safari では file picker 復帰後に document.hasFocus() が false のまま残り、
+  // ondemand 描画の requestRender() が canvas frame を再予約できない場合がある
+  // mmodeler は公開済み webg core の挙動を変えず、この sample だけ page visibility を pause 根拠にする
+  app.shouldAutoPauseFrameLoop = function shouldAutoPauseFrameLoopForModeler() {
+    if (this.renderMode === "continuous") {
+      return false;
+    }
+    return this.doc?.hidden === true || this.doc?.visibilityState === "hidden";
+  };
   await app.init();
+  boxSelectSession = new BoxSelectSession({
+    getCanvas: () => app.screen.canvas,
+    getEditorMode: getRenderableEditorMode,
+    getEditorTool: getRenderableEditorTool,
+    setMobileOrbitEnabled,
+    setMessage,
+    selectByClientRect,
+    defaultMode: EDITOR_MODE_OBJECT
+  });
+  mobileInput.setServices({
+    setMessage,
+    updateMobileRibbon,
+    renderMobilePalette,
+    setMobileOrbitEnabled,
+    closeMobilePalette,
+    clearBoxSelectSession: () => boxSelectSession?.clear(),
+    isBoxSelectAwaitingConfirm: () => boxSelectSession?.isAwaitingConfirm === true,
+    confirmBoxSelectSession: () => boxSelectSession?.confirm() === true,
+    isTransformActive: () => transformController?.state?.active === true,
+    isCommandPaletteOpen: () => commandPalette?.isOpen === true,
+    inspectGestureTarget,
+    hasAnyModelerVertices,
+    openMobilePalette,
+    getOrbit: () => orbit,
+    getApp: () => app,
+    resetCanvasClick
+  });
+  commandPalette = new CommandPalette({
+    isMobileProfile: IS_MOBILE_PROFILE,
+    root: ui.mobilePalette,
+    buttons: ui.mobilePaletteButtons,
+    getCanvasRect: () => app.screen.canvas.getBoundingClientRect(),
+    getActionLabel: getMobileRibbonActionLabel,
+    isActionEnabled: isMobileActionEnabled,
+    isActionActive: isMobileActionActive,
+    cancelPendingTap: cancelPendingMobileCanvasTap
+  });
+  viewController.setEffects({
+    applyProjection: applyModelerProjection,
+    rebuildScene,
+    applyBackgroundColor,
+    updateMobileRibbon,
+    setOrbitViewPreset,
+    setMessage
+  });
+  objectModeController = new ObjectModeController({
+    scene: editor,
+    objectModeName: EDITOR_MODE_OBJECT,
+    commitActiveObject,
+    activateObject,
+    rebuildScene,
+    setMessage,
+    pushUndo,
+    getObjectOrigin,
+    getObjectRotation,
+    getObjectScale,
+    buildJoinedObject,
+    buildPrimitiveObject,
+    orientAllFacesConsistently
+  });
+  editModeController = new EditModeController({
+    scene: editor,
+    objectModeName: EDITOR_MODE_OBJECT,
+    editModeName: EDITOR_MODE_EDIT,
+    faceToolName: TOOL_SELECT_FACE,
+    normalizeToolName,
+    setEditorMode,
+    setMessage,
+    rebuildScene,
+    refreshSelectionVisuals,
+    pushUndo,
+    markMarkerOverlayDirty,
+    getXMirrorEdit: () => xMirrorEdit,
+    setXMirrorEdit: (value) => {
+      xMirrorEdit = value === true;
+    },
+    orderVertexIdsForFaceFromView,
+    getCameraScreenBasis
+  });
+  modelerPicking = new ModelerPicking({
+    getCanvas: () => app.screen.canvas,
+    getEye: () => app.eye,
+    getProjectionMatrix: () => app.projectionMatrix,
+    getProjectionMode: () => viewController.projectionMode,
+    orthographicMode: PROJECTION_MODE_ORTHOGRAPHIC,
+    getObjects: () => editor.objects,
+    getActiveObject,
+    getRenderableEditorMode,
+    editModeName: EDITOR_MODE_EDIT,
+    getRenderableEditMeshState,
+    makeObjectLocalRay,
+    buildVertexLookup,
+    localToWorldPosition,
+    projectWorldToClient,
+    clientPointInRect,
+    getCurrentViewProjectionMatrix,
+    getActiveObjectBounds,
+    getFaceCenter: (face) => editModeController.getFaceCenter(face),
+    getVisiblePickOnly: () => viewController.visiblePickOnly,
+    getObjectWireframe: () => viewController.objectWireframe,
+    isMobileProfile: IS_MOBILE_PROFILE,
+    visiblePickGridCols: VISIBLE_PICK_GRID_COLS,
+    visiblePickGridRows: VISIBLE_PICK_GRID_ROWS,
+    visiblePickGridPaddingPx: VISIBLE_PICK_GRID_PADDING_PX,
+    setVisiblePickSelectionStats
+  });
+  modelerCommandDispatcher = new ModelerCommandDispatcher({
+    palette: commandPalette,
+    isActionEnabled: isMobileActionEnabled,
+    setMessage,
+    openFilePicker: openModelFilePicker,
+    saveJson: saveModelAssetJsonGz,
+    saveGlb,
+    createInitialModel,
+    objectModeController,
+    editModeController,
+    viewController,
+    showSelectedVertexCoordinates,
+    showActiveObjectInfo,
+    cycleViewAnglePreset,
+    undo,
+    redo,
+    takeScreenshot: takeModelerScreenshot,
+    setTransformMode,
+    deleteSelected,
+    invertSelectionForCurrentMode,
+    selectXNegativeForCurrentMode,
+    setEditorMode,
+    selectAllForCurrentMode,
+    setPrimitiveSegments: (segments) => {
+      mobileInput.setPrimitiveSegments(segments);
+    },
+    setPaletteTransformAxis,
+    renderPalette: renderMobilePalette,
+    closePalette: closeMobilePalette,
+    objectModeName: EDITOR_MODE_OBJECT,
+    faceToolName: TOOL_SELECT_FACE,
+    vertexToolName: TOOL_SELECT_VERTEX,
+    addVertexToolName: TOOL_ADD_VERTEX
+  });
   selectedFaceShader = new SelectedFaceOverlayShader(app.getGPU());
   await selectedFaceShader.init();
   if (app.projectionMatrix) {
@@ -6656,51 +4858,45 @@ async function start() {
     dragZoomSpeed: 0.04,
     dragRotateSpeed: 0.28,
     dragPanSpeed: 2.0,
-    pitchMin: -90.0,
-    pitchMax: 90.0,
+    // EyeRig は有限の pitch 範囲を前提にするため、mmodeler 側では十分広い範囲を渡し、
+    // orbit pitch を実質的に無制限として扱う
+    pitchMin: -UNRESTRICTED_ORBIT_PITCH_DEGREES,
+    pitchMax: UNRESTRICTED_ORBIT_PITCH_DEGREES,
     // mobile profile は画面内操作が主役なので、PC デバッグ時も
     // 通常時の左ドラッグを orbit、短い左クリックを選択として扱う
     dragButton: 0,
     alternateDragButton: 1,
     alternateDragModifierKey: null
   });
-  const operationContext = {
-    editor,
-    addExplicitXMirrorVertexPairs,
-    addFace,
-    addFaceOrientedToDirection,
-    addFaceWithStableOrientation,
-    addVertex,
-    applyXMirrorEdit,
-    clearSelection,
-    computeCenter,
-    computeFaceNormal,
-    computeSelectionNormal,
-    createExtrusion: (distance) => editOperations.createExtrusion(distance),
-    focusModelerCanvas,
-    getActiveVertexObjects,
-    getCameraScreenBasis,
-    getCanvas: () => app.screen.canvas,
-    getEdgeSlideTargets,
-    getEditorBounds,
-    getSelectedFaceObjects,
-    getObjectOrigin,
-    getTransformTargetObjects,
-    getTransformTargetVertexObjects,
-    getVertexById,
-    getXMirrorExtrusionFaces,
-    isEditMode,
-    makeXMirrorEditPairs,
-    makeSnapshot,
-    orderVertexIdsForFaceFromView,
-    pushUndo,
+  const transformServices = {
+    // scene / history transaction
+    beginTransformTransaction,
     rebuildScene,
-    restoreSnapshot,
-    reverseVertexLoop,
-    setMessage
+    restoreTransformStartSnapshot,
+    rollbackTransformTransaction,
+    // object transform operations
+    applyObjectTransformPreview: (options) => objectModeController.applyObjectTransformPreview(options),
+    createObjectTransformSnapshot: (objects) => objectModeController.createObjectTransformSnapshot(objects),
+    // UI / pointer environment
+    focusModelerCanvas,
+    getCanvas: () => app.screen.canvas,
+    setMessage,
+    // camera / geometry helpers
+    getCameraScreenBasis,
+    getEditorBounds,
+    // edit geometry operations
+    applyEditTransformDrag: (options) => editModeController.applyEditTransformDrag(options),
+    cancelEditTransformSession: () => editModeController.cancelEditTransformSession(),
+    confirmEditTransformSession: () => editModeController.confirmEditTransformSession(),
+    finishEditTransformDragSegment: () => editModeController.finishEditTransformDragSegment(),
+    hasEditTransformChanged: () => editModeController.hasEditTransformChanged(),
+    hasEditTransformSegmentChanged: () => editModeController.hasEditTransformSegmentChanged(),
+    startEditTransformSession: (mode) => editModeController.startEditTransformSession(mode),
+    toggleEditTransformAxisConstraint: (axis) => editModeController.toggleEditTransformAxisConstraint(axis),
+    getTransformTargetObjects,
+    isEditMode
   };
-  editOperations = createEditOperations(operationContext);
-  transformController = createTransformController(operationContext);
+  transformController = createTransformController(transformServices);
   detachTransformPointerBridge?.();
   detachTransformPointerBridge = installTransformPointerBridge(app.screen.canvas);
   // 床 grid を共有頂点の wireframe plane として作る
@@ -6739,7 +4935,8 @@ async function start() {
   app.start({
     // frame ごとに diagnostics と UI 表示を更新し、projection 依存 shader へ現在行列を渡す
     onUpdate({ screen, deltaSec }) {
-      if (projectionMode === PROJECTION_MODE_ORTHOGRAPHIC) {
+      normalizeOrbitPitchForModeler();
+      if (viewController.projectionMode === PROJECTION_MODE_ORTHOGRAPHIC) {
         // Orthographic では orbit distance を表示スケールとして使うため、
         // wheel / drag zoom 後の距離を毎 frame projection に反映する。
         applyModelerProjection({
@@ -6762,6 +4959,7 @@ async function start() {
       drawGuideOverlayPass();
       // Edit Mode の edge と marker overlay を scene 描画後に重ねる
       drawEditOverlayPass();
+      drawEditPreviewOverlayPass();
     }
   });
 }
