@@ -1,0 +1,46 @@
+@startuml
+title clip -> action -> state -> task 層図
+
+left to right direction
+skinparam backgroundColor white
+skinparam shadowing true
+skinparam dpi 150
+skinparam defaultFontName Yu Gothic UI
+skinparam defaultFontSize 18
+skinparam rectangle {
+  RoundCorner 24
+  BorderColor black
+  BackgroundColor #f7fbff
+  FontColor black
+}
+skinparam ArrowColor black
+skinparam ranksep 20
+skinparam nodesep 20
+
+rectangle "clip\n元の animation data" as Clip
+rectangle "action\n使う区間を切り出す" as Action
+rectangle "state\n今どの action を選ぶか" as State
+rectangle "schedule / task\n時間進行と補間実行" as Task
+rectangle "node pose\nupdate" as NodePose
+
+Clip --> Action
+Action --> State
+State --> Task
+Task --> NodePose
+
+note bottom of Clip
+アセットが持つ連続データ
+end note
+
+note bottom of Action
+どこを使うかを決める
+end note
+
+note bottom of State
+状況に応じて選択する
+end note
+
+note bottom of Task
+実際に時間を進める
+end note
+@enduml

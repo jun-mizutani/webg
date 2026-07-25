@@ -1,0 +1,1206 @@
+<!DOCTYPE html>
+<html lang='ja'>
+<head>
+<meta charset='UTF-8' />
+<title>webg unittest 一覧</title>
+<style>
+body { font-family: sans-serif; line-height: 1.5; margin: 24px; }
+pre { background: #f6f8fa; border: 1px solid #d0d7de; padding: 12px; overflow-x: auto; white-space: pre-wrap; }
+.sample { margin: 28px 0; }
+.guide { background: #f8fbff; border: 1px solid #b8d5ee; padding: 16px; margin: 20px 0; }
+.category { margin: 24px 0; }
+.category h3 { margin-bottom: 8px; }
+.note { color: #475467; }
+</style>
+</head>
+<body>
+<h1>webg unittest</h1>
+<div class='guide'>
+<h2>unittest の見方</h2>
+<p>公開向けの sample 一覧は <a href='../samples/index.html'>../samples/index.html</a> を参照してください</p>
+<p>book 内の実行用 HTML 一覧は <a href='../book/examples/index.html'>../book/examples/index.html</a> を参照してください</p>
+</div>
+<h2>個別目次</h2>
+<ul>
+<li><a href='#ai_contracts'>ai_contracts</a>: 基本 API 規約と初期化順序をまとめて自動確認する</li>
+<li><a href='#animation_state_contracts'>animation_state_contracts</a>: AnimationState の state / transition 規約を自動確認する</li>
+<li><a href='#background'>background</a>: Background の画像描画と aspect 補正を確認する</li>
+<li><a href='#camera_follow'>camera_follow</a>: WebgApp camera follow helper の追従と解除を確認する</li>
+<li><a href='#compression'>compression</a>: Compression Streams による ModelAsset JSON gzip 往復を確認する</li>
+<li><a href='#cube_axes'>cube_axes</a>: addVertex / addPlane だけで作る cube の面向きと軸を確認する</li>
+<li><a href='#destroy_lifecycle'>destroy_lifecycle</a>: ShapeResource / runtime / instantiated の destroy 規約を確認する</li>
+<li><a href='#detouch_min'>detouch_min</a>: attach / detach で world 位置が保たれるかを確認する</li>
+<li><a href='#embedded'>embedded</a>: embedded layout と overlay の配置を確認する</li>
+<li><a href='#flick'>flick</a>: Touch.attachSurface の flick / long press / double tap を確認する</li>
+<li><a href='#game_api'>game_api</a>: WebgApp のゲーム向け helper API を確認する</li>
+<li><a href='#input_controller'>input_controller</a>: InputController の key 正規化と action / hold 入力を確認する</li>
+<li><a href='#message'>message</a>: Message / HUD 表示の基本動作を確認する</li>
+<li><a href='#overlay_panel'>overlay_panel</a>: OverlayPanel の表示状態と UI 統合を確認する</li>
+<li><a href='#particle_emitter'>particle_emitter</a>: ParticleEmitter の emit / update / draw / clear を確認する</li>
+<li><a href='#physics_node_contracts'>physics_node_contracts</a>: PhysicsNode 単体 API の規約を自動確認する</li>
+<li><a href='#physics_space_contracts'>physics_space_contracts</a>: PhysicsSpace の接触 / 摩擦 / raycast / query 規約を自動確認する</li>
+<li><a href='#physics_node_fall'>physics_node_fall</a>: PhysicsNode が重力で落下して床で止まる見え方を確認する</li>
+<li><a href='#physics_node_rotate'>physics_node_rotate</a>: angularVelocity / torque の姿勢反映を確認する</li>
+<li><a href='#scene_loader_contracts'>scene_loader_contracts</a>: Scene JSON から PhysicsSpace / PhysicsNode を構築する規約を確認する</li>
+<li><a href='#phong_debug'>phong_debug</a>: Phong 系 shader の debug 表示を確認する</li>
+<li><a href='#primitive_modelasset'>primitive_modelasset</a>: Primitive から ModelAsset / runtime 復元を確認する</li>
+<li><a href='#primitive_normal_map'>primitive_normal_map</a>: Primitive 形状の normal map 表示を比較する</li>
+<li><a href='#primitive_texture_uv'>primitive_texture_uv</a>: Primitive 形状の texture UV を確認する</li>
+<li><a href='#primitive_wireframe'>primitive_wireframe</a>: Primitive 形状の solid / wireframe 切替を確認する</li>
+<li><a href='#raycast'>raycast</a>: mouse 位置から ray を生成して picking を確認する</li>
+<li><a href='#skinning_basic'>skinning_basic</a>: SmoothShader の skinning と wireframe 経路を確認する</li>
+<li><a href='#skinning_normal_map'>skinning_normal_map</a>: skinning と normal map の組み合わせを確認する</li>
+<li><a href='#smooth_shader'>smooth_shader</a>: SmoothShader の static / skinned / normal map / flat 経路を確認する</li>
+<li><a href='#textdemo'>textdemo</a>: 低水準 Text 表示を確認する</li>
+<li><a href='#theme'>theme</a>: WebgApp UI theme 切替を確認する</li>
+<li><a href='#touch'>touch</a>: Touch の hold / action ボタン通知を確認する</li>
+<li><a href='#tween'>tween</a>: Tween の補間と update 挙動を確認する</li>
+<li><a href='#translucent'>translucent</a>: FrostedGlassPass の曇りガラス表現を確認する</li>
+<li><a href='#vignette'>vignette</a>: Vignette postprocess の見え方を確認する</li>
+</ul>
+<section class='sample'>
+<h2 id='ai_contracts'>ai_contracts</h2>
+<p>URL: <a href='./ai_contracts/index.html'>./ai_contracts/index.html</a></p>
+<pre>
+サンプル: ai_contracts
+
+概要
+- `webg` の基本 API が期待どおりに失敗し、期待どおりに動くことをまとめて確認するページです。
+- 境界条件、失敗例、最小構成、破棄処理、リサイズ、入力正規化のうち、軽量に自動確認できる基本仕様を 1 画面にまとめています。
+- 3D の見た目を作り込むものではなく、API の基本仕様を軽く確認するための基本仕様確認ページです。
+
+このサンプルで使うwebg機能
+- `Screen`: `getGPU()`、`resize()`、`getRecommendedFov()` の基本仕様
+- `WebgApp`: `init()` 前に使ってはいけない API の失敗例
+- `Shape`: `Primitive` から最小形状を作り、`endShape()` で GPU buffer が確定すること
+- `ShapeResource`: 参照中 resource の `destroy()` guard と、最後の参照からの破棄
+- `InputController`: raw key を action 比較用の正規化名へ変換する規約
+- `UnitTestApp`: unittest の起動、resize、status 表示の共通 helper
+
+確認ポイント
+- `Screen.getGPU()` が現在の GPU context wrapper を返すことを確認します。
+- `Screen.resize()` が正の有限値だけを受け付け、不正値を明確に拒否することを確認します。
+- `Screen.getRecommendedFov()` が範囲外の FOV を拒否することを確認します。
+- `WebgApp.createOrbitEyeRig()` を `init()` 前に呼ぶと、初期化順序の誤りとして失敗することを確認します。
+- `Shape.endShape()` の前後で GPU buffer の確定状態が変わることを確認します。
+- 参照中の `ShapeResource.destroy()` は false になり、最後の `Shape.destroy({ destroyResource: true })` で破棄されることを確認します。
+- `InputController` の key 正規化と action map が、`space` / `escape` / lower-case の規約に従うことを確認します。
+
+操作説明
+- 操作は不要です。画面を開くと自動確認が走ります。
+- PASS / FAIL の一覧が status に表示されます。
+- canvas 部分は最小の clear / present だけを行い、WebGPU frame が成立していることを確認します。
+
+実装確認の見方
+- 初期化順序、resize、Shape の buffer 確定、destroy 系の挙動を見るときは、このページで基本仕様をまとめて確認できます。
+- 入力まわりの確認では `unittest/input_controller` も併せて確認すると、action map と touch control の流れを追いやすくなります。
+- raycast の確認では `unittest/raycast`、animation state の確認では `samples/animation_state` と関連 unittest を併せて見ると、機能ごとの役割が分かります。
+</pre>
+</section>
+<section class='sample'>
+<h2 id='animation_state_contracts'>animation_state_contracts</h2>
+<p>URL: <a href='./animation_state_contracts/index.html'>./animation_state_contracts/index.html</a></p>
+<pre>
+サンプル: animation_state_contracts
+
+概要
+- `AnimationState` の状態定義と遷移ルールだけを、描画や実アセットから切り離して確認する状態遷移ルール確認ページです。
+- animation state まわりの挙動を、軽量な自動確認として切り分けて見られます。
+- `samples/animation_state` や `samples/janken` の前段として、state machine の基本仕様を確認します。
+
+このサンプルで使うwebg機能
+- `AnimationState`: state の追加、transition の正規化、`update()` による state 遷移
+- mock controller: `start()`、`play()`、`getActionInfo()` を持つ最小 controller
+
+確認ポイント
+- state 定義が object でない場合に失敗することを確認します。
+- state に `action` または `clip` がない場合に失敗することを確認します。
+- transition に `to` または `test(context)` がない場合に失敗することを確認します。
+- `update()` には有限の `context.nowMs` が必須であることを確認します。
+- 初回 update で initial state が開始されることを確認します。
+- 同じ frame で state が開始または切り替わった場合、`play()` をまだ進めないことを確認します。
+- 複数 transition が成立するとき、priority の高いものが選ばれることを確認します。
+- 次 frame では現在 action の `play()` が呼ばれることを確認します。
+- `getCurrentTransition()` と `getDebugInfo()` が HUD / diagnostics に使いやすい要約を返すことを確認します。
+
+操作説明
+- 操作は不要です。画面を開くと自動確認が走ります。
+- PASS / FAIL の一覧が status に表示されます。
+
+実装確認の見方
+- `AnimationState.js`、`Action.js`、`samples/animation_state`、`samples/janken` の関係を見るときは、このページで state machine の基本仕様を確認できます。
+- 実際の骨や glTF / Collada clip の見え方は、このページでは扱いません。見た目の確認は `samples/animation_state`、`samples/janken`、skinning 系 unittest を併用してください。
+</pre>
+</section>
+<section class='sample'>
+<h2 id='background'>background</h2>
+<p>URL: <a href='./background/index.html'>./background/index.html</a></p>
+<pre>
+サンプル: background
+
+概要
+- 背景画像を画面全体へ描画し、色乗算とアスペクト補正の見え方を確認する単体テストです。
+- 3D オブジェクトの背面に置く空、壁紙、UI 背景の基礎として使います。
+
+このサンプルで使うwebg機能
+- `Background`: 背景描画専用シェーダ
+- `Texture`: 画像ロードと GPU 転送
+- `Screen`: クリア色と描画フレーム管理
+
+確認ポイント
+- 背景画像の縦横比が viewport 変更時に破綻しないことを確認します。
+- 色乗算で明るさや色味が変わっても、背景として読めることを確認します。
+- 画面全体を使うため、UI 背景や空表現の土台として流用できることを確認します。
+
+操作説明
+- キー入力: なし
+- マウス操作: なし
+</pre>
+</section>
+<section class='sample'>
+<h2 id='camera_follow'>camera_follow</h2>
+<p>URL: <a href='./camera_follow/index.html'>./camera_follow/index.html</a></p>
+<pre>
+camera_follow
+
+このページは、`WebgApp` の camera follow helper を確認するためのものです。
+まず headless の自動テストで helper の値の流れを確認し、そのあと実際の canvas 上で target と camera の関係を確認します。
+
+このページで見たいのは、camera が動くことだけではありません。
+`followNode()` が target node を登録して追従を開始すること、`lockOn()` が camera を target へ即時に合わせること、`clearCameraTarget()` が追従を解除することを確認します。
+visual phase では target を角のあるループで動かし、`follow` では camera が少し遅れて角を曲がり、`lock` ではその場でぴたりと合う違いを見ます。
+
+`yaw-follow` は、このページの中でいちばん意味を取り違えやすい部分です。
+ここでは `followNode(targetRoot, { inheritTargetYaw: true, targetYawOffset: 180.0 })` を使い、camera の位置は target に追従しつつ、camera yaw も target heading に合わせて変わるかを見ます。
+つまり、`follow` が「位置だけを追う」見え方なのに対して、`yaw-follow` は「位置に加えて向きも一緒に変わる」見え方です。
+この違いが見えるように、visual phase では target heading と camera yaw を manual panel に表示しています。
+
+操作の流れ:
+- 画面を開くと自動で確認が走る
+- そのあと canvas へ 3D scene が出て、target が動き続ける
+- `follow` で camera が target の位置を追う
+- `lock` で camera が target に即時に合う
+- target が角を曲がるときに follow の遅れが見える
+- `yaw-follow` で target heading と camera yaw の変化を見比べる
+- `clear` で追従を解除する
+- `reset` で初期状態へ戻す
+- `Space` / `P` で target motion を止めたり再開したりする
+
+確認ポイント:
+- `followNode()` が camera follow を有効化するか
+- `updateCameraTarget()` が target position を camera に反映するか
+- `lockOn()` が即時反映になるか
+- `clearCameraTarget()` が追従を解除するか
+- `yaw-follow` で target heading と camera yaw が一緒に変わるか
+
+このページは、動きを複雑にしすぎず、camera helper の違いだけを読み取りやすくすることを優先しています。
+target の motion はあえてゆっくりにしてあり、`yaw-follow` のときだけ heading と yaw の関係が画面上で追いやすいようにしている。
+</pre>
+</section>
+<section class='sample'>
+<h2 id='compression'>compression</h2>
+<p>URL: <a href='./compression/index.html'>./compression/index.html</a></p>
+<pre>
+サンプル: compression
+
+概要
+- Compression Streams API を使い、ModelAsset JSON を gzip 圧縮してから Decompression Streams API で復元する単体テストです
+- GPU や webg 描画には依存せず、ブラウザ標準の `CompressionStream` / `DecompressionStream` の利用可否、圧縮率、復元一致を確認します
+- 既定では `Primitive.cube()` から作った ModelAsset JSON を textarea に読み込みます。任意の ModelAsset JSON ファイルや `.json.gz` ファイルも読み込めます
+
+このサンプルで使うwebg機能
+- `Primitive`: 確認用の ModelAsset JSON を生成
+- `ModelValidator`: 圧縮前に ModelAsset として妥当か確認
+
+確認ポイント
+- `CompressionStream` と `DecompressionStream` が利用可能なブラウザでは、Compress で `.json.gz` 相当の Blob が作られることを確認します
+- 圧縮後に即時復元し、元 JSON 文字列と復元結果が完全一致することを確認します
+- status に original / compressed / restored の byte 数と圧縮率が表示されることを確認します
+- Download `.json.gz` で gzip 圧縮済み JSON を保存できることを確認します
+- Download restored JSON で復元後の JSON を保存できることを確認します
+
+操作説明
+- Load Sample: 確認用 ModelAsset JSON を textarea に読み込み
+- Open JSON: 任意の ModelAsset JSON または `.json.gz` を読み込み
+- Compress: textarea の JSON を gzip 圧縮し、同じ Blob を復元して一致確認
+- Decompress: 直近の圧縮 Blob を再度復元
+- Download .json.gz: 直近の圧縮 Blob を保存
+- Download restored JSON: 直近の復元 JSON を保存
+
+補足
+- Compression Streams API はブラウザ実装に依存します。未対応ブラウザではボタンが無効になります
+- このページは gzip を使います。ModelAsset の構造や読み込み形式を変えず、保存・転送用の byte stream として圧縮します
+</pre>
+</section>
+<section class='sample'>
+<h2 id='cube_axes'>cube_axes</h2>
+<p>URL: <a href='./cube_axes/index.html'>./cube_axes/index.html</a></p>
+<pre>
+サンプル: cube_axes
+
+概要
+- `addVertex` と `addPlane` だけを使って 6 面の立方体を組み、面の向きと回転の見え方を確認する単体テストです。
+- 面ごとに色を分けているので、どの面が正面に来ているかを追いやすくしています。
+
+このサンプルで使うwebg機能
+- `SmoothShader`: 立方体面の陰影計算
+- `Shape`: 頂点と面の手組み
+- `Space`: 立方体ノードと camera ノードの管理
+- `Matrix`: projection matrix の生成
+
+確認ポイント
+- 6 面がそれぞれ正しく張られていることを確認します。
+- Y / Z / X 軸回転を切り替えたときに、各面の見え方が破綻しないことを確認します。
+- 面ごとの色分けで、どの面がどの向きを向いているかを読みやすくします。
+- primitive を使わずに `Shape` だけで立方体を組んでも、基本の描画経路が成立することを確認します。
+
+操作説明
+- 自動回転: Y / Z / X 軸を 2 秒ごとに切り替え
+- キー入力: なし
+- マウス操作: なし
+</pre>
+</section>
+<section class='sample'>
+<h2 id='destroy_lifecycle'>destroy_lifecycle</h2>
+<p>URL: <a href='./destroy_lifecycle/index.html'>./destroy_lifecycle/index.html</a></p>
+<pre>
+サンプル: destroy_lifecycle
+
+概要
+- `Shape.destroy()`、`ShapeResource.destroy()`、`instantiated.destroy()`、`runtime.destroy()` の効果を、自動チェックと実画面の両方で確認する unittest です
+- 左レーンは `Shape` / `ShapeResource`、右レーンは `runtime` / `instantiation` の寿命管理に分け、どの層を destroy したかを見分けやすくしています
+
+このサンプルで使うwebg機能
+- `Shape`: `createInstance()` と `destroy()` による instance 側の寿命管理
+- `ShapeResource`: shared GPUBuffer の保持と `destroy()` による明示破棄
+- `Space`: `instantiate()` 後の node を描画し、destroy 後に scene から外れたかを確認する場
+- `Primitive`: 最小の立方体と床を作るための asset source
+- `ModelAsset.build()` / runtime: `instantiated.destroy()` と `runtime.destroy()` の確認
+- `SmoothShader`: 形状差と消え方を読みやすくする最小陰影
+- `UnitTestApp`: Screen 初期化、status 表示、ループ起動の共通 helper
+
+確認ポイント
+- 起動直後の自動確認で、`shape.destroy()` が owner node から shape instance を外し、最後の参照に対しては shared resource を破棄できることを確認します
+- `instantiated.destroy()` が scene 上の実体だけを外し、runtime の shared resource は残すことを確認します
+- `runtime.destroy()` が残っている instantiation と shared resource をまとめて終了させることを確認します
+- 実画面では、左レーンで instance だけを消す場合と resource まで終える場合、右レーンで scene 実体だけを消す場合と runtime ごと終える場合の差を見比べられます
+- 左レーンで shared resource まで終える見えを確認したい場合は、先に `1` で clone を消してから `2` を押すと分かりやすくなります
+
+操作説明
+- `1`: 左レーンの clone shape を destroy する
+- `2`: 左レーンの source shape を終了する。これが最後の参照なら shared resource も終了する
+- `3`: 左レーンを初期状態で作り直す
+- `7`: 右レーンの instantiation だけを destroy する
+- `8`: 右レーンの instantiation を runtime から作り直す
+- `9`: 右レーンの runtime を destroy する
+- `0`: 右レーンを新しい runtime で作り直す
+</pre>
+</section>
+<section class='sample'>
+<h2 id='detouch_min'>detouch_min</h2>
+<p>URL: <a href='./detouch_min/index.html'>./detouch_min/index.html</a></p>
+<pre>
+サンプル: detouch_min
+
+概要
+- `attach` と `detach` で親ノードを付け替えたとき、world 位置が保たれるかを確認する最小テストです。
+- 左右 2 つの同形アームと先端の球を置き、親変更前後の見え方と座標差を同時に追います。
+
+このサンプルで使うwebg機能
+- `Space`: Node 階層と親子付け替え
+- `Shape`: 棒と球の最小メッシュ
+- `Primitive`: 棒と球の基礎形状
+- `SmoothShader`: 単純な陰影
+- `Matrix`: 固定視点の投影行列
+
+確認ポイント
+- `attach` 前後で球の world 位置が極端に飛ばないことを確認します。
+- `detach` してから別の親へ付け替えても、見た目の位置が破綻しないことを確認します。
+- `space.raycast` のような複雑な処理を入れず、親変更そのものに集中できることを確認します。
+- 画面表示と数値表示の両方で、親変更の結果を同時に読み取れることを確認します。
+
+操作説明
+- `Space`: 左右の先端間で attach / detach を切り替える
+- `D`: 右先端へ付け替え / 右先端から外す
+- `R`: 初期状態へ戻す
+</pre>
+</section>
+<section class='sample'>
+<h2 id='embedded'>embedded</h2>
+<p>URL: <a href='./embedded/index.html'>./embedded/index.html</a></p>
+<pre>
+サンプル: embedded
+
+最終更新: 2026-04-09 JST
+
+このページは、`WebgApp` の `layoutMode: "embedded"` と `fixedCanvasSize` を組み合わせたときに、固定サイズ canvas を HTML 文書の途中へ置き、その上に重なる DOM overlay も同じ host 要素を基準に動くかを確認します。通常の fullscreen sample では、canvas と overlay は viewport 全体を前提にしていても気付きにくいのですが、教材ページのように本文の前後へ説明文やコード例を置く構成では、scroll 中に overlay が canvas から外れて見えないことが重要になります。
+
+ここでは、canvas のまわりへ長い本文を意図的に置き、ページ自体は普通にスクロールできるようにしています。そのうえで `OverlayPanel` による help、会話風 panel、`format: "pre"` の長文 panel、`Touch` を同時に出し、右側の status で host / canvas / overlay の矩形差分を毎フレーム表示します。これにより、単に「見た目で何となく追従している」だけでなく、「left / top / right / bottom の差分がどの程度か」も数値で追えます。
+
+このページの役割は、`embedded` を使った教材ページ、解説記事、社内ドキュメント用ページを作る前に、`WebgApp` 側の埋め込み配置が崩れていないかを一通りまとめて確認することです。`fixedCanvasSize` だけでなく、`app.takeScreenshot()`、`app.showOverlayPanel()`、`OverlayPanelPresets`、`InputController.installTouchControls()` の組み合わせが同じ host 要素で揃うかを見ます。
+
+## このページで確認すること
+
+最初に確認したいのは、ページ全体をスクロールしたときに canvas が文書フローの一部として動き、その上の help panel、dialogue 風 panel、pre panel、touch controls も一緒に移動することです。status の `canvas-host`、`help`、`dialogue`、`fixed`、`touch` が PASS のまま変わらないことを見ます。
+
+次に確認したいのは、help panel を畳んだときの見え方です。`H` で collapse / expand を切り替えたとき、`Show Help` ボタンだけが小さく残り、panel 枠が host 全幅へ帯状に広がらないことを見ます。
+
+さらに、`Enter` / `Space` で dialogue を進め、`D` で dialogue、`F` で fixed panel を切り替え、`S` で screenshot を予約し、`R` で camera を初期状態へ戻しても embedded の配置が崩れないことを確認します。`1`、`2`、`3` では先頭、canvas、末尾へ scroll できるため、長いページの途中にある canvas を往復しやすくしています。
+
+## このページで使う webg 機能
+
+このページでは、`WebgApp`、`EyeRig`、`OverlayPanel`、`OverlayPanelPresets`、`InputController`、`Touch`、`Shape`、`Primitive` を使います。`WebgApp` は embedded host と overlay の共通配置を担当し、`EyeRig` は orbit camera、`OverlayPanel` は help と会話風 panel と長文 panel の土台、`InputController` と `Touch` は keyboard / touch の共通入力を担当します。3D 表示自体は立方体 1 個だけに絞り、配置確認を主役にしています。
+
+## 操作説明
+
+マウスドラッグで orbit camera を動かせます。`ArrowLeft` / `ArrowRight` と touch の左右ボタンは cube の回転位相を変えます。`Enter` / `Space` で dialogue を次へ進めます。`H` で help panel の collapse / expand、`D` で dialogue の表示切替、`F` で pre panel の表示切替、`S` で screenshot、`R` で camera reset を行います。`1`、`2`、`3` はページ先頭、canvas 位置、末尾へ scroll する補助です。
+
+## つまずきやすい点
+
+このページが動いていても、実際の教材ページ側で `html, body { overflow: hidden; }` を付けたままだとページはスクロールしません。`layoutMode: "embedded"` は canvas と overlay を本文フローへ戻すための option であり、文書自体の scroll は HTML / CSS 側で許可する必要があります。
+
+また、`Touch` はここでは desktop でも確認できるよう `touchDeviceOnly: false` で常時表示しています。実アプリで mobile だけに出したい場合は既定値へ戻してください。
+
+## 関連文書
+
+- [05_WebgAppによるアプリ構成.md](../../book/05_WebgAppによるアプリ構成.md)
+- [15_HUDとオーバーレイの設計.md](../../book/15_HUDとオーバーレイの設計.md)
+- [WebgApp.js](../../webg/WebgApp.js)
+- [Touch.js](../../webg/Touch.js)
+</pre>
+</section>
+<section class='sample'>
+<h2 id='flick'>flick</h2>
+<p>URL: <a href='./flick/index.html'>./flick/index.html</a></p>
+<pre>
+サンプル: flick
+
+概要
+- `Touch.attachSurface()` の flick / long press / double tap を、モバイル向け編集操作へ変換する unittest です。
+- `samples/webgmodeler` の UI を移植するのではなく、スマホやタブレットで使う入力プロファイルを検証するための小さな 2D 編集 canvas として作っています。
+- tap は頂点選択または追加、double tap は Object / Edit mode 切り替え、long press は command palette、flick は tool 切り替えや duplicate / delete に割り当てています。
+
+この unittest で使うwebg機能
+- `Touch`: 指定 element 上の pointer event から tap / double tap / long press / flick を検出します。
+
+確認ポイント
+- canvas 上の頂点を tap すると選択されることを確認します。
+- 空き領域を tap、または Add tool 中に tap すると頂点が追加されることを確認します。
+- double tap で Object / Edit mode 表示が切り替わることを確認します。
+- long press で command palette が開くことを確認します。
+- left / right flick で Select / Add / Face / Move tool が切り替わることを確認します。
+- up flick で選択頂点が複製され、down flick で選択頂点が削除されることを確認します。
+
+操作説明
+- tap: 頂点選択または頂点追加
+- double tap: Object / Edit mode 切り替え
+- long press: command palette
+- flick left / right: tool 切り替え
+- flick up: 選択頂点の複製
+- flick down: 選択頂点の削除
+
+補足
+- desktop でも確認しやすいように `touchOnly: false` で mouse pointer も受け付けます。
+- 本格的なモデラー UI ではなく、webg core の gesture 入力を確認するための POC です。
+</pre>
+</section>
+
+<section class='sample'>
+<h2 id='game_api'>game_api</h2>
+<p>URL: <a href='./game_api/index.html'>./game_api/index.html</a></p>
+<pre>
+game_api
+
+このページは、ゲーム向け API を 1 本の小さな流れとして確認するためのものです。
+WebgApp で画面と HUD をまとめて初期化し、InputController で action 名を扱い、app 側の GameStateManager で title / play / pause / result を切り替え、Space と Shape の collision helper で player と target の重なりを拾います。
+
+画面上では、左側の player cube を左右入力で動かし、右側の target cube を拾うと score が増え、toast が出て、combo も更新されます。
+timeLeft が 0 になるか score が一定値に達すると result に入り、R で title に戻せます。
+
+このページで見たいのは、単に cube が動くことではありません。
+入力の edge と hold が分かれているか、scene phase が自然に切り替わるか、collision body の enter を使って 1 回だけ加点できるか、そして score / timer / toast が Message 系 HUD へ崩れずに重なるかを確認します。
+
+操作:
+Enter / Space / Start で pause から play へ戻る
+P / Esc / Pause で pause 切り替え
+R / Reset で pause/result から play を再開
+ArrowLeft / ArrowRight / A / D、または touch の ← / → で player を移動
+
+確認ポイント:
+- `InputController.registerActionMap()` で keyboard と touch を同じ action に束ねられるか
+- app 側 `GameStateManager` が title / play / pause / result を分けて扱えるか
+- `Shape.setCollisionShape()` の sphere 定義が `Space.addCollisionBody()` に渡るか
+- `app.message.setLines()` で構成した score / combo / time 表示と `pushToast()` が HUD として自然に出るか
+- `WebgApp.setControlRows()` が canvas HUD と debug dock の両方に流せる形になっているか
+</pre>
+</section>
+<section class='sample'>
+<h2 id='input_controller'>input_controller</h2>
+<p>URL: <a href='./input_controller/index.html'>./input_controller/index.html</a></p>
+<pre>
+input_controller
+
+このページは、InputController の設計をゲーム向けの土台として確認するためのものです。
+
+ここで見たいのは、単にキーが押せるかどうかではありません。
+physical key の継続状態が `keyState` で保たれるか、`registerActionMap()` で複数のキーを 1 つの action に束ねられるか、そして `pulseAction()` が touch ボタンや menu 系の one-shot 操作としてその frame にだけ見えるかを確認します。
+
+`getAction()` は継続入力を見る入口で、`wasActionPressed()` と `wasActionReleased()` は edge を見る入口です。
+このページでは、まず自動チェックで Enter / Space のような鍵盤入力が action に反映されることと、`pulseAction()` で与えた action が同じ frame では `getAction()` からも見えて次の frame では消えることを確かめます。
+
+その後の manual フェーズでは、画面に表示した touch ボタンを実際に押し、keyboard の ArrowLeft / A / ArrowRight / D / Space / Enter / R と同じ action 名で動くかを確認します。`left` / `right` は hold、`fire` / `reset` は action として扱い、keyboard と touch の両方で同じ見え方になるかを見ます。
+
+操作:
+- 画面を開くと自動で確認が走る
+- 自動確認のあと、下に出る touch ボタンと keyboard を実際に操作する
+- `ArrowLeft / A` と `touch ←`、`ArrowRight / D` と `touch →` をそれぞれ押して同じ移動になるかを見る
+- `Space / Enter` と `Fire`、`R` と `Reset` を押して同じ action として扱われるかを見る
+
+確認ポイント:
+- `normalizeKey()` が space / esc / trim を正規化できるか
+- `registerActionMap()` が action と binding を対応づけるか
+- `keydown` / `keyup` の default を抑えてゲーム入力向けに扱えるか
+- `pulseAction()` が one-shot action として扱えるか
+- touch ボタンが keyboard と同じ action 名で動くか
+</pre>
+</section>
+<section class='sample'>
+<h2 id='message'>message</h2>
+<p>URL: <a href='./message/index.html'>./message/index.html</a></p>
+<pre>
+サンプル: message
+
+概要
+- `Text` と `Message` を並べて比較し、低レベルな文字バッファ更新と高レベルなHUDレイアウト更新の違いを確認するサンプルです。
+- `Message` は `setLine(id, text, options)` / `setBlock(id, lines, options)` / `replaceAll(entries)` を中心に使い、AI が行番号や message index を手管理しなくて済む構成を示します。
+- `Text.setScale(scale)` と可変 grid を使うと、見える列数と行数が変わること、その visible grid に対して `Message` の anchor が効くことも確認できます。
+
+このサンプルで使うwebg機能
+- `Text.init` / `clearScreen` / `writeAt` / `drawScreen`
+- `Message.init` / `setLine` / `setBlock` / `replaceAll` / `drawScreen`
+- `Text.setScale(scale)` と `Message` の anchor / block レイアウト
+- `Screen` のフレーム描画制御
+
+確認ポイント
+- `Text` 側では `writeAt()` で screen buffer を直接更新し、`drawScreen()` で一括描画する流れを確認します。
+- `Message` 側では `replaceAll()` で HUD 全体を差し替え、`id` と `anchor` を持つ高レベルAPIの方が sample 記述を簡潔にできることを確認します。
+- `top-right` / `bottom-left` の anchor で固定座標ではなく visible grid 基準の配置ができることを確認します。
+- フレーム数や点滅文字列のような毎フレーム更新値でも、block 単位でまとめた方が意図を追いやすいことを確認します。
+
+操作説明
+- キー入力: なし
+- マウス操作: なし
+</pre>
+</section>
+<section class='sample'>
+<h2 id='overlay_panel'>overlay_panel</h2>
+<p>URL: <a href='./overlay_panel/index.html'>./overlay_panel/index.html</a></p>
+<pre>
+サンプル: overlay_panel
+
+概要
+- DOM 文字表示 UI を `OverlayPanel` へ集約し、複数の表示形式を同じ基盤で扱えることを確認する unittest です
+- 3D scene の上に複数の panel を重ね、anchor、collapse、pre 表示、scroll、modal、buttons、choices、debug dock 回避の組み合わせを 1 つの app で見比べます
+- 用途ごとに別々の UI class を増やさず、`WebgApp.showOverlayPanel()` と `OverlayPanelPresets` を中心に確認します
+
+このサンプルで使うwebg機能
+- `WebgApp`: Screen、Input、Message、debug dock、汎用 `OverlayPanel` 管理をまとめて初期化
+- `OverlayPanelPresets`: help などの代表的な option object を `WebgApp` の外で組み立てる
+- `OverlayPanel`: DOM 上の説明、ログ、modal panel、choice button を 1 つの基盤で表示
+- `Primitive` / `Shape`: 背景として回転 cube を描き、panel の邪魔になり方を確認しやすくする
+- `EyeRig`: orbit camera の最小確認
+
+確認ポイント
+- `anchor` を `top-left` から `bottom-right` まで切り替えたとき、同じ panel が 9 方向へ移動することを確認します
+- help preset 相当の panel が collapse / expand を切り替え、再表示 button を残せることを確認します
+- `format: "pre"` と `scrollY: true` を組み合わせた log panel が、長い本文を崩さず読めることを確認します
+- `modal: true` と `pauseScene: true` を持つ center panel を開いたとき、test 側がその state を読んで回転停止できることを確認します
+- `buttons` と `choices` の click が `onAction` へ同じ経路で届くことを確認します
+- debug mode へ切り替えて dock を出したとき、右寄せ anchor の panel が dock 領域を避けることを確認します
+
+操作説明
+- `1` から `9`: anchor panel の配置を 9 方向へ切り替える
+- `H`: help panel を collapse / expand する
+- `L`: log panel を表示 / 非表示する
+- `M`: modal panel を表示 / 非表示する
+- `R`: action log を初期状態へ戻す
+- `F9` のあと `M`: debug mode を切り替え、dock 回避を確認する
+- Drag / Arrow keys: orbit camera
+- `[ / ]` または wheel: zoom
+
+補足
+- modal panel 自体は scene を自動停止しません。この unittest では `panel.getState().pauseScene` を読んで、回転を止める側の実装例を示しています
+- `Enter` は modal panel の defaultAction に割り当ててあり、panel が focus を持っている間は既定 button が発火します
+</pre>
+</section>
+<section class='sample'>
+<h2 id='particle_emitter'>particle_emitter</h2>
+<p>URL: <a href='./particle_emitter/index.html'>./particle_emitter/index.html</a></p>
+<pre>
+particle_emitter
+
+このページは、`ParticleEmitter` を「動作確認」と「そのまま使い方が分かるサンプル」の両方として扱うためのものです。
+最初に fake renderer を使った自動テストで `preset / emit / update / draw / clear` の流れを確かめ、そのあと WebgApp の実画面へ切り替えて、本当に particle が画面で動くことを確認します。
+
+このページで見たいのは、particle が増えることだけではありません。
+`setPreset()` で procedural billboard texture が作り直されること、`emit()` で source 位置と shadowY を指定して burst を出せること、`update()` で life と位置が進むこと、`draw()` で billboard と shadow billboard の両方へ流れることを見ます。
+さらに、実画面側では keyboard と touch ボタンの両方を同じ action 名へ流し込み、ゲームで使うときの入力の組み方まで読めるようにしています。
+
+操作の流れ:
+- 画面を開くと、まず自動テストが走る
+- そのあと WebgApp の実画面へ切り替わり、particle が描画される
+- `Space` / `Enter` または `Burst` ボタンで burst を出す
+- `1` / `2` / `3` / `4` または preset ボタンで `spark` / `smoke` / `debris` / `pickup` を切り替える
+- `ArrowLeft` / `ArrowRight` / `A` / `D` または touch の `←` / `→` で emission point を動かす
+- `C` または `Clear` で現在の particle を消す
+- `R` または `Reset` で source を中央へ戻す
+- `[` / `]` または `-` / `+` ボタンで 1 回の burst 数を調整する
+- touch の action ボタンは押した瞬間に反応し、次 frame の edge と重ならないようにしてある
+
+確認ポイント:
+- `ParticleEmitter.getPreset()` が preset 名を返すか
+- `setPreset()` が texture の再生成まで行うか
+- `emit()` が指定 count の particle を生むか
+- `update()` が position と life を進めるか
+- `draw()` が billboard と shadow billboard へ流せるか
+- `clear()` が active particle を消せるか
+- 実画面で keyboard と touch が同じ action 名へ集約されるか
+
+このページは、`ParticleEmitter` を使ったサンプルを新しく作るときの最小の実例にもなっています。
+source の位置、preset の切り替え、burst 数の調整、shadow billboard の見え方を 1 本にまとめてあるので、別のゲームや演出サンプルへ流用しやすい構成です。
+あわせて、`ParticleEmitter.emit()` では `position`、`velocity`、`gravity`、`color` とそれぞれの spread を省略せず明示する使い方を、manual phase でそのまま示しています。
+</pre>
+</section>
+<section class='sample'>
+<h2 id='physics_node_contracts'>physics_node_contracts</h2>
+<p>URL: <a href='./physics_node_contracts/index.html'>./physics_node_contracts/index.html</a></p>
+<pre>
+サンプル: physics_node_contracts
+
+概要
+- `PhysicsNode` 単体 API の振る舞いを固定するための基本仕様確認ページです。
+- ここでは見た目の物理挙動ではなく、`bodyType` 切替、速度保存、sleep、teleport、`syncNodeFromPhysics()`、各種 guard のような API の規約を自動確認します。
+- 実際の落下と床停止の見え方は `unittest/physics_node_fall` が担当し、このページは「PhysicsNode 単体をどう使うか」を確認する位置付けです。
+
+このサンプルで使うwebg機能
+- `PhysicsNode`: `dynamic / kinematic / static`、速度、減衰、sleep、trigger、fixedRotation、collision layer / mask、`teleport()`、`syncNodeFromPhysics()`
+- `Space.addPhysicsNode()`: scene graph に PhysicsNode を登録する入口
+- `UnitTestApp`: unittest の起動、resize、status 表示の共通 helper
+
+確認ポイント
+- `dynamic` の既定値、`mass` と `invMass` の関係を確認します。
+- `kinematic` と `static` が `invMass = 0` になることを確認します。
+- `pauseDynamic()` / `resumeDynamic()` が速度保存と復元の規約に従うことを確認します。
+- `teleport()` が `keepVelocity` の設定どおりに速度を消すか保持するかを確認します。
+- `syncNodeFromPhysics()` が位置と姿勢を node 側へ反映できることを確認します。
+- `dynamic` 中の `setPosition()` や `animatePosition()` が例外で拒否されることを確認します。
+- `applyImpulse()`、`applyAngularImpulse()`、sleep、accumulator clear、参照オブジェクト保持が期待どおりに動くことを確認します。
+
+操作説明
+- 操作は不要です。画面を開くと自動確認が走ります。
+- PASS / FAIL の一覧が status に表示されます。
+- canvas 部分は最小の clear / present だけを行い、WebGPU frame が成立していることを確認します。
+
+実装確認の見方
+- `webg/PhysicsNode.js` の挙動を見るときは、まずこのページで body type、速度、sleep、teleport、node 同期の規約を確認できます。
+- 単体 API の規約確認はこのページが担当し、複数物体の関係確認は `unittest/physics_space_contracts` が担当します。
+- 見た目の落下や床停止だけを確認したい場合は `unittest/physics_node_fall` を併せて確認してください。
+</pre>
+</section>
+<section class='sample'>
+<h2 id='physics_space_contracts'>physics_space_contracts</h2>
+<p>URL: <a href='./physics_space_contracts/index.html'>./physics_space_contracts/index.html</a></p>
+<pre>
+サンプル: physics_space_contracts
+
+概要
+- `PhysicsSpace` が、固定タイムステップ、gravity、角速度積分、body 登録、box collider / plane collider / sphere collider / capsule collider の接触解決、反発、摩擦、sleep 判定、trigger contact、raycast / raycastAll、queryAabb、overlapSphere を期待どおりに処理できるかを自動確認する基本仕様確認ページです。
+- `PhysicsNode` 単体 API の規約は `unittest/physics_node_contracts` が担当し、このページは複数 body の関係を解く world 側の規約を確認します。
+- 見た目の落下シーンは `unittest/physics_node_fall` が担当し、このページは PASS / FAIL による切り分けを優先します。
+
+このサンプルで使うwebg機能
+- `PhysicsSpace`: gravity、fixed timestep、angular velocity / torque の姿勢反映、solver、contact 記録、listener、trigger、raycast、raycastAll、queryAabb、overlapSphere、反発、摩擦、sleep 判定
+- `PhysicsNode`: dynamic / static body、box / plane / sphere / capsule collider、物理材質、sleep 状態
+- `Space.addPhysicsNode()`: world へ登録する body を scene graph 上に作る入口
+- `UnitTestApp`: unittest の起動、resize、status 表示の共通 helper
+
+確認ポイント
+- `PhysicsSpace` の constructor option と getter / setter が整合することを確認します。
+- sleep step / angular threshold の getter / setter と、連続低速 contact による sleep 安定化を確認します。
+- sleeping dynamic body が active body との contact で wake することを確認します。
+- `addBody()` と `removeBody()` が所属 world 参照と body 一覧を整合させることを確認します。
+- plane floor と box の最小シーンで、重力落下後に box が床上面で sleep へ入ることを確認します。
+- 同質量 2 体の head-on collision で、反発係数に応じて速度が反転することを確認します。
+- AABB broadphase が、離れた有限 collider を narrowphase 前に除外し、重なった有限 collider は narrowphase へ渡すことを確認します。
+- `sweepAabb` broadphase と `bruteForce` broadphase が同じ finite contact pair を返すことを確認します。
+- 回転した `BoxCollider` が外接 AABB、raycast normal、queryAabb、overlapSphere、sphere / box / capsule contact の dispatch に乗ることを確認します。
+- collision layer / mask が contact 候補を制御し、query 系の `layerMask` が対象 body を絞ることを確認します。
+- query 系の `triggerOnly` が trigger body だけを対象にすることを確認します。
+- `angularVelocity` と `torque` が `PhysicsNode` の姿勢へ反映され、`fixedRotation` が角更新を止めることを確認します。
+- 中心から外れた contact が contact point と inertia を使って角速度を生み、`fixedRotation` では角 impulse が入らないことを確認します。
+- plane contact で摩擦により接線方向速度が減ることを確認します。
+- `SphereCollider` が broadphase / narrowphase / query / raycast の既存 dispatch に参加できることを確認します。
+- `CapsuleCollider` が broadphase / narrowphase / query / raycast の既存 dispatch に参加できることを確認します。
+- `getLastContacts()` が直近解決 contact の body、normal、penetration を返すことを確認します。
+- `raycast()` と `raycastAll()` が plane / box / sphere / capsule collider に対して hit を返し、`includeTriggers`、`filter`、`maxDistance`、距離順整列を扱えることを確認します。
+- `queryAabb()` が AABB 対応 collider に対する重なり問い合わせを返し、`includeTriggers`、`filter`、境界一致を扱えることを確認します。
+- `overlapSphere()` が collider に対する球範囲問い合わせを返し、`includeTriggers`、`filter`、球中心が collider 内にあるケースを扱えることを確認します。
+
+操作説明
+- 操作は不要です。画面を開くと自動確認が走ります。
+- PASS / FAIL の一覧が status に表示されます。
+- canvas 部分は最小の clear / present だけを行い、WebGPU frame が成立していることを確認します。
+
+実装確認の見方
+- `webg/PhysicsSpace.js` の挙動を見るときは、まずこのページで固定タイムステップ、contact、query、raycast の規約を確認できます。
+- collider 種別や query API の関係を見る場合も、ここで最小の自動確認を押さえてから、見た目を確認するサンプルへ進むと切り分けやすくなります。
+</pre>
+</section>
+<section class='sample'>
+<h2 id='physics_node_fall'>physics_node_fall</h2>
+<p>URL: <a href='./physics_node_fall/index.html'>./physics_node_fall/index.html</a></p>
+<pre>
+physics_node_fall
+
+概要
+- `PhysicsSpace` と `PhysicsNode` を使い、少し回転した立方体が重力で落下して床で停止する最小確認を行うページです。
+- 固定タイムステップ、plane collider の床、box collider の立方体、重力、摩擦、sleep 判定を使った最小の落下シーンを確認します。
+- 立方体同士の接触解決も `PhysicsSpace` 側で処理しますが、主眼は「少し回転した箱が床で安定して止まるか」にあります。
+
+このテストで使う webg 機能
+- `PhysicsSpace`: 固定タイムステップ、重力、plane / box collider の接触解決、摩擦、sleep 判定
+- `PhysicsNode`: `dynamic / kinematic / static` の切替、速度保持、collider と物理材質の保持、`syncNodeFromPhysics()`
+- `Space.addPhysicsNode()`: 物理ノードを scene graph に登録する入口
+- `Shape` と `Primitive.cube()`: 立方体と床の最小メッシュ生成
+- `SmoothShader`: 単色ライティングで箱の傾きと接地状態を見やすく表示
+- `UnitTestApp`: Screen 初期化、resize、status 表示
+
+確認ポイント
+- 少し傾いた複数の立方体が、開始直後は `dynamic` として落下することを確認します。
+- 各立方体が床の上面位置で止まり、めり込まずに静止することを確認します。
+- 停止後は `dynamic` のまま sleeping 状態へ入り、位置がぶれ続けないことを確認します。
+- `Space` で一時停止 / 再開、`R` で初期配置へ戻せることを確認します。
+
+操作
+- `Space`: 物理更新の一時停止 / 再開
+- `R`: 立方体の位置、速度、`bodyType` を初期状態へ戻す
+
+実装確認の見方
+- `PhysicsSpace.js` や `PhysicsNode.js` の落下、接地、sleep の流れを見るときは、このページで最小シーンを確認できます。
+- `PhysicsNode` 単体 API の規約は `unittest/physics_node_contracts` が担当し、このページは world を通した落下シーンの確認を担当します。
+- plane collider と box collider の組み合わせ、および box-box の OBB 解決を目視できます。問い合わせ系と OBB dispatch は `physics_space_contracts` の raycast / raycastAll / queryAabb / overlapSphere 確認を参照してください。
+</pre>
+</section>
+<section class='sample'>
+<h2 id='physics_node_rotate'>physics_node_rotate</h2>
+<p>URL: <a href='./physics_node_rotate/index.html'>./physics_node_rotate/index.html</a></p>
+<pre>
+physics_node_rotate
+
+概要
+- `PhysicsSpace` が `angularVelocity` と `torque` を quaternion ベースで姿勢へ積分し、`PhysicsNode` の見た目回転として反映されるかを画面で確認するページです。
+- 左の赤 beam は `angularVelocity` による等速回転、中央の青 beam は最初の数秒だけ毎フレーム与える `torque` による加速回転、右の緑 body は灰色 block 群へ落下して相互作用を起こしながら回転が落ち着く動き、奥の黄 beam は `fixedRotation` による回転禁止を担当します。
+- `BoxCollider` は body の quaternion 姿勢へ追従する OBB として扱われます。ここでは、見た目の姿勢更新と、灰色 block 群との box-box 相互作用を目視で確認します。
+
+このテストで使う webg 機能
+- `PhysicsSpace`: 固定タイムステップ、重力、角速度積分、torque の反映、角減衰、sleep 判定
+- `PhysicsNode`: `dynamic / kinematic / static` の切替、`angularVelocity`、`torque`、`fixedRotation`、`syncNodeFromPhysics()`
+- `BoxCollider` と `PlaneCollider`: 物理判定の最小 collider
+- `Shape` と `Primitive.cuboid()`: beam と床の最小メッシュ生成
+- `SmoothShader`: beam の回転方向と姿勢変化を読みやすく表示
+- `UnitTestApp`: Screen 初期化、resize、status 表示
+
+確認ポイント
+- 左の赤 beam が `angularVelocity` によって一定方向へ回り続けることを確認します。
+- torque 用 beam が、最初の数秒は torque によって時間とともに回転が速くなり、その後は torque を止めても同じ角速度で慣性回転を続けることを確認します。
+- 落下 body が灰色 block 群へ落ちつつ回転し、block を押しながら最終的に落ち着いていくことを確認します。
+- `fixedRotation` を有効にした beam は、他の body と違って回転しないことを確認します。
+- status で各 body の姿勢と角速度が変化し、blue の `torque on / off`、green の `falling / impacting blocks / settling / sleep` が読み取れることを確認します。
+
+操作
+- `Space`: 物理更新の一時停止 / 再開
+- `R`: 位置、姿勢、速度、`bodyType` を初期状態へ戻す
+- `T`: torque beam に追加の強い torque pulse を与える
+
+実装確認の見方
+- `PhysicsSpace.js` の `angularVelocity`、`torque`、`angularDamping`、`fixedRotation`、sleep 条件を見るときは、このページで画面上の回転と status を確認できます。
+- `BoxCollider` の OBB dispatch は `unittest/physics_space_contracts` が自動確認します。ここでは画面上の姿勢更新を中心に見ており、inertia tensor や本格的な回転 contact solver の確認ではありません。
+- 自動確認の規約は `unittest/physics_space_contracts` が担当し、このページは画面上の見え方確認を担当します。
+</pre>
+</section>
+<section class='sample'>
+<h2 id='scene_loader_contracts'>scene_loader_contracts</h2>
+<p>URL: <a href='./scene_loader_contracts/index.html'>./scene_loader_contracts/index.html</a></p>
+<pre>
+scene_loader_contracts
+
+概要
+- `SceneAsset` と `SceneLoader` が、Scene JSON の `physicsSpace` と各 entry の `physics` を読んで、`PhysicsSpace` と `PhysicsNode` を構築できるかを確認するページです。
+- ここでは `PhysicsSpace` 単体の接触式ではなく、「Scene JSON の宣言が validator を通り、runtime の `physicsSpace` と `stepPhysics()` に届くか」を見ることを目的にしています。
+- 画面上では、Scene JSON から作った gray floor と blue crate が表示され、blue crate は起動直後から見える位置で、横移動や回転なしに floor 上面へ向かって落下します。
+
+このテストで使う webg 機能
+- `SceneAsset`: Scene JSON の保持、検証、build の入口
+- `SceneLoader`: `physicsSpace` と `entry.physics` を runtime へ変換する loader
+- `SceneValidator`: 物理宣言を含む Scene JSON の構造検証
+- `PhysicsSpace`: build 後の runtime から `stepPhysics(deltaMs)` で進める物理空間
+- `PhysicsNode`: `entry.physics` 付き entry の placement body
+- `Primitive`: floor と crate の最小形状生成
+- `UnitTestApp`: Screen 初期化、resize、status 表示
+
+確認ポイント
+- `SceneAsset.validate()` が、`physicsSpace` と `entry.physics` を含む Scene JSON を受け付けることを確認します。
+- `SceneAsset.build({ gpu, space })` の戻り値に `physicsSpace` と `stepPhysics()` が含まれることを確認します。
+- `entry.physics` を持つ floor / crate は `physicsNode` を持つことを確認します。
+- `stepPhysics()` によって crate の位置が変化し、Scene JSON から生成した body が floor 上面へ向かって実際に落下することを確認します。
+- 起動直後から blue crate が見え、`y=8` 付近から `y=-16` 付近へ真下に落ちて止まることを確認します。
+- `R` で crate を初期位置へ戻し、`Space` で一時停止 / 再開できることを確認します。
+
+操作
+- `Space`: 物理更新の一時停止 / 再開
+- `R`: crate を初期位置と初期速度へ戻す
+
+実装確認の見方
+- `SceneLoader.js`、`SceneValidator.js`、`SceneAsset.js`、`PhysicsSpace.js` の関係を見るときは、この確認ページで Scene JSON から runtime までの流れを追えます。
+- ここで見ているのは Scene JSON からの物理入口です。接触式や query の規約は `unittest/physics_space_contracts` を参照してください。
+- runtime の `stepPhysics(deltaMs)` を明示的に呼び、Scene JSON から作られた body が物理更新へ届くことを確認します。
+</pre>
+</section>
+<section class='sample'>
+<h2 id='phong_debug'>phong_debug</h2>
+<p>URL: <a href='./phong_debug/index.html'>./phong_debug/index.html</a></p>
+<pre>
+phong_debug unittest
+
+## 目的
+`SmoothShader` の `backface_debug`、`has_bone`、`use_normal_map`、`weight_debug` の組み合わせを constructor option と材質パラメータから有効化できるかを確認します。
+
+## 方法
+`SmoothShader` を 4 インスタンス作り、折れ曲がった板状メッシュ、revolution 系の筒、skinned tube、normal map 付き skinned tube を並べて比較します。折れ板は `has_bone = 0` の static mesh として backface debug を確認し、筒は `use_normal_map = 1` を加えて normal map と裏面表示が同時に効くかを見ます。下段左は `has_bone = 1` の基本 skinned tube、下段中央は `use_normal_map = 1` と `weight_debug = 1` を同時に有効化した skinned tube、下段右は `use_normal_map = 1` だけを有効化した skinned tube とし、同じ `SmoothShader` でも材質パラメータだけで経路が切り替わることを確認します。`webg` の UV は左下原点という前提を使い、`num256.png` は左右反転せずにそのまま読み込みます。revolution 系の 3 つは、必要なときだけ内部補正で V の見え方を合わせ、裏面表示でも webg の UV 基準と同じ意味で上下が揃うことを確認します。
+
+## 予想
+backface debug が効いていれば、裏面はマゼンタ系の色で目立ちます。normal map を有効にした筒や skinned tube では、側面に細かい陰影が出て、回転に応じて見え方が切り替わるはずです。下段中央の `weight_debug = ON` では、normal map よりも重み色が優先され、赤・緑系の分布が確認できるはずです。もしマゼンタが出ないなら constructor option の伝播か cull 設定が疑われます。もし normal map の陰影が出ないなら `SmoothShader` の `normal_texture` 反映か UV の扱いが疑われます。`webg` の UV 基準は左下原点なので、画像の左右はそのままにし、必要な場合だけ内部補正で V を合わせて、メッシュの表裏とテクスチャの上下を論理的に分離して確認します。
+
+## 結果
+未実行
+
+## 解釈
+未実行
+
+## Commit
+コミットなし
+</pre>
+</section>
+<section class='sample'>
+<h2 id='primitive_modelasset'>primitive_modelasset</h2>
+<p>URL: <a href='./primitive_modelasset/index.html'>./primitive_modelasset/index.html</a></p>
+<pre>
+サンプル: primitive_modelasset
+
+概要
+- `Primitive` が返す `ModelAsset` を `ModelValidator` と `ModelBuilder` へ通し、runtime の `Space / Node / Shape` として復元できるかを最小構成で確認する unittest です。
+- UV、wireframe、normal map は固定せず、`Primitive -&gt; ModelAsset -&gt; ModelValidator -&gt; ModelBuilder -&gt; instantiate(space)` の経路が壊れていないかを確認対象に絞ります。
+
+このサンプルで使うwebg機能
+- `Primitive.sphere` / `Primitive.cone` / `Primitive.truncated_cone` / `Primitive.double_cone`
+- `Primitive.prism` / `Primitive.donut` / `Primitive.cube` / `Primitive.cuboid` / `Primitive.mapCube`
+- `ModelValidator`: `ModelAsset` 構造の妥当性確認
+- `ModelBuilder`: `ModelAsset` から runtime `Shape` / `Node` を組み立てる helper
+- `Space`: build 後の node tree を復元して描画する
+- `UnitTestApp`: Screen 初期化、resize、status 表示の共通 helper
+
+確認ポイント
+- 9 種類の primitive asset が validator を通過し、`builder.build()` 後に 3x3 で描画されることを確認します。
+- `instantiate(space)` で復元した runtime node へ追加移動を与えても、描画が崩れないことを確認します。
+- validator warnings が想定外に増えていないことを status から確認します。
+
+操作説明
+- `Space`: 回転の一時停止 / 再開
+</pre>
+</section>
+<section class='sample'>
+<h2 id='primitive_normal_map'>primitive_normal_map</h2>
+<p>URL: <a href='./primitive_normal_map/index.html'>./primitive_normal_map/index.html</a></p>
+<pre>
+サンプル: primitive_normal_map
+
+概要
+- `Primitive` が返す代表形状へ同じベース texture を貼り、normal map なし / 画像由来 normal / 手続き normal の見えを 3x3 で比較する unittest です。
+- 行で primitive の違い、列で normal source の違いを見比べ、`SmoothShader` の normal map 変化だけを最小構成で確認します。
+
+このサンプルで使うwebg機能
+- `Primitive.sphere` / `Primitive.prism` / `Primitive.mapCube`
+- `SmoothShader`: normal map の有無と強度を反映する shader
+- `Texture.buildNormalMapFromHeightMap`
+- `Texture.buildNormalMapFromProceduralHeight`
+- `Shape.setTextureMappingMode` / `setTextureMappingAxis` / `setTextureScale`
+- `UnitTestApp`: Screen 初期化、resize、status 表示の共通 helper
+
+確認ポイント
+- 同じ primitive で、normal map なしと image / procedural normal の陰影差が見えることを確認します。
+- `sphere` と `prism` の回転体 UV 系、`mapCube` の専用 UV 系で、normal map 適用後も極端な破綻が出ないことを確認します。
+- `num256.png` 由来の image normal と、noise ベース strength=2.0 の procedural normal で陰影の出方が明確に違うことを確認します。
+
+操作説明
+- `Space`: 回転の一時停止 / 再開
+</pre>
+</section>
+<section class='sample'>
+<h2 id='primitive_texture_uv'>primitive_texture_uv</h2>
+<p>URL: <a href='./primitive_texture_uv/index.html'>./primitive_texture_uv/index.html</a></p>
+<pre>
+サンプル: primitive_texture_uv
+
+概要
+- `Primitive` が返す基本形状へテクスチャを貼り、UV 崩れがないかを最小構成で確認する unittest です。
+- 回転体に共通の UV 計算を使う形状群と、平面マッピング系、`mapCube` の専用 UV を 3x3 配置で同時に見比べます。
+
+このサンプルで使うwebg機能
+- `Primitive.sphere` / `Primitive.cone` / `Primitive.truncated_cone` / `Primitive.double_cone`
+- `Primitive.prism` / `Primitive.donut` / `Primitive.cube` / `Primitive.cuboid` / `Primitive.mapCube`
+- `Shape.setTextureMappingMode` / `setTextureMappingAxis` / `setTextureScale`
+- `Texture`: `num256.png` の読み込み
+- `UnitTestApp`: Screen 初期化、resize、status 表示の共通 helper
+
+確認ポイント
+- 球、円錐、切頭円錐、両円錐、角柱、ドーナツで、回転体 UV の seam や数字の流れが極端に破綻しないことを確認します。
+- `cube` / `cuboid` の平面マッピングで、面ごとのスケール差が意図どおり見えることを確認します。
+- `mapCube` が通常 `cube` と異なる UV 展開を持ち、面ごとの数字の流れが破綻しないことを確認します。
+
+操作説明
+- `Space`: 回転の一時停止 / 再開
+</pre>
+</section>
+<section class='sample'>
+<h2 id='primitive_wireframe'>primitive_wireframe</h2>
+<p>URL: <a href='./primitive_wireframe/index.html'>./primitive_wireframe/index.html</a></p>
+<pre>
+サンプル: primitive_wireframe
+
+概要
+- `Primitive` が返す代表的な基本形状を 3x3 で並べ、solid 表示と wireframe 表示の切替が破綻しないかを確認する unittest です。
+- texture や normal map は使わず、`Shape.setWireframe()` の切替結果だけを最小構成で観察します。
+
+このサンプルで使うwebg機能
+- `Primitive.sphere` / `Primitive.cone` / `Primitive.truncated_cone` / `Primitive.double_cone`
+- `Primitive.prism` / `Primitive.donut` / `Primitive.cube` / `Primitive.cuboid` / `Primitive.arrow`
+- `Shape.setWireframe`
+- `SmoothShader`: solid / wireframe 切替時の共通 shader と基本ライティング
+- `UnitTestApp`: Screen 初期化、resize、status 表示の共通 helper
+
+確認ポイント
+- 球、回転体、多角柱、トーラス、直方体、矢印で、solid と wireframe の切替後も描画が消えたり崩れたりしないことを確認します。
+- 回転中でも wireframe 線が極端に欠けず、形状の輪郭を追えることを確認します。
+- `1` から `9` で個別 primitive の wireframe を反転したとき、一部だけ線表示にして比較しても他の shape に影響しないことを確認します。
+
+操作説明
+- `Space`: 回転の一時停止 / 再開
+- `1` - `9`: 対応する primitive の wireframe を個別切替
+- `W`: 全 primitive の wireframe 一括切替
+</pre>
+</section>
+<section class='sample'>
+<h2 id='raycast'>raycast</h2>
+<p>URL: <a href='./raycast/index.html'>./raycast/index.html</a></p>
+<pre>
+raycast
+
+概要
+- マウス位置からワールド空間レイを生成し、`space.raycast` でオブジェクト選択を行う内部テストです。
+- クリック選択、ピッキング、インタラクション開始点として利用できます。
+- 視点をもう少し近づけ、少し強めに見下ろす向きにして、対象もやや大きくすることでクリックしやすさとヒットの見えやすさを上げています。
+- 球と円柱状の対象をさらに上げ、球は上下の振れ幅を広げることで円柱に隠れにくくしています。
+
+このサンプルで使うwebg機能
+- `Space.raycast(origin, dir, options)`
+- 画面座標→NDC→ワールドレイ変換
+- `Shape.updateMaterial`: 選択状態の色変更
+
+確認ポイント
+- クリック位置に対応したオブジェクトだけが選択されるかを確認し、レイ生成と判定結果の整合性を検証します。
+- 選択時の色変更で「ヒットした対象」が明確に可視化されるかを確認し、UI入力フローの基礎として利用します。
+- 物体サイズと camera 距離の調整で、画面上の対象が見失いにくいことを確認します。
+- 球の上下移動を少し大きくしても、raycast のヒット位置が追いやすいことを確認します。
+
+操作説明
+- クリック: マウス位置からレイを飛ばしてオブジェクト選択
+
+実装確認の見方
+- このページは ray 生成過程を見せるため、意図的に `WebgApp` ではなく `Screen` を直接使います。
+- 通常のアプリ構成を提案する場合は、この初期化コードをそのまま模倣せず、`WebgApp` または `UnitTestApp` を優先してください。
+- collision shape やより複雑な衝突判定は `samples/collisions` も併せて確認してください。
+</pre>
+</section>
+<section class='sample'>
+<h2 id='skinning_basic'>skinning_basic</h2>
+<p>URL: <a href='./skinning_basic/index.html'>./skinning_basic/index.html</a></p>
+<pre>
+サンプル: skinning_basic
+
+概要
+- `SmoothShader` の skinning 経路と、同じ skinned mesh を `Wireframe` へ切り替えたときの線描画を最小構成で確認する unittest です。
+- 少数ボーンで曲がる円柱側面メッシュと debugBone 表示だけに絞り、スキニング中の面描画と線描画が同じ変形に追従するかを見ます。
+
+このサンプルで使うwebg機能
+- `SmoothShader`: `setMaterial("smooth-shader", ...)` を入口にした smooth skinning 描画
+- `Wireframe`: `Shape.setWireframe()` による skinned mesh の line-list 描画
+- `Skeleton` / `Shape.addVertexWeight`: 2 ボーンの最小ウェイト設定
+- `Space.drawBones`: ボーン表示
+- `UnitTestApp`: Screen 初期化、status / error 表示の共通化
+
+確認ポイント
+- メッシュ変形が継続し、ボーン表示と曲がる位置が一致することを確認します
+- `num256.png` を貼った状態でも UV が極端に崩れず、skinning shader の基本表示が成立することを確認します
+- `W` で wireframe を有効にしたとき、線描画も同じボーン変形に追従し、静止姿勢へ戻ったり元メッシュ位置へ残ったりしないことを確認します
+- shader や matrix palette の挙動を見るときに、最小の SmoothShader / Wireframe skinning 経路が壊れていないかを素早く確認します
+
+操作説明
+- `W`: skinned mesh の wireframe 表示を切り替え
+- マウス操作: なし
+</pre>
+</section>
+<section class='sample'>
+<h2 id='skinning_normal_map'>skinning_normal_map</h2>
+<p>URL: <a href='./skinning_normal_map/index.html'>./skinning_normal_map/index.html</a></p>
+<pre>
+サンプル: skinning_normal_map
+
+概要
+- `SmoothShader` の skinning + normal map 経路だけを最小構成で確認する unittest です。
+- 同じ `num256.png` から生成した法線マップを使い、ボーン変形中でも陰影が破綻しないかを狭く確認します。
+
+このサンプルで使うwebg機能
+- `SmoothShader`: `setMaterial("smooth-shader", ...)` を入口にした skinning + normal map 描画
+- `Texture.buildNormalMapFromHeightMap`: 同一画像から normal map を生成
+- `Skeleton` / `Shape.addVertexWeight`: 2 ボーンの最小ウェイト設定
+- `Space.drawBones`: ボーン表示
+- `UnitTestApp`: Screen 初期化、status / error 表示の共通化
+
+確認ポイント
+- メッシュ変形中でも normal map 由来の陰影が破綻せず追従することを確認します
+- `SmoothShader` の normal map 付き skinning 経路が壊れていないかを素早く確認します
+- seam や不自然なハイライトが極端に出ず、normal map OFF の smooth skinning 経路との差が陰影として読み取れることを確認します
+
+操作説明
+- キー入力: なし
+- マウス操作: なし
+</pre>
+</section>
+<section class='sample'>
+<h2 id='smooth_shader'>smooth_shader</h2>
+<p>URL: <a href='./smooth_shader/index.html'>./smooth_shader/index.html</a></p>
+<pre>
+サンプル: smooth_shader
+
+概要
+- `SmoothShader` 1 本で、static / skinned / normal map / flat shading の 5 経路を同じ画面へ並べて確認する unittest です
+- 既存の smooth 系 5 経路をまとめるための新しい surface shader が、共通パラメータ入口で成立するかを最小構成で見ます
+
+このサンプルで使うwebg機能
+- `SmoothShader`: static / skinned / texture / normal map / flat shading を 1 本で扱う統合 smooth shader
+- `Skeleton` / `Shape.addVertexWeight`: 2 ボーン prism の最小 skinning 設定
+- `Space.drawBones`: skinned 2 体の debugBone 表示
+- `UnitTestApp`: Screen 初期化、status / error 表示の共通化
+
+確認ポイント
+- 左上の共有頂点 sphere が `has_bone = 0` でも通常描画され、滑らかな陰影になることを確認します
+- 上中央の共有頂点 sphere で `flat_shading = 1` を有効にしたとき、同じ geometry / texture のまま面単位の陰影へ切り替わることを確認します
+- 右上の static mesh で normal map を ON にしたとき、陰影だけが増え、geometry 自体は変わらないことを確認します
+- 左下の skinned mesh で bone 変形が継続し、bone 表示と曲がる位置が一致することを確認します
+- 右下の skinned mesh で、bone 変形と normal map の両方が同時に効くことを確認します
+- shader 実装の挙動を見るときに、smooth 系統合 shader の 5 経路が同時に壊れていないかを素早く確認します
+
+操作説明
+- キー入力: `Space` で pause / resume
+- マウス操作: なし
+</pre>
+</section>
+<section class='sample'>
+<h2 id='textdemo'>textdemo</h2>
+<p>URL: <a href='./textdemo/index.html'>./textdemo/index.html</a></p>
+<pre>
+サンプル: textdemo
+
+概要
+- `Text` クラスで文字バッファ描画を行うサンプルです。
+- 固定グリッド文字表示、書式付き出力、フォント描画の基本を確認できます。
+
+このサンプルで使うwebg機能
+- `Text.init` / `writeAt` / `writefAt` / `drawScreen`
+- 3D描画と2Dテキストの重ね合わせ
+
+確認ポイント
+- 固定座標への文字描画が崩れず表示されるかを確認し、デバッグ情報の定位置表示に使えることを確認します。
+- `writeAt` と `writefAt` の使い分けで、定型文と数値付き文の更新が容易にできることを確認します。
+
+操作説明
+- キー入力: なし
+- マウス操作: なし
+
+実装確認の見方
+- このページは `Text` の低レベル文字バッファを確認するため、意図的に `Screen + Text` の最小構成にしています。
+- 通常の HUD、status、操作説明では `Message` や `WebgApp` の HUD helper、長文では `OverlayPanel` を優先してください。
+</pre>
+</section>
+<section class='sample'>
+<h2 id='theme'>theme</h2>
+<p>URL: <a href='./theme/index.html'>./theme/index.html</a></p>
+<pre>
+サンプル: theme
+
+概要
+- `WebgApp.setUiTheme()` で `DebugDock` と `OverlayPanel` の見た目をまとめて差し替えられるかを確認する unittest です
+- dark / light / sunset / forest の 4 preset を runtime 中に切り替え、配色だけでなく panel の透明度や文字の読みやすさも見比べます
+
+このサンプルで使うwebg機能
+- `WebgApp`: Screen、Input、Message、debug dock、汎用 `OverlayPanel` 管理をまとめて初期化
+- `WebgUiTheme`: 既定 theme preset と追加 preset の切替元
+- `OverlayPanel`: scene の上に重ねる DOM panel と button / choice の theme 適用を確認する部品
+- `Primitive` / `Shape`: 背景越しに見える最小 3D object を構成
+- `Diagnostics`: probe / debug 操作で現在 theme 情報を記録
+
+確認ポイント
+- `[1]` から `[4]` の切替で、`DebugDock` と `OverlayPanel` が同じ preset にそろって更新されるかを確認します
+- 半透明 overlay 越しに cube が十分見え、文字色と border が dark / light の両方で読めるかを確認します
+- preview panel の表示中に theme を切り替えても panel が崩れず、新しい `uiPanel` 色へ更新されるかを確認します
+
+操作説明
+- キー入力: `[1]-[4]` theme 切替、`[n]` 次の theme、`[p]` preview panel 表示切替、`[space]` 回転停止、`[r]` camera reset
+- マウス操作: drag で orbit、ホイールで zoom
+
+関連文書
+- [14_UI表示の設計.md](../../book/14_UI表示の設計.md)
+- [15_HUDとオーバーレイの設計.md](../../book/15_HUDとオーバーレイの設計.md)
+</pre>
+</section>
+<section class='sample'>
+<h2 id='touch'>touch</h2>
+<p>URL: <a href='./touch/index.html'>./touch/index.html</a></p>
+<pre>
+touch
+
+概要
+- `webg/Touch.js` の汎用タッチボタンUIを使い、押下中入力（hold）と単発入力（action）を確認するページです。
+- キーボード入力とタッチ入力を同じ状態管理に流し、操作実装を1系統にまとめる方法を確認します。
+
+このサンプルで使うwebg機能
+- `Touch`: 仮想ボタンUI生成、hold/actionイベント通知
+- `Message`: 入力状態と操作ガイド表示
+- `Space` / `Node` / `Shape` / `SmoothShader`: 3D立方体の移動・回転表示
+
+確認ポイント
+- `← / → / A / D` のholdボタンが押下中のみ有効で、離した瞬間に停止することを確認します
+- `R` のactionボタンがワンショットで姿勢リセットされることを確認します
+- キーボード操作とタッチ操作が同じ挙動になることを確認し、入力実装の共通化ができていることを検証します
+- URLオプション `?touchButtons=&lt;数&gt;` でボタン総数を増やし、`Touch.js` の密度モード（normal/dense/compact）とサイズ変化を確認します
+
+操作説明
+- キーボード: `ArrowLeft` / `ArrowRight` / `A` / `D` / `R`
+- タッチUI: `←` / `→` / `A` / `D` / `R`
+- デバッグ用URL例: `index.html?touchButtons=5` / `index.html?touchButtons=8` / `index.html?touchButtons=12`
+
+実装確認の見方
+- このページは `Touch` 単体の hold/action 通知を見るため、意図的に `WebgApp.attachInput()` を使っていません。
+- 通常のアプリでは `InputController.installTouchControls()` や `WebgApp` の入力経路を優先してください。
+- key 名は raw の `event.key` ではなく、`InputController` の正規化後の名前で比較する前提です。
+</pre>
+</section>
+<section class='sample'>
+<h2 id='tween'>tween</h2>
+<p>URL: <a href='./tween/index.html'>./tween/index.html</a></p>
+<pre>
+tween
+
+このページは、ゲームでよく使う「少しだけ変化する」処理を確認するためのものです。
+数値や配列を時間で補間する `Tween`、`Shape.animateParameter()` による material parameter の変化、`Node.animateRotation()` による local rotation の補間、`Space.updateShapeAnimations()` / `Space.updateNodeAnimations()` による毎 frame の反映、そして `WebgApp.createTween()` / `shakeCamera()` / `flashMessage()` がゲーム向けの演出として崩れずに動くかを見ます。
+
+このページが確認したいのは、単に値が 0 から 1 に動くことではありません。
+`outCubic` のような easing が途中値をどう変えるか、`Shape` 側の parameter animation が `Space` 経由で進むか、`Node.animateRotation()` が local rotation を 500ms で滑らかに変えられるか、`WebgApp` が tween と camera shake をまとめて管理しても sample 側の state を壊さないかを確認します。
+
+操作:
+- 画面を開くと自動で確認が走る
+- 途中値、終端値、camera shake、toast の結果を status で読む
+
+確認ポイント:
+- `Tween` が object / array の両方を補間できるか
+- `Shape.animateParameter()` が material parameter を更新できるか
+- `Node.animateRotation()` が local rotation を補間できるか
+- `Space.updateShapeAnimations()` が Shape の補間を毎 frame 進められるか
+- `Space.updateNodeAnimations()` が Node の rotation 補間を毎 frame 進められるか
+- `WebgApp.createTween()` がサンプルから使いやすい入口になっているか
+- `WebgApp.shakeCamera()` と `flashMessage()` が HUD や camera の基本的な演出として使えるか
+</pre>
+</section>
+<section class='sample'>
+<h2 id='translucent'>translucent</h2>
+<p>URL: <a href='./translucent/index.html'>./translucent/index.html</a></p>
+<pre>
+translucent unittest
+
+概要
+- FrostedGlassPass と GlassMaskShader を使い、半透明オブジェクト越しに背景だけを blur する曇りガラス表現を確認する単体テストです。
+- ディレクトリ名は `translucent` に統一しています。
+
+このテストで使う webg 機能
+- `FrostedGlassPass`: scene color、blur color、glass mask を合成する postprocess pass
+- `GlassMaskShader`: ガラス Shape の画面上の領域を mask target へ描く mesh shader
+- `SeparableBlurPass`: scene color に横/縦 blur を掛ける共通 blur helper
+- `RenderTarget`: scene / mask / blur の中間描画先
+- `Space.draw(..., { filter })`: 通常 scene と glass mask を分けて描くための filter
+
+確認ポイント
+- ガラス Shape の内側だけ背景がぼけて見えることを確認します。
+- ガラスより手前にある黒い縦バーは、mask pass の depth test により blur されず sharp に残ることを確認します。
+- `V` で `composite / scene / blur / mask` を切り替え、scene、blur、mask、合成結果を個別に確認します。
+- `B` で effect を無効にすると、同じ描画フローのまま raw scene に戻ることを確認します。
+
+操作
+- `Space`: 一時停止 / 再開
+- `V`: 表示を `composite / scene / blur / mask` で切り替え
+- `B`: FrostedGlassPass の有効 / 無効
+- `1` / `2`: blur radius を下げる / 上げる
+- `3` / `4`: blur mix を下げる / 上げる
+- `5` / `6`: tint strength を下げる / 上げる
+- `7` / `8`: mask power を下げる / 上げる
+- `R`: 初期値へ戻す
+</pre>
+</section>
+<section class='sample'>
+<h2 id='vignette'>vignette</h2>
+<p>URL: <a href='./vignette/index.html'>./vignette/index.html</a></p>
+<pre>
+サンプル: vignette
+
+概要
+- `VignettePass` の最小表示確認ページです。
+- 3D scene を一度 offscreen `RenderTarget` へ描き、その結果を `VignettePass` で canvas へ戻す経路だけを確認します。
+- 明るめの背板と四隅付近の object を置き、周辺減衰が raw scene と見比べやすい構成にしています。
+
+このサンプルで使うwebg機能
+- `RenderTarget`: 3D scene の offscreen 描画先
+- `FullscreenPass`: raw scene をそのまま canvas へ戻す比較用 pass
+- `VignettePass`: 周辺減衰を掛ける最小 postprocess
+- `Space` / `Shape` / `Primitive` / `SmoothShader`
+- `UnitTestApp`: Screen 初期化、resize、status 表示の共通 helper
+
+確認ポイント
+- `view=vignette` で、画面周辺だけが `radius` / `softness` / `strength` に応じて暗くなることを確認します。
+- `view=scene` に切り替えたとき、source scene 自体は変わらず、postprocess の有無だけが変わることを確認します。
+- `tint` を切り替えたとき、黒だけでなく暖色 / 寒色寄りの vignette も同じ経路で掛かることを確認します。
+- `center` を少しずらしたとき、減衰の中心が追従し、offscreen scene の内容には影響しないことを確認します。
+
+操作説明
+- `Space`: 回転の一時停止 / 再開
+- `V`: `scene` / `vignette` 表示切り替え
+- `B`: vignette の ON / OFF
+- `Q` / `A`: strength を増減
+- `W` / `S`: radius を増減
+- `E` / `D`: softness を増減
+- `J` / `L`: centerX を左右へ移動
+- `I` / `K`: centerY を上下へ移動
+- `C`: tint 切り替え
+- `R`: parameter を初期値へ戻す
+</pre>
+</section>
+</body>
+</html>

@@ -1,0 +1,29 @@
+physics_node_fall
+
+概要
+- `PhysicsSpace` と `PhysicsNode` を使い、少し回転した立方体が重力で落下して床で停止する最小確認を行うページです。
+- 固定タイムステップ、plane collider の床、box collider の立方体、重力、摩擦、sleep 判定を使った最小の落下シーンを確認します。
+- 立方体同士の接触解決も `PhysicsSpace` 側で処理しますが、主眼は「少し回転した箱が床で安定して止まるか」にあります。
+
+このテストで使う webg 機能
+- `PhysicsSpace`: 固定タイムステップ、重力、plane / box collider の接触解決、摩擦、sleep 判定
+- `PhysicsNode`: `dynamic / kinematic / static` の切替、速度保持、collider と物理材質の保持、`syncNodeFromPhysics()`
+- `Space.addPhysicsNode()`: 物理ノードを scene graph に登録する入口
+- `Shape` と `Primitive.cube()`: 立方体と床の最小メッシュ生成
+- `SmoothShader`: 単色ライティングで箱の傾きと接地状態を見やすく表示
+- `UnitTestApp`: Screen 初期化、resize、status 表示
+
+確認ポイント
+- 少し傾いた複数の立方体が、開始直後は `dynamic` として落下することを確認します。
+- 各立方体が床の上面位置で止まり、めり込まずに静止することを確認します。
+- 停止後は `dynamic` のまま sleeping 状態へ入り、位置がぶれ続けないことを確認します。
+- `Space` で一時停止 / 再開、`R` で初期配置へ戻せることを確認します。
+
+操作
+- `Space`: 物理更新の一時停止 / 再開
+- `R`: 立方体の位置、速度、`bodyType` を初期状態へ戻す
+
+実装確認の見方
+- `PhysicsSpace.js` や `PhysicsNode.js` の落下、接地、sleep の流れを見るときは、このページで最小シーンを確認できます。
+- `PhysicsNode` 単体 API の規約は `unittest/physics_node_contracts` が担当し、このページは world を通した落下シーンの確認を担当します。
+- plane collider と box collider の組み合わせ、および box-box の OBB 解決を目視できます。問い合わせ系と OBB dispatch は `physics_space_contracts` の raycast / raycastAll / queryAabb / overlapSphere 確認を参照してください。

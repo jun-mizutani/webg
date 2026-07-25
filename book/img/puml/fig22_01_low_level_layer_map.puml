@@ -1,0 +1,48 @@
+@startuml
+title ローレベル API の 3 層構造
+
+top to bottom direction
+skinparam backgroundColor white
+skinparam shadowing true
+skinparam dpi 150
+skinparam defaultFontName Yu Gothic UI
+skinparam defaultFontSize 18
+skinparam rectangle {
+  RoundCorner 24
+  BorderColor black
+  BackgroundColor #f7fbff
+  FontColor black
+}
+skinparam ArrowColor black
+skinparam ranksep 20
+skinparam nodesep 20
+
+rectangle "Screen\ncanvas / device / context" as Screen
+rectangle "Shader\npipeline / uniform / bind group" as Shader
+rectangle "Shape\nmesh / material" as Shape
+rectangle "CoordinateSystem\nposition / attitude" as CoordinateSystem
+rectangle "Node\nshape を置く実体" as Node
+rectangle "Space\nscene 全体を draw" as Space
+rectangle "eye\n視点 node" as Eye
+rectangle "Matrix\nprojection / view / transform" as Matrix
+rectangle "Quat\n回転保持 / 補間" as Quat
+
+'Screen -[hidden]down-> Shader
+'Shader -[hidden]down-> Shape
+'CoordinateSystem -[hidden]down-> Node
+'Node -[hidden]down-> Space
+'Space -[hidden]down-> Eye
+'Matrix -[hidden]right-> Quat
+'Screen -[hidden]right-> CoordinateSystem
+'CoordinateSystem -[hidden]down-> Matrix
+
+Screen --> Shader
+Shader --> Shape
+Shape -right-> Node
+CoordinateSystem --> Node
+Node -right-> Space
+Eye -down-> Space
+Matrix --> CoordinateSystem
+Quat --> CoordinateSystem
+
+@enduml

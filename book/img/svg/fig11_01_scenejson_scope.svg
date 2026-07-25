@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?><svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" contentScriptType="application/ecmascript" contentStyleType="text/css" height="417.1875px" preserveAspectRatio="none" style="width:1171px;height:417px;" version="1.1" viewBox="0 0 1171 417" width="1171.875px" zoomAndPan="magnify"><defs><filter height="300%" id="f1g8ttc70i9k7z" width="300%" x="-1" y="-1"><feGaussianBlur result="blurOut" stdDeviation="3.125"/><feColorMatrix in="blurOut" result="blurOut2" type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 .4 0"/><feOffset dx="6.25" dy="6.25" in="blurOut2" result="blurOut3"/><feBlend in="SourceGraphic" in2="blurOut3" mode="normal"/></filter></defs><g><text fill="#000000" font-family="Yu Gothic UI" font-size="28.125" lengthAdjust="spacingAndGlyphs" textLength="340.625" x="421.0938" y="26.1063">Scene JSON の守備範囲図</text><!--MD5=[c8f729b8e352a0860913e8756c4779b6]
+entity Camera--><rect fill="#F7FBFF" filter="url(#f1g8ttc70i9k7z)" height="63.9893" rx="18.75" ry="18.75" style="stroke: #000000; stroke-width: 2.34375;" width="132.8125" x="288.2813" y="61.6455"/><text fill="#000000" font-family="Yu Gothic UI" font-size="28.125" lengthAdjust="spacingAndGlyphs" textLength="101.5625" x="303.9063" y="103.3768">camera</text><!--MD5=[592d1bec421c689d34c573f1d622c569]
+entity Hud--><rect fill="#F7FBFF" filter="url(#f1g8ttc70i9k7z)" height="96.7285" rx="18.75" ry="18.75" style="stroke: #000000; stroke-width: 2.34375;" width="220.3125" x="452.3438" y="45.2393"/><text fill="#000000" font-family="Yu Gothic UI" font-size="28.125" lengthAdjust="spacingAndGlyphs" textLength="189.0625" x="467.9688" y="86.9705">HUD / guide /</text><text fill="#000000" font-family="Yu Gothic UI" font-size="28.125" lengthAdjust="spacingAndGlyphs" textLength="79.6875" x="467.9688" y="119.7098">status</text><!--MD5=[7f66e88f788e9b29f8abe717a972e8bc]
+entity InputActions--><rect fill="#F7FBFF" filter="url(#f1g8ttc70i9k7z)" height="96.7285" rx="18.75" ry="18.75" style="stroke: #000000; stroke-width: 2.34375;" width="126.5625" x="703.9063" y="45.2393"/><text fill="#000000" font-family="Yu Gothic UI" font-size="28.125" lengthAdjust="spacingAndGlyphs" textLength="70.3125" x="719.5313" y="86.9705">input</text><text fill="#000000" font-family="Yu Gothic UI" font-size="28.125" lengthAdjust="spacingAndGlyphs" textLength="95.3125" x="719.5313" y="119.7098">actions</text><!--MD5=[578494f732901079df7e4ff6e4d4e34e]
+entity SceneJson--><rect fill="#E0F0FF" filter="url(#f1g8ttc70i9k7z)" height="63.9893" rx="18.75" ry="18.75" style="stroke: #000000; stroke-width: 2.34375;" width="193.75" x="465.625" y="191.333"/><text fill="#000000" font-family="Yu Gothic UI" font-size="28.125" lengthAdjust="spacingAndGlyphs" textLength="162.5" x="481.25" y="233.0643">Scene JSON</text><!--MD5=[81bce69da2cf24f71c0a4614e5e45ad4]
+entity PrimitiveEntries--><rect fill="#F7FBFF" filter="url(#f1g8ttc70i9k7z)" height="96.7285" rx="18.75" ry="18.75" style="stroke: #000000; stroke-width: 2.34375;" width="156.25" x="398.4375" y="304.6143"/><text fill="#000000" font-family="Yu Gothic UI" font-size="28.125" lengthAdjust="spacingAndGlyphs" textLength="125" x="414.0625" y="346.3455">primitive</text><text fill="#000000" font-family="Yu Gothic UI" font-size="28.125" lengthAdjust="spacingAndGlyphs" textLength="95.3125" x="414.0625" y="379.0848">entries</text><!--MD5=[b206e7ac71368b3ebe601234d6ef1706]
+entity ModelEntries--><rect fill="#F7FBFF" filter="url(#f1g8ttc70i9k7z)" height="96.7285" rx="18.75" ry="18.75" style="stroke: #000000; stroke-width: 2.34375;" width="126.5625" x="586.7188" y="304.6143"/><text fill="#000000" font-family="Yu Gothic UI" font-size="28.125" lengthAdjust="spacingAndGlyphs" textLength="85.9375" x="602.3438" y="346.3455">model</text><text fill="#000000" font-family="Yu Gothic UI" font-size="28.125" lengthAdjust="spacingAndGlyphs" textLength="95.3125" x="602.3438" y="379.0848">entries</text><!--MD5=[56aa73e62b8809ef6c50eb50ecd20c23]
+entity Metadata--><rect fill="#F7FBFF" filter="url(#f1g8ttc70i9k7z)" height="96.7285" rx="18.75" ry="18.75" style="stroke: #000000; stroke-width: 2.34375;" width="185.9375" x="691.4063" y="174.9268"/><text fill="#000000" font-family="Yu Gothic UI" font-size="28.125" lengthAdjust="spacingAndGlyphs" textLength="154.6875" x="707.0313" y="216.658">animation /</text><text fill="#000000" font-family="Yu Gothic UI" font-size="28.125" lengthAdjust="spacingAndGlyphs" textLength="129.6875" x="707.0313" y="249.3973">metadata</text><!--MD5=[7371fb933a974136003e8030a4ae06ad]
+entity ModelAsset--><rect fill="#FFF8EF" filter="url(#f1g8ttc70i9k7z)" height="63.9893" rx="18.75" ry="18.75" style="stroke: #000000; stroke-width: 2.34375;" width="187.5" x="967.1875" y="191.333"/><text fill="#000000" font-family="Yu Gothic UI" font-size="28.125" lengthAdjust="spacingAndGlyphs" textLength="156.25" x="982.8125" y="233.0643">ModelAsset</text><path d="M9.375,182.7393 L9.375,263.8428 A0,0 0 0 0 9.375,263.8428 L434.375,263.8428 A0,0 0 0 0 434.375,263.8428 L434.375,229.6143 L465.2031,223.3643 L434.375,217.1143 L434.375,198.3643 L418.75,182.7393 L9.375,182.7393 A0,0 0 0 0 9.375,182.7393 " fill="#FBFB77" filter="url(#f1g8ttc70i9k7z)" style="stroke: #A80036; stroke-width: 1.5625;"/><path d="M418.75,182.7393 L418.75,198.3643 L434.375,198.3643 L418.75,182.7393 " fill="#FBFB77" style="stroke: #A80036; stroke-width: 1.5625;"/><text fill="#000000" font-family="Yu Gothic UI" font-size="28.125" lengthAdjust="spacingAndGlyphs" textLength="392.1875" x="18.75" y="216.658">1 モデルではなくシーン全体の</text><text fill="#000000" font-family="Yu Gothic UI" font-size="28.125" lengthAdjust="spacingAndGlyphs" textLength="253.125" x="18.75" y="249.3973">初期状態を宣言する</text><!--MD5=[d9a6493d5cea93c6f3952c867491dc1c]
+link Camera to SceneJson--><path d="M405,125.8799 C435.1406,144.2393 473.5938,167.6611 504.9531,186.7549 " fill="none" id="Camera-&gt;SceneJson" style="stroke: #000000; stroke-width: 1.5625;"/><polygon fill="#000000" points="511.9375,191.0049,503.175,178.3544,505.2641,186.9428,496.6757,189.0319,511.9375,191.0049" style="stroke: #000000; stroke-width: 1.5625;"/><!--MD5=[713a1cdf21c1e7c3b7b9b2ec02b36a93]
+link Hud to SceneJson--><path d="M562.5,142.3643 C562.5,155.6143 562.5,169.8799 562.5,182.5986 " fill="none" id="Hud-&gt;SceneJson" style="stroke: #000000; stroke-width: 1.5625;"/><polygon fill="#000000" points="562.5,191.1455,568.75,177.083,562.5,183.333,556.25,177.083,562.5,191.1455" style="stroke: #000000; stroke-width: 1.5625;"/><!--MD5=[7a68c010ddd4754b6e505e4983fc0df4]
+link InputActions to SceneJson--><path d="M703.5469,134.583 C676.5156,151.3018 645.25,170.6299 619.0469,186.833 " fill="none" id="InputActions-&gt;SceneJson" style="stroke: #000000; stroke-width: 1.5625;"/><polygon fill="#000000" points="611.7969,191.3174,627.0458,189.2473,618.4443,187.2129,620.4787,178.6114,611.7969,191.3174" style="stroke: #000000; stroke-width: 1.5625;"/><!--MD5=[c8a256a41f1ccf706acdf7f9f4a50751]
+link SceneJson to PrimitiveEntries--><path d="M541.7031,255.5674 C533.1563,268.1455 523.0156,283.083 513.2969,297.3799 " fill="none" id="SceneJson-&gt;PrimitiveEntries" style="stroke: #000000; stroke-width: 1.5625;"/><polygon fill="#000000" points="508.5781,304.333,521.6501,296.2126,512.9681,297.8706,511.3102,289.1886,508.5781,304.333" style="stroke: #000000; stroke-width: 1.5625;"/><!--MD5=[2154ca2806d1aa94b03efee329625de8]
+link SceneJson to ModelEntries--><path d="M583.6875,255.5674 C592.375,268.1455 602.7031,283.083 612.5938,297.3799 " fill="none" id="SceneJson-&gt;ModelEntries" style="stroke: #000000; stroke-width: 1.5625;"/><polygon fill="#000000" points="617.4063,304.333,614.5541,289.2108,612.9651,297.9056,604.2703,296.3166,617.4063,304.333" style="stroke: #000000; stroke-width: 1.5625;"/><!--MD5=[c037e1f53fbd4543709e231fb6ea76c0]
+link SceneJson to Metadata--><path d="M659.5625,223.3643 C667.5,223.3643 675.4219,223.3643 683.3438,223.3643 " fill="none" id="SceneJson-&gt;Metadata" style="stroke: #000000; stroke-width: 1.5625;"/><polygon fill="#000000" points="691.2656,223.3643,677.2031,217.1143,683.4531,223.3643,677.2031,229.6143,691.2656,223.3643" style="stroke: #000000; stroke-width: 1.5625;"/><!--MD5=[9087b06ebe5e3a8c6f2736543cb17424]
+link Metadata to ModelAsset--><path d="M878,223.3643 C904,223.3643 932.3438,223.3643 958.7969,223.3643 " fill="none" id="Metadata-&gt;ModelAsset" style="stroke: #000000; stroke-width: 1.5625; stroke-dasharray: 7.0,7.0;"/><polygon fill="#000000" points="966.9375,223.3643,952.875,217.1143,959.125,223.3643,952.875,229.6143,966.9375,223.3643" style="stroke: #000000; stroke-width: 1.5625;"/><text fill="#000000" font-family="Yu Gothic UI" font-size="28.125" lengthAdjust="spacingAndGlyphs" textLength="56.25" x="894.1406" y="211.9705">参照</text><!--MD5=[354a6633ca46ea8683eb02a1df5facfb]
+@startuml
+title Scene JSON の守備範囲図
+
+top to bottom direction
+skinparam backgroundColor white
+skinparam shadowing true
+skinparam dpi 150
+skinparam defaultFontName Yu Gothic UI
+skinparam defaultFontSize 18
+skinparam rectangle {
+  RoundCorner 24
+  BorderColor black
+  BackgroundColor #f7fbff
+  FontColor black
+}
+skinparam ArrowColor black
+skinparam ranksep 20
+skinparam nodesep 20
+
+rectangle "camera" as Camera
+rectangle "HUD / guide /\nstatus" as Hud
+rectangle "input\nactions" as InputActions
+rectangle "Scene JSON" as SceneJson #e0f0ff
+rectangle "primitive\nentries" as PrimitiveEntries
+rectangle "model\nentries" as ModelEntries
+rectangle "animation /\nmetadata" as Metadata
+rectangle "ModelAsset" as ModelAsset #fff8ef
+
+Camera - -> SceneJson
+Hud - -> SceneJson
+InputActions - -> SceneJson
+
+SceneJson - -> PrimitiveEntries
+SceneJson - -> ModelEntries
+SceneJson -right-> Metadata
+Metadata .right.> ModelAsset : 参照
+
+
+note left of SceneJson
+1 モデルではなくシーン全体の
+初期状態を宣言する
+end note
+
+@enduml
+
+PlantUML version 1.2020.02(Sun Mar 01 19:22:07 JST 2020)
+(GPL source distribution)
+Java Runtime: OpenJDK Runtime Environment
+JVM: OpenJDK 64-Bit Server VM
+Java Version: 21.0.10+7-Ubuntu-124.04
+Operating System: Linux
+Default Encoding: UTF-8
+Language: en
+Country: null
+--></g></svg>

@@ -1,0 +1,174 @@
+サンプル: mmodeler
+
+概要
+- `samples/mmodeler` は、スマホやタブレットで使う mobile profile を canvas 内の操作と command palette で成立させることを目標にした 3D modeler です
+- desktop 版の横長 panel や多数の button は使わず、camera 操作、選択、transform、低頻度 command を gesture と 4x4 palette へ寄せています
+- mobile 画面で扱いやすいよう、常時表示する UI を絞り、編集 command を double tap で開く palette に集約しています
+- Object / Edit mode の切り替え、頂点 / face / object の選択、複数選択、`G/R/S/E` の transform、削除、loop cut、undo / redo、読み込み / 保存の主要フローを mobile profile で扱います
+
+mobile 操作体系の仕様
+- 基本思想は「canvas 上の 1 本指 drag は camera」「短い tap は遅延確定の選択」「double tap は command 展開」「長押しは mode 切り替え」です。同じ canvas drag に camera と command 判定を重ねると、pointermove の時点で camera が動いた後に command 判定が遅れて成立してしまうため、現在の実装では command を double tap palette へ集約しています
+- camera は `EyeRig` の touch 対応を使い、通常時は 1 本指 drag で orbit、2 本指 drag で pan、pinch で zoom を行います。これにより mobile 固有の camera helper を別実装せず、既存 scene 制御と同じ数値系を使います
+- 選択系は短い tap を主入口にします。Object Mode では object、Edit Mode では現在 tool に応じて vertex または face を選びます。Add Vertex tool では tap 位置へ頂点を追加します
+- mode 切り替えは long press を使います。対象がある位置で long press すると Object / Edit mode をトグルします。空き領域での long press は画面全体の browser zoom と混ざるリスクがあるため、mobile では camera fit を割り当てません
+- command 実行は double tap を使います。polygon / vertex / object 上で double tap すると 4x4 の command palette が開きます。このとき pointer 下の geometry は自動選択せず、未選択状態なら未選択のままにします。palette は 3 枚構成で、`Next` を押すたびに 1 -> 2 -> 3 -> 1 の順で循環します。1 枚目には `G/R/S/E`、loop cut、selection tool、Add、Del、projection、undo / redo、Mirror、wireframe を置きます。2 枚目には select all / invert、origin、screenshot、new scene、座標表示、load / save、複数 object を 1 object へ統合する `Join` などを置きます。3 枚目には primitive object の追加と primitive の分割数を置きます
+- command palette は double tap した点を覆い隠さないよう、tap 位置が画面中心より右上なら右上、左下なら左下のように、画面中心から見た象限方向へずらして表示します。その方向に余地がない場合は対角側を試し、最終的には画面内へ収まる位置へ寄せます
+- 図形が存在する状態で empty 上を double tap した場合は box select を準備し、続けて drag した矩形内の対象を選択します。2 回目の tap を押したまま drag する操作と、double tap 後に改めて drag する操作の両方を受け付けます。頂点が 1 つもない状態では囲む対象がないため、empty double tap は command palette を開き、Load や primitive 追加を呼び出せるようにします
+- command palette の `Add` は追加系の文脈 command です。Edit Mode で 3 個または 4 個の頂点を選択しているときは face を作成し、それ以外では Add Vertex tool へ切り替えます。キートップは状態で変えず、選択中やトグル中の command は控えめな active 色で示します
+- `G/R/S/E/Del` など選択が前提の command は、選択対象がない場合は無効になり、実行されても何も変更しません。Load、New、projection、view、select all など、未選択でも意味がある command はそのまま使えます
+- transform は palette から `G/R/S/E` を選んだあと、1 本指 drag で preview、pointerup で確定するフローです。`G/R/S/E` を選んだ直後に command palette は閉じ、canvas drag を妨げない状態へ戻ります。transform 中だけ右上に小さな axis chooser (`Free / X / Y / Z`) が表示され、何も押さなければ `Free` のまま変形します。たとえば `G` の後に右上の `X` を押すと `GX` 相当の X 軸移動になり、`S` の後に `Y` を押すと Y 軸方向だけを scale します。`Free` を押すと axis constraint を解除します
+- loop cut は Edit Mode で四角 face を選択して `L / loop` を実行します。選択 face を開始点にして隣接する四角面へカットを伝播し、各四角面の対辺の中点をつないで 2 枚の四角面へ分割します。隣り合う 2 枚以上の face を選ぶと共有辺から loop 方向を確定できます。単独の四角面では `L / loop` で方向選択 preview に入り、pointer に近い辺に応じて preview 線が切り替わり、次の tap で確定します
+- 低頻度 command と object 作成 command は command palette の 2 枚目以降へまとめます。読み込み、gzip 圧縮済み JSON / GLB 保存、new scene、projection 切り替え、undo / redo、screenshot、primitive 追加、object 統合などを double tap から呼び出せるため、画面下端の ribbon を表示せずに横持ち画面を広く使えます
+- X mirror が ON のときは、command palette の `M / mirror` button が控えめな active 表示になります。OFF のときは通常色に戻ります
+- 視点切り替えの `X/-X/Y/-Y/Z/-Z` は view dock として常時表示します。縦長画面では画面上部、横長画面では右端へ配置し、command palette を開かなくても 6 方向の view を直接選べるようにします
+- 常時見える UI は canvas、status、view dock を中心にし、command は double tap 時だけ表示する grid command menu へ絞ります。詳細な debug 情報は `status` や diagnostics に残しつつ、普段の mobile 画面では重ね表示しません
+
+入力判断フロー
+- mmodeler の mobile profile では、command 呼び出しを double tap に集約します。canvas 上の 1 本指 drag は通常時は camera orbit として扱い、速く横へ動かしても command palette や page 切り替えにはしません
+- 短い tap は single tap か double tap かを判断するため、すぐには選択へ確定しません。pointerup 後に短い猶予を置き、その間に 2 回目の tap、long press、palette 表示、box select 開始が来なかった場合だけ single tap 選択として実行します。これにより double tap で palette を開く前に、1 回目の tap が選択解除や active object 変更を起こすことを防ぎます
+- single tap として確定した場合は、Object Mode では object、Edit Mode では現在 tool に応じて vertex / face を選びます。Add Vertex tool では tap 位置へ頂点を追加します。移動距離が大きい操作は tap ではなく drag として扱い、通常時は camera、box select 準備中は矩形選択に回します
+- geometry 上で double tap した場合は command palette を開きます。このとき pointer 下の geometry は自動選択せず、既存選択があればその選択状態を維持します。未選択状態でも command palette を開けるため、Load、New、primitive 追加など選択なしで意味を持つ command を呼び出せます
+- command palette を開くときは、保留中の single tap 選択を破棄します。これにより、palette 表示後に 1 回目 tap の選択処理が遅れて走り、操作対象が変わることを防ぎます
+- 図形が存在する状態で empty 上を double tap した場合は `boxSelectArmed` になり、次の drag を矩形選択として扱います。この状態では camera orbit を止め、矩形選択を確定した後に camera orbit を再開します。頂点が 1 つもない状態の empty double tap は `boxSelectArmed` にせず、command palette を開きます
+- canvas 上で long press した場合は、対象があれば Object / Edit mode を切り替えます。空き領域では状態表示だけを行い、camera や選択状態は変更しません。long press が成立した場合も保留中の single tap 選択は破棄します
+- transform 中は `transformController` が pointer を優先して受け取ります。touch pointer では pointerdown で確定せず、pointermove で preview、pointerup で確定します。これによりスマホでも `G/R/S/E` 後に drag で形状を動かせます
+- DebugDock の `mobileLastGesture` には、double tap、long press、box select、transform などの入力状態が記録されます。camera 操作と command 実行を分けているため、canvas drag が command として誤判定されないことを diagnostics から確認できます
+
+画面内ジェスチャー一覧
+- tap on canvas: double tap 判定時間の後、現在 mode / tool に応じて object / vertex / face を選択、または Add Vertex tool なら頂点を追加
+- double tap on geometry: 現在の選択状態を維持したまま grid command menu を開く
+- double tap on empty with geometry: box select を準備し、次の drag を複数選択へ使う
+- double tap on empty scene: command palette を開く
+- long press on hit: Object / Edit mode を切り替え
+- long press on empty: 状態表示だけを行い、camera や選択状態は変更しない
+- drag after `G/R/S/E`: command palette を閉じた canvas 上で transform preview
+- tap `Free / X / Y / Z` during transform: Free 変形または world X/Y/Z 軸制限を選ぶ
+- pointerup during transform: transform を確定
+- tap during loop cut preview: pointer に近い辺を開始辺として loop cut を確定
+- tap view dock `X/-X/Y/-Y/Z/-Z`: 6 方向の view を直接選ぶ
+- 1 finger drag on canvas: 通常時は orbit camera。box select 準備中は矩形選択
+- 2 finger drag on canvas: pan camera
+- pinch on canvas: zoom camera
+
+1st command palette の意味
+- 1 枚目は基本編集 command を集めています。表示上の行は `G / E / Add / v`、`R / L / Del / f`、`S / GG / Pr / Ud`、`Next / M / W / Rd` の順です
+- `G`: move
+- `E`: extrude
+- `Add`: Add Vertex tool。3/4 頂点選択時は face 作成
+- `v`: Vertex Select
+- `R`: rotate
+- `L`: loop cut
+- `Del`: delete selection
+- `f`: Face Select
+- `S`: scale
+- `GG`: Edge Slide。選択 vertex を隣接 edge の直線上で同じ比率だけ slide
+- `Pr`: projection。透視投影と orthogonal view を切り替える
+- `Ud`: undo
+- `Next`: 2nd command palette へ切り替え
+- `M`: X mirror
+- `W`: wireframe。Object / Edit Mode の mesh wireframe 表示を切り替える。Edit Mode で ON の間は、wireframe として見えている裏側の vertex も選択対象にする
+- `Rd`: redo
+- 視点切り替えは常時表示の view dock から行う
+
+view dock の意味
+- `X`: side view
+- `-X`: reverse side view
+- `Y`: up view
+- `-Y`: reverse up view
+- `Z`: front view
+- `-Z`: reverse front view
+
+transform axis chooser の意味
+- `Free`: axis constraint を使わない。`G` は画面平面移動、`R` は視線方向軸回転、`S` は uniform scale、`E` は face normal 方向押し出しとして preview する
+- `X`: `G/R/S/E` の移動、回転、拡大縮小、押し出し方向を world X 軸へ制限する
+- `Y`: `G/R/S/E` の移動、回転、拡大縮小、押し出し方向を world Y 軸へ制限する
+- `Z`: `G/R/S/E` の移動、回転、拡大縮小、押し出し方向を world Z 軸へ制限する
+
+2nd command palette の意味
+- 2 枚目は選択、file 操作、scene 操作を集めています。表示上の行は `A / O / - / Load`、`I / Ss / - / Json`、`H / N / - / Glb`、`Next / Join / Vcood / Tab` の順です
+- `A`: select all
+- `O`: Origin
+- `-`: 未割り当て。今後 command を追加するときの予約枠
+- `Load`: file load
+- `I`: invert selection
+- `Ss`: screenshot
+- `Json`: gzip 圧縮済み ModelAsset JSON (`.json.gz`) save
+- `H`: select X<0
+- `N`: new scene
+- `Glb`: GLB save
+- `Next`: 3rd command palette へ切り替え
+- `Join`: Object Mode で選択中の 2 個以上の object を 1 object へ統合
+- `Vcood`: selected vertex coordinates
+- `Tab`: Edit / Object Mode 切り替え
+
+3rd command palette の意味
+- 3 枚目は primitive 追加と primitive の分割数を集めています。表示上の行は `Cube / Torus / Ball / DCone`、`Cyl / Cone / Plane / -`、`3 / 4 / 8 / 12`、`Next / 16 / 24 / 32` の順です
+- `Cube`: cube object を scene に追加
+- `Torus`: torus object を scene に追加
+- `Ball`: sphere object を scene に追加
+- `DCone`: double cone object を scene に追加
+- `Cyl`: cylinder object を scene に追加
+- `Cone`: cone object を scene に追加
+- `Plane`: plane object を scene に追加
+- `-`: 未割り当て。今後 command を追加するときの予約枠
+- `3` / `4` / `8` / `12` / `16` / `24` / `32`: Ball、Torus、Cyl、Cone、DCone の分割数を選ぶ。どれか 1 つが active 表示になり、初期値は `12`
+- `Next`: 1st command palette へ戻る
+
+選択状態の方針
+- mobile では geometry 上の double tap を command palette 表示に使い、double tap だけで geometry を選択しません。これにより、未選択でも使える command を呼び出すための状態を保てます
+- empty 上の double tap は矩形選択の開始に使います。geometry 上で command、empty 上で範囲選択という役割分担にすることで、camera drag との衝突を避けます
+- 複数選択は `A` select all、`I` invert selection、`H` select X<0 などの command を中心に扱います。face / vertex の混在選択は desktop 版と同じく mode / tool ごとに分け、同時編集対象を曖昧にしません
+
+このサンプルで使う webg 機能
+- `WebgApp`: embedded canvas、Screen / Shader / Space / Input / Message の初期化
+- `EyeRig`: 1 本指 orbit、2 本指 pan、pinch zoom を含む touch camera
+- `Touch.attachSurface()`: double tap、long press を gesture として検出。mmodeler では command palette 表示と mode 切り替えに使います
+- `ModelAsset`: 編集結果の保存形式、読み込み済み asset の mesh 取り出し、gzip 圧縮済み JSON download
+- `WebgApp.loadModel()`: glTF / GLB / Collada を ModelAsset へ正規化する入口
+- `Overlay2DRenderer`: Edit Mode の頂点 marker overlay
+- `EdgeWireframeOverlayRenderer`: Edit Mode の edge overlay
+- `Space.raycast()`: object / face pick
+
+Blender との ModelAsset JSON 受け渡し
+- `samples/mmodeler/blender_modelasset_io.py` は、mmodeler の `.json` / `.json.gz` 保存データを Blender と受け渡しするための Blender アドオンです
+- Blender の `Edit > Preferences > Add-ons > Install...` から `samples/mmodeler/blender_modelasset_io.py` を選び、`Webg ModelAsset JSON I/O` を有効化します
+- 有効化後は `File > Import > Webg ModelAsset JSON (.json)` と `File > Export > Webg ModelAsset JSON (.json)` が追加されます。対象形式は `.json` と `.json.gz` です
+- mmodeler から Blender へ渡す場合は、mmodeler の `Json` で `mmodeler_modelasset.json.gz` を保存し、Blender 側で Import します
+- Blender から mmodeler へ戻す場合は、Blender 側で mesh object を選択して Export し、mmodeler の `Load` で書き出した `.json` または `.json.gz` を読み込みます
+- Export オプションの `Export as .json.gz` を ON にすると gzip 圧縮済み `.json.gz`、OFF にすると通常の `.json` を書き出します。保存名に `.json` や `.json.gz` が既に付いていても、二重拡張子にならないよう正規化します
+- Import / Export では既定で Blender の Z-up と ModelAsset の Y-up を相互変換します。軸変換を行いたくない検証では、Import / Export オプションの axis conversion を OFF にします
+- このアドオンは mesh geometry、material の基本色、`polygonLoops` を中心に扱います。複雑な rig、animation、一般的な 3D ツール連携を優先する場合は GLB / glTF 経路を使います
+
+読み込み時の段階表示
+- `.json.gz` を読み込むと、status/message に `loading <file>: decompressing`、`loading <file>: parsing`、`loading <file>: importing` の順で表示します。iPhone Safari などで固まる場合に、gzip 展開、JSON parse、editor への取り込みのどこで止まったかを見分けるための表示です
+- 各段階表示の直後に 1 frame 待ってから重い処理へ入ります。これにより、JSON parse などの同期処理で browser が固まった場合でも、直前の段階名が画面へ反映されやすくなります
+- `.json` は gzip 展開がないため `parsing` から始まり、その後 `importing` へ進みます。glTF / GLB / Collada は loader の stage 表示を使い、ModelAsset 化後に `importing` へ進みます
+
+確認ポイント
+- 起動直後に full-screen canvas が広く見え、canvas 外 panel や上部 HUD がないことを確認します
+- tap で object / vertex / face を選択できることを確認します
+- selection 上の double tap で command palette が開き、`Next` で 1st / 2nd / 3rd の 3 枚が循環することを確認します
+- active 状態の command は控えめな色、`Next` は赤系の色で表示されることを確認します
+- Edit Mode で隣り合う四角 face を選択し、`L / loop` で選択範囲外の隣接四角面にもカットが伝播し、中点 vertex が共有されることを確認します
+- Edit Mode で四角 face を 1 枚だけ選択し、`L / loop` 後に pointer を face の各辺へ近づけると preview 線が切り替わり、tap でその方向の loop cut が確定することを確認します
+- Edit Mode で 3 個または 4 個の頂点を選択したとき、`Add` の tap で面を作成できることを確認します
+- 1st palette の `W` で Object / Edit Mode の mesh wireframe 表示が切り替わり、Edit Mode では見えている裏側の vertex も選択できることを確認します
+- 1st palette の `Pr` で透視投影と orthogonal view が切り替わることを確認します
+- 1st palette の `GG` を選んだあと、drag で選択 vertex が隣接 edge の直線上を同じ比率で slide し、pointerup で確定できることを確認します
+- 2nd palette の `Vcood` で選択 vertex の座標が message に表示されることを確認します
+- Object Mode で複数 object を選択し、2nd palette の `Join` で 1 object へ統合できることを確認します
+- 3rd palette の `Cube` / `Torus` / `Ball` / `DCone` / `Cyl` / `Cone` / `Plane` で既存 object を残したまま primitive object を追加できることを確認します
+- 3rd palette の分割数 button を押すと active 表示が切り替わり、その後に追加する Ball / Torus / Cyl / Cone / DCone の分割数へ反映されることを確認します
+- `G/R/S/E` を選んだあと command palette が閉じ、1 本指 drag で Free preview が動き、pointerup で確定できることを確認します
+- `G/R/S/E` を選んだ直後に右上の `Free / X / Y / Z` axis chooser が表示され、たとえば `G` -> `X` で X 軸方向だけへ移動でき、`Free` で軸制限を解除できることを確認します
+- 未選択状態で polygon 上を double tap しても、その polygon / face / vertex が自動選択されず、未選択のまま command palette が開くことを確認します
+- canvas 上の 1 本指 drag は速く動かしても camera orbit として動作し、command が誤実行されないことを確認します
+- 2nd palette から load / save / projection / undo / redo / screenshot / new scene などが実行できることを確認します
+- X mirror が ON のとき、palette 上の `M / mirror` button が active 色に変わることを確認します
+- 図形が存在する状態で empty 上を double tap したあと drag すると、camera が回らず box select が動作することを確認します
+- 全 object を削除して頂点が 1 つもない状態では、empty double tap で command palette が開き、primitive 追加や Load を選べることを確認します
+- 1 本指 drag orbit、2 本指 drag pan、pinch zoom が scene 上で動くことを確認します
+
+補足
+- このサンプルは mobile profile の構成であり、スマホやタブレット上での command palette 操作を優先しています
+- 編集データ、pick、transform、保存形式は同じ画面内で一貫して扱い、mobile 専用に別仕様の geometry を持たないようにしています

@@ -1,0 +1,46 @@
+<!doctype html>
+<!-- webg/unittest/overlay_panel/index.html 2026/04/30 -->
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>overlay_panel unittest</title>
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      overflow: hidden;
+      background: #07101b;
+      color: #eaf1ff;
+      font-family: sans-serif;
+    }
+    canvas {
+      display: block;
+      width: 100vw;
+      height: 100vh;
+    }
+    #status {
+      position: fixed;
+      left: 12px;
+      top: 132px;
+      z-index: 30;
+      max-width: min(420px, calc(100vw - 24px));
+      background: rgba(10, 18, 30, 0.84);
+      border: 1px solid rgba(160, 188, 236, 0.20);
+      border-radius: 12px;
+      padding: 10px 12px;
+      box-sizing: border-box;
+      white-space: pre-wrap;
+      line-height: 1.5;
+      font-size: 13px;
+      pointer-events: none;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="canvas"></canvas>
+  <pre id="status">starting...</pre>
+  <script type="module" src="./main.js?v=20260430_overlaypanel"></script>
+</body>
+</html>

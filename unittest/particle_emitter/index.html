@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>webg particle emitter unittest</title>
+  <link rel="icon" href="data:," />
+  <style>
+    :root {
+      color-scheme: dark;
+    }
+    html, body {
+      margin: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background:
+        radial-gradient(circle at top, rgba(66, 104, 72, 0.36), transparent 42%),
+        linear-gradient(180deg, #121c12 0%, #1a2920 100%);
+      color: #e4edf8;
+      font-family: "Courier New", monospace;
+    }
+    #canvas {
+      position: fixed;
+      inset: 0;
+      width: 100vw;
+      height: 100vh;
+      display: block;
+    }
+    .panel {
+      position: fixed;
+      z-index: 4;
+      pointer-events: none;
+      white-space: pre-wrap;
+      line-height: 1.55;
+      border-radius: 14px;
+      border: 1px solid rgba(145, 178, 221, 0.26);
+      background: rgba(14, 22, 14, 0.76);
+      box-shadow: 0 14px 40px rgba(0, 0, 0, 0.22);
+      backdrop-filter: blur(8px);
+    }
+    #status {
+      left: 14px;
+      top: 14px;
+      width: min(430px, calc(100vw - 28px));
+      padding: 14px 16px;
+      font-size: 13px;
+    }
+    #manual {
+      top: 14px;
+      right: 14px;
+      width: min(410px, calc(100vw - 28px));
+      padding: 14px 16px;
+      font-size: 13px;
+    }
+    .page-note {
+      position: fixed;
+      left: 14px;
+      bottom: 98px;
+      z-index: 4;
+      padding: 10px 12px;
+      border-radius: 12px;
+      border: 1px solid rgba(145, 178, 221, 0.18);
+      background: rgba(12, 18, 12, 0.42);
+      color: #b8c7da;
+      font-size: 12px;
+      pointer-events: none;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="canvas"></canvas>
+  <pre id="status" class="panel">initializing...</pre>
+  <pre id="manual" class="panel">loading visual sample...</pre>
+  <div class="page-note">touch buttons appear at the bottom after the visual phase starts</div>
+  <script type="module" src="./main.js"></script>
+</body>
+</html>

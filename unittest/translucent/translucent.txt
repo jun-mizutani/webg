@@ -1,0 +1,28 @@
+translucent unittest
+
+概要
+- FrostedGlassPass と GlassMaskShader を使い、半透明オブジェクト越しに背景だけを blur する曇りガラス表現を確認する単体テストです。
+- ディレクトリ名は `translucent` に統一しています。
+
+このテストで使う webg 機能
+- `FrostedGlassPass`: scene color、blur color、glass mask を合成する postprocess pass
+- `GlassMaskShader`: ガラス Shape の画面上の領域を mask target へ描く mesh shader
+- `SeparableBlurPass`: scene color に横/縦 blur を掛ける共通 blur helper
+- `RenderTarget`: scene / mask / blur の中間描画先
+- `Space.draw(..., { filter })`: 通常 scene と glass mask を分けて描くための filter
+
+確認ポイント
+- ガラス Shape の内側だけ背景がぼけて見えることを確認します。
+- ガラスより手前にある黒い縦バーは、mask pass の depth test により blur されず sharp に残ることを確認します。
+- `V` で `composite / scene / blur / mask` を切り替え、scene、blur、mask、合成結果を個別に確認します。
+- `B` で effect を無効にすると、同じ描画フローのまま raw scene に戻ることを確認します。
+
+操作
+- `Space`: 一時停止 / 再開
+- `V`: 表示を `composite / scene / blur / mask` で切り替え
+- `B`: FrostedGlassPass の有効 / 無効
+- `1` / `2`: blur radius を下げる / 上げる
+- `3` / `4`: blur mix を下げる / 上げる
+- `5` / `6`: tint strength を下げる / 上げる
+- `7` / `8`: mask power を下げる / 上げる
+- `R`: 初期値へ戻す

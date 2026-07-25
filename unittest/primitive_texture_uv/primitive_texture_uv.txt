@@ -1,0 +1,20 @@
+サンプル: primitive_texture_uv
+
+概要
+- `Primitive` が返す基本形状へテクスチャを貼り、UV 崩れがないかを最小構成で確認する unittest です。
+- 回転体に共通の UV 計算を使う形状群と、平面マッピング系、`mapCube` の専用 UV を 3x3 配置で同時に見比べます。
+
+このサンプルで使うwebg機能
+- `Primitive.sphere` / `Primitive.cone` / `Primitive.truncated_cone` / `Primitive.double_cone`
+- `Primitive.prism` / `Primitive.donut` / `Primitive.cube` / `Primitive.cuboid` / `Primitive.mapCube`
+- `Shape.setTextureMappingMode` / `setTextureMappingAxis` / `setTextureScale`
+- `Texture`: `num256.png` の読み込み
+- `UnitTestApp`: Screen 初期化、resize、status 表示の共通 helper
+
+確認ポイント
+- 球、円錐、切頭円錐、両円錐、角柱、ドーナツで、回転体 UV の seam や数字の流れが極端に破綻しないことを確認します。
+- `cube` / `cuboid` の平面マッピングで、面ごとのスケール差が意図どおり見えることを確認します。
+- `mapCube` が通常 `cube` と異なる UV 展開を持ち、面ごとの数字の流れが破綻しないことを確認します。
+
+操作説明
+- `Space`: 回転の一時停止 / 再開

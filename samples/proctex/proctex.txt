@@ -1,0 +1,40 @@
+サンプル: proctex
+
+概要
+- `WebgApp` を土台に、Texture.js の手続きハイトマップ生成と法線マップ生成を同時に確認するサンプルです。
+- 同一ハイトマップを「カラー用テクスチャ」と「法線マップ」の両方に使い、
+  `Shape.mapCube` に貼り付けた立方体を画面中央でゆっくり回転表示します。
+- `WebgApp` の入力と HUD を使い、キー操作ガイドと現在パラメータを同じ画面で追えるようにしています。
+
+このサンプルで使うwebg機能
+- `Texture.makeProceduralHeightMapPixels`: 手続きハイトマップ生成
+- `Texture.buildNormalMapFromHeightMap`: ハイトマップから法線マップ生成
+- `Shape.mapCube`: UV展開済み立方体
+- `SmoothShader`: テクスチャ + 法線マップ描画
+- `InputController` / `Touch`: キー入力とタッチボタン入力の共通化
+- `WebgApp` の HUD: 操作ガイドと現在パラメータの表示
+
+確認ポイント
+- テクスチャON/OFF、法線マップON/OFFで見え方が即時に切り替わることを確認します。
+- pattern/scale/contrast/bias/seed を変更して、生成模様が再構築されることを確認します。
+- normal strength の変更で凹凸の強調具合が変わることを確認します。
+- PC でも touch ボタンが表示され、同じキー操作をそのまま押せることを確認します。
+
+操作説明
+- `T`: テクスチャON/OFF
+- `N`: 法線マップON/OFF
+- `P`: パターン切替（noise / dots）
+- `C`: シェーダ `color` プリセット切替
+- `[` / `]`: scale 減少 / 増加
+- `,` / `.`: bias 減少 / 増加
+- `;` / `'`: contrast 減少 / 増加
+- `K` / `L`: seed 減少 / 増加
+- `U` / `J`: normal strength 増加 / 減少
+- `I`: invertHeight ON/OFF
+- `Y`: invertY ON/OFF
+- `R`: 現在パラメータで強制再生成（通常は自動再生成される）
+- touch ボタンも同じキー割り当てで表示され、PC でもそのまま確認できます
+
+再生成の仕様
+- `P`/`[`/`]`/`,`/`.`/`;`/`'`/`K`/`L`/`I`/`Y` は変更時に自動で再生成されます。
+- `R` は「同じパラメータのまま再生成を明示的に実行したい時」に使います。

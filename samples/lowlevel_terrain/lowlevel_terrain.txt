@@ -1,0 +1,35 @@
+サンプル: lowlevel_terrain
+
+概要
+- `WebgApp` で camera と HUD を整え、terrain mesh そのものは `Shape` の low-level API だけで作る sample です
+- `value noise` と `fbm` を使って高さを決め、共有頂点の grid に対して `addPlane()` で quad を張り、連続した地形を 1 枚の mesh として構築します
+- mesh と同じ height field から高さ帯 texture も生成し、海辺、草地、岩場、雪線のような色の変化を 1 枚の procedural texture として与えます
+- steep な段差には簡易 erosion 風 smoothing をかけ、急な崖を少しだけ崩して自然な尾根と斜面へ寄せています
+- 中心を高く、外周を低くする falloff を入れているため、島状の silhouette が分かりやすく出ます
+- orbit と zoom で近くから法線、遠くから輪郭を見比べると、low-level terrain 生成の意図を確認しやすい構成です
+- `Q` / `E` で camera 距離、`-` / `=` で terrain の起伏量をその場で変えられるため、同じ topology で見え方がどう変わるかを比較できます
+
+このサンプルで使うwebg機能
+- `WebgApp`: 起動、camera、HUD、input、fog の初期化
+- `EyeRig`: orbit camera と zoom
+- `Shape.addVertexUV()`: grid 上の頂点を並べる
+- `Shape.addPlane()`: quad を 2 三角形へ分けて追加する
+
+確認ポイント
+- 起動直後に島状の地形が見え、orbit camera で上空と斜めから観察できることを確認します
+- rows / cols、vertex 数、quad 数、高さの最小値と最大値が右上に表示されることを確認します
+- 高さ帯ごとに地表色が変わり、低地から高地までの地形の読みやすさが上がっていることを確認します
+- 共有頂点で法線を作っているため、地形表面が連続して smooth に見えることを確認します
+- erosion 風 smoothing により、ノイズだけの terrain よりも steep な段差が少し和らいでいることを確認します
+- zoom を寄せると山肌の傾き、引くと全体の silhouette と falloff の効き方が分かることを確認します
+- `-` / `=` で右上の `heightScale` と地形の起伏量が一緒に変わることを確認します
+
+操作説明
+- drag: orbit camera
+- 2本指 drag: camera を平行移動
+- pinch / wheel: zoom
+- arrow keys: orbit camera
+- `[` / `]`: zoom
+- `Q` / `E`: camera 距離を近づける / 遠ざける
+- `-` / `=`: terrain の起伏量を下げる / 上げる
+- `R`: 既定 view へ戻す

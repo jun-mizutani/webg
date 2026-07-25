@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Compression Streams ModelAsset Test</title>
+  <link rel="icon" href="data:," />
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f5f7fb;
+      --panel: #ffffff;
+      --ink: #172033;
+      --muted: #637083;
+      --line: #ccd5e1;
+      --accent: #245ca8;
+      --accent-ink: #ffffff;
+      --warn: #8a5a00;
+      --error: #a22622;
+      --ok: #17643a;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      margin: 0;
+      min-height: 100%;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    body {
+      padding: 20px;
+    }
+
+    main {
+      display: grid;
+      grid-template-columns: minmax(320px, 1fr) minmax(320px, 0.86fr);
+      gap: 16px;
+      max-width: 1280px;
+      margin: 0 auto;
+    }
+
+    h1 {
+      grid-column: 1 / -1;
+      margin: 0;
+      font-size: 24px;
+      font-weight: 700;
+      letter-spacing: 0;
+    }
+
+    section {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 14px;
+      min-width: 0;
+    }
+
+    h2 {
+      margin: 0 0 10px;
+      font-size: 16px;
+      letter-spacing: 0;
+    }
+
+    textarea,
+    pre {
+      width: 100%;
+      min-height: 420px;
+      margin: 0;
+      padding: 10px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: #fbfdff;
+      color: #111827;
+      font-family: "Courier New", Consolas, monospace;
+      font-size: 13px;
+      line-height: 1.45;
+      white-space: pre;
+      overflow: auto;
+      resize: vertical;
+    }
+
+    pre {
+      min-height: 260px;
+      white-space: pre-wrap;
+    }
+
+    .toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin: 0 0 12px;
+      align-items: center;
+    }
+
+    button,
+    label.file {
+      min-height: 34px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      padding: 7px 10px;
+      background: #ffffff;
+      color: var(--ink);
+      font: inherit;
+      cursor: pointer;
+    }
+
+    button.primary {
+      border-color: var(--accent);
+      background: var(--accent);
+      color: var(--accent-ink);
+    }
+
+    button:disabled {
+      opacity: 0.46;
+      cursor: not-allowed;
+    }
+
+    input[type="file"] {
+      display: none;
+    }
+
+    .status {
+      color: var(--muted);
+      font-family: "Courier New", Consolas, monospace;
+      font-size: 13px;
+      white-space: pre-wrap;
+    }
+
+    .ok {
+      color: var(--ok);
+    }
+
+    .warn {
+      color: var(--warn);
+    }
+
+    .error {
+      color: var(--error);
+    }
+
+    @media (max-width: 860px) {
+      main {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Compression Streams ModelAsset Test</h1>
+
+    <section>
+      <h2>ModelAsset JSON</h2>
+      <div class="toolbar">
+        <button id="loadSample">Load Sample</button>
+        <label class="file">
+          Open JSON
+          <input id="fileInput" type="file" accept=".json,.json.gz,application/json,application/gzip" />
+        </label>
+        <button id="compress" class="primary">Compress</button>
+        <button id="decompress">Decompress</button>
+        <button id="downloadCompressed" disabled>Download .json.gz</button>
+        <button id="downloadRestored" disabled>Download restored JSON</button>
+      </div>
+      <textarea id="jsonText" spellcheck="false"></textarea>
+    </section>
+
+    <section>
+      <h2>Status</h2>
+      <pre id="status">initializing...</pre>
+      <h2>Restored JSON Preview</h2>
+      <pre id="restored"></pre>
+    </section>
+  </main>
+
+  <script type="module" src="./main.js"></script>
+</body>
+</html>

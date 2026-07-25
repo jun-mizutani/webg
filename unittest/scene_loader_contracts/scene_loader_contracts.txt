@@ -1,0 +1,32 @@
+scene_loader_contracts
+
+概要
+- `SceneAsset` と `SceneLoader` が、Scene JSON の `physicsSpace` と各 entry の `physics` を読んで、`PhysicsSpace` と `PhysicsNode` を構築できるかを確認するページです。
+- ここでは `PhysicsSpace` 単体の接触式ではなく、「Scene JSON の宣言が validator を通り、runtime の `physicsSpace` と `stepPhysics()` に届くか」を見ることを目的にしています。
+- 画面上では、Scene JSON から作った gray floor と blue crate が表示され、blue crate は起動直後から見える位置で、横移動や回転なしに floor 上面へ向かって落下します。
+
+このテストで使う webg 機能
+- `SceneAsset`: Scene JSON の保持、検証、build の入口
+- `SceneLoader`: `physicsSpace` と `entry.physics` を runtime へ変換する loader
+- `SceneValidator`: 物理宣言を含む Scene JSON の構造検証
+- `PhysicsSpace`: build 後の runtime から `stepPhysics(deltaMs)` で進める物理空間
+- `PhysicsNode`: `entry.physics` 付き entry の placement body
+- `Primitive`: floor と crate の最小形状生成
+- `UnitTestApp`: Screen 初期化、resize、status 表示
+
+確認ポイント
+- `SceneAsset.validate()` が、`physicsSpace` と `entry.physics` を含む Scene JSON を受け付けることを確認します。
+- `SceneAsset.build({ gpu, space })` の戻り値に `physicsSpace` と `stepPhysics()` が含まれることを確認します。
+- `entry.physics` を持つ floor / crate は `physicsNode` を持つことを確認します。
+- `stepPhysics()` によって crate の位置が変化し、Scene JSON から生成した body が floor 上面へ向かって実際に落下することを確認します。
+- 起動直後から blue crate が見え、`y=8` 付近から `y=-16` 付近へ真下に落ちて止まることを確認します。
+- `R` で crate を初期位置へ戻し、`Space` で一時停止 / 再開できることを確認します。
+
+操作
+- `Space`: 物理更新の一時停止 / 再開
+- `R`: crate を初期位置と初期速度へ戻す
+
+実装確認の見方
+- `SceneLoader.js`、`SceneValidator.js`、`SceneAsset.js`、`PhysicsSpace.js` の関係を見るときは、この確認ページで Scene JSON から runtime までの流れを追えます。
+- ここで見ているのは Scene JSON からの物理入口です。接触式や query の規約は `unittest/physics_space_contracts` を参照してください。
+- runtime の `stepPhysics(deltaMs)` を明示的に呼び、Scene JSON から作られた body が物理更新へ届くことを確認します。

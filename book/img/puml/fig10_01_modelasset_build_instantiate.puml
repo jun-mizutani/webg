@@ -1,0 +1,50 @@
+@startuml
+title ModelAsset -> build -> instantiate
+
+left to right direction
+'top to bottom direction
+skinparam backgroundColor white
+skinparam shadowing true
+skinparam dpi 150
+skinparam defaultFontName Yu Gothic UI
+skinparam defaultFontSize 18
+skinparam rectangle {
+  RoundCorner 24
+  BorderColor black
+  BackgroundColor #f7fbff
+  FontColor black
+}
+skinparam ArrowColor black
+skinparam ranksep 20
+skinparam nodesep 20
+
+rectangle "glTF / GLB" as Gltf
+rectangle "Collada" as Collada
+rectangle "imported JSON" as ImportedJson
+rectangle "ModelAsset\nCPU 側の共通データ" as ModelAsset
+rectangle "validate" as Validate
+rectangle "build()" as Build
+rectangle "モデル\nGPU共有バッファ" as Runtime
+rectangle "instantiate() -> A" as InstA
+rectangle "instantiate() -> B" as InstB
+rectangle "instantiate() -> C" as InstC
+
+Gltf --> ModelAsset
+Collada --> ModelAsset
+ImportedJson --> ModelAsset
+ModelAsset --> Validate
+ModelAsset --> Build
+Build --> Runtime
+Runtime -down-> InstA
+Runtime -down-> InstB
+Runtime -down-> InstC
+
+note top of Gltf
+入力形式
+end note
+
+note top of Runtime
+build は 1 回
+必要な数だけインスタンスを作る
+end note
+@enduml

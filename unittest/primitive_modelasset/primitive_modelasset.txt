@@ -1,0 +1,21 @@
+サンプル: primitive_modelasset
+
+概要
+- `Primitive` が返す `ModelAsset` を `ModelValidator` と `ModelBuilder` へ通し、runtime の `Space / Node / Shape` として復元できるかを最小構成で確認する unittest です。
+- UV、wireframe、normal map は固定せず、`Primitive -> ModelAsset -> ModelValidator -> ModelBuilder -> instantiate(space)` の経路が壊れていないかを確認対象に絞ります。
+
+このサンプルで使うwebg機能
+- `Primitive.sphere` / `Primitive.cone` / `Primitive.truncated_cone` / `Primitive.double_cone`
+- `Primitive.prism` / `Primitive.donut` / `Primitive.cube` / `Primitive.cuboid` / `Primitive.mapCube`
+- `ModelValidator`: `ModelAsset` 構造の妥当性確認
+- `ModelBuilder`: `ModelAsset` から runtime `Shape` / `Node` を組み立てる helper
+- `Space`: build 後の node tree を復元して描画する
+- `UnitTestApp`: Screen 初期化、resize、status 表示の共通 helper
+
+確認ポイント
+- 9 種類の primitive asset が validator を通過し、`builder.build()` 後に 3x3 で描画されることを確認します。
+- `instantiate(space)` で復元した runtime node へ追加移動を与えても、描画が崩れないことを確認します。
+- validator warnings が想定外に増えていないことを status から確認します。
+
+操作説明
+- `Space`: 回転の一時停止 / 再開

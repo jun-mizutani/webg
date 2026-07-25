@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>webg unittest physics_node_contracts</title>
+  <link rel="icon" href="data:," />
+  <style>
+    html, body {
+      margin: 0;
+      width: 100%;
+      height: 100%;
+      background: #101820;
+      color: #edf4ff;
+      font-family: sans-serif;
+    }
+    body {
+      display: grid;
+      grid-template-rows: minmax(220px, 42vh) 1fr;
+    }
+    canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+    main {
+      padding: 18px;
+      box-sizing: border-box;
+      overflow: auto;
+      background: #17212c;
+      border-top: 1px solid rgba(255, 255, 255, 0.14);
+    }
+    h1 {
+      margin: 0 0 10px;
+      font-size: 20px;
+    }
+    p {
+      margin: 0 0 12px;
+      color: #c8d6e6;
+      line-height: 1.6;
+    }
+    pre {
+      white-space: pre-wrap;
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      border-radius: 10px;
+      padding: 14px;
+      line-height: 1.55;
+      margin: 0;
+      min-height: 160px;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="canvas" width="640" height="360"></canvas>
+  <main>
+    <h1>physics_node_contracts</h1>
+    <p>
+      `PhysicsSpace` を導入する前段として、
+      `PhysicsNode` の bodyType 切替、速度保持、sleep、teleport、同期 API、transform guard を自動確認する基本仕様確認テストです。
+    </p>
+    <pre id="status">loading...</pre>
+  </main>
+  <script type="module" src="./main.js"></script>
+</body>
+</html>

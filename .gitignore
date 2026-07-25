@@ -1,0 +1,14 @@
+# General
+.DS_Store
+__MACOSX/
+.AppleDouble
+.LSOverride
+Icon[]
+user/
+tools/
+inside_*.txt
+# Thumbnails
+._*
+
+# Emacs
+*~

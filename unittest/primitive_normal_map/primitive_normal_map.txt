@@ -1,0 +1,21 @@
+サンプル: primitive_normal_map
+
+概要
+- `Primitive` が返す代表形状へ同じベース texture を貼り、normal map なし / 画像由来 normal / 手続き normal の見えを 3x3 で比較する unittest です。
+- 行で primitive の違い、列で normal source の違いを見比べ、`SmoothShader` の normal map 変化だけを最小構成で確認します。
+
+このサンプルで使うwebg機能
+- `Primitive.sphere` / `Primitive.prism` / `Primitive.mapCube`
+- `SmoothShader`: normal map の有無と強度を反映する shader
+- `Texture.buildNormalMapFromHeightMap`
+- `Texture.buildNormalMapFromProceduralHeight`
+- `Shape.setTextureMappingMode` / `setTextureMappingAxis` / `setTextureScale`
+- `UnitTestApp`: Screen 初期化、resize、status 表示の共通 helper
+
+確認ポイント
+- 同じ primitive で、normal map なしと image / procedural normal の陰影差が見えることを確認します。
+- `sphere` と `prism` の回転体 UV 系、`mapCube` の専用 UV 系で、normal map 適用後も極端な破綻が出ないことを確認します。
+- `num256.png` 由来の image normal と、noise ベース strength=2.0 の procedural normal で陰影の出方が明確に違うことを確認します。
+
+操作説明
+- `Space`: 回転の一時停止 / 再開

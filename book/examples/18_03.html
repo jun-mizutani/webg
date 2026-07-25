@@ -1,0 +1,109 @@
+<!doctype html>
+<!-- webg/book/examples/18_03.html 2026/05/14 -->
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>18_03 独自BGM</title>
+  <link rel="stylesheet" href="./example.css" />
+  <style>
+    button { margin: 6px 8px 6px 0; padding: 8px 14px; }
+    #status { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <h1>book/examples</h1>
+    <h2>18_03 独自BGM</h2>
+    <div class="section-card">
+      <p>`registerMelody()` で `story_field` を追加し、`setMelody()` と `startBgm()` で再生する例です</p>
+      <p class="note">Start BGM でループを開始し、Stop BGM で短くフェードアウトします</p>
+      <button id="startButton">Audio Start</button>
+      <button id="playButton" disabled>Start BGM</button>
+      <button id="stopButton" disabled>Stop BGM</button>
+      <p id="status">status: waiting for Audio Start</p>
+    </div>
+
+    <pre id="code"></pre>
+
+    <script type="module" id="example-source">
+import GameAudioSynth from "../../webg/GameAudioSynth.js";
+
+const synth = new GameAudioSynth();
+const startButton = document.getElementById("startButton");
+const playButton = document.getElementById("playButton");
+const stopButton = document.getElementById("stopButton");
+const status = document.getElementById("status");
+
+const setStatus = (text) => {
+  status.textContent = `status: ${text}`;
+};
+
+const registerStoryFieldBgm = () => {
+  synth.registerMelody("story_field", {
+    scale: [0, 2, 4, 5, 7, 9, 11],
+    bassPattern: [0, -5, -3, -2, 0, -4, -2, -5],
+    bassOctave: -12,
+    leadDegrees: [
+      0, 2, 4, 5, 7, 5, 4, 2,
+      0, 2, 4, 7, 9, 7, 5, 4,
+      0, 2, 4, 5, 7, 9, 7, 5,
+      4, 5, 7, 9, 11, 9, 7, 5
+    ],
+    leadHoldSteps: [
+      1.0, 1.0, 1.0, 1.6, 1.0, 1.0, 1.0, 2.0,
+      1.0, 1.0, 1.0, 1.7, 1.0, 1.0, 1.0, 2.4,
+      1.0, 1.0, 1.0, 1.6, 1.0, 1.0, 1.0, 2.0,
+      1.0, 1.0, 1.0, 1.8, 1.0, 1.0, 1.0, 2.8
+    ],
+    leadOctave: 12,
+    leadType: "triangle",
+    leadDur: 0.11,
+    leadGain: 0.060,
+    bassType: "triangle",
+    bassDur: 0.16,
+    bassGain: 0.074,
+    rhythmDropWeakProb: 0.28,
+    rhythmDropTailProb: 0.52
+  });
+};
+
+startButton.addEventListener("click", async () => {
+  await synth.resume();
+  registerStoryFieldBgm();
+
+  synth.setMasterVolume(0.25);
+  synth.setBgmVolume(0.75);
+  synth.setBpm(116);
+  synth.setRootHz(220.0);
+  synth.setBgmEnvelope({
+    attack: 0.03,
+    decay: 0.18,
+    sustain: 0.60,
+    release: 0.36
+  });
+  synth.setMelody("story_field");
+
+  startButton.disabled = true;
+  playButton.disabled = false;
+  stopButton.disabled = false;
+  setStatus("audio started, story_field registered");
+});
+
+playButton.addEventListener("click", () => {
+  synth.startBgm();
+  setStatus("story_field playing");
+});
+
+stopButton.addEventListener("click", () => {
+  synth.stopBgm(0.4);
+  setStatus("story_field stopped");
+});
+    </script>
+    <script>
+      document.getElementById("code").textContent =
+        document.getElementById("example-source").textContent.trim();
+    </script>
+  </div>
+</body>
+</html>

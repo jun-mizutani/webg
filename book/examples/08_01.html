@@ -1,0 +1,144 @@
+<!doctype html>
+<!-- webg/book/examples/08_01.html 2026/04/24 -->
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>08_01 SmoothShader の flat_shading 比較</title>
+  <link rel="stylesheet" href="./example.css" />
+</head>
+<body>
+  <div class="page">
+    <h1>book/examples</h1>
+    <h2>08_01 SmoothShader の flat_shading 比較</h2>
+    <div class="section-card">
+      <p>`book/08_WGSLの読み方.md` の flat shading を、同じ low-poly sphere を `SmoothShader` 1 本の中で切り替えて見比べる実行例です</p>
+      <p class="note">左は `flat_shading = 1` にした `SmoothShader` で面法線を `dpdy` / `dpdx` から再構成し、右は既定の `SmoothShader` で頂点法線を補間します。同じ mesh でも法線の取り方だけで見え方が変わることを確認できます</p>
+    </div>
+
+    <div class="canvas-block">
+      <canvas id="canvas" width="960" height="720"></canvas>
+    </div>
+
+    <pre id="code"></pre>
+
+    <script type="module" id="example-source">
+import WebgApp from "../../webg/WebgApp.js";
+import { buildHelpPanelOptions } from "../../webg/OverlayPanelPresets.js";
+import Primitive from "../../webg/Primitive.js";
+import Shape from "../../webg/Shape.js";
+
+const LIGHT = [22.0, 30.0, 42.0, 1.0];
+
+const app = new WebgApp({
+  document,
+  messageFontTexture: "../../webg/font512.png",
+  clearColor: [0.07, 0.09, 0.13, 1.0],
+  lightPosition: LIGHT,
+  layoutMode: "embedded",
+  fixedCanvasSize: {
+    width: 960,
+    height: 720,
+    useDevicePixelRatio: false
+  },
+  camera: {
+    target: [0.0, 1.8, 0.0],
+    distance: 14.0,
+    yaw: 18.0,
+    pitch: -12.0
+  }
+});
+await app.init();
+
+const orbit = app.createOrbitEyeRig({
+    target: [0.0, 1.8, 0.0],
+    distance: 14.0,
+    yaw: 18.0,
+    pitch: -12.0,
+    minDistance: 8.0,
+    maxDistance: 24.0
+});
+
+const sphereAsset = Primitive.sphere(1.8, 8, 12);
+
+const makeSphere = (flatShading = 0) => {
+  const shape = new Shape(app.getGPU());
+  shape.applyPrimitiveAsset(sphereAsset);
+  shape.endShape();
+  shape.setShader(app.shader);
+  shape.setMaterial("smooth-shader", {
+    has_bone: 0,
+    flat_shading: flatShading,
+    use_texture: 0,
+    color: [0.28, 0.72, 0.98, 1.0],
+    ambient: 0.24,
+    specular: 0.86,
+    power: 42.0,
+    emissive: 0.0
+  });
+  return shape;
+};
+
+const floorShape = new Shape(app.getGPU());
+floorShape.applyPrimitiveAsset(Primitive.cuboid(18.0, 0.4, 12.0));
+floorShape.endShape();
+floorShape.setShader(app.shader);
+floorShape.setMaterial("smooth-shader", {
+  has_bone: 0,
+  use_texture: 0,
+  color: [0.14, 0.18, 0.26, 1.0],
+  ambient: 0.18,
+  specular: 0.12,
+  power: 10.0,
+  emissive: 0.0
+});
+const floor = app.space.addNode(null, "floor");
+floor.setPosition(0.0, -0.2, 0.0);
+floor.addShape(floorShape);
+
+const flatNode = app.space.addNode(null, "flatSphere");
+flatNode.setPosition(-3.2, 1.8, 0.0);
+flatNode.addShape(makeSphere(1));
+
+const smoothNode = app.space.addNode(null, "smoothSphere");
+smoothNode.setPosition(3.2, 1.8, 0.0);
+smoothNode.addShape(makeSphere(0));
+
+app.showOverlayPanel(buildHelpPanelOptions({
+  id: "example0801Help",
+  anchor: "bottom-left",
+  lines: [
+    "Drag: orbit camera",
+    "left: SmoothShader flat_shading=1",
+    "right: SmoothShader flat_shading=0"
+  ]
+}));
+
+let elapsedSec = 0.0;
+
+app.start({
+  onUpdate: ({ deltaSec }) => {
+    elapsedSec += deltaSec;
+    orbit.update(deltaSec);
+    flatNode.rotateY(0.5);
+    smoothNode.rotateY(0.5);
+
+    app.message.setLines("status", [
+      "left = SmoothShader flat_shading=1",
+      "right = SmoothShader flat_shading=0",
+      `time=${elapsedSec.toFixed(1)} sec`
+    ], {
+      anchor: "top-left",
+      x: 0,
+      y: 0
+    });
+  }
+});
+    </script>
+    <script>
+      document.getElementById("code").textContent =
+        document.getElementById("example-source").textContent.trim();
+    </script>
+  </div>
+</body>
+</html>

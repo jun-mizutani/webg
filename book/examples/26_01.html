@@ -1,0 +1,165 @@
+<!doctype html>
+<!-- webg/book/examples/26_01.html 2026/05/10 -->
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>26_01 物理エンジン</title>
+  <link rel="stylesheet" href="./example.css" />
+</head>
+<body>
+  <div class="page">
+    <h1>book/examples</h1>
+    <h2>26_01 物理エンジンの最小例</h2>
+    <div class="section-card">
+      <p>`book/26_物理エンジン.md` の「実装例：床に箱を落下させる」を、本文中へ埋め込みやすい固定 canvas へ調整した実行ページです</p>
+    </div>
+
+    <div class="canvas-block">
+      <canvas id="canvas" width="960" height="720"></canvas>
+    </div>
+
+    <pre id="code"></pre>
+
+    <script type="module" id="example-source">
+import Screen from "../../webg/Screen.js";
+import Space from "../../webg/Space.js";
+import Primitive from "../../webg/Primitive.js";
+import Shape from "../../webg/Shape.js";
+import Matrix from "../../webg/Matrix.js";
+import SmoothShader from "../../webg/SmoothShader.js";
+import PhysicsSpace from "../../webg/PhysicsSpace.js";
+import BoxCollider from "../../webg/BoxCollider.js";
+import PlaneCollider from "../../webg/PlaneCollider.js";
+
+const CANVAS_W = 960;
+const CANVAS_H = 720;
+
+// 1) Screen と shader を初期化する
+const screen = new Screen(document);
+await screen.ready;
+screen.setClearColor([0.1, 0.15, 0.1, 1.0]);
+
+const shader = new SmoothShader(screen.getGPU());
+await shader.init();
+Shape.prototype.shader = shader;
+
+// 2) 埋め込み用の固定 canvas へ合わせて projection を作る
+const projection = new Matrix();
+const applyViewportLayout = () => {
+  screen.resize(CANVAS_W, CANVAS_H);
+  projection.makeProjectionMatrix(
+    0.1,
+    1000.0,
+    screen.getRecommendedFov(55.0),
+    screen.getAspect()
+  );
+  shader.setProjectionMatrix(projection);
+};
+applyViewportLayout();
+window.addEventListener("resize", applyViewportLayout);
+window.addEventListener("orientationchange", applyViewportLayout);
+
+shader.setLightPosition([120.0, 180.0, 140.0, 1.0]);
+
+// 3) Space、eye、Shape を順に作る
+const space = new Space();
+const eye = space.addNode(null, "eye");
+eye.setPosition(0.0, 1.0, 28.0);
+eye.setAttitude(0.0, 15.0, 0.0);
+
+// 箱の形状の作成
+const shape = new Shape(screen.getGPU());
+shape.applyPrimitiveAsset(Primitive.cube(2.0, shape.getPrimitiveOptions()));
+shape.endShape();
+shape.setMaterial("smooth-shader", {
+  has_bone: 0,
+  use_texture: 0,
+  color: [1.0, 0.5, 0.3, 1.0]
+});
+
+// 床の見た目用 shape を作成する
+const floorShape = new Shape(screen.getGPU());
+floorShape.applyPrimitiveAsset(Primitive.cuboid(8.0, 0.1, 8.0, shape.getPrimitiveOptions()));
+floorShape.endShape();
+floorShape.setMaterial("smooth-shader", {
+  has_bone: 0,
+  use_texture: 0,
+  color: [0.0, 0.8, 0.6, 1.0]
+});
+
+// PlaneCollider は無限平面なので、見た目の床は別ノードで top 面を y=0 に合わせる
+const floorVisual = space.addNode(null, "floor_visual");
+floorVisual.setPosition(0.0, -0.05, 0.0);
+floorVisual.addShape(floorShape);
+
+// 物理空間の作成
+const physics = new PhysicsSpace({
+  gravity: [0.0, -9.8, 0.0],
+  fixedTimeStepMs: 1000.0 / 120.0,
+  solverIterations: 4
+});
+
+// 箱を配置 (space.addNode の代わり)
+const box = space.addPhysicsNode(null, "box", {
+  bodyType: "kinematic",
+  mass: 1.0,
+  linearDamping: 0.2
+});
+// 位置を設定
+box.setPosition(0.0, 25.0, 0.0);
+// 衝突形状の設定
+box.setCollider(new BoxCollider([2.0, 2.0, 2.0]));
+// 反発係数と摩擦係数の設定
+box.setPhysicsMaterial({
+  restitution: 0.0,
+  friction: 0.5
+});
+// 箱形状の設定
+box.addShape(shape);
+// 物理空間にも配置
+physics.addBody(box);
+
+// 床
+const floor = space.addPhysicsNode(null, "floor", {
+  bodyType: "static"
+});
+floor.setPosition(0.0, 0.0, 0.0);
+floor.setCollider(new PlaneCollider([0.0, 1.0, 0.0]));
+floor.setPhysicsMaterial({
+  restitution: 0.0,
+  friction: 0.7
+});
+physics.addBody(floor);
+
+// 運動開始
+box.setBodyType("dynamic", {
+  clearVelocity: false,
+  restoreVelocity: false
+});
+
+let previousTimeMs = null;
+
+const loop = (timeMs) => {
+  if (previousTimeMs === null) {
+    previousTimeMs = timeMs;
+  }
+  const deltaMs = Math.min(timeMs - previousTimeMs, 80.0);
+  previousTimeMs = timeMs;
+  physics.step(deltaMs);
+  screen.clear();
+  space.draw(eye);
+  screen.present();
+  requestAnimationFrame(loop);
+};
+
+requestAnimationFrame(loop);
+
+    </script>
+    <script>
+      document.getElementById("code").textContent =
+        document.getElementById("example-source").textContent.trim();
+    </script>
+  </div>
+</body>
+</html>

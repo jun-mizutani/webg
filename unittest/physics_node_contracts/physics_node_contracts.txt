@@ -1,0 +1,30 @@
+サンプル: physics_node_contracts
+
+概要
+- `PhysicsNode` 単体 API の振る舞いを固定するための基本仕様確認ページです。
+- ここでは見た目の物理挙動ではなく、`bodyType` 切替、速度保存、sleep、teleport、`syncNodeFromPhysics()`、各種 guard のような API の規約を自動確認します。
+- 実際の落下と床停止の見え方は `unittest/physics_node_fall` が担当し、このページは「PhysicsNode 単体をどう使うか」を確認する位置付けです。
+
+このサンプルで使うwebg機能
+- `PhysicsNode`: `dynamic / kinematic / static`、速度、減衰、sleep、trigger、fixedRotation、collision layer / mask、`teleport()`、`syncNodeFromPhysics()`
+- `Space.addPhysicsNode()`: scene graph に PhysicsNode を登録する入口
+- `UnitTestApp`: unittest の起動、resize、status 表示の共通 helper
+
+確認ポイント
+- `dynamic` の既定値、`mass` と `invMass` の関係を確認します。
+- `kinematic` と `static` が `invMass = 0` になることを確認します。
+- `pauseDynamic()` / `resumeDynamic()` が速度保存と復元の規約に従うことを確認します。
+- `teleport()` が `keepVelocity` の設定どおりに速度を消すか保持するかを確認します。
+- `syncNodeFromPhysics()` が位置と姿勢を node 側へ反映できることを確認します。
+- `dynamic` 中の `setPosition()` や `animatePosition()` が例外で拒否されることを確認します。
+- `applyImpulse()`、`applyAngularImpulse()`、sleep、accumulator clear、参照オブジェクト保持が期待どおりに動くことを確認します。
+
+操作説明
+- 操作は不要です。画面を開くと自動確認が走ります。
+- PASS / FAIL の一覧が status に表示されます。
+- canvas 部分は最小の clear / present だけを行い、WebGPU frame が成立していることを確認します。
+
+実装確認の見方
+- `webg/PhysicsNode.js` の挙動を見るときは、まずこのページで body type、速度、sleep、teleport、node 同期の規約を確認できます。
+- 単体 API の規約確認はこのページが担当し、複数物体の関係確認は `unittest/physics_space_contracts` が担当します。
+- 見た目の落下や床停止だけを確認したい場合は `unittest/physics_node_fall` を併せて確認してください。

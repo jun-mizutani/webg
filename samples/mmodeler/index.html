@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+  <title>webg sample mmodeler</title>
+  <link rel="icon" href="data:," />
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #061018;
+      --panel: rgba(8, 18, 28, 0.84);
+      --panel-strong: rgba(10, 24, 38, 0.94);
+      --line: rgba(138, 202, 255, 0.18);
+      --ink: #eff8ff;
+      --sub: #a2bdd3;
+      --accent: #51b7ff;
+      --accent-strong: #1f8fd8;
+      --accent-soft: rgba(81, 183, 255, 0.18);
+      --warn: #ffd36b;
+      --danger: #ff7f7f;
+      --safe-top: env(safe-area-inset-top, 0px);
+      --safe-right: env(safe-area-inset-right, 0px);
+      --safe-bottom: env(safe-area-inset-bottom, 0px);
+      --safe-left: env(safe-area-inset-left, 0px);
+    }
+
+    html,
+    body {
+      margin: 0;
+      width: 100%;
+      height: 100%;
+      min-height: 100dvh;
+      overflow: hidden;
+      background: var(--bg);
+      color: var(--ink);
+      font: 14px/1.5 "Hiragino Sans", "Yu Gothic", sans-serif;
+      touch-action: none;
+      user-select: none;
+      -webkit-user-select: none;
+      -webkit-touch-callout: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    button,
+    input,
+    select {
+      font: inherit;
+    }
+
+    .app {
+      position: relative;
+      width: 100vw;
+      height: 100vh;
+      height: 100dvh;
+      min-height: 100dvh;
+      overflow: hidden;
+      background:
+        radial-gradient(circle at 50% 0%, rgba(39, 114, 168, 0.18), transparent 40%),
+        linear-gradient(180deg, #08131c 0%, #061018 100%);
+      touch-action: none;
+      user-select: none;
+      -webkit-user-select: none;
+      -webkit-touch-callout: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .viewport {
+      position: absolute;
+      inset: 0;
+      overflow: hidden;
+      touch-action: none;
+      user-select: none;
+      -webkit-user-select: none;
+      -webkit-touch-callout: none;
+    }
+
+    #canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+      touch-action: none;
+      background: #101a24;
+    }
+
+    .mobile-status {
+      position: absolute;
+      left: calc(var(--safe-left) + 10px);
+      bottom: calc(var(--safe-bottom) + 10px);
+      max-width: min(76vw, 520px);
+      z-index: 12;
+      padding: 4px 8px;
+      border: 1px solid rgba(138, 202, 255, 0.14);
+      border-radius: 999px;
+      background: rgba(6, 14, 22, 0.54);
+      color: rgba(232, 245, 255, 0.82);
+      font-size: 11px;
+      line-height: 1.35;
+      letter-spacing: 0.04em;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      pointer-events: none;
+      backdrop-filter: blur(10px);
+      text-shadow: 0 1px 0 rgba(0, 0, 0, 0.34);
+    }
+
+    .command-palette {
+      position: absolute;
+      box-sizing: border-box;
+      width: 264px;
+      transform: translate(-50%, -50%);
+      display: none;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+      z-index: 20;
+    }
+
+    .command-palette.open {
+      display: grid;
+      pointer-events: auto;
+    }
+
+    .palette-button {
+      width: 100%;
+      min-width: 0;
+      height: 48px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: rgba(12, 26, 38, 0.54);
+      color: var(--ink);
+      font-weight: 800;
+      box-shadow: 0 8px 16px rgba(0, 0, 0, 0.18);
+      backdrop-filter: blur(10px);
+      touch-action: manipulation;
+      user-select: none;
+      -webkit-user-select: none;
+      -webkit-touch-callout: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .palette-button small {
+      display: block;
+      margin-top: 2px;
+      color: var(--sub);
+      font-size: 9px;
+      font-weight: 600;
+      letter-spacing: 0.03em;
+    }
+
+    .palette-button.active {
+      border-color: rgba(248, 212, 118, 0.48);
+      background: rgba(86, 74, 42, 0.48);
+      color: #fff5cf;
+      box-shadow:
+        0 0 0 1px rgba(255, 232, 160, 0.10) inset,
+        0 8px 16px rgba(120, 88, 26, 0.14);
+    }
+
+    .palette-button.page-switch {
+      border-color: rgba(255, 132, 116, 0.66);
+      background: rgba(108, 32, 32, 0.62);
+      color: #fff3f0;
+    }
+
+    .palette-button.page-switch small {
+      color: rgba(255, 211, 204, 0.86);
+    }
+
+    .view-dock {
+      position: absolute;
+      left: 50%;
+      top: calc(var(--safe-top) + 10px);
+      z-index: 17;
+      display: grid;
+      grid-template-columns: repeat(6, 42px);
+      gap: 6px;
+      transform: translateX(-50%);
+      pointer-events: auto;
+    }
+
+    .view-button {
+      width: 42px;
+      height: 38px;
+      border: 1px solid rgba(120, 186, 255, 0.38);
+      border-radius: 10px;
+      background: rgba(8, 22, 34, 0.58);
+      color: rgba(236, 247, 255, 0.92);
+      font-weight: 800;
+      line-height: 1;
+      box-shadow: 0 8px 16px rgba(0, 0, 0, 0.16);
+      backdrop-filter: blur(10px);
+      touch-action: manipulation;
+      user-select: none;
+      -webkit-user-select: none;
+      -webkit-touch-callout: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .view-button.active {
+      border-color: rgba(248, 212, 118, 0.62);
+      background: rgba(86, 74, 42, 0.60);
+      color: #fff5cf;
+    }
+
+    @media (orientation: landscape) {
+      .view-dock {
+        left: auto;
+        right: calc(var(--safe-right) + 10px);
+        top: 50%;
+        grid-template-columns: 42px;
+        transform: translateY(-50%);
+      }
+    }
+
+    .axis-chooser {
+      position: absolute;
+      right: calc(var(--safe-right) + 10px);
+      top: calc(var(--safe-top) + 10px);
+      z-index: 18;
+      display: none;
+      grid-template-columns: repeat(4, 42px);
+      gap: 6px;
+      pointer-events: auto;
+    }
+
+    .axis-chooser.open {
+      display: grid;
+    }
+
+    .axis-button {
+      width: 42px;
+      height: 42px;
+      border: 1px solid rgba(118, 238, 154, 0.50);
+      border-radius: 10px;
+      background: rgba(12, 32, 28, 0.58);
+      color: #edfff4;
+      font-weight: 800;
+      line-height: 1;
+      box-shadow: 0 8px 16px rgba(0, 0, 0, 0.16);
+      backdrop-filter: blur(10px);
+      touch-action: manipulation;
+      user-select: none;
+      -webkit-user-select: none;
+      -webkit-touch-callout: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .axis-button.active {
+      border-color: rgba(146, 255, 178, 0.92);
+      background: rgba(31, 132, 70, 0.80);
+      color: #f5fff8;
+      box-shadow:
+        0 0 0 1px rgba(206, 255, 220, 0.18) inset,
+        0 8px 18px rgba(28, 172, 82, 0.24);
+    }
+
+    .hidden-controls {
+      display: none;
+    }
+
+    * {
+      -webkit-touch-callout: none;
+    }
+
+    .selection-rect {
+      position: absolute;
+      display: none;
+      pointer-events: none;
+      border: 1px solid rgba(98, 181, 255, 0.92);
+      background: rgba(98, 181, 255, 0.12);
+      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.14);
+      z-index: 10;
+    }
+  </style>
+</head>
+<body data-modeler-profile="mobile">
+  <div class="app">
+    <div class="viewport">
+      <canvas id="canvas"></canvas>
+
+      <div class="view-dock" id="mobileViewDock" aria-label="View controls">
+        <button class="view-button" type="button" data-view-action="view-x">X</button>
+        <button class="view-button" type="button" data-view-action="view-x-reverse">-X</button>
+        <button class="view-button" type="button" data-view-action="view-y">Y</button>
+        <button class="view-button" type="button" data-view-action="view-y-reverse">-Y</button>
+        <button class="view-button" type="button" data-view-action="view-z">Z</button>
+        <button class="view-button" type="button" data-view-action="view-z-reverse">-Z</button>
+      </div>
+
+      <div class="command-palette" id="mobilePalette">
+        <button class="palette-button" type="button" data-slot="0"></button>
+        <button class="palette-button" type="button" data-slot="1"></button>
+        <button class="palette-button" type="button" data-slot="2"></button>
+        <button class="palette-button" type="button" data-slot="3"></button>
+        <button class="palette-button" type="button" data-slot="4"></button>
+        <button class="palette-button" type="button" data-slot="5"></button>
+        <button class="palette-button" type="button" data-slot="6"></button>
+        <button class="palette-button" type="button" data-slot="7"></button>
+        <button class="palette-button" type="button" data-slot="8"></button>
+        <button class="palette-button" type="button" data-slot="9"></button>
+        <button class="palette-button" type="button" data-slot="10"></button>
+        <button class="palette-button" type="button" data-slot="11"></button>
+        <button class="palette-button" type="button" data-slot="12"></button>
+        <button class="palette-button" type="button" data-slot="13"></button>
+        <button class="palette-button" type="button" data-slot="14"></button>
+        <button class="palette-button" type="button" data-slot="15"></button>
+      </div>
+
+      <div class="axis-chooser" id="mobileAxisChooser" aria-label="Transform axis constraint">
+        <button class="axis-button" type="button" data-axis="free">Free</button>
+        <button class="axis-button" type="button" data-axis="x">X</button>
+        <button class="axis-button" type="button" data-axis="y">Y</button>
+        <button class="axis-button" type="button" data-axis="z">Z</button>
+      </div>
+
+      <div class="mobile-status" id="mobileStatus">object / select | ready</div>
+    </div>
+
+    <div class="hidden-controls" aria-hidden="true">
+      <pre id="status"></pre>
+      <input id="modelFile" type="file" />
+      <select id="meshSelect"></select>
+      <button id="useMesh" type="button">Use Mesh</button>
+      <button id="saveJson" type="button">Save JSON GZ</button>
+      <button id="saveJsonGz" type="button">Save GZ</button>
+      <button id="saveGlb" type="button">Save GLB</button>
+      <button id="screenshot" type="button">Screenshot</button>
+      <button id="newScene" type="button">New</button>
+      <button id="makeFace" type="button">Face</button>
+      <button id="flipFaces" type="button">Flip</button>
+      <button id="loopCutFaces" type="button">Loop Cut</button>
+      <button id="xMirrorEdit" type="button">X Mirror</button>
+      <button id="undo" type="button">Undo</button>
+      <button id="redo" type="button">Redo</button>
+      <button id="objectWireframe" type="button">Wireframe</button>
+      <button id="lightBackground" type="button">Light Background</button>
+      <button id="visiblePickOnly" type="button">Visible Pick</button>
+      <input id="overlayAlpha" type="range" min="0" max="1" step="0.01" value="0.65" />
+      <span id="overlayAlphaValue">0.65</span>
+      <input id="overlayMarkerColor" type="color" value="#000000" />
+      <span id="overlayMarkerColorValue">#000000</span>
+      <input id="overlayEdgeColor" type="color" value="#000000" />
+      <span id="overlayEdgeColorValue">#000000</span>
+
+      <button type="button" data-mode="object">Object</button>
+      <button type="button" data-mode="edit">Edit</button>
+      <button type="button" data-tool="selectVertex">Vertex</button>
+      <button type="button" data-tool="selectFace">Face</button>
+      <button type="button" data-tool="addVertex">Add</button>
+    </div>
+  </div>
+
+  <script type="module" src="./main.js"></script>
+</body>
+</html>

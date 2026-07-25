@@ -1,0 +1,39 @@
+@startuml
+title 1 頂点のスキニング
+
+left to right direction
+skinparam backgroundColor white
+skinparam shadowing true
+skinparam dpi 150
+skinparam defaultFontName Yu Gothic UI
+skinparam defaultFontSize 18
+skinparam rectangle {
+  RoundCorner 24
+  BorderColor black
+  BackgroundColor #f7fbff
+  FontColor black
+}
+skinparam ArrowColor black
+skinparam ranksep 20
+skinparam nodesep 20
+
+rectangle "頂点 p" as Vertex
+rectangle "ボーン0 行列 * p" as Bone0
+rectangle "ボーン1 行列 * p" as Bone1
+rectangle "w0 * 位置1" as Weight0
+rectangle "w1 * 位置2" as Weight1
+rectangle "重み付き平均" as WeightedSum
+rectangle "最終位置" as FinalPosition
+
+  Vertex --> Bone0
+  Vertex --> Bone1
+  Bone0 --> Weight0
+  Bone1 --> Weight1
+  Weight0 --> WeightedSum
+  Weight1 --> WeightedSum
+WeightedSum --> FinalPosition
+
+'Bone0 -[hidden]down-> Bone1
+'Weight0 -[hidden]down-> Weight1
+
+@enduml

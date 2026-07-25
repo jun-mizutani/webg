@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>webg unittest flick</title>
+  <link rel="icon" href="data:," />
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #111820;
+      --panel: #182632;
+      --line: #385163;
+      --ink: #eef8ff;
+      --sub: #9eb4c4;
+      --accent: #46b8ff;
+      --ok: #69df91;
+      --warn: #ffd36b;
+    }
+
+    html,
+    body {
+      margin: 0;
+      min-height: 100%;
+      background: var(--bg);
+      color: var(--ink);
+      font: 14px/1.55 system-ui, sans-serif;
+      overscroll-behavior: none;
+    }
+
+    .app {
+      min-height: 100vh;
+      display: grid;
+      grid-template-rows: auto minmax(0, 1fr) auto;
+    }
+
+    .topbar,
+    .bottombar {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex-wrap: wrap;
+      padding: 10px 12px;
+      background: rgba(24, 38, 50, 0.94);
+      border-color: var(--line);
+    }
+
+    .topbar {
+      border-bottom: 1px solid var(--line);
+    }
+
+    .bottombar {
+      border-top: 1px solid var(--line);
+      padding-bottom: calc(10px + env(safe-area-inset-bottom));
+    }
+
+    .chip {
+      min-height: 36px;
+      border: 1px solid rgba(100, 184, 255, 0.34);
+      border-radius: 8px;
+      padding: 7px 10px;
+      background: #203444;
+      color: var(--ink);
+      font-weight: 700;
+      box-sizing: border-box;
+    }
+
+    button.chip {
+      cursor: pointer;
+    }
+
+    .chip.active {
+      background: #0b6fa6;
+      border-color: var(--accent);
+      color: #ffffff;
+    }
+
+    .status {
+      color: var(--sub);
+      margin-left: auto;
+    }
+
+    .stage {
+      position: relative;
+      min-height: 0;
+      overflow: hidden;
+      background:
+        linear-gradient(rgba(255, 255, 255, 0.035) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 255, 255, 0.035) 1px, transparent 1px),
+        radial-gradient(circle at 50% 35%, rgba(70, 184, 255, 0.13), transparent 45%),
+        #0b1118;
+      background-size: 32px 32px, 32px 32px, auto, auto;
+    }
+
+    #surface {
+      width: 100%;
+      height: 100%;
+      display: block;
+      touch-action: none;
+    }
+
+    .palette {
+      position: absolute;
+      left: 16px;
+      top: 16px;
+      min-width: 190px;
+      display: none;
+      gap: 8px;
+      padding: 10px;
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      border-radius: 8px;
+      background: rgba(17, 26, 34, 0.96);
+      box-shadow: 0 14px 32px rgba(0, 0, 0, 0.32);
+      z-index: 2;
+    }
+
+    .palette.open {
+      display: grid;
+    }
+
+    .palette button {
+      min-height: 42px;
+      border: 1px solid rgba(100, 184, 255, 0.34);
+      border-radius: 8px;
+      background: #203444;
+      color: var(--ink);
+      font-weight: 700;
+    }
+
+    .log {
+      min-width: 240px;
+      color: var(--sub);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <div class="topbar">
+      <span class="chip active" data-role="mode">Edit</span>
+      <span class="chip" data-role="tool">Select</span>
+      <span class="chip" data-role="selection">selected: -</span>
+      <span class="status">flick / long press / double tap POC</span>
+    </div>
+    <section class="stage">
+      <canvas id="surface"></canvas>
+      <div class="palette" id="palette">
+        <button data-command="move">Move</button>
+        <button data-command="extrude">Extrude</button>
+        <button data-command="delete">Delete</button>
+        <button data-command="close">Close</button>
+      </div>
+    </section>
+    <div class="bottombar">
+      <button class="chip" data-command="select">Select</button>
+      <button class="chip" data-command="add">Add</button>
+      <button class="chip" data-command="face">Face</button>
+      <button class="chip" data-command="undo">Undo</button>
+      <span class="log" id="log">tap a vertex or flick on the canvas</span>
+    </div>
+  </main>
+  <script type="module" src="./main.js"></script>
+</body>
+</html>

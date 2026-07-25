@@ -1,0 +1,22 @@
+サンプル: message
+
+概要
+- `Text` と `Message` を並べて比較し、低レベルな文字バッファ更新と高レベルなHUDレイアウト更新の違いを確認するサンプルです。
+- `Message` は `setLine(id, text, options)` / `setBlock(id, lines, options)` / `replaceAll(entries)` を中心に使い、AI が行番号や message index を手管理しなくて済む構成を示します。
+- `Text.setScale(scale)` と可変 grid を使うと、見える列数と行数が変わること、その visible grid に対して `Message` の anchor が効くことも確認できます。
+
+このサンプルで使うwebg機能
+- `Text.init` / `clearScreen` / `writeAt` / `drawScreen`
+- `Message.init` / `setLine` / `setBlock` / `replaceAll` / `drawScreen`
+- `Text.setScale(scale)` と `Message` の anchor / block レイアウト
+- `Screen` のフレーム描画制御
+
+確認ポイント
+- `Text` 側では `writeAt()` で screen buffer を直接更新し、`drawScreen()` で一括描画する流れを確認します。
+- `Message` 側では `replaceAll()` で HUD 全体を差し替え、`id` と `anchor` を持つ高レベルAPIの方が sample 記述を簡潔にできることを確認します。
+- `top-right` / `bottom-left` の anchor で固定座標ではなく visible grid 基準の配置ができることを確認します。
+- フレーム数や点滅文字列のような毎フレーム更新値でも、block 単位でまとめた方が意図を追いやすいことを確認します。
+
+操作説明
+- キー入力: なし
+- マウス操作: なし

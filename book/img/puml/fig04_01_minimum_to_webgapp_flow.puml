@@ -1,0 +1,47 @@
+@startuml
+title 最小描画から WebgApp への流れ
+
+top to bottom direction
+'left to right direction
+skinparam backgroundColor white
+skinparam shadowing true
+skinparam dpi 150
+skinparam defaultFontName Yu Gothic UI
+skinparam defaultFontSize 18
+skinparam rectangle {
+  RoundCorner 24
+  BorderColor black
+  BackgroundColor #f7fbff
+  FontColor black
+}
+skinparam ArrowColor black
+skinparam ranksep 20
+skinparam nodesep 20
+
+rectangle "1. Screen を作って await ready" as Low1
+rectangle "2. Shader / projection を初期化" as Low2
+rectangle "3. Space / eye / Shape を作る" as Low3
+rectangle "4. clear -> draw -> present を回す" as Low4
+
+rectangle "1. new WebgApp(options)" as App1
+rectangle "2. await app.init()" as App2
+rectangle "3. shape / model / scene を追加" as App3
+rectangle "4. app.start() で入力 / HUD / 診断も回す" as App4
+
+Low1 -down-> Low2
+Low2 -down-> Low3
+Low3 -down-> Low4
+App1 -down-> App2
+App2 -down-> App3
+App3 -down-> App4
+
+Low2 .right.> App2 : 描画の骨格を理解\nしたあとで標準構成へ
+
+note top of Low1
+ローレベルの最小構成
+end note
+
+note top of App1
+WebgApp の標準構成
+end note
+@enduml

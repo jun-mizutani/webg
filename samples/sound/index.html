@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>sound sample</title>
+  <link rel="icon" href="data:," />
+  <style>
+    html, body {
+      margin: 0;
+      background: #1a261a;
+      color: #dfe9ff;
+      font: 14px/1.5 ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+    }
+    #app {
+      max-width: 860px;
+      margin: 28px auto;
+      padding: 0 16px 24px;
+    }
+    h1 {
+      margin: 0 0 12px;
+      font-size: 22px;
+      letter-spacing: 0.02em;
+    }
+    p {
+      margin: 6px 0 14px;
+      color: #b8c9ef;
+    }
+    .panel {
+      background: #243624;
+      border: 1px solid #2a3550;
+      border-radius: 10px;
+      padding: 12px;
+      margin: 10px 0;
+    }
+    .panel h2 {
+      margin: 0 0 10px;
+      font-size: 16px;
+      color: #f6f8ff;
+      letter-spacing: 0.02em;
+    }
+    .row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+      margin: 8px 0;
+    }
+    button {
+      border: 1px solid #3a4d7a;
+      background: #355035;
+      color: #f2f6ff;
+      border-radius: 8px;
+      padding: 8px 12px;
+      cursor: pointer;
+    }
+    button:hover {
+      background: #406240;
+    }
+    button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    label {
+      min-width: 110px;
+      color: #b8c9ef;
+    }
+    input[type="range"] {
+      width: 220px;
+    }
+    #status {
+      margin-top: 8px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      color: #ffd688;
+      white-space: pre;
+    }
+  </style>
+</head>
+<body>
+  <div id="app">
+    <h1>AudioSynth Sample</h1>
+    <p>AudioContext と OscillatorNode だけで、SE/BGM を試しながら、短い SE を `Next SE` と `Audition All` で連続比較できるサンプルです。</p>
+
+    <div class="panel">
+      <h2>System</h2>
+      <div class="row">
+        <button id="btnInit">Audio Start</button>
+        <label for="masterVol">Master Vol</label>
+        <input id="masterVol" type="range" min="0" max="1" step="0.01" value="0.25" />
+        <span id="masterVal">0.25</span>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>Sound Effects</h2>
+      <div class="row">
+        <label for="soundEffect">Sound Effect</label>
+        <select id="soundEffect"></select>
+        <button id="btnPlaySe" disabled>Play SE</button>
+        <button id="btnNextSe" disabled>Next SE</button>
+        <button id="btnAuditionSe" disabled>Audition All</button>
+      </div>
+      <div class="row">
+        <label>SE Profiles</label>
+        <span id="seProfiles">-</span>
+      </div>
+      <div class="row">
+        <label>Editing Profile</label>
+        <span id="seEditingProfile">-</span>
+      </div>
+      <div class="row">
+        <label for="seVol">SE Vol</label>
+        <input id="seVol" type="range" min="0" max="1" step="0.01" value="0.90" />
+        <span id="seVal">0.90</span>
+      </div>
+      <div class="row">
+        <label for="seDelay">SE Delay</label>
+        <input id="seDelay" type="range" min="0" max="0.4" step="0.01" value="0.14" />
+        <span id="seDelayVal">0.14</span>
+      </div>
+      <div class="row">
+        <label for="seReverb">SE Reverb</label>
+        <input id="seReverb" type="range" min="0" max="1" step="0.01" value="0.32" />
+        <span id="seReverbVal">0.32</span>
+      </div>
+      <div class="row">
+        <label for="seReverbKind">SE Reverb Kind</label>
+        <select id="seReverbKind"></select>
+      </div>
+      <div class="row">
+        <label for="seReverbDuration">SE Reverb Length</label>
+        <input id="seReverbDuration" type="range" min="0.30" max="5.00" step="0.05" value="3.20" />
+        <span id="seReverbDurationVal">3.20 sec</span>
+      </div>
+      <div class="row">
+        <label for="seReverbDecay">SE Reverb Decay</label>
+        <input id="seReverbDecay" type="range" min="0.50" max="4.50" step="0.05" value="1.80" />
+        <span id="seReverbDecayVal">1.80</span>
+      </div>
+      <div class="row">
+        <label for="seEnvelopeProfile">SE Envelope</label>
+        <select id="seEnvelopeProfile"></select>
+      </div>
+      <div class="row">
+        <label for="seAttack">SE Attack</label>
+        <input id="seAttack" type="range" min="0" max="0.20" step="0.001" value="0.005" />
+        <span id="seAttackVal">0.005 sec</span>
+      </div>
+      <div class="row">
+        <label for="seDecay">SE Decay</label>
+        <input id="seDecay" type="range" min="0" max="0.30" step="0.001" value="0.050" />
+        <span id="seDecayVal">0.050 sec</span>
+      </div>
+      <div class="row">
+        <label for="seSustain">SE Sustain</label>
+        <input id="seSustain" type="range" min="0" max="1" step="0.01" value="0.55" />
+        <span id="seSustainVal">0.55 ratio</span>
+      </div>
+      <div class="row">
+        <label for="seRelease">SE Release</label>
+        <input id="seRelease" type="range" min="0" max="0.40" step="0.001" value="0.080" />
+        <span id="seReleaseVal">0.080 sec</span>
+      </div>
+      <div class="row">
+        <label>SE Reverb A/B</label>
+        <button id="btnSeDry" disabled>SE Dry</button>
+        <button id="btnSeWet" disabled>SE Reverb Max</button>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>Background Music</h2>
+      <div class="row">
+        <button id="btnBgmOn" disabled>BGM Start</button>
+        <button id="btnBgmOff" disabled>BGM Stop</button>
+      </div>
+      <div class="row">
+        <label for="bgmVol">BGM Vol</label>
+        <input id="bgmVol" type="range" min="0" max="1" step="0.01" value="0.75" />
+        <span id="bgmVal">0.75</span>
+      </div>
+      <div class="row">
+        <label for="bpm">BPM</label>
+        <input id="bpm" type="range" min="70" max="200" step="1" value="124" />
+        <span id="bpmVal">124</span>
+      </div>
+      <div class="row">
+        <label for="melody">Melody</label>
+        <select id="melody"></select>
+      </div>
+      <div class="row">
+        <label for="bgmDelay">BGM Delay</label>
+        <input id="bgmDelay" type="range" min="0" max="0.6" step="0.01" value="0.18" />
+        <span id="bgmDelayVal">0.18</span>
+      </div>
+      <div class="row">
+        <label for="bgmReverb">BGM Reverb</label>
+        <input id="bgmReverb" type="range" min="0" max="1" step="0.01" value="0.24" />
+        <span id="bgmReverbVal">0.24</span>
+      </div>
+      <div class="row">
+        <label for="bgmReverbKind">BGM Reverb Kind</label>
+        <select id="bgmReverbKind"></select>
+      </div>
+      <div class="row">
+        <label for="bgmReverbDuration">BGM Reverb Length</label>
+        <input id="bgmReverbDuration" type="range" min="0.30" max="6.00" step="0.05" value="4.00" />
+        <span id="bgmReverbDurationVal">4.00 sec</span>
+      </div>
+      <div class="row">
+        <label for="bgmReverbDecay">BGM Reverb Decay</label>
+        <input id="bgmReverbDecay" type="range" min="0.50" max="4.50" step="0.05" value="1.90" />
+        <span id="bgmReverbDecayVal">1.90</span>
+      </div>
+      <div class="row">
+        <label for="bgmAttack">BGM Attack</label>
+        <input id="bgmAttack" type="range" min="0" max="0.40" step="0.005" value="0.03" />
+        <span id="bgmAttackVal">0.030 sec</span>
+      </div>
+      <div class="row">
+        <label for="bgmDecay">BGM Decay</label>
+        <input id="bgmDecay" type="range" min="0" max="0.60" step="0.005" value="0.20" />
+        <span id="bgmDecayVal">0.200 sec</span>
+      </div>
+      <div class="row">
+        <label for="bgmSustain">BGM Sustain</label>
+        <input id="bgmSustain" type="range" min="0" max="1" step="0.01" value="0.60" />
+        <span id="bgmSustainVal">0.60 ratio</span>
+      </div>
+      <div class="row">
+        <label for="bgmRelease">BGM Release</label>
+        <input id="bgmRelease" type="range" min="0" max="0.80" step="0.005" value="0.40" />
+        <span id="bgmReleaseVal">0.400 sec</span>
+      </div>
+      <div class="row">
+        <label>BGM Reverb A/B</label>
+        <button id="btnBgmDry" disabled>BGM Dry</button>
+        <button id="btnBgmWet" disabled>BGM Reverb Max</button>
+      </div>
+    </div>
+
+    <div id="status">status: waiting for Audio Start</div>
+  </div>
+  <script type="module" src="./main.js"></script>
+</body>
+</html>

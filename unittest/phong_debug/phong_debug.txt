@@ -1,0 +1,19 @@
+phong_debug unittest
+
+## 目的
+`SmoothShader` の `backface_debug`、`has_bone`、`use_normal_map`、`weight_debug` の組み合わせを constructor option と材質パラメータから有効化できるかを確認します。
+
+## 方法
+`SmoothShader` を 4 インスタンス作り、折れ曲がった板状メッシュ、revolution 系の筒、skinned tube、normal map 付き skinned tube を並べて比較します。折れ板は `has_bone = 0` の static mesh として backface debug を確認し、筒は `use_normal_map = 1` を加えて normal map と裏面表示が同時に効くかを見ます。下段左は `has_bone = 1` の基本 skinned tube、下段中央は `use_normal_map = 1` と `weight_debug = 1` を同時に有効化した skinned tube、下段右は `use_normal_map = 1` だけを有効化した skinned tube とし、同じ `SmoothShader` でも材質パラメータだけで経路が切り替わることを確認します。`webg` の UV は左下原点という前提を使い、`num256.png` は左右反転せずにそのまま読み込みます。revolution 系の 3 つは、必要なときだけ内部補正で V の見え方を合わせ、裏面表示でも webg の UV 基準と同じ意味で上下が揃うことを確認します。
+
+## 予想
+backface debug が効いていれば、裏面はマゼンタ系の色で目立ちます。normal map を有効にした筒や skinned tube では、側面に細かい陰影が出て、回転に応じて見え方が切り替わるはずです。下段中央の `weight_debug = ON` では、normal map よりも重み色が優先され、赤・緑系の分布が確認できるはずです。もしマゼンタが出ないなら constructor option の伝播か cull 設定が疑われます。もし normal map の陰影が出ないなら `SmoothShader` の `normal_texture` 反映か UV の扱いが疑われます。`webg` の UV 基準は左下原点なので、画像の左右はそのままにし、必要な場合だけ内部補正で V を合わせて、メッシュの表裏とテクスチャの上下を論理的に分離して確認します。
+
+## 結果
+未実行
+
+## 解釈
+未実行
+
+## Commit
+コミットなし

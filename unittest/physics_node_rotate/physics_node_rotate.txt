@@ -1,0 +1,31 @@
+physics_node_rotate
+
+概要
+- `PhysicsSpace` が `angularVelocity` と `torque` を quaternion ベースで姿勢へ積分し、`PhysicsNode` の見た目回転として反映されるかを画面で確認するページです。
+- 左の赤 beam は `angularVelocity` による等速回転、中央の青 beam は最初の数秒だけ毎フレーム与える `torque` による加速回転、右の緑 body は灰色 block 群へ落下して相互作用を起こしながら回転が落ち着く動き、奥の黄 beam は `fixedRotation` による回転禁止を担当します。
+- `BoxCollider` は body の quaternion 姿勢へ追従する OBB として扱われます。ここでは、見た目の姿勢更新と、灰色 block 群との box-box 相互作用を目視で確認します。
+
+このテストで使う webg 機能
+- `PhysicsSpace`: 固定タイムステップ、重力、角速度積分、torque の反映、角減衰、sleep 判定
+- `PhysicsNode`: `dynamic / kinematic / static` の切替、`angularVelocity`、`torque`、`fixedRotation`、`syncNodeFromPhysics()`
+- `BoxCollider` と `PlaneCollider`: 物理判定の最小 collider
+- `Shape` と `Primitive.cuboid()`: beam と床の最小メッシュ生成
+- `SmoothShader`: beam の回転方向と姿勢変化を読みやすく表示
+- `UnitTestApp`: Screen 初期化、resize、status 表示
+
+確認ポイント
+- 左の赤 beam が `angularVelocity` によって一定方向へ回り続けることを確認します。
+- torque 用 beam が、最初の数秒は torque によって時間とともに回転が速くなり、その後は torque を止めても同じ角速度で慣性回転を続けることを確認します。
+- 落下 body が灰色 block 群へ落ちつつ回転し、block を押しながら最終的に落ち着いていくことを確認します。
+- `fixedRotation` を有効にした beam は、他の body と違って回転しないことを確認します。
+- status で各 body の姿勢と角速度が変化し、blue の `torque on / off`、green の `falling / impacting blocks / settling / sleep` が読み取れることを確認します。
+
+操作
+- `Space`: 物理更新の一時停止 / 再開
+- `R`: 位置、姿勢、速度、`bodyType` を初期状態へ戻す
+- `T`: torque beam に追加の強い torque pulse を与える
+
+実装確認の見方
+- `PhysicsSpace.js` の `angularVelocity`、`torque`、`angularDamping`、`fixedRotation`、sleep 条件を見るときは、このページで画面上の回転と status を確認できます。
+- `BoxCollider` の OBB dispatch は `unittest/physics_space_contracts` が自動確認します。ここでは画面上の姿勢更新を中心に見ており、inertia tensor や本格的な回転 contact solver の確認ではありません。
+- 自動確認の規約は `unittest/physics_space_contracts` が担当し、このページは画面上の見え方確認を担当します。

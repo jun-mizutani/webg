@@ -1,0 +1,44 @@
+@startuml
+title tile_sim の構成
+
+top to bottom direction
+skinparam backgroundColor white
+skinparam shadowing true
+skinparam dpi 150
+skinparam defaultFontName Yu Gothic UI
+skinparam defaultFontSize 18
+skinparam rectangle {
+  RoundCorner 24
+  BorderColor black
+  BackgroundColor #f7fbff
+  FontColor black
+}
+skinparam ArrowColor black
+skinparam ranksep 20
+skinparam nodesep 20
+
+rectangle "main.js" as MainJs
+rectangle "controller.js" as ControllerJs
+rectangle "camera.js" as CameraJs
+rectangle "mission.js" as MissionJs
+rectangle "terrain.js /\nconstants.js" as TerrainJs
+rectangle "alpha_actor.js" as AlphaActorJs
+rectangle "enemy_units.js /\nsupport_units.js" as EnemyUnitsJs
+rectangle "human.glb runtime" as HumanRuntime
+
+MainJs --> ControllerJs
+MainJs --> CameraJs
+MainJs --> MissionJs
+MainJs --> TerrainJs
+ControllerJs --> AlphaActorJs
+MissionJs --> EnemyUnitsJs
+AlphaActorJs --> HumanRuntime
+
+ControllerJs -[hidden]right-> CameraJs
+CameraJs -[hidden]right-> MissionJs
+AlphaActorJs -[hidden]right-> EnemyUnitsJs
+
+note top of MainJs
+役割を分けて読むと tile_sim の設計が追いやすい
+end note
+@enduml

@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?><svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" contentScriptType="application/ecmascript" contentStyleType="text/css" height="315.625px" preserveAspectRatio="none" style="width:1464px;height:315px;" version="1.1" viewBox="0 0 1464 315" width="1464.0625px" zoomAndPan="magnify"><defs><filter height="300%" id="f12ym3ts5yfmfp" width="300%" x="-1" y="-1"><feGaussianBlur result="blurOut" stdDeviation="3.125"/><feColorMatrix in="blurOut" result="blurOut2" type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 .4 0"/><feOffset dx="6.25" dy="6.25" in="blurOut2" result="blurOut3"/><feBlend in="SourceGraphic" in2="blurOut3" mode="normal"/></filter></defs><g><text fill="#000000" font-family="Yu Gothic UI" font-size="28.125" lengthAdjust="spacingAndGlyphs" textLength="260.9375" x="607.0313" y="26.1063">判定 API の選び分け</text><!--MD5=[684d6514d27743a5b20ad0d8befdb98d]
+entity Root--><rect fill="#EEF5FF" filter="url(#f12ym3ts5yfmfp)" height="63.9893" rx="18.75" ry="18.75" style="stroke: #000000; stroke-width: 2.34375;" width="312.5" x="9.375" y="148.3643"/><text fill="#000000" font-family="Yu Gothic UI" font-size="28.125" lengthAdjust="spacingAndGlyphs" textLength="281.25" x="25" y="190.0955">今やりたい判定は何か</text><!--MD5=[5707128086643840b84e1627a3798abc]
+entity HitPick--><rect fill="#F7FBFF" filter="url(#f12ym3ts5yfmfp)" height="63.9893" rx="18.75" ry="18.75" style="stroke: #000000; stroke-width: 2.34375;" width="481.25" x="354.6875" y="48.3643"/><text fill="#000000" font-family="Yu Gothic UI" font-size="28.125" lengthAdjust="spacingAndGlyphs" textLength="450" x="370.3125" y="90.0955">クリック / タップで何に当たったか</text><!--MD5=[1a80cbed88c238f940b6755ac2213a3e]
+entity Collision--><rect fill="#F7FBFF" filter="url(#f12ym3ts5yfmfp)" height="63.9893" rx="18.75" ry="18.75" style="stroke: #000000; stroke-width: 2.34375;" width="425" x="382.8125" y="148.3643"/><text fill="#000000" font-family="Yu Gothic UI" font-size="28.125" lengthAdjust="spacingAndGlyphs" textLength="393.75" x="398.4375" y="190.0955">オブジェクト同士が重なったか</text><!--MD5=[310fa37d333790ffeea8cda6ac0735dc]
+entity DetailedNeed--><rect fill="#F7FBFF" filter="url(#f12ym3ts5yfmfp)" height="63.9893" rx="18.75" ry="18.75" style="stroke: #000000; stroke-width: 2.34375;" width="256.25" x="870.3125" y="235.8643"/><text fill="#000000" font-family="Yu Gothic UI" font-size="28.125" lengthAdjust="spacingAndGlyphs" textLength="225" x="885.9375" y="277.5955">AABB 候補を絞る</text><!--MD5=[4780731998e68f927a08b15b42f1ec58]
+entity Raycast--><rect fill="#F7FBFF" filter="url(#f12ym3ts5yfmfp)" height="63.9893" rx="18.75" ry="18.75" style="stroke: #000000; stroke-width: 2.34375;" width="242.1875" x="877.3438" y="45.2393"/><text fill="#000000" font-family="Yu Gothic UI" font-size="28.125" lengthAdjust="spacingAndGlyphs" textLength="210.9375" x="892.9688" y="86.9705">Space.raycast()</text><!--MD5=[f344c6943ae90e8ed86c5a19f74625b1]
+entity CheckCollisions--><rect fill="#F7FBFF" filter="url(#f12ym3ts5yfmfp)" height="63.9893" rx="18.75" ry="18.75" style="stroke: #000000; stroke-width: 2.34375;" width="259.375" x="868.75" y="140.5518"/><text fill="#000000" font-family="Yu Gothic UI" font-size="28.125" lengthAdjust="spacingAndGlyphs" textLength="228.125" x="884.375" y="182.283">checkCollisions()</text><!--MD5=[2826883e218ea79dda4a520b2cd65ca0]
+entity CheckDetailed--><rect fill="#F7FBFF" filter="url(#f12ym3ts5yfmfp)" height="63.9893" rx="18.75" ry="18.75" style="stroke: #000000; stroke-width: 2.34375;" width="143.75" x="1303.125" y="188.9893"/><text fill="#000000" font-family="Yu Gothic UI" font-size="28.125" lengthAdjust="spacingAndGlyphs" textLength="112.5" x="1318.75" y="230.7205">詳細判定</text><!--MD5=[6ecec19dfef9204ab4e571d1fb208b74]
+link Root to HitPick--><path d="M288.5469,148.2861 C310.5156,142.6768 333.2656,137.0361 354.6875,131.958 C379.7656,126.0205 406.4063,119.9893 432.4531,114.2549 " fill="none" id="Root-&gt;HitPick" style="stroke: #000000; stroke-width: 1.5625;"/><polygon fill="#000000" points="440.5,112.4893,425.4251,109.3966,432.8688,114.1628,428.1027,121.6065,440.5,112.4893" style="stroke: #000000; stroke-width: 1.5625;"/><!--MD5=[622c7a413ac616373fd724c03f90da78]
+link Root to DetailedNeed--><path d="M277,212.5205 C302.3125,218.8799 329.2813,224.8174 354.6875,228.833 C528.2344,256.2705 730.9531,264.7393 861.4844,267.1924 " fill="none" id="Root-&gt;DetailedNeed" style="stroke: #000000; stroke-width: 1.5625;"/><polygon fill="#000000" points="869.9844,267.333,856.0311,260.8429,862.173,267.1991,855.8168,273.3411,869.9844,267.333" style="stroke: #000000; stroke-width: 1.5625;"/><!--MD5=[3b9d8030707ae06e212fb15d518866f0]
+link Root to Collision--><path d="M322.3906,180.3955 C339.3281,180.3955 356.7969,180.3955 374.3281,180.3955 " fill="none" id="Root-&gt;Collision" style="stroke: #000000; stroke-width: 1.5625;"/><polygon fill="#000000" points="382.375,180.3955,368.3125,174.1455,374.5625,180.3955,368.3125,186.6455,382.375,180.3955" style="stroke: #000000; stroke-width: 1.5625;"/><!--MD5=[ecc01ad66a68e0c9e4dd566cec401dec]
+link HitPick to Raycast--><path d="M836.4844,78.5205 C847.625,78.4424 858.5938,78.3486 869.2344,78.2705 " fill="none" id="HitPick-&gt;Raycast" style="stroke: #000000; stroke-width: 1.5625;"/><polygon fill="#000000" points="877.3125,78.208,863.1969,72.0788,869.5003,78.275,863.3041,84.5783,877.3125,78.208" style="stroke: #000000; stroke-width: 1.5625;"/><!--MD5=[bdf60c5ef1793b7bb97f08d1c63f8c5b]
+link Collision to CheckCollisions--><path d="M808,176.2705 C825.75,175.9268 843.3906,175.583 860.3438,175.2549 " fill="none" id="Collision-&gt;CheckCollisions" style="stroke: #000000; stroke-width: 1.5625;"/><polygon fill="#000000" points="868.6094,175.083,854.4247,169.1155,860.7984,175.2392,854.6747,181.613,868.6094,175.083" style="stroke: #000000; stroke-width: 1.5625;"/><!--MD5=[09e9388f5acf7176c9755f0598986048]
+link DetailedNeed to CheckDetailed--><path d="M1126.9531,251.958 C1182.5156,244.9893 1245.9844,237.0205 1294.5938,230.9111 " fill="none" id="DetailedNeed-&gt;CheckDetailed" style="stroke: #000000; stroke-width: 1.5625;"/><polygon fill="#000000" points="1302.875,229.8799,1288.1396,225.4432,1295.1242,230.8599,1289.7076,237.8445,1302.875,229.8799" style="stroke: #000000; stroke-width: 1.5625;"/><!--MD5=[68c5251af49af70c6fa87afd3cd06ed8]
+link CheckCollisions to CheckDetailed--><path d="M1128.5156,189.2549 C1183.7656,196.4111 1246.5625,204.5674 1294.7344,210.8174 " fill="none" id="CheckCollisions-&gt;CheckDetailed" style="stroke: #000000; stroke-width: 1.5625; stroke-dasharray: 7.0,7.0;"/><polygon fill="#000000" points="1302.9531,211.8799,1289.8112,203.8733,1295.2055,210.8751,1288.2036,216.2695,1302.9531,211.8799" style="stroke: #000000; stroke-width: 1.5625;"/><text fill="#000000" font-family="Yu Gothic UI" font-size="28.125" lengthAdjust="spacingAndGlyphs" textLength="140.625" x="1145.3125" y="184.6268">候補が多い</text><!--MD5=[4aa416089a93ced1de3973110b82ef7c]
+link Collision to DetailedNeed--><!--MD5=[4c746642712a6a4e83bc7e31e616f16f]
+@startuml
+title 判定 API の選び分け
+
+left to right direction
+skinparam backgroundColor white
+skinparam shadowing true
+skinparam dpi 150
+skinparam defaultFontName Yu Gothic UI
+skinparam defaultFontSize 18
+skinparam rectangle {
+  RoundCorner 24
+  BorderColor black
+  BackgroundColor #f7fbff
+  FontColor black
+}
+skinparam ArrowColor black
+skinparam ranksep 20
+skinparam nodesep 20
+
+rectangle "今やりたい判定は何か" as Root #eef5ff
+
+rectangle "クリック / タップで何に当たったか" as HitPick
+rectangle "オブジェクト同士が重なったか" as Collision
+rectangle "AABB 候補を絞る" as DetailedNeed
+
+rectangle "Space.raycast()" as Raycast
+rectangle "checkCollisions()" as CheckCollisions
+rectangle "詳細判定" as CheckDetailed
+
+Root - -> HitPick
+Root - -> DetailedNeed
+Root - -> Collision
+
+HitPick - -> Raycast
+Collision - -> CheckCollisions
+DetailedNeed - -> CheckDetailed
+CheckCollisions .down.> CheckDetailed : 候補が多い
+
+Collision -[hidden]down-> DetailedNeed
+
+@enduml
+
+PlantUML version 1.2020.02(Sun Mar 01 19:22:07 JST 2020)
+(GPL source distribution)
+Java Runtime: OpenJDK Runtime Environment
+JVM: OpenJDK 64-Bit Server VM
+Java Version: 21.0.10+7-Ubuntu-124.04
+Operating System: Linux
+Default Encoding: UTF-8
+Language: en
+Country: null
+--></g></svg>

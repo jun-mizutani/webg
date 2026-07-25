@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>webg unittest embedded</title>
+  <link rel="icon" href="data:," />
+  <style>
+    :root {
+      color-scheme: light;
+      --page-bg: #eef2f6;
+      --paper: #ffffff;
+      --line: #c9d5e4;
+      --text-main: #18212c;
+      --text-sub: #4d5d70;
+      --accent: #1f6fb8;
+      --accent-soft: #dfeefd;
+      --status-bg: rgba(10, 16, 28, 0.88);
+      --status-line: rgba(144, 184, 230, 0.28);
+      --status-text: #eef5ff;
+    }
+
+    html, body {
+      margin: 0;
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.72), rgba(230, 237, 245, 0.92)),
+        var(--page-bg);
+      color: var(--text-main);
+      font: 15px/1.8 "Hiragino Sans", "Yu Gothic", sans-serif;
+    }
+
+    body {
+      min-height: 100vh;
+    }
+
+    .page {
+      max-width: 1180px;
+      margin: 0 auto;
+      padding: 28px 20px 80px;
+      box-sizing: border-box;
+    }
+
+    .hero,
+    .paper,
+    .demo-block,
+    .footer-note {
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      box-shadow: 0 18px 44px rgba(23, 35, 52, 0.08);
+    }
+
+    .hero,
+    .paper,
+    .footer-note {
+      padding: 24px 28px;
+      margin-bottom: 24px;
+    }
+
+    .hero h1,
+    .hero h2,
+    .paper h2,
+    .footer-note h2 {
+      margin: 0 0 12px;
+      line-height: 1.35;
+    }
+
+    .hero p,
+    .paper p,
+    .footer-note p {
+      margin: 10px 0 0;
+      color: var(--text-sub);
+    }
+
+    .button-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 18px;
+    }
+
+    .button-row button {
+      appearance: none;
+      border: 1px solid rgba(31, 111, 184, 0.22);
+      background: var(--accent-soft);
+      color: var(--accent);
+      border-radius: 999px;
+      padding: 9px 14px;
+      font: 600 13px/1 "Hiragino Sans", "Yu Gothic", sans-serif;
+      cursor: pointer;
+    }
+
+    .button-row button:hover {
+      background: #d3e8ff;
+    }
+
+    .demo-block {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 320px;
+      gap: 20px;
+      padding: 20px;
+      margin: 24px 0;
+      align-items: start;
+    }
+
+    .demo-copy {
+      padding-right: 6px;
+    }
+
+    .demo-copy h2 {
+      margin: 0 0 10px;
+      line-height: 1.35;
+    }
+
+    .demo-copy p {
+      margin: 10px 0 0;
+      color: var(--text-sub);
+    }
+
+    .canvas-wrap {
+      margin-top: 18px;
+      overflow-x: auto;
+    }
+
+    #canvas {
+      display: block;
+      margin: 0;
+      background: #18261c;
+      box-shadow: 0 18px 38px rgba(10, 24, 42, 0.18);
+    }
+
+    .status-panel {
+      position: sticky;
+      top: 18px;
+      background: var(--status-bg);
+      color: var(--status-text);
+      border: 1px solid var(--status-line);
+      border-radius: 16px;
+      padding: 16px 16px 14px;
+      box-sizing: border-box;
+    }
+
+    .status-panel h3 {
+      margin: 0 0 10px;
+      font: 700 15px/1.3 "Hiragino Sans", "Yu Gothic", sans-serif;
+    }
+
+    .status-panel p {
+      margin: 0 0 10px;
+      color: rgba(214, 229, 250, 0.82);
+      font-size: 13px;
+      line-height: 1.6;
+    }
+
+    #status {
+      margin: 0;
+      white-space: pre-wrap;
+      font: 12px/1.55 ui-monospace, "SFMono-Regular", "Cascadia Mono", monospace;
+    }
+
+    .code-block {
+      margin-top: 18px;
+      padding: 14px 16px;
+      border-radius: 14px;
+      background: #1a291d;
+      color: #eef5ff;
+      font: 12px/1.65 ui-monospace, "SFMono-Regular", "Cascadia Mono", monospace;
+      overflow-x: auto;
+    }
+
+    .footer-note {
+      margin-top: 24px;
+    }
+
+    @media (max-width: 980px) {
+      .demo-block {
+        grid-template-columns: 1fr;
+      }
+
+      .status-panel {
+        position: static;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <section class="hero" id="pageTop">
+      <h1>webg unittest: embedded layout</h1>
+      <h2>固定サイズ canvas を本文へ埋め込んだ状態で overlay の追従を確認する test</h2>
+      <p>
+        この unittest は、`WebgApp` の `layoutMode: "embedded"` と `fixedCanvasSize` を組み合わせたときに、
+        HTML 文書のスクロールと canvas 内 overlay が同じ host 要素を基準に動くかを確認するためのものです
+      </p>
+      <p>
+        右側の status では、canvas host、HelpPanel、dialogue、fixed panel、touch controls の矩形を毎フレーム読み取り、
+        host 基準で揃っているかを PASS / WAIT / FAIL で表示します
+      </p>
+      <div class="button-row">
+        <button type="button" data-scroll-target="pageTop">先頭へ戻る</button>
+        <button type="button" data-scroll-target="demoArea">canvas へ移動</button>
+        <button type="button" data-scroll-target="pageBottom">末尾へ移動</button>
+      </div>
+    </section>
+
+    <section class="paper">
+      <h2>確認したいポイント</h2>
+      <p>
+        1. ページ全体をスクロールしても canvas が本文中の位置に残り、本文だけでなく HelpPanel や touch controls も一緒に移動すること
+      </p>
+      <p>
+        2. `Hide Help` で閉じたあとに、HelpPanel の枠が host 全幅へ広がらず `Show Help` ボタンに近い幅へ保たれること
+      </p>
+      <p>
+        3. `D` で dialogue、`F` で fixed panel を出したまま上下へスクロールしても、overlay が viewport 固定にならず canvas に付いてくること
+      </p>
+      <p>
+        4. `S` でスクリーンショット、`F9` → `M` で debug mode 切替を行っても、embedded の基本配置が崩れないこと
+      </p>
+    </section>
+
+    <section class="demo-block" id="demoArea">
+      <div class="demo-copy">
+        <h2>埋め込み canvas</h2>
+        <p>
+          下の canvas は `fixedCanvasSize: { width: 720, height: 540 }` で固定し、`layoutMode: "embedded"` で本文へ埋め込んでいます
+        </p>
+        <p>
+          マウスドラッグで orbit、`ArrowLeft` / `ArrowRight` または touch ボタンで自動回転の位相を変えられます
+        </p>
+        <p>
+          `Enter` / `Space` で dialogue 次送り、`H` で HelpPanel、`D` で dialogue、`F` で fixed panel、`S` で screenshot、`R` で camera を初期状態へ戻します
+        </p>
+        <div class="canvas-wrap">
+          <canvas id="canvas" width="960" height="720"></canvas>
+        </div>
+        <pre class="code-block">const app = new WebgApp({
+  document,
+  layoutMode: "embedded",
+  fixedCanvasSize: {
+    width: 720,
+    height: 540,
+    useDevicePixelRatio: false
+  }
+});</pre>
+      </div>
+      <aside class="status-panel">
+        <h3>embedded status</h3>
+        <p>
+          PASS は host 基準で位置が揃っている状態、WAIT はその overlay が現在非表示の状態です
+        </p>
+        <pre id="status">initializing...</pre>
+      </aside>
+    </section>
+
+    <section class="paper">
+      <h2>本文の中に canvas を置くときの確認メモ</h2>
+      <p>
+        HTML 側で `overflow: hidden` を指定したままだと、`layoutMode: "embedded"` を使ってもページ自体はスクロールしません。
+        この unittest では意図的に長い本文を前後へ置き、文書フローと canvas host の関係を追いやすくしています
+      </p>
+      <p>
+        同じ要領で教材ページを作る場合は、解説文、画像、コード例のあいだに canvas を差し込めます。WebgApp 側は host を自動で作り、
+        HelpPanel、dialogue、fixed panel、touch controls をその host 内の absolute overlay として扱います
+      </p>
+      <p>
+        下へスクロールしたあと、右上の status が見えていれば、そこで現在の矩形差分を数値でも追えます
+      </p>
+    </section>
+
+    <section class="footer-note" id="pageBottom">
+      <h2>末尾セクション</h2>
+      <p>
+        ここまでスクロールした状態で canvas の位置が画面外へ出ていても、status の `scrollY` と `canvasTop` を見ると、
+        文書全体の中でどこまで移動したかを追えます。もう一度 canvas を見たいときは上のボタンか `2` キーで戻れます
+      </p>
+      <p>
+        この unittest は内部確認用なので、見た目の装飾よりも `embedded` の動作確認を優先しています。必要があれば、
+        今後ここへ `dialogue side=right` や複数 help panel の確認項目も足せます
+      </p>
+    </section>
+  </main>
+  <script type="module" src="./main.js"></script>
+</body>
+</html>

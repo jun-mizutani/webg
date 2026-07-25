@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>PhysicsNode Fall Test</title>
+  <link rel="icon" href="data:," />
+  <style>
+    html, body {
+      margin: 0;
+      background: #10161d;
+      color: #e5edf7;
+      font-family: "Courier New", monospace;
+    }
+    canvas {
+      display: block;
+      width: 1120px;
+      height: 760px;
+      background: #10161d;
+    }
+    #status {
+      position: fixed;
+      left: 12px;
+      top: 10px;
+      white-space: pre;
+      pointer-events: none;
+      font-size: 13px;
+      line-height: 1.25;
+      text-shadow:
+        0 1px 2px rgba(0, 0, 0, 0.96),
+        0 0 12px rgba(0, 0, 0, 0.62);
+    }
+  </style>
+</head>
+<body>
+  <canvas id="canvas" width="1120" height="760"></canvas>
+  <div id="status">creating screen...</div>
+  <script type="module" src="./main.js"></script>
+</body>
+</html>

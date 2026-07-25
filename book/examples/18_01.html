@@ -1,0 +1,62 @@
+<!doctype html>
+<!-- webg/book/examples/18_01.html 2026/05/14 -->
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>18_01 Web Audio API で単音を鳴らす</title>
+  <link rel="stylesheet" href="./example.css" />
+  <style>
+    button { margin: 6px 8px 6px 0; padding: 8px 14px; }
+    #status { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <h1>book/examples</h1>
+    <h2>18_01 Web Audio API で単音を鳴らす</h2>
+    <div class="section-card">
+      <p>`book/18_サウンドの設計.md` 冒頭の、ブラウザ標準の Web Audio API だけで単音を鳴らす例です</p>
+      <p class="note">このページは `ToneSynth` を使わず、章の導入部にある素の `AudioContext` / `OscillatorNode` の流れを確認します</p>
+      <button id="playButton">単音を鳴らす</button>
+      <p id="status">status: waiting</p>
+    </div>
+
+    <pre id="code"></pre>
+
+    <script id="example-source">
+const playButton = document.getElementById("playButton");
+const status = document.getElementById("status");
+
+let audioContext = null;
+let osc = null;
+
+const startAudio = () => {
+  audioContext = new AudioContext();           // AudioContext を作成
+  osc = audioContext.createOscillator();       // 音源 OscillatorNode を作成
+  const gainNode = audioContext.createGain();  // 音量調整用 GainNode を作成
+  osc.type = "sine";                           // 正弦波を指定
+  osc.frequency.value = 220;                   // 周波数を指定 A4 = 220Hz
+  gainNode.gain.value = 0.2;                   // 音量を指定
+  osc.connect(gainNode);                       // 接続する
+  gainNode.connect(audioContext.destination);
+};
+
+const playTone = () => {
+  osc.start();                                 // 音を鳴らす
+  osc.stop(audioContext.currentTime + 1);      // 1秒後に止める
+};
+
+playButton.addEventListener("click", () => {
+  startAudio();
+  playTone();
+  status.textContent = "status: sine 220Hz played for 1 sec";
+});
+    </script>
+    <script>
+      document.getElementById("code").textContent =
+        document.getElementById("example-source").textContent.trim();
+    </script>
+  </div>
+</body>
+</html>

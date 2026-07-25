@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>bone_creature sample</title>
+  <link rel="icon" href="data:," />
+  <style>
+    html, body {
+      margin: 0;
+      background: #16221a;
+    }
+    #canvas {
+      display: block;
+      width: 960px;
+      height: 720px;
+      background: #233223;
+    }
+    #hud {
+      position: fixed;
+      left: 12px;
+      top: 10px;
+      color: #d9e7ff;
+      font: 14px/1.45 monospace;
+      background: rgba(12, 20, 12, 0.68);
+      padding: 6px 8px;
+      border-radius: 6px;
+      pointer-events: none;
+      white-space: pre;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="canvas" width="960" height="720"></canvas>
+  <div id="hud">bone_creature</div>
+  <script type="module" src="./main.js"></script>
+</body>
+</html>
