@@ -3043,9 +3043,6 @@ function setOrbitViewPreset(key, reversed = false) {
     return true;
   }
   orbit.setAngles(preset.yaw, preset.pitch, 0.0);
-  // view dock の X/-X/Y/-Y/Z/-Z は標準方向へ戻す操作なので、
-  // 2 本指 view roll で傾けた eye 側の roll も同時にリセットする
-  orbit.setLookAngles(0.0, 0.0, 0.0);
   // box select などで orbit が一時停止していても、view preset は即座に camera node へ反映する
   orbit.apply?.(true);
   app.syncCameraFromEyeRig(orbit);

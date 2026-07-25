@@ -448,11 +448,11 @@ export default class MobileInputController {
       return false;
     }
     // 2 本指入力は EyeRig の pan / pinch と同時に使う
-    // ここでは入力を奪わず、角度差だけを lookRoll へ加算するための基準角度を保存する
+    // ここでは入力を奪わず、角度差だけを orbit roll へ加算するための基準角度を保存する
     this.services.resetCanvasClick?.();
     state.active = true;
     state.startAngle = metrics.angle;
-    state.lastRoll = Number(orbit.orbit.lookRoll ?? 0.0);
+    state.lastRoll = Number(orbit.orbit.roll ?? 0.0);
     this.lastGesture = "roll:start";
     this.lastGesturePointer = "touch";
     return true;
@@ -473,15 +473,13 @@ export default class MobileInputController {
       return;
     }
     const delta = normalizeAngleDelta(metrics.angle - state.startAngle);
-    const nextRoll = Number(orbit.orbit.lookRoll ?? 0.0) + delta;
-    // EyeRig の orbit.roll は camera 位置を支える rod 側の回転であり、
-    // 画面中心を軸に視野そのものを傾ける操作にはならない
-    // 2 本指 roll gesture は eye 側の lookRoll を動かし、camera target / distance は維持する
-    orbit.setLookAngles(orbit.orbit.lookYaw, orbit.orbit.lookPitch, nextRoll);
+    // 2 本指 roll gesture も orbit camera の主姿勢として rod 側へ蓄積し、
+    // camera target / distance は維持したまま view forward 軸まわりに回転する
+    orbit.rotateOrbitByViewRoll(delta);
     orbit.apply?.(true);
     app?.syncCameraFromEyeRig?.(orbit);
     state.startAngle = metrics.angle;
-    state.lastRoll = nextRoll;
+    state.lastRoll = Number(orbit.orbit.roll ?? state.lastRoll);
     this.lastGesture = `roll:${delta.toFixed(1)}`;
     this.lastGesturePointer = String(ev?.pointerType ?? "touch");
   }

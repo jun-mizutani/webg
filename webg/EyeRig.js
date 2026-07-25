@@ -650,10 +650,14 @@ export default class EyeRig {
     state._lookDirty = false;
   }
 
-  applyOrbitRotationByViewDelta(yawDegree, pitchDegree) {
+  applyOrbitRotationByViewAxes(yawDegree, pitchDegree, rollDegree = 0.0) {
     const state = this.orbit;
     this.syncOrbitQuatsFromEuler();
-    if (Math.abs(yawDegree) <= 1.0e-9 && Math.abs(pitchDegree) <= 1.0e-9) {
+    if (
+      Math.abs(yawDegree) <= 1.0e-9
+      && Math.abs(pitchDegree) <= 1.0e-9
+      && Math.abs(rollDegree) <= 1.0e-9
+    ) {
       return false;
     }
     const eyeMatrix = this.eyeNode?.getWorldMatrix?.() ?? null;
@@ -662,9 +666,11 @@ export default class EyeRig {
     }
     const upAxis = this.normalizeVector(eyeMatrix.mul3x3Vector([0.0, 1.0, 0.0]));
     const rightAxis = this.normalizeVector(eyeMatrix.mul3x3Vector([1.0, 0.0, 0.0]));
+    const forwardAxis = this.normalizeVector(eyeMatrix.mul3x3Vector([0.0, 0.0, -1.0]));
     if (
       Math.hypot(upAxis[0], upAxis[1], upAxis[2]) <= 1.0e-8
       || Math.hypot(rightAxis[0], rightAxis[1], rightAxis[2]) <= 1.0e-8
+      || Math.hypot(forwardAxis[0], forwardAxis[1], forwardAxis[2]) <= 1.0e-8
     ) {
       return false;
     }
@@ -674,6 +680,9 @@ export default class EyeRig {
     }
     if (Math.abs(pitchDegree) > 1.0e-9) {
       next.lmulQuat(this.createQuatFromAxisAngle(rightAxis, pitchDegree));
+    }
+    if (Math.abs(rollDegree) > 1.0e-9) {
+      next.lmulQuat(this.createQuatFromAxisAngle(forwardAxis, rollDegree));
     }
     next.normalize();
     state.attitudeQuat = next;
@@ -849,9 +858,23 @@ export default class EyeRig {
     if (this.type !== "orbit") {
       return this;
     }
-    this.applyOrbitRotationByViewDelta(
+    this.applyOrbitRotationByViewAxes(
       util.readFiniteNumber(yawDegree, "orbitViewDelta.yaw"),
-      util.readFiniteNumber(pitchDegree, "orbitViewDelta.pitch")
+      util.readFiniteNumber(pitchDegree, "orbitViewDelta.pitch"),
+      0.0
+    );
+    this.apply();
+    return this;
+  }
+
+  rotateOrbitByViewRoll(rollDegree) {
+    if (this.type !== "orbit") {
+      return this;
+    }
+    this.applyOrbitRotationByViewAxes(
+      0.0,
+      0.0,
+      util.readFiniteNumber(rollDegree, "orbitViewRoll.roll")
     );
     this.apply();
     return this;
@@ -983,7 +1006,7 @@ export default class EyeRig {
         if (this.input.has(state.keyMap.right)) yawDelta += state.keyRotateSpeed * dt;
         if (this.input.has(state.keyMap.up)) pitchDelta += state.keyRotateSpeed * dt;
         if (this.input.has(state.keyMap.down)) pitchDelta -= state.keyRotateSpeed * dt;
-        changed = this.applyOrbitRotationByViewDelta(yawDelta, pitchDelta) || changed;
+        changed = this.applyOrbitRotationByViewAxes(yawDelta, pitchDelta, 0.0) || changed;
       } else {
         if (this.input.has(state.keyMap.left)) {
           state.yaw -= state.keyRotateSpeed * dt;
@@ -1516,7 +1539,7 @@ export default class EyeRig {
       );
     } else {
       if (this.orbit.rotationInputMode === "camera-view") {
-        this.applyOrbitRotationByViewDelta(dx * dragRotateSpeed, dy * dragRotateSpeed);
+        this.applyOrbitRotationByViewAxes(dx * dragRotateSpeed, dy * dragRotateSpeed, 0.0);
       } else {
         this.orbit.yaw += dx * dragRotateSpeed;
         this.orbit.pitch = this.clamp(
