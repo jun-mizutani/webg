@@ -278,7 +278,7 @@ G-bufferと深度依存パスは同じオブジェクトを共有し、異なる
 ### コンピュートシェーダー系の画面効果
 ここは、第27章、第28章、および `samples/compute_effect` で使うコンピュートシェーダー系APIの一覧です。
 `ComputeEffectPipeline` が高水準APIです。
-その内側では、`GeometryBufferPass`、`ShadowMapPass`、`SpotShadowMapPass`、`SsaoPass`、`ComputeShadowPass`、`ComputeSpotShadowPass`、`DeferredLightingPass`、`ComputeSsrPass`、`ComputeEffectComposer`、`TransparencyPass`、`ComputeToonPass`、`ComputeDofPass`、`ComputeBloomPass`、`ComputeEffectToneMapPass`、`ComputeEdgePass`を処理順に接続します。
+その内側では、`GeometryBufferPass`、`ShadowMapPass`、`SpotShadowMapPass`、`SsaoPass`、`ComputeShadowPass`、`ComputeSpotShadowPass`、`DeferredLightingPass`、`ComputeSsrPass`、`ComputeEffectComposer`、`TransparencyPass`、`ComputeFogPass`、`ComputeToonPass`、`ComputeDofPass`、`ComputeBloomPass`、`ComputeEffectToneMapPass`、`ComputeEdgePass`、`ComputeVignettePass`を処理順に接続します。
 各パスは、必要な部分だけを利用側で接続する低水準APIとしても使えます。
 
 ### `ComputePass`
@@ -609,6 +609,36 @@ G-bufferと深度依存パスは同じオブジェクトを共有し、異なる
 - `getGeometryEdgePass()`: 形状の輪郭用の内部 `ComputePass` を返す
 - `destroy()`: 内部で生成した描画先と内部パスを破棄する
 
+### `ComputeVignettePass`
+`ComputeVignettePass`は、トーンマッピングと任意の輪郭抽出を終えた表示色へ、画面周辺の減光と色付けを加えるコンピュートパスです。
+入力と出力は`rgba8unorm`であり、線形HDR区間へは接続しません。
+中心からの水平方向の距離は画面のアスペクト比で補正されるため、縦横比が変わっても周辺効果を円形に保てます。
+
+- `constructor(gpu, options = {})`
+  - `width`と`height`の既定値は1です。
+  - `format`の既定値と対応値は`"rgba8unorm"`です。
+  - `center`の既定値は`[0.5, 0.5]`です。
+  - `radius`の既定値は`0.9`で、0より大きい値を指定します。
+  - `softness`の既定値は`0.35`で、0より大きく`radius`以下の値を指定します。
+  - `strength`の既定値は`0.65`、範囲は0.0から1.0です。
+  - `tint`の既定値は`[0.0, 0.0, 0.0]`で、各成分へ0以上の値を指定します。
+  - `enabled`の既定値は`false`です。
+- `ready`
+  - 出力描画先を使用できるまで待つ`Promise`です。
+- `encode(commandEncoder, scene, options = {})`
+  - `scene`へ`rgba8unorm`の表示色を渡します。
+  - `center`、`radius`、`softness`、`strength`、`tint`、`enabled`を検証し、周辺効果を適用した`rgba8unorm`の描画先を返します。
+  - `timestampWrites`でGPU時間の計測範囲を指定できます。
+- `resize(width, height)`
+  - 出力描画先を新しい表示寸法へ更新します。
+  - 寸法が変わった場合だけ`true`を返します。
+- `getOutputTarget()`
+  - 直近のビネット適用結果を返します。
+- `getComputePass()`
+  - 内部の`ComputePass`を返します。
+- `destroy()`
+  - 出力描画先と内部のコンピュートパスを破棄します。
+
 ### `DeferredLightingPass`
 `DeferredLightingPass` はG-bufferのアルベド / 法線 / マテリアル / 深度、AO / 方向光 / スポット可視率とローカルライト配列を読み、ビュー空間で`rgba16float`の照明結果を計算します。
 環境拡散光はAO可視率、Fresnel反射、`metallic`によるエネルギー配分を適用し、完全な金属へアルベド由来の拡散光を加えません。
@@ -653,7 +683,7 @@ Reinhardまたは線形切り詰めの後に正確なsRGB伝達関数を適用�
 - `destroy()`: 内部で生成した描画先とコンピュートパスを破棄する
 
 ### `ComputeEffectPipeline`
-`ComputeEffectPipeline` は、G-buffer、シャドウマップ、可視率、遅延照明、SSR、半透明、トゥーン、DoF、ブルーム、トーンマッピング、輪郭抽出をまとめる高水準APIです。
+`ComputeEffectPipeline` は、G-buffer、シャドウマップ、可視率、遅延照明、SSR、半透明、フォグ、トゥーン、DoF、ブルーム、トーンマッピング、輪郭抽出、ビネットをまとめる高水準APIです。
 標準`Space`と`Shape`を入力にし、同じカメラフレームとHDR処理順を検証しながら必要な効果を実行します。
 
 材質の`alpha`が1.0未満の三角形がある場合、遅延ライティングとSSRの後で内部の`TransparencyPass`を実行します。
@@ -697,6 +727,38 @@ Reinhardまたは線形切り詰めの後に正確なsRGB伝達関数を適用�
 - `destroy()`
   - コンピュートパス、画像ピラミッド、`RenderTarget`、
     シェーダーを破棄します。
+
+### `ComputeFogPass`
+`ComputeFogPass`は、半透明合成を終えた線形HDRシーンへ、カメラから不透明面までの距離に応じたフォグを一度だけ適用するコンピュートパスです。
+入力と出力は`rgba16float`です。
+距離はカメラ用Reverse-ZのG-buffer深度と、同じG-buffer描画に使った`cameraFrame`から復元します。
+背景深度では距離を推測せず、入力シーンの色をそのまま保持します。
+
+- `constructor(gpu, options = {})`
+  - `width`と`height`の既定値は1です。
+  - `format`の既定値と対応値は`"rgba16float"`です。
+  - `color`の既定値は`[0.1, 0.15, 0.1]`で、各成分へ0以上の値を指定します。
+  - `near`の既定値は`20.0`、`far`の既定値は`80.0`で、`far`は`near`より大きくする必要があります。
+  - `density`の既定値は`0.03`で、0以上の値を指定します。
+  - `mode`の既定値は`"linear"`で、`"linear"`または`"exp"`を指定します。
+  - `enabled`の既定値は`false`です。
+- `ready`
+  - 出力描画先を使用できるまで待つ`Promise`です。
+- `encode(commandEncoder, resources, options = {})`
+  - `resources.scene`へ`rgba16float`のシーンを渡します。
+  - `resources.depth`へカメラ用Reverse-Z深度を渡します。
+  - `options.cameraFrame`へ同じG-buffer描画に使ったカメラフレームを渡します。
+  - `color`、`near`、`far`、`density`、`mode`、`enabled`を検証し、フォグ適用後の`rgba16float`描画先を返します。
+  - `timestampWrites`でGPU時間の計測範囲を指定できます。
+- `resize(width, height)`
+  - 出力描画先を新しい表示寸法へ更新します。
+  - 寸法が変わった場合だけ`true`を返します。
+- `getOutputTarget()`
+  - 直近のフォグ適用結果を返します。
+- `getComputePass()`
+  - 内部の`ComputePass`を返します。
+- `destroy()`
+  - 出力描画先と内部のコンピュートパスを破棄します。
 
 ### `Background`
 `Background` は、画面後景にテクスチャや色を配置するヘルパーです。
@@ -1493,19 +1555,12 @@ title、簡単なデバッグ文字列、最小HUDを自前で組みたいとき
 - `drawScreen()`: HUDとして描画する
 
 ### 会話UIの扱い
-会話、チュートリアル本文、選択肢のようなUI専用補助機能は core から削除した
+会話、チュートリアル本文、選択肢のようなUI専用補助機能はコアから削除されています。
 
-現在の方針では、UTF-8の本文やボタン付きパネルは `OverlayPanel` を使って app / サンプル側で組み立てる
+現在の方針では、UTF-8の本文やボタン付きパネルは`OverlayPanel`を使ってアプリケーションまたはサンプル側で組み立てます。
 
-つまり core のAPI一覧としては、会話専用クラスや用途別窓口は持たず、文字表示系は `Text` / `Message` / `OverlayPanel` / `DebugDock` の組み合わせで説明する
-- `clear()`: 待ち行列と表示を消して会話を閉じる
-- `current()`: 現在表示中のエントリーを返す
-- `isActive()`: 会話が表示中かつエントリーを持つかを返す
-- `enqueue(entries = [])`: 既存待ち行列の後ろへ追加エントリーを積む
-- `next()`: 次のエントリーへ進める
-- `choose(index = 0)`: 選択肢を 1つ選び、必要なら分岐を待ち行列に差し込む
-- `getState()`: 現在の進行状態、インデックス、lastChoice、表示状態を返す
-- `render()`: 現在状態をDOMに反映する
+このため、コアのAPI一覧には会話専用クラスや会話専用メソッドを掲載しません。
+文字表示と操作は、`Text`、`Message`、`OverlayPanel`、`DebugDock`を用途に応じて組み合わせます。
 
 ### HTMLパネル系
 `OverlayPanel`、`CommandPalette`、`OverlayPanelPresets`、`DebugDock`、`WebgUiTheme` は、HTMLベースの補助UIを作る層です。

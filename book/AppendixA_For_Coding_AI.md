@@ -4,8 +4,6 @@
 
 This appendix is written for coding AI systems that help users build 3D applications with `webg`. The expected role of the AI is not to apply general knowledge from common 3D engines or external libraries directly, but to act as a guide that understands the self-contained design of `webg` and can decide what to inspect and in what order.
 
-This book targets `2.0.0 beta`. The public APIs and rendering sequence are feature-frozen as of July 20, 2026.
-
 In an application built with `webg`, `WebgApp` first integrates initialization, the update loop, camera control, input, UI, and rendering timing. The 3D content is built from `Space`, `Node`, `Shape`, and `ModelAsset`. This part remains the same for both the forward rendering path and the deferred rendering path that uses compute processing.
 
 The major decision is not how to build the shapes, but which rendering path should handle lighting and screen effects. Use the forward rendering path when the application draws the scene normally with vertex and fragment shaders through `SmoothShader`. Use the deferred rendering path with `ComputeEffectPipeline` when the application needs advanced lighting, SSAO, SSR, or multiple downstream effects. Both paths fit inside the `WebgApp` frame lifecycle.
@@ -73,7 +71,7 @@ This path uses the normal `WebgApp` frame lifecycle. The user does not need to m
 
 The deferred rendering path first stores opaque surface information in a G-buffer, then uses those textures to calculate lighting and screen effects. `ComputeEffectPipeline` connects the G-buffer, Shadow, SSAO, Deferred Lighting, SSR, transparency, Toon, DoF, Bloom, Tone Mapping, and Edge processing in one defined order.
 
-Material `alpha` controls rendering opacity independently of `color[3]`. Transparent triangles are collected across every Shape and sorted back-to-front. Applications do not insert a transparency Render Pass into the pipeline; the internal `TransparencyPass` applies roughness-driven background blur and then blends the sorted surfaces.
+Rendering opacity is specified by the material's independent `alpha` value. Do not reinterpret `color[3]` as opacity. Even when one Shape contains both opaque and transparent triangles, transparent triangles are collected across all Shapes and sorted from back to front. Do not propose adding a transparency Render Pass on the application side. Leave roughness-based background blur and Specular processing to the internal `TransparencyPass`.
 
 Consider the deferred rendering path in the following situations.
 
@@ -117,7 +115,7 @@ The reason to choose this pattern is not to enable deferred lighting. It is to u
 
 The camera follows `cameraRig` -> `cameraRod` -> `eye`, while scene content follows `Space` -> `Node` -> `Shape`. `ModelAsset` -> `build()` -> `instantiate()` separates shared resources from instances, and `clip` -> `pattern` -> `action` -> `state` organizes animation behavior.
 
-First confirm the `webg` definitions and which code creates, updates, and destroys each resource. Then map them to general 3D or WebGPU concepts when that helps explanation. Applying external conventions first can lead to incorrect depth rules, color spaces, camera state, or resource management.
+First confirm the definitions specific to `webg` and the processing handled by each feature, then map them to general 3D or WebGPU concepts. Applying general conventions first can lead to incorrect decisions about depth rules, color spaces, camera state, or where GPU resources are managed.
 
 ## Technical Rules to Follow
 
@@ -132,7 +130,7 @@ First confirm the `webg` definitions and which code creates, updates, and destro
 ### 2. Finalizing Shapes and Resources
 
 - After adding vertex data to a `Shape`, always call `shape.endShape()`.
-- Build a ModelAsset runtime, then instantiate it as many times as required.
+- A ModelAsset creates its runtime resources with `build()`, then uses `instantiate()` to create as many instances as required.
 - When placing the same Shape more than once, use Node transforms instead of duplicating vertices.
 - Decide in one place where each resource is created, resized, updated, and destroyed.
 - Do not duplicate or destroy resources that the Pipeline creates and manages internally.
