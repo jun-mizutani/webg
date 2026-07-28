@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// Background.js   2026/07/25
+// Background.js   2026/07/28
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // ---------------------------------------------
@@ -112,7 +112,10 @@ fn fsMain(input : VSOut) -> @location(0) vec4f {
       depthStencil: {
         format: CAMERA_REVERSE_Z.format,
         depthWriteEnabled: false,
-        depthCompare: CAMERA_REVERSE_Z.compare
+        // 背景頂点はReverse-ZのclearValueと同じ最奥の0.0に配置する
+        // 通常形状用のgreaterでは同値のfragmentが破棄されるため、背景だけ同値を許可する
+        // depthを書き込まないので、既に描かれた手前の3D形状を背景が上書きすることはない
+        depthCompare: CAMERA_REVERSE_Z.compareEqual
       }
     });
 

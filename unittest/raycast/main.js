@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// unittest/raycast/main.js  2026/07/25
+// unittest/raycast/main.js  2026/07/28
 //   raycast unittest
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -10,6 +10,7 @@ import Primitive from "../../webg/Primitive.js";
 import Shape from "../../webg/Shape.js";
 import Matrix from "../../webg/Matrix.js";
 import SmoothShader from "../../webg/SmoothShader.js";
+import { CAMERA_REVERSE_Z } from "../../webg/DepthConvention.js";
 
 // AI向け注意:
 // この unittest は、画面座標 -> NDC -> world ray -> Space.raycast の変換過程を
@@ -49,11 +50,15 @@ const makeRayFromMouse = (canvas, clientX, clientY, eyeNode, proj, view) => {
   // クリック位置からワールド空間レイ（origin, dir）を生成する
   const [nx, ny] = cssToNdc(canvas, clientX, clientY);
   const invVp = proj.clone();
-  invVp.mul(view);         // VP = P * V
+  // projectionは透視成分を持つため、剛体変換専用のmul()ではなく
+  // 4×4の全要素を計算するmul_()でVP = P * Vを作る
+  invVp.mul_(view);
   invVp.inverse_strict();  // world = inverse(VP) * clip
 
-  const near = invVp.mulVector([nx, ny, -1.0]);
-  const far = invVp.mulVector([nx, ny, 1.0]);
+  // WebGPUのNDC depthは0..1で、Camera Reverse-Zではnear=1、far=0になる
+  // OpenGL式のnear=-1、far=1を使わず、共通定義から両端のworld座標を逆投影する
+  const near = invVp.mulVector([nx, ny, CAMERA_REVERSE_Z.nearDepth]);
+  const far = invVp.mulVector([nx, ny, CAMERA_REVERSE_Z.farDepth]);
   const eyePos = eyeNode.getWorldPosition();
   // 視点位置からfar点へ向かう方向ベクトルを作る
   const dir = [

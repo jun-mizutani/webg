@@ -1,0 +1,39 @@
+# tween_consumer_contracts
+
+## 目的
+
+`Tween`を使用する`Shape`、`Node`、`Space`、`WebgApp`の接続を、canvas、WebGPU、DOM表示を使わずに確認します。
+
+## 確認内容
+
+`Shape.animateParameter()`でmaterialの`alpha`と`tint`を補間し、`Space.updateShapeAnimations()`から500msずつ進めます。途中値と終端値の両方を検査します。
+
+`Node.animateRotation()`でlocal yawを0度から90度へ補間し、`Space.updateNodeAnimations()`から500msずつ進めます。途中の45度と終端の90度に加え、pitchとrollが0度付近を保つことを確認します。
+
+`WebgApp`は`init()`を呼ばず、空のdocumentを渡してGPUやcanvasに依存しないhelperだけを使います。`createTween()`と`updateTweens()`の途中値・終端値、固定時刻によるcamera shakeと終了後の復帰、`flashMessage()`からMessage代替への値転送を検査します。
+
+## 実行方法
+
+```sh
+node headless_tests/integration/tween/headless_probe.js
+```
+
+## 予想
+
+Shape、Node、WebgAppの補間は明示したdelta timeだけで決まり、実フレーム速度に依存しないはずです。camera shakeも開始時刻と更新時刻を固定しているため、途中では基準位置から動き、duration終了後は基準位置へ正確に戻るはずです。
+
+## 結果
+
+専用testは成功し、次を表示しました。
+
+```text
+tween_consumer_contracts: Shape, Node, Space, and WebgApp integrations passed
+```
+
+## 解釈
+
+ブラウザ版でstatus表示していたTween利用側の検査は、DOM表示やcanvasを必要とせずNode.js上で決定的に実行できます。Messageの見た目は検査せず、`flashMessage()`が値を渡す処理だけを対象にしています。
+
+## Commit
+
+Git commitは作成していません。

@@ -1,20 +1,20 @@
 # headless_tests coverage
 
-更新日: 2026-07-21
+更新日: 2026-07-28
 
 ## 数え方
 
 この文書のcoverageは、行数や分岐の百分率ではなく「どのコアを個別suiteで検証するか」を示します。
 import の直接参照数だけでは、間接的に通る処理や実ブラウザでしか成立しない処理を評価できないためです。
 
-現在は76 suite、103 caseです。Contact Shadowの実験用contractは
+現在は83 suite、111 caseです。Contact Shadowの実験用contractは
 `user/contact_shadow`へ移したため、この集計には含めません。
 
 | 分類 | suite | case | 役割 |
 |---|---:|---:|---|
-| core | 63 | 89 | webg コアが持つ決定論的な必須条件 |
-| integration | 3 | 3 | 複数コアをまたぐ境界 |
-| samples | 9 | 10 | sample source と API 利用方法 |
+| core | 67 | 93 | webg コアが持つ決定論的な必須条件 |
+| integration | 4 | 5 | 複数コアをまたぐ境界 |
+| samples | 11 | 12 | sample source と API 利用方法 |
 | diagnostics | 1 | 1 | 数値調査 |
 
 ## 明示的な core suite
@@ -25,6 +25,7 @@ import の直接参照数だけでは、間接的に通る処理や実ブラウ�
 - billboard
 - camera_frame
 - color_space
+- command_palette
 - compute_bloom_pass
 - compute_blur_pass
 - compute_dof_pass
@@ -33,7 +34,9 @@ import の直接参照数だけでは、間接的に通る処理や実ブラウ�
 - compute_effect_pipeline
 - compute_effect_tone_map_pass
 - compute_fog_pass
+- compute_image_pyramid
 - compute_pass
+- compute_pyramid_blur_pass
 - compute_shadow_pass
 - compute_ssr_pass
 - compute_toon_pass
@@ -80,6 +83,7 @@ import の直接参照数だけでは、間接的に通る処理や実ブラウ�
 - task
 - texture
 - transparency_pass
+- tween
 - util
 - webg_app
 
@@ -90,8 +94,8 @@ import の直接参照数だけでは、間接的に通る処理や実ブラウ�
 
 ## 統合・sample・diagnostics
 
-- integration: presentation、rendering_conventions、rendering_depth_pipelines
-- samples: bloom、compute_bloom、compute_effect、custom_depth、low_level、materials、maze2、mmodeler、startup
+- integration: presentation、rendering_conventions、rendering_depth_pipelines、tween
+- samples: bloom、bloom_api_usage、compute_bloom、compute_dof、compute_effect、custom_depth、low_level、materials、maze2、mmodeler、startup
 - diagnostics: physics_collider
 
 sample suite は sample source の import、初期化、pipeline 接続などを静的に確認します。
@@ -139,6 +143,15 @@ destroy、CPU側dataとの対応など、ブラウザを必要としない所有
 `Shape` / `ShapeResource`は既存caseが契約を包含していました。
 `Screen`と`WebgApp`へ各1 case、`InputController`へ新しい1 suite / 1 caseを追加し、
 現在は74 suite、98 caseです。
+
+`unittest/tween`はcanvas、WebGPU、ブラウザ入力を使用せず、DOMへの依存も自動検査結果をstatus要素へ表示する部分だけでした。
+ブラウザで表示する意味がないため、次の2 suiteへ分けてheadlessへ移行しました。
+
+- `core/tween`: 数値と配列の開始値、`outCubic`途中値、終端値、完了状態
+- `integration/tween`: Shape parameter、Node rotation、Space更新、WebgApp tween、camera shake、flashMessage
+
+ブラウザ版の`unittest/tween`と`unittest/index.html`の項目は削除しました。
+移行後は83 suite、111 caseをブラウザなしで実行できます。
 
 ## 既知不一致
 

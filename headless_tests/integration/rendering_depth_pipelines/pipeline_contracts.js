@@ -1,5 +1,5 @@
 // ---------------------------------------------------------
-// headless_tests/integration/rendering_depth_pipelines/headless_probe.js  2026/07/20
+// headless_tests/integration/rendering_depth_pipelines/pipeline_contracts.js  2026/07/28
 //   GPU pipeline descriptor contracts for Reverse-Z drawing
 // ---------------------------------------------------------
 import assert from "node:assert/strict";
@@ -58,11 +58,20 @@ async function readDepthStencil(ShaderClass, options = undefined) {
   return probe.pipelines[0].depthStencil;
 }
 
-// 面、mask、billboard、backgroundは通常のReverse-Z比較greaterを共有します
-for (const ShaderClass of [SmoothShader, GlassMaskShader, BillboardShader, Background]) {
+// 通常の面、mask、billboardはclear後の0.0より手前にあるfragmentだけを描く
+for (const ShaderClass of [SmoothShader, GlassMaskShader, BillboardShader]) {
   const depth = await readDepthStencil(ShaderClass);
   assert.equal(depth.format, "depth32float", `${ShaderClass.name} format`);
   assert.equal(depth.depthCompare, "greater", `${ShaderClass.name} compare`);
+}
+
+// Backgroundの頂点はclearValueと同じ最奥の0.0なので、背景だけ同値比較を許可する
+// depth writeを無効のまま維持し、背景が手前の3D形状のdepthを変更しないことも確認する
+{
+  const depth = await readDepthStencil(Background);
+  assert.equal(depth.format, "depth32float");
+  assert.equal(depth.depthCompare, "greater-equal");
+  assert.equal(depth.depthWriteEnabled, false);
 }
 
 // 利用側が旧lessを指定してもSmooth/Glassの規則を上書きできず、後方互換分岐を残しません

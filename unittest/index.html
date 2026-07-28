@@ -61,7 +61,6 @@ pre { background: #f6f8fa; border: 1px solid #d0d7de; padding: 12px; overflow-x:
 <li><a href='#overlay_panel'>overlay_panel</a>: OverlayPanel の表示状態と UI 統合を確認する</li>
 <li><a href='#particle_emitter'>particle_emitter</a>: ParticleEmitter の emit / update / draw / clear を確認する</li>
 <li><a href='#scene_loader_contracts'>scene_loader_contracts</a>: Scene JSON の構築contractと物理挙動を確認する</li>
-<li><a href='#tween'>tween</a>: Tween の補間と update 挙動を確認する</li>
 </ul>
 <section class='sample'>
 <h2 id='background'>background</h2>
@@ -971,32 +970,6 @@ touch
 - このページは `Touch` 単体の hold/action 通知を見るため、意図的に `WebgApp.attachInput()` を使っていません。
 - 通常のアプリでは `InputController.installTouchControls()` や `WebgApp` の入力経路を優先してください。
 - key 名は raw の `event.key` ではなく、`InputController` の正規化後の名前で比較する前提です。
-</pre>
-</section>
-<section class='sample'>
-<h2 id='tween'>tween</h2>
-<p>URL: <a href='./tween/index.html'>./tween/index.html</a></p>
-<pre>
-tween
-
-このページは、ゲームでよく使う「少しだけ変化する」処理を確認するためのものです。
-数値や配列を時間で補間する `Tween`、`Shape.animateParameter()` による material parameter の変化、`Node.animateRotation()` による local rotation の補間、`Space.updateShapeAnimations()` / `Space.updateNodeAnimations()` による毎 frame の反映、そして `WebgApp.createTween()` / `shakeCamera()` / `flashMessage()` がゲーム向けの演出として崩れずに動くかを見ます。
-
-このページが確認したいのは、単に値が 0 から 1 に動くことではありません。
-`outCubic` のような easing が途中値をどう変えるか、`Shape` 側の parameter animation が `Space` 経由で進むか、`Node.animateRotation()` が local rotation を 500ms で滑らかに変えられるか、`WebgApp` が tween と camera shake をまとめて管理しても sample 側の state を壊さないかを確認します。
-
-操作:
-- 画面を開くと自動で確認が走る
-- 途中値、終端値、camera shake、toast の結果を status で読む
-
-確認ポイント:
-- `Tween` が object / array の両方を補間できるか
-- `Shape.animateParameter()` が material parameter を更新できるか
-- `Node.animateRotation()` が local rotation を補間できるか
-- `Space.updateShapeAnimations()` が Shape の補間を毎 frame 進められるか
-- `Space.updateNodeAnimations()` が Node の rotation 補間を毎 frame 進められるか
-- `WebgApp.createTween()` がサンプルから使いやすい入口になっているか
-- `WebgApp.shakeCamera()` と `flashMessage()` が HUD や camera の基本的な演出として使えるか
 </pre>
 </section>
 <section class='sample'>

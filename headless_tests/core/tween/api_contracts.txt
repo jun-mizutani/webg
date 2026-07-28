@@ -1,0 +1,37 @@
+# tween_api_contracts
+
+## 目的
+
+`Tween`がブラウザや描画フレームに依存せず、数値と配列を指定時間で補間できることを確認します。
+
+## 確認内容
+
+数値`value`と3成分の`color`を同じTweenへ渡し、開始時点、500ms後の`outCubic`途中値、1000ms後の終端値を検査します。終端では`isFinished()`も`true`になることを確認します。
+
+浮動小数点の比較は許容幅を明示し、配列は長さと全成分を個別に検査します。ブラウザ版のstatus文字列による合否集計は使わず、条件が一致しなければ`node:assert/strict`で直ちに失敗します。
+
+## 実行方法
+
+```sh
+node headless_tests/core/tween/headless_probe.js
+```
+
+## 予想
+
+500ms後は線形の0.5ではなく、`outCubic`で計算した0.875の進捗が数値と配列の両方へ反映されるはずです。1000ms後はすべての値が目標値と一致し、Tweenは完了状態になるはずです。
+
+## 結果
+
+専用testは成功し、次を表示しました。
+
+```text
+tween_api_contracts: numeric and array interpolation passed
+```
+
+## 解釈
+
+`Tween`の基本補間はDOM、canvas、WebGPU、実時間へ依存せず、Node.js上で決定的に検査できます。
+
+## Commit
+
+Git commitは作成していません。

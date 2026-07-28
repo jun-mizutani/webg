@@ -6,6 +6,17 @@ raycast
 - 視点をもう少し近づけ、少し強めに見下ろす向きにして、対象もやや大きくすることでクリックしやすさとヒットの見えやすさを上げています。
 - 球と円柱状の対象をさらに上げ、球は上下の振れ幅を広げることで円柱に隠れにくくしています。
 
+画面座標からレイを作る流れ
+- canvas上のCSS座標を、左右が-1から1、上下が-1から1のNDC座標へ変換します。
+- 透視投影行列とview行列は、4×4の全要素を計算する`Matrix.mul_()`で合成します。`Matrix.mul()`は回転と平行移動を扱う剛体変換向けであり、透視投影行列の合成には使用しません。
+- 合成したview-projection行列を逆行列へ変換し、クリック位置のnear planeとfar planeをworld座標へ戻します。
+- 視点からfar plane上の点へ向かう方向を`Space.raycast`へ渡し、各Shapeのworld AABBとの交差を調べます。
+
+Reverse-Zの深度
+- WebGPUのNDC depth範囲は0から1です。
+- webgの通常カメラはReverse-Zなので、near planeは`CAMERA_REVERSE_Z.nearDepth`の1、far planeは`CAMERA_REVERSE_Z.farDepth`の0です。
+- OpenGL形式のnear=-1、far=1を直接書かず、`DepthConvention.js`の共通定義を参照します。これにより、コード上のnearとfarが実際のReverse-Z深度と一致します。
+
 このサンプルで使うwebg機能
 - `Space.raycast(origin, dir, options)`
 - 画面座標→NDC→ワールドレイ変換
@@ -22,5 +33,7 @@ raycast
 
 実装確認の見方
 - このページは ray 生成過程を見せるため、意図的に `WebgApp` ではなく `Screen` を直接使います。
+- HUDの`ndc`が変わるだけで`hit node`が変わらない場合は、クリックイベントではなく逆view-projection行列とray方向を確認します。
+- 物体をクリックすると、`hit node`、交差距離、world座標上の交点がHUDへ表示され、選択された物体だけが赤くなります。
 - 通常のアプリ構成を提案する場合は、この初期化コードをそのまま模倣せず、`WebgApp` または `UnitTestApp` を優先してください。
 - collision shape やより複雑な衝突判定は `samples/collisions` も併せて確認してください。

@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// samples/opacity/main.js  2026/07/24
+// samples/opacity/main.js  2026/07/27
 //   Mixed opaque/translucent Shape with deferred color effects
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -316,11 +316,13 @@ async function start() {
       ...COMPUTE_BLOOM_DEFAULTS,
       strength: 0.78
     },
+    // 画像Pyramidのfilter radiusは現行ComputeDofPassの検証範囲0.25〜3.0に合わせる
+    // cocScaleは焦点面から離れた距離をCoCへ変換する倍率として現行名を明示する
     dof: {
       focusDistance: 18,
       focusRange: 7,
-      maxBlurMix: 0.88,
-      blurRadius: 5
+      cocScale: 0.88,
+      blurRadius: 3.0
     },
     toon: {
       levels: 4,

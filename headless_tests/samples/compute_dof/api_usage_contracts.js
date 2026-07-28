@@ -1,5 +1,5 @@
 // ---------------------------------------------------------
-// headless_tests/samples/compute_dof/api_usage_contracts.js  2026/07/23
+// headless_tests/samples/compute_dof/api_usage_contracts.js  2026/07/27
 //   Public sample contracts for the 1/16 image-pyramid DoF
 // ---------------------------------------------------------
 import assert from "node:assert/strict";
@@ -14,6 +14,8 @@ const main = read("../../../samples/compute_dof/main.js");
 const html = read("../../../samples/compute_dof/compute_dof.html");
 const readmeJa = read("../../../samples/compute_dof/README.md");
 const readmeEn = read("../../../samples/compute_dof/README.en.md");
+const opacityMain = read("../../../samples/opacity/main.js");
+const opacityHtml = read("../../../samples/opacity/opacity.html");
 
 // 実行入口から新しいPipeline世代を読み、debug viewが1/16 targetを明示的に選びます
 assert.match(html, /main\.js\?v=20260723_dof_coverage/);
@@ -28,6 +30,15 @@ assert.match(main, /cocScale: p\.cocScale/);
 assert.match(main, /pipeline\.dofPass\.getFarFieldTarget\(\)/);
 assert.match(main, /pipeline\.dofPass\.getNearFieldTarget\(\)/);
 assert.match(main, /pipeline\.dofPass\.getCocFieldTarget\(\)/);
+
+// opacityでDoFを有効にしたときも現行APIの検証範囲内でencodeできる設定を維持します
+// 実行HTMLのcache識別子も同時に検査し、修正前main.jsの再利用を防ぎます
+assert.match(opacityHtml, /main\.js\?v=20260727_dof_options/);
+assert.match(
+  opacityMain,
+  /dof:\s*\{\s*focusDistance:\s*18,\s*focusRange:\s*7,\s*cocScale:\s*0\.88,\s*blurRadius:\s*3\.0\s*\}/
+);
+assert.doesNotMatch(opacityMain, /\bmaxBlurMix\s*:/);
 
 // 日英説明はcoverage/CoC分離、scene blur置換、負荷を実装と同じ式で説明します
 assert.match(readmeJa, /abs\(viewDepth - focusDistance\) \/ focusRange \* cocScale/);

@@ -1,0 +1,45 @@
+# rendering_conventions_raycast_unprojection_contracts
+
+## 目的
+
+`unittest/raycast`がcanvas上のクリック位置から正しいworld rayを生成し、Camera Reverse-Zのnearとfarを実際の深度規則どおりに扱うことを確認します。
+
+## 確認内容
+
+`unittest/raycast/main.js`が、透視投影行列とview行列の合成に4×4の全要素を計算する`Matrix.mul_()`を使用することを確認します。剛体変換向けの`Matrix.mul()`へ戻った場合は失敗します。
+
+逆投影に使う深度が数値リテラルではなく、`CAMERA_REVERSE_Z.nearDepth`と`CAMERA_REVERSE_Z.farDepth`を参照することも確認します。現在のCamera Reverse-Zではnearが1、farが0です。
+
+`book/17_衝突判定.md`のコード例も、`CAMERA_REVERSE_Z`、`Matrix.mul_()`、near depth、far depthを使用することを確認します。修正前の`invVp.mul(view)`や、`Space.raycast()`には存在しない最大距離optionの注意書きが戻った場合は失敗します。
+
+`book/03_3Dグラフィックスの基礎.md`には、projectionとviewの合成で`Matrix.mul_()`を使う説明があることを確認します。
+
+数値検査では実際のunittestと同じcameraとprojectionを作り、cube中心をNDCへ投影します。そのNDCをnear depthとfar depthでworld座標へ逆投影し、どちらから作ったrayも視点から元のcube中心へ向かうことを比較します。
+
+## 実行方法
+
+```sh
+node headless_tests/integration/rendering_conventions/headless_probe.js
+```
+
+## 予想
+
+`Matrix.mul_()`で透視成分を維持し、Reverse-Zのnear=1、far=0を使う場合は、near側とfar側のworld点が同じ視線上に並び、ray方向がcube中心方向と一致するはずです。
+
+実行コードまたは書籍で`Matrix.mul()`を使う、nearとfarを逆にする、またはOpenGL式のdepth=-1を使う変更が入った場合は、ソース検査または数値検査で失敗するはずです。
+
+## 結果
+
+専用testは成功し、次を表示しました。
+
+```text
+rendering_conventions_raycast_unprojection_contracts: Reverse-Z ray points toward projected cube
+```
+
+## 解釈
+
+クリック位置、view-projection、Reverse-Z depth、world rayの関係が一致しています。第17章のコード例と第3章の行列説明も実装と一致しています。実際のcanvasイベント、HUD更新、選択色は実ブラウザで別途確認します。
+
+## Commit
+
+Git commitは作成していません。

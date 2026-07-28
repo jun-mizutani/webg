@@ -1,1 +1,20 @@
+# sample_compute_dof_api_usage_contracts
+
+## 目的
+
+`samples/compute_dof`が1/16までの画像Pyramid、近景・遠景coverage、
+CoC metadataを現行API名で接続していることを確認します。
+
+`samples/opacity`については、DoFを有効にしたときの`blurRadius`が
+`ComputeDofPass`の上限3.0以内であり、旧名`maxBlurMix`ではなく
+現行名`cocScale`を使うことを確認します。
+実行HTMLの`main.js`キャッシュ識別子も検査し、修正前の設定を持つ
+JavaScriptがブラウザキャッシュから再利用される状態を防ぎます。
+
+## 期待する結果
+
+すべての契約を満たした場合は、次の文字列を表示します。
+
+```text
 PASS sample_compute_dof_api_usage_contracts
+```

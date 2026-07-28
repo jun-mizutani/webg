@@ -15,7 +15,8 @@
 
 ## 確認内容
 
-- 通常面、mask、billboard、backgroundは `depth32float` と `greater` を使う。
+- 通常面、mask、billboardは `depth32float` と `greater` を使う。
+- Backgroundは消去深度と同じ最奥面を描くため `depth32float` と `greater-equal` を使い、depth writeは行わない。
 - 旧 `depthCompare: less` optionで規則を上書きできない。
 - Wireframeは `greater-equal` とdepth writeを使う。
 - Fontはoverlay用 `always` を維持しつつformatを `depth32float` にする。
@@ -28,7 +29,7 @@ node headless_tests/integration/rendering_depth_pipelines/headless_probe.js
 
 ## 結果
 
-2026-07-12 JSTに6モジュールとtestの構文確認、専用headless test、`git diff --check` を実行した。すべて終了コード0となり、次を表示した。
+2026-07-28 JSTに6モジュールとtestの構文確認、専用headless test、`git diff --check` を実行した。すべて終了コード0となり、次を表示した。
 
 ```text
 rendering_depth_pipelines_contracts: all pipeline contracts passed
@@ -36,7 +37,9 @@ rendering_depth_pipelines_contracts: all pipeline contracts passed
 
 ## 解釈
 
-SmoothShader、GlassMaskShader、BillboardShader、Backgroundは `depth32float` と `greater` を使用した。SmoothShaderとGlassMaskShaderへ旧 `depthCompare: "less"` を指定しても、Reverse-Z規則は上書きされなかった。
+SmoothShader、GlassMaskShader、BillboardShaderは `depth32float` と `greater` を使用した。SmoothShaderとGlassMaskShaderへ旧 `depthCompare: "less"` を指定しても、Reverse-Z規則は上書きされなかった。
+
+BackgroundはReverse-Zの消去値と同じ深度`0.0`へ背景面を配置するため、同値を許可する `greater-equal` とdepth write無効を使用した。これにより消去直後の領域には背景を描き、既に通常形状のdepthが書かれた領域は上書きしない。
 
 Wireframeは同一面の線を許す `greater-equal` とdepth writeを使用した。Fontはoverlayとして `always` とdepth write無効を維持し、attachment formatだけを `depth32float` に一致させた。
 
