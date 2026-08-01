@@ -168,6 +168,16 @@ beginPresentPass()
 
 `clearDepthBuffer()` does not erase the completed texture. It reopens the depth-enabled canvas pass used by the HUD after the final texture has been presented.
 
+### 6. Separate Reproducible Randomness by Use
+
+Use `util.MersenneTwister` for particles, audio noise, probability decisions, and other processes that consume values in sequence. This class produces the same 32-bit output as the 2002 `mt19937ar.c` implementation by Matsumoto and Nishimura. Use `util.hashUint32()`, based on Chris Wellons's `lowbias32`, when a coordinate, component ID, lattice point, or arbitrary index must produce a value independently of call order.
+
+Combine multiple integers in order with `util.hashUint32Sequence()`. When JavaScript and WGSL need the same value in `[0, 1)`, follow the same upper-24-bit conversion as `util.uint32ToUnitFloat()`. WGSL cannot call the JavaScript helper directly, so implement the same 32-bit constants and shifts and verify them against known-output tests.
+
+Do not share one MT19937 state among unrelated processes. Derive independent streams from a base seed and purpose identifier so, for example, changing reverb generation does not alter BGM rhythm or modulation decisions. Do not add `Math.random()`, a private LCG, or a large-angle trigonometric hash to the core. These algorithms are not cryptographically secure and must not be used for secrets, tokens, or unpredictable identifiers.
+
+Primary sources are the [2002 Mersenne Twister implementation](https://www.math.sci.hiroshima-u.ac.jp/m-mat/MT/MT2002/mt19937ar.html) and [Chris Wellons's Hash Function Prospector](https://nullprogram.com/blog/2018/07/31/).
+
 ## Goal-Oriented References
 
 Identify which layer the user is working in, then choose the corresponding
@@ -198,8 +208,8 @@ Directory names without a prefix refer to samples under `samples/`.
   Chapter 26; `physics_bounce`, `headless_tests/core/physics_space`
 - **Individual compute effects**: Chapters 27-29. See
   `compute_bloom`, `compute_deferred_lighting`, `compute_dof`,
-  `compute_edge`, `compute_shadow_map`, `compute_ssao`,
-  `compute_ssao_gbuffer`, `compute_ssr`, and `compute_vignette`
+  `compute_edge`, `compute_shadow_map`, `compute_ssao_gbuffer`,
+  `compute_ssr`, and `compute_vignette`
 - **GPU-updated particles, cloth, physics, or textures**: Chapter 27. See
   `compute_particles`, `compute_cloth`, `compute_physics_bounce`,
   and `compute_texture`

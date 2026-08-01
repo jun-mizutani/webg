@@ -56,7 +56,7 @@ For rendering, `ComputeEffectPipeline.renderScene()` uses the `cameraFrame` rece
 - `A` / `Left Arrow`: turn right; `D` / `Right Arrow`: turn left
 - `Shift`: run
 - `5` / `6`: decrease / increase SSR intensity
-- `0`: reset to position `[5.8319, 0.0, 2.3017]`, eye height `1.60m`, and yaw `31.5°`
+- `0`: reset to position `[-4.0960, 0.0, 9.6915]`, eye height `1.60m`, and yaw `-29.91°`
 - `K`: screenshot
 - Double tap / double click or `/`: command palette
 - `Edge` in the CommandPalette: toggle geometry edges

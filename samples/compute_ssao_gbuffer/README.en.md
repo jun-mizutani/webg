@@ -18,8 +18,8 @@ English | [日本語](README.md)
 
 ## Checkpoints
 - Press `V` to switch between `composite / scene / AO / normal` and inspect the G-buffer normals
-- Compared with the depth-difference normal approximation used by `compute_ssao`, this sample can use more stable normals on object boundaries and flat surfaces
-- `radius`, `strength`, `bias`, and `sample count` have the same meanings as in `compute_ssao`
+- It reads normals stored in the G-buffer instead of estimating them from depth differences, producing more stable results on object boundaries and flat surfaces
+- `radius`, `strength`, `bias`, and `sample count` are standard settings passed to `SsaoPass`
 - `SSAO Scale` is the resolution scale for the raw AO target. The default is 0.70, and the editable range is 0.50 to 1.00
 - Lowering `SSAO Scale` reduces the number of pixels processed by raw AO generation, making it useful for checking the balance between GPU load and image quality
 - Color, depth, normal, and the final composite remain full resolution, so this is different from simply lowering the resolution of the whole final image

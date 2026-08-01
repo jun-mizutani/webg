@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// samples/maze2/main.js  2026/07/25
+// samples/maze2/main.js  2026/08/01
 //   Octagonal sci-fi walk-through maze
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -17,6 +17,7 @@ import {
 } from "../../webg/ComputeBloomPass.js?v=20260723_image_pyramid";
 import { buildErrorPanelOptions, buildHelpPanelOptions } from "../../webg/OverlayPanelPresets.js";
 import CommandPalette from "../../webg/CommandPalette.js";
+import util from "../../webg/util.js";
 import CollisionWorld, {
   CollisionSegment,
   DEFAULT_PLAYER_HEIGHT,
@@ -103,9 +104,11 @@ const FIXTURE_PANEL_LONG_SPAN = 3.60;
 const FIXTURE_PANEL_HEIGHT = 0.025;
 const FIXTURE_PANEL_CENTER_Y = 3.95;
 const FIXTURE_GEOMETRY_VISIBLE = true;
-const INITIAL_POSITION_X = 5.8318959138505555;
-const INITIAL_POSITION_Z = 2.301664061813298;
-const INITIAL_BODY_YAW_DEG = 31.5;
+// maze-runtime-probeで確認したcamera targetをplayerの床面上の初期位置として使う
+// EyeRigがEYE_HEIGHTを加えるため、JSONのeyePosition.y = 1.6と同じ視点高さになる
+const INITIAL_POSITION_X = -4.0959586292702035;
+const INITIAL_POSITION_Z = 9.691514516173461;
+const INITIAL_BODY_YAW_DEG = -29.91426226806605;
 const CEILING_LIGHT_COLORS = Object.freeze({
   white: [1.00, 0.98, 0.94],
   green: [0.18, 1.00, 0.46],
@@ -168,16 +171,12 @@ let viewerSize = {
 let initialViewState = null;
 let mazeState = null;
 
-// 迷路生成の準備段階で、同じseedから同じ数列を返す疑似乱数生成器を作る
-// 戻り値の関数を呼ぶたびに0以上1未満の値を一つ返す
-function mulberry32(seed) {
-  let state = seed >>> 0;
-  return () => {
-    state = (state + 0x6D2B79F5) >>> 0;
-    let t = Math.imul(state ^ (state >>> 15), 1 | state);
-    t ^= t + Math.imul(t ^ (t >>> 7), 61 | t);
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
+// 迷路生成専用のMT19937を固定seedから初期化する
+// callbackを呼ぶたびに[0, 1)の値を順番に返し、掘削、部屋配置、照明色選択で一つの乱数列を共有する
+// util.MersenneTwister側がseedをunsigned 32bit整数として検証するため、暗黙の丸めは行わない
+function createMazeRandom(seed) {
+  const generator = new util.MersenneTwister(seed);
+  return () => generator.random();
 }
 
 // 迷路生成中に、指定した最小値から最大値までの整数を疑似乱数で一つ選ぶ
@@ -556,7 +555,7 @@ function wallCenterZForHorizontalBoundary(boundaryRow) {
 
 // scene構築の最初に、固定seedの基本迷路、部屋、入口、開始地点、終了地点をまとめて生成する
 function createMazeState() {
-  const rng = mulberry32(MAZE_SEED);
+  const rng = createMazeRandom(MAZE_SEED);
   const cells = createCellGrid(MAZE_ROWS, MAZE_COLS);
   carveBaseMaze(cells, rng);
   const roomOverlay = overlayRooms(cells, rng);

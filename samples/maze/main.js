@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// samples/maze/main.js  2026/07/25
+// samples/maze/main.js  2026/08/01
 //   Walk-through maze sample generated at runtime
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -15,6 +15,7 @@ import { buildErrorPanelOptions, buildHelpPanelOptions } from "../../webg/Overla
 import ComputeEffectPipeline from "../../webg/ComputeEffectPipeline.js?v=20260723_dof_coverage";
 import CommandPalette from "../../webg/CommandPalette.js";
 import { COMPUTE_EDGE_BLEND_MODES } from "../../webg/ComputeEdgePass.js";
+import util from "../../webg/util.js";
 import { DEFAULT_PLAYER_HEIGHT, DEFAULT_PLAYER_RADIUS, overlapsPlayerHeight } from "./CollisionWorld.js";
 import { buildCollisionWorldFromRuntime } from "./WalkCollisionBuilder.js";
 
@@ -78,6 +79,11 @@ const WALL_HEIGHT = 3.0;
 const CEILING_THICKNESS = 0.1;
 const FLOOR_THICKNESS = 0.1;
 const EYE_HEIGHT = 1.6;
+// maze2のcamera targetを2.5 / 4.0倍し、同じrow、colとcell内相対位置へ変換する
+// player baseはY=0に置き、EyeRigがEYE_HEIGHTを加えて視点をY=1.6へ配置する
+const INITIAL_POSITION_X = -2.559974143293877;
+const INITIAL_POSITION_Z = 6.057196572608413;
+const INITIAL_BODY_YAW_DEG = -29.91426226806605;
 const ROOM_MIN_CELLS = 2;
 const ROOM_MAX_CELLS = 3;
 const ROOM_ATTEMPTS = 20;
@@ -142,15 +148,12 @@ let currentSpotLight = {
   direction: [0.0, 0.0, -1.0]
 };
 
-// `mulberry32`は受け取った値を処理し、後続処理で利用する状態または結果を生成する
-function mulberry32(seed) {
-  let state = seed >>> 0;
-  return () => {
-    state = (state + 0x6D2B79F5) >>> 0;
-    let t = Math.imul(state ^ (state >>> 15), 1 | state);
-    t ^= t + Math.imul(t ^ (t >>> 7), 61 | t);
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
+// 迷路生成専用のMT19937を固定seedから初期化する
+// callbackを呼ぶたびに[0, 1)の値を順番に返し、掘削と部屋配置で一つの乱数列を共有する
+// util.MersenneTwister側がseedをunsigned 32bit整数として検証するため、暗黙の丸めは行わない
+function createMazeRandom(seed) {
+  const generator = new util.MersenneTwister(seed);
+  return () => generator.random();
 }
 
 function randInt(rng, minInclusive, maxInclusive) {
@@ -515,7 +518,7 @@ function wallCenterZForHorizontalBoundary(boundaryRow) {
 
 // `maze`の状態を生成し、後続処理で利用できる状態にする
 function createMazeState() {
-  const rng = mulberry32(MAZE_SEED);
+  const rng = createMazeRandom(MAZE_SEED);
   const cells = createCellGrid(MAZE_ROWS, MAZE_COLS);
   carveBaseMaze(cells, rng);
   const roomOverlay = overlayRooms(cells, rng);
@@ -576,11 +579,9 @@ function rebuildCollisionWorld() {
 
 // `initial`の表示の状態を生成し、後続処理で利用できる状態にする
 function buildInitialViewState() {
-  const startX = cellCenterX(mazeState.start.col);
-  const startZ = cellCenterZ(mazeState.start.row);
   return {
-    position: [startX, 0.0, startZ],
-    bodyYaw: 90.0,
+    position: [INITIAL_POSITION_X, 0.0, INITIAL_POSITION_Z],
+    bodyYaw: INITIAL_BODY_YAW_DEG,
     bodyPitch: 0.0,
     bodyRoll: 0.0,
     lookYaw: 0.0,

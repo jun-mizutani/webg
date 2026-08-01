@@ -8,11 +8,13 @@
 
 統合Compute effectを使うsampleでは、`onBeforeDraw`と`onAfterDraw3d`が同じCamera Frameを受け取り、`ComputeEffectPipeline.renderScene()`と`encode()`へ渡すことを検査します。最終copyは`beginPresentPass()`の後に実行し、その後`clearDepthBuffer()`でFont/HUD用のCamera Reverse-Z passを復元します。
 
+`maze`では`maze2`のruntime probe位置をcell pitch比`2.5 / 4.0`で変換した`[-2.559974143293877, 0.0, 6.057196572608413]`を使用します。これにより同じrow、colとcell内相対位置を保ち、方位角`-29.91426226806605`度を起動時とreset時に共有すること、更新したmodule queryからmain.jsを読み込むことを検査します。
+
 `compute_benchmark`の単独blurは`ComputePyramidBlurPass`を使い、1/2から1/16までの連続縮小とフル解像度までの段階的拡大を測定します。旧`ComputeBlurPass`、`blurRadius`、`blurIterations`が再導入された場合は停止します。
 
 `compute_ssao_gbuffer`では、共通の`addObject()`を通らず直接Nodeへ追加されるnormal-map cubeとskinned cylinderについても、`roughness`、`metallic`、`emissive`を含む完全なsurface materialを持つことを検査します。
 
-render-pass版DoFはCameraFrameをsampleへ露出せず、scene描画、`beginScene()`、`render()`へ同じ`renderFrameToken`を渡します。旧`view`入力は明示的に拒否します。独自SSAOはG-buffer共通WGSLの背景depth 0判定と線形化を使い、旧背景depth 1比較を拒否します。
+render-pass版DoFはCameraFrameをsampleへ露出せず、scene描画、`beginScene()`、`render()`へ同じ`renderFrameToken`を渡します。旧`view`入力は明示的に拒否します。SSAOは`compute_ssao_gbuffer`と正式な`SsaoPass`を使う経路を検査し、削除したdepth-only独自実装は対象に含めません。
 
 削除済み`createViewMatrix`、旧`gbufferColorMode`、`setProjectionRange`、旧`pipeline.sceneTarget`とsample側`sceneTarget`、旧projection near/far option、cameraWorld再生成、`depth24plus`が対象sampleへ再導入された場合は停止します。
 

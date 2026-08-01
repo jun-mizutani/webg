@@ -18,8 +18,8 @@
 
 ## 確認ポイント
 - Vでcomposite / scene / AO / normalを切り替え、G-buffer法線を確認できます。
-- compute_ssaoのdepth差分法線より、object境界や平面で安定した法線を使えます。
-- radius、strength、bias、sample countはcompute_ssaoと同じ意味です。
+- 深度差分から法線を推定せず、G-bufferに保存した法線を使うため、object境界や平面で安定した結果を得られます。
+- radius、strength、bias、sample countは`SsaoPass`へ渡す標準設定です。
 - `SSAO Scale`はraw AO targetの解像度倍率です。既定値は0.70で、0.50から1.00の範囲で変更できます。
 - `SSAO Scale`を下げるとraw AO生成の対象画素数が減るため、GPU負荷と表示品質のバランスを確認できます。
 - color、depth、normal、最終compositeはフル解像度のまま維持するため、最終画像全体を低解像度化した場合とは異なる見え方になります。

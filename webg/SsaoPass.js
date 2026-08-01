@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// SsaoPass.js  2026/07/25
+// SsaoPass.js  2026/08/01
 //   G-buffer Screen-Space Ambient Occlusion pass
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -54,9 +54,30 @@ fn loadNormal(coord : vec2<i32>, dims : vec2<i32>) -> vec3f {
   return decodeGBufferNormal(encoded);
 }
 
+// Chris Wellonsのlowbias32と同じ32bit整数permutationをWGSLで実行する
+// JavaScript側のutil.hashUint32()と同じ定数、shift、u32 overflowを使う
+fn hashUint32(value : u32) -> u32 {
+  var result = value;
+  result ^= result >> 16u;
+  result *= 0x7feb352du;
+  result ^= result >> 15u;
+  result *= 0x846ca68bu;
+  result ^= result >> 16u;
+  return result;
+}
+
+// util.hashUint32Sequence([x, y], 0)と同じ順序でpixel座標を畳み込む
+fn hashCoord2(coord : vec2<u32>) -> u32 {
+  var state = hashUint32(2u);
+  state = hashUint32(state ^ coord.x);
+  state = hashUint32(state ^ coord.y);
+  return state;
+}
+
 fn hashAngle(coord : vec2<i32>) -> f32 {
-  let value = sin(dot(vec2f(coord), vec2f(12.9898, 78.233))) * 43758.5453;
-  return fract(value) * 6.2831853;
+  // 上位24bitだけをf32へ変換し、最大hashでも[0, 1)を越えない角度にする
+  let unit = f32(hashCoord2(vec2<u32>(coord)) >> 8u) / 16777216.0;
+  return unit * 6.2831853;
 }
 
 fn rotate2(value : vec2f, angle : f32) -> vec2f {

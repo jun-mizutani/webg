@@ -202,6 +202,16 @@ beginPresentPass()
 `clearDepthBuffer()`は最終テクスチャを消す処理ではありません。
 完成したテクスチャを表示した後、HUDが使う深度付きCanvasパスを再開します。
 
+### 6. 再現可能な乱数を用途で分ける
+
+順番に値を生成するparticle、音声noise、確率判定には`util.MersenneTwister`を使います。このclassは、Matsumoto氏とNishimura氏による2002年版`mt19937ar.c`と同じ32bit出力を生成します。座標、部材ID、格子点、任意indexから呼び出し順に依存しない値を求める場合は、Chris Wellons氏の`lowbias32`に基づく`util.hashUint32()`を使います。
+
+複数の整数は`util.hashUint32Sequence()`で順序付きに結合します。hash値をJavaScriptとWGSLで共通の`[0, 1)`へ変換する場合は、上位24bitを使う`util.uint32ToUnitFloat()`と同じ規則に揃えます。WGSLではJavaScript関数を直接呼べないため、同じ定数とshiftの32bit版を実装し、既知出力testで一致を確認します。
+
+一つのMT19937を無関係な処理で共有しません。基準seedから用途識別値をhashして独立streamを作り、たとえばリバーブ生成量の変更がBGMの休符や転調を変えないようにします。コアへ`Math.random()`、独自LCG、大きな角度の三角関数hashを追加しません。これらは暗号学的乱数ではないため、秘密値、token、予測されてはいけない識別子には使用しません。
+
+出典は、[Mersenne Twister 2002年版](https://www.math.sci.hiroshima-u.ac.jp/m-mat/MT/MT2002/mt19937ar.html)と、[Chris Wellons氏のHash Function Prospector](https://nullprogram.com/blog/2018/07/31/)です。
+
 ## 目的別の参照先
 
 AIは利用者がどの層の話をしているかを判定し、目的に対応する章、サンプル、自動テストを選択してください。
@@ -230,8 +240,8 @@ AIは利用者がどの層の話をしているかを判定し、目的に対応
   第26章、`physics_bounce`、`headless_tests/core/physics_space`
 - **個別のコンピュート効果**: 第27〜29章。参照先は
   `compute_bloom`、`compute_deferred_lighting`、`compute_dof`、
-  `compute_edge`、`compute_shadow_map`、`compute_ssao`、
-  `compute_ssao_gbuffer`、`compute_ssr`、`compute_vignette`
+  `compute_edge`、`compute_shadow_map`、`compute_ssao_gbuffer`、
+  `compute_ssr`、`compute_vignette`
 - **GPU上で更新する粒子、布、物理、テクスチャ**:
   第27章。参照先は
   `compute_particles`、`compute_cloth`、`compute_physics_bounce`、

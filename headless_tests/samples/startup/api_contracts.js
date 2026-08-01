@@ -1,5 +1,5 @@
 // ---------------------------------------------------------
-// headless_tests/samples/startup/headless_probe.js  2026/07/21
+// headless_tests/samples/startup/headless_probe.js  2026/08/01
 //   v2 sample module, frame, material, and presentation contracts
 // ---------------------------------------------------------
 import assert from "node:assert/strict";
@@ -24,6 +24,18 @@ const benchmark = read("../../../samples/compute_benchmark/main.js");
 const shadowMap = pipelineSamples.find(({ name }) => name === "compute_shadow_map").source;
 const computeDof = pipelineSamples.find(({ name }) => name === "compute_dof").source;
 const computeSsaoGbuffer = pipelineSamples.find(({ name }) => name === "compute_ssao_gbuffer").source;
+const maze = pipelineSamples.find(({ name }) => name === "maze").source;
+const mazeHtml = read("../../../samples/maze/maze.html");
+
+// maze2のruntime probe位置をcell pitch比で変換し、同じ論理cell内位置を維持します
+assert.match(maze, /const INITIAL_POSITION_X = -2\.559974143293877/);
+assert.match(maze, /const INITIAL_POSITION_Z = 6\.057196572608413/);
+assert.match(maze, /const INITIAL_BODY_YAW_DEG = -29\.91426226806605/);
+assert.match(
+  maze,
+  /function buildInitialViewState\(\)[\s\S]+position:\s*\[INITIAL_POSITION_X,\s*0\.0,\s*INITIAL_POSITION_Z\],[\s\S]+bodyYaw:\s*INITIAL_BODY_YAW_DEG/
+);
+assert.match(mazeHtml, /main\.js\?v=20260801_mt19937_logical_view/);
 
 for (const { name, source } of pipelineSamples) {
   assert.match(source, /ComputeEffectPipeline/, `${name} must use the integrated v2 pipeline`);
@@ -38,8 +50,7 @@ const allMigratedSources = [
   ...pipelineSamples.map((entry) => entry.source),
   benchmark,
   read("../../../samples/axis/main.js"),
-  read("../../../samples/dof/main.js"),
-  read("../../../samples/compute_ssao/main.js")
+  read("../../../samples/dof/main.js")
 ];
 const combined = allMigratedSources.join("\n");
 
@@ -112,13 +123,6 @@ for (const name of ["axis", "dof"]) {
   assert.doesNotMatch(source, /\(\{ view \}\)|\{ view \}/);
   assert.doesNotMatch(source, /\bcameraFrame\b/);
 }
-
-// sample独自SSAOは共通Reverse-Z WGSLとCamera Frame projection parameterを使います
-const ssao = read("../../../samples/compute_ssao/main.js");
-assert.match(ssao, /GBUFFER_WGSL_COMMON/);
-assert.match(ssao, /isGBufferBackgroundDepth\(centerDepth\)/);
-assert.match(ssao, /createGBufferProjectionParams\(cameraFrame\)/);
-assert.doesNotMatch(ssao, /0\.999999/);
 
 // ondemand benchmarkはWebgApp callback外で測定するため、測定開始ごとにCamera Frameを明示生成します
 assert.match(benchmark, /app\.updateCameraFrame\(\)/);

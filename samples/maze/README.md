@@ -42,7 +42,7 @@
 - `A` / `D`: 左旋回 / 右旋回
 - `Shift`: 移動を速くする
 - `5` / `6`: Toon の段階数を 2 から 8 の範囲で減らす / 増やす
-- `0`: 初期視点へ戻す
+- `0`: 初期視点へ戻す。位置は`[-2.5600, 0.0, 6.0572]`、視点高さは`1.60m`、方位角は`-29.91°`
 - `K`: screenshot を保存する
 - Canvas の double tap / double click、または `/`: command palette を開閉する
 - Palette 1 page: SSAO、Shadow、SSR、Toon、DoF、Bloom、Edge、Ambient Only、Ambient Strength、Toon Levels、Edge Thickness、Edge Blend を設定する
@@ -50,7 +50,7 @@
 
 ## 確認ポイント
 
-- 起動直後と `0` による reset 後に、開始 cell の内部から迷路へ向いた first-person 視点に戻ること
+- 起動直後と `0` による reset 後に、maze2と同じrow、colとcell内相対位置に対応する`[-2.5600, 0.0, 6.0572]`、方位角`-29.91°`のfirst-person視点へ戻ること
 - 左右Dragで進行方向と視線が一緒に回転し、上下Dragでは操作中だけ上または下を見て、Drag終了時に水平へ戻ること
 - `W` / `A` / `S` / `D` で、orbit ではなく first-person 視点の移動として操作できること
 - 壁や room door の side jamb で移動が止まり、door 開口部だけを通過できること

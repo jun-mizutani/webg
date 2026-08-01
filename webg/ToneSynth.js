@@ -1,5 +1,5 @@
 // ---------------------------------------------
-//  ToneSynth.js    2026/05/14
+//  ToneSynth.js    2026/08/01
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // ---------------------------------------------
@@ -12,6 +12,16 @@ export default class ToneSynth {
   // 実際の WebAudio node はユーザー操作後の ensureContext() まで作らない
   constructor(options = {}) {
     const opts = util.readPlainObject(options, "ToneSynth options", {});
+
+    // 音声内の再現可能な乱数streamを作る基準seed
+    // 時刻やブラウザ組み込み乱数から暗黙生成せず、未指定時も固定値で同じ音響素材を作る
+    this.randomSeed = util.readOptionalInteger(
+      opts.randomSeed,
+      "ToneSynth randomSeed",
+      5489,
+      { min: 0, max: 0xffffffff }
+    );
+    this.reverbRandom = this.createRandomGenerator(0x72657662);
 
     // AudioContext はユーザー操作まで遅延初期化する
     // constructor で作るとブラウザ再生制限に引っかかりやすいため
@@ -98,6 +108,18 @@ export default class ToneSynth {
     };
     this.seReverbImpulseConfig = this.toneReverbImpulseConfig;
     this.seEnvelopePresets = this.toneEnvelopePresets;
+  }
+
+  // 基準seedと用途識別値をlowbias32で結合し、ほかの用途と独立したMT19937を作る
+  // streamIdは4文字程度のASCIIを16進表現した固定値にして、用途をcommentから追跡できるようにする
+  createRandomGenerator(streamId) {
+    const id = util.readFiniteNumber(streamId, "ToneSynth random streamId", {
+      integer: true,
+      min: 0,
+      max: 0xffffffff
+    });
+    const streamSeed = util.hashUint32Sequence([id], this.randomSeed);
+    return new util.MersenneTwister(streamSeed);
   }
 
   // WebAudio の実体を作成し、master から単音 bus までの最小経路を準備する
@@ -459,7 +481,7 @@ export default class ToneSynth {
     for (let i = 0; i < length; i++) {
       const t = length > 1 ? i / (length - 1) : 0.0;
       const amp = Math.pow(1.0 - t, decay);
-      const white = Math.random() * 2.0 - 1.0;
+      const white = this.reverbRandom.random() * 2.0 - 1.0;
       const alpha = profile.alphaStart + ((profile.alphaEnd - profile.alphaStart) * t);
       filtered += (white - filtered) * alpha;
       data[i] = filtered * amp;
@@ -480,7 +502,7 @@ export default class ToneSynth {
         const index = start + j;
         if (index >= length) break;
         const t = burstLength > 1 ? j / (burstLength - 1) : 0.0;
-        const burst = (1.0 - t) * (0.55 + Math.random() * 0.45);
+        const burst = (1.0 - t) * (0.55 + this.reverbRandom.random() * 0.45);
         data[index] += burst * reflection.gain;
       }
     }

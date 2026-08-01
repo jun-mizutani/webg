@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// ParticleEmitter.js 2026/07/25
+// ParticleEmitter.js 2026/08/01
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // ---------------------------------------------
@@ -29,16 +29,11 @@ const cloneObject = (value, label = "object") => {
   return { ...util.readPlainObject(value, `ParticleEmitter ${label}`, {}) };
 };
 
-// `seeded`の`random`を生成し、後続処理で利用できる状態にする
+// MT19937をparticle専用streamとして初期化し、後続処理へ[0, 1)の値を順番に渡す
+// emitterごとにstateを分けるため、別emitterの発生数がこの乱数列へ影響しない
 const createSeededRandom = (seed = 1) => {
-  let state = util.readFiniteNumber(seed, "ParticleEmitter seed", { integer: true }) >>> 0;
-  if (state === 0) {
-    throw new Error("ParticleEmitter seed must not resolve to 0");
-  }
-  return () => {
-    state = (state * 1664525 + 1013904223) >>> 0;
-    return state / 0x100000000;
-  };
+  const generator = new util.MersenneTwister(seed);
+  return () => generator.random();
 };
 
 const DEFAULT_PRESETS = {
@@ -172,8 +167,17 @@ export default class ParticleEmitter {
     this.maxParticles = util.readOptionalInteger(options.maxParticles, "ParticleEmitter maxParticles", 256, { min: 1 });
     this.useShadow = options.useShadow === true;
     this.groundY = util.readOptionalFiniteNumber(options.groundY, "ParticleEmitter groundY", 0.0);
-    this.seed = util.readOptionalInteger(options.seed, "ParticleEmitter seed", 1);
-    this.random = typeof options.random === "function" ? options.random : createSeededRandom(this.seed);
+    this.seed = util.readOptionalInteger(options.seed, "ParticleEmitter seed", 1, {
+      min: 0,
+      max: 0xffffffff
+    });
+    const injectedRandom = util.readOptionalFunction(
+      options.random,
+      "ParticleEmitter random",
+      null,
+      { allowNull: false }
+    );
+    this.random = injectedRandom ?? createSeededRandom(this.seed);
     this.presetName = "spark";
     this.presetOptions = {};
     this.particles = Array.from({ length: this.maxParticles }, () => this._createParticle());

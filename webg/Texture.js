@@ -1,8 +1,10 @@
 // ---------------------------------------------
-// Texture.js      2026/07/25
+// Texture.js      2026/08/01
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // ---------------------------------------------
+
+import util from "./util.js";
 
 export default class Texture {
   // テクスチャ管理を初期化し非同期初期化を開始する
@@ -306,11 +308,6 @@ export default class Texture {
     return this.buildNormalMapFromHeightMap(options);
   }
 
-  // 小数部を返す内部ユーティリティ
-  _fract(v) {
-    return v - Math.floor(v);
-  }
-
   // 線形補間を返す内部ユーティリティ
   _lerp(a, b, t) {
     return a + (b - a) * t;
@@ -324,9 +321,13 @@ export default class Texture {
 
   // 2D格子座標から擬似乱数を生成する
   _hash2D(ix, iy, seed = 0) {
-    // 格子点に対する擬似乱数value noise / dots 配置の共通乱数源
-    const s = Math.sin(ix * 127.1 + iy * 311.7 + seed * 74.7) * 43758.5453123;
-    return this._fract(s);
+    // 負の格子座標は二の補数の32bit表現へ写し、座標評価順に依存しない値を得る
+    // seedへの内部offsetはmodulo 2^32として明示的にwrapしてから結合する
+    const hash = util.hashUint32Sequence(
+      [ix >>> 0, iy >>> 0],
+      seed >>> 0
+    );
+    return util.uint32ToUnitFloat(hash);
   }
 
   // 2D value noiseを計算する
@@ -356,7 +357,10 @@ export default class Texture {
     const octaves = Math.floor(options.octaves ?? 4);
     const persistence = Number(options.persistence ?? 0.5);
     const lacunarity = Number(options.lacunarity ?? 2.0);
-    const seed = Number(options.seed ?? 0);
+    const seed = util.readOptionalInteger(options.seed, "Texture fBm seed", 0, {
+      min: 0,
+      max: 0xffffffff
+    });
     let amp = 1.0;
     let freq = 1.0;
     let sum = 0.0;
@@ -374,7 +378,10 @@ export default class Texture {
   // dotsパターンの高さ値を計算する
   _dotsPatternHeight(x, y, options = {}) {
     // セルごとにランダム中心を置いたドットハイト生物的な「ぶつぶつ」表現向け
-    const seed = Number(options.seed ?? 0);
+    const seed = util.readOptionalInteger(options.seed, "Texture dots seed", 0, {
+      min: 0,
+      max: 0xffffffff
+    });
     const jitter = Number(options.jitter ?? 0.35);
     const radius = Number(options.dotRadius ?? 0.28);
     // dotRadiusRange:
@@ -546,7 +553,10 @@ export default class Texture {
     // 中心は濃く、外周は滑らかに透明化したRGBAを生成する
     const width = Math.floor(options.width ?? 96);
     const height = Math.floor(options.height ?? 96);
-    const seed = Number(options.seed ?? 17);
+    const seed = util.readOptionalInteger(options.seed, "Texture billboard seed", 17, {
+      min: 0,
+      max: 0xffffffff
+    });
     const noiseScale = Number(options.noiseScale ?? 5.2);
     const noiseAmount = Number(options.noiseAmount ?? 0.62);
     const dotsAmount = Number(options.dotsAmount ?? 0.28);

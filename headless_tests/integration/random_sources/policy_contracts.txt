@@ -1,0 +1,13 @@
+# webg core and maze sample random source policy contracts
+
+## 目的
+
+webgコアと迷路sampleの再現可能な乱数を、順次生成用の`util.MersenneTwister`と、座標・ID・index参照用のChris Wellons `lowbias32`に基づく`util.hashUint32()`系へ限定します。
+
+## 確認内容
+
+`webg/*.js`が`Math.random()`を直接呼ばないこと、`Texture`と`SsaoPass`へ大きな角度の三角関数hashを戻さないこと、`ParticleEmitter`へ旧LCGを戻さないことを確認します。また、TextureとWGSL SSAOがlowbias32経路を使い、音声がリバーブ、リズム、転調の独立MT19937 streamを持つことを固定します。`samples/maze`と`samples/maze2`については、旧`mulberry32`を持たず、固定seedから`util.MersenneTwister`を初期化することを確認します。
+
+## 解釈
+
+このtestは乱数値そのものの品質testではありません。lowbias32とMT19937の既知出力は`headless_tests/core/util`で別に照合します。ここでは、用途の異なる二つの方式を混同したり、実行環境依存の乱数や三角関数hashをコアへ再導入したりする構成上の退行を検出します。

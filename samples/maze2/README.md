@@ -56,7 +56,7 @@ Shadow MapとSSAOの効果は無効にしています。
 - `A` / `←`: 右旋回、`D` / `→`: 左旋回
 - `Shift`: 走る
 - `5` / `6`: SSR intensity を減らす / 増やす
-- `0`: 初期視点へ戻る。位置は`[5.8319, 0.0, 2.3017]`、視点高さは`1.60m`、方位角は`31.5°`
+- `0`: 初期視点へ戻る。位置は`[-4.0960, 0.0, 9.6915]`、視点高さは`1.60m`、方位角は`-29.91°`
 - `K`: screenshot
 - double tap / double click または `/`: command palette
 - CommandPaletteの `Edge`: geometry edgeのON/OFF

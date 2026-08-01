@@ -91,7 +91,7 @@ main {
   <section class="panel">
     <h2>compute sample の見分け方</h2>
     <p><code>compute_bloom</code>、<code>compute_dof</code>、<code>compute_physics_bounce</code>は非compute版との比較ペアです。<code>compute_effect</code>は統合API、<code>compute_benchmark</code>は計測、<code>compute_json</code>はModelAsset viewerを担当します。</p>
-    <p><code>compute_ssao</code>はdepth-only方式、<code>compute_ssao_gbuffer</code>はG-buffer normalと正式<code>SsaoPass</code>を使う方式です。同じ題材でも入力と目的が異なるため、両方を比較用に残しています。</p>
+    <p><code>compute_ssao_gbuffer</code>は、G-buffer normalと正式な<code>SsaoPass</code>を使うSSAOの単体確認用サンプルです。</p>
   </section>
   <section class="panel">
     <h2>クイックリンク</h2>
@@ -118,7 +118,6 @@ main {
       <li><a href="#compute_physics_bounce">compute_physics_bounce</a></li>
       <li><a href="#compute_postprocess">compute_postprocess</a></li>
       <li><a href="#compute_shadow_map">compute_shadow_map</a></li>
-      <li><a href="#compute_ssao">compute_ssao</a></li>
       <li><a href="#compute_ssao_gbuffer">compute_ssao_gbuffer</a></li>
       <li><a href="#compute_ssr">compute_ssr</a></li>
       <li><a href="#compute_texture">compute_texture</a></li>
@@ -424,18 +423,6 @@ main {
           <a href="./compute_shadow_map/compute_shadow_map.html">Demo</a>
           <a href="./compute_shadow_map/index.html">README JA</a>
           <a href="./compute_shadow_map/index.en.html">README EN</a>
-        </div>
-      </article>
-      <article class="card" data-name="compute_ssao" data-summary="scene colorとsampleable depthをCompute Shaderで読み、depth-only SSAOを計算します。">
-        <div class="card-head">
-          <span class="badge">Compute</span>
-          <h3 id="compute_ssao">compute_ssao</h3>
-        </div>
-        <p class="summary">scene colorとsampleable depthをCompute Shaderで読み、depth-only SSAOを計算します。</p>
-        <div class="links">
-          <a href="./compute_ssao/compute_ssao.html">Demo</a>
-          <a href="./compute_ssao/index.html">README JA</a>
-          <a href="./compute_ssao/index.en.html">README EN</a>
         </div>
       </article>
       <article class="card" data-name="compute_ssao_gbuffer" data-summary="GeometryBufferPassとSsaoPassを使い、G-buffer normalとdepthからSSAOを計算します。">

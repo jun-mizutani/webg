@@ -42,13 +42,13 @@ Detailed rules for maze generation, rooms, doors, collision handling, and radar 
 - `A` / `D`: turn left / right
 - `Shift`: run
 - `5` / `6`: decrease / increase Toon levels in the range 2 to 8
-- `0`: reset to the initial view
+- `0`: reset to position `[-2.5600, 0.0, 6.0572]`, eye height `1.60m`, and yaw `-29.91°`
 - `K`: save a screenshot
 - Double tap / double click the canvas, or `/`: open or close the command palette
 
 ## What to verify
 
-- Reset returns to the start cell and faces into the maze again
+- Reset returns to `[-2.5600, 0.0, 6.0572]`, the same row, column, and relative in-cell position as maze2, with yaw `-29.91°`
 - Horizontal drag rotates heading and view together, while vertical drag only affects temporary look pitch
 - `W` / `A` / `S` / `D` behave as first-person controls, not orbit camera controls
 - Walls and doorway side jambs block movement, while doorway openings remain passable

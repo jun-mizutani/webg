@@ -30,6 +30,22 @@ assert.equal(height.image.length, 8 * 4 * 4);
 assert.equal(height.ncol, 4);
 assert.ok(height.image.every((value) => value >= 0 && value <= 255));
 
+// 2D格子hashはlowbias32の順序付き結合と上位24bit変換を使う
+assert.equal(texture._hash2D(12, 34, 56), 0.676010251045227);
+assert.equal(texture._hash2D(-1, 0, 0), 0.06104761362075806);
+assert.throws(
+  () => texture.makeProceduralHeightMapPixels({
+    width: 2,
+    height: 2,
+    scale: 1,
+    pattern: "noise",
+    contrast: 1,
+    bias: 0,
+    seed: -1
+  }),
+  /Texture fBm seed must be >= 0/
+);
+
 const billboardA = texture.makeProceduralBillboardTexturePixels({ width: 8, height: 8, seed: 7 });
 const billboardB = texture.makeProceduralBillboardTexturePixels({ width: 8, height: 8, seed: 7 });
 assert.deepEqual(billboardA.image, billboardB.image);

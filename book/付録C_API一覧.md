@@ -2234,7 +2234,8 @@ Follow は drag で rod の基準構図、pinch で eye の基準 distance を�
 
 ### `ToneSynth`
 
-- `constructor(options = {})`: 単音再生用の synth 基盤を作る
+- `constructor(options = {})`: 単音再生用の synth 基盤を作る。`randomSeed`はリバーブ用MT19937 streamの基準seedで、既定値は`5489`
+- `createRandomGenerator(streamId)`: 基準seedと用途識別値から独立したMT19937 streamを作る
 - `ensureContext()`: AudioContextを確保し、単音用バスとエフェクト処理を準備する
 - `buildToneFxChain()`: 単音用バスのディレイ / リバーブ処理を作る
 - `async resume()`: user ジェスチャー後に audio コンテキストを再開する
@@ -2258,7 +2259,7 @@ Follow は drag で rod の基準構図、pinch で eye の基準 distance を�
 
 ### `AudioSynth`
 
-- `constructor()`: `ToneSynth` を継承したSE/BGM synth を作る
+- `constructor(options = {})`: `ToneSynth` を継承したSE/BGM synth を作る。`randomSeed`からリバーブ、休符、転調用の独立streamを作る
 - `ensureContext()`: ToneSynth のコンテキストを確保し、BGM bus を追加する
 - `buildBgmFxChain()`: BGM用のディレイ / リバーブ処理を作る
 - `async resume()`: user ジェスチャー後に audio コンテキストを再開する
@@ -2301,7 +2302,7 @@ Follow は drag で rod の基準構図、pinch で eye の基準 distance を�
 ### `GameAudioSynth`
 `GameAudioSynth` は、ゲーム向けの melody preset とSE catalog を追加した上位層です。
 
-- `constructor()`: ゲーム向け preset を持つ synth を作る
+- `constructor(options = {})`: ゲーム向け preset を持つ synth を作る。`randomSeed`は`AudioSynth`へ渡される
 - `playGameTone(freq, dur = 0.12, profile = "piano", options = {})`: プロファイル付きで単音を鳴らす
 - `installMelodyPresets()`: melody preset を登録する
 - `installSePresets()`: SE preset を登録する
@@ -2424,8 +2425,10 @@ API文書を読むときは、まず public クラスを押さえ、そのあと
 - `PingPongTarget.destroy()`: `ownsResources`が有効な場合は内部で保持する描画先も破棄する
 
 ### `util.js` / `formatJSON`
-`util.js` は文字列整形、時間計測、同期 / 非同期I/Oの補助関数群です。
+`util.js` は文字列整形、時間計測、同期 / 非同期I/O、再現可能な乱数生成の補助関数群です。
 `JsonFormat.js` の `formatJSON()` は、数値配列を読みやすく保ったままJSON文字列へ整形する関数です。
+
+順次生成には[Mersenne Twister 2002年版](https://www.math.sci.hiroshima-u.ac.jp/m-mat/MT/MT2002/mt19937ar.html)と同じ`MersenneTwister`を使い、座標やIDからの直接参照には[Chris Wellons氏の`lowbias32`](https://nullprogram.com/blog/2018/07/31/)に基づく整数hashを使います。どちらも暗号学的乱数ではありません。
 
 - `strDup(char, cnt)`: 文字を指定回数だけ複製する
 - `format_D(num, flag, cnt)`: 整数を `%d` 風に整形する
@@ -2442,6 +2445,10 @@ API文書を読むときは、まず public クラスを押さえ、そのあと
 - `print()`: 空行を出力する
 - `readUrlSync(filename)`: 同期的なURL読み込みを行う
 - `readUrl(filename)`: fetch ベースで非同期読み込みする
+- `hashUint32(value)`: Chris Wellonsの`lowbias32`に基づき、一つの32bit整数へ対応する32bit値を返す
+- `hashUint32Sequence(values, seed = 0)`: 複数の32bit整数を順序付きで畳み込み、座標や複合IDに対応する値を返す
+- `uint32ToUnitFloat(value)`: 32bit値の上位24bitをJavaScriptとWGSLで共通の`[0, 1)`へ変換する
+- `MersenneTwister`: `mt19937ar.c`互換のseed付き乱数生成class。`random()`は`[0, 1)`、`nextUint32()`は32bit符号なし整数を返す
 - `formatJSON(value, indent = 2)`: JSON値を、行列や数値配列を潰しすぎずに整形して返す
 
 ### `Tween`

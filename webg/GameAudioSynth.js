@@ -1,5 +1,5 @@
 // ---------------------------------------------
-//  GameAudioSynth.js   2026/07/25
+//  GameAudioSynth.js   2026/08/01
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // ---------------------------------------------
@@ -9,8 +9,8 @@ import AudioSynth from "./AudioSynth.js";
 export default class GameAudioSynth extends AudioSynth {
 
   // インスタンス生成時に、受け取った設定を検証して初期状態を準備する
-  constructor() {
-    super();
+  constructor(options = {}) {
+    super(options);
 
     this.installMelodyPresets();
     this.installSePresets();

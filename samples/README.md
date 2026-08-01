@@ -48,8 +48,7 @@ directoryは規模では分けません。公開URLとsample間参照を安定�
 | `compute_physics_bounce` | GPU球体simulation | `physics_bounce` | GPU限定球体群と汎用CPU物理の比較ペア |
 | `compute_postprocess` | sample内の低水準compute後処理 | `compute_effect` | core pipelineではなく接続方法を読む教材 |
 | `compute_shadow_map` | directional shadow評価 | `compute_effect`の一部 | shadow単体のdebug・bias・PCF確認 |
-| `compute_ssao` | depth-only SSAO | `compute_ssao_gbuffer` | normal texture不要の簡易方式 |
-| `compute_ssao_gbuffer` | G-buffer normalを使う`SsaoPass` | `compute_ssao` | 正式コア経路と品質比較 |
+| `compute_ssao_gbuffer` | G-buffer normalを使う`SsaoPass` | `compute_effect`の一部 | 正式コア経路のSSAO単体確認 |
 | `compute_ssr` | screen-space reflection | `compute_effect`の一部 | ray条件とdebug viewへ焦点を絞る |
 | `compute_texture` | ping-pong texture feedback | なし | 独立したアプリ規模sample |
 | `compute_vignette` | 1 dispatchの最小後処理 | `unittest/vignette`、`compute_edge` | Compute / Fragment比較と最小教材 |
@@ -60,9 +59,9 @@ directoryは規模では分けません。公開URLとsample間参照を安定�
 同じ効果や題材を異なる実行方式で比較するための意図的なペアです。正規化した`main.js`の類似度も
 それぞれ0.268、0.206、0.053で、実装を複製したものではありません。
 
-`compute_ssao`と旧`compute_ssao2`は履歴上も同時に追加された比較ペアです。
-前者はdepth差分からnormalを推定し、後者はG-buffer normalと正式`SsaoPass`を使います。
-数字では役割が分からないため、後者を`compute_ssao_gbuffer`へ改名しました。
+旧`compute_ssao`はdepth差分からnormalを推定する開発初期の実装でした。
+現在のコアがG-buffer normalと正式`SsaoPass`を共有する構成へ統一されたため、
+単体確認は`compute_ssao_gbuffer`だけを残しています。
 
 `compute_effect`、`compute_benchmark`、`compute_json`は同じ`ComputeEffectPipeline`を使いますが、
 それぞれ統合APIの利用例、性能計測、外部ModelAsset viewerを所有します。

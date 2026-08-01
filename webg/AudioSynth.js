@@ -1,5 +1,5 @@
 // ---------------------------------------------
-//  AudioSynth.js    2026/05/14
+//  AudioSynth.js    2026/08/01
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // ---------------------------------------------
@@ -11,8 +11,10 @@ export default class AudioSynth extends ToneSynth {
 
   // ToneSynth の単音基盤を SE として使い、そこへ BGM 用 bus とシーケンサー状態を追加する
   // GameAudioSynth はこのクラスの上にプリセット名と効果音カタログを載せる
-  constructor() {
+  constructor(options = {}) {
+    const opts = util.readPlainObject(options, "AudioSynth options", {});
     super({
+      randomSeed: opts.randomSeed,
       masterGain: 0.25,
       toneBusGain: 0.90,
       toneDryGain: 0.88,
@@ -32,6 +34,10 @@ export default class AudioSynth extends ToneSynth {
       },
       toneReverbImpulseConfig: { kind: "hall", durationSec: 3.2, decay: 1.8 }
     });
+
+    // BGMの休符と転調を別streamへ分け、片方の判定回数がもう片方を変えないようにする
+    this.rhythmRandom = this.createRandomGenerator(0x72687974);
+    this.modulationRandom = this.createRandomGenerator(0x6d6f6475);
 
     // ToneSynth が持つ単音用 bus / envelope / reverb を、
     // AudioSynth では SE 用の基盤としてそのまま使う
@@ -604,7 +610,7 @@ export default class AudioSynth extends ToneSynth {
     const weak = melody?.rhythmDropWeakProb;
     const tail = melody?.rhythmDropTailProb;
     const p = isTail ? tail : weak;
-    return Math.random() > p;
+    return this.rhythmRandom.random() > p;
   }
 
   // scale の度数を半音数へ変換する
@@ -621,7 +627,7 @@ export default class AudioSynth extends ToneSynth {
   maybeModulate() {
     if (this.bgmBar <= 0) return;
     if ((this.bgmBar % this.modulateEveryBars) !== 0) return;
-    if (Math.random() > this.modulateProbability) return;
+    if (this.modulationRandom.random() > this.modulateProbability) return;
 
     this.modulationIndex = (this.modulationIndex + 1) % this.modulationCycle.length;
     this.bgmTransposeSemitone = this.modulationCycle[this.modulationIndex];

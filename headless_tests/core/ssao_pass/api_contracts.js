@@ -1,5 +1,5 @@
 // ---------------------------------------------------------
-// headless_tests/core/ssao_pass/headless_probe.js  2026/07/13
+// headless_tests/core/ssao_pass/headless_probe.js  2026/08/01
 //   headless contracts for SsaoPass
 // ---------------------------------------------------------
 import assert from "node:assert/strict";
@@ -146,6 +146,10 @@ assert.match(SSAO_WGSL, /reconstructGBufferViewPosition/);
 assert.match(SSAO_WGSL, /texture_storage_2d<rgba8unorm, write>/);
 assert.match(SSAO_WGSL, /outputCoord/);
 assert.match(SSAO_WGSL, /sourceUv/);
+assert.match(SSAO_WGSL, /0x7feb352du/);
+assert.match(SSAO_WGSL, /0x846ca68bu/);
+assert.match(SSAO_WGSL, /hashCoord2\(vec2<u32>\(coord\)\) >> 8u/);
+assert.doesNotMatch(SSAO_WGSL, /43758\.5453|12\.9898|78\.233/);
 assert.match(SSAO_WGSL, /smoothstep\(params\.ao\.z, 0\.75, facingDot\)/);
 assert.match(SSAO_WGSL, /exp2\(-average \* params\.ao\.y \* 2\.2\)/);
 assert.match(SSAO_BILATERAL_WGSL, /fullCoordToAoCoord/);

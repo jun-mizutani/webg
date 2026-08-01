@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// util.js        2026/04/23
+// util.js        2026/08/01
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // ---------------------------------------------
@@ -567,5 +567,302 @@ util.readBooleanOption = function (candidates, name, defaultValue) {
   }
   return util.readOptionalBoolean(resolved.value, `${name} (${resolved.label ?? "value"})`, defaultValue);
 };
+
+/*
+ * hashUint32()はChris Wellons氏がHash Function Prospectorで探索した
+ * 32bit整数permutation lowbias32をJavaScriptへ移したもの
+ *
+ * 出典:
+ *   Chris Wellons, "Prospecting for Hash Functions"
+ *   https://nullprogram.com/blog/2018/07/31/
+ *   https://github.com/skeeto/hash-prospector
+ *
+ * 原記事は、特記がない内容をpublic domainとして公開しており、
+ * Hash Prospector repositoryはUnlicenseで公開されている
+ */
+
+// hashへ渡す値をunsigned 32bit整数として検証し、負数、小数、範囲外を暗黙変換しない
+function readHashUint32(value, label) {
+  return util.readFiniteNumber(value, label, {
+    integer: true,
+    min: 0,
+    max: 0xffffffff
+  }) >>> 0;
+}
+
+// 検証済み32bit整数へlowbias32のmultiply-xorshiftを適用する内部処理
+// Math.imul()で乗算の下位32bitを取り、JavaScript Numberの丸めを結果へ持ち込まない
+function mixLowbias32(value) {
+  let result = value >>> 0;
+  result = (result ^ (result >>> 16)) >>> 0;
+  result = Math.imul(result, 0x7feb352d) >>> 0;
+  result = (result ^ (result >>> 15)) >>> 0;
+  result = Math.imul(result, 0x846ca68b) >>> 0;
+  return (result ^ (result >>> 16)) >>> 0;
+}
+
+// 任意indexや部材IDなど、一つの32bit整数に対応する再現可能な32bit値を返す
+// 内部stateを持つ乱数列ではないため、呼び出し順に関係なく同じ入力は同じ出力になる
+util.hashUint32 = function (value) {
+  return mixLowbias32(readHashUint32(value, "hashUint32 value"));
+};
+
+// 複数の32bit整数を順序付きで畳み込み、座標や複合IDに対応する値を返す
+// lowbias32自体とは別のwebg用入力結合規則であり、32bitを超える入力空間では衝突し得る
+util.hashUint32Sequence = function (values, seed = 0) {
+  if (!Array.isArray(values) && !(values instanceof Uint32Array)) {
+    throw new Error("hashUint32Sequence values must be an Array or Uint32Array");
+  }
+  if (values.length === 0) {
+    throw new Error("hashUint32Sequence values must not be empty");
+  }
+
+  // 長さを初期stateへ含め、末尾へ0を追加した列を同じ入力として扱わない
+  let state = mixLowbias32(
+    (readHashUint32(seed, "hashUint32Sequence seed") ^ values.length) >>> 0
+  );
+  for (let index = 0; index < values.length; index += 1) {
+    const value = readHashUint32(values[index], `hashUint32Sequence values[${index}]`);
+    state = mixLowbias32((state ^ value) >>> 0);
+  }
+  return state >>> 0;
+};
+
+// 32bit値の上位24bitを、JavaScriptとWGSLのf32で共通に表せる[0, 1)へ変換する
+// 32bit全体をf32へ変換すると最大値付近が1.0へ丸まるため、下位8bitは意図的に使わない
+util.uint32ToUnitFloat = function (value) {
+  const word = readHashUint32(value, "uint32ToUnitFloat value");
+  return (word >>> 8) / 16777216.0;
+};
+
+// MT19937の状態数とtwist位置は、周期2^19937-1の標準パラメーターを使う
+// C版のunsigned longをJavaScriptの32bit unsigned演算へ対応させるため、
+// 状態はUint32Arrayへ保存し、乗算にはMath.imul()、演算結果には>>> 0を使う
+const MT19937_STATE_SIZE = 624;
+const MT19937_MIDDLE_WORD = 397;
+const MT19937_MATRIX_A = 0x9908b0df;
+const MT19937_UPPER_MASK = 0x80000000;
+const MT19937_LOWER_MASK = 0x7fffffff;
+const MT19937_DEFAULT_SEED = 5489;
+
+/*
+ * Mersenne Twister MT19937 implementation adapted from mt19937ar.c
+ * https://www.math.sci.hiroshima-u.ac.jp/m-mat/MT/MT2002/mt19937ar.html
+ *
+ * Copyright (C) 1997 - 2002, Makoto Matsumoto and Takuji Nishimura,
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ *
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in the
+ *    documentation and/or other materials provided with the distribution.
+ * 3. The names of the contributors may not be used to endorse or promote
+ *    products derived from this software without specific prior written
+ *    permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+ * A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+ * OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+ * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+ * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+ * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+ * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ */
+
+// MT19937へ渡す値をunsigned 32bit整数として検証し、負数や小数を暗黙変換しない
+function readMt19937Uint32(value, label) {
+  return util.readFiniteNumber(value, label, {
+    integer: true,
+    min: 0,
+    max: 0xffffffff
+  }) >>> 0;
+}
+
+// mt19937ar.cのinit_genrand()、init_by_array()、genrand_*()に対応する生成器
+// 暗号用途には使用せず、seedから再現可能なsimulationやprocedural生成に使用する
+class MersenneTwister {
+  constructor(seed = MT19937_DEFAULT_SEED) {
+    this.state = new Uint32Array(MT19937_STATE_SIZE);
+    this.index = MT19937_STATE_SIZE;
+    if (Array.isArray(seed) || seed instanceof Uint32Array) {
+      this.initByArray(seed);
+    } else {
+      this.initGenrand(seed);
+    }
+  }
+
+  // 2002年版init_genrand()と同じ係数で、単一の32bit seedから624語を初期化する
+  initGenrand(seed) {
+    this.state[0] = readMt19937Uint32(seed, "MersenneTwister seed");
+    for (let index = 1; index < MT19937_STATE_SIZE; index += 1) {
+      const previous = this.state[index - 1];
+      const mixed = previous ^ (previous >>> 30);
+      this.state[index] = (Math.imul(1812433253, mixed) + index) >>> 0;
+    }
+    this.index = MT19937_STATE_SIZE;
+    return this;
+  }
+
+  // 2002年版init_by_array()に従い、空でない32bit seed配列を全状態へ反映する
+  initByArray(seedArray) {
+    if (!Array.isArray(seedArray) && !(seedArray instanceof Uint32Array)) {
+      throw new Error("MersenneTwister seed array must be an Array or Uint32Array");
+    }
+    if (seedArray.length === 0) {
+      throw new Error("MersenneTwister seed array must not be empty");
+    }
+    const keys = new Uint32Array(seedArray.length);
+    for (let index = 0; index < seedArray.length; index += 1) {
+      keys[index] = readMt19937Uint32(
+        seedArray[index],
+        `MersenneTwister seed array[${index}]`
+      );
+    }
+
+    this.initGenrand(19650218);
+    let stateIndex = 1;
+    let keyIndex = 0;
+    let remaining = Math.max(MT19937_STATE_SIZE, keys.length);
+    while (remaining > 0) {
+      const previous = this.state[stateIndex - 1];
+      const mixed = previous ^ (previous >>> 30);
+      this.state[stateIndex] = (
+        (this.state[stateIndex] ^ Math.imul(mixed, 1664525))
+        + keys[keyIndex]
+        + keyIndex
+      ) >>> 0;
+      stateIndex += 1;
+      keyIndex += 1;
+      if (stateIndex >= MT19937_STATE_SIZE) {
+        this.state[0] = this.state[MT19937_STATE_SIZE - 1];
+        stateIndex = 1;
+      }
+      if (keyIndex >= keys.length) {
+        keyIndex = 0;
+      }
+      remaining -= 1;
+    }
+
+    remaining = MT19937_STATE_SIZE - 1;
+    while (remaining > 0) {
+      const previous = this.state[stateIndex - 1];
+      const mixed = previous ^ (previous >>> 30);
+      this.state[stateIndex] = (
+        (this.state[stateIndex] ^ Math.imul(mixed, 1566083941))
+        - stateIndex
+      ) >>> 0;
+      stateIndex += 1;
+      if (stateIndex >= MT19937_STATE_SIZE) {
+        this.state[0] = this.state[MT19937_STATE_SIZE - 1];
+        stateIndex = 1;
+      }
+      remaining -= 1;
+    }
+    // 全要素が0の初期状態を避けるため、C版と同じく最上位bitを固定する
+    this.state[0] = MT19937_UPPER_MASK;
+    this.index = MT19937_STATE_SIZE;
+    return this;
+  }
+
+  // 624語を一括twistし、次の624個の出力に使う内部状態へ更新する
+  twist() {
+    let word = 0;
+    let index = 0;
+    for (; index < MT19937_STATE_SIZE - MT19937_MIDDLE_WORD; index += 1) {
+      word = (
+        (this.state[index] & MT19937_UPPER_MASK)
+        | (this.state[index + 1] & MT19937_LOWER_MASK)
+      ) >>> 0;
+      this.state[index] = (
+        this.state[index + MT19937_MIDDLE_WORD]
+        ^ (word >>> 1)
+        ^ ((word & 1) === 0 ? 0 : MT19937_MATRIX_A)
+      ) >>> 0;
+    }
+    for (; index < MT19937_STATE_SIZE - 1; index += 1) {
+      word = (
+        (this.state[index] & MT19937_UPPER_MASK)
+        | (this.state[index + 1] & MT19937_LOWER_MASK)
+      ) >>> 0;
+      this.state[index] = (
+        this.state[index + MT19937_MIDDLE_WORD - MT19937_STATE_SIZE]
+        ^ (word >>> 1)
+        ^ ((word & 1) === 0 ? 0 : MT19937_MATRIX_A)
+      ) >>> 0;
+    }
+    word = (
+      (this.state[MT19937_STATE_SIZE - 1] & MT19937_UPPER_MASK)
+      | (this.state[0] & MT19937_LOWER_MASK)
+    ) >>> 0;
+    this.state[MT19937_STATE_SIZE - 1] = (
+      this.state[MT19937_MIDDLE_WORD - 1]
+      ^ (word >>> 1)
+      ^ ((word & 1) === 0 ? 0 : MT19937_MATRIX_A)
+    ) >>> 0;
+    this.index = 0;
+  }
+
+  // temperingを適用したunsigned 32bit整数を返すgenrand_int32()対応API
+  genrandInt32() {
+    if (this.index >= MT19937_STATE_SIZE) {
+      this.twist();
+    }
+    let value = this.state[this.index];
+    this.index += 1;
+    value ^= value >>> 11;
+    value ^= (value << 7) & 0x9d2c5680;
+    value ^= (value << 15) & 0xefc60000;
+    value ^= value >>> 18;
+    return value >>> 0;
+  }
+
+  // JavaScript側で意図が読みやすいuint32名から標準整数生成を呼ぶ
+  nextUint32() {
+    return this.genrandInt32();
+  }
+
+  // 最上位31bitを符号なし整数として返すgenrand_int31()対応API
+  genrandInt31() {
+    return this.genrandInt32() >>> 1;
+  }
+
+  // 両端を含む[0, 1]の32bit精度実数を返すgenrand_real1()対応API
+  genrandReal1() {
+    return this.genrandInt32() * (1.0 / 4294967295.0);
+  }
+
+  // 上端を含まない[0, 1)の32bit精度実数を返すgenrand_real2()対応API
+  genrandReal2() {
+    return this.genrandInt32() * (1.0 / 4294967296.0);
+  }
+
+  // 両端を含まない(0, 1)の32bit精度実数を返すgenrand_real3()対応API
+  genrandReal3() {
+    return (this.genrandInt32() + 0.5) * (1.0 / 4294967296.0);
+  }
+
+  // 32bit出力を2回使い、上端を含まない[0, 1)の53bit精度実数を返す
+  genrandRes53() {
+    const high = this.genrandInt32() >>> 5;
+    const low = this.genrandInt32() >>> 6;
+    return (high * 67108864.0 + low) * (1.0 / 9007199254740992.0);
+  }
+
+  // JavaScript標準random APIと同じ[0, 1)規約で、既存のrandom function引数へ渡しやすくする
+  random() {
+    return this.genrandReal2();
+  }
+}
+
+util.MersenneTwister = MersenneTwister;
 
 export default util;

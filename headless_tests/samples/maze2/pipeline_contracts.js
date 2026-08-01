@@ -1,5 +1,5 @@
 // ---------------------------------------------------------
-// headless_tests/samples/maze2/headless_probe.js  2026/07/15
+// headless_tests/samples/maze2/headless_probe.js  2026/08/01
 //   v2 integrated CameraFrame and effect contracts for maze2
 // ---------------------------------------------------------
 import assert from "node:assert/strict";
@@ -20,9 +20,9 @@ const indexEn = read("../../../samples/maze2/index.en.html");
 
 // 指定された実行時の視点を開始位置とreset先の共通状態にする
 {
-  assert.match(main, /const INITIAL_POSITION_X = 5\.8318959138505555/);
-  assert.match(main, /const INITIAL_POSITION_Z = 2\.301664061813298/);
-  assert.match(main, /const INITIAL_BODY_YAW_DEG = 31\.5/);
+  assert.match(main, /const INITIAL_POSITION_X = -4\.0959586292702035/);
+  assert.match(main, /const INITIAL_POSITION_Z = 9\.691514516173461/);
+  assert.match(main, /const INITIAL_BODY_YAW_DEG = -29\.91426226806605/);
   assert.match(
     main,
     /function buildInitialViewState\(\)[\s\S]+position:\s*\[INITIAL_POSITION_X,\s*0\.0,\s*INITIAL_POSITION_Z\],[\s\S]+bodyYaw:\s*INITIAL_BODY_YAW_DEG/
@@ -171,7 +171,7 @@ const indexEn = read("../../../samples/maze2/index.en.html");
     /screen\.beginPresentPass\([\s\S]+copyPass\.draw\(finalColor\);[\s\S]+screen\.clearDepthBuffer\(\);/
   );
   assert.doesNotMatch(main, /screen\.beginPass\(\{[\s\S]{0,180}depthView:\s*null/);
-  assert.match(html, /main\.js\?v=20260725_point_light_intensity_52/);
+  assert.match(html, /main\.js\?v=20260801_mt19937_initial_view/);
 }
 
 // READMEとHTML版は日英で同じPipeline、Camera Frame、無効化効果を説明する
