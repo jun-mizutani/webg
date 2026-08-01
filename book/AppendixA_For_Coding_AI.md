@@ -170,13 +170,14 @@ beginPresentPass()
 
 ### 6. Separate Reproducible Randomness by Use
 
-Use `util.MersenneTwister` for particles, audio noise, probability decisions, and other processes that consume values in sequence. This class produces the same 32-bit output as the 2002 `mt19937ar.c` implementation by Matsumoto and Nishimura. Use `util.hashUint32()`, based on Chris Wellons's `lowbias32`, when a coordinate, component ID, lattice point, or arbitrary index must produce a value independently of call order.
+Use `util.MersenneTwister` for particles, audio noise, probability decisions, and other processes that consume values in sequence. This class produces the same 32-bit output as the 2002 version of `mt19937ar.c`. Use `util.hashUint32()`, based on `lowbias32`, when a coordinate, component ID, lattice point, or arbitrary index must produce a value independently of call order.
 
 Combine multiple integers in order with `util.hashUint32Sequence()`. When JavaScript and WGSL need the same value in `[0, 1)`, follow the same upper-24-bit conversion as `util.uint32ToUnitFloat()`. WGSL cannot call the JavaScript helper directly, so implement the same 32-bit constants and shifts and verify them against known-output tests.
 
 Do not share one MT19937 state among unrelated processes. Derive independent streams from a base seed and purpose identifier so, for example, changing reverb generation does not alter BGM rhythm or modulation decisions. Do not add `Math.random()`, a private LCG, or a large-angle trigonometric hash to the core. These algorithms are not cryptographically secure and must not be used for secrets, tokens, or unpredictable identifiers.
 
-Primary sources are the [2002 Mersenne Twister implementation](https://www.math.sci.hiroshima-u.ac.jp/m-mat/MT/MT2002/mt19937ar.html) and [Chris Wellons's Hash Function Prospector](https://nullprogram.com/blog/2018/07/31/).
+- Mersenne Twister: https://www.math.sci.hiroshima-u.ac.jp/m-mat/MT/MT2002/mt19937ar.html
+- lowbias32: https://nullprogram.com/blog/2018/07/31/
 
 ## Goal-Oriented References
 
@@ -185,8 +186,7 @@ chapters, samples, and automated tests.
 Directory names without a prefix refer to samples under `samples/`.
 
 - **First 3D object**: Chapters 4 and 5; `low_level`, `high_level`
-- **Application foundation with `WebgApp`**:
-  Chapters 5 and 6; `high_level`
+- **Application foundation with WebgApp**: Chapters 5 and 6; `high_level`
 - **Orbit, Follow, or First-person camera**:
   Chapters 5 and 6; `high_level`, `eye_rig`
 - **Shapes and materials**:

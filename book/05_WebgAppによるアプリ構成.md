@@ -605,7 +605,7 @@ app.showOverlayPanel(buildHelpPanelOptions({
   - 軽量なパーティクル演出を作る
 - **scenePhase**
   - `"title"`、`"gameplay"`などの進行状態を持つ
-- **saveProgress()`、`loadProgress()**
+- **saveProgress()、loadProgress()**
   - 進行状況を保存または読み込みする
 - **takeScreenshot()**
   - 描画後のキャンバスを画像として保存する
