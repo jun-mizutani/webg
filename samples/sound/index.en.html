@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>sound</title>
   <link rel="icon" href="data:," />
-  <!-- 2026/09/20 -->
+  <!-- 2026/06/19 -->
   <style>
 
 :root {
@@ -174,14 +174,21 @@ blockquote {
 <p>English | <a href="index.html">日本語</a></p>
 <p><img src="./sound.jpg" alt="sound" /></p>
 <h2>Overview</h2>
-<ul><li>This sample uses <code>AudioSynth</code> and <code>GameAudioSynth</code> so you can inspect sound effects and BGM while adjusting them on the same screen</li><li>After starting the <code>AudioContext</code> with <code>Audio Start</code>, you can play sound with <code>Play SE</code>, <code>Next SE</code>, <code>Audition All</code>, and <code>BGM Start</code>, then adjust volume, delay, reverb, envelope, and melody on the spot</li><li>The sample is arranged so you can go back and forth on a single screen between &quot;what to play&quot; and &quot;how to shape what it sounds like&quot;</li></ul>
+<p>Use <code>GameAudioSynth</code> with <code>AudioSynth</code> to compare sound effects and background music on one page. After pressing <code>Audio Start</code>, play effects or melodies and adjust their volume, timing, envelope, and reverb.</p>
+<h2>BGM presets and score format</h2>
+<p>The sample includes 24 built-in BGM presets: two for each of 12 styles. <code>Cafe Steps</code> (112 BPM) is selected at startup. Press <code>Audio Start</code>, then <code>BGM Start</code>, and choose a melody. Each selection starts the phrase from the beginning and applies its suggested BPM, which you can adjust. Every preset has eight bars in 4/4. BPM is measured in quarter notes, and swing changes the length of paired eighth notes. The jogging styles each include two presets at 170, 175, and 180 BPM.</p>
+<p>Scores are defined in <code>webg/GameMusicPresets.js</code>: each row represents one bar, with eight positions for eighth notes. Numeric entries are MIDI pitches, <code>null</code> sustains the previous note, and <code>-1</code> marks a rest. <code>GameAudioSynth.js</code> plays the melody, bass, chords, and percussion. Each melody note lasts for its <code>leadGate</code> fraction of the interval to the next note, rest, or bar line. If Attack and Decay together exceed that duration, they are shortened proportionally; Release is capped at the note duration, and the melody release also ends by the next onset or rest. The default <code>setRootHz</code> value of 220 Hz preserves the written pitches. Changing it transposes the melody, bass, and chords by the same ratio; percussion pitches remain fixed.</p>
+<p>The melody uses a low-pass filter to soften strong harmonics, with frequencies above 880 Hz gradually attenuated. Kick, snare, and hi-hat patterns follow each style and share the melody's BPM and swing. Jazz presets use softer percussion; funk and jogging presets have a stronger pulse; ballads and gentle pieces use fewer or quieter hits. Percussion follows BGM volume, delay, and reverb, with its own short envelope independent of the BGM Envelope.</p>
+<p><code>Melody Vol</code> scales the lead. <code>Rhythm Vol</code> scales the bass, chords, and percussion (0–2, default 1). Set either to zero to compare the parts separately. These values persist when you switch songs and affect newly scheduled notes; notes already playing and effect tails decay naturally. <code>BGM Vol</code> controls the overall level.</p>
+<p>The score format currently supports eight bars in 4/4, eighth-note positions, and a monophonic lead. It cannot encode sixteenth notes, independent triplets, lead chords, or ties across bar lines. Swing controls the ratio between paired eighth notes. Instruments use basic waveforms and filters rather than recorded instrument samples. Separate part volumes apply to GameAudioSynth scores, not AudioSynth degree-based melodies.</p>
+<table><thead><tr><th>Style</th><th>Preset / BPM</th><th>Preset / BPM</th></tr></thead><tbody><tr><td>Jazz swing</td><td>Cafe Steps · 112</td><td>Corner Quartet · 132</td></tr><tr><td>Blues jazz</td><td>Blue Room · 96</td><td>Blue Alley · 104</td></tr><tr><td>Bossa jazz</td><td>Palm Terrace · 126</td><td>Coastal Breeze · 138</td></tr><tr><td>Jazz ballad</td><td>Midnight Window · 72</td><td>Velvet Rain · 78</td></tr><tr><td>Modal jazz</td><td>Dorian Walk · 118</td><td>Quartal Horizon · 128</td></tr><tr><td>Jazz funk</td><td>Sunset Pocket · 108</td><td>Electric Crosswalk · 120</td></tr><tr><td>Jogging jazz</td><td>River Run · 170</td><td>Boardwalk Miles · 170</td></tr><tr><td>Jogging synth</td><td>Neon Stride · 175</td><td>Midnight Circuit · 175</td></tr><tr><td>Jogging pop</td><td>Sunrise Sprint · 180</td><td>Open Road · 180</td></tr><tr><td>Upbeat</td><td>Daylight · 124</td><td>Market Square · 132</td></tr><tr><td>Gentle</td><td>Evening · 84</td><td>Moonlit Garden · 90</td></tr><tr><td>Tense</td><td>Pursuit · 148</td><td>Nightfall Chase · 156</td></tr></tbody></table>
 <h2>Reading the Screen</h2>
 <p>The screen is divided into <code>System</code>, <code>Sound Effects</code>, and <code>Background Music</code>. In that order, you first start the <code>AudioContext</code>, then adjust sound effects, and finally adjust melody, BPM, BGM envelope, and BGM reverb directly to refine the detailed contour of the BGM.</p>
 <p><code>System</code> contains <code>Audio Start</code> and <code>Master Vol</code>. <code>Audio Start</code> is the button that starts <code>AudioContext</code> after a user gesture, matching browser restrictions. <code>Master Vol</code> is the baseline for the overall volume. Adjusting that first makes it easier to compare the relative balance between sound effects and BGM.</p>
 <p>In <code>Sound Effects</code>, you choose the effect to play through <code>Sound Effect</code>, then play it with <code>Play SE</code>. <code>Next SE</code> advances through the catalog one item at a time, while <code>Audition All</code> plays the full catalog in sequence so you can compare the differences. <code>SE Profiles</code> shows the envelope profiles used by that effect, and <code>Editing Profile</code> shows the profile currently being edited by the sliders. <code>SE Vol</code>, <code>SE Delay</code>, <code>SE Reverb</code>, <code>SE Reverb Kind</code>, <code>SE Reverb Length</code>, <code>SE Reverb Decay</code>, <code>SE Envelope</code>, <code>SE Attack</code>, <code>SE Decay</code>, <code>SE Sustain</code>, and <code>SE Release</code> let you change the contour and spatial character of the same sound effect in considerable detail.</p>
-<p>In <code>Background Music</code>, you work with <code>BGM Start</code>, <code>BGM Stop</code>, <code>BGM Vol</code>, <code>BPM</code>, <code>Melody</code>, <code>BGM Delay</code>, <code>BGM Reverb</code>, <code>BGM Reverb Kind</code>, <code>BGM Reverb Length</code>, <code>BGM Reverb Decay</code>, <code>BGM Attack</code>, <code>BGM Decay</code>, <code>BGM Sustain</code>, and <code>BGM Release</code>. Because BGM changes its progression itself through melody and BPM, it is different from SE and is better adjusted while listening to the flow of time.</p>
+<p>In <code>Background Music</code>, you work with <code>BGM Start</code>, <code>BGM Stop</code>, <code>BGM Vol</code>, <code>BPM</code>, <code>Melody</code>, <code>BGM Delay</code>, <code>BGM Reverb</code>, <code>BGM Reverb Kind</code>, <code>BGM Reverb Length</code>, <code>BGM Reverb Decay</code>, <code>BGM Attack</code>, <code>BGM Decay</code>, <code>BGM Sustain</code>, and <code>BGM Release</code>. Unlike a short sound effect, BGM unfolds over time, so adjust it while listening to a full phrase.</p>
 <h2>How to Run</h2>
-<ul><li>Open <a href="./sound.html">./sound.html</a></li><li>Use a browser with WebGPU support, and check the help panel and HUD together with the sample when needed</li></ul>
+<ul><li>Open <a href="./sound.html">./sound.html</a> in a browser that supports the Web Audio API.</li><li>Press <code>Audio Start</code> before playing a sound; browsers require a user gesture to start audio.</li></ul>
 <h2>webg Features Used</h2>
 <ul><li><code>GameAudioSynth</code>: handles the game-oriented sound-effect catalog and melody presets together</li><li><code>AudioSynth</code>: handles envelope, delay, reverb, and IR settings for SE and BGM</li></ul>
 <h2>Compare the synthesized sound effects</h2>
@@ -190,101 +197,24 @@ blockquote {
 <p>Audition All waits until each effect’s tones and current Release finish, then adds 0.15 seconds before the next effect. You can also keep BGM running to compare the clarity of collision and UI sounds. Delay and reverb tails are not included in the audition wait time.</p>
 <h2>Checkpoints</h2>
 <p>The first thing to do is press <code>Audio Start</code>. Once sound output is enabled, use <code>Sound Effect</code> and <code>Play SE</code> to inspect short effects, then use <code>BGM Start</code> to play a melody. If you want to inspect the contour of the sound, change <code>SE Envelope</code>. If you want to inspect spatial character, change <code>SE Reverb Kind</code>, <code>SE Reverb Length</code>, and <code>SE Reverb Decay</code>. If you want to inspect the flow of BGM, change <code>Melody</code> and <code>BPM</code>.</p>
-<p>This sample also provides comparison buttons such as <code>SE Dry / SE Reverb Max</code> and <code>BGM Dry / BGM Wet</code>. If the difference is hard to hear at middle slider values, pushing the state to an extreme and then returning makes it easier to grasp the direction of change.</p>
+<p>The sample also provides comparison buttons such as <code>SE Dry / SE Reverb Max</code> and <code>BGM Dry / BGM Wet</code>. If the difference is subtle at a middle slider setting, compare the two extremes, then return to the desired value.</p>
 <p><code>SE Reverb Kind</code> and <code>BGM Reverb Kind</code> switch between <code>room</code>, <code>hall</code>, and <code>plate</code>. These settings select the character of the reverberation. <code>Length</code> describes the length of the IR, and <code>Decay</code> describes how quickly it fades. You can compare the full range from a short, tight room to a long, spreading hall.</p>
-<p><code>SE Envelope</code> is the place where you switch the envelope profile used by the chosen sound effect. Profile names are grouped like instrument categories such as <code>percussion</code>, <code>brass</code>, <code>woodwind</code>, <code>organ</code>, <code>piano</code>, and <code>guitar</code>, making it easy to compare time behavior such as percussive hits, wind-like sustain, held tones, and plucked or struck strings. When you change <code>SE Attack</code>, <code>SE Decay</code>, <code>SE Sustain</code>, and <code>SE Release</code>, the next playback of that profile changes. Because short sound effects can make the difference harder to hear, selecting <code>tail_probe</code> makes both the front contour and the trailing tail easier to compare.</p>
-<p><code>BGM Envelope</code> defines the attack and tail of each BGM note. When you change <code>BGM Attack</code>, <code>BGM Decay</code>, <code>BGM Sustain</code>, and <code>BGM Release</code>, the impression changes even with the same melody. <code>BPM</code> changes speed, and <code>Melody</code> changes the shape of the phrase, so BGM is easier to tune if you separate &quot;what is played&quot; from &quot;how it progresses&quot;. The BGM-side reverb is initialized a little stronger and more hall-like than the SE side, making it easier to first grasp the longer phrase tail when <code>Audition All</code> plays the melody.</p>
+<p><code>SE Envelope</code> selects the envelope profile for the chosen sound effect. Profiles use names such as <code>percussion</code>, <code>brass</code>, <code>woodwind</code>, <code>organ</code>, <code>piano</code>, and <code>guitar</code>; compare their short attacks, sustained tones, and decays. Changes to <code>SE Attack</code>, <code>SE Decay</code>, <code>SE Sustain</code>, and <code>SE Release</code> apply to the next playback. The longer <code>tail_probe</code> effect makes the envelope and reverb tail easier to hear.</p>
+<p><code>BGM Envelope</code> shapes the attack and tail of each note. Adjust <code>BGM Attack</code>, <code>BGM Decay</code>, <code>BGM Sustain</code>, and <code>BGM Release</code> while keeping the melody the same. <code>BPM</code> changes the tempo, while <code>Melody</code> changes the phrase. The initial BGM reverb is stronger and more hall-like than the SE reverb, making the longer phrase tail easy to hear during <code>Audition All</code>.</p>
 <p>First, press <code>Audio Start</code> and confirm that <code>Play SE</code>, <code>Next SE</code>, <code>Audition All</code>, and <code>BGM Start</code> become active. Then switch <code>Sound Effect</code> and confirm that <code>SE Profiles</code> and <code>Editing Profile</code> change to match the selected sound. After that, move <code>SE Attack</code>, <code>SE Decay</code>, <code>SE Sustain</code>, <code>SE Release</code>, and <code>SE Reverb</code>, replay the same effect, and compare the differences.</p>
 <p>When you press <code>Audition All</code>, confirm that the entire catalog plays in sequence. If you want to stop it halfway, pressing the same button stops it. <code>Next SE</code> advances only one item at a time, which is useful when you want to hear a specific effect once again.</p>
 <p>When you switch <code>SE Reverb Kind</code> between <code>room</code>, <code>hall</code>, and <code>plate</code>, the reflection texture changes even if the wet amount stays the same. Changing <code>SE Reverb Length</code> and <code>SE Reverb Decay</code> changes both the length and the falloff of the reverberation. Selecting <code>tail_probe</code> makes differences in envelope and reverb tail easier to follow than with shorter sound effects.</p>
-<p>On the BGM side, change <code>Melody</code> while adjusting <code>BPM</code> and <code>BGM Envelope</code>, and compare how the same source can feel different. Changing <code>BGM Reverb Kind</code>, <code>BGM Reverb Length</code>, and <code>BGM Reverb Decay</code> shows how the same melody changes in spatial spread. The initial values lean toward a stronger hall sound, so it is easier to hear the difference if you first play it as-is and then return toward the dry side.</p>
+<p>On the BGM side, change <code>Melody</code>, <code>BPM</code>, and <code>BGM Envelope</code> to compare how the same phrase sounds at different settings. <code>BGM Reverb Kind</code>, <code>BGM Reverb Length</code>, and <code>BGM Reverb Decay</code> change the apparent space around the melody. Compare the initial hall-like setting with the dry setting, then adjust the controls to find the amount you prefer.</p>
 <h2>Controls</h2>
 <p>Use the on-screen UI buttons and sliders to control this sample.</p>
 <p><code>Audio Start</code> starts the <code>AudioContext</code>, <code>BGM Start / BGM Stop</code> start and stop the BGM, and <code>Play SE</code> plays the currently selected sound effect once. <code>SE Dry / SE Reverb Max</code> and <code>BGM Dry / BGM Wet</code> switch to fixed comparison states.</p>
 <h2>Common Pitfalls</h2>
 <p>Press <code>Audio Start</code> to activate the <code>AudioContext</code> as required by the browser, then use the other buttons to play sound.</p>
 <p><code>SE Reverb</code> and <code>SE Reverb Kind</code> are different settings. <code>SE Reverb</code> is the amount of reverberation, while <code>Kind</code> is the character of the reverberation. The same applies on the BGM side: <code>BGM Reverb</code> is the amount and <code>BGM Reverb Kind</code> is the character.</p>
-<p><code>SE Attack</code> and <code>BGM Attack</code> are in seconds, while <code>SE Sustain</code> and <code>BGM Sustain</code> are ratios. Because the units differ, it is easier to understand the behavior if you watch the displayed values while moving the sliders.</p>
-<h2>Related Documents</h2>
-<ul><li><a href="../../book/14_UI表示の設計.md">14_UI表示の設計.md</a></li><li><a href="../../book/16_サウンドの設計.md">16_サウンドの設計.md</a></li><li><a href="../../book/01_はじめに.md">01_はじめに.md</a></li><li><a href="./main.js">samples/sound/main.js</a></li><li><a href="./sound.html">samples/sound/sound.html</a></li></ul>
-<p><code>16_サウンドの設計.md</code> explains the implementation in detail, and <code>01_はじめに.md</code> is the overall project entry point. This <code>README.md</code> is easiest to read as guidance focused on how to operate the sample screen itself.</p>
-<h2>Audition the new eight-bar pieces</h2>
-<p>GameAudioSynth now includes 24 BGM presets: two pieces for each of twelve styles. Melody labels are English, with matching styles placed together. Cafe Steps (112 BPM) is selected initially. Press Audio Start, then BGM Start. Selecting a piece restarts its phrase and applies its suggested BPM, which remains adjustable. BPM counts quarter notes. Every piece has eight bars in 4/4. Swing lengthens the first half of each beat and shortens the second. Jogging presets include two pieces each at 170, 175, and 180 BPM. Scores are stored in webg/GameMusicPresets.js: each row is one bar with eight eighth-note positions, MIDI pitches, null to extend the previous note, and -1 for an explicit rest. GameAudioSynth.js performs melody, bass, chords, and percussion. Melody duration uses each piece’s leadGate fraction of the interval to the next onset, rest, or bar end. Attack and Decay are proportionally shortened when their total exceeds the note duration; Release is limited to that duration, and the lead also ends its release before the next onset or rest. The default setRootHz value of 220 Hz preserves the written pitches; changing it transposes melody, bass, and chords by the same ratio. Percussion pitches remain fixed. Existing controls adjust volume, reverberation, and envelopes.</p>
-<p>The lead uses a low-pass filter to soften strong harmonics and gradually reduces the gain above 880 Hz. Kick, snare, and hi-hat patterns follow each style and share the melody’s BPM and swing. Jazz uses softer percussion, funk and jogging pieces have a stronger pulse, and ballads and gentle pieces use fewer or quieter hits. Percussion follows BGM volume, delay, and reverb, but has its own short envelope independent of BGM Envelope.</p>
-<p>All 24 melodies have been rewritten with distinct registers, motifs, onset patterns, rests, and note lengths. Blue Room and Evening use low registers; Cafe Steps and Daylight use middle registers; Corner Quartet and Market Square sit higher. Funk and tense pieces use short repeated figures, ballads use sustained notes and rests, and Quartal Horizon uses fourths. Paired styles also contrast busier phrases with longer singing lines. Titles, suggested BPM, and chord progressions are preserved.</p>
-<p>Lead gains are lower and kick, snare, and hi-hat gains are higher. Melody Vol scales the lead; Rhythm Vol scales bass, chords, and percussion (0–2, default 1). Set either to zero to compare parts separately. These values persist across song changes and affect newly scheduled notes; existing notes and effect tails decay naturally. BGM Vol controls the overall level.</p>
-<p>The score format currently supports eight bars in 4/4, eighth-note positions, and a monophonic lead. It cannot encode sixteenth notes, independent triplets, lead chords, or ties across bar lines. Swing controls the ratio between paired eighth notes. Instruments use basic waveforms and filters rather than recorded instrument samples. Separate part volumes apply to GameAudioSynth scores, not AudioSynth degree-based melodies.</p>
-<table>
-<thead>
-<tr>
-<th>Style</th>
-<th>Preset / BPM</th>
-<th>Preset / BPM</th>
-</tr>
-</thead>
-<tbody><tr>
-<td>Jazz swing</td>
-<td>Cafe Steps · 112</td>
-<td>Corner Quartet · 132</td>
-</tr>
-<tr>
-<td>Blues jazz</td>
-<td>Blue Room · 96</td>
-<td>Blue Alley · 104</td>
-</tr>
-<tr>
-<td>Bossa jazz</td>
-<td>Palm Terrace · 126</td>
-<td>Coastal Breeze · 138</td>
-</tr>
-<tr>
-<td>Jazz ballad</td>
-<td>Midnight Window · 72</td>
-<td>Velvet Rain · 78</td>
-</tr>
-<tr>
-<td>Modal jazz</td>
-<td>Dorian Walk · 118</td>
-<td>Quartal Horizon · 128</td>
-</tr>
-<tr>
-<td>Jazz funk</td>
-<td>Sunset Pocket · 108</td>
-<td>Electric Crosswalk · 120</td>
-</tr>
-<tr>
-<td>Jogging jazz</td>
-<td>River Run · 170</td>
-<td>Boardwalk Miles · 170</td>
-</tr>
-<tr>
-<td>Jogging synth</td>
-<td>Neon Stride · 175</td>
-<td>Midnight Circuit · 175</td>
-</tr>
-<tr>
-<td>Jogging pop</td>
-<td>Sunrise Sprint · 180</td>
-<td>Open Road · 180</td>
-</tr>
-<tr>
-<td>Upbeat</td>
-<td>Daylight · 124</td>
-<td>Market Square · 132</td>
-</tr>
-<tr>
-<td>Gentle</td>
-<td>Evening · 84</td>
-<td>Moonlit Garden · 90</td>
-</tr>
-<tr>
-<td>Tense</td>
-<td>Pursuit · 148</td>
-<td>Nightfall Chase · 156</td>
-</tr>
-</tbody></table>
-<p>English | <a href="README.md">日本語</a></p>
-<p><img src="./sound.jpg" alt="sound"></p>
+<p><code>SE Attack</code> and <code>BGM Attack</code> are measured in seconds; <code>SE Sustain</code> and <code>BGM Sustain</code> are ratios. The displayed values show the units as you move the sliders.</p>
+<h2>Related documents</h2>
+<ul><li><a href="../../book.en/12_UI.md">UI Design</a></li><li><a href="../../book.en/16_Audio.md">Audio Design</a></li><li><a href="../../book.en/01_Introduction.md">Introduction</a></li><li><a href="./main.js">samples/sound/main.js</a></li><li><a href="./sound.html">samples/sound/sound.html</a></li></ul>
+<p>The audio chapter explains the implementation in detail, and the introduction describes the project as a whole. This guide focuses on using the sample's controls.</p>
     </article>
   </main>
 </body>

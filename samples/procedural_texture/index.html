@@ -172,12 +172,12 @@ blockquote {
     <article class="doc">
 <h1>procedural_texture</h1>
 <p><a href="index.en.html">English</a> | 日本語</p>
-<p><img src="./procedural_texture.jpg" alt="procedural_texture"></p>
+<p><img src="./procedural_texture.jpg" alt="procedural_texture" /></p>
 <h2>概要</h2>
 <p><code>ProceduralTiledSurface</code>が生成するColor mapとHeight mapを、立方体の6面で比較するためのサンプルです。Height mapからNormal mapを生成し、Color mapと同じUVで各面へ貼ります。木材3種、コンクリート2種、赤レンガ、光沢のあるビニールタイルの7 presetを同じ形状と照明で観察できます。</p>
 <p>初期状態の6面は木材3種、コンクリート2種、赤レンガです。+ZはCommand Palette先頭ページから7 presetのいずれかへ直接変更でき、ビニールタイルも+Zで確認できます。独立CPU参照classの周期Perlin fBmを、木理の蛇行、コンクリートの色斑、レンガの焼きむら、大理石、Voronoiのwarp、VinylのCloudyとLinenへ材質別に利用します。Terrazzoは<code>util.js</code>の座標hashでモノトーンchipを配置します。</p>
 <p>各presetは材質に応じた<code>variationCell</code>を持ちます。OakとCedarは2部材×4行、Walnutは1/3のrunning-bond周期を閉じるため2部材×6行、コンクリートブロックは2部材×4行、stack配置のコンクリートパネルは1枚×1行、レンガは4×8、正方形のビニールタイルは4×4です。木材の初期LayoutはOakが1/2、Walnutが1/3、Cedarが1/4のrunning-bondです。周期境界をまたぐ一枚の部材は同じvariation IDへ折り返すため、部材途中で色や模様位相が切り替わりません。</p>
-<p>このサンプルはCPU参照実装です。WebGPU Compute Shaderによる生成、材質編集、preview、完成definitionの出力は、上位サンプルの<a href="../texture_catalog/README.md"><code>texture_catalog</code></a>で確認できます。</p>
+<p>このサンプルはCPU参照実装です。WebGPU Compute Shaderによる生成、材質編集、preview、完成definitionの出力は、上位サンプルの<a href="../texture_catalog//index.html">`texture_catalog`</a>で確認できます。</p>
 <h2>実行方法</h2>
 <p>実行ファイルは<a href="./procedural_texture.html">./procedural_texture.html</a>です。WebGPU対応ブラウザで開き、立方体をドラッグして各面へ回り込みます。ホイールまたはピンチで距離を変更し、目地の境界に付く法線マップの陰影を近距離から確認できます。<code>/</code>キー、またはCanvasのダブルクリック／ダブルタップでCommand Paletteを開くと、生成パラメータを実行中に変更できます。</p>
 <h2>使用しているwebg機能</h2>
@@ -204,31 +204,9 @@ blockquote {
 <p>部材寸法は<code>shortSizeMeters</code>と<code>longSizeMeters</code>で指定し、<code>longAxis</code>へ<code>&quot;u&quot;</code>または<code>&quot;v&quot;</code>を明示します。木目はshort座標に濃淡層を作り、long座標で層を蛇行させます。このため、部材の長手方向へ連続する木理になります。</p>
 <p>各面のUV終点は、3mの面寸法を生成textureの物理tile寸法で割って求めます。実寸の部材と目地を必要な回数だけ繰り返します。初期カメラ距離は6.75mで、3m立方体を近距離から観察します。</p>
 <h2>確認ポイント</h2>
-<ul>
-<li>オーク、ウォールナット、シダーで色、板幅、木理の細かさが異なること</li>
-<li>木目が板の長軸方向へ流れていること</li>
-<li>コンクリート平板とブロックが木目を持たず、方向性のない斑と粗さを持つこと</li>
-<li>赤レンガでrunning bond、焼きむら、粒状面が確認できること</li>
-<li>ビニールタイルで正方形目地、大理石、Voronoi、Cloudy、Linen、Terrazzoの模様、ほぼ平坦なNormal、光沢が確認できること</li>
-<li>どの面でもColor mapの目地とNormal mapの凹みが同じ位置にあること</li>
-<li>textureを繰り返す境界に色や法線の不連続な線が出ないこと</li>
-<li>左下の背景previewへ+Z面のColor mapとNormal mapの全体が同じscaleで表示され、既定値では縦並びになること</li>
-</ul>
+<ul><li>オーク、ウォールナット、シダーで色、板幅、木理の細かさが異なること</li><li>木目が板の長軸方向へ流れていること</li><li>コンクリート平板とブロックが木目を持たず、方向性のない斑と粗さを持つこと</li><li>赤レンガでrunning bond、焼きむら、粒状面が確認できること</li><li>ビニールタイルで正方形目地、大理石、Voronoi、Cloudy、Linen、Terrazzoの模様、ほぼ平坦なNormal、光沢が確認できること</li><li>どの面でもColor mapの目地とNormal mapの凹みが同じ位置にあること</li><li>textureを繰り返す境界に色や法線の不連続な線が出ないこと</li><li>左下の背景previewへ+Z面のColor mapとNormal mapの全体が同じscaleで表示され、既定値では縦並びになること</li></ul>
 <h2>操作方法</h2>
-<ul>
-<li>ドラッグ: 立方体の周囲を軌道回転</li>
-<li>2本指ドラッグ: 視点の注視位置を平行移動</li>
-<li>ホイールまたはピンチ: ズーム</li>
-<li>矢印キー: 軌道回転</li>
-<li><code>[</code> / <code>]</code>: ズーム</li>
-<li><code>/</code>またはCanvasのダブルクリック／ダブルタップ: Command Paletteを開く</li>
-<li>Command Paletteの<code>Next</code>: 次ページへ進む</li>
-<li>Command Paletteの<code>Reset</code>: 基準値をプリセットへ戻す</li>
-<li><code>F9</code>の後に<code>M</code>: DebugDockの表示切替</li>
-<li><code>F9</code>の後に<code>V</code>: Palette設定を含むdiagnostics JSONをコピー</li>
-<li><code>Show Help</code> / <code>Hide Help</code>: HelpPanelの表示切替</li>
-</ul>
-
+<ul><li>ドラッグ: 立方体の周囲を軌道回転</li><li>2本指ドラッグ: 視点の注視位置を平行移動</li><li>ホイールまたはピンチ: ズーム</li><li>矢印キー: 軌道回転</li><li><code>[</code> / <code>]</code>: ズーム</li><li><code>/</code>またはCanvasのダブルクリック／ダブルタップ: Command Paletteを開く</li><li>Command Paletteの<code>Next</code>: 次ページへ進む</li><li>Command Paletteの<code>Reset</code>: 基準値をプリセットへ戻す</li><li><code>F9</code>の後に<code>M</code>: DebugDockの表示切替</li><li><code>F9</code>の後に<code>V</code>: Palette設定を含むdiagnostics JSONをコピー</li><li><code>Show Help</code> / <code>Hide Help</code>: HelpPanelの表示切替</li></ul>
     </article>
   </main>
 </body>

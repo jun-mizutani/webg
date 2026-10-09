@@ -7,7 +7,7 @@ English | [日本語](README.md)
 ## Overview
 - This is an educational sample that places the X / Y / Z reference axes at the origin of 3D space so you can check coordinate-system orientation and scale
 - It uses `WebgApp` for startup and lets you compare the orbit camera from `EyeRig` with projection updates from `WebgApp.updateProjection()` in the same screen
-- `projectionFar` is narrowed to `160`, matching `samples/dof`, so the readable range for depth-buffer precision stays compact
+- `projectionFar` is set to `160`, matching `samples/dof`, to keep the far clipping plane close to the scene and preserve useful depth precision
 - By changing the FOV with `- / =` and the camera distance with `[ / ]` or the mouse wheel, it becomes easier to follow how the projection matrix changes the final view
 - The camera's world position is displayed near the FOV display so that the relationship between viewpoint position and final appearance is easier to inspect at the same time
 - The background and fog are shifted slightly toward gray, and the CommandPalette is drawn in black so the axis colors and pyramid colors remain easy to read

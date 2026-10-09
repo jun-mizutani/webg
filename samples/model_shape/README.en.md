@@ -5,31 +5,34 @@ English | [日本語](README.md)
 ![model_shape](./model_shape.jpg)
 
 ## Overview
-- This sample validates the `ModelAsset` returned by `Primitive.js` with `ModelValidator`, converts it into `Shape` objects with `ModelBuilder`, and displays the result
-- Multiple shapes are arranged with normal maps, but the main characteristic is that the shape-generation path is unified as `Primitive -> ModelAsset -> validate -> build` using this sequence
-- `WebgApp.js` is used so initialization, message display, and the loop are collected through the high-level API
+
+This sample shows how primitive geometry becomes renderable through the
+`ModelAsset` pipeline. It creates nine primitive assets; the `mapCube` data is
+explicitly wrapped with `ModelAsset.fromData()`. `ModelValidator` checks each
+asset, and `ModelBuilder` builds its runtime Shapes. The app attaches each Shape
+to a Node, applies color and normal maps, and displays the nine objects in a grid.
 
 ## How to Run
 - Open [./model_shape.html](./model_shape.html)
-- Use a browser with WebGPU support, and check the help panel and HUD together with the sample when needed
+- Open the page in a WebGPU-enabled browser. The HUD lists the available controls and current display settings.
 
 ## webg Features Used
 - `WebgApp`: standard initialization, render loop, and operation-guide display
-- `Primitive`: generates basic primitives as `ModelAsset`
-- `ModelAsset`: shared entry point for data representation
+- `Primitive`: generates the primitive geometry used by each `ModelAsset`
+- `ModelAsset`: shared data format for model geometry, materials, and nodes
 - `ModelValidator`: validates consistency of geometry, animation, nodes, and related data
 - `ModelBuilder`: constructs `Shape` groups from `ModelAsset`
 - `SmoothShader`: draws regular textures together with normal maps
 - `Texture.buildNormalMapFromHeightMap`: generates a normal map from the same image
 
 ## Checkpoints
-- Confirm that the `ModelAsset` returned by `Primitive` can be passed directly to the validator
-- Confirm that normal-mapped rendering still works even for `Shape` objects created through `ModelBuilder`
-- Compared with `shapes`, confirm that this sample is meant to follow the processing flow `Primitive -> ModelAsset -> validate -> build` with emphasis on the data flow
-- Confirm that wireframe and normal-map controls work consistently across the generation paths
+
+- Check that all nine model assets pass `ModelValidator` before `ModelBuilder` builds them.
+- Toggle the normal map and wireframe to compare the resulting Shapes.
+- Compare this data flow with [shapes](../shapes/index.en.html), which focuses on the appearance of primitive geometry and normal maps.
 
 ## Controls
-- Drag / arrow keys: orbit camera rotation
+- Drag / arrow keys: orbit the camera
 - Mouse wheel / `[ / ]`: zoom
 - `Space`: pause rotation
 - `N`: toggle the normal map on or off

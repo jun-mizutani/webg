@@ -3,9 +3,9 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>fantasy</title>
+  <title>fantasy — Starfall Keep</title>
   <link rel="icon" href="data:," />
-  <!-- 2026/10/02: READMEから生成 -->
+  <!-- 2026/06/19 -->
   <style>
 
 :root {
@@ -167,58 +167,30 @@ blockquote {
 <body>
   <main class="page">
     <section class="hero">
-      <h1>fantasy</h1>
+      <h1>fantasy — Starfall Keep</h1>
     </section>
     <article class="doc">
 <h1>fantasy — Starfall Keep</h1>
 <p>English | <a href="index.html">日本語</a></p>
-<p><img src="fantasy.jpg" alt="Starfall Keep"></p>
+<p><img src="fantasy.jpg" alt="Starfall Keep" /></p>
 <h2>Overview</h2>
 <p>A small turn-based battle on a 9×9 map with three elevation levels. Command a knight, mage, and ranger against three enemies. This sample adds moving Nodes, picking, DOM controls, GPU particles, victory, defeat, and restart to a PBR scene.</p>
 <p>No external models or audio assets are required. Primitive geometry forms the characters; parent and child Nodes connect their limbs and equipment. Rules run independently of the GPU and DOM, making the boundary between a grid path and its animation visible.</p>
-<p>The keep is submerged. Core caustics illuminate terrain, scenery, and moving units; blue-green light, distance fog, and drifting particles give the battlefield an underwater atmosphere. Toggle <strong>水中のコースティクス</strong> to compare the moving illumination. Underwater colors and fog remain when caustics are off.</p>
+<p>The keep is submerged. Core caustics illuminate terrain, scenery, and moving units; blue-green light, distance fog, and drifting particles give the battlefield an underwater atmosphere. Toggle <strong>水中のコースティクス</strong> (Underwater Caustics) to compare the moving illumination. Underwater colors and fog remain when caustics are off.</p>
 <h2>Run and controls</h2>
 <p>Open <a href="fantasy.html">fantasy.html</a> in a WebGPU browser. Serve the repository over HTTP using localhost or HTTPS. Startup prepares PBR and GPU particles.</p>
-<ol>
-<li>Select an ally in the 3D scene or party panel.</li>
-<li>Click a cyan tile to move.</li>
-<li>Click an enemy within range to attack.</li>
-<li>Command the remaining allies and press <strong>味方ターンを終了</strong> (end turn).</li>
-</ol>
-<p>Each unit moves once and attacks once per turn. An attack can be the unit's only action. Movement takes place before attacking; choose **待機** after an attack to finish the unit's actions. <strong>待機</strong> ends an individual unit&#39;s actions. Enemies approach attack positions, then attack the available ally with the lowest HP.</p>
+<ol><li>Select an ally in the 3D scene or party panel.</li><li>Click a cyan tile to move.</li><li>Click an enemy within range to attack.</li><li>Command the remaining allies and press <strong>味方ターンを終了</strong> (End Ally Turn).</li></ol>
+<p>Each ally can move once and attack once per turn, but movement must come first. An attack made without moving ends that unit's actions. After moving, attack or choose <strong>待機</strong> (Wait) to finish that unit's turn. Enemies move into attack range, then target the available ally with the lowest HP.</p>
 <p>Movement uses four neighbors and permits one elevation step. Climbing costs 2 movement points; level and downhill movement cost 1. Living units and obstacles block movement. Attacking from higher ground adds 3 damage. Range uses Manhattan distance; ranged attacks pass over obstacles and always hit.</p>
-<p>Defeat all enemies to win. Losing every ally ends the battle. <strong>最初から</strong> and <strong>もう一度戦う</strong> restart it. Expand <strong>マスをボタンで操作</strong> to use grid buttons with Tab and Enter; these invoke the same actions as 3D picking.</p>
+<p>Defeat all enemies to win; losing every ally ends the battle. <strong>最初から</strong> (Start Over) and <strong>もう一度戦う</strong> (Fight Again) restart it. Expand <strong>マスをボタンで操作</strong> (Use Grid Buttons) to control the map with Tab and Enter; these buttons trigger the same actions as 3D picking.</p>
 <p>Drag to rotate and use the wheel to zoom. The initial view uses perspective projection. Canvas size is 960×720 on large screens; narrow screens reduce its width and place the controls below it.</p>
 <h2>webg features</h2>
-<ul>
-<li><code>WebgSceneApp</code> starts PBR and GPU particles from a manifest object with the SceneDefinition structure. Game updates use <code>onUpdate({ deltaSec })</code>.</li>
-<li><code>Shape</code>, <code>Primitive</code>, and <code>Node</code> form characters and equipment. Moving the parent moves its children; rotation differences animate the limbs.</li>
-<li>PBR materials, <code>blue-sky</code> environment lighting, a blue vertical directional light, shadows, Bloom, and Fog distinguish terrain, armor, and crystals.</li>
-<li><code>WaterBody</code> and <code>PbrRenderer.setWater()</code> project wave-generated illumination onto terrain and moving unit diffuse lighting. Surface refraction is disabled to keep tactical tiles readable.</li>
-<li><code>Space.raycast()</code> picks terrain and character AABBs from a Reverse-Z pointer ray.</li>
-<li><code>ComputeParticleEmitter</code> handles footsteps, magic, sparks, and ambient light. The standard app handles simulation and PBR composition.</li>
-</ul>
+<ul><li><code>WebgSceneApp</code> starts PBR and GPU particles from a manifest object with the SceneDefinition structure. Game updates use <code>onUpdate({ deltaSec })</code>.</li><li><code>Shape</code>, <code>Primitive</code>, and <code>Node</code> form characters and equipment. Moving the parent moves its children; rotation differences animate the limbs.</li><li>PBR materials, <code>blue-sky</code> environment lighting, a blue vertical directional light, shadows, Bloom, and Fog distinguish terrain, armor, and crystals.</li><li><code>WaterBody</code> and <code>PbrRenderer.setWater()</code> add wave-generated caustics to terrain and the diffuse PBR lighting of moving units. The water surface is hidden to keep tactical tiles clear.</li><li><code>Space.raycast()</code> picks terrain and character AABBs from a Reverse-Z pointer ray.</li><li><code>ComputeParticleEmitter</code> handles footsteps, magic, sparks, and ambient light. The standard app handles simulation and PBR composition.</li></ul>
 <p>The app uses <code>physics:false</code>. Tile rules determine paths and elevation; no rigid-body simulation, external model skinning, or animation clips are used.</p>
 <h2>Verification points</h2>
-<ul>
-<li>Select Rio and move to column 4, row 5, elevation 1 on the grid. This uses 4 movement points, including the climb from elevation 0 to 1.</li>
-<li>Watch limb motion, vertical motion, and particles at each step. Input remains disabled until animation finishes and the logical tile position is committed.</li>
-<li>Finn has range 4 and Luna range 3. Clicking an out-of-range enemy shows a message without changing HP.</li>
-<li>Check attack trails, impact particles, hit motion, HP, and defeated units disappearing.</li>
-<li>Enemy attacks from higher ground show <strong>高所 +3</strong> in the log. Allies regain their actions next turn.</li>
-<li>Restart restores HP, positions, turn, log, and particles while reusing GPU resources.</li>
-<li>Rotate and resize the view; labels and picking should remain aligned with the 3D scene.</li>
-<li>Toggle caustics and check that moving units, attacks, and turn progression continue correctly.</li>
-</ul>
+<ul><li>Select Rio and move to column 4, row 5, elevation 1 on the grid. This uses 4 movement points, including the climb from elevation 0 to 1.</li><li>Watch limb motion, vertical motion, and particles at each step. Input remains disabled until animation finishes and the logical tile position is committed.</li><li>Finn has range 4 and Luna range 3. Clicking an out-of-range enemy shows a message without changing HP.</li><li>Check attack trails, impact particles, hit motion, HP, and defeated units disappearing.</li><li>Enemy attacks from higher ground show <strong>高所 +3</strong> (High Ground +3) in the log. Allies regain their actions next turn.</li><li>Restart restores HP, positions, turn, log, and particles while reusing GPU resources.</li><li>Rotate and resize the view; labels and picking should remain aligned with the 3D scene.</li><li>Toggle caustics and check that moving units, attacks, and turn progression continue correctly.</li></ul>
 <h2>Read the code in this order</h2>
-<ol>
-<li><strong><code>main.js</code>: <code>start()</code></strong> — initialize through one entry point, add moving Nodes and input, then start frames. Do not add a second render loop or particle step.</li>
-<li><strong><code>scene.js</code>: <code>createManifest()</code></strong> — read initial placement, materials, PBR, and emitters. Grid coordinates and display height come from <code>rules.mjs</code>.</li>
-<li><strong><code>visuals.js</code>: <code>part()</code> and <code>character()</code></strong> — examine RGBA/PBR material parameters, Node hierarchy, and ownership of manually created Shapes.</li>
-<li><strong><code>main.js</code>: <code>choose()</code> → <code>move()</code> → <code>updateMotion()</code></strong> — select a tile, await animation, and commit coordinates. <code>rules.mjs</code>: <code>paths()</code> includes uphill movement costs.</li>
-<li><strong><code>main.js</code>: <code>makePointerRay()</code>, <code>pickTile()</code>, <code>updateLabels()</code></strong> — use the same camera for picking and DOM projection.</li>
-<li><strong><code>FantasyApp.js</code> and cleanup</strong> — synchronize CSS, Canvas, and PBR sizes, then release the observer, manual Shapes, and standard app separately.</li>
-</ol>
+<ol><li><strong>`main.js`: `start()`</strong> — initialize through one entry point, add moving Nodes and input, then start frames. Do not add a second render loop or particle step.</li><li><strong>`scene.js`: `createManifest()`</strong> — read initial placement, materials, PBR, and emitters. Grid coordinates and display height come from <code>rules.mjs</code>.</li><li><strong>`visuals.js`: `part()` and `character()`</strong> — examine RGBA/PBR material parameters, Node hierarchy, and ownership of manually created Shapes.</li><li><strong>`main.js`: `choose()` → `move()` → `updateMotion()`</strong> — select a tile, await animation, and commit coordinates. <code>rules.mjs</code>: <code>paths()</code> includes uphill movement costs.</li><li><strong>`main.js`: `makePointerRay()`, `pickTile()`, `updateLabels()`</strong> — use the same camera for picking and DOM projection.</li><li><strong>`FantasyApp.js` and cleanup</strong> — synchronize CSS, Canvas, and PBR sizes, then release the observer, manual Shapes, and standard app separately.</li></ol>
 <p>The <code>reset()</code> function in <code>main.js</code> restarts this game. It is distinct from <code>WebgSceneApp.reset()</code>; HP and action flags belong to the game.</p>
 <h2>Underwater lighting</h2>
 <p><code>connectWater()</code> in <code>main.js</code> creates an 18m-wide, 18m-deep <code>WaterBody</code>, with its mean surface at 6m. Terrain and unit root Nodes are receivers; child Shapes inherit registration, including animated limbs and equipment. Movement markers and the selection ring are excluded. <code>update()</code> advances only the shared wave time through <code>setTime()</code>.</p>
@@ -226,24 +198,16 @@ blockquote {
   causticsEnabled: true,
   surfaceEnabled: false,
   quality: &quot;high&quot;
-});
-</code></pre>
-<p>Switching stops new frames, awaits <code>setWater()</code>, and resumes the app. OFF releases dedicated GPU resources. Re-enabling preserves combat state and registered Nodes; restart reuses the water body.</p>
-<p>This sample creates an underwater scene through lighting. Absorption attenuates the projected caustic field; standard distance Fog approximates water haze toward the camera. Underwater camera refraction, total internal reflection, and the underside of the surface are not rendered. Caustics use horizontal-field projection onto opaque receivers; ordinary PBR handles shadows and specular reflections. See the <a href="../water/index.html">water sample</a> for the API.</p>
+});</code></pre>
+<p>When the caustics control changes, its handler pauses rendering while it awaits <code>setWater()</code>, then resumes the app. Turning caustics off releases the dedicated GPU resources. Turning them on again preserves the battle state and registered Nodes; restarting the battle reuses the same water body.</p>
+<p>Lighting creates the underwater atmosphere: absorption attenuates the projected caustic field, and distance Fog adds a water haze toward the camera. The sample projects caustics across a horizontal field onto opaque receivers; ordinary PBR handles shadows and specular reflections. It does not render underwater refraction, total internal reflection, or the underside of the surface. See the <a href="../water/index.en.html">water sample</a> for the API.</p>
 <h2>Change one thing at a time</h2>
-<ul>
-<li>Set <code>palette.steel.roughness</code> in <code>visuals.js</code> from 0.28 to 0.65, then rotate the camera to compare highlights. Shared terrain materials live in <code>scene.js</code>.</li>
-<li>Set Rio&#39;s <code>move</code> in <code>rules.mjs</code> from 4 to 3. Column 4, row 5 should no longer be reachable from the initial position. Paths and cyan markers share the same result.</li>
-<li>Increase the segment <code>duration</code> in <code>main.js</code>: <code>move()</code>. Keep combat values unchanged and check input locking and coordinate commitment.</li>
-<li>Change both RGB entries of <code>steps.appearance.colors</code> in <code>scene.js</code>. Keep emission positions and paths unchanged.</li>
-</ul>
+<ul><li>Set <code>palette.steel.roughness</code> in <code>visuals.js</code> from 0.28 to 0.65, then rotate the camera to compare highlights. Shared terrain materials live in <code>scene.js</code>.</li><li>Set Rio's <code>move</code> in <code>rules.mjs</code> from 4 to 3. Column 4, row 5 should no longer be reachable from the initial position. Paths and cyan markers share the same result.</li><li>Increase the segment <code>duration</code> in <code>main.js</code>: <code>move()</code>. Keep combat values unchanged and check input locking and coordinate commitment.</li><li>Change both RGB entries of <code>steps.appearance.colors</code> in <code>scene.js</code>. Keep emission positions and paths unchanged.</li></ul>
 <p>Use the verification points after each change so that its effect has a clear cause.</p>
 <h2>Documents and rule checks</h2>
-<p><a href="fantasy_design.md">fantasy_design.md</a> describes the game and its scope in Japanese. <code>camera_reference.json</code> records the initial camera reference. The book&#39;s <a href="../../book/examples/fantasy_guide.html"><strong>PBRシーンから小さなゲームへ</strong></a> explains the boundaries between individual feature examples and this app.</p>
+<p><a href="fantasy_design.md">fantasy_design.md</a> describes the game and its scope in Japanese. <code>camera_reference.json</code> records the initial camera reference. The book's <a href="../../book.en/PBRSceneToGame.md">From a PBR Scene to a Small Game</a> explains how the individual feature examples connect in this app.</p>
 <p>Run from the repository root to check paths, occupancy, range, enemy planning, and outcomes without a GPU. Rendering and interaction require separate browser verification.</p>
-<pre><code class="language-sh">node --test samples/fantasy/rules.test.mjs
-</code></pre>
-
+<pre><code class="language-sh">node --test samples/fantasy/rules.test.mjs</code></pre>
     </article>
   </main>
 </body>

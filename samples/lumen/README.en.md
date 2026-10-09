@@ -1,6 +1,6 @@
 # LUMEN — Light Observatory
 
-LUMEN is an interactive science-fiction gallery combining webg rendering, GPU simulation, and synthesized music. Three golden rings rotate around a luminous core. The central sculpture and pulse origin are raised by 40% above their original height. Side exhibits contrast translucent glass with a highly reflective aluminum sphere. Both exhibit spheres are slightly larger, with a diameter of 2.3 units. Twelve metal spheres fall into a tray in the foreground.
+LUMEN is an interactive science-fiction gallery combining webg rendering, GPU simulation, and synthesized music. Three golden rings rotate around a luminous core. Side exhibits contrast translucent glass with a highly reflective aluminum sphere; each exhibit sphere has a diameter of 2.3 units. Twelve metal spheres fall into a tray in the foreground.
 
 ## Running and controls
 

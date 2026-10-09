@@ -16,8 +16,7 @@ The screen is divided into `Play`, `Envelope`, `Reverb`, and `What To Listen For
 `Hold Single` plays only the current root while the button is held down. `Hold Triad` plays `root`, `3rd`, and `5th` together while the button is held down. When the button is released, the sound stops according to the release of the selected envelope. When `Mode` is `minor`, it plays a minor triad; otherwise it plays a major triad, so you can compare how the same waveform and envelope sound different as a single note and as a chord.
 
 ## How to Run
-- Open [./tone.html](./tone.html)
-- Use a browser with WebGPU support, and check the help panel and HUD together with the sample when needed
+- Open [./tone.html](./tone.html) in a browser that supports the Web Audio API. Press `Audio Start` before playing a note.
 
 ## webg Features Used
 - `ToneSynth`: handles single-note playback, stopping, envelope presets, reverb impulses, and volume adjustment
@@ -32,7 +31,7 @@ When you switch the `Envelope` profile, the time behavior changes even with the 
 
 In `Reverb`, switch between `Dry`, `Room`, `Hall`, and `Plate` and confirm how reverberation changes the outline of the sound. With short envelopes, the reverb tail becomes especially noticeable; with long envelopes, the way the dry signal and reverb overlap changes.
 
-When you press `Hold Triad`, it becomes easier to hear reverb smear and the density of harmonics in `square / sawtooth`, which can be hard to judge with a single note. In chords, the voices are also given slightly different pan positions, so the left-right spread can be heard as well.
+When you press `Hold Triad`, the chord makes reverb overlap and the stronger harmonics of `square` and `sawtooth` easier to hear than a single note. Each voice also has a slightly different pan position, so you can hear the stereo spread.
 
 ## Controls
 - `Audio Start`: starts the `AudioContext`
@@ -59,7 +58,7 @@ If `Reverb Mix` is high and `Release` is long, the direct sound and reverberatio
 
 ## Related Documents
 
-- [18_サウンドの設計.md](../../book/18_サウンドの設計.md)
-- [付録D_API一覧.md](../../book/付録D_API一覧.md)
+- [Audio Design](../../book.en/16_Audio.md)
+- [API Reference](../../book.en/Appendix_D_API.md)
 - [samples/tone/main.js](./main.js)
 - [samples/tone/tone.html](./tone.html)

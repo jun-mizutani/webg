@@ -6,29 +6,26 @@ English | [日本語](README.md)
 
 ## Overview
 
-A compact underwater exhibit with five instances of the supplied dolphin GLB, its embedded texture and skeletal animation.
-PBR environment lighting, caustics, fog, subtle floating particles and rising bubbles surround the swimming dolphins.
-Caustics illuminate the dolphin, floor, rocks and sea grass. A rippling surface is visible overhead.
+A compact underwater exhibit with five instances of the supplied dolphin GLB, using its embedded texture and skeletal animation. PBR environment lighting, caustics, fog, floating particles, and rising bubbles surround the dolphins. Caustics illuminate the dolphins, floor, rocks, and sea grass beneath a rippling water surface.
 
 ## Run and controls
 
 Serve [aquarium.html](aquarium.html) over HTTP and open it in a WebGPU browser.
 
 - Drag to orbit; use the wheel to zoom.
-- Use the view button to compare above-water refraction with the thin surface seen from underwater.
-- Pause freezes skeletal animation, the swimming path, waves and particles. Camera controls remain active.
-- Caustics toggles the entire effect.
-- The dolphin light checkbox independently selects the dolphin as a receiver.
+- Click the view button to switch between the refracted view from above and the simplified surface seen from below. Its label is **水面上から見る** (View from Above) or **水中から見る** (View from Underwater).
+- Press **一時停止** (Pause) to freeze skeletal animation, swimming paths, waves, and particles; press **再生** (Play) to resume. Camera controls stay active.
+- **コースティクス** (Caustics) toggles caustic lighting; the water surface stays visible.
+- **イルカにも光を当てる** (Light the Dolphins) independently registers the dolphins as caustics receivers.
 
-The floor and surface measure 18m × 12m. Rocks, sea grass and lamps retain
-their positions; surface height remains 6m. Floor UVs retain their physical scale.
+The floor and surface measure 18m × 12m, with the mean water level 6m above the floor. Rocks, sea grass, and lamps are distributed across the aquarium floor. Floor UVs use meter-based scale.
 
 ## Reading order
 
-1. `scene.js` creates the procedural gravel floor, flat-shaded icosphere rocks and sea grass. Rocks use dark gray with roughness 0.28 to reflect underwater lighting.
+1. `scene.js` creates the procedural gravel floor, flat-shaded icosphere rocks, and sea grass. Dark gray rocks with roughness 0.28 reflect the underwater lighting.
 2. `start()` in `main.js` initializes `WebgApp`, `PbrRenderer` and the GLB model.
-3. `model.instantiate()` creates four additional dolphins from the same asset. Each instance has its own skeleton, animation state and swimming parent Node, while sharing geometry and textures.
-4. `updateSwimming()` and `swimmingPath.js` move each parent along its own 3D path at 0.8–0.95m/s. Centers, horizontal rotations, contour bends, vertical cycles and phases vary by dolphin; two swim in the opposite direction. A distance table maintains speed through turns, and the 3D tangent aligns the model's head (+Z) with its actual movement, including ascent and descent. The skeletal clip loops independently. Each dolphin moves vertically by ±0.45m; the parent Nodes span 2.55–3.45m, 2.7–3.6m, 2.4–3.3m, 3.0–3.9m and 2.1–3.0m, keeping clearance above the floor when tilted.
+3. `model.instantiate()` creates four more dolphins from the same asset. Each instance has its own skeleton, animation state, and swimming parent Node, while sharing geometry and textures.
+4. `updateSwimming()` and `swimmingPath.js` move each parent along its own 3D path at 0.8–0.95 m/s. The paths vary in center, heading, bend, vertical cycle, and phase; two dolphins swim in the opposite direction. A distance table maintains speed through turns, and the 3D path tangent points each model's head (+Z) along its movement during climbs and dives. The skeletal clip loops independently. Each dolphin moves vertically by ±0.45 m. Parent heights range from 2.1 to 3.9 m, keeping tilted dolphins above the floor.
 5. `WaterBody.addReceiver()` registers scenery with strength 0.65 and the dolphin with strength 1. Parent registration includes descendant Shapes.
 6. `setCaustics()` stops rendering while asynchronous GPU resource changes complete, then resumes it.
 7. `waterSurface.js` uses the core `WATER_WAVE_WGSL` to update mesh positions and normals on the GPU. Wavelength is 0.6 with amplitude 0.05.
@@ -44,10 +41,10 @@ Bubbles are approximated by small blue-white particles emitted from three floor 
 Their radii vary from 0.04 to 0.095m, with upward speeds of 0.65, 0.8 and 0.95m/s
 and slight horizontal spread. Lifetime is calculated from the distance to the surface
 and the constant vertical speed, so bubbles fade just before reaching it.
-Additive intensity is reduced to 0.25 for faint bubbles that let the background show through.
+Additive intensity is 0.25, keeping the bubbles faint enough for the background to show through.
 Pause also freezes bubble emission and ascent.
 
-Dolphins also roll around their forward axis. One large and one small dolphin roll
+Dolphins also roll about their forward axis. One large and one small dolphin roll
 by up to ±90 degrees; the remaining three roll by up to ±10 degrees.
 Each has a different phase and period, while its head remains aligned with movement.
 
@@ -56,10 +53,9 @@ and subtle Bloom around the bulb.
 
 ## Checkpoints
 
-Check that the eyes follow the body, the tail keeps animating, caustics follow moving receivers,
-and pause/resume does not jump ahead after waiting. The dolphin receiver can be toggled independently.
-When caustics are off, the ordinary PBR image and water surface remain. Surface resources stay allocated,
-and caustic generation stops.
+Check that the eyes follow the body, the tail keeps animating, and caustics move across the receivers.
+Pause and resume to verify that the swimming paths and effects continue from the same time. The dolphin receiver can be toggled independently.
+Turning caustics off leaves the regular PBR lighting and water surface visible while caustic generation stops.
 
 ## Scope and assets
 
@@ -86,5 +82,5 @@ A white fill light below the dolphins approximates reflected light from the floo
 and a lower initial camera angle makes their pale undersides visible.
 Rocks use the shared `buildIcosphere()` helper with one subdivision and flat normals (80 faces each).
 
-See [water](../water/index.html) for surface rendering and resource checks,
-[gltf_loader](../gltf_loader/index.html) for model import contracts, and book chapter 35 for the water API.
+See [water](../water/index.en.html) for surface rendering and resource checks,
+[gltf_loader](../gltf_loader/index.en.html) for model import details, and [book chapter 35](../../book.en/35_LightingEffects.md) for the water API.

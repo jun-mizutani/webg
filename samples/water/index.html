@@ -3,9 +3,9 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>water</title>
+  <title>water — PBRの水面とコースティクス</title>
   <link rel="icon" href="data:," />
-  <!-- 2026/10/03: READMEから生成 -->
+  <!-- 2026/06/19 -->
   <style>
 
 :root {
@@ -167,22 +167,17 @@ blockquote {
 <body>
   <main class="page">
     <section class="hero">
-      <h1>water</h1>
+      <h1>water — PBRの水面とコースティクス</h1>
     </section>
     <article class="doc">
 <h1>water — PBRの水面とコースティクス</h1>
 <p><a href="index.en.html">English</a> | 日本語</p>
-<p><img src="preview.jpg" alt="PBRの水面と集光"></p>
+<p><img src="preview.jpg" alt="PBRの水面と集光" /></p>
 <h2>概要</h2>
 <p>球・箱・斜面と石砂利の底へコースティクスを設定し、同じ波の水面を表示する小さな統合例です。<code>WaterBody</code>は水域・波・吸収・受光対象を保持し、<code>ComputeEffectPipeline.setWater()</code>がGPU資源と描画順を管理します。シェーダーの置換や描画関数の差し替えは不要です。</p>
 <h2>実行と操作</h2>
 <p>WebGPU対応ブラウザで<a href="water.html">water.html</a>を開きます。リポジトリ全体をHTTPで配信し、localhostまたはHTTPSを使います。</p>
-<ol>
-<li>「コースティクスを使う」と「水面を表示する」を個別にONにします。</li>
-<li>受光対象のチェックを外し、その物体の集光だけが消えることを確認します。</li>
-<li>「波を動かす」、球の高さ、品質を変更します。ドラッグで視点を回し、ホイールで拡大できます。</li>
-<li>検証ボタンでGPU画像を比較します。描画中の自動readbackはありません。</li>
-</ol>
+<ol><li>「コースティクスを使う」と「水面を表示する」を個別にONにします。</li><li>受光対象のチェックを外し、その物体の集光だけが消えることを確認します。</li><li>「波を動かす」、球の高さ、品質を変更します。ドラッグで視点を回し、ホイールで拡大できます。</li><li>検証ボタンでGPU画像を比較します。描画中の自動readbackはありません。</li></ol>
 <p>初期状態は両方OFF、時刻1.5秒で停止です。水面を表示しなくても集光を使えます。青空は既存の<code>ProceduralEnvironment</code>で生成し、PBRの環境光と水面反射へ同じ前処理済み環境を渡しています。</p>
 <h2>最小の接続</h2>
 <p>通常のPBRシーンを先に用意します。集光は垂直なdirectional lightを使用します。低水準pipelineなら、生成時に<code>lightDirection: [0, -1, 0]</code>と<code>shadow: { directional: { up: [0, 0, 1] } }</code>を指定します。<code>PbrRenderer</code>では同じ設定を<code>pipeline</code>オプションに入れます。</p>
@@ -208,8 +203,7 @@ await pipeline.setWater(water, {
 });
 
 // frameごとに時刻だけ更新し、通常のrenderScene → encodeを使う。
-water.setTime(timeMs / 1000);
-</code></pre>
+water.setTime(timeMs / 1000);</code></pre>
 <p><code>PbrRenderer</code>にも同じ<code>setWater(water, options)</code>と<code>getWaterStats()</code>があります。<code>webg/app/index.js</code>から<code>WaterBody</code>をimportすることもできます。水域は現在一つです。</p>
 <h2>変更、対象の解除、OFF</h2>
 <pre><code class="language-js">// 高さ・波・色を変更する場合は再接続不要。次のframeで反映する。
@@ -226,8 +220,7 @@ await pipeline.setWater(water, {
   quality: &quot;high&quot;
 });
 
-await pipeline.setWater(null); // 全専用GPU資源と追加照明variantを解放
-</code></pre>
+await pipeline.setWater(null); // 全専用GPU資源と追加照明variantを解放</code></pre>
 <p><code>setOptions()</code>は不正な値を拒否し、それまでの設定を保持します。平均水深は<code>amplitude</code>より大きくし、<code>extent</code>は水域の幅・奥行き以上にします。<code>waterlineFade</code>は水際で集光を混ぜる幅、<code>wavelength</code>は波長倍率、<code>variation</code>は時間と空間に連続な位相・振幅変調の量、<code>roughness</code>は水面のGGX鏡面と環境反射の粗さです。</p>
 <p>受光は不透明なShapeとNodeへ設定します。Nodeの<code>children: false</code>はそのNode自身に限定します。複数の登録Nodeがある場合は最も近い祖先が優先します。解除やOFFでも対象の形状・材質を保持します。</p>
 <h2>描画への接続</h2>
@@ -241,15 +234,8 @@ await pipeline.setWater(null); // 全専用GPU資源と追加照明variantを解
 <p><code>getWaterStats()</code>は実行したdispatch/pass数とGPU timestampの非同期測定値を返します。timestamp非対応時は<code>timing.timestampSupported: false</code>です。計測区間は照度生成、水面compute、深度転写であり、受光mask・照明variant・透明物の描画を含む全体の追加時間ではありません。<code>ResourceLedger.js</code>はQuerySetの個数も追跡します。容量はtexture/bufferの論理容量で、ドライバのcacheや配置まで測る値ではありません。</p>
 <p>有限の水平水域を上から見る用途に対応します。水中カメラ、水の側面、複数水域、画面外・物体の裏側の屈折、周囲の物体の鏡像は扱いません。水面交差を得られない画素や、屈折先を探せない画素には元の背景を使います。集光は垂直入射で基準面へ集めた照度を立体へ投影する近似であり、物体の各面へ厳密に光線を追跡する処理ではありません。水中の透明物のFrost・Transmission・Volume吸収を水と重ねた物理的な屈折は、このサンプルの対応範囲外です。</p>
 <h2>読む順序と確認箇所</h2>
-<ul>
-<li><code>main.js</code>：通常PBRの準備、<code>WaterBody</code>の接続と個別ON/OFF。</li>
-<li><code>scene.js</code>／<code>floor.js</code>：受光対象の登録単位と既存Procedural Textureの材質。</li>
-<li><code>validation.js</code>：対象外への漏れ、OFF一致、深度、環境反射、透明面・粒子、リサイズのGPU検証。</li>
-<li><code>../../webg/WaterBody.js</code>：公開設定と受光対象の契約。</li>
-<li><code>../../webg/WaterSystem.js</code>：遅延生成、照度画像の再利用、破棄。</li>
-</ul>
+<ul><li><code>main.js</code>：通常PBRの準備、<code>WaterBody</code>の接続と個別ON/OFF。</li><li><code>scene.js</code>／<code>floor.js</code>：受光対象の登録単位と既存Procedural Textureの材質。</li><li><code>validation.js</code>：対象外への漏れ、OFF一致、深度、環境反射、透明面・粒子、リサイズのGPU検証。</li><li><code>../../webg/WaterBody.js</code>：公開設定と受光対象の契約。</li><li><code>../../webg/WaterSystem.js</code>：遅延生成、照度画像の再利用、破棄。</li></ul>
 <p>PBRの基本はbook 30〜33章、水面の使い分けは35章です。材質や環境の比較は<code>pbr_reference</code>、通常の透明屈折は<code>transmission</code>を参照してください。</p>
-
     </article>
   </main>
 </body>

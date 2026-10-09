@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<!-- 2026/10/10: English catalog for the public webg samples -->
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="google-site-verification" content="2ktNc9rn5kPZnlB2vtjqln7jiuzFkOgum3Qtzz6J4Ro" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>webg Samples</title>
+<style>
+:root {
+  color-scheme: light;
+  --bg: #edf3f8;
+  --panel: #ffffff;
+  --line: #c8d5e2;
+  --text: #183247;
+  --muted: #526b80;
+  --accent: #0c629e;
+  --chapter: #76531a;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  margin: 0;
+  color: var(--text);
+  background: linear-gradient(180deg, #f8fbfd 0%, var(--bg) 100%);
+  font: 16px/1.7 "Avenir Next", "Hiragino Sans", "Yu Gothic", sans-serif;
+}
+a { color: var(--accent); }
+a:hover { text-decoration-thickness: 2px; }
+code { font-family: "SFMono-Regular", Consolas, monospace; }
+main { width: min(1180px, calc(100% - 32px)); margin: 0 auto; padding: 32px 0 64px; }
+.hero, .guide, .category {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  box-shadow: 0 12px 32px rgba(35, 57, 83, 0.07);
+}
+.hero { padding: 28px 30px; }
+.language { margin: 0 0 10px; text-align: right; }
+.hero h1 { margin: 0 0 8px; font-size: clamp(2rem, 5vw, 3.1rem); line-height: 1.15; }
+.hero p, .guide p { max-width: 920px; margin: 8px 0 0; color: var(--muted); }
+.hero img { width: 100%; max-height: 360px; object-fit: cover; margin-top: 20px; border: 1px solid var(--line); border-radius: 12px; }
+.guide { margin-top: 20px; padding: 22px 26px; }
+.guide h2 { margin: 0 0 8px; font-size: 1.25rem; }
+.category-nav { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 8px 18px; margin: 14px 0 0; padding: 0; list-style: none; }
+.category-nav a { display: block; padding: 6px 0; text-decoration: none; }
+.category-nav a:hover { text-decoration: underline; }
+.toolbar { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 14px; align-items: center; }
+.toolbar input { width: 100%; padding: 12px 14px; font: inherit; color: var(--text); background: #fff; border: 1px solid var(--line); border-radius: 10px; }
+.count { color: var(--muted); white-space: nowrap; }
+.category { margin-top: 24px; overflow: hidden; scroll-margin-top: 16px; }
+.category-header { padding: 20px 24px 16px; background: #f8fbfe; border-bottom: 1px solid var(--line); }
+.category-title { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px 16px; }
+.category h2 { margin: 0; font-size: 1.45rem; }
+.chapter { color: var(--chapter); font-size: 0.9rem; font-weight: 700; }
+.category-header p { margin: 6px 0 0; color: var(--muted); }
+.catalog-head, .catalog-item { display: grid; grid-template-columns: minmax(170px, 0.75fr) minmax(360px, 2.7fr) minmax(250px, 1fr); gap: 20px; align-items: start; }
+.catalog-head { padding: 9px 24px; color: var(--muted); background: #f5f8fb; border-bottom: 1px solid var(--line); font-size: 0.82rem; font-weight: 700; letter-spacing: 0.04em; }
+.catalog-item { padding: 17px 24px; border-bottom: 1px solid #dde6ee; scroll-margin-top: 16px; }
+.catalog-item:last-child { border-bottom: 0; }
+.catalog-item:nth-child(even) { background: #fbfdff; }
+.sample-name { margin: 0; overflow-wrap: anywhere; font: 700 1rem/1.45 "SFMono-Regular", Consolas, monospace; }
+.description { margin: 0; color: #344f65; }
+.actions { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; }
+.actions a { white-space: nowrap; }
+.actions .primary { font-weight: 700; }
+.source-link { font-size: 0.88rem; color: var(--muted); }
+.category[hidden], .catalog-item[hidden] { display: none; }
+@media (max-width: 880px) {
+  main { width: min(100% - 20px, 1180px); padding-top: 18px; }
+  .hero, .guide, .category { border-radius: 12px; }
+  .hero, .guide { padding: 20px; }
+  .catalog-head { display: none; }
+  .catalog-item { grid-template-columns: 1fr; gap: 8px; padding: 17px 20px; }
+  .category-header { padding: 18px 20px 14px; }
+}
+@media (max-width: 560px) { .toolbar { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<main>
+  <header class="hero">
+    <p class="language"><a href="./index.html" lang="ja">日本語</a></p>
+    <h1>webg samples</h1>
+    <p>Browse <span id="sampleCount">65</span> runnable samples grouped by topic and linked to relevant book chapters. Samples within each topic are alphabetized by folder name. Read a short overview, launch an app, or open its detailed guide in English or Japanese.</p>
+    <img src="./samples.jpg" alt="Preview of webg samples" />
+  </header>
+
+  <section class="guide" aria-labelledby="guide-title">
+    <h2 id="guide-title">How to use this catalog</h2>
+    <p>New to webg? Start with the <a href="../book.en/ExampleGuide.md">English example guide</a> to choose a first sample and build toward a complete app. Each guide links runnable code with practical checks.</p>
+    <p><strong>Run</strong> opens the sample app. <strong>Details</strong> opens its English guide, and <strong>日本語</strong> opens the Japanese guide. Use <strong>README</strong> to save the English Markdown source.</p>
+    <p>For focused browser checks, see the <a href="../unittest/index.en.html">unittest catalog</a>. Runnable examples from the book are listed in the <a href="../book/examples/index.en.html">book examples catalog</a>. The <a href="./README.md" download>samples/README.md (Japanese)</a> explains how samples, unittests, and headless tests differ.</p>
+    <p>To explore YAML scenes, start with <a href="./model_yaml/index.en.html">ModelYAML</a>, then try <a href="./scene_model_yaml/index.en.html">SceneYAML with ModelYAML</a>. Use the <a href="./edit_yaml/index.en.html">SceneYAML editor</a> to change placement, materials, and physics settings.</p>
+    <p>In samples that use <code>WebgApp</code>, press <code>F9</code> to open the CommandPalette. Press <code>M</code> to switch between debug and release modes, <code>C</code> to show diagnostics, or <code>V</code> to copy diagnostic JSON.</p>
+  </section>
+
+  <section class="guide" aria-labelledby="recent-title">
+    <h2 id="recent-title">Featured demos</h2>
+    <p><a href="./lumen/lumen.html">LUMEN</a> is an interactive gallery combining metallic and glass PBR, colored lights, Compute particles and physics, and music. <a href="./lumen/index.en.html">Details</a></p>
+    <p><a href="./neon_coaster/neon_coaster.html">NEON COASTER</a> follows four cars around a three-dimensional course with a city skyline and changing rails. <a href="./neon_coaster/index.en.html">Details</a></p>
+    <p><a href="./void_strike/void_strike.html">VOID STRIKE</a> is a PBR 3D shooter with colored lights and Compute sparks. <a href="./void_strike/index.en.html">Details</a></p>
+  </section>
+
+  <nav class="guide" aria-labelledby="category-nav-title">
+    <h2 id="category-nav-title">Browse by topic</h2>
+    <ul class="category-nav" id="categoryNav"></ul>
+  </nav>
+
+  <section class="guide" aria-labelledby="search-title">
+    <h2 id="search-title">Search names and descriptions</h2>
+    <div class="toolbar">
+      <input id="search" type="search" placeholder="For example: camera, physics, PBR, texture" aria-label="Search samples" />
+      <div class="count"><span id="visibleCount">65</span> / <span id="totalCount">65</span> samples</div>
+    </div>
+  </section>
+
+  <div id="catalog"></div>
+</main>
+<script>
+const categories = [
+  {
+    id: "foundations",
+    title: "Fundamentals and app structure",
+    chapters: "Book chapters 03–06",
+    summary: "Start with coordinate axes, the first render, WebgApp, and camera control—the foundation shared by other topics.",
+    items: [
+      ["axis", "Place X, Y, and Z reference axes at the origin to inspect webg's coordinate system, axis directions, scale, and distance."],
+      ["demo_spheres", "Arrange spheres and explore color, textures, rotation, lighting, and camera controls in one basic 3D scene."],
+      ["eye_rig", "Switch between orbit, first-person, and follow cameras to compare camera hierarchies, movement, focus, and orientation."],
+      ["high_level", "Build a standard WebgApp with initialization, scene creation, update, and rendering. This is a good first app."],
+      ["low_level", "Render with Screen, Shader, Matrix, and Node APIs directly to see the work handled by WebgApp." ]
+    ]
+  },
+  {
+    id: "shaders",
+    title: "Shaders, materials, and geometry",
+    chapters: "Book chapters 07, 38–39",
+    summary: "Explore shaders, materials, vertices, faces, low-level mesh construction, and the data that shapes an object's appearance.",
+    items: [
+      ["billboard", "Keep a flat shape facing the camera and use one image to represent smoke, light, or particles."],
+      ["detouch", "Change a Node's parent at runtime with attach and detach while preserving its world position."],
+      ["fog_cube", "Add fog to a cube scene and inspect color blending as camera distance and fog density change."],
+      ["lowlevel_terrain", "Use WebgApp for the camera and HUD, then build the terrain mesh with low-level Shape APIs."],
+      ["materials", "Switch the same sixteen spheres between SmoothShader and deferred lighting to compare material values and lighting models."],
+      ["model_shape", "Validate a ModelAsset returned by Primitive, then inspect how ModelBuilder converts it into a renderable Shape."],
+      ["shapes", "Compare basic shapes with regular textures, image-based normals, and procedurally generated normals."]
+    ]
+  },
+  {
+    id: "assets",
+    title: "Models and scenes",
+    chapters: "Book chapters 08–11",
+    summary: "Load ModelAssets from ModelYAML, JSON, and external model formats. Reference ModelYAML from SceneYAML to set a scene's PBR materials and physics.",
+    items: [
+      ["collada_loader", "Load a selected Collada (.dae) file, normalize it as a webg ModelAsset, and place it in a scene."],
+      ["embedded_glb_viewer", "Embed a GLB viewer in a limited page region and display its model and controls with WebgApp."],
+      ["gltf_loader", "Load a selected glTF or GLB file, normalize it as a ModelAsset, and display its materials and animations."],
+      ["json_loader", "Load, validate, and build a webg ModelAsset JSON file in a compact viewer."],
+      ["model_yaml", "Load a commented ModelYAML file and place three shared models with individual rotations; inspect and save the YAML source or gzip data."],
+      ["scene_model_yaml", "Define geometry and Nodes in ModelYAML, then reference the model with PBR materials and physics in SceneYAML. Drop three boxes with 240 Hz Compute physics; inspect start, stop, reset, and YAML export."],
+      ["scene", "Validate a declarative Scene JSON document with validateScene(), then build and display it with loadScene()."]
+    ]
+  },
+  {
+    id: "animation",
+    title: "Animation and skinning",
+    chapters: "Book chapters 10–11, 40",
+    summary: "Explore clip playback, animation-state selection, bone-driven vertex deformation, and control of models with multiple actions.",
+    items: [
+      ["animation_state", "Load a hand model and use Action for finger-pose playback and AnimationState for selecting the current action."],
+      ["bone_creature", "Animate several tentacles made from skinned meshes and inspect bone deformation, normal maps, and multiple instances."],
+      ["compute_json", "Play animations from ModelAsset JSON while switching Compute screen effects in a general-purpose model viewer."],
+      ["janken", "Play rock-paper-scissors with a hand model and AnimationState, connecting input, state transitions, and animation selection."],
+      ["skinning", "Change weight distribution, bone rotation axes, and deformation amount to study how multiple bones affect each vertex."]
+    ]
+  },
+  {
+    id: "interaction",
+    title: "UI, input, and audio",
+    chapters: "Book chapters 12–16",
+    summary: "Add selection UI, touch controls, sound effects, background music, and synthesized tones to an application.",
+    items: [
+      ["com_palette", "Use CommandPalette as a standalone UI component and try filtering, selecting, and running commands from the keyboard."],
+      ["mmodeler", "A 3D modeler designed for touch on phones and tablets, with geometry editing, camera control, and model saving."],
+      ["edit_yaml", "Edit SceneYAML scenes, including placement, materials, physics settings, vertex positions, and face extrusion."],
+      ["sound", "Play sound effects and music with AudioSynth and GameAudioSynth; adjust volume, tone, and reverb in one app."],
+      ["tone", "Play single notes and triads with ToneSynth, comparing waveforms, attack, decay, and reverb."]
+    ]
+  },
+  {
+    id: "applications",
+    title: "Games and integrated apps",
+    chapters: "Book chapters 05, 09–16, 26, 30",
+    summary: "See rendering, input, UI, collision, audio, and other features combined into playable applications.",
+    items: [
+      ["fantasy", "A small PBR battle game on a stepped map. Follow how Shape materials, walking Nodes, picking, GPU particles, resizing, and cleanup connect across functions."],
+      ["breakout", "A 3D Breakout game that brings together input, ball movement, collisions, scoring, and on-screen status."],
+      ["circular_breaker", "An integrated circular Breakout example combining scene management, collision detection, HUD, input, and sound effects."],
+      ["circular_breaker2", "A circular Breakout game that defines the scene and PBR materials in SceneYAML and meshes and Node placement in ModelYAML."],
+      ["cube4", "A 3D falling-block game combining a board, movement and rotation, collision checks, and display updates."],
+      ["maze", "Generate a maze from a fixed seed and explore it with a first-person camera, spot light, wall collisions, and radar."],
+      ["maze2", "A science-fiction corridor maze integrating deferred lighting, SSR, outlines, colored ceilings, first-person collision, and a heading-aware radar."],
+      ["neon_coaster", "Four cars ride a closed 3D course through a 72-building night city, combining Follow EyeRig, PBR, colored deferred lights, SSR, Bloom, Compute particles, and music."],
+      ["project_app", "An independent high-level API sample that builds PBR, Compute physics, Joints, objectSets, and Blender-authored scenes from project JSON."],
+      ["karakuri", "Place blocks, balls, ramps, and dominoes, try the machine, then save the SceneYAML and play with the result in this child-friendly maker."],
+      ["void_strike", "Intercept enemy formations from an interstellar rift with WASD movement, twin lasers, and boost. PBR, colored deferred lights, Bloom, Compute sparks, and waves are integrated."]
+    ]
+  },
+  {
+    id: "physics",
+    title: "Collision and physics",
+    chapters: "Book chapters 15, 27–28, 42",
+    summary: "Compare collision queries, CPU rigid-body physics, and GPU-updated Compute physics for different use cases.",
+    items: [
+      ["collisions", "Use AABBs to find broad collision candidates, then sphere-to-mesh distance for detailed checks, with the results shown on screen."],
+      ["compute_physics", "Run the same 72-body Box, Sphere, and Capsule scenario with ComputePhysicsSpace and CPU PhysicsSpace; compare contacts, settling, and speed."],
+      ["compute_physics_bounce", "Store sphere position, radius, velocity, bounce, friction, and color in GPU storage buffers and compare Compute and CPU results."],
+      ["falling_box", "Compare the same 200-box drop scenario in CPU PhysicsSpace and ComputePhysicsSpace, including Plane boundaries, contacts, and settling."],
+      ["falling_dominoes", "Use ComputePhysicsSpace and Box colliders to inspect a chain reaction, collision wake-up, and persistent sleep after 32 dominoes fall."],
+      ["falling_dominoes_cpu", "Run the domino chain with CPU PhysicsSpace and compare Box/Plane contacts, support, wake-up, and persistent sleep with the Compute version."],
+      ["joint", "Compare the same pendulum and six hanging ropes through CPU PhysicsSpace, direct GPU Compute rendering, and GPU readback with Node rendering."],
+      ["physics_bounce", "Move several spheres with CPU PhysicsSpace and inspect how floor, wall, and sphere contacts change their motion through bounce and friction."],
+      ["physics_collider", "Drop and rotate rigid bodies with Box colliders and inspect air and floor contacts, pushing, friction, and settling."]
+    ]
+  },
+  {
+    id: "rendering",
+    title: "Screen effects and PBR",
+    chapters: "Book chapters 23–25, 30–36",
+    summary: "Compare image-space effects, physically based materials, environment lighting, transparency, and transmission in integrated rendering.",
+    items: [
+      ["bloom", "Render a 3D scene offscreen, extract and blur bright areas, then combine them with the original image using BloomPass."],
+      ["compute_benchmark", "Measure a fixed scene with G-buffer, shadows, SSAO, IBL deferred lighting, SSR, transmission, transparency, and tone mapping."],
+      ["dof", "Create depth of field with multi-stage DofPass blur and inspect focus distance, blur amount, and diagnostic views."],
+      ["lumen", "LUMEN is an interactive light gallery combining SceneYAML, metallic and glass PBR, colored lights, reflections, Bloom, Compute particles and physics, procedural materials, and jazz."],
+      ["opacity", "Mix opaque and translucent materials in one Shape, then inspect translucent-triangle sorting and screen effects in the PBR pipeline."],
+      ["aquarium", "An underwater exhibit with five animated instances of a supplied dolphin GLB. Apply caustics to dolphins, the floor, and rocks; inspect receiver and pause controls."],
+      ["water", "Connect caustics to PBR diffuse lighting and display the water surface. Check independent toggles, receiver registration, environment reflections, transparent draw order, particles, and GPU cleanup."],
+      ["pbr_reference", "Switch between forward and deferred PBR with the same materials and environment to compare IBL, HDR images, SSR, alpha modes, and transparent PBR."],
+      ["transmission", "Compare refractive backgrounds through transparent PBR surfaces as IOR, absorption, and roughness change across a sphere, slab, and torus."]
+    ]
+  },
+  {
+    id: "compute",
+    title: "Compute and procedural generation",
+    chapters: "Book chapters 20–22, 26–29",
+    summary: "Explore GPU computation with Compute Shaders, along with procedural geometry and texture generation.",
+    items: [
+      ["compute_cloth", "Update a grid of masses and springs on the GPU, then render cloth deformation from neighbor constraints, gravity, and fixed points."],
+      ["compute_particle_emitter", "Build standard Compute particle emitters from SceneYAML and inspect bursts, continuous emission, stopping, capacity limits, PBR, and Bloom."],
+      ["compute_particles", "Update many particle positions and velocities with a Compute Shader and render the same GPU state for a GPU-first workflow."],
+      ["compute_texture", "Update and ping-pong two textures every frame with a Compute Shader to animate an image entirely on the GPU."],
+      ["procedural_texture", "Generate material-specific Color and Height maps on the CPU, derive Normal maps, and compare them across a cube's six faces."],
+      ["proctex", "Generate a procedural height map and its normal map with Texture.js to inspect surface relief."],
+      ["texture_catalog", "Select and edit procedural texture presets, preview their Color and Normal maps on a cube, and save the resulting definition."]
+    ]
+  }
+];
+
+const sampleLinkOverrides = {
+  falling_box: { run: "./falling_box/falling_box_cpu.html" },
+  joint: { run: "./joint/joint_cpu_node.html" },
+  project_app: { run: "./project_app/" },
+  karakuri: { run: "./karakuri/" }
+};
+
+// 一覧に表示するラベルと参照先をリンク要素へまとめ、強調表示と保存操作を行単位でそろえる
+function createLink(label, href, className = "", download = false) {
+  const link = document.createElement("a");
+  link.textContent = label;
+  link.href = href;
+  if (className) link.className = className;
+  if (download) link.download = "";
+  return link;
+}
+
+// カテゴリ定義から分野ナビゲーション、説明、実行先と言語別ガイドへのリンクを作り、総件数を表示する
+function renderCatalog() {
+  const nav = document.getElementById("categoryNav");
+  const catalog = document.getElementById("catalog");
+  let total = 0;
+
+  for (const category of categories) {
+    category.items.sort((a, b) => a[0].localeCompare(b[0], "en"));
+    total += category.items.length;
+
+    const navItem = document.createElement("li");
+    navItem.append(createLink(`${category.title} (${category.items.length})`, `#${category.id}`));
+    nav.append(navItem);
+
+    const section = document.createElement("section");
+    section.className = "category";
+    section.id = category.id;
+    section.dataset.category = "";
+
+    const header = document.createElement("div");
+    header.className = "category-header";
+    const titleRow = document.createElement("div");
+    titleRow.className = "category-title";
+    const heading = document.createElement("h2");
+    heading.textContent = category.title;
+    const chapters = document.createElement("span");
+    chapters.className = "chapter";
+    chapters.textContent = category.chapters;
+    titleRow.append(heading, chapters);
+    const summary = document.createElement("p");
+    summary.textContent = category.summary;
+    header.append(titleRow, summary);
+    section.append(header);
+
+    const columnHead = document.createElement("div");
+    columnHead.className = "catalog-head";
+    for (const label of ["Sample", "What it demonstrates", "Open or read"]) {
+      const span = document.createElement("span");
+      span.textContent = label;
+      columnHead.append(span);
+    }
+    section.append(columnHead);
+
+    for (const [name, description] of category.items) {
+      const item = document.createElement("article");
+      item.className = "catalog-item";
+      item.id = name;
+      item.dataset.search = `${category.title} ${category.chapters} ${category.summary}`;
+      const itemTitle = document.createElement("h3");
+      itemTitle.className = "sample-name";
+      itemTitle.textContent = name;
+      const text = document.createElement("p");
+      text.className = "description";
+      text.textContent = description;
+      const actions = document.createElement("div");
+      actions.className = "actions";
+      const override = sampleLinkOverrides[name] ?? {};
+      actions.append(
+        createLink("Run", override.run ?? `./${name}/${name}.html`, "primary"),
+        createLink("Details", `./${name}/index.en.html`),
+        createLink("日本語", `./${name}/index.html`),
+        createLink("README", `./${name}/README.en.md`, "source-link", true)
+      );
+      item.append(itemTitle, text, actions);
+      section.append(item);
+    }
+    catalog.append(section);
+  }
+
+  document.getElementById("sampleCount").textContent = String(total);
+  document.getElementById("visibleCount").textContent = String(total);
+  document.getElementById("totalCount").textContent = String(total);
+}
+
+renderCatalog();
+
+const search = document.getElementById("search");
+const items = Array.from(document.querySelectorAll(".catalog-item"));
+const categorySections = Array.from(document.querySelectorAll("[data-category]"));
+const visibleCount = document.getElementById("visibleCount");
+
+// 入力語を名称、説明、分類と照合し、一致する行と分類、および表示中の件数を同期する
+function updateSearch() {
+  const query = search.value.trim().toLocaleLowerCase("en");
+  let visible = 0;
+  for (const item of items) {
+    const haystack = `${item.textContent} ${item.dataset.search}`.toLocaleLowerCase("en");
+    const show = !query || haystack.includes(query);
+    item.hidden = !show;
+    if (show) visible += 1;
+  }
+  for (const category of categorySections) {
+    category.hidden = !category.querySelector(".catalog-item:not([hidden])");
+  }
+  visibleCount.textContent = String(visible);
+}
+
+search.addEventListener("input", updateSearch);
+</script>
+</body>
+</html>

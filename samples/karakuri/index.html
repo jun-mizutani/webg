@@ -1,35 +1,189 @@
-<!doctype html>
-<!-- samples/karakuri/index.html 2026/09/17 -->
+<!DOCTYPE html>
 <html lang="ja">
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Karakuri</title>
+  <title>Karakuri Maker／Karakuri Player</title>
   <link rel="icon" href="data:," />
-  <link rel="stylesheet" href="./karakuri.css" />
+  <!-- 2026/06/19 -->
+  <style>
+
+:root {
+  color-scheme: light;
+  --bg: #eef3f8;
+  --paper: rgba(255, 255, 255, 0.94);
+  --line: #c8d5e4;
+  --ink: #17324a;
+  --muted: #5c748b;
+  --accent: #1566ab;
+  --accent-soft: #dfeefe;
+  --code-bg: #f3f7fb;
+  --shadow: rgba(29, 52, 79, 0.10);
+}
+* { box-sizing: border-box; }
+html, body {
+  margin: 0;
+  min-height: 100%;
+}
+body {
+  background:
+    radial-gradient(circle at top left, rgba(21, 102, 171, 0.12), transparent 24%),
+    radial-gradient(circle at top right, rgba(255, 191, 118, 0.10), transparent 22%),
+    linear-gradient(180deg, #f8fbfd 0%, var(--bg) 100%);
+  color: var(--ink);
+  font: 16px/1.78 "Avenir Next", "Hiragino Sans", "Yu Gothic", sans-serif;
+}
+.page {
+  width: min(1080px, calc(100% - 28px));
+  margin: 0 auto;
+  padding: 24px 0 56px;
+}
+.hero,
+.doc {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  box-shadow: 0 22px 52px var(--shadow);
+}
+.hero {
+  padding: 22px 24px;
+  margin-bottom: 18px;
+}
+.hero h1 {
+  margin: 0 0 8px;
+  font-size: clamp(2rem, 4vw, 3rem);
+  line-height: 1.08;
+}
+.hero p {
+  margin: 0;
+  color: var(--muted);
+}
+.doc {
+  padding: 28px;
+}
+.doc > :first-child {
+  margin-top: 0;
+}
+h1, h2, h3, h4, h5, h6 {
+  line-height: 1.25;
+  margin: 1.45em 0 0.55em;
+}
+h1 {
+  font-size: 2.2rem;
+}
+h2 {
+  padding-bottom: 0.28em;
+  border-bottom: 1px solid var(--line);
+  font-size: 1.48rem;
+}
+h3 {
+  font-size: 1.14rem;
+}
+p, ul, ol, table, pre, blockquote {
+  margin: 0 0 1em;
+}
+ul, ol {
+  padding-left: 1.4em;
+}
+li + li {
+  margin-top: 0.26em;
+}
+a {
+  color: var(--accent);
+  text-decoration: none;
+}
+a:hover {
+  text-decoration: underline;
+}
+img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  border-radius: 16px;
+  border: 1px solid var(--line);
+  box-shadow: 0 12px 32px rgba(29, 52, 79, 0.08);
+  margin: 1.1em 0 1.4em;
+}
+code {
+  padding: 0.12em 0.38em;
+  border-radius: 0.45em;
+  background: var(--code-bg);
+  border: 1px solid #dbe6f1;
+  font: 0.92em/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+pre {
+  padding: 14px 16px;
+  overflow-x: auto;
+  border-radius: 14px;
+  background: #0f1720;
+  color: #ecf5ff;
+}
+pre code {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #ffffff;
+}
+th, td {
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  text-align: left;
+  vertical-align: top;
+}
+th {
+  background: #f5f9fc;
+}
+hr {
+  border: 0;
+  border-top: 1px solid var(--line);
+  margin: 1.5em 0;
+}
+blockquote {
+  padding: 0.3em 0 0.3em 1em;
+  border-left: 4px solid #c9dbef;
+  color: var(--muted);
+}
+@media (max-width: 720px) {
+  .page {
+    width: min(100% - 18px, 1080px);
+    padding-top: 16px;
+  }
+  .hero,
+  .doc {
+    border-radius: 18px;
+  }
+  .doc {
+    padding: 20px;
+  }
+}
+
+  </style>
 </head>
 <body>
   <main class="page">
     <section class="hero">
-      <h1>Karakuri</h1>
-      <p>ぶひんをおいて、ためして、からくりをつくろう</p>
-      <nav class="top-links">
-        <a class="primary" data-i18n="maker" href="./karakuri_maker.html">つくる</a>
-        <a class="green" data-i18n="player" href="./karakuri_player.html">あそぶ</a>
-        <a href="../../docs/karakuri.md">設計仕様</a>
-        <a href="./index.en.html">English</a>
-      </nav>
+      <h1>Karakuri Maker／Karakuri Player</h1>
     </section>
-    <section class="home-grid">
-      <a class="home-card" href="./karakuri_maker.html">
-        <h2>🧩 つくる</h2>
-        <p>ボール、つみき、6このカラフルなドミノをえらんで、こうさく台におきます。</p>
-      </a>
-      <a class="home-card" href="./karakuri_player.html">
-        <h2>▶️ あそぶ</h2>
-        <p>つくったからくりをためして、うごきを見てみます。</p>
-      </a>
-    </section>
+    <article class="doc">
+<h1>Karakuri Maker／Karakuri Player</h1>
+<p>Makerでは「置く → ためす → なおす」を同じ画面で繰り返せます。子どもにも使いやすい操作で、部品を並べて仕掛けの動きを試せます。</p>
+<p><code>karakuri_maker.html</code>でSceneYAMLを編集し、<code>karakuri_player.html</code>で同じSceneYAMLを動かすサンプルです。つみき、球、坂、6枚のカラフルなドミノ、ゴール、PBR材質、static／kinematic／dynamicの物理設定を一つの作品データへまとめる構成を確認できます。</p>
+<h2>使い方</h2>
+<ol><li><code>http://localhost:8000/samples/karakuri/</code>を開く</li><li><code>つくる</code>を開き、下の「ぶひん」からボール、坂、つみき、ドミノ、ゴールを選ぶ</li><li>画面の置きたい場所を押す。選んだ部品がそこへ現れる</li><li>立体を押すとオレンジ色になる。つかんで上下左右へ動かし、<code>↶ ひだり</code>／<code>↷ みぎ</code>で部品を傾ける</li><li><code>もうひとつ</code>で同じ部品を増やし、<code>はずす</code>で片付ける</li><li><code>ひとつ もどす</code>で直前の編集へ戻る</li><li><code>ためす</code>で同じ画面で動きを確認する。試運転中は3Dビュー上部の<code>1.0</code>、<code>0.5</code>、<code>0.25</code>から速度倍率を選べる</li><li><code>とめる</code>、<code>はじめから</code>、<code>なおす</code>で試運転を観察・再編集する</li><li><code>おとなの設定</code>から作品をSceneYAMLまたはgzipで保存する。「しまう」を押した時点の配置は、このブラウザーで<code>初期配置に戻す</code>を使うときの配置として保存される</li><li>保存した初期配置へ戻すときは、<code>おとなの設定</code>の<code>初期配置に戻す</code>を使う</li></ol>
+<p>Makerの「ためす」は現在の編集状態を同じ画面で実行します。Playerを通常URLで開いたときは、保存済みSceneYAMLよりリポジトリの標準SceneYAMLを優先して読み込みます。別のSceneYAMLを試す場合はPlayerの「ひらく」から明示的に読み込めます。</p>
+<p>MakerはXY工作面で配置・移動します。部品のない場所をマウスでドラッグすると視点を回転でき、マウスを離すと約0.35秒で正面へ戻ります。戻っている途中にもう一度ドラッグすると、その時点の視点から操作を続けられます。部品の上で始めたドラッグは部品のXY移動になります。「ドミノ 6こ」を選んで画面を押すと、少し薄くした6色のドミノがまとまって現れます。既定のSceneYAMLには坂、ゴール、6枚のカラフルなドミノを配置しています。球と発射装置は明るいアルミ色で表示します。既定の発射台は半径<code>0.12 m</code>の球を最大5個まで同時に残し、試運転中に最大24個を2秒間隔で生成します。見た目の床は平らな床として表示し、物理用の水平平面と高さをそろえます。背面と左右の壁は床の範囲に合わせた大きさで、光の反射、影、接触陰影を見せる背景として残し、床と壁は工作部品として選べない表示にしています。「しまう」で保存した配置はブラウザー内へ保持されますが、MakerとPlayerの通常起動ではリポジトリの標準SceneYAMLを読み込みます。保存した配置へ戻すときは「初期配置に戻す」を使い、別のブラウザーや端末へ渡す場合は保存したSceneYAMLを「ひらく」から読み込みます。</p>
+<p>球とドミノの物理設定には密度の項目はなく、質量と形状の大きさから運動を計算します。半径<code>0.12 m</code>の既定球は質量を約<code>19.54 kg</code>にして、体積から逆算した密度がアルミニウムの<code>2,700 kg/m³</code>程度になるようにしています。サイズ<code>[0.10, 0.6, 0.32] m</code>のドミノは体積から質量を<code>51.84 kg</code>として、球と同じ密度にしています。PBR材質の<code>metallic: 1.0</code>は金属らしい見た目を指定する値で、物理の密度を変更しません。Playerの通常起動ではリポジトリの標準SceneYAMLを読み込み、保存済みSceneYAMLは起動時の入力に使いません。</p>
+<p>Playerでは、SceneYAMLに記録されたPBR、SSAO、SSR、弱いDoFを使って画面を作ります。エミッターの球はCompute physicsへ実行中に追加され、同時存在数を超えた球は一定時間後に回収されます。3Dビュー上部の速度倍率ボタンは<code>playback.timeScaleOptions</code>を表示し、重力や質量を変更せず、物理計算とアニメーションの時間倍率だけを変更します。StartまたはMakerの「ためす」を押すと音声を有効にし、球が床・壁・部品・ゴール板へ反発したときは短い接触音、ゴールへ届いたときは別の上昇音を鳴らします。ゴール表示後も試運転は続きます。</p>
+<h2>SceneYAMLの交換</h2>
+<p><code>karakuri_scene.yaml</code>はMakerとPlayerの間で交換するデータです。Procedural Textureはpreset名、必要な<code>tile</code>差分、appearanceを共有し、生成された画像ファイルは共有しません。例えば床は<code>wood.oak.mixed-sawn</code>を使い、<code>tile.joint.widthMeters: 0</code>で板境界の幅を指定します。壁は<code>ceramic.white.square</code>を使い、床と壁の両方へ<code>scale: 2</code>を指定します。<code>scale: 2</code>はテクスチャの一周期を2倍に広げ、同じ面上の反復を半分にします。Procedural Textureを使うBoxは<code>Primitive.mapRealCuboid()</code>で実寸UVを作り、MakerとPlayerは既存のProcedural Texture APIへ<code>scale</code>を渡してShape完成前に適用します。静的な床と壁はサンプル側で対象Shapeを作り直し、動的なBoxは生成時に同じ順序で適用するため、両方でテクスチャの大きさがそろいます。SceneYAMLを編集した場合は、Makerの<code>シーンを開く</code>で検証してからPlayerへ渡します。</p>
+<h2>このサンプルの対応範囲</h2>
+<p>3Dメッシュ選択、XY配置・移動、回転、複製、取り外し、Undo、同じ画面での物理付き試運転、発射器、接触音、ゴール到達時の別効果音、接触に基づくゴール表示、保存・読込みを実装しています。ゴール表示後も物理は継続します。試運転では、ゴール到達時の表示とドミノの連鎖を確認します。詳しい設計は<a href="../../docs/karakuri.md">`docs/karakuri.md`</a>を参照してください。</p>
+    </article>
   </main>
 </body>
 </html>

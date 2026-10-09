@@ -13,7 +13,7 @@ Each cell has a thin longitudinal ceiling panel centered at `y = 3.95m`, with a 
 The point Local Light illuminates all directions with a radius of `7.2m` and an intensity of `5.2`, lighting the corridor below while producing a strong direct reflection on the fixture underside about `0.2375m` above the light.
 The structural ceiling uses a `roughness` of `0.55` to broaden and weaken narrow specular highlights from the point lights.
 Point lights provide direct lighting with the Shadow Map disabled. Lighting omits geometry occlusion so the corridor and light placement can be inspected.
-The fixture-wide `emissive` value is reduced to `0.10`; the main high-dynamic-range highlight instead comes from direct lighting on the underside with `specular = 0.80` and `roughness = 0.10`.
+Fixtures use `emissive = 0.10`. Direct lighting on each underside creates the main high-dynamic-range highlight with `specular = 0.80` and `roughness = 0.10`.
 White lights account for 60% of cells, while green, orange, and red each account for 13.3%.
 Up to 64 nearby lights are evaluated.
 SSR is applied to the floor, walls, slopes, and ceiling.

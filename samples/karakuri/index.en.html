@@ -1,35 +1,189 @@
-<!doctype html>
-<!-- samples/karakuri/index.en.html 2026/09/17 -->
+<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Karakuri</title>
+  <title>Karakuri Maker / Karakuri Player</title>
   <link rel="icon" href="data:," />
-  <link rel="stylesheet" href="./karakuri.css" />
+  <!-- 2026/06/19 -->
+  <style>
+
+:root {
+  color-scheme: light;
+  --bg: #eef3f8;
+  --paper: rgba(255, 255, 255, 0.94);
+  --line: #c8d5e4;
+  --ink: #17324a;
+  --muted: #5c748b;
+  --accent: #1566ab;
+  --accent-soft: #dfeefe;
+  --code-bg: #f3f7fb;
+  --shadow: rgba(29, 52, 79, 0.10);
+}
+* { box-sizing: border-box; }
+html, body {
+  margin: 0;
+  min-height: 100%;
+}
+body {
+  background:
+    radial-gradient(circle at top left, rgba(21, 102, 171, 0.12), transparent 24%),
+    radial-gradient(circle at top right, rgba(255, 191, 118, 0.10), transparent 22%),
+    linear-gradient(180deg, #f8fbfd 0%, var(--bg) 100%);
+  color: var(--ink);
+  font: 16px/1.78 "Avenir Next", "Hiragino Sans", "Yu Gothic", sans-serif;
+}
+.page {
+  width: min(1080px, calc(100% - 28px));
+  margin: 0 auto;
+  padding: 24px 0 56px;
+}
+.hero,
+.doc {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  box-shadow: 0 22px 52px var(--shadow);
+}
+.hero {
+  padding: 22px 24px;
+  margin-bottom: 18px;
+}
+.hero h1 {
+  margin: 0 0 8px;
+  font-size: clamp(2rem, 4vw, 3rem);
+  line-height: 1.08;
+}
+.hero p {
+  margin: 0;
+  color: var(--muted);
+}
+.doc {
+  padding: 28px;
+}
+.doc > :first-child {
+  margin-top: 0;
+}
+h1, h2, h3, h4, h5, h6 {
+  line-height: 1.25;
+  margin: 1.45em 0 0.55em;
+}
+h1 {
+  font-size: 2.2rem;
+}
+h2 {
+  padding-bottom: 0.28em;
+  border-bottom: 1px solid var(--line);
+  font-size: 1.48rem;
+}
+h3 {
+  font-size: 1.14rem;
+}
+p, ul, ol, table, pre, blockquote {
+  margin: 0 0 1em;
+}
+ul, ol {
+  padding-left: 1.4em;
+}
+li + li {
+  margin-top: 0.26em;
+}
+a {
+  color: var(--accent);
+  text-decoration: none;
+}
+a:hover {
+  text-decoration: underline;
+}
+img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  border-radius: 16px;
+  border: 1px solid var(--line);
+  box-shadow: 0 12px 32px rgba(29, 52, 79, 0.08);
+  margin: 1.1em 0 1.4em;
+}
+code {
+  padding: 0.12em 0.38em;
+  border-radius: 0.45em;
+  background: var(--code-bg);
+  border: 1px solid #dbe6f1;
+  font: 0.92em/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+pre {
+  padding: 14px 16px;
+  overflow-x: auto;
+  border-radius: 14px;
+  background: #0f1720;
+  color: #ecf5ff;
+}
+pre code {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #ffffff;
+}
+th, td {
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  text-align: left;
+  vertical-align: top;
+}
+th {
+  background: #f5f9fc;
+}
+hr {
+  border: 0;
+  border-top: 1px solid var(--line);
+  margin: 1.5em 0;
+}
+blockquote {
+  padding: 0.3em 0 0.3em 1em;
+  border-left: 4px solid #c9dbef;
+  color: var(--muted);
+}
+@media (max-width: 720px) {
+  .page {
+    width: min(100% - 18px, 1080px);
+    padding-top: 16px;
+  }
+  .hero,
+  .doc {
+    border-radius: 18px;
+  }
+  .doc {
+    padding: 20px;
+  }
+}
+
+  </style>
 </head>
 <body>
   <main class="page">
     <section class="hero">
-      <h1>Karakuri</h1>
-      <p>Place parts, try the machine, and make it better</p>
-      <nav class="top-links">
-        <a class="primary" href="./karakuri_maker.html?lang=en">Make</a>
-        <a class="button green" href="./karakuri_player.html?lang=en">Play</a>
-        <a href="../../docs/karakuri.md">Design specification</a>
-        <a href="./index.html">日本語</a>
-      </nav>
+      <h1>Karakuri Maker / Karakuri Player</h1>
     </section>
-    <section class="home-grid">
-      <a class="home-card" href="./karakuri_maker.html?lang=en">
-        <h2>🧩 Make</h2>
-        <p>Choose balls, blocks, ramps, six colorful dominoes, and goals, then place them on the workbench.</p>
-      </a>
-      <a class="home-card" href="./karakuri_player.html?lang=en">
-        <h2>▶️ Play</h2>
-        <p>Try your machine and watch how your parts move.</p>
-      </a>
-    </section>
+    <article class="doc">
+<h1>Karakuri Maker / Karakuri Player</h1>
+<p>Maker lets users place parts, try the machine, and return to editing in the same scene view. Child-friendly controls make it easy to arrange parts and explore their motion.</p>
+<p><code>karakuri_maker.html</code> edits a SceneYAML document and <code>karakuri_player.html</code> plays the same document. The sample groups blocks, balls, ramps, six colorful dominoes, goals, PBR materials, and static / kinematic / dynamic physics values in one project file.</p>
+<h2>How to try it</h2>
+<ol><li>Open <code>http://localhost:8000/samples/karakuri/</code></li><li>Open <code>Make</code> and choose a ball, ramp, block, domino, or goal from the Parts shelf</li><li>Click a place in the scene to put the selected part there</li><li>Click a 3D part to highlight it orange, drag it up/down or left/right, and use the turn buttons to tilt the part</li><li>Use <code>Another one</code> to duplicate a part and <code>Put away</code> to remove it</li><li>Use <code>Undo</code> to return to the previous making step</li><li>Press <code>Try it</code> to watch the machine in the same scene view. During the trial, choose a speed multiplier from <code>1.0</code>, <code>0.5</code>, or <code>0.25</code> at the top of the 3D view</li><li>Use <code>Pause</code>, <code>Start again</code>, and <code>Edit</code> to observe and improve the machine</li><li>Use <code>Grown-up settings</code> to save SceneYAML as plain text or gzip. The layout at the time of <code>Save</code> is kept for <code>Use starting layout</code> in this browser</li><li>Use <code>Use starting layout</code> in <code>Grown-up settings</code> to return to the saved starting layout</li></ol>
+<p>Maker's <code>Try it</code> runs the current editing state in the same view. When Player is opened with its normal URL, it loads the repository's standard SceneYAML instead of preferring a saved SceneYAML. To try another SceneYAML, load it explicitly with Player's <code>Open</code> button.</p>
+<p>The Player uses the SceneYAML PBR settings with SSAO, SSR, and weak DoF. Emitter balls are added to Compute physics while the scene is running and are collected after their active lifetime. The speed multiplier buttons at the top of the 3D view display <code>playback.timeScaleOptions</code> and change only the physics and animation time scale while preserving gravity, mass, friction, and restitution. Clicking Start or Maker's Try it enables audio: a short contact sound plays when a ball rebounds from a floor, wall, part, or goal board, and a different rising sound plays when the goal is reached. The trial continues after the goal message appears.</p>
+<h2>SceneYAML exchange</h2>
+<p>Maker places and moves parts on an XY plane. Drag an empty area with the mouse to orbit the view; after release, it smoothly returns to the front view in about 0.35 seconds. Starting another drag during the return continues from the current view. A drag that starts on a part moves that part on the XY plane. Choose <code>6 dominoes</code> and click the scene to place six slightly thinner dominoes in six colors. The standard SceneYAML already places a ramp, a goal, and six colorful dominoes. The ball and launcher are displayed in a bright aluminum color. The default launcher uses balls with a <code>0.12 m</code> radius, keeps up to five active balls, and creates up to 24 balls at two-second intervals during a trial. The default scene has a broad, flat visible floor aligned with the horizontal physics plane. The back and side walls cover the floor area with matching width and depth, remain as a visual background for reflections, shadows, and contact shading, and the floor and walls cannot be selected as parts. A layout saved with <code>Save</code> is kept in the current browser for <code>Use starting layout</code>, while normal Maker and Player startup loads the repository's standard SceneYAML. To move the work to another browser or device, open the saved SceneYAML file.</p>
+<p>The physics data for balls and dominoes does not define density; it uses mass and shape size. The default ball has a <code>0.12 m</code> radius and a mass of about <code>19.54 kg</code>, which gives it an implied density close to aluminum at <code>2,700 kg/m³</code>. A domino with size <code>[0.10, 0.6, 0.32] m</code> has a mass of <code>51.84 kg</code>, giving it the same density as the ball. PBR <code>metallic: 1.0</code> controls the visual metal appearance and does not change the physical density. A normal Player startup loads the repository's standard SceneYAML and does not use a saved SceneYAML as its startup input.</p>
+<p><code>karakuri_scene.yaml</code> is the exchange data between Maker and Player. Procedural Texture settings share preset names and appearance values; generated image files remain runtime resources. The floor uses <code>wood.oak.mixed-sawn</code> with <code>tile.joint.widthMeters: 0</code>, and the walls use <code>ceramic.white.square</code>; both use <code>scale: 2</code> so one pattern period is twice the preset base size and the repetition is reduced. <code>Primitive.mapRealCuboid()</code> creates meter-based UVs, and the scale is converted before the Shape is finalized so static floors and walls and dynamically created Boxes use the same pattern size. Use <code>Open scene</code> in Maker to validate an edited document before playing it.</p>
+<h2>Sample scope</h2>
+<p>The sample implements mesh selection, XY placement and dragging, turning, duplication, removal, Undo, same-screen physics trials, emitters, contact sounds, a distinct goal sound, contact-based goal messages, and file save/load. The trial continues after the goal message appears. During a trial, check the goal message and domino chain reactions. See <a href="../../docs/karakuri.md">`docs/karakuri.md`</a> for the detailed design.</p>
+    </article>
   </main>
 </body>
 </html>

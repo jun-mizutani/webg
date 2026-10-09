@@ -5,9 +5,9 @@ English | [日本語](README.md)
 ![animation_state](./animation_state.jpg)
 
 ## Overview
-- This sample loads the hand from `samples/gltf_loader/hand.glb` and demonstrates a setup where each finger pose is still played as an `Action`, while `AnimationState` decides which action should be selected at the current moment
-- The sample is arranged so that simply switching the desired state with `1 - 6` starts the corresponding action, making it easier to follow the division of responsibilities between state control and action playback
-- The operation guide is shown in a collapsible help panel at the upper left by using `buildHelpPanelOptions()` and `showOverlayPanel()`, while the current state is displayed separately on the canvas HUD
+- This sample loads the hand model from `samples/gltf_loader/hand.glb`. Each finger pose is an `Action`; `AnimationState` selects which action should play.
+- Press `1`–`6` to select a state and play its corresponding action. The HUD shows the selected state and the action currently playing.
+- A collapsible help panel describes the controls.
 
 ## How to Run
 - Open [./animation_state.html](./animation_state.html)

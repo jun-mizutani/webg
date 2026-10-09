@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>sound</title>
   <link rel="icon" href="data:," />
-  <!-- 2026/09/20 -->
+  <!-- 2026/06/19 -->
   <style>
 
 :root {
@@ -171,6 +171,13 @@ blockquote {
     </section>
     <article class="doc">
 <h1>sound</h1>
+<h2>8小節の新しいBGMを試聴する</h2>
+<p>GameAudioSynthの内蔵BGMは、12種類の曲調を2曲ずつそろえた24曲です。Melodyの曲名・曲調説明は英語で表示し、同じ曲調を隣に並べています。初期選択はCafe Steps（112 BPM）です。Audio Startの後にBGM Startを押し、Melodyで曲を選ぶと冒頭と推奨BPMへ切り替わります。BPMは四分音符の速さで、選択後も調整できます。全曲は4/4拍子・8小節です。swingは拍の前半を長くし、後半を短くして演奏します。ジョギング向けは170、175、180 BPMを各2曲収録しています。譜面はwebg/GameMusicPresets.jsにあり、各行が1小節、8要素が8分音符の位置、数値がMIDI音高、nullが前の音を延ばす位置、-1が明示的な休符です。GameAudioSynth.jsが旋律・低音・和音・打楽器を演奏します。旋律は次の発音・休符・小節末までの間隔に、曲ごとのleadGate（発音時間の比率）を掛けた長さで鳴らします。AttackとDecayは合計が音価を超えると同比率で短縮し、Releaseは音価までとし、旋律では次の発音・休符までの残り時間にも収めます。setRootHzの既定220 Hzで譜面どおりの音高になり、値を変えると旋律・低音・和音を同じ比率で移調できます。打楽器の音高は固定です。音量・残響・音量包絡は既存の操作で調整できます。</p>
+<p>旋律はローパスフィルターで強い倍音を抑え、880 Hzを超える高音を徐々に小さくしています。リズムはキック・スネア・ハイハットを曲調ごとに組み合わせ、旋律と同じBPM・swingで演奏します。Jazzは控えめ、funkやジョギング向けは拍を明確にし、バラードや穏やかな曲では打音を減らすか音量を下げています。打楽器はBGMの音量・delay・reverbに追従しますが、短い打音を保つためBGM Envelopeの影響は受けません。</p>
+<p>24曲の旋律を、音域・モチーフ・発音位置・休符・音の長さから書き直しました。Blue RoomとEveningは低音域、Cafe StepsとDaylightは中音域、Corner QuartetとMarket Squareは比較的高めの音域を使います。funkや緊張感のある曲は短い反復、バラードは長い音と休符、Quartal Horizonは四度の跳躍で輪郭を作ります。同じ曲調の2曲も、細かく刻む曲と長く歌う曲などに分けています。曲名・推奨BPM・和音進行は維持しています。</p>
+<p>旋律の基準音量を下げ、キック・スネア・ハイハットを強めました。Melody Volは旋律だけ、Rhythm Volは低音・和音・打楽器の倍率（0〜2、既定1）です。0にすると該当パートを消して比較でき、曲を切り替えても値を保持します。変更は次に予約する音から反映され、すでに鳴っている音や残響は自然に減衰します。BGM Volは全体音量です。</p>
+<p>現在の譜面形式は4/4拍子・8小節・八分音符単位の単旋律です。十六分音符、独立した三連符、旋律の和音、小節をまたぐタイは記述できません。swingは八分音符の長短比率で表します。旋律は基本波形とフィルターによる合成音で、実楽器のサンプル音源ではありません。パート音量の個別設定はGameAudioSynthの譜面形式に適用され、AudioSynthの度数形式には適用されません。</p>
+<table><thead><tr><th>Style</th><th>Preset / BPM</th><th>Preset / BPM</th></tr></thead><tbody><tr><td>Jazz swing</td><td>Cafe Steps · 112</td><td>Corner Quartet · 132</td></tr><tr><td>Blues jazz</td><td>Blue Room · 96</td><td>Blue Alley · 104</td></tr><tr><td>Bossa jazz</td><td>Palm Terrace · 126</td><td>Coastal Breeze · 138</td></tr><tr><td>Jazz ballad</td><td>Midnight Window · 72</td><td>Velvet Rain · 78</td></tr><tr><td>Modal jazz</td><td>Dorian Walk · 118</td><td>Quartal Horizon · 128</td></tr><tr><td>Jazz funk</td><td>Sunset Pocket · 108</td><td>Electric Crosswalk · 120</td></tr><tr><td>Jogging jazz</td><td>River Run · 170</td><td>Boardwalk Miles · 170</td></tr><tr><td>Jogging synth</td><td>Neon Stride · 175</td><td>Midnight Circuit · 175</td></tr><tr><td>Jogging pop</td><td>Sunrise Sprint · 180</td><td>Open Road · 180</td></tr><tr><td>Upbeat</td><td>Daylight · 124</td><td>Market Square · 132</td></tr><tr><td>Gentle</td><td>Evening · 84</td><td>Moonlit Garden · 90</td></tr><tr><td>Tense</td><td>Pursuit · 148</td><td>Nightfall Chase · 156</td></tr></tbody></table>
 <p><a href="index.en.html">English</a> | 日本語</p>
 <p><img src="./sound.jpg" alt="sound" /></p>
 <h2>概要</h2>
@@ -208,83 +215,6 @@ blockquote {
 <p>関連文書</p>
 <ul><li><a href="../../book/14_UI表示の設計.md">14_UI表示の設計.md</a></li><li><a href="../../book/16_サウンドの設計.md">16_サウンドの設計.md</a></li><li><a href="../../book/01_はじめに.md">01_はじめに.md</a></li><li><a href="./main.js">samples/sound/main.js</a></li><li><a href="./sound.html">samples/sound/sound.html</a></li></ul>
 <p>16_サウンドの設計.md は実装の詳しい説明、01_はじめに.md はプロジェクト全体の入口です。この README.md は、サンプルの画面をどう触るかに集中した案内として読むと分かりやすくなります。</p>
-<h2>8小節の新しいBGMを試聴する</h2>
-<p>GameAudioSynthの内蔵BGMは、12種類の曲調を2曲ずつそろえた24曲です。Melodyの曲名・曲調説明は英語で表示し、同じ曲調を隣に並べています。初期選択はCafe Steps（112 BPM）です。Audio Startの後にBGM Startを押し、Melodyで曲を選ぶと冒頭と推奨BPMへ切り替わります。BPMは四分音符の速さで、選択後も調整できます。全曲は4/4拍子・8小節です。swingは拍の前半を長くし、後半を短くして演奏します。ジョギング向けは170、175、180 BPMを各2曲収録しています。譜面はwebg/GameMusicPresets.jsにあり、各行が1小節、8要素が8分音符の位置、数値がMIDI音高、nullが前の音を延ばす位置、-1が明示的な休符です。GameAudioSynth.jsが旋律・低音・和音・打楽器を演奏します。旋律は次の発音・休符・小節末までの間隔に、曲ごとのleadGate（発音時間の比率）を掛けた長さで鳴らします。AttackとDecayは合計が音価を超えると同比率で短縮し、Releaseは音価までとし、旋律では次の発音・休符までの残り時間にも収めます。setRootHzの既定220 Hzで譜面どおりの音高になり、値を変えると旋律・低音・和音を同じ比率で移調できます。打楽器の音高は固定です。音量・残響・音量包絡は既存の操作で調整できます。</p>
-<p>旋律はローパスフィルターで強い倍音を抑え、880 Hzを超える高音を徐々に小さくしています。リズムはキック・スネア・ハイハットを曲調ごとに組み合わせ、旋律と同じBPM・swingで演奏します。Jazzは控えめ、funkやジョギング向けは拍を明確にし、バラードや穏やかな曲では打音を減らすか音量を下げています。打楽器はBGMの音量・delay・reverbに追従しますが、短い打音を保つためBGM Envelopeの影響は受けません。</p>
-<p>24曲の旋律を、音域・モチーフ・発音位置・休符・音の長さから書き直しました。Blue RoomとEveningは低音域、Cafe StepsとDaylightは中音域、Corner QuartetとMarket Squareは比較的高めの音域を使います。funkや緊張感のある曲は短い反復、バラードは長い音と休符、Quartal Horizonは四度の跳躍で輪郭を作ります。同じ曲調の2曲も、細かく刻む曲と長く歌う曲などに分けています。曲名・推奨BPM・和音進行は維持しています。</p>
-<p>旋律の基準音量を下げ、キック・スネア・ハイハットを強めました。Melody Volは旋律だけ、Rhythm Volは低音・和音・打楽器の倍率（0〜2、既定1）です。0にすると該当パートを消して比較でき、曲を切り替えても値を保持します。変更は次に予約する音から反映され、すでに鳴っている音や残響は自然に減衰します。BGM Volは全体音量です。</p>
-<p>現在の譜面形式は4/4拍子・8小節・八分音符単位の単旋律です。十六分音符、独立した三連符、旋律の和音、小節をまたぐタイは記述できません。swingは八分音符の長短比率で表します。旋律は基本波形とフィルターによる合成音で、実楽器のサンプル音源ではありません。パート音量の個別設定はGameAudioSynthの譜面形式に適用され、AudioSynthの度数形式には適用されません。</p>
-<table>
-<thead>
-<tr>
-<th>Style</th>
-<th>Preset / BPM</th>
-<th>Preset / BPM</th>
-</tr>
-</thead>
-<tbody><tr>
-<td>Jazz swing</td>
-<td>Cafe Steps · 112</td>
-<td>Corner Quartet · 132</td>
-</tr>
-<tr>
-<td>Blues jazz</td>
-<td>Blue Room · 96</td>
-<td>Blue Alley · 104</td>
-</tr>
-<tr>
-<td>Bossa jazz</td>
-<td>Palm Terrace · 126</td>
-<td>Coastal Breeze · 138</td>
-</tr>
-<tr>
-<td>Jazz ballad</td>
-<td>Midnight Window · 72</td>
-<td>Velvet Rain · 78</td>
-</tr>
-<tr>
-<td>Modal jazz</td>
-<td>Dorian Walk · 118</td>
-<td>Quartal Horizon · 128</td>
-</tr>
-<tr>
-<td>Jazz funk</td>
-<td>Sunset Pocket · 108</td>
-<td>Electric Crosswalk · 120</td>
-</tr>
-<tr>
-<td>Jogging jazz</td>
-<td>River Run · 170</td>
-<td>Boardwalk Miles · 170</td>
-</tr>
-<tr>
-<td>Jogging synth</td>
-<td>Neon Stride · 175</td>
-<td>Midnight Circuit · 175</td>
-</tr>
-<tr>
-<td>Jogging pop</td>
-<td>Sunrise Sprint · 180</td>
-<td>Open Road · 180</td>
-</tr>
-<tr>
-<td>Upbeat</td>
-<td>Daylight · 124</td>
-<td>Market Square · 132</td>
-</tr>
-<tr>
-<td>Gentle</td>
-<td>Evening · 84</td>
-<td>Moonlit Garden · 90</td>
-</tr>
-<tr>
-<td>Tense</td>
-<td>Pursuit · 148</td>
-<td>Nightfall Chase · 156</td>
-</tr>
-</tbody></table>
-<p><a href="README.en.md">English</a> | 日本語</p>
-<p><img src="./sound.jpg" alt="sound"></p>
     </article>
   </main>
 </body>

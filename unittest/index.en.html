@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<!-- 2026/10/09: English catalog for interactive browser checks -->
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>webg unittest catalog</title>
+<style>
+:root {
+  color-scheme: light;
+  --bg: #f1f3f7;
+  --panel: #ffffff;
+  --line: #ccd4df;
+  --text: #202f3d;
+  --muted: #5c6c7c;
+  --accent: #315f9b;
+  --chapter: #76531a;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body { margin: 0; color: var(--text); background: linear-gradient(180deg, #fafbfd 0%, var(--bg) 100%); font: 16px/1.7 "Avenir Next", "Hiragino Sans", "Yu Gothic", sans-serif; }
+a { color: var(--accent); }
+a:hover { text-decoration-thickness: 2px; }
+code { font-family: "SFMono-Regular", Consolas, monospace; }
+main { width: min(1180px, calc(100% - 32px)); margin: 0 auto; padding: 32px 0 64px; }
+.hero, .guide, .category { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; box-shadow: 0 10px 28px rgba(35, 50, 68, 0.06); }
+.hero { padding: 28px 30px; }
+.language { margin: 0 0 10px; text-align: right; }
+.hero h1 { margin: 0 0 8px; font-size: clamp(2rem, 5vw, 3rem); line-height: 1.15; }
+.hero p, .guide p { max-width: 920px; margin: 8px 0 0; color: var(--muted); }
+.guide { margin-top: 20px; padding: 22px 26px; }
+.guide h2 { margin: 0 0 8px; font-size: 1.25rem; }
+.category-nav { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 8px 18px; margin: 14px 0 0; padding: 0; list-style: none; }
+.category-nav a { display: block; padding: 6px 0; text-decoration: none; }
+.category-nav a:hover { text-decoration: underline; }
+.toolbar { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 14px; align-items: center; }
+.toolbar input { width: 100%; padding: 12px 14px; font: inherit; color: var(--text); background: #fff; border: 1px solid var(--line); border-radius: 9px; }
+.count { color: var(--muted); white-space: nowrap; }
+.category { margin-top: 24px; overflow: hidden; scroll-margin-top: 16px; }
+.category-header { padding: 20px 24px 16px; background: #f8f9fc; border-bottom: 1px solid var(--line); }
+.category-title { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px 16px; }
+.category h2 { margin: 0; font-size: 1.4rem; }
+.chapter { color: var(--chapter); font-size: 0.9rem; font-weight: 700; }
+.category-header p { margin: 6px 0 0; color: var(--muted); }
+.catalog-head, .catalog-item { display: grid; grid-template-columns: minmax(190px, 0.85fr) minmax(390px, 2.8fr) minmax(180px, 0.8fr); gap: 20px; align-items: start; }
+.catalog-head { padding: 9px 24px; color: var(--muted); background: #f5f7fa; border-bottom: 1px solid var(--line); font-size: 0.82rem; font-weight: 700; letter-spacing: 0.04em; }
+.catalog-item { padding: 17px 24px; border-bottom: 1px solid #dfe5ec; scroll-margin-top: 16px; }
+.catalog-item:last-child { border-bottom: 0; }
+.catalog-item:nth-child(even) { background: #fbfcfe; }
+.test-name { margin: 0; overflow-wrap: anywhere; font: 700 1rem/1.45 "SFMono-Regular", Consolas, monospace; }
+.description { margin: 0; color: #394d60; }
+.actions { display: flex; flex-wrap: wrap; gap: 8px 14px; }
+.actions a { white-space: nowrap; }
+.actions .primary { font-weight: 700; }
+.source-link { font-size: 0.88rem; color: var(--muted); }
+.category[hidden], .catalog-item[hidden] { display: none; }
+@media (max-width: 840px) {
+  main { width: min(100% - 20px, 1180px); padding-top: 18px; }
+  .hero, .guide, .category { border-radius: 11px; }
+  .hero, .guide { padding: 20px; }
+  .catalog-head { display: none; }
+  .catalog-item { grid-template-columns: 1fr; gap: 8px; padding: 17px 20px; }
+  .category-header { padding: 18px 20px 14px; }
+}
+@media (max-width: 560px) { .toolbar { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<main>
+  <header class="hero">
+    <p class="language"><a href="./index.html" lang="ja">日本語</a></p>
+    <h1>webg unittest</h1>
+    <p>Browse <span id="pageCount">33</span> interactive browser checks, grouped by the topics covered in the book. Entries within each topic are alphabetized by folder name. Choose a test to see the feature and expected result on screen.</p>
+  </header>
+
+  <section class="guide" aria-labelledby="guide-title">
+    <h2 id="guide-title">About unittest</h2>
+    <p>Select <strong>Run</strong> to open an interactive check. Each English summary below describes its purpose and the behavior to inspect. The linked detailed test notes are currently in Japanese.</p>
+    <p>For complete user-facing examples, see the <a href="../samples/index.en.html">samples catalog</a>. Runnable examples from the book are listed in <a href="../book/examples/index.en.html">book examples</a>. Automated API and behavior checks for Node.js are documented in <a href="../headless_tests/README.md" download>headless_tests/README.md (Japanese)</a>.</p>
+    <p><code>unittest/shared</code> contains common setup code for the checks, including initialization and reusable geometry. This catalog links to the runnable pages.</p>
+  </section>
+
+  <nav class="guide" aria-labelledby="category-nav-title">
+    <h2 id="category-nav-title">Browse by topic</h2>
+    <ul class="category-nav" id="categoryNav"></ul>
+  </nav>
+
+  <section class="guide" aria-labelledby="search-title">
+    <h2 id="search-title">Search names and descriptions</h2>
+    <div class="toolbar">
+      <input id="search" type="search" placeholder="For example: camera, input, Shape, physics" aria-label="Search unittests" />
+      <div class="count"><span id="visibleCount">33</span> / <span id="totalCount">33</span> tests</div>
+    </div>
+  </section>
+
+  <div id="catalog"></div>
+</main>
+<script>
+const categories = [
+  {
+    id: "application",
+    title: "Application structure, cameras, and scenes",
+    chapters: "Book chapters 05–06, 08–11",
+    summary: "Check WebgApp helpers, camera following, Node hierarchies, model-resource lifetimes, and Scene JSON construction.",
+    items: [
+      ["camera_follow", "Switch follow, lock, yaw-follow, and clear modes; inspect camera position, orientation, lag, and release around a moving target."],
+      ["destroy_lifecycle", "Dispose of Shape, shared ShapeResource, runtime, and instantiation separately to inspect which scene objects and shared GPU resources are released."],
+      ["detouch_min", "Change Node parentage with attach and detach, then inspect world-position preservation and local-transform recalculation."],
+      ["game_api", "Call WebgApp's game helpers together and check how updates, status display, and controls pass values through the app."],
+      ["primitive_modelasset", "Validate and build a ModelAsset created by Primitive, then restore it as runtime Space, Node, and Shape objects."],
+      ["scene_loader_contracts", "Validate and build Scene JSON, then check nodes, shapes, materials, physics settings, and a generated crate falling to rest."],
+      ["scene_mesh", "Drop a YAML-defined wedge mesh with Box, Sphere, and Capsule colliders, then use GPU readback to check that it reaches the floor."]
+    ]
+  },
+  {
+    id: "shader",
+    title: "Shaders, geometry, and skinning",
+    chapters: "Book chapters 07, 38–40",
+    summary: "Compare drawing paths for vertices, faces, UVs, normals, wireframes, material shaders, and bone deformation.",
+    items: [
+      ["cube_axes", "Build a six-sided cube with addVertex and addPlane, then check face orientation, front and back sides, and X/Y/Z rotation."],
+      ["phong_debug", "Compare SmoothShader back-face diagnostics, bone deformation, image normals, and weight display against material settings."],
+      ["primitive_normal_map", "Apply the same material to basic Primitives and compare shading with no normal map, an image normal, and a procedural normal."],
+      ["primitive_texture_uv", "Apply one texture to several Primitives and inspect how seams, orientation, and scale follow each shape's UV layout."],
+      ["primitive_wireframe", "Arrange Primitives in a 3×3 grid and compare their faces and edges in solid and wireframe modes."],
+      ["skinning_basic", "Inspect SmoothShader skinning, then switch the same skinned mesh to wireframe and compare vertex deformation."],
+      ["skinning_normal_map", "Apply a normal map to a bone-deformed mesh and check that surface detail and lighting follow its pose."],
+      ["smooth_shader", "Compare static, skinned, normal-map, and flat-shading paths side by side with SmoothShader."]
+    ]
+  },
+  {
+    id: "ui-input",
+    title: "UI, input, and device interaction",
+    chapters: "Book chapters 12–14",
+    summary: "Check messages, OverlayPanel, themes, keyboard and touch controls, device tilt, and embedded layouts.",
+    items: [
+      ["embedded", "Embed a canvas and overlay in a page host, then scroll and toggle visibility to check that both remain aligned inside it."],
+      ["flick", "Inspect flick, long-press, and double-tap events from Touch.attachSurface() as mobile editing gestures."],
+      ["input_controller", "Check InputController key normalization and distinguish a held input from a one-shot action."],
+      ["message", "Create, update, and clear Message and HUD text to display status and instructions over a 3D scene."],
+      ["overlay_panel", "Inspect OverlayPanel placement, visibility, modal state, and pauseScene information, then pause app updates from panel state."],
+      ["textdemo", "Write character codes to Text's 80×25 character buffer and inspect glyphs from the character atlas on a fixed grid."],
+      ["theme", "Use WebgApp.setUiTheme() to change DebugDock and OverlayPanel together and check the theme across the UI."],
+      ["tilt_input", "Visualize phone deviceorientation and PC simulation as the same tiltX/tiltY vector for comparison."],
+      ["touch", "Use Touch hold and action buttons to compare a continuous pressed value with a one-time event."]
+    ]
+  },
+  {
+    id: "interaction",
+    title: "Queries, physics, and particles",
+    chapters: "Book chapters 15, 26–28",
+    summary: "Check animated features such as ray casting, lightweight particles, and PhysicsNode movement and rotation.",
+    items: [
+      ["particle_emitter", "Follow ParticleEmitter through emit, update, draw, and clear to inspect a lightweight CPU-updated particle lifecycle."],
+      ["physics_node_fall", "Drop a PhysicsNode under gravity and inspect contacts, bounce, friction, and settling on Plane and Box colliders."],
+      ["physics_node_rotate", "Apply angularVelocity and torque to PhysicsNode and inspect how angular motion changes the Node pose."],
+      ["raycast", "Cast a ray from the mouse position into 3D space and display intersections and selection results for basic picking."]
+    ]
+  },
+  {
+    id: "effects",
+    title: "Backgrounds, transparency, and screen effects",
+    chapters: "Book chapters 23–25",
+    summary: "Inspect image processing around scene rendering with background images, frosted glass, and Vignette.",
+    items: [
+      ["background", "Draw an image into a rectangle based on an 800×600 layout and inspect initial aspect correction, brightness, and tint."],
+      ["translucent", "Use FrostedGlassPass and a mask to blur the background inside glass while keeping foreground objects sharp."],
+      ["vignette", "Render the scene offscreen, then inspect edge darkening as VignettePass strength, range, softness, center, and color change."]
+    ]
+  },
+  {
+    id: "browser-data",
+    title: "Browser APIs and data processing",
+    chapters: "Book chapter 29 and browser APIs",
+    summary: "Check browser APIs and data processing for saving and transferring 3D content.",
+    items: [
+      ["compression", "Compress and restore ModelAsset JSON with Compression Streams API, then compare byte size, compression ratio, and exact text."],
+      ["procedural_pebbles", "Compare GPU pebble Color and Height values with CPU references; inspect independent color and height, rounded profiles, tiling, and seam normals."]
+    ]
+  }
+];
+
+// 一覧のラベルと参照先からリンクを作り、主操作や補足説明の表示をそろえる
+function createLink(label, href, className = "") {
+  const link = document.createElement("a");
+  link.textContent = label;
+  link.href = href;
+  if (className) link.className = className;
+  return link;
+}
+
+// カテゴリ定義からテストの説明、実行リンク、確認用ナビゲーションを組み立て、掲載件数を表示する
+function renderCatalog() {
+  const nav = document.getElementById("categoryNav");
+  const catalog = document.getElementById("catalog");
+  let total = 0;
+
+  for (const category of categories) {
+    category.items.sort((a, b) => a[0].localeCompare(b[0], "en"));
+    total += category.items.length;
+
+    const navItem = document.createElement("li");
+    navItem.append(createLink(`${category.title} (${category.items.length})`, `#${category.id}`));
+    nav.append(navItem);
+
+    const section = document.createElement("section");
+    section.className = "category";
+    section.id = category.id;
+    section.dataset.category = "";
+
+    const header = document.createElement("div");
+    header.className = "category-header";
+    const titleRow = document.createElement("div");
+    titleRow.className = "category-title";
+    const heading = document.createElement("h2");
+    heading.textContent = category.title;
+    const chapters = document.createElement("span");
+    chapters.className = "chapter";
+    chapters.textContent = category.chapters;
+    titleRow.append(heading, chapters);
+    const summary = document.createElement("p");
+    summary.textContent = category.summary;
+    header.append(titleRow, summary);
+    section.append(header);
+
+    const columnHead = document.createElement("div");
+    columnHead.className = "catalog-head";
+    for (const label of ["Test", "What it checks", "Open or read"]) {
+      const span = document.createElement("span");
+      span.textContent = label;
+      columnHead.append(span);
+    }
+    section.append(columnHead);
+
+    for (const [name, description] of category.items) {
+      const item = document.createElement("article");
+      item.className = "catalog-item";
+      item.id = name;
+      item.dataset.search = `${category.title} ${category.chapters} ${category.summary}`;
+      const itemTitle = document.createElement("h3");
+      itemTitle.className = "test-name";
+      itemTitle.textContent = name;
+      const text = document.createElement("p");
+      text.className = "description";
+      text.textContent = description;
+      const actions = document.createElement("div");
+      actions.className = "actions";
+      actions.append(
+        createLink("Run", `./${name}/index.html`, "primary"),
+        createLink("Description (Japanese)", `./details.html?test=${name}`, "source-link")
+      );
+      item.append(itemTitle, text, actions);
+      section.append(item);
+    }
+    catalog.append(section);
+  }
+
+  document.getElementById("visibleCount").textContent = String(total);
+  document.getElementById("totalCount").textContent = String(total);
+  document.getElementById("pageCount").textContent = String(total);
+}
+
+renderCatalog();
+
+const search = document.getElementById("search");
+const items = Array.from(document.querySelectorAll(".catalog-item"));
+const categorySections = Array.from(document.querySelectorAll("[data-category]"));
+const visibleCount = document.getElementById("visibleCount");
+
+// 入力語をテスト名、説明、分野と照合し、一致する項目と分野、表示件数を更新する
+function updateSearch() {
+  const query = search.value.trim().toLocaleLowerCase("en");
+  let visible = 0;
+  for (const item of items) {
+    const haystack = `${item.textContent} ${item.dataset.search}`.toLocaleLowerCase("en");
+    const show = !query || haystack.includes(query);
+    item.hidden = !show;
+    if (show) visible += 1;
+  }
+  for (const category of categorySections) {
+    category.hidden = !category.querySelector(".catalog-item:not([hidden])");
+  }
+  visibleCount.textContent = String(visible);
+}
+
+search.addEventListener("input", updateSearch);
+</script>
+</body>
+</html>

@@ -173,11 +173,11 @@ blockquote {
 <h1>Combining SceneYAML and ModelYAML</h1>
 <p><a href="index.html">日本語</a> | <a href="scene_model_yaml.html">Run</a></p>
 <h2>Overview</h2>
-<p>This sample references ModelYAML from SceneYAML, renders three blue boxes using PBR, and drops them onto a floor. ModelYAML stores model geometry and Nodes; SceneYAML stores the artwork's rendering and physics settings.</p>
+<p>This sample references ModelYAML from SceneYAML, renders three blue boxes with PBR, and drops them onto a floor. ModelYAML stores model geometry and Nodes; SceneYAML stores the scene's rendering and physics settings.</p>
 <p><a href="model.yaml">model.yaml</a> defines a 1m cube mesh, an 8×0.3×6m floor mesh, material IDs, four Nodes, and initial transforms. Three Nodes share the cube mesh and start at center heights of 2m, 3m, and 4m. <a href="scene.yaml">scene.yaml</a> references ./model.yaml through modelAssetUrl and specifies PBR surfaces, environment lighting, gravity, and collision shapes.</p>
 <h2>Running and controls</h2>
 <p>Serve the repository over HTTP and open <a href="scene_model_yaml.html">scene_model_yaml.html</a> in a WebGPU browser using localhost or HTTPS. Physics starts paused. Drag to orbit and use the wheel to zoom.</p>
-<p>“開始” starts falling, “停止” pauses physics, and “初期位置へ” pauses and restores initial transforms. Rendering and camera controls remain active while physics is paused. The status shows four bodies, four bindings, a 240Hz fixed update, and comment counts for both documents.</p>
+<p><strong>開始</strong> (Start) releases the boxes, <strong>停止</strong> (Stop) pauses physics, and <strong>初期位置へ</strong> (Reset Positions) pauses physics and restores the initial transforms. Rendering and camera controls remain active while physics is paused. The status shows four bodies, four bindings, a 240 Hz fixed update, and comment counts for both documents.</p>
 <h2>How the documents connect</h2>
 <p>SceneYAML objects[].node references ModelYAML nodes[].id. objects[].id identifies the object within the artwork: falling-box-1 maps to box-node-1. In the current external-model path, initial transforms belong to ModelYAML Nodes; SceneYAML objects bind those Nodes to physics settings.</p>
 <p>SceneYAML materials[].assetMaterialId matches ModelYAML materials[].id. The sample applies a blue metallic surface to box-material and a rough surface to floor-material. All three boxes share the same material.</p>
@@ -185,7 +185,7 @@ blockquote {
 <h2>Loading and saving</h2>
 <p>main.js loads scene.yaml using SceneAsset.load, calls assertValid(), and passes the Asset to createWebgSceneApp. WebgSceneApp uses SceneDefinition to resolve the relative model URL and ModelAsset.load to read ModelYAML. Model construction, PBR application, Compute body registration, and Node synchronization use the core high-level API.</p>
 <p>The loaded model is available through sceneApp.model.asset. Source inspection uses the loaded Asset. Expand the two document sections to view the original text, including comments.</p>
-<p>“SceneYAML保存” and “ModelYAML保存” save the initial definitions as their original text. The saved content contains initial definitions, separately from runtime physics positions. Save scene.yaml and model.yaml in the same folder to preserve the relative reference. Save the external model separately with the ModelYAML save button.</p>
+<p><strong>SceneYAML保存</strong> (Save SceneYAML) and <strong>ModelYAML保存</strong> (Save ModelYAML) download the initial definitions as source text. Runtime physics positions are separate from these saved values. Keep <code>scene.yaml</code> and <code>model.yaml</code> in the same folder to preserve their relative reference. The ModelYAML button saves the external model separately.</p>
 <h2>Files and implementation</h2>
 <p>scene_model_yaml.html is the executable page, main.js initializes the app and controls, scene.yaml contains artwork settings, and model.yaml contains the model. Japanese and English README files have corresponding HTML guides.</p>
 <p>Asset values remain unchanged while physics updates runtime Nodes, preserving YAML comments during export. Startup and saving failures appear on screen. Runtime rendering or physics errors stop updates. WebgSceneApp.destroy() releases resources on page exit.</p>

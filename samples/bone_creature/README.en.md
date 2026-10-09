@@ -5,8 +5,8 @@ English | [日本語](README.md)
 ![bone_creature](./bone_creature.jpg)
 
 ## Overview
-- This sample animates multiple skinned meshes (tentacles) at the same time so you can inspect bone deformation and the appearance of normal maps
-- It is structured as a practical example of using `SmoothShader` for "skinning + normal map"
+- This sample animates several skinned tentacles so you can inspect bone deformation and normal mapping as they move.
+- `SmoothShader` lights the deformed meshes with their normal maps.
 
 ## How to Run
 - Open [./bone_creature.html](./bone_creature.html)

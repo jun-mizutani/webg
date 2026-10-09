@@ -1,16 +1,16 @@
 # webg 3.0
 
-[日本語](README.md) · [GitHub](https://github.com/jun-mizutani/webg) · [Sample gallery](samples/index.html) · [Guide to examples and samples](book/examples/guide.html)
+[日本語](README.md) · [GitHub](https://github.com/jun-mizutani/webg) · [Sample gallery](https://jun-mizutani.github.io/webg/samples/) · [Guide to examples and samples](https://jun-mizutani.github.io/webg/book/examples/guide.html)
 
 Build 3D applications with light, materials, and motion using JavaScript and WebGPU.
 
 `webg` is a self-contained library that combines PBR, environment lighting, water surfaces and caustics, CPU/GPU physics simulation, animation, particles, and sound.
 You can move from high-level application development to direct control of Render Passes, Compute Passes, and WGSL while using the same scenes and models.
 
-[![Dolphins swimming in a PBR aquarium with a water surface, underwater caustics, red and yellow lamps, and bubbles](samples/aquarium/aquarium.jpg)](samples/aquarium/aquarium.html)
+[![Dolphins swimming in a PBR aquarium with a water surface, underwater caustics, red and yellow lamps, and bubbles](https://jun-mizutani.github.io/webg/samples/aquarium/aquarium.jpg)](https://jun-mizutani.github.io/webg/samples/aquarium/aquarium.html)
 
 **Aquarium — Light beneath the water** — A scene combining glTF model animation, caustics, a water surface, particles, and lighting.
-[Run the sample](samples/aquarium/aquarium.html) · [Explanation and code](samples/aquarium/index.en.html)
+[Run the sample](https://jun-mizutani.github.io/webg/samples/aquarium/aquarium.html) · [Explanation and code](https://jun-mizutani.github.io/webg/samples/aquarium/index.en.html)
 
 ## Explore webg through samples
 
@@ -55,7 +55,7 @@ Click an image to run the sample in a WebGPU-enabled browser. Each sample's expl
   </tr>
 </table>
 
-[Browse all samples](samples/index.html)
+[Browse all samples](https://jun-mizutani.github.io/webg/samples/)
 
 ## Main features
 
@@ -77,7 +77,7 @@ Register opaque `Shape` or `Node` receivers and adjust the intensity for each ob
 
 The surface and caustics can be switched independently. Turning both off releases water-specific GPU resources and returns to the regular PBR pipeline.
 The core water surface supports finite horizontal water regions viewed from above. Caustics use an approximation that projects vertically directed light from a reference plane onto 3D objects.
-The aquarium sample also includes its own water-surface rendering for underwater viewpoints. The scope of each effect is described in the [water sample documentation](samples/water/index.en.html).
+The aquarium sample also includes its own water-surface rendering for underwater viewpoints. The scope of each effect is described in the [water sample documentation](https://jun-mizutani.github.io/webg/samples/water/index.en.html).
 
 ### Procedural materials and models
 
@@ -100,7 +100,7 @@ They support contact between boxes, spheres, capsules, and fixed planes, along w
 | Rendering integration | Use the position and orientation of `PhysicsNode` | Render directly from GPU state or synchronize it to Nodes |
 
 Choose based on object count, shape, update frequency, and the information your CPU-side logic needs.
-[samples/compute_physics](samples/compute_physics/index.en.html) compares the CPU and GPU engines with the same initial conditions. [samples/karakuri](samples/karakuri/index.en.html) demonstrates an application combining editing and simulation.
+[samples/compute_physics](https://jun-mizutani.github.io/webg/samples/compute_physics/index.en.html) compares the CPU and GPU engines with the same initial conditions. [samples/karakuri](https://jun-mizutani.github.io/webg/samples/karakuri/index.en.html) demonstrates an application combining editing and simulation.
 
 ### Animation, particles, sound, and input
 
@@ -110,13 +110,13 @@ Sound synthesis, background music, and sound effects are available through the W
 
 ## Start building an application
 
-If you are new to webg, use the [guide to examples and samples](book/examples/guide.html) to find an example close to what you want to build.
+If you are new to webg, use the [guide to examples and samples](https://jun-mizutani.github.io/webg/book/examples/guide.html) to find an example close to what you want to build.
 `book/examples/` contains small runnable examples for individual chapters; `samples/` contains reference applications combining multiple features.
 
-- **Describe geometry and motion in JavaScript:** Start with `WebgApp`, `Space`, `Node`, and `Shape`. See [high_level](samples/high_level/index.en.html).
-- **Define placement, materials, and physics in SceneYAML:** Use `createWebgSceneApp()` and `SceneDefinition`. See [project_app](samples/project_app/index.en.html).
+- **Describe geometry and motion in JavaScript:** Start with `WebgApp`, `Space`, `Node`, and `Shape`. See [high_level](https://jun-mizutani.github.io/webg/samples/high_level/index.en.html).
+- **Define placement, materials, and physics in SceneYAML:** Use `createWebgSceneApp()` and `SceneDefinition`. See [project_app](https://jun-mizutani.github.io/webg/samples/project_app/index.en.html).
 - **Combine PBR lighting and screen effects:** Use `PbrRenderer` and `ComputeEffectPipeline`. See the [PBR integration example](book/examples/32_01.html).
-- **Render GPU-updated state in the same frame:** Use `ComputePass` and run GPU computation before rendering. See [compute_particles](samples/compute_particles/index.en.html).
+- **Render GPU-updated state in the same frame:** Use `ComputePass` and run GPU computation before rendering. See [compute_particles](https://jun-mizutani.github.io/webg/samples/compute_particles/index.en.html).
 
 `WebgApp` brings together GPU initialization, scenes, cameras, input, UI, and the update/render loop.
 `WebgSceneApp` builds models, materials, PBR, and physics from SceneYAML/JSON application definitions.
@@ -136,7 +136,7 @@ The library itself can be used through relative JavaScript imports.
 
 ## Learn with the book
 
-The English book is available in [`book.en/`](book.en/README.md). Its [entry guide](book.en/ExampleGuide.md) maps application goals to runnable examples, code to read, and checks to make. The companion [browser guide](book/examples/guide.html) provides the same navigation in the browser.
+The English book is available in [`book.en/`](book.en/README.md). Its [entry guide](book.en/ExampleGuide.md) maps application goals to runnable examples, code to read, and checks to make. The companion [browser guide](https://jun-mizutani.github.io/webg/book/examples/guide.html) provides the same navigation in the browser.
 
 The chapters progress from minimal rendering through application structure, models, interaction, physics, PBR, and GPU processing. Each chapter links its explanation to runnable examples in `book/examples/` and larger applications in `samples/`.
 
@@ -158,7 +158,7 @@ Use a WebGPU-enabled browser and GPU, and run applications on localhost or HTTPS
 Available features and performance depend on the browser, OS, GPU, and driver.
 GPU timing measurements require `timestamp-query` support.
 
-[compute_benchmark](samples/compute_benchmark/index.en.html) measures PBR rendering, lighting, reflections, transparency composition, and other stages under the same scene conditions.
+[compute_benchmark](https://jun-mizutani.github.io/webg/samples/compute_benchmark/index.en.html) measures PBR rendering, lighting, reflections, transparency composition, and other stages under the same scene conditions.
 `headless_tests/` contains automated tests for API and data contracts; `unittest/` contains browser applications for visual checks.
 
 ```bash

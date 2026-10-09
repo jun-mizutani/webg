@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+<!-- 2026/10/09: 英語版カタログへの切替を追加 -->
 <html lang="ja">
 <head>
 <meta charset="UTF-8" />
@@ -36,6 +37,7 @@ main { width: min(1180px, calc(100% - 32px)); margin: 0 auto; padding: 32px 0 64
   box-shadow: 0 10px 28px rgba(35, 50, 68, 0.06);
 }
 .hero { padding: 28px 30px; }
+.language { margin: 0 0 10px; text-align: right; }
 .hero h1 { margin: 0 0 8px; font-size: clamp(2rem, 5vw, 3rem); line-height: 1.15; }
 .hero p { max-width: 920px; margin: 8px 0 0; color: var(--muted); }
 .guide { margin-top: 20px; padding: 22px 26px; }
@@ -83,6 +85,7 @@ main { width: min(1180px, calc(100% - 32px)); margin: 0 auto; padding: 32px 0 64
 <body>
 <main>
   <header class="hero">
+    <p class="language"><a href="./index.en.html" lang="en">English</a></p>
     <h1>webg unittest</h1>
     <p>ブラウザーで表示・操作して確認する<span id="pageCount">33</span>本のテストを、bookの章に対応する分野別に整理しています。各分野の中はフォルダ名のアルファベット順です。確認したい機能と画面上で見るべき結果を、一覧から選べます。</p>
   </header>

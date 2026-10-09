@@ -1,12 +1,181 @@
-<!doctype html>
-<!-- samples/circular_breaker2/index.en.html 2026/09/20 -->
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>circular_breaker2</title><style>body{max-width:960px;margin:2rem auto;padding:0 1rem;line-height:1.7;font-family:system-ui,sans-serif}code,a{color:#1769aa}</style></head><body>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>circular_breaker2</title>
+  <link rel="icon" href="data:," />
+  <!-- 2026/06/19 -->
+  <style>
+
+:root {
+  color-scheme: light;
+  --bg: #eef3f8;
+  --paper: rgba(255, 255, 255, 0.94);
+  --line: #c8d5e4;
+  --ink: #17324a;
+  --muted: #5c748b;
+  --accent: #1566ab;
+  --accent-soft: #dfeefe;
+  --code-bg: #f3f7fb;
+  --shadow: rgba(29, 52, 79, 0.10);
+}
+* { box-sizing: border-box; }
+html, body {
+  margin: 0;
+  min-height: 100%;
+}
+body {
+  background:
+    radial-gradient(circle at top left, rgba(21, 102, 171, 0.12), transparent 24%),
+    radial-gradient(circle at top right, rgba(255, 191, 118, 0.10), transparent 22%),
+    linear-gradient(180deg, #f8fbfd 0%, var(--bg) 100%);
+  color: var(--ink);
+  font: 16px/1.78 "Avenir Next", "Hiragino Sans", "Yu Gothic", sans-serif;
+}
+.page {
+  width: min(1080px, calc(100% - 28px));
+  margin: 0 auto;
+  padding: 24px 0 56px;
+}
+.hero,
+.doc {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  box-shadow: 0 22px 52px var(--shadow);
+}
+.hero {
+  padding: 22px 24px;
+  margin-bottom: 18px;
+}
+.hero h1 {
+  margin: 0 0 8px;
+  font-size: clamp(2rem, 4vw, 3rem);
+  line-height: 1.08;
+}
+.hero p {
+  margin: 0;
+  color: var(--muted);
+}
+.doc {
+  padding: 28px;
+}
+.doc > :first-child {
+  margin-top: 0;
+}
+h1, h2, h3, h4, h5, h6 {
+  line-height: 1.25;
+  margin: 1.45em 0 0.55em;
+}
+h1 {
+  font-size: 2.2rem;
+}
+h2 {
+  padding-bottom: 0.28em;
+  border-bottom: 1px solid var(--line);
+  font-size: 1.48rem;
+}
+h3 {
+  font-size: 1.14rem;
+}
+p, ul, ol, table, pre, blockquote {
+  margin: 0 0 1em;
+}
+ul, ol {
+  padding-left: 1.4em;
+}
+li + li {
+  margin-top: 0.26em;
+}
+a {
+  color: var(--accent);
+  text-decoration: none;
+}
+a:hover {
+  text-decoration: underline;
+}
+img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  border-radius: 16px;
+  border: 1px solid var(--line);
+  box-shadow: 0 12px 32px rgba(29, 52, 79, 0.08);
+  margin: 1.1em 0 1.4em;
+}
+code {
+  padding: 0.12em 0.38em;
+  border-radius: 0.45em;
+  background: var(--code-bg);
+  border: 1px solid #dbe6f1;
+  font: 0.92em/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+pre {
+  padding: 14px 16px;
+  overflow-x: auto;
+  border-radius: 14px;
+  background: #0f1720;
+  color: #ecf5ff;
+}
+pre code {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #ffffff;
+}
+th, td {
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  text-align: left;
+  vertical-align: top;
+}
+th {
+  background: #f5f9fc;
+}
+hr {
+  border: 0;
+  border-top: 1px solid var(--line);
+  margin: 1.5em 0;
+}
+blockquote {
+  padding: 0.3em 0 0.3em 1em;
+  border-left: 4px solid #c9dbef;
+  color: var(--muted);
+}
+@media (max-width: 720px) {
+  .page {
+    width: min(100% - 18px, 1080px);
+    padding-top: 16px;
+  }
+  .hero,
+  .doc {
+    border-radius: 18px;
+  }
+  .doc {
+    padding: 20px;
+  }
+}
+
+  </style>
+</head>
+<body>
+  <main class="page">
+    <section class="hero">
+      <h1>circular_breaker2</h1>
+    </section>
+    <article class="doc">
 <h1>circular_breaker2</h1>
 <p>Columns and blocks have a strong continuous upper light band, lower strips, and indicator marks. The upper emission mask uses 255 and the lower lamps use 160.</p>
 <p>LEVEL, PACK, destroyed-block count, SCORE, phase, and objectives appear beside the title above the canvas. On narrow windows, the header wraps and the canvas fills the remaining height.</p>
 <p>The canvas fills the window width and the height below the header. ArenaSceneApp uses ResizeObserver to update Screen, the camera aspect ratio, and PBR render targets. Rendering uses one pixel per CSS pixel.</p>
 <p>The play page displays the game name, scores, stage objectives, control hints, and buttons. M toggles diagnostics. PBR shadows and reflections are enabled; SSAO is disabled.</p>
-<p>This sample builds a circular breakout game with SceneYAML, ModelYAML, and PBR.</p>
+<p>This sample builds a circular Breakout game with SceneYAML, ModelYAML, and PBR.</p>
 <p><a href="./circular_breaker2.html">Run the sample</a>　<a href="./index.html">日本語</a></p>
 <h2>Overview</h2>
 <p>The arena contains a circular floor, seven concentric rings, 48 boundary columns, 28 blocks, and a beveled paddle and puck. The camera follows the paddle. A dark metallic floor and cyan/red emissive rings define the arena.</p>
@@ -15,7 +184,7 @@
 <p>ArrowLeft / ArrowRight move along the paddle's long axis; A / D rotate it. The following camera makes the surrounding arena rotate around the paddle on screen. Enter, Space, or a click starts play. R resets the puck; K pauses and resumes. On the result screen, R restarts the game. The bottom buttons also support movement and rotation.</p>
 <p>P captures a screenshot and O ends the game. M toggles diagnostics including paddle angle and position. Q/W, C/V, J/L, and F/G collect, copy, log, and save diagnostics. Both held keys and short presses released between rendering frames are accepted.</p>
 <h2>Implementation</h2>
-<p><code>ArenaSceneApp.js</code> extends WebgSceneApp and supplies six fixed point lights to Deferred Lighting: cyan, amber, violet, green, red, and blue. They are placed on a radius-36 circle at height 22, each with radius 72 and relative intensity 4.0. Directional intensity is reduced to 0.12 and environment intensity to 0.65. Light positions stay fixed while the camera moves. Point lights provide local illumination; the directional shadow remains enabled and SSAO is disabled. Individual point-light shadows are outside this configuration. Edit point lights in <code>createArenaLights()</code> and fill lighting in <code>scene.yaml</code>.</p>
+<p><code>ArenaSceneApp.js</code> extends WebgSceneApp and supplies six fixed point lights to Deferred Lighting: cyan, amber, violet, green, red, and blue. They are placed on a radius-36 circle at height 22, each with radius 72 and relative intensity 4.0. Directional intensity is 0.12 and environment intensity is 0.65. Light positions stay fixed while the camera moves. Point lights provide local illumination; the directional shadow remains enabled and SSAO is disabled. Individual point-light shadows are outside this configuration. Edit point lights in <code>createArenaLights()</code> and fill lighting in <code>scene.yaml</code>.</p>
 <p><code>main.js</code> connects Asset loading, the paddle-following camera, input, and the score overlay. It disables the default Orbit camera's input updates and pointer controls, then reparents the eye to the paddle. The relative eye position is <code>[0, 34, 50]</code>, its downward pitch is 36 degrees, and the field of view is 52 degrees.</p>
 <p><code>blockField.js</code> retrieves placed ModelYAML Nodes and switches their visibility and materials by block type. Standard, tall, and damaged-short meshes are loaded from ModelYAML. The first hit reduces a hard block's height from 12.8 to 6.4. <code>panelTexture.js</code> procedurally generates a 512×512 science-fiction casing with four panels around the circumference, seams, shallow grooves, narrow light strips, and three indicator marks. Separate color, height, and emission-mask images produce three GPU textures shared by columns and all blocks. Broad metallic surfaces retain smooth reflections; only white regions of the emission mask glow. Supply blocks retain their casing while their lamps pulse green.</p>
 <p>The floor uses metallic 0.72 and roughness 0.18, with SSR reflecting visible objects. SSR cannot capture off-screen or hidden surfaces; reflections combine SSR and IBL. Normal blocks use metallic 0.72 and roughness 0.22; columns use roughness 0.20. Specular remains 1; metallic, roughness, and environment lighting shape the highlights.</p>
@@ -27,4 +196,7 @@
 <h2>What to check</h2>
 <p>After starting, A/D should rotate the view and arrow keys should move the camera with the paddle. Hits increase the score, destroyed blocks disappear, and the first hit shortens hard blocks. K freezes paddle and puck movement; another K resumes play.</p>
 <p>Move the camera to check changing floor reflections and column highlights, and check the colored glow surrounding rings and supply blocks.</p>
-</body></html>
+    </article>
+  </main>
+</body>
+</html>

@@ -1,16 +1,16 @@
 # webg 3.0
 
-[English](README.en.md) · [GitHub](https://github.com/jun-mizutani/webg) · [サンプル一覧](samples/index.html) · [実行例とサンプルの案内](book/examples/guide.html)
+[English](README.en.md) · [GitHub](https://github.com/jun-mizutani/webg) · [サンプル一覧](https://jun-mizutani.github.io/webg/samples/) · [実行例とサンプルの案内](https://jun-mizutani.github.io/webg/book/examples/guide.html)
 
 JavaScriptとWebGPUで、光・材質・動きのある3Dアプリケーションを。
 
 `webg`は、PBR、環境光、水面とコースティクス、CPU／GPUの物理シミュレーション、アニメーション、粒子、サウンドを組み合わせられる自己完結型のライブラリです。
 高水準のアプリ構築から、Render Pass・Compute Pass・WGSLを直接扱う実装まで、同じシーンやモデルを使って進められます。
 
-[![イルカが泳ぐ水槽。水面、水底の集光、赤と黄色のランプ、泡を組み合わせたPBRシーン](samples/aquarium/aquarium.jpg)](samples/aquarium/aquarium.html)
+[![イルカが泳ぐ水槽。水面、水底の集光、赤と黄色のランプ、泡を組み合わせたPBRシーン](https://jun-mizutani.github.io/webg/samples/aquarium/aquarium.jpg)](https://jun-mizutani.github.io/webg/samples/aquarium/aquarium.html)
 
 **水光のアクアリウム** — glTFモデルのアニメーション、コースティクス、水面、粒子、照明を組み合わせた情景です。
-[動かして見る](samples/aquarium/aquarium.html) · [作り方とコード](samples/aquarium/index.html)
+[動かして見る](https://jun-mizutani.github.io/webg/samples/aquarium/aquarium.html) · [作り方とコード](https://jun-mizutani.github.io/webg/samples/aquarium/index.html)
 
 ## サンプルで見るwebg
 
@@ -55,7 +55,7 @@ JavaScriptとWebGPUで、光・材質・動きのある3Dアプリケーショ�
   </tr>
 </table>
 
-[すべてのサンプルを見る](samples/index.html)
+[すべてのサンプルを見る](https://jun-mizutani.github.io/webg/samples/)
 
 ## 主な機能
 
@@ -77,7 +77,7 @@ JavaScriptとWebGPUで、光・材質・動きのある3Dアプリケーショ�
 
 水面と集光は個別に切り替えられます。両方OFFでは水専用のGPU資源を解放し、通常のPBR処理へ戻ります。
 コアの水面は有限の水平水域を上から見る用途、集光は垂直方向の光を基準面から立体へ投影する近似に対応します。
-水中視点のaquariumは、サンプル側で水面の描画も組み合わせています。各表現の適用範囲は[waterの解説](samples/water/index.html)にまとめています。
+水中視点のaquariumは、サンプル側で水面の描画も組み合わせています。各表現の適用範囲は[waterの解説](https://jun-mizutani.github.io/webg/samples/water/index.html)にまとめています。
 
 ### 手続きマテリアルとモデル
 
@@ -100,7 +100,7 @@ Box、Sphere、Capsuleと固定Planeの接触、重力、摩擦、回転、静�
 | 描画への接続 | `PhysicsNode`の位置と姿勢を使う | GPU状態の直接描画、またはNodeへの同期を選ぶ |
 
 両者を選ぶときは、物体数、形状、更新頻度、CPU側で必要な情報を基準にします。
-[samples/compute_physics](samples/compute_physics/index.html)で同じ初期条件のCPU版とGPU版を比較し、[samples/karakuri](samples/karakuri/index.html)で編集と試運転を組み合わせたアプリを確認できます。
+[samples/compute_physics](https://jun-mizutani.github.io/webg/samples/compute_physics/index.html)で同じ初期条件のCPU版とGPU版を比較し、[samples/karakuri](https://jun-mizutani.github.io/webg/samples/karakuri/index.html)で編集と試運転を組み合わせたアプリを確認できます。
 
 ### アニメーション、粒子、サウンド、入力
 
@@ -110,13 +110,13 @@ Web Audio APIによる音の合成、BGM、効果音も利用できます。
 
 ## アプリケーションを作り始める
 
-初めて使う場合は、[実行例とサンプルの案内](book/examples/guide.html)から、作りたいものに近い例を選んでください。
+初めて使う場合は、[実行例とサンプルの案内](https://jun-mizutani.github.io/webg/book/examples/guide.html)から、作りたいものに近い例を選んでください。
 `book/examples/`は各章の小さな実行例、`samples/`は複数の機能を組み合わせた参照アプリです。
 
-- **形状と動きをJavaScriptで記述する**：`WebgApp`、`Space`、`Node`、`Shape`から始めます。[high_level](samples/high_level/index.html)を参照してください。
-- **配置・材質・物理をSceneYAMLで定義する**：`createWebgSceneApp()`と`SceneDefinition`を使います。[project_app](samples/project_app/index.html)を参照してください。
+- **形状と動きをJavaScriptで記述する**：`WebgApp`、`Space`、`Node`、`Shape`から始めます。[high_level](https://jun-mizutani.github.io/webg/samples/high_level/index.html)を参照してください。
+- **配置・材質・物理をSceneYAMLで定義する**：`createWebgSceneApp()`と`SceneDefinition`を使います。[project_app](https://jun-mizutani.github.io/webg/samples/project_app/index.html)を参照してください。
 - **PBRの照明と画面効果を組み合わせる**：`PbrRenderer`と`ComputeEffectPipeline`を使います。[PBR統合の実行例](book/examples/32_01.html)を参照してください。
-- **GPUの更新結果を同じフレームで描画する**：`ComputePass`を使い、GPU計算を描画より先に実行します。[compute_particles](samples/compute_particles/index.html)を参照してください。
+- **GPUの更新結果を同じフレームで描画する**：`ComputePass`を使い、GPU計算を描画より先に実行します。[compute_particles](https://jun-mizutani.github.io/webg/samples/compute_particles/index.html)を参照してください。
 
 `WebgApp`は、GPU初期化、シーン、カメラ、入力、UI、更新と描画のループをまとめます。
 `WebgSceneApp`はSceneYAML／JSONの作品定義からモデル・材質・PBR・物理を組み立てます。
@@ -159,7 +159,7 @@ WebGPUに対応したブラウザーとGPUを使用し、localhostまたはHTTPS
 利用できる機能と性能は、ブラウザー、OS、GPU、ドライバーによって異なります。
 GPU時間の計測には`timestamp-query`対応が必要です。
 
-[compute_benchmark](samples/compute_benchmark/index.html)では、PBRの描画・照明・反射・透明合成などを、同じシーン条件で段階別に計測できます。
+[compute_benchmark](https://jun-mizutani.github.io/webg/samples/compute_benchmark/index.html)では、PBRの描画・照明・反射・透明合成などを、同じシーン条件で段階別に計測できます。
 `headless_tests/`にはAPIとデータの条件を検証する自動テスト、`unittest/`にはブラウザーで表示を確認する検証アプリがあります。
 
 ```bash

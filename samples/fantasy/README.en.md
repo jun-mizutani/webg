@@ -10,7 +10,7 @@ A small turn-based battle on a 9×9 map with three elevation levels. Command a k
 
 No external models or audio assets are required. Primitive geometry forms the characters; parent and child Nodes connect their limbs and equipment. Rules run independently of the GPU and DOM, making the boundary between a grid path and its animation visible.
 
-The keep is submerged. Core caustics illuminate terrain, scenery, and moving units; blue-green light, distance fog, and drifting particles give the battlefield an underwater atmosphere. Toggle **水中のコースティクス** to compare the moving illumination. Underwater colors and fog remain when caustics are off.
+The keep is submerged. Core caustics illuminate terrain, scenery, and moving units; blue-green light, distance fog, and drifting particles give the battlefield an underwater atmosphere. Toggle **水中のコースティクス** (Underwater Caustics) to compare the moving illumination. Underwater colors and fog remain when caustics are off.
 
 ## Run and controls
 
@@ -19,13 +19,13 @@ Open [fantasy.html](fantasy.html) in a WebGPU browser. Serve the repository over
 1. Select an ally in the 3D scene or party panel.
 2. Click a cyan tile to move.
 3. Click an enemy within range to attack.
-4. Command the remaining allies and press **味方ターンを終了** (end turn).
+4. Command the remaining allies and press **味方ターンを終了** (End Ally Turn).
 
-Each unit moves once and attacks once per turn. An attack can be the unit's only action. Movement takes place before attacking; choose **待機** after an attack to finish the unit's actions. **待機** ends an individual unit's actions. Enemies approach attack positions, then attack the available ally with the lowest HP.
+Each ally can move once and attack once per turn, but movement must come first. An attack made without moving ends that unit's actions. After moving, attack or choose **待機** (Wait) to finish that unit's turn. Enemies move into attack range, then target the available ally with the lowest HP.
 
 Movement uses four neighbors and permits one elevation step. Climbing costs 2 movement points; level and downhill movement cost 1. Living units and obstacles block movement. Attacking from higher ground adds 3 damage. Range uses Manhattan distance; ranged attacks pass over obstacles and always hit.
 
-Defeat all enemies to win. Losing every ally ends the battle. **最初から** and **もう一度戦う** restart it. Expand **マスをボタンで操作** to use grid buttons with Tab and Enter; these invoke the same actions as 3D picking.
+Defeat all enemies to win; losing every ally ends the battle. **最初から** (Start Over) and **もう一度戦う** (Fight Again) restart it. Expand **マスをボタンで操作** (Use Grid Buttons) to control the map with Tab and Enter; these buttons trigger the same actions as 3D picking.
 
 Drag to rotate and use the wheel to zoom. The initial view uses perspective projection. Canvas size is 960×720 on large screens; narrow screens reduce its width and place the controls below it.
 
@@ -34,7 +34,7 @@ Drag to rotate and use the wheel to zoom. The initial view uses perspective proj
 - `WebgSceneApp` starts PBR and GPU particles from a manifest object with the SceneDefinition structure. Game updates use `onUpdate({ deltaSec })`.
 - `Shape`, `Primitive`, and `Node` form characters and equipment. Moving the parent moves its children; rotation differences animate the limbs.
 - PBR materials, `blue-sky` environment lighting, a blue vertical directional light, shadows, Bloom, and Fog distinguish terrain, armor, and crystals.
-- `WaterBody` and `PbrRenderer.setWater()` project wave-generated illumination onto terrain and moving unit diffuse lighting. Surface refraction is disabled to keep tactical tiles readable.
+- `WaterBody` and `PbrRenderer.setWater()` add wave-generated caustics to terrain and the diffuse PBR lighting of moving units. The water surface is hidden to keep tactical tiles clear.
 - `Space.raycast()` picks terrain and character AABBs from a Reverse-Z pointer ray.
 - `ComputeParticleEmitter` handles footsteps, magic, sparks, and ambient light. The standard app handles simulation and PBR composition.
 
@@ -46,7 +46,7 @@ The app uses `physics:false`. Tile rules determine paths and elevation; no rigid
 - Watch limb motion, vertical motion, and particles at each step. Input remains disabled until animation finishes and the logical tile position is committed.
 - Finn has range 4 and Luna range 3. Clicking an out-of-range enemy shows a message without changing HP.
 - Check attack trails, impact particles, hit motion, HP, and defeated units disappearing.
-- Enemy attacks from higher ground show **高所 +3** in the log. Allies regain their actions next turn.
+- Enemy attacks from higher ground show **高所 +3** (High Ground +3) in the log. Allies regain their actions next turn.
 - Restart restores HP, positions, turn, log, and particles while reusing GPU resources.
 - Rotate and resize the view; labels and picking should remain aligned with the 3D scene.
 - Toggle caustics and check that moving units, attacks, and turn progression continue correctly.
@@ -74,9 +74,9 @@ await sceneApp.renderer.setWater(water, {
 });
 ```
 
-Switching stops new frames, awaits `setWater()`, and resumes the app. OFF releases dedicated GPU resources. Re-enabling preserves combat state and registered Nodes; restart reuses the water body.
+When the caustics control changes, its handler pauses rendering while it awaits `setWater()`, then resumes the app. Turning caustics off releases the dedicated GPU resources. Turning them on again preserves the battle state and registered Nodes; restarting the battle reuses the same water body.
 
-This sample creates an underwater scene through lighting. Absorption attenuates the projected caustic field; standard distance Fog approximates water haze toward the camera. Underwater camera refraction, total internal reflection, and the underside of the surface are not rendered. Caustics use horizontal-field projection onto opaque receivers; ordinary PBR handles shadows and specular reflections. See the [water sample](../water/index.html) for the API.
+Lighting creates the underwater atmosphere: absorption attenuates the projected caustic field, and distance Fog adds a water haze toward the camera. The sample projects caustics across a horizontal field onto opaque receivers; ordinary PBR handles shadows and specular reflections. It does not render underwater refraction, total internal reflection, or the underside of the surface. See the [water sample](../water/index.en.html) for the API.
 
 ## Change one thing at a time
 
@@ -89,7 +89,7 @@ Use the verification points after each change so that its effect has a clear cau
 
 ## Documents and rule checks
 
-[fantasy_design.md](fantasy_design.md) describes the game and its scope in Japanese. `camera_reference.json` records the initial camera reference. The book's [**PBRシーンから小さなゲームへ**](../../book/examples/fantasy_guide.html) explains the boundaries between individual feature examples and this app.
+[fantasy_design.md](fantasy_design.md) describes the game and its scope in Japanese. `camera_reference.json` records the initial camera reference. The book's [From a PBR Scene to a Small Game](../../book.en/PBRSceneToGame.md) explains how the individual feature examples connect in this app.
 
 Run from the repository root to check paths, occupancy, range, enemy planning, and outcomes without a GPU. Rendering and interaction require separate browser verification.
 

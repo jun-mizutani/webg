@@ -1,0 +1,78 @@
+<!doctype html>
+<!-- book/examples/index.en.html 2026/10/09: English index for runnable examples from the book -->
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Book Examples</title>
+  <link rel="stylesheet" href="./examples_common.css" />
+</head>
+<body>
+  <div class="page">
+    <p><a href="./index.html" lang="ja">日本語</a></p>
+    <h1>Book examples</h1>
+    <div class="section-card">
+      <p>This index lists the runnable HTML examples from each chapter of the book, with a short description of what to inspect.</p>
+      <p class="note">Each page runs one example from the book. Open it alongside the chapter to connect the code with its rendered output and UI.</p>
+    </div>
+    <div class="section-card">
+      <h2>Choose a starting point for your app</h2>
+      <p>The <a href="../../book.en/ExampleGuide.md">development guide</a> suggests starting points and a sequence for adding features to a first render, model viewer, SceneYAML scene, game, or editor. Choose an example for your goal before reading every chapter.</p>
+    </div>
+    <ul>
+      <li><a href="./03_01.html">03_01.html</a>: Try parent-child transforms and local coordinates with a solar system and an articulated arm</li>
+      <li><a href="./04_01.html">04_01.html</a>: Minimal rendering with the low-level API</li>
+      <li><a href="./04_02.html">04_02.html</a>: A standard minimal app built with <code>WebgApp</code></li>
+      <li><a href="./05_01.html">05_01.html</a>: Render one cube with the low-level API</li>
+      <li><a href="./05_02.html">05_02.html</a>: Try a concise app structure with <code>WebgApp</code></li>
+      <li><a href="./05_03.html">05_03.html</a>: Try <code>fixedCanvasSize</code> and <code>layoutMode: "embedded"</code></li>
+      <li><a href="./06_01.html">06_01.html</a>: Try the <code>EyeRig</code> orbit camera</li>
+      <li><a href="./06_02.html">06_02.html</a>: Inspect follow-camera tracking</li>
+      <li><a href="./07_01.html">07_01.html</a>: Try material settings and fog</li>
+      <li><a href="./07_02.html">07_02.html</a>: Compare four <code>SmoothShader</code> rendering paths</li>
+      <li><a href="./08_01.html">08_01.html</a>: Load a minimal <code>ModelAsset</code></li>
+      <li><a href="./10_01.html">10_01.html</a>: A minimal example of <code>Action</code> and <code>AnimationState</code></li>
+      <li><a href="./12_01.html">12_01.html</a>: Compare the roles of a HUD and a DOM overlay</li>
+      <li><a href="./12_02.html">12_02.html</a>: Switch themes with <code>WebgApp.setUiTheme()</code></li>
+      <li><a href="./13_01.html">13_01.html</a>: Choose between <code>Text</code> and <code>Message</code></li>
+      <li><a href="./14_01.html">14_01.html</a>: Detect gestures with <code>Touch.attachSurface()</code></li>
+      <li><a href="./15_01.html">15_01.html</a>: A minimal example of ray casting and collision queries</li>
+      <li><a href="./16_01.html">16_01.html</a>: Play a single tone with the Web Audio API</li>
+      <li><a href="./16_02.html">16_02.html</a>: Play a sound effect with <code>GameAudioSynth.playSe()</code></li>
+      <li><a href="./16_03.html">16_03.html</a>: Register custom background music with <code>registerMelody()</code></li>
+      <li><a href="./16_04.html">16_04.html</a>: Layer custom sound effects with <code>playGameTone()</code></li>
+      <li><a href="./16_05.html">16_05.html</a>: Load and play audio with <code>AudioSynth.loadAudioBuffer()</code> and <code>playAudioBuffer()</code></li>
+      <li><a href="./17_01.html">17_01.html</a>: A minimal diagnostics setup and the information it can share</li>
+      <li><a href="./18_01.html">18_01.html</a>: Compare <code>flat_shading</code> with <code>SmoothShader</code></li>
+      <li><a href="./19_01.html">19_01.html</a>: Overlay <code>Wireframe</code> on <code>SmoothShader</code></li>
+      <li><a href="./19_02.html">19_02.html</a>: A textured torus with <code>Phong.js</code></li>
+      <li><a href="./19_03.html">19_03.html</a>: A torus with a normal map using <code>NormPhong.js</code></li>
+      <li><a href="./19_04.html">19_04.html</a>: Visualize cylinder weights with <code>BonePhong.js</code></li>
+      <li><a href="./20_01.html">20_01.html</a>: Image processing with <code>ComputePass</code></li>
+      <li><a href="./21_01.html">21_01.html</a>: One-dimensional Storage Buffer computation and readback</li>
+      <li><a href="./23_01.html">23_01.html</a>: Combine emitted light with <code>BloomPass</code></li>
+      <li><a href="./26_01.html">26_01.html</a>: A minimal <code>ParticleEmitter</code> setup</li>
+      <li><a href="./27_01.html">27_01.html</a>: A minimal physics-engine setup</li>
+      <li><a href="./27_02.html">27_02.html</a>: Copy Compute Physics results to ordinary Nodes for rendering</li>
+      <li><a href="./27_03.html">27_03.html</a>: Simulate a floor and boxes on the GPU with Compute Physics</li>
+      <li><a href="./29_01.html">29_01.html</a>: Try procedural materials and real-world-scale UV mapping</li>
+      <li><a href="./30_01.html">30_01.html</a>: Compare metallic and roughness values</li>
+      <li><a href="./30_02.html">30_02.html</a>: Try an HDR environment and IBL</li>
+      <li><a href="./31_01.html">31_01.html</a>: Display a reference scene in standard <code>WebgApp</code></li>
+      <li><a href="./32_01.html">32_01.html</a>: Try a PBR integration pipeline</li>
+      <li><a href="./33_01.html">33_01.html</a>: Inspect the PBR rendering pipeline</li>
+      <li><a href="./34_01.html">34_01.html</a>: Follow the rendering flow from G-buffer to SSAO</li>
+      <li><a href="./37_01.html">37_01.html</a>: Inspect the connections in the low-level API</li>
+      <li><a href="./38_01.html">38_01.html</a>: Generate geometry through the high-level <code>Shape</code> path</li>
+      <li><a href="./38_02.html">38_02.html</a>: Build a low-level quad with <code>addVertexUV()</code> and <code>addTriangle()</code></li>
+      <li><a href="./38_03.html">38_03.html</a>: A minimal example using <code>addPlane()</code></li>
+      <li><a href="./39_01.html">39_01.html</a>: Generate an icosphere procedurally</li>
+      <li><a href="./39_02.html">39_02.html</a>: Generate a Möbius strip and handle its seam</li>
+      <li><a href="./39_03.html">39_03.html</a>: Generate a Sierpinski tetrahedron</li>
+      <li><a href="./39_04.html">39_04.html</a>: Generate fractal terrain</li>
+      <li><a href="./40_01.html">40_01.html</a>: Verify skinning calculations with bones and markers</li>
+      <li><a href="./40_02.html">40_02.html</a>: Display a two-bone skinned cylinder mesh</li>
+    </ul>
+  </div>
+</body>
+</html>

@@ -6,7 +6,7 @@ English | [日本語](README.md)
 
 ## Overview
 - This sample uses a WebGPU compute shader to rewrite the contents of two textures every frame while ping-ponging between them
-- Rather than adding a compute-specific API to the `webg` core library, it uses the WebGPU `device / queue / canvas context` initialized by `WebgApp` directly inside the sample
+- The sample builds its Compute Passes from the WebGPU device, queue, and canvas context initialized by `WebgApp`
 - The compute pass reads the previous frame's sampled texture and writes the next frame's storage texture by combining diffusion, a flow field, background patterns, pointer input, and a center burst
 - The render pass uses the same texture at the same time on the lower-left plane preview and on a sphere mesh created with `Primitive.sphere()`, showing the GPU-updated texture on screen without CPU readback
 - Dragging injects colored seeds at the pointer position, and clicking adds expanding rings of inverted color that gradually grow and fade. The lower-left plane preview makes the correspondence with input position easy to inspect, while the center sphere lets you inspect both the wrapped texture and the lighting appearance
@@ -30,7 +30,7 @@ English | [日本語](README.md)
 - `sampler`: reads neighboring pixels and UVs shifted along the flow direction with linear interpolation, generating bleed and flow
 - `uniform buffer`: passes time, `deltaTime`, pointer position, mode, brush radius, burst state, and brush color to the shader
 - `compute pipeline`: combines previous-frame color, neighboring color, background waves, and input injection with one invocation per pixel
-- `render pipeline`: uses the post-compute texture on both the plane preview and the lit `Primitive.sphere()` mesh, visualizing the rewritten result in two different ways
+- `render pipeline`: displays the generated texture on both the plane preview and the lit `Primitive.sphere()` mesh
 - `timestamp query`: measures GPU Compute time for the texture update plus Render Pass time, then displays per-stage and total load
 
 ## Checkpoints

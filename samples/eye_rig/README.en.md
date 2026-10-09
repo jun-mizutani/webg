@@ -60,4 +60,4 @@ Follow interpolates orientation with a frame-rate-independent response and a max
 
 - `main.js`: scene, vehicle paths, mode switching, UI, and diagnostics
 - `eye_rig.txt`: detailed implementation notes for users and coding assistants
-- `book/06_カメラ制御とEyeRig.md`: Chapter 6, shared by the core implementation and camera-control examples
+- [Chapter 6: Camera Control and EyeRig](../../book.en/06_CameraRig.md): the shared explanation for the core implementation and camera-control examples

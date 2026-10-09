@@ -175,7 +175,7 @@ blockquote {
 <h2>Overview</h2>
 <p>This development utility imports every JavaScript module under <code>webg</code> with a unique <code>?v=...</code> URL so development pages do not reuse an old ES module URL.</p>
 <h2>How to run</h2>
-<p>Open <a href="./cache_clear_webg.html">`cache_clear_webg.html`</a> through a web server and press <code>全coreを再import</code>. Open the target sample again after the import completes.</p>
+<p>Open <a href="./cache_clear_webg.html">`cache_clear_webg.html`</a> through a web server and press <strong>Re-import all core modules</strong> (<code>全coreを再import</code>). Open the target sample again after the import completes.</p>
 <p>The target is the webg core ES modules; other browser HTTP cache entries remain intact. It changes only the import URLs for the <code>webg</code> core modules on each run so the browser fetches the current files. The <code>webg</code> core itself remains free of cache-query imports.</p>
 <p>Update the core module list in <code>main.js</code> when a module is added under <code>webg</code>.</p>
     </article>

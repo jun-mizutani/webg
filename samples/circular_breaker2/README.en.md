@@ -8,7 +8,7 @@ The canvas fills the window width and the height below the header. ArenaSceneApp
 
 The play page displays the game name, scores, stage objectives, control hints, and buttons. M toggles diagnostics. PBR shadows and reflections are enabled; SSAO is disabled.
 
-This sample builds a circular breakout game with SceneYAML, ModelYAML, and PBR.
+This sample builds a circular Breakout game with SceneYAML, ModelYAML, and PBR.
 
 [Run the sample](./circular_breaker2.html)　[日本語](./README.md)
 
@@ -26,7 +26,7 @@ P captures a screenshot and O ends the game. M toggles diagnostics including pad
 
 ## Implementation
 
-`ArenaSceneApp.js` extends WebgSceneApp and supplies six fixed point lights to Deferred Lighting: cyan, amber, violet, green, red, and blue. They are placed on a radius-36 circle at height 22, each with radius 72 and relative intensity 4.0. Directional intensity is reduced to 0.12 and environment intensity to 0.65. Light positions stay fixed while the camera moves. Point lights provide local illumination; the directional shadow remains enabled and SSAO is disabled. Individual point-light shadows are outside this configuration. Edit point lights in `createArenaLights()` and fill lighting in `scene.yaml`.
+`ArenaSceneApp.js` extends WebgSceneApp and supplies six fixed point lights to Deferred Lighting: cyan, amber, violet, green, red, and blue. They are placed on a radius-36 circle at height 22, each with radius 72 and relative intensity 4.0. Directional intensity is 0.12 and environment intensity is 0.65. Light positions stay fixed while the camera moves. Point lights provide local illumination; the directional shadow remains enabled and SSAO is disabled. Individual point-light shadows are outside this configuration. Edit point lights in `createArenaLights()` and fill lighting in `scene.yaml`.
 
 `main.js` connects Asset loading, the paddle-following camera, input, and the score overlay. It disables the default Orbit camera's input updates and pointer controls, then reparents the eye to the paddle. The relative eye position is `[0, 34, 50]`, its downward pitch is 36 degrees, and the field of view is 52 degrees.
 

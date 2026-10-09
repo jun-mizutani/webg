@@ -3,9 +3,9 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>water</title>
+  <title>water — PBR water surface and caustics</title>
   <link rel="icon" href="data:," />
-  <!-- 2026/10/03: READMEから生成 -->
+  <!-- 2026/06/19 -->
   <style>
 
 :root {
@@ -167,18 +167,18 @@ blockquote {
 <body>
   <main class="page">
     <section class="hero">
-      <h1>water</h1>
+      <h1>water — PBR water surface and caustics</h1>
     </section>
     <article class="doc">
 <h1>water — PBR water surface and caustics</h1>
 <p>English | <a href="index.html">日本語</a></p>
-<p><img src="preview.jpg" alt="PBR water and caustics"></p>
+<p><img src="preview.jpg" alt="PBR water and caustics" /></p>
 <h2>Overview</h2>
 <p>A small integration example applying caustics to a floor, sphere, box, and slope, with an independently switchable water surface. <code>WaterBody</code> stores the water region, waves, absorption, and registered receivers. <code>ComputeEffectPipeline.setWater()</code> owns GPU resources and composition order. Applications connect water through this public API while retaining the standard rendering sequence.</p>
 <h2>Run</h2>
 <p>Open <a href="water.html">water.html</a> from an HTTP server serving the repository. Use a WebGPU browser on localhost or HTTPS. Enable caustics and water separately, select receivers, move the sphere, animate waves, or change caustic quality. Drag to orbit and scroll to zoom. The verification button runs explicit GPU image comparisons; normal rendering does not read images back.</p>
 <h2>Connect water</h2>
-<p>Caustics currently require a vertical downward directional light. Use <code>lightDirection: [0, -1, 0]</code> and <code>shadow: { directional: { up: [0, 0, 1] } }</code> when creating the pipeline. The same configuration is accepted in <code>PbrRenderer</code>&#39;s <code>pipeline</code> options.</p>
+<p>Caustics use a vertical downward directional light. Set <code>lightDirection: [0, -1, 0]</code> and <code>shadow: { directional: { up: [0, 0, 1] } }</code> when creating the pipeline. <code>PbrRenderer</code> accepts the same settings in its <code>pipeline</code> options.</p>
 <pre><code class="language-js">import WaterBody from &quot;../../webg/WaterBody.js&quot;;
 
 const water = new WaterBody({
@@ -191,21 +191,19 @@ water.addReceiver(objectNode, { children: true, strength: 0.7 });
 await pipeline.setWater(water, {
   surfaceEnabled: true, causticsEnabled: true, quality: &quot;low&quot;
 });
-water.setTime(timeMs / 1000);
-</code></pre>
+water.setTime(timeMs / 1000);</code></pre>
 <p>Pause frame generation while awaiting <code>setWater()</code>. Continue using the normal <code>renderScene()</code> and <code>encode()</code> calls afterwards. <code>PbrRenderer</code> exposes the same <code>setWater()</code> and <code>getWaterStats()</code> methods; <code>WaterBody</code> is also exported from <code>webg/app/index.js</code>.</p>
 <p>Update parameters through <code>water.setOptions()</code>, without reconnecting. <code>waveMix</code> gives relative weights for crossing waves, swell, and ripples. <code>speed</code>, <code>variation</code>, and <code>wavelength</code> control their evolution. <code>absorption</code> is RGB Beer–Lambert absorption in 1/m; <code>[0.07, 0.015, 0.07]</code> produces greener transmission. <code>roughness</code> controls GGX water reflection. Invalid patches preserve the previous settings.</p>
-<p>Shape registration overrides Node registration, including <code>strength: 0</code>. The nearest registered ancestor wins; <code>children: false</code> limits a Node to its own shapes. <code>removeReceiver()</code> and <code>clearReceivers()</code> preserve geometry and materials. Use <code>await pipeline.setWater(null)</code> to release every water GPU resource and the additional lighting variant.</p>
+<p>Shape registration takes precedence over Node registration, including when its <code>strength</code> is <code>0</code>. For Nodes, the nearest registered ancestor determines the strength; <code>children: false</code> limits registration to that Node's own Shapes. <code>removeReceiver()</code> and <code>clearReceivers()</code> leave geometry and materials intact. Use <code>await pipeline.setWater(null)</code> to release the water GPU resources and its additional lighting variant.</p>
 <h2>Composition and performance</h2>
-<p>Caustics modify the registered opaque receiver&#39;s direct diffuse reflection. Specular, IBL, local lights, and emissive retain their existing paths. Wave height controls a smooth transition at the waterline.</p>
+<p>Caustics modify the registered opaque receiver's direct diffuse reflection. Specular, IBL, local lights, and emissive retain their existing paths. Wave height controls a smooth transition at the waterline.</p>
 <p>Water combines screen-space refraction, IOR Fresnel, RGB absorption, GGX directional specular, and the current PBR environment in linear HDR. Alpha Blend fragments and Compute particles are split at water depth: underwater fragments enter the refracted background, while foreground fragments are drawn afterwards. Particle simulation updates once per frame. Fog, DoF, Bloom, Tone Map, and Edge run afterwards, with combined water depth and normals where needed.</p>
-<p><code>low</code> uses 512² rays and a 256² field; <code>high</code> uses 1024² rays and a 512² field. Both use 48 refraction steps. A paused caustic field is reused. With both features OFF, water resources are released and rendering uses the ordinary lighting path. Water-only and caustics-only allocate their respective resources independently.</p>
+<p><code>low</code> uses 512² rays and a 256² field; <code>high</code> uses 1024² rays and a 512² field. Both use 48 refraction steps. The pipeline reuses a paused caustic field. When both features are off, water resources are released and rendering follows the standard lighting path. Water-only and caustics-only modes allocate their resources independently.</p>
 <p>Standard <code>PbrRenderer.createFrameCallbacks()</code> collects timing at the next frame. With a custom loop, call <code>pipeline.afterGpuSubmit()</code> or <code>renderer.afterGpuSubmit()</code> immediately after queue submission.</p>
 <p><code>getWaterStats()</code> exposes dispatch/pass counts and asynchronous GPU timestamps. Timestamp support may be unavailable. Timing covers field generation, surface compute, and depth transfer; it excludes receiver-mask rendering, additional lighting cost, and translucent rendering. Resource figures are logical buffer/texture capacities, not driver memory measurements.</p>
-<p>The sample supports one finite horizontal region viewed from above. Underwater cameras, water side walls, offscreen refraction, reflected scene geometry, and physical combination with underwater Frost/Transmission/Volume are outside its scope. Caustics are a horizontal-field projection approximation for arbitrary opaque receivers, rather than exact per-mesh ray intersections.</p>
+<p>The sample focuses on one finite horizontal water region viewed from above. It demonstrates refraction at the water surface and caustics projected from a horizontal field onto opaque receivers. It does not cover underwater cameras, vertical water walls, offscreen refraction, reflected scene geometry, or combining water with Frost, Transmission, or Volume materials. The caustic projection does not trace rays against each receiver mesh.</p>
 <h2>Source guide</h2>
 <p>Read <code>main.js</code> for connection and lifecycle, <code>scene.js</code>/<code>floor.js</code> for receivers and procedural materials, and <code>validation.js</code> for GPU regression checks. Core configuration is in <code>WaterBody.js</code>, resource ownership in <code>WaterSystem.js</code>. Book chapters 30–33 cover PBR and chapter 35 covers water; <code>pbr_reference</code> compares PBR lighting and <code>transmission</code> demonstrates regular transparent refraction.</p>
-
     </article>
   </main>
 </body>

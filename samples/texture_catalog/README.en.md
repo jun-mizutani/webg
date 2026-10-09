@@ -40,7 +40,7 @@ Select the `stone` category to find three presets:
 | `stone.pebbles-gravel.gray` | Pebbles with small gravel in the gaps; 6mm gravel height bound |
 | `stone.gravel.gray` | Small gravel only; 6mm height bound |
 
-All use the new `pebbles` pattern on a seamless 2m square without joints.
+Each uses the `pebbles` pattern on a seamless 2 m square with no joints.
 `Pattern scale m` sets the placement scale rather than a fixed diameter for every grain.
 The large and small scales are 0.12m and 0.065m; the seed varies radius, aspect and orientation.
 

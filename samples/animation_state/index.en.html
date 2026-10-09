@@ -174,7 +174,7 @@ blockquote {
 <p>English | <a href="index.html">日本語</a></p>
 <p><img src="./animation_state.jpg" alt="animation_state" /></p>
 <h2>Overview</h2>
-<ul><li>This sample loads the hand from <code>samples/gltf_loader/hand.glb</code> and demonstrates a setup where each finger pose is still played as an <code>Action</code>, while <code>AnimationState</code> decides which action should be selected at the current moment</li><li>The sample is arranged so that simply switching the desired state with <code>1 - 6</code> starts the corresponding action, making it easier to follow the division of responsibilities between state control and action playback</li><li>The operation guide is shown in a collapsible help panel at the upper left by using <code>buildHelpPanelOptions()</code> and <code>showOverlayPanel()</code>, while the current state is displayed separately on the canvas HUD</li></ul>
+<ul><li>This sample loads the hand model from <code>samples/gltf_loader/hand.glb</code>. Each finger pose is an <code>Action</code>; <code>AnimationState</code> selects which action should play.</li><li>Press <code>1</code>–<code>6</code> to select a state and play its corresponding action. The HUD shows the selected state and the action currently playing.</li><li>A collapsible help panel describes the controls.</li></ul>
 <h2>How to Run</h2>
 <ul><li>Open <a href="./animation_state.html">./animation_state.html</a></li><li>Use a browser with WebGPU support, and check the help panel and HUD together with the sample when needed</li></ul>
 <h2>webg Features Used</h2>

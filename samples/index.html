@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- 2026/10/02: 目的別の開発案内を追加し、現在のbook章番号へ対応 -->
+<!-- 2026/10/09: 英語版への切替と公開サンプル件数の表示を追加 -->
 <html lang="ja">
 <head>
 <meta charset="UTF-8" />
@@ -38,6 +38,7 @@ main { width: min(1180px, calc(100% - 32px)); margin: 0 auto; padding: 32px 0 64
   box-shadow: 0 12px 32px rgba(35, 57, 83, 0.07);
 }
 .hero { padding: 28px 30px; }
+.language { margin: 0 0 10px; text-align: right; }
 .hero h1 { margin: 0 0 8px; font-size: clamp(2rem, 5vw, 3.1rem); line-height: 1.15; }
 .hero p { max-width: 900px; margin: 8px 0 0; color: var(--muted); }
 .hero img { width: 100%; max-height: 360px; object-fit: cover; margin-top: 20px; border: 1px solid var(--line); border-radius: 12px; }
@@ -86,8 +87,9 @@ main { width: min(1180px, calc(100% - 32px)); margin: 0 auto; padding: 32px 0 64
 <body>
 <main>
   <header class="hero">
+    <p class="language"><a href="./index.en.html" lang="en">English</a></p>
     <h1>webg samples</h1>
-    <p>63本の公開サンプルを、bookの章に対応する分野別に整理しています。各分野の中はフォルダ名のアルファベット順です。概要で目的を確認し、実行ページで動作を試してから、詳細説明へ進めます。</p>
+    <p>65本の公開サンプルを、bookの章に対応する分野別に整理しています。各分野の中はフォルダ名のアルファベット順です。概要で目的を確認し、実行ページで動作を試してから、詳細説明へ進めます。</p>
     <img src="./samples.jpg" alt="webg samples preview" />
   </header>
 
@@ -117,7 +119,7 @@ main { width: min(1180px, calc(100% - 32px)); margin: 0 auto; padding: 32px 0 64
     <h2 id="search-title">名前・説明から検索</h2>
     <div class="toolbar">
       <input id="search" type="search" placeholder="例: camera、物理、PBR、テクスチャ" aria-label="サンプル検索" />
-      <div class="count"><span id="visibleCount">63</span> / <span id="totalCount">63</span> samples</div>
+      <div class="count"><span id="visibleCount">65</span> / <span id="totalCount">65</span> samples</div>
     </div>
   </section>
 

@@ -4,7 +4,7 @@
 
 ## Overview
 
-This sample references ModelYAML from SceneYAML, renders three blue boxes using PBR, and drops them onto a floor. ModelYAML stores model geometry and Nodes; SceneYAML stores the artwork's rendering and physics settings.
+This sample references ModelYAML from SceneYAML, renders three blue boxes with PBR, and drops them onto a floor. ModelYAML stores model geometry and Nodes; SceneYAML stores the scene's rendering and physics settings.
 
 [model.yaml](model.yaml) defines a 1m cube mesh, an 8×0.3×6m floor mesh, material IDs, four Nodes, and initial transforms. Three Nodes share the cube mesh and start at center heights of 2m, 3m, and 4m. [scene.yaml](scene.yaml) references ./model.yaml through modelAssetUrl and specifies PBR surfaces, environment lighting, gravity, and collision shapes.
 
@@ -12,7 +12,7 @@ This sample references ModelYAML from SceneYAML, renders three blue boxes using 
 
 Serve the repository over HTTP and open [scene_model_yaml.html](scene_model_yaml.html) in a WebGPU browser using localhost or HTTPS. Physics starts paused. Drag to orbit and use the wheel to zoom.
 
-“開始” starts falling, “停止” pauses physics, and “初期位置へ” pauses and restores initial transforms. Rendering and camera controls remain active while physics is paused. The status shows four bodies, four bindings, a 240Hz fixed update, and comment counts for both documents.
+**開始** (Start) releases the boxes, **停止** (Stop) pauses physics, and **初期位置へ** (Reset Positions) pauses physics and restores the initial transforms. Rendering and camera controls remain active while physics is paused. The status shows four bodies, four bindings, a 240 Hz fixed update, and comment counts for both documents.
 
 ## How the documents connect
 
@@ -28,7 +28,7 @@ main.js loads scene.yaml using SceneAsset.load, calls assertValid(), and passes 
 
 The loaded model is available through sceneApp.model.asset. Source inspection uses the loaded Asset. Expand the two document sections to view the original text, including comments.
 
-“SceneYAML保存” and “ModelYAML保存” save the initial definitions as their original text. The saved content contains initial definitions, separately from runtime physics positions. Save scene.yaml and model.yaml in the same folder to preserve the relative reference. Save the external model separately with the ModelYAML save button.
+**SceneYAML保存** (Save SceneYAML) and **ModelYAML保存** (Save ModelYAML) download the initial definitions as source text. Runtime physics positions are separate from these saved values. Keep `scene.yaml` and `model.yaml` in the same folder to preserve their relative reference. The ModelYAML button saves the external model separately.
 
 ## Files and implementation
 

@@ -8,7 +8,7 @@ English | [日本語](README.md)
 - This sample loads the glTF / GLB file specified in `main.js`, normalizes it into `ModelAsset`, and then displays it
 - It calls the glTF facade from `WebgApp.loadModel()`, so you can inspect the flow in which `ModelAsset` data and runtime objects are assembled internally
 - The loaded `ModelAsset` can be downloaded as a JSON file with the `D` key
-- For glTF files that have a static parent-node transform, the importer side bakes parent rotation and parent scale for skinned meshes so that runtime complexity is not increased
+- For glTF files with static parent-node transforms, the importer bakes parent rotation and scale into skinned meshes, keeping their runtime transforms simple
 - When exporting glTF / GLB from Blender, the loader assumes files are exported in `Y-up`
 - The loader's model-origin policy uses the skeleton root as the origin for skinned models and the mesh node as the origin for non-skinned models
 
