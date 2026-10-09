@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>texture_catalog</title>
+  <link rel="icon" href="data:," />
+  <!-- 2026/06/19 -->
+  <style>
+
+:root {
+  color-scheme: light;
+  --bg: #eef3f8;
+  --paper: rgba(255, 255, 255, 0.94);
+  --line: #c8d5e4;
+  --ink: #17324a;
+  --muted: #5c748b;
+  --accent: #1566ab;
+  --accent-soft: #dfeefe;
+  --code-bg: #f3f7fb;
+  --shadow: rgba(29, 52, 79, 0.10);
+}
+* { box-sizing: border-box; }
+html, body {
+  margin: 0;
+  min-height: 100%;
+}
+body {
+  background:
+    radial-gradient(circle at top left, rgba(21, 102, 171, 0.12), transparent 24%),
+    radial-gradient(circle at top right, rgba(255, 191, 118, 0.10), transparent 22%),
+    linear-gradient(180deg, #f8fbfd 0%, var(--bg) 100%);
+  color: var(--ink);
+  font: 16px/1.78 "Avenir Next", "Hiragino Sans", "Yu Gothic", sans-serif;
+}
+.page {
+  width: min(1080px, calc(100% - 28px));
+  margin: 0 auto;
+  padding: 24px 0 56px;
+}
+.hero,
+.doc {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  box-shadow: 0 22px 52px var(--shadow);
+}
+.hero {
+  padding: 22px 24px;
+  margin-bottom: 18px;
+}
+.hero h1 {
+  margin: 0 0 8px;
+  font-size: clamp(2rem, 4vw, 3rem);
+  line-height: 1.08;
+}
+.hero p {
+  margin: 0;
+  color: var(--muted);
+}
+.doc {
+  padding: 28px;
+}
+.doc > :first-child {
+  margin-top: 0;
+}
+h1, h2, h3, h4, h5, h6 {
+  line-height: 1.25;
+  margin: 1.45em 0 0.55em;
+}
+h1 {
+  font-size: 2.2rem;
+}
+h2 {
+  padding-bottom: 0.28em;
+  border-bottom: 1px solid var(--line);
+  font-size: 1.48rem;
+}
+h3 {
+  font-size: 1.14rem;
+}
+p, ul, ol, table, pre, blockquote {
+  margin: 0 0 1em;
+}
+ul, ol {
+  padding-left: 1.4em;
+}
+li + li {
+  margin-top: 0.26em;
+}
+a {
+  color: var(--accent);
+  text-decoration: none;
+}
+a:hover {
+  text-decoration: underline;
+}
+img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  border-radius: 16px;
+  border: 1px solid var(--line);
+  box-shadow: 0 12px 32px rgba(29, 52, 79, 0.08);
+  margin: 1.1em 0 1.4em;
+}
+code {
+  padding: 0.12em 0.38em;
+  border-radius: 0.45em;
+  background: var(--code-bg);
+  border: 1px solid #dbe6f1;
+  font: 0.92em/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+pre {
+  padding: 14px 16px;
+  overflow-x: auto;
+  border-radius: 14px;
+  background: #0f1720;
+  color: #ecf5ff;
+}
+pre code {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #ffffff;
+}
+th, td {
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  text-align: left;
+  vertical-align: top;
+}
+th {
+  background: #f5f9fc;
+}
+hr {
+  border: 0;
+  border-top: 1px solid var(--line);
+  margin: 1.5em 0;
+}
+blockquote {
+  padding: 0.3em 0 0.3em 1em;
+  border-left: 4px solid #c9dbef;
+  color: var(--muted);
+}
+@media (max-width: 720px) {
+  .page {
+    width: min(100% - 18px, 1080px);
+    padding-top: 16px;
+  }
+  .hero,
+  .doc {
+    border-radius: 18px;
+  }
+  .doc {
+    padding: 20px;
+  }
+}
+
+  </style>
+</head>
+<body>
+  <main class="page">
+    <section class="hero">
+      <h1>texture_catalog</h1>
+    </section>
+    <article class="doc">
+<h1>texture_catalog</h1>
+<p><a href="index.en.html">English</a> | 日本語</p>
+<h2>概要</h2>
+<p><code>texture_catalog</code>は、webgコアのProcedural Texture presetを選択・編集し、立方体とColor／Height／Normal mapで確認するサンプルです。完成した設定はJavaScriptまたはJSON、生成したColor／Height／Normal mapはPNGまたはJPEGとして保存できます。</p>
+<h2>実行</h2>
+<p>リポジトリrootでHTTP serverを起動し、<code>samples/texture_catalog/texture_catalog.html</code>を開きます。</p>
+<pre><code class="language-sh">python3 -m http.server 8000
+</code></pre>
+<h2>最小API</h2>
+<pre><code class="language-js">import ProceduralMaterials from &quot;../../webg/ProceduralMaterials.js&quot;;
+
+const materials = new ProceduralMaterials(gpu);
+const oak = await materials.createPreset(&quot;wood.oak.plank&quot;);
+oak.applyTo(shape);
+</code></pre>
+<p>Shapeは事前にUVを持つ必要があります。同じmaterial handleは複数Shapeへ登録できます。終了時は<code>materials.destroy()</code>で生成したGPU resourceを解放します。</p>
+<h2>初期preset</h2>
+<p>木材、コンクリート、窯業系セメント、レンガ、ビニール、セラミック、樹脂、石材の23 presetを収録しています。13 pattern（柾目、板目、柾目・板目mixを含む）を確認できます。Oak、Walnut、Cedarには板目とmixのpresetがあり、mixはvariation単位で柾目／板目を半数ずつ割り当てます。</p>
+<h2>丸い石粒と砂利</h2>
+<p><code>Category</code>を<code>stone</code>にすると、次の3種類を選べます。</p>
+<table>
+<thead>
+<tr>
+<th>Preset ID</th>
+<th>内容</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>stone.pebbles.gray</code></td>
+<td>石だけ。丸い大粒、高さ上界40mm</td>
+</tr>
+<tr>
+<td><code>stone.pebbles-gravel.gray</code></td>
+<td>石と砂利。石の隙間に高さ6mmの小粒</td>
+</tr>
+<tr>
+<td><code>stone.gravel.gray</code></td>
+<td>砂利だけ。小粒、高さ上界6mm</td>
+</tr>
+</tbody></table>
+<p>いずれも新しい<code>pebbles</code> pattern、目地なし、2m四方の周期面です。
+<code>Pattern scale m</code>は粒の配置尺度で、全粒の直径を同じ値にする指定ではありません。
+大粒は0.12m、小粒は0.065mを基準に、半径・縦横比・向きをseedで変えます。</p>
+<p>粒の色は暗色・中間色・明色を連続した濃淡から選びます。
+<code>Color amount</code>は粒の色の濃淡、<code>Pattern height m</code>は粒の高さです。
+色を薄くしてもHeight／Normalは変わらず、暗い粒も上向きに盛り上がります。
+専用欄の「丸み」は0が平頂、1が丸い上面です。丸みを変えてもColor mapは変わりません。
+「敷き詰め」は粒の大きさと中心位置のばらつきを調整し、隙間を狭めます。
+「配置の乱雑さ」は0〜1で、位置のずれ、粒径、縦横比のばらつきを増やします。
+「石だけ」は乱雑さ・粒の密度・敷き詰めを1にし、中央が高い丸い石を密に配置します。
+「隙間の砂利の量」は0で大粒だけ、1で隙間へ小粒を合成します。
+砂利の配置尺度・高さ・色の濃淡も独立して編集できます。</p>
+<pre><code class="language-js">const stones = await materials.createPreset(&quot;stone.pebbles-gravel.gray&quot;, {
+  tile: {
+    pattern: {
+      colorAmount: 0.10,
+      heightMeters: 0.040,
+      pebbles: { roundness: 1, gravelAmount: 1, gravelHeightMeters: 0.006 }
+    }
+  }
+});
+stones.applyTo(shape);
+</code></pre>
+<p>左下にColor・Height・Normalを並べて表示します。Heightは低い面が暗く、高い面が明るい画像です。
+グレースケールは各材質の<code>heightRangeMeters</code>に対する値で、物理高さそのものではありません。
+<code>Height range</code>で復号に必要な範囲を確認でき、<code>Download Height</code>で画像も保存できます。
+Height／Normalを再利用する場合はPNGを選んでください。</p>
+<p>立方体はNormalで起伏を照明へ反映するため、輪郭は変位しません。
+実際の起伏へ光線を当てるアプリではHeightを復号し、高さ場の交差に使います。
+<a href="../../docs/sample_development/procedural_pebbles.md">設定と実装の詳細</a>、
+<a href="../../unittest/procedural_pebbles/index.html">GPU検証</a>も参照してください。</p>
+<p><img src="pebbles_preview.png" alt="中心が高い石を敷き詰めた表示"></p>
+<h2>編集と出力</h2>
+<p>解像度、Base／Dirt／Joint色、タイル間の色変化、部材寸法、長軸、variation cell、目地、配置、pattern、surface detail、random seed、roughness、specular、metallic、Normal strengthを編集できます。<code>Thickness m</code>は部材寸法の参考値としてdefinitionへ保存されますが、手続きテクスチャ生成には使われません。変更は入力と同時にコード表示とGPU textureへ反映されます。<code>Generate</code>または<code>G</code>キーは、同じdefinitionを手動で再生成する操作です。</p>
+<p><code>Definition metadata</code>では、出力する部材の<code>Material ID</code>、<code>Category</code>、日英の<code>Label</code>、<code>Tile preset ID</code>を編集できます。最初の<code>Category</code>は既存presetを絞り込む選択欄で、Definition metadata内の<code>Category</code>が出力definitionへ保存される分類です。既存presetを選択してからこれらの値を変更すると、同じtileとappearanceを元に別の部材definitionを作成できます。</p>
+<p>コンクリートの砂による細かなざらつきを試す場合は、<code>Pattern</code>の<code>mottle</code>を大きな色むらとして残し、<code>Surface detail scale m</code>を0.010〜0.0125、<code>Surface noise height m</code>を0.00020〜0.00030から調整します。色むらの粗さは<code>Pattern scale m</code>、色の強さは<code>Color amount</code>、凹凸の強さは<code>Surface noise height m</code>で別々に変更できます。<code>pixelsPerMeter</code>は細部を記録する画素数を指定します。凹凸の高さは<code>Surface noise height m</code>で指定します。200 pixels/mで細部が潰れる場合だけ400 pixels/mを試します。</p>
+<p>例えば、fiber cement siding用にmetadataを設定すると、JavaScript出力の先頭は次の形になります。<code>tile</code>内の他の設定も画面で編集した完成値が続きます。</p>
+<pre><code class="language-js">export default {
+  &quot;id&quot;: &quot;fiber.cement.siding&quot;,
+  &quot;schemaVersion&quot;: 1,
+  &quot;category&quot;: &quot;cement&quot;,
+  &quot;label&quot;: {
+    &quot;ja&quot;: &quot;窯業系サイディング&quot;,
+    &quot;en&quot;: &quot;Fiber cement siding&quot;
+  },
+  &quot;tile&quot;: {
+    &quot;presetId&quot;: &quot;fiber.cement.siding&quot;,
+    // resolution、unit、layout、color、patternなどの完成値
+  }
+};
+</code></pre>
+<p>このsampleはdefinitionファイルを出力します。コアpresetへの登録は別の操作として扱います。出力したdefinitionをコアpresetへ追加または既存presetと入れ替える場合は、内容を確認したうえでコア側へ個別に反映します。</p>
+<p><code>Layout</code>の<code>stack</code>はRow offsetを0にします。<code>running-bond</code>へ変更した時にRow offsetが0なら、違いが見える標準値として1/2へ切り替えます。running-bondのoffsetを0、1/3、1/4へ変更すると、選択した値で再生成されます。</p>
+<p>木材presetの初期配置は、Oakが<code>running-bond</code>の1/2、Walnutが1/3、Cedarが1/4です。Walnutは1/3の周期を閉じるため、variation cellを2列×6行で生成します。</p>
+<h3>寸法、配置、反射</h3>
+<table>
+<thead>
+<tr>
+<th>項目</th>
+<th>変更する内容</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Pixels per meter</td>
+<td>生成解像度。部材寸法、目地幅、edge roundはこの解像度で整数pixelに揃えられる</td>
+</tr>
+<tr>
+<td>Long／Short size m</td>
+<td>一部材の長辺と短辺。textureの一周期と実寸Repeatに影響する</td>
+</tr>
+<tr>
+<td>Thickness mode／Thickness m</td>
+<td>部材厚の参考値。指定してもColor／Height／Normal mapの生成結果は変わらない</td>
+</tr>
+<tr>
+<td>Long axis</td>
+<td>長辺をtextureの<code>u</code>または<code>v</code>へ割り当てる方向</td>
+</tr>
+<tr>
+<td>Variation columns／rows</td>
+<td>texture内で異なる部材variationを配置する数</td>
+</tr>
+<tr>
+<td>Joint edge round m</td>
+<td>目地から部材面へ戻る縁の丸み</td>
+</tr>
+<tr>
+<td>Dirt color／Dirt amount</td>
+<td>部材表面へ加える汚れの色と量</td>
+</tr>
+<tr>
+<td>Metallic</td>
+<td>PBRマテリアルの金属度</td>
+</tr>
+</tbody></table>
+<h3>Patternとnoise</h3>
+<table>
+<thead>
+<tr>
+<th>項目</th>
+<th>変更する内容</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Tile color variation</td>
+<td>タイルまたは部材ごとの明暗差。0で均一になり、大きいほどタイル間の色変化が強くなる。入力範囲は0～0.25</td>
+</tr>
+<tr>
+<td>Pattern scale m</td>
+<td>木理、石目、斑、粒など材質固有patternの基準寸法。小さいほど細かく、大きいほど粗くなる</td>
+</tr>
+<tr>
+<td>Pattern color amount</td>
+<td>patternによるColor mapの明暗振幅</td>
+</tr>
+<tr>
+<td>Pattern height m</td>
+<td>patternをHeight／Normal mapへ反映する物理的な凹凸振幅</td>
+</tr>
+<tr>
+<td>Surface detail scale m</td>
+<td>材質patternとは独立した共通Perlin detailの基準寸法</td>
+</tr>
+<tr>
+<td>Surface noise height m</td>
+<td>surface detailをHeight／Normal mapへ加える微細な凹凸振幅</td>
+</tr>
+<tr>
+<td>Random seed</td>
+<td>部材variation、Perlin noise、Voronoi点、Terrazzo chipなどの配置を変更する再現用整数</td>
+</tr>
+</tbody></table>
+<p>Patternとsurface detailは別の層です。例えば木理の間隔だけを変える場合は<code>Pattern scale m</code>、木理を保ったまま表面の細かなざらつきを変える場合は<code>Surface detail scale m</code>と<code>Surface noise height m</code>を調整します。同じseedと同じ設定は同じtextureを再生成します。</p>
+<h3>数値の入力とshortcut</h3>
+<p>すべての数値欄は、右端のspin buttonだけでなく、欄を選択して数値を直接入力できます。数値欄へfocusがある間は↑／↓で次のstepずつ変更します。panel外では↑／↓はcamera操作です。</p>
+<table>
+<thead>
+<tr>
+<th>数値欄</th>
+<th align="right">↑／↓のstep</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Pixels per meter</td>
+<td align="right">1</td>
+</tr>
+<tr>
+<td>Long／Short size、Joint width</td>
+<td align="right">0.005 m</td>
+</tr>
+<tr>
+<td>Joint edge round</td>
+<td align="right">0.0001 m</td>
+</tr>
+<tr>
+<td>Joint depth</td>
+<td align="right">0.0001 m</td>
+</tr>
+<tr>
+<td>Pattern scale、Surface detail scale</td>
+<td align="right">0.0025 m</td>
+</tr>
+<tr>
+<td>Pattern color amount</td>
+<td align="right">0.005</td>
+</tr>
+<tr>
+<td>Pattern height、Surface noise height</td>
+<td align="right">0.00001 m</td>
+</tr>
+<tr>
+<td>Random seed</td>
+<td align="right">1</td>
+</tr>
+<tr>
+<td>Dirt amount</td>
+<td align="right">0.005</td>
+</tr>
+<tr>
+<td>Metallic、Roughness、Specular</td>
+<td align="right">0.01</td>
+</tr>
+<tr>
+<td>Normal strength</td>
+<td align="right">0.05</td>
+</tr>
+</tbody></table>
+<p><code>G</code>はGenerate buttonと同じ操作です。Canvas上でも数値欄へfocusがあるときでも使用できます。<code>Ctrl+G</code>、<code>Command+G</code>、<code>Alt+G</code>はbrowser／OS側の操作を優先します。一回の長押しでGenerateを連続実行しません。</p>
+<p>数値を直接入力している間はcode表示だけを更新し、入力完了時にGPU textureを生成します。↑／↓のspin buttonも値が確定した時点で生成します。これにより<code>0.01</code>のような小数を途中の<code>0</code>や<code>0.</code>で確定してしまいません。step、min、max、解像度の整数pixel条件から外れた値は、最も近い入力可能な値へ丸め、info欄に変更内容を表示します。
+<code>G</code>は文字列入力欄とtextareaでは入力文字として扱われ、それ以外のcontrolとCanvasではGenerate shortcutとして動作します。</p>
+<p><code>Copy Code</code>と<code>Download JS</code>は省略なしの完成definitionをES moduleとして出力します。<code>Download JSON</code>も同じdefinitionを保存し、<code>Import JSON</code>で再読込できます。数値がstep、min、max、解像度の整数pixel条件から外れる場合は、入力可能な近い値へ丸めてinfo欄へ表示します。</p>
+<p><code>Texture images</code>でPNGまたはJPEGを選び、Color・Height・Normal mapを生成元と同じpixel寸法で個別に保存できます。設定変更後に自動生成が完了してからダウンロードしてください。PNGは可逆です。Height／Normal mapを材質へ再利用する場合は、channel値が圧縮で変化しないPNGを使用してください。</p>
+
+    </article>
+  </main>
+</body>
+</html>

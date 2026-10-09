@@ -1,0 +1,12 @@
+単体テスト: gpu_pass_profiler
+
+概要
+- `webg/GpuPassProfiler.js` の名前付きGPU timestamp区間とCPU移動平均を、DOMや実GPUを使わず確認するheadless testです
+
+確認ポイント
+- 1区間へ開始・終了の2 queryを割り当てることを確認します
+- 複数区間のresolve元を256 byte境界へ置き、map用Bufferへ16 byteずつ詰めることを確認します
+- GPU/CPU sampleの移動平均とtimestamp-query非対応表示を確認します
+
+実行方法
+- `node headless_tests/core/gpu_pass_profiler/headless_probe.js`

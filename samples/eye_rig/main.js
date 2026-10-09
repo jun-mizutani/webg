@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// samples/eye_rig/main.js  2026/07/25
+// samples/eye_rig/main.js  2026/08/11
 //   EyeRig specification verification sample
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -13,7 +13,7 @@ import CommandPalette, {
 import Diagnostics from "../../webg/Diagnostics.js";
 import Primitive from "../../webg/Primitive.js";
 import Shape from "../../webg/Shape.js";
-import EyeRig from "../../webg/EyeRig.js?v=20260612_02";
+import EyeRig from "../../webg/EyeRig.js";
 
 const MODE_ORBIT = "orbit";
 const MODE_FIRST_PERSON = "first-person";

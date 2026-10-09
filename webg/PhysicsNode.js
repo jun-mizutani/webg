@@ -1,5 +1,5 @@
 // ---------------------------------------------
-//  PhysicsNode.js  2026/05/06
+//  PhysicsNode.js  2026/09/13
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // ---------------------------------------------
@@ -36,6 +36,13 @@ export default class PhysicsNode extends Node {
     this.invInertia = [0.0, 0.0, 0.0];
     this.velocity = [0.0, 0.0, 0.0];
     this.angularVelocity = [0.0, 0.0, 0.0];
+    // kinematicの接触面へだけ加える搬送速度。通常のlinearVelocityとは分離します
+    this.surfaceVelocity = opts.surfaceVelocity === undefined
+      ? [0.0, 0.0, 0.0]
+      : this._readVec3(opts.surfaceVelocity, "PhysicsNode surfaceVelocity");
+    if (this.bodyType !== "kinematic" && this.surfaceVelocity.some((entry) => entry !== 0.0)) {
+      throw new Error("PhysicsNode surfaceVelocity requires a kinematic body");
+    }
     this.force = [0.0, 0.0, 0.0];
     this.torque = [0.0, 0.0, 0.0];
     this.gravityScale = util.readOptionalFiniteNumber(
@@ -84,6 +91,12 @@ export default class PhysicsNode extends Node {
       "PhysicsNode collisionMask"
     );
     this.material = opts.material ?? null;
+    this.materialId = opts.materialId;
+    if (this.materialId !== undefined) {
+      if (typeof this.materialId !== "string" || !this.materialId.trim() || this.material !== null) {
+        throw new Error("PhysicsNode requires a nonempty materialId or inline material, not both");
+      }
+    }
     this.collider = opts.collider ?? null;
     this.physicsSpace = null;
     this._savedLinearVelocity = null;
@@ -304,6 +317,11 @@ export default class PhysicsNode extends Node {
     }
 
     this.bodyType = nextType;
+    if (nextType !== "kinematic") {
+      this.surfaceVelocity[0] = 0.0;
+      this.surfaceVelocity[1] = 0.0;
+      this.surfaceVelocity[2] = 0.0;
+    }
 
     if (nextType === "dynamic") {
       if (restoreVelocity
@@ -510,7 +528,37 @@ export default class PhysicsNode extends Node {
   // Shape の material と混同しないよう、PhysicsNode 側に独立して置く
   setPhysicsMaterial(material) {
     this.material = this._readObjectReference(material, "PhysicsNode material");
+    this.materialId = undefined;
+    this._invalidateContactMaterial();
     return this;
+  }
+
+  setPhysicsMaterialId(materialId) {
+    if (typeof materialId !== "string" || !materialId.trim()) {
+      throw new Error("PhysicsNode materialId must be a nonempty string");
+    }
+    this.physicsSpace?.materialPairs?.material({}, materialId);
+    this.materialId = materialId;
+    this.material = null;
+    this._invalidateContactMaterial();
+    return this;
+  }
+
+  getPhysicsMaterialId() {
+    return this.materialId;
+  }
+
+  _invalidateContactMaterial() {
+    this.wakeUp();
+    const space = this.physicsSpace;
+    if (!space) return;
+    space.cpuBoxPhysicsAdapter?.reset();
+    space.sleepFastPathReady = false;
+    space.previousManifoldMap?.clear();
+    for (const body of space.bodies) {
+      if (body.isDynamic?.()) body.wakeUp();
+      space._resetSleepStepCount?.(body);
+    }
   }
 
   // 現在の物理材質参照を返す
@@ -547,6 +595,30 @@ export default class PhysicsNode extends Node {
   setLinearVelocityVec(velocity) {
     const vec = this._readVec3(velocity, "PhysicsNode velocity");
     return this.setLinearVelocity(vec[0], vec[1], vec[2]);
+  }
+
+  // kinematic bodyの接触面へだけ接線速度を与え、bodyの通常linearVelocityは変更しません
+  // dynamic bodyへ摩擦を伝える搬送用途では、quasiStaticの位置更新と併用します
+  setSurfaceVelocity(x, y, z) {
+    if (this.bodyType !== "kinematic") {
+      throw new Error("PhysicsNode.setSurfaceVelocity() requires a kinematic body");
+    }
+    this.surfaceVelocity[0] = util.readFiniteNumber(x, "PhysicsNode surface velocity x");
+    this.surfaceVelocity[1] = util.readFiniteNumber(y, "PhysicsNode surface velocity y");
+    this.surfaceVelocity[2] = util.readFiniteNumber(z, "PhysicsNode surface velocity z");
+    this.wakeUp();
+    return this;
+  }
+
+  // vec3でkinematic接触面の搬送速度を設定します
+  setSurfaceVelocityVec(velocity) {
+    const vec = this._readVec3(velocity, "PhysicsNode surface velocity");
+    return this.setSurfaceVelocity(vec[0], vec[1], vec[2]);
+  }
+
+  // kinematic接触面へ設定した搬送速度を返します
+  getSurfaceVelocity() {
+    return [...this.surfaceVelocity];
   }
 
   // 角速度を設定する
@@ -748,6 +820,7 @@ export default class PhysicsNode extends Node {
       quat: this.getQuat(),
       velocity: this.getLinearVelocity(),
       angularVelocity: this.getAngularVelocity(),
+      surfaceVelocity: this.getSurfaceVelocity(),
       bodyType: this.bodyType
     };
   }

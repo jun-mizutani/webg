@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>webg cache clear</title>
+  <link rel="icon" href="data:," />
+  <!-- 2026/09/13 -->
+  <style>
+    :root {
+      color-scheme: dark;
+      font-family: ui-sans-serif, system-ui, "Yu Gothic", sans-serif;
+      background: #081018;
+      color: #edf4f8;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; min-height: 100%; }
+    body {
+      padding: 24px;
+      background: radial-gradient(circle at 18% 0%, #17384b 0, #081018 42%);
+    }
+    main { width: min(860px, 100%); margin: 0 auto; }
+    .panel {
+      padding: 24px;
+      border: 1px solid #31536a;
+      border-radius: 14px;
+      background: rgba(13, 25, 34, 0.96);
+      box-shadow: 0 18px 42px rgba(0, 0, 0, 0.26);
+    }
+    h1 { margin: 0 0 8px; font-size: 1.55rem; }
+    p { color: #a9bbc8; line-height: 1.65; }
+    code { color: #c4ecff; }
+    button {
+      min-height: 38px;
+      padding: 0 14px;
+      border: 1px solid #3b7894;
+      border-radius: 7px;
+      background: #173448;
+      color: #eef7fb;
+      font: inherit;
+      cursor: pointer;
+    }
+    button:hover { filter: brightness(1.15); }
+    button:disabled { cursor: wait; opacity: 0.65; }
+    #status { margin: 18px 0 0; white-space: pre-wrap; }
+    #status.ok { color: #bfe8c4; }
+    #status.error { color: #ff9f9f; }
+    #details {
+      max-height: 360px;
+      overflow: auto;
+      padding: 12px;
+      border: 1px solid #294352;
+      border-radius: 8px;
+      background: #0b151d;
+      color: #a9bbc8;
+      font: 12px/1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      white-space: pre-wrap;
+    }
+  </style>
+</head>
+<body>
+  <main class="panel">
+    <h1>webg core cache clear</h1>
+    <p>
+      開発用ページです。<code>webg</code>コアの全JavaScript moduleを、同じ一意な
+      <code>?v=...</code>でimportして、ブラウザーの古いmodule URLを使わず最新版を取得します。
+      webgコア自身のimport文にはキャッシュクエリを追加しません。
+    </p>
+    <p>
+      これはブラウザーの全HTTPキャッシュを削除する操作ではありません。コアmoduleの
+      キャッシュをURL更新で回避し、依存moduleを先に読み込むためのツールです。
+    </p>
+    <button id="reload" type="button">全coreを再import</button>
+    <div id="status" role="status" aria-live="polite">準備中…</div>
+    <pre id="details" hidden></pre>
+  </main>
+  <script type="module" src="./main.js"></script>
+</body>
+</html>

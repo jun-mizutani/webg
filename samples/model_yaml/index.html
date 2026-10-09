@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>ModelYAMLの読込みと複数配置</title>
+  <link rel="icon" href="data:," />
+  <!-- 2026/06/19 -->
+  <style>
+
+:root {
+  color-scheme: light;
+  --bg: #eef3f8;
+  --paper: rgba(255, 255, 255, 0.94);
+  --line: #c8d5e4;
+  --ink: #17324a;
+  --muted: #5c748b;
+  --accent: #1566ab;
+  --accent-soft: #dfeefe;
+  --code-bg: #f3f7fb;
+  --shadow: rgba(29, 52, 79, 0.10);
+}
+* { box-sizing: border-box; }
+html, body {
+  margin: 0;
+  min-height: 100%;
+}
+body {
+  background:
+    radial-gradient(circle at top left, rgba(21, 102, 171, 0.12), transparent 24%),
+    radial-gradient(circle at top right, rgba(255, 191, 118, 0.10), transparent 22%),
+    linear-gradient(180deg, #f8fbfd 0%, var(--bg) 100%);
+  color: var(--ink);
+  font: 16px/1.78 "Avenir Next", "Hiragino Sans", "Yu Gothic", sans-serif;
+}
+.page {
+  width: min(1080px, calc(100% - 28px));
+  margin: 0 auto;
+  padding: 24px 0 56px;
+}
+.hero,
+.doc {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  box-shadow: 0 22px 52px var(--shadow);
+}
+.hero {
+  padding: 22px 24px;
+  margin-bottom: 18px;
+}
+.hero h1 {
+  margin: 0 0 8px;
+  font-size: clamp(2rem, 4vw, 3rem);
+  line-height: 1.08;
+}
+.hero p {
+  margin: 0;
+  color: var(--muted);
+}
+.doc {
+  padding: 28px;
+}
+.doc > :first-child {
+  margin-top: 0;
+}
+h1, h2, h3, h4, h5, h6 {
+  line-height: 1.25;
+  margin: 1.45em 0 0.55em;
+}
+h1 {
+  font-size: 2.2rem;
+}
+h2 {
+  padding-bottom: 0.28em;
+  border-bottom: 1px solid var(--line);
+  font-size: 1.48rem;
+}
+h3 {
+  font-size: 1.14rem;
+}
+p, ul, ol, table, pre, blockquote {
+  margin: 0 0 1em;
+}
+ul, ol {
+  padding-left: 1.4em;
+}
+li + li {
+  margin-top: 0.26em;
+}
+a {
+  color: var(--accent);
+  text-decoration: none;
+}
+a:hover {
+  text-decoration: underline;
+}
+img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  border-radius: 16px;
+  border: 1px solid var(--line);
+  box-shadow: 0 12px 32px rgba(29, 52, 79, 0.08);
+  margin: 1.1em 0 1.4em;
+}
+code {
+  padding: 0.12em 0.38em;
+  border-radius: 0.45em;
+  background: var(--code-bg);
+  border: 1px solid #dbe6f1;
+  font: 0.92em/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+pre {
+  padding: 14px 16px;
+  overflow-x: auto;
+  border-radius: 14px;
+  background: #0f1720;
+  color: #ecf5ff;
+}
+pre code {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #ffffff;
+}
+th, td {
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  text-align: left;
+  vertical-align: top;
+}
+th {
+  background: #f5f9fc;
+}
+hr {
+  border: 0;
+  border-top: 1px solid var(--line);
+  margin: 1.5em 0;
+}
+blockquote {
+  padding: 0.3em 0 0.3em 1em;
+  border-left: 4px solid #c9dbef;
+  color: var(--muted);
+}
+@media (max-width: 720px) {
+  .page {
+    width: min(100% - 18px, 1080px);
+    padding-top: 16px;
+  }
+  .hero,
+  .doc {
+    border-radius: 18px;
+  }
+  .doc {
+    padding: 20px;
+  }
+}
+
+  </style>
+</head>
+<body>
+  <main class="page">
+    <section class="hero">
+      <h1>ModelYAMLの読込みと複数配置</h1>
+    </section>
+    <article class="doc">
+<h1>ModelYAMLの読込みと複数配置</h1>
+<p><a href="index.en.html">English</a> | <a href="model_yaml.html">実行</a></p>
+<h2>このサンプルでできること</h2>
+<p>コメント付きの<a href="model.yaml">model.yaml</a>をModelAssetとして読み込み、台座付きの青い結晶を3組表示します。ModelYAMLは個別モデルの形状、マテリアル、Node階層を保存する形式です。この例では2つのメッシュと3つのNodeを記述し、同じモデルを一度構築して3回配置します。</p>
+<p>WebgAppの標準Forward描画とオービットカメラを使います。ドラッグで視点を回し、ホイールで拡大縮小します。「回転を開始」で各結晶がY軸まわりに回転し、「回転を停止」で止まります。台座はそのままなので、親子関係と個別Nodeの操作を確認できます。</p>
+<h2>起動と保存</h2>
+<p>リポジトリをHTTPサーバーで配信し、WebGPU対応ブラウザで<a href="model_yaml.html">model_yaml.html</a>を開きます。localhostまたはHTTPSを使用してください。画面下部に検証結果、メッシュ数、Node数、三角形数、配置数、コメント数を表示します。「読み込んだYAML原文」を開くとコメントを含む入力全体を確認できます。</p>
+<p>「YAML保存」は元のモデル定義を保存します。「gzip YAML保存」は同じ原文を圧縮します。画面上の3組の配置と回転はJavaScriptが作る実行時の状態です。保存されるのは1組分のモデル定義で、画面全体の保存にはSceneYAMLを使います。</p>
+<h2>実装の流れ</h2>
+<p>main.jsではModelAsset.load(&quot;./model.yaml&quot;)で読み込み、assertValid()でモデル内部の参照と形状データを検証します。WebgApp.init()の完了後にasset.build(app.getGPU())を一度呼び出し、runtime.instantiate(app.space)を3回呼び出します。配置ごとのnodeMapからrootとgemを取得して位置と回転を変更します。GPUの形状データを共有し、Nodeの姿勢を配置ごとに管理する例です。</p>
+<p>ModelYAMLのversionは文字列の&quot;1.0&quot;です。positionsはXYZが連続する配列、indicesは3要素で1三角形を表します。ModelAssetのrotationは[x, y, z, w]順のQuaternionです。台座と結晶の色はmaterialsのshaderParamsへ記述します。法線はModelBuilderが形状から計算します。</p>
+<p>getSourceDocument()から入力原文とコメントを取得します。このサンプルはAssetの値を保持するため、toYAMLText()とdownloadYAML()はコメントと字下げを保った原文を返します。Nodeの回転は表示中の姿勢へ反映し、Assetの値は保持します。コメント付きAssetの値を直接変更して保存しようとすると、コアはコメント保持のため例外で停止します。コメント付きモデルを編集する場合は、更新したYAML原文をfromYAML()へ渡してください。</p>
+<h2>ファイルと確認点</h2>
+<p>model.yamlがモデル定義、main.jsが読込み・構築・操作、model_yaml.htmlが実行ページです。各モデルは2メッシュ、3 Node、20三角形です。3組が同時に表示され、回転操作では結晶だけが動くことを確認してください。保存したYAMLは入力原文と一致し、gzipを展開しても同じ文字列になります。起動や保存に失敗した場合は理由を画面へ表示します。</p>
+<p>ページを閉じると更新を停止し、配置したインスタンス、共有モデルリソースの順に解放します。</p>
+    </article>
+  </main>
+</body>
+</html>

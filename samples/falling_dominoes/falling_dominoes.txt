@@ -1,0 +1,32 @@
+# falling_dominoes
+
+## このサンプルの目的
+
+`ComputePhysicsSpace`と`ComputeBoxCollider`を使い、一直線に並んだ32個（先頭1個＋後続31個）のドミノをGPU上でシミュレーションするサンプルです。左端のbodyだけへ初期角速度を与え、後続bodyは静止状態からBox接触で倒します。Box同士と床Planeの接触、回転、摩擦、persistent sleepは一つのCompute Physics処理で確認します。
+
+描画側は`getRenderState()`が返す最新のBodyState Storage Bufferをvertex shaderから直接読みます。bodyの位置や姿勢を毎frame CPUへreadbackしてNodeへ同期する処理はありません。sleepしたbodyは元の色を75%の明るさで描画し、停止状態を画面上でも確認できます。sleeping body数はpanelの統計で確認できます。
+
+## 処理の流れ
+
+`createBodies()`は同じ寸法のBox bodyを32個生成し、すべてを直立姿勢にしたうえで、左端だけへz軸回りの初期角速度`-7.683333rad/s`を設定します。後続bodyはidentity姿勢と静止速度から始め、接触後のbody状態は`ComputePhysicsSpace`が更新します。Spaceはboundsから床と四壁の`ComputePlaneCollider`を作り、重力を固定時間刻みへ分けてGPUへ記録します。
+
+物理単位はm・kg・sです。ドミノは列方向xの厚さ`0.006m`、高さ`0.050m`、底面の長辺zの長さ`0.025m`、密度`700kg/m³`とし、基準質量は体積から約`0.00525kg`になります。実アプリにはdomino32専用Nelder–Mead探索の候補を適用し、質量倍率`6.183333`、各bodyの質量約`0.0324625kg`、初期角速度`-7.683333rad/s`、反発係数`0.11`、`friction` `0.300833`、`linearDamping` `0.091667`、`angularDamping` `0.133333`を使います。列方向xへ倒れるときはz方向の底面長辺を軸にします。間隔は`0.0225m`、重力は`-9.80665m/s²`です。sleep線速度閾値は`0.0133167m/s`、wake線速度閾値は`0.02665m/s`、sleep角速度閾値は`0.469167rad/s`、wake角速度閾値は`0.7175rad/s`、接触速度閾値は`0.007075m/s`、法線速度閾値は`0.011675m/s`です。通常経路のfixed stepは120Hz、solverは10反復、最大sub stepは4で、追加位置補正passは0回です。追加補正は比較時だけ明示的に有効化します。`ComputePlaneCollider`にはPlane個別の摩擦係数がないため、床との摩擦もbody側の値を使います。床とドミノ同士の摩擦を分けるにはcore側のPlane材質拡張が必要です。
+
+16.5mmの隙間を先頭bodyが倒れて埋めるときの目標値を、サイズ・質量・重力から簡易計算します。先頭bodyの底面端をpivot、上端角が次bodyの鉛直面へ当たる形、床との衝突後の角速度を角運動量保存で初期値`7.683333rad/s`の4分の1、摩擦なしと仮定します。厚さを6mmとした場合、理論値は接触角`19.695deg`、重心下降`2.474mm`、重力エネルギー`0.787mJ`、接触直前エネルギー`0.838mJ`、接触点法線速度`0.3521m/s`、反発係数`0.11`を含む簡易接触力積`2.013e-3N・s`です。これは上記の仮定による理論値で、実測値と比較する基準です。panelの`theory`行に同じ値を表示します。
+
+各fixed stepでは、coreが予測AABBを作り、XZ Gridとswept Yで候補を絞り、body別candidate bitsetを作ります。その後、同じ候補をcombined local solverが再利用して、Box同士とPlaneとの法線・摩擦impulseを反復計算します。低い動きが連続したbodyはpersistent sleepへ入り、sleep状態はpanelの統計readbackと暗くなった描画色で確認できます。
+
+sleep中のbodyがwake条件を満たした場合、coreはまず次fixed stepの相手body stateを予測して接触を検出します。その予測接触をwake判定だけで終わらせず、wakeしたbody側のbody間solverにも同じ相手stateとして渡します。これにより、wakeしたのに接触力積が失われて後続bodyへ動きが伝わらない状態を避けます。panelの`solverInVn`と`solverJ`は相手側とsleepから復帰したbody側の両方で確認できます。
+
+通常起動では追加readbackを発行しません。URLへ`?diagnostics=1`を付けた場合だけ、`FallingDominoSleepDiagnostic.js`が明示的なBodyState readbackとcontact queryを使い、コア外の診断モジュールとして監査値を組み立てます。Coreへ特定body番号やpair名を埋め込まず、B29〜B32のpair力積とB31のsolver段階はサンプル専用のCPU traceから組み立てます。GPU timestampは少量の明示計測として通常経路から分離して残します。
+
+## 操作と確認
+
+- `space`: 先頭bodyへ角impulseを与える
+- `P`: pause / resume
+- `R`: 初期配置へ戻す
+- `H`: Help Panelの展開 / 折りたたみ
+- ドラッグ: camera orbit
+- ホイール: zoom（速度10%）
+
+起動直後に左から右へ連鎖すること、床をすり抜けないこと、最後に倒れたbodyがsleepしてpanelのsleeping body数へ反映されることを確認します。Help Panelは起動時に見出しと展開ボタンだけを表示し、`H`で本文を展開できます。本文にはframe間隔、GPU Compute/Render時間・負荷率、JavaScript時間・負荷率、active body数、sleeping body数、fixed step数を表示します。通常起動ではwake詳細診断が無効と表示され、`?diagnostics=1`で開いた場合はコア外のstate/contact診断と、サンプル側CPU traceから作ったB29〜B32の隣接pair詳細を表示します。`vN`はsolver後の速度、`preFrameVn`はreadback frame開始時の速度、`closePeak`はbody中心間のx方向接近速度であり、理論の接触点法線速度とは別の参考値です。

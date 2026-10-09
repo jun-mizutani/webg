@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// samples/opacity/main.js  2026/07/27
+// samples/opacity/main.js  2026/08/11
 //   Mixed opaque/translucent Shape with deferred color effects
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -8,7 +8,7 @@
 import ComputeEffectPipeline from "../../webg/ComputeEffectPipeline.js";
 import {
   COMPUTE_BLOOM_DEFAULTS
-} from "../../webg/ComputeBloomPass.js?v=20260723_image_pyramid";
+} from "../../webg/ComputeBloomPass.js";
 import FullscreenPass from "../../webg/FullscreenPass.js";
 import Primitive from "../../webg/Primitive.js";
 import Shape from "../../webg/Shape.js";
@@ -47,7 +47,7 @@ const state = {
 };
 
 // G-bufferが必要とするsurface値と、透明分類に使うalphaを一つのmaterial定義にする
-// color[3]は従来のtexture混合係数なので透明度には使わず、alphaを独立して指定する
+// color[3]はtexture混合係数なので透明度には使わず、alphaを独立して指定する
 function createMaterial(color, options = {}) {
   return {
     has_bone: 0,

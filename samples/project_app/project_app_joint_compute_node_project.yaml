@@ -1,0 +1,311 @@
+# joint_compute_nodeと同じGPU JointシナリオをSceneYAMLで記述するprojectです。
+# 物理body、Distance Joint、PBR material、表示用primitiveを一つのデータへまとめます。
+name: project-app-joint-compute-node
+version: 1
+
+# Compute bodyの色を画面上で区別するPBR materialです。
+materials:
+  - id: pendulum-pivot-material
+    color: [1.00, 0.54, 0.08, 1.0]
+    metallic: 0.12
+    roughness: 0.24
+    specular: 0.92
+  - id: pendulum-weight-material
+    color: [0.98, 0.16, 0.14, 1.0]
+    metallic: 0.10
+    roughness: 0.22
+    specular: 0.95
+  - id: rope-pivot-material
+    color: [0.98, 0.68, 0.12, 1.0]
+    metallic: 0.08
+    roughness: 0.28
+    specular: 0.90
+  - id: rope-link-even-material
+    color: [0.10, 0.78, 0.42, 1.0]
+    metallic: 0.06
+    roughness: 0.30
+    specular: 0.88
+  - id: rope-link-odd-material
+    color: [0.62, 0.90, 0.18, 1.0]
+    metallic: 0.06
+    roughness: 0.30
+    specular: 0.88
+  - id: crossing-capsule-material
+    color: [0.08, 0.82, 0.94, 1.0]
+    metallic: 0.12
+    roughness: 0.22
+    specular: 0.94
+  - id: pendulum-connector-material
+    color: [0.96, 0.90, 0.58, 1.0]
+    metallic: 0.18
+    roughness: 0.24
+    specular: 0.92
+
+# 重力、固定step、GPU容量、PlaneをScenePhysicsへ渡します。
+physics:
+  space:
+    gravity: [0.0, -9.80665, 0.0]
+    fixedTimeStepMs: 8.3333333333
+    maxSubSteps: 8
+    solverIterations: 10
+    jointSolverIterations: 16
+    maxBodies: 80
+    maxJoints: 80
+    maxJointsPerBody: 4
+    defaultRestitution: 0.0
+    defaultFriction: 0.0
+    persistentSleep: true
+    bounds: { minX: -4.0, maxX: 4.0, minZ: -2.8, maxZ: 2.8 }
+    scale: { referenceLength: 0.08 }
+    # joint_compute_nodeと同じく、ロープと振り子は空間中で動きます。
+    planes: []
+  joints:
+    # 振り子の支点と重りをDistance Jointでつなぎます。
+    - id: pendulum-distance
+      type: distance
+      a: { body: pendulum-pivot, localPoint: [0.0, 0.0, 0.0] }
+      b: { body: pendulum-weight, localPoint: [0.0, 0.0, 0.0] }
+      lengthMeters: 2.234
+      compliance: 0.0
+      positionCorrectionSlop: 0.0001
+      collideConnected: false
+
+    # rope-link objectSetはcount=[6,10,1]で、X方向6列、Y方向10段を作ります。
+    # IDはrope-link_000〜rope-link_059です。index=(row * 6 + column)で列を参照します。
+    # 各列の最上段だけpivotのtop anchorへつなぎ、以降は前段bottomと次段topをつなぎます。
+    - id: rope-0-top
+      type: distance
+      a: { body: rope-pivot_000, anchor: down }
+      b: { body: rope-link_000, anchor: up }
+      lengthMeters: 0.025
+      compliance: 0.0
+      positionCorrectionSlop: 0.0001
+      collideConnected: false
+    - id: rope-1-top
+      type: distance
+      a: { body: rope-pivot_001, anchor: down }
+      b: { body: rope-link_001, anchor: up }
+      lengthMeters: 0.025
+      compliance: 0.0
+      positionCorrectionSlop: 0.0001
+      collideConnected: false
+    - id: rope-2-top
+      type: distance
+      a: { body: rope-pivot_002, anchor: down }
+      b: { body: rope-link_002, anchor: up }
+      lengthMeters: 0.025
+      compliance: 0.0
+      positionCorrectionSlop: 0.0001
+      collideConnected: false
+    - id: rope-3-top
+      type: distance
+      a: { body: rope-pivot_003, anchor: down }
+      b: { body: rope-link_003, anchor: up }
+      lengthMeters: 0.025
+      compliance: 0.0
+      positionCorrectionSlop: 0.0001
+      collideConnected: false
+    - id: rope-4-top
+      type: distance
+      a: { body: rope-pivot_004, anchor: down }
+      b: { body: rope-link_004, anchor: up }
+      lengthMeters: 0.025
+      compliance: 0.0
+      positionCorrectionSlop: 0.0001
+      collideConnected: false
+    - id: rope-5-top
+      type: distance
+      a: { body: rope-pivot_005, anchor: down }
+      b: { body: rope-link_005, anchor: up }
+      lengthMeters: 0.025
+      compliance: 0.0
+      positionCorrectionSlop: 0.0001
+      collideConnected: false
+
+    # 各列の10個のlinkを順に接続します。
+    - { id: rope-0-01, type: distance, a: { body: rope-link_000, anchor: down }, b: { body: rope-link_006, anchor: up }, lengthMeters: 0.025, compliance: 0.0, positionCorrectionSlop: 0.0001, collideConnected: false }
+    - { id: rope-0-02, type: distance, a: { body: rope-link_006, anchor: down }, b: { body: rope-link_012, anchor: up }, lengthMeters: 0.025, compliance: 0.0, positionCorrectionSlop: 0.0001, collideConnected: false }
+    - { id: rope-0-03, type: distance, a: { body: rope-link_012, anchor: down }, b: { body: rope-link_018, anchor: up }, lengthMeters: 0.025, compliance: 0.0, positionCorrectionSlop: 0.0001, collideConnected: false }
+    - { id: rope-0-04, type: distance, a: { body: rope-link_018, anchor: down }, b: { body: rope-link_024, anchor: up }, lengthMeters: 0.025, compliance: 0.0, positionCorrectionSlop: 0.0001, collideConnected: false }
+    - { id: rope-0-05, type: distance, a: { body: rope-link_024, anchor: down }, b: { body: rope-link_030, anchor: up }, lengthMeters: 0.025, compliance: 0.0, positionCorrectionSlop: 0.0001, collideConnected: false }
+    - { id: rope-0-06, type: distance, a: { body: rope-link_030, anchor: down }, b: { body: rope-link_036, anchor: up }, lengthMeters: 0.025, compliance: 0.0, positionCorrectionSlop: 0.0001, collideConnected: false }
+    - { id: rope-0-07, type: distance, a: { body: rope-link_036, anchor: down }, b: { body: rope-link_042, anchor: up }, lengthMeters: 0.025, compliance: 0.0, positionCorrectionSlop: 0.0001, collideConnected: false }
+    - { id: rope-0-08, type: distance, a: { body: rope-link_042, anchor: down }, b: { body: rope-link_048, anchor: up }, lengthMeters: 0.025, compliance: 0.0, positionCorrectionSlop: 0.0001, collideConnected: false }
+    - { id: rope-0-09, type: distance, a: { body: rope-link_048, anchor: down }, b: { body: rope-link_054, anchor: up }, lengthMeters: 0.025, compliance: 0.0, positionCorrectionSlop: 0.0001, collideConnected: false }
+    - { id: rope-1-01, type: distance, a: { body: rope-link_001, anchor: down }, b: { body: rope-link_007, anchor: up }, lengthMeters: 0.025, compliance: 0.0, positionCorrectionSlop: 0.0001, collideConnected: false }
+    - { id: rope-1-02, type: distance, a: { body: rope-link_007, anchor: down }, b: { body: rope-link_013, anchor: up }, lengthMeters: 0.025, compliance: 0.0, positionCorrectionSlop: 0.0001, collideConnected: false }
+    - { id: rope-1-03, type: distance, a: { body: rope-link_013, anchor: down }, b: { body: rope-link_019, anchor: up }, lengthMeters: 0.025, compliance: 0.0, positionCorrectionSlop: 0.0001, collideConnected: false }
+    - { id: rope-1-04, type: distance, a: { body: rope-link_019, anchor: down }, b: { body: rope-link_025, anchor: up }, lengthMeters: 0.025, compliance: 0.0, positionCorrectionSlop: 0.0001, collideConnected: false }
+    - { id: rope-1-05, type: distance, a: { body: rope-link_025, anchor: down }, b: { body: rope-link_031, anchor: up }, lengthMeters: 0.025, compliance: 0.0, positionCorrectionSlop: 0.0001, collideConnected: false }
+    - { id: rope-1-06, type: distance, a: { body: rope-link_031, anchor: down }, b: { body: rope-link_037, anchor: up }, lengthMeters: 0.025, compliance: 0.0, positionCorrectionSlop: 0.0001, collideConnected: false }
+    - { id: rope-1-07, type: distance, a: { body: rope-link_037, anchor: down }, b: { body: rope-link_043, anchor: up }, lengthMeters: 0.025, compliance: 0.0, positionCorrectionSlop: 0.0001, collideConnected: false }
+    - { id: rope-1-08, type: distance, a: { body: rope-link_043, anchor: down }, b: { body: rope-link_049, anchor: up }, lengthMeters: 0.025, compliance: 0.0, positionCorrectionSlop: 0.0001, collideConnected: false }
+    - { id: rope-1-09, type: distance, a: { body: rope-link_049, anchor: down }, b: { body: rope-link_055, anchor: up }, lengthMeters: 0.025, compliance: 0.0, positionCorrectionSlop: 0.0001, collideConnected: false }
+    - { id: rope-2-01, type: distance, a: { body: rope-link_002, anchor: down }, b: { body: rope-link_008, anchor: up }, lengthMeters: 0.025, compliance: 0.0, positionCorrectionSlop: 0.0001, collideConnected: false }
+    - { id: rope-2-02, type: distance, a: { body: rope-link_008, anchor: down }, b: { body: rope-link_014, anchor: up }, lengthMeters: 0.025, compliance: 0.0, positionCorrectionSlop: 0.0001, collideConnected: false }
+    - { id: rope-2-03, type: distance, a: { body: rope-link_014, anchor: down }, b: { body: rope-link_020, anchor: up }, lengthMeters: 0.025, compliance: 0.0, positionCorrectionSlop: 0.0001, collideConnected: false }
+    - { id: rope-2-04, type: distance, a: { body: rope-link_020, anchor: down }, b: { body: rope-link_026, anchor: up }, lengthMeters: 0.025, compliance: 0.0, positionCorrectionSlop: 0.0001, collideConnected: false }
+    - { id: rope-2-05, type: distance, a: { body: rope-link_026, anchor: down }, b: { body: rope-link_032, anchor: up }, lengthMeters: 0.025, compliance: 0.0, positionCorrectionSlop: 0.0001, collideConnected: false }
+    - { id: rope-2-06, type: distance, a: { body: rope-link_032, anchor: down }, b: { body: rope-link_038, anchor: up }, lengthMeters: 0.025, compliance: 0.0, positionCorrectionSlop: 0.0001, collideConnected: false }
+    - { id: rope-2-07, type: distance, a: { body: rope-link_038, anchor: down }, b: { body: rope-link_044, anchor: up }, lengthMeters: 0.025, compliance: 0.0, positionCorrectionSlop: 0.0001, collideConnected: false }
+    - { id: rope-2-08, type: distance, a: { body: rope-link_044, anchor: down }, b: { body: rope-link_050, anchor: up }, lengthMeters: 0.025, compliance: 0.0, positionCorrectionSlop: 0.0001, collideConnected: false }
+    - { id: rope-2-09, type: distance, a: { body: rope-link_050, anchor: down }, b: { body: rope-link_056, anchor: up }, lengthMeters: 0.025, compliance: 0.0, positionCorrectionSlop: 0.0001, collideConnected: false }
+    - { id: rope-3-01, type: distance, a: { body: rope-link_003, anchor: down }, b: { body: rope-link_009, anchor: up }, lengthMeters: 0.025, compliance: 0.0, positionCorrectionSlop: 0.0001, collideConnected: false }
+    - { id: rope-3-02, type: distance, a: { body: rope-link_009, anchor: down }, b: { body: rope-link_015, anchor: up }, lengthMeters: 0.025, compliance: 0.0, positionCorrectionSlop: 0.0001, collideConnected: false }
+    - { id: rope-3-03, type: distance, a: { body: rope-link_015, anchor: down }, b: { body: rope-link_021, anchor: up }, lengthMeters: 0.025, compliance: 0.0, positionCorrectionSlop: 0.0001, collideConnected: false }
+    - { id: rope-3-04, type: distance, a: { body: rope-link_021, anchor: down }, b: { body: rope-link_027, anchor: up }, lengthMeters: 0.025, compliance: 0.0, positionCorrectionSlop: 0.0001, collideConnected: false }
+    - { id: rope-3-05, type: distance, a: { body: rope-link_027, anchor: down }, b: { body: rope-link_033, anchor: up }, lengthMeters: 0.025, compliance: 0.0, positionCorrectionSlop: 0.0001, collideConnected: false }
+    - { id: rope-3-06, type: distance, a: { body: rope-link_033, anchor: down }, b: { body: rope-link_039, anchor: up }, lengthMeters: 0.025, compliance: 0.0, positionCorrectionSlop: 0.0001, collideConnected: false }
+    - { id: rope-3-07, type: distance, a: { body: rope-link_039, anchor: down }, b: { body: rope-link_045, anchor: up }, lengthMeters: 0.025, compliance: 0.0, positionCorrectionSlop: 0.0001, collideConnected: false }
+    - { id: rope-3-08, type: distance, a: { body: rope-link_045, anchor: down }, b: { body: rope-link_051, anchor: up }, lengthMeters: 0.025, compliance: 0.0, positionCorrectionSlop: 0.0001, collideConnected: false }
+    - { id: rope-3-09, type: distance, a: { body: rope-link_051, anchor: down }, b: { body: rope-link_057, anchor: up }, lengthMeters: 0.025, compliance: 0.0, positionCorrectionSlop: 0.0001, collideConnected: false }
+    - { id: rope-4-01, type: distance, a: { body: rope-link_004, anchor: down }, b: { body: rope-link_010, anchor: up }, lengthMeters: 0.025, compliance: 0.0, positionCorrectionSlop: 0.0001, collideConnected: false }
+    - { id: rope-4-02, type: distance, a: { body: rope-link_010, anchor: down }, b: { body: rope-link_016, anchor: up }, lengthMeters: 0.025, compliance: 0.0, positionCorrectionSlop: 0.0001, collideConnected: false }
+    - { id: rope-4-03, type: distance, a: { body: rope-link_016, anchor: down }, b: { body: rope-link_022, anchor: up }, lengthMeters: 0.025, compliance: 0.0, positionCorrectionSlop: 0.0001, collideConnected: false }
+    - { id: rope-4-04, type: distance, a: { body: rope-link_022, anchor: down }, b: { body: rope-link_028, anchor: up }, lengthMeters: 0.025, compliance: 0.0, positionCorrectionSlop: 0.0001, collideConnected: false }
+    - { id: rope-4-05, type: distance, a: { body: rope-link_028, anchor: down }, b: { body: rope-link_034, anchor: up }, lengthMeters: 0.025, compliance: 0.0, positionCorrectionSlop: 0.0001, collideConnected: false }
+    - { id: rope-4-06, type: distance, a: { body: rope-link_034, anchor: down }, b: { body: rope-link_040, anchor: up }, lengthMeters: 0.025, compliance: 0.0, positionCorrectionSlop: 0.0001, collideConnected: false }
+    - { id: rope-4-07, type: distance, a: { body: rope-link_040, anchor: down }, b: { body: rope-link_046, anchor: up }, lengthMeters: 0.025, compliance: 0.0, positionCorrectionSlop: 0.0001, collideConnected: false }
+    - { id: rope-4-08, type: distance, a: { body: rope-link_046, anchor: down }, b: { body: rope-link_052, anchor: up }, lengthMeters: 0.025, compliance: 0.0, positionCorrectionSlop: 0.0001, collideConnected: false }
+    - { id: rope-4-09, type: distance, a: { body: rope-link_052, anchor: down }, b: { body: rope-link_058, anchor: up }, lengthMeters: 0.025, compliance: 0.0, positionCorrectionSlop: 0.0001, collideConnected: false }
+    - { id: rope-5-01, type: distance, a: { body: rope-link_005, anchor: down }, b: { body: rope-link_011, anchor: up }, lengthMeters: 0.025, compliance: 0.0, positionCorrectionSlop: 0.0001, collideConnected: false }
+    - { id: rope-5-02, type: distance, a: { body: rope-link_011, anchor: down }, b: { body: rope-link_017, anchor: up }, lengthMeters: 0.025, compliance: 0.0, positionCorrectionSlop: 0.0001, collideConnected: false }
+    - { id: rope-5-03, type: distance, a: { body: rope-link_017, anchor: down }, b: { body: rope-link_023, anchor: up }, lengthMeters: 0.025, compliance: 0.0, positionCorrectionSlop: 0.0001, collideConnected: false }
+    - { id: rope-5-04, type: distance, a: { body: rope-link_023, anchor: down }, b: { body: rope-link_029, anchor: up }, lengthMeters: 0.025, compliance: 0.0, positionCorrectionSlop: 0.0001, collideConnected: false }
+    - { id: rope-5-05, type: distance, a: { body: rope-link_029, anchor: down }, b: { body: rope-link_035, anchor: up }, lengthMeters: 0.025, compliance: 0.0, positionCorrectionSlop: 0.0001, collideConnected: false }
+    - { id: rope-5-06, type: distance, a: { body: rope-link_035, anchor: down }, b: { body: rope-link_041, anchor: up }, lengthMeters: 0.025, compliance: 0.0, positionCorrectionSlop: 0.0001, collideConnected: false }
+    - { id: rope-5-07, type: distance, a: { body: rope-link_041, anchor: down }, b: { body: rope-link_047, anchor: up }, lengthMeters: 0.025, compliance: 0.0, positionCorrectionSlop: 0.0001, collideConnected: false }
+    - { id: rope-5-08, type: distance, a: { body: rope-link_047, anchor: down }, b: { body: rope-link_053, anchor: up }, lengthMeters: 0.025, compliance: 0.0, positionCorrectionSlop: 0.0001, collideConnected: false }
+    - { id: rope-5-09, type: distance, a: { body: rope-link_053, anchor: down }, b: { body: rope-link_059, anchor: up }, lengthMeters: 0.025, compliance: 0.0, positionCorrectionSlop: 0.0001, collideConnected: false }
+
+# primitive objectの形状、初期姿勢、材質、physics bodyを記述します。
+objects:
+  - id: pendulum-pivot
+    shape: { type: sphere, radius: 0.025 }
+    transform: { position: [-2.8, 5.55, -0.18] }
+    material: pendulum-pivot-material
+    physics:
+      bodyType: static
+      shape: { type: sphere, radius: 0.025 }
+      collisionLayer: 8
+      collisionMask: 0
+      material: { friction: 0.0, restitution: 0.0 }
+
+  - id: pendulum-weight
+    shape: { type: sphere, radius: 0.18 }
+    transform: { position: [-2.036, 3.451, -0.18] }
+    material: pendulum-weight-material
+    physics:
+      bodyType: dynamic
+      mass: 1.0
+      shape: { type: sphere, radius: 0.18 }
+      linearDamping: 0.00875
+      angularDamping: 0.02
+      allowSleep: false
+      collisionLayer: 8
+      collisionMask: 0
+      material: { friction: 0.0, restitution: 0.0 }
+
+  - id: pendulum-connector
+    shape: { type: capsule, radius: 0.0175, segmentLength: 2.199 }
+    transform:
+      position: [-2.418, 4.500, -0.18]
+      orientation: [0.0, 0.0, 0.0]
+    material: pendulum-connector-material
+
+  - id: crossing-capsule
+    shape: { type: capsule, radius: 0.33, segmentLength: 1.2 }
+    transform:
+      position: [-3.3, 4.0, 0.0]
+      orientation: [90.0, 0.0, 0.0]
+    material: crossing-capsule-material
+    physics:
+      bodyType: kinematic
+      mass: 8.0
+      shape: { type: capsule, radius: 0.33, segmentLength: 1.2 }
+      gravityScale: 0.0
+      allowSleep: false
+      fixedRotation: true
+      collisionLayer: 4
+      collisionMask: 2
+      material: { friction: 0.0, restitution: 0.0 }
+
+# 同じcapsuleをX方向6列、Y方向10段へ展開します。
+# 各列のZは0.08mずつずらし、交差するCapsuleとの接触を立体的に観察できます。
+objectSets:
+  # pivotのX/Z配置はrope-link objectSetの6列と一致します。
+  - id: rope-pivot
+    prototype:
+      shape: { type: sphere, radius: 0.1 }
+      material: rope-pivot-material
+      physics:
+        bodyType: static
+        shape: { type: sphere, radius: 0.1 }
+        anchors: { down: { localPoint: [0.0, -0.14, 0.0] } }
+        collisionLayer: 2
+        collisionMask: 0
+        material: { friction: 0.0, restitution: 0.0 }
+    placement:
+      type: grid3d
+      count: [6, 1, 1]
+      origin: [-1.8, 5.55, -0.18]
+      spacing: [0.72, 0.0, 0.08]
+
+  - id: rope-link
+    variants:
+      - id: even
+        shape: { type: capsule, radius: 0.06, segmentLength: 0.18 }
+        material: rope-link-even-material
+        physics:
+          bodyType: dynamic
+          mass: 0.50
+          shape: { type: capsule, radius: 0.06, segmentLength: 0.18 }
+          linearDamping: 0.30
+          angularDamping: 0.82
+          allowSleep: true
+          collisionLayer: 2
+          collisionMask: 4
+          anchors:
+            up: { localPoint: [0.0, 0.14, 0.0] }
+            down: { localPoint: [0.0, -0.14, 0.0] }
+          material: { friction: 0.0, restitution: 0.0 }
+      - id: odd
+        shape: { type: capsule, radius: 0.06, segmentLength: 0.18 }
+        material: rope-link-odd-material
+        physics:
+          bodyType: dynamic
+          mass: 0.50
+          shape: { type: capsule, radius: 0.06, segmentLength: 0.18 }
+          linearDamping: 0.30
+          angularDamping: 0.82
+          allowSleep: true
+          collisionLayer: 2
+          collisionMask: 4
+          anchors:
+            up: { localPoint: [0.0, 0.14, 0.0] }
+            down: { localPoint: [0.0, -0.14, 0.0] }
+          material: { friction: 0.0, restitution: 0.0 }
+    variantPattern:
+      type: cycle
+      values: [even, odd]
+    placement:
+      type: grid3d
+      count: [6, 10, 1]
+      origin: [-1.8, 5.245, -0.18]
+      spacing: [0.72, -0.305, 0.08]
+
+# PBR rendererのprofileと画面効果をproject側で固定します。
+renderer:
+  profile: studio
+  width: 960
+  height: 640
+  clearColor: [0.012, 0.026, 0.036, 1.0]
+  environment:
+    preset: dark-studio
+    resolution: { width: 128, height: 64 }
+  dof: { enabled: false }
+  pipeline:
+    lighting: { ambient: 0.0, directionalIntensity: 1.05, environmentIntensity: 0.42 }
+    ssao: { radius: 12.0, strength: 1.15, samples: 8 }
+    ssr: { intensity: 0.65, distance: 24.0, steps: 28 }
+    toneMap: { exposure: 1.0 }

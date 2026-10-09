@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>texture_catalog</title>
+  <link rel="icon" href="data:," />
+  <!-- 2026/06/19 -->
+  <style>
+
+:root {
+  color-scheme: light;
+  --bg: #eef3f8;
+  --paper: rgba(255, 255, 255, 0.94);
+  --line: #c8d5e4;
+  --ink: #17324a;
+  --muted: #5c748b;
+  --accent: #1566ab;
+  --accent-soft: #dfeefe;
+  --code-bg: #f3f7fb;
+  --shadow: rgba(29, 52, 79, 0.10);
+}
+* { box-sizing: border-box; }
+html, body {
+  margin: 0;
+  min-height: 100%;
+}
+body {
+  background:
+    radial-gradient(circle at top left, rgba(21, 102, 171, 0.12), transparent 24%),
+    radial-gradient(circle at top right, rgba(255, 191, 118, 0.10), transparent 22%),
+    linear-gradient(180deg, #f8fbfd 0%, var(--bg) 100%);
+  color: var(--ink);
+  font: 16px/1.78 "Avenir Next", "Hiragino Sans", "Yu Gothic", sans-serif;
+}
+.page {
+  width: min(1080px, calc(100% - 28px));
+  margin: 0 auto;
+  padding: 24px 0 56px;
+}
+.hero,
+.doc {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  box-shadow: 0 22px 52px var(--shadow);
+}
+.hero {
+  padding: 22px 24px;
+  margin-bottom: 18px;
+}
+.hero h1 {
+  margin: 0 0 8px;
+  font-size: clamp(2rem, 4vw, 3rem);
+  line-height: 1.08;
+}
+.hero p {
+  margin: 0;
+  color: var(--muted);
+}
+.doc {
+  padding: 28px;
+}
+.doc > :first-child {
+  margin-top: 0;
+}
+h1, h2, h3, h4, h5, h6 {
+  line-height: 1.25;
+  margin: 1.45em 0 0.55em;
+}
+h1 {
+  font-size: 2.2rem;
+}
+h2 {
+  padding-bottom: 0.28em;
+  border-bottom: 1px solid var(--line);
+  font-size: 1.48rem;
+}
+h3 {
+  font-size: 1.14rem;
+}
+p, ul, ol, table, pre, blockquote {
+  margin: 0 0 1em;
+}
+ul, ol {
+  padding-left: 1.4em;
+}
+li + li {
+  margin-top: 0.26em;
+}
+a {
+  color: var(--accent);
+  text-decoration: none;
+}
+a:hover {
+  text-decoration: underline;
+}
+img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  border-radius: 16px;
+  border: 1px solid var(--line);
+  box-shadow: 0 12px 32px rgba(29, 52, 79, 0.08);
+  margin: 1.1em 0 1.4em;
+}
+code {
+  padding: 0.12em 0.38em;
+  border-radius: 0.45em;
+  background: var(--code-bg);
+  border: 1px solid #dbe6f1;
+  font: 0.92em/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+pre {
+  padding: 14px 16px;
+  overflow-x: auto;
+  border-radius: 14px;
+  background: #0f1720;
+  color: #ecf5ff;
+}
+pre code {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #ffffff;
+}
+th, td {
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  text-align: left;
+  vertical-align: top;
+}
+th {
+  background: #f5f9fc;
+}
+hr {
+  border: 0;
+  border-top: 1px solid var(--line);
+  margin: 1.5em 0;
+}
+blockquote {
+  padding: 0.3em 0 0.3em 1em;
+  border-left: 4px solid #c9dbef;
+  color: var(--muted);
+}
+@media (max-width: 720px) {
+  .page {
+    width: min(100% - 18px, 1080px);
+    padding-top: 16px;
+  }
+  .hero,
+  .doc {
+    border-radius: 18px;
+  }
+  .doc {
+    padding: 20px;
+  }
+}
+
+  </style>
+</head>
+<body>
+  <main class="page">
+    <section class="hero">
+      <h1>texture_catalog</h1>
+    </section>
+    <article class="doc">
+<h1>texture_catalog</h1>
+<p>English | <a href="index.html">日本語</a></p>
+<h2>Overview</h2>
+<p><code>texture_catalog</code> selects and edits Procedural Texture presets provided by the webg core. It previews each material on a cube and as Color/Height/Normal maps, exports the complete definition as JavaScript or JSON, and saves generated Color/Height/Normal maps as PNG or JPEG images.</p>
+<h2>Running</h2>
+<p>Start an HTTP server at the repository root and open <code>samples/texture_catalog/texture_catalog.html</code>.</p>
+<pre><code class="language-sh">python3 -m http.server 8000
+</code></pre>
+<h2>Minimal API</h2>
+<pre><code class="language-js">import ProceduralMaterials from &quot;../../webg/ProceduralMaterials.js&quot;;
+
+const materials = new ProceduralMaterials(gpu);
+const oak = await materials.createPreset(&quot;wood.oak.plank&quot;);
+oak.applyTo(shape);
+</code></pre>
+<p>The Shape must already contain UV coordinates. One material handle may be applied to multiple Shapes. Call <code>materials.destroy()</code> to release all generated GPU resources when the owner ends.</p>
+<h2>Initial presets</h2>
+<p>The core provides twenty-three presets across wood, concrete, fiber-cement, brick, vinyl, ceramic, resin, and stone. They cover thirteen recipes including quarter-sawn, flat-sawn, and board-by-board mixed grain. Oak, Walnut, and Cedar provide flat-sawn and mixed variants; each mixed variation cell assigns half its boards to each cut.</p>
+<h2>Rounded pebbles and gravel</h2>
+<p>Select the <code>stone</code> category to find three presets:</p>
+<table>
+<thead>
+<tr>
+<th>Preset ID</th>
+<th>Content</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>stone.pebbles.gray</code></td>
+<td>Large rounded pebbles only; 40mm height bound</td>
+</tr>
+<tr>
+<td><code>stone.pebbles-gravel.gray</code></td>
+<td>Pebbles with small gravel in the gaps; 6mm gravel height bound</td>
+</tr>
+<tr>
+<td><code>stone.gravel.gray</code></td>
+<td>Small gravel only; 6mm height bound</td>
+</tr>
+</tbody></table>
+<p>All use the new <code>pebbles</code> pattern on a seamless 2m square without joints.
+<code>Pattern scale m</code> sets the placement scale rather than a fixed diameter for every grain.
+The large and small scales are 0.12m and 0.065m; the seed varies radius, aspect and orientation.</p>
+<p>Grain tones span a continuous range from dark through midtones to light.
+<code>Color amount</code> controls grain color contrast independently of <code>Pattern height m</code>.
+Dark grains also rise upward. The pebble controls set density, roundness (0: flat top; 1: rounded cap),
+plus the amount, scale, height and color contrast of gravel in the gaps.
+Changing roundness leaves the Color map unchanged. Packing narrows gaps by adjusting grain size and center jitter.
+Irregularity (0–1) increases center jitter and variation in radius and aspect.
+The pebbles-only preset uses irregularity, density and packing of 1, with raised centers and a 40mm height bound. Set gravel amount to 0 for a single grain layer.</p>
+<pre><code class="language-js">const stones = await materials.createPreset(&quot;stone.pebbles-gravel.gray&quot;, {
+  tile: { pattern: {
+    colorAmount: 0.10, heightMeters: 0.040,
+    pebbles: { roundness: 1, gravelAmount: 1, gravelHeightMeters: 0.006 }
+  } }
+});
+stones.applyTo(shape);
+</code></pre>
+<p>The previews show Color, Height and Normal in that order. Height is normalized to the material&#39;s
+<code>heightRangeMeters</code>; check the displayed <code>Height range</code> when decoding the downloaded Height image.
+Use PNG when reusing Height or Normal maps. The cube uses normal mapping and retains its geometric outline.
+Applications that need actual relief must decode Height and intersect the resulting height field.
+See the <a href="../../docs/sample_development/procedural_pebbles.md">implementation notes</a> and
+<a href="../../unittest/procedural_pebbles/index.html">GPU validation</a>.</p>
+<p><img src="pebbles_preview.png" alt="Densely packed pebbles with raised centers"></p>
+<h2>Editing and exporting</h2>
+<p>The editor exposes resolution, base/dirt/joint colors, tile-to-tile color variation, physical unit dimensions, long-axis direction, variation-cell counts, joints, layout, pattern, surface detail, random seed, roughness, specular, metallic, and Normal strength. <code>Thickness m</code> is saved in the definition as a reference dimension for the material, but it is not used by procedural texture generation. Changes immediately update both the displayed code and the GPU textures. <code>Generate</code> or the <code>G</code> key manually rebuilds the same definition.</p>
+<p><code>Definition metadata</code> exposes editable <code>Material ID</code>, <code>Category</code>, Japanese and English <code>Label</code>, and <code>Tile preset ID</code> fields. The first <code>Category</code> field filters the existing preset list; the <code>Category</code> field under Definition metadata is the category saved in the exported definition. Select an existing preset first, then change these values to create a separate material definition based on the same tile and appearance settings.</p>
+<p>To try fine sand-like roughness on concrete, keep the <code>mottle</code> Pattern as the broad color variation and adjust <code>Surface detail scale m</code> from 0.010 to 0.0125 and <code>Surface noise height m</code> from 0.00020 to 0.00030. <code>Pattern scale m</code> controls the size of the color mottling, <code>Color amount</code> controls its color contrast, and <code>Surface noise height m</code> controls the physical relief separately. <code>pixelsPerMeter</code> specifies the number of pixels available to record detail. <code>Surface noise height m</code> specifies relief height. Try 400 pixels/m only when detail is lost at 200 pixels/m.</p>
+<p>For example, setting the metadata for fiber cement siding produces the following beginning in the JavaScript output. The rest of <code>tile</code> continues with the complete values edited in the page.</p>
+<pre><code class="language-js">export default {
+  &quot;id&quot;: &quot;fiber.cement.siding&quot;,
+  &quot;schemaVersion&quot;: 1,
+  &quot;category&quot;: &quot;cement&quot;,
+  &quot;label&quot;: {
+    &quot;ja&quot;: &quot;窯業系サイディング&quot;,
+    &quot;en&quot;: &quot;Fiber cement siding&quot;
+  },
+  &quot;tile&quot;: {
+    &quot;presetId&quot;: &quot;fiber.cement.siding&quot;,
+    // complete resolution, unit, layout, color, and pattern values
+  }
+};
+</code></pre>
+<p>This sample only exports definition files; it does not edit <code>webg/ProceduralMaterials.js</code> directly. To add the exported definition as a core preset or replace an existing preset, review the file and apply it to the core separately.</p>
+<p>The <code>stack</code> layout always uses a row offset of 0. When changing to <code>running-bond</code> while the row offset is 0, the editor selects the standard 1/2 offset so the layout difference is visible. You can then change the running-bond offset to 0, 1/3, or 1/4 and regenerate with that value.</p>
+<p>The initial wood layouts are <code>running-bond</code> with 1/2 for Oak, 1/3 for Walnut, and 1/4 for Cedar. Walnut uses a 2-by-6 variation cell so the 1/3 offset period closes correctly.</p>
+<h3>Dimensions, layout, and reflection</h3>
+<table>
+<thead>
+<tr>
+<th>Control</th>
+<th>Effect</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Pixels per meter</td>
+<td>Generation resolution. Unit dimensions, joint width, and edge round are aligned to integer pixels at this resolution</td>
+</tr>
+<tr>
+<td>Long/Short size m</td>
+<td>Long and short dimensions of one unit. These affect one texture period and real-size repeats</td>
+</tr>
+<tr>
+<td>Thickness mode/Thickness m</td>
+<td>Reference thickness of the material unit. Changing it does not change the generated Color/Height/Normal maps</td>
+</tr>
+<tr>
+<td>Long axis</td>
+<td>Assigns the long dimension to texture <code>u</code> or <code>v</code></td>
+</tr>
+<tr>
+<td>Variation columns/rows</td>
+<td>Number of different unit variations placed in the generated texture</td>
+</tr>
+<tr>
+<td>Joint edge round m</td>
+<td>Rounding distance from the joint bottom back to the unit surface</td>
+</tr>
+<tr>
+<td>Dirt color/Dirt amount</td>
+<td>Color and amount of dirt added to the unit surface</td>
+</tr>
+<tr>
+<td>Metallic</td>
+<td>PBR material metallic value</td>
+</tr>
+</tbody></table>
+<h3>Pattern and noise</h3>
+<table>
+<thead>
+<tr>
+<th>Control</th>
+<th>Effect</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Tile color variation</td>
+<td>Brightness difference shared by each tile or board. 0 makes tiles uniform; larger values increase the color change between tiles. The valid range is 0 to 0.25</td>
+</tr>
+<tr>
+<td>Pattern scale m</td>
+<td>Base size of material-specific wood grain, veining, mottling, or particles. Smaller values make the pattern finer; larger values make it coarser</td>
+</tr>
+<tr>
+<td>Pattern color amount</td>
+<td>Brightness amplitude contributed to the Color map by the pattern</td>
+</tr>
+<tr>
+<td>Pattern height m</td>
+<td>Physical relief amplitude contributed by the pattern to the Height/Normal maps</td>
+</tr>
+<tr>
+<td>Surface detail scale m</td>
+<td>Base size of the shared Perlin detail layer, independent of the material pattern</td>
+</tr>
+<tr>
+<td>Surface noise height m</td>
+<td>Fine physical relief contributed by surface detail to the Height/Normal maps</td>
+</tr>
+<tr>
+<td>Random seed</td>
+<td>Reproducible integer that changes board variation, Perlin noise, Voronoi points, Terrazzo chips, and related placement</td>
+</tr>
+</tbody></table>
+<p>Pattern and surface detail are separate layers. To change only wood-grain spacing, edit <code>Pattern scale m</code>. To retain the grain while changing fine roughness, edit <code>Surface detail scale m</code> and <code>Surface noise height m</code>. The same seed and settings regenerate the same texture.</p>
+<h3>Numeric input and shortcuts</h3>
+<p>Every numeric field supports direct typed entry as well as its spin buttons. While a numeric field has focus, ↑/↓ changes it by the following step. Outside the editor panel, ↑/↓ continues to control the camera.</p>
+<table>
+<thead>
+<tr>
+<th>Numeric field</th>
+<th align="right">↑/↓ step</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Pixels per meter</td>
+<td align="right">1</td>
+</tr>
+<tr>
+<td>Long/Short size, Joint width</td>
+<td align="right">0.005 m</td>
+</tr>
+<tr>
+<td>Joint edge round</td>
+<td align="right">0.0001 m</td>
+</tr>
+<tr>
+<td>Joint depth</td>
+<td align="right">0.0001 m</td>
+</tr>
+<tr>
+<td>Pattern scale, Surface detail scale</td>
+<td align="right">0.0025 m</td>
+</tr>
+<tr>
+<td>Pattern color amount</td>
+<td align="right">0.005</td>
+</tr>
+<tr>
+<td>Pattern height, Surface noise height</td>
+<td align="right">0.00001 m</td>
+</tr>
+<tr>
+<td>Random seed</td>
+<td align="right">1</td>
+</tr>
+<tr>
+<td>Dirt amount</td>
+<td align="right">0.005</td>
+</tr>
+<tr>
+<td>Metallic, Roughness, Specular</td>
+<td align="right">0.01</td>
+</tr>
+<tr>
+<td>Normal strength</td>
+<td align="right">0.05</td>
+</tr>
+</tbody></table>
+<p><code>G</code> performs the same operation as the Generate button, both over the Canvas and while a numeric field has focus. <code>Ctrl+G</code>, <code>Command+G</code>, and <code>Alt+G</code> remain available to the browser or operating system. Holding the key does not repeatedly start generation.</p>
+<p>While typing a number, the editor updates the displayed code and starts GPU generation when the value is committed. The ↑/↓ spin buttons also generate after the value is committed. This prevents a decimal such as <code>0.01</code> from being committed prematurely at <code>0</code> or <code>0.</code>. Values outside the step, min, max, or exact-pixel constraints are rounded to the nearest input-acceptable value, and the info area reports the adjustment.
+<code>G</code> is inserted as a character in text inputs and textareas; in other controls and over the Canvas it remains the Generate shortcut.</p>
+<p><code>Copy Code</code> and <code>Download JS</code> emit a complete ES-module definition without omitted defaults. <code>Download JSON</code> saves the same definition and <code>Import JSON</code> loads it again. Numeric values outside the step, min, max, or exact-pixel constraints are rounded to the nearest input-acceptable value and reported in the info area.</p>
+<p>Under <code>Texture images</code>, choose PNG or JPEG and download the Color, Height and Normal maps separately at their original generated pixel dimensions. Wait for automatic generation to finish after changing a setting before downloading. PNG is lossless. Use PNG when reusing a Normal map as material input so compression does not alter its channel values.</p>
+
+    </article>
+  </main>
+</body>
+</html>

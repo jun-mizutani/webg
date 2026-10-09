@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>PBR Reference</title>
+  <link rel="icon" href="data:," />
+  <!-- 2026/06/19 -->
+  <style>
+
+:root {
+  color-scheme: light;
+  --bg: #eef3f8;
+  --paper: rgba(255, 255, 255, 0.94);
+  --line: #c8d5e4;
+  --ink: #17324a;
+  --muted: #5c748b;
+  --accent: #1566ab;
+  --accent-soft: #dfeefe;
+  --code-bg: #f3f7fb;
+  --shadow: rgba(29, 52, 79, 0.10);
+}
+* { box-sizing: border-box; }
+html, body {
+  margin: 0;
+  min-height: 100%;
+}
+body {
+  background:
+    radial-gradient(circle at top left, rgba(21, 102, 171, 0.12), transparent 24%),
+    radial-gradient(circle at top right, rgba(255, 191, 118, 0.10), transparent 22%),
+    linear-gradient(180deg, #f8fbfd 0%, var(--bg) 100%);
+  color: var(--ink);
+  font: 16px/1.78 "Avenir Next", "Hiragino Sans", "Yu Gothic", sans-serif;
+}
+.page {
+  width: min(1080px, calc(100% - 28px));
+  margin: 0 auto;
+  padding: 24px 0 56px;
+}
+.hero,
+.doc {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  box-shadow: 0 22px 52px var(--shadow);
+}
+.hero {
+  padding: 22px 24px;
+  margin-bottom: 18px;
+}
+.hero h1 {
+  margin: 0 0 8px;
+  font-size: clamp(2rem, 4vw, 3rem);
+  line-height: 1.08;
+}
+.hero p {
+  margin: 0;
+  color: var(--muted);
+}
+.doc {
+  padding: 28px;
+}
+.doc > :first-child {
+  margin-top: 0;
+}
+h1, h2, h3, h4, h5, h6 {
+  line-height: 1.25;
+  margin: 1.45em 0 0.55em;
+}
+h1 {
+  font-size: 2.2rem;
+}
+h2 {
+  padding-bottom: 0.28em;
+  border-bottom: 1px solid var(--line);
+  font-size: 1.48rem;
+}
+h3 {
+  font-size: 1.14rem;
+}
+p, ul, ol, table, pre, blockquote {
+  margin: 0 0 1em;
+}
+ul, ol {
+  padding-left: 1.4em;
+}
+li + li {
+  margin-top: 0.26em;
+}
+a {
+  color: var(--accent);
+  text-decoration: none;
+}
+a:hover {
+  text-decoration: underline;
+}
+img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  border-radius: 16px;
+  border: 1px solid var(--line);
+  box-shadow: 0 12px 32px rgba(29, 52, 79, 0.08);
+  margin: 1.1em 0 1.4em;
+}
+code {
+  padding: 0.12em 0.38em;
+  border-radius: 0.45em;
+  background: var(--code-bg);
+  border: 1px solid #dbe6f1;
+  font: 0.92em/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+pre {
+  padding: 14px 16px;
+  overflow-x: auto;
+  border-radius: 14px;
+  background: #0f1720;
+  color: #ecf5ff;
+}
+pre code {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #ffffff;
+}
+th, td {
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  text-align: left;
+  vertical-align: top;
+}
+th {
+  background: #f5f9fc;
+}
+hr {
+  border: 0;
+  border-top: 1px solid var(--line);
+  margin: 1.5em 0;
+}
+blockquote {
+  padding: 0.3em 0 0.3em 1em;
+  border-left: 4px solid #c9dbef;
+  color: var(--muted);
+}
+@media (max-width: 720px) {
+  .page {
+    width: min(100% - 18px, 1080px);
+    padding-top: 16px;
+  }
+  .hero,
+  .doc {
+    border-radius: 18px;
+  }
+  .doc {
+    padding: 20px;
+  }
+}
+
+  </style>
+</head>
+<body>
+  <main class="page">
+    <section class="hero">
+      <h1>PBR Reference</h1>
+    </section>
+    <article class="doc">
+<h1>PBR Reference</h1>
+<p><code>pbr_reference</code>は、webgのPBR forward描画と遅延描画を同じ材質、照明、環境で比較する公開サンプルです。PBRの数値契約はコアと<code>headless_tests</code>が所有し、このサンプルは表示、操作、実写HDR、診断結果の確認を担当します。</p>
+<p>画面には15個の球があります。横方向はroughness 0.08、0.20、0.40、0.65、0.90、縦方向はmetallic 0.0、0.5、1.0です。全ての球が同じbase color、誘電体F0 0.04、白色直接光を使います。</p>
+<p><code>Deferredへ切替</code>ボタンまたはSpaceキーで、<code>PbrForwardShader</code>と<code>ComputeEffectPipeline</code>の<code>DeferredLightingPass</code>を切り替えます。Shape、camera、材質値は両経路で共有します。両経路ともReinhard Tone Mapと標準sRGB変換を使い、SSAO、Shadow、SSR、Fog、Toon、DoF、Bloom、Edge、Vignetteは無効です。</p>
+<p><code>IBLを有効化</code>ボタンはDeferredへ切り替え、直接光に加えて最小構成の画像ベース照明を評価します。起動時は小さな手続き生成環境を使います。<code>診断HDR IBLへ切替</code>を押すと、Radiance HDRからCompute Shaderで前処理し、CPU参照値との比較を通過した環境へ切り替わります。どちらも線形HDRの緯度経度画像、拡散irradiance map、roughness別の鏡面map、BRDF積分LUTから構成されます。IBLを無効に戻せば、forwardとdeferredの直接光だけを比較できます。</p>
+<p><code>PBR SSRを有効化</code>ボタンはDeferredとIBLを有効にし、画面内でray hitした反射だけを鏡面IBLへ置き換えます。SSR出力のRGBはhit位置のTone Map前の線形HDR radiance、alphaはhit confidenceです。ray missや画面端では同じHDR環境のroughness別鏡面IBLを保ち、直接光、拡散IBL、発光は置き換えません。透明物はSSR後に描くため、現在は反射元にも反射面にも含まれません。</p>
+<p><code>HDR背景を表示</code>は、照明の入力になった元の緯度経度HDRを物体のないpixelへ表示します。球は、その同じHDRから生成したirradiance、roughness別鏡面map、BRDF LUTで照らされます。背景は元画像を表示し、球は材質に応じて積分した照明を使います。<code>IBLのみで確認</code>はdirectional、point、cone、shadowを無効にし、環境由来の拡散反射と鏡面反射だけを残します。<code>環境を45°回転</code>は背景と不透明／透明物のIBLをworld-spaceのY軸周りへ一緒に回すため、背景の明部と球の反射が対応して移動することを確認できます。</p>
+<p>背景とIBLは共通の線形HDR処理フローを通り、最終段階で同じReinhard Tone MapとsRGB変換を受けます。背景表示を要求した環境に元radianceがない場合や、環境なしで回転を指定した場合は例外です。確認画像は<code>hdr_background_ibl_only_0deg.jpg</code>と<code>hdr_background_ibl_only_45deg.jpg</code>です。</p>
+<p>画面の<code>HDR Input</code>はRadiance RGBE decoderの診断結果です。起動時に8×4の2:1緯度経度HDRをbyte列から復号し、標準方向<code>-Y +X</code>、<code>EXPOSURE</code>補正、高輝度値が維持されることを確認します。診断HDRは上側を青、下側を暖色、左右4方向を異なる色にし、上下反転、左右反転、roughness mip、高輝度clipを検出しやすくしています。</p>
+<p><code>PbrEnvironmentReference.js</code>と<code>PbrEnvironmentCompute.js</code>が同じHammersley点列、方向変換、cosine-weighted拡散積分、GGX importance sampling、roughness規則から5段階の鏡面mapと32×32 BRDF LUTを生成します。画面の<code>HDR Prefilter</code>にはCPU時間、GPU完了待ちを含むCompute時間、半精度textureから読み戻した全要素の最大絶対誤差を表示します。cache検証後は、そのCompute生成値をcacheから復元したresourceが15球を照らします。<code>手続きIBLへ戻す</code>で手続き生成環境を選択できます。</p>
+<p>数値検証を通過したCompute結果と元HDRを版付きbinary cacheへ保存します。cacheはsource ID、元HDRの寸法・色空間・方向、全出力解像度、specular mip数、三種類のsample count、生成algorithm版をmetadataへ持ち、radiance、irradiance、specular、BRDF LUTをlittle-endian binary16で保持します。参照アプリはmemory上のcacheをBlob URLから非同期fetchし、同じkeyの二回取得が一つのGPU environmentを共有することを確認してから、その復元環境を実際の照明へ使います。</p>
+<p>画面の<code>HDR Cache</code>が<code>v1 / 6.9 KiB / reused</code>なら、7054 byteの診断cacheが版1として読まれ、二回の取得で同じGPU resourceが再利用されています。source ID、生成条件、版、mip寸法、payload長が違うcacheは例外です。通信失敗やcache破損も例外として報告します。利用中handleを<code>release()</code>した後にだけ<code>evict()</code>でき、利用中の強制破棄は拒否されます。</p>
+<p><code>環境診断</code>ボタンは、最終球、元HDR radiance、拡散irradiance、GGX prefiltered specular、BRDF LUTを順に全画面表示します。元HDR、irradiance、specularは診断用露出を1 EVずつ変更できます。<code>次のSpecular Mip</code>はmipと対応roughnessを一段ずつ進め、画面の<code>View Detail</code>へ解像度、mip、roughness、露出を表示します。BRDF LUTはRをFresnel scale、Gをbiasとして線形表示します。各成分は反射計算の係数です。</p>
+<p>診断画像をクリックすると、白黒crosshairが選択位置へ移動し、<code>Selected Pixel</code>へUV、texel座標、cache内のbinary16復元値を表示します。画像は縦横比を保って全画面へ収め、黒帯のclickは選択として扱いません。診断露出は画面表示だけを変え、照明に使う環境強度やcache値を変更しません。確認画像は<code>environment_debug_radiance.jpg</code>、<code>environment_debug_irradiance.jpg</code>、<code>environment_debug_specular_mip.jpg</code>、<code>environment_debug_brdf_lut.jpg</code>です。</p>
+<p><code>White Furnace</code>、<code>GPU Interval</code>、<code>Env Memory</code>を表示します。White Furnaceは、白い一様環境で誘電体と金属、roughness 5段階、<code>NdotV</code> 4段階の計40点を調べ、energyの上限を1.02とします。判定対象はsingle-scattering GGXのenergy増幅です。複数散乱を含む保存性を評価するときは、散乱モデルに応じた別の検証条件を用意します。</p>
+<p><code>GPU Interval</code>はtimestamp-query対応GPUで、Compute前処理の最初のdispatchから最後のdispatchまでを測ります。<code>HDR Prefilter</code>のGPU wallはCPUからsubmitして完了を待つ時間で、pipeline準備や待機を含み得ます。<code>Env Memory</code>はformatと寸法から求めた論理texture data量を表示します。driver内部のpaddingや管理領域は別に必要です。</p>
+<p>ForwardとDeferredは、同じIBL合成、BRDF LUT境界処理、診断HDRを使います。IBLのみを比較するときはForwardのshader既定radianceを0へ設定し、両方の画面で<code>Error</code>が<code>なし</code>であることを確認します。輪郭のラスタライズとG-buffer量子化による差も含め、反射と照明の対応を観察してください。</p>
+<p>CPU実装を基準にCompute Shader版の出力を比較します。診断設定の誤差上限は0.25です。上限超過、非有限値、寸法またはmip数の不一致は例外になります。8×4の診断入力は出力の検証に使い、実写HDRの速度を比較するときは同じ画像と生成条件で計測してください。</p>
+<p>実写HDRは<code>診断HDR IBLへ切替</code>をもう一度押して選択できます。使用する<code>Studio Small 01</code>はPoly HavenのCC0 assetで、元HDR 1024×512と、オフラインCPU toolで生成した約4.41 MiBの<code>.webgpbr</code> cacheを同梱しています。<code>Real HDR Asset</code>には読込、復号、GPU転送を合わせた時間が表示されます。元HDRを背景へ表示し、同じ環境から得たIBLで15球を照らします。</p>
+<p><code>standard</code>はirradiance 64×32、specular 256×128から9 mip、BRDF LUT 128×128、各512 sampleです。<code>webg-split-sum-ggx-environment-mis-linear-srgb-v3</code>は、Radiance標準primariesをlinear sRGBへ変換し、linear sRGB輝度による環境proposalを拡散のcosine proposalと鏡面のGGX proposalへMISで組み合わせます。</p>
+<p>診断HDRのCompute実装はCPU版と同じalias tableとPDFを使います。生成中はalias tableに1 pixel当たり8 byteを使います。alias tableは生成処理のためのデータで、runtimeはcacheのIBL textureを参照します。</p>
+<p>コアの<code>RadianceHdr.js</code>は<code>FORMAT=32-bit_rle_rgbe</code>、標準<code>-Y height +X width</code>、線形<code>GAMMA=1</code>を受け付け、flat、旧RLE、新RLE scanlineを復号します。<code>EXPOSURE</code>と<code>COLORCORR</code>はfileへ適用済みの累積倍率として除算し、元radianceへ戻します。未知format、別方向、切れたRLE、余分なpayload、非有限metadataは例外です。復号値は<code>linear-radiance-rgb</code>として保ち、別関数でRadiance標準primariesの白色点EからsRGB D65へBradford色順応して<code>linear-srgb</code>へ変換します。色域外は<code>reject</code>または<code>clip</code>を必ず明示し、標準以外の<code>PRIMARIES</code>は未対応変換として例外にします。</p>
+<p><code>PBR Textureを有効化</code>ボタンはDeferredへ切り替え、手続き生成したmetallic-roughness、環境遮蔽、発光テクスチャを15個の球へ適用します。metallic-roughnessテクスチャはglTFと同じくGにroughness、Bにmetallicを格納し、材質ごとの一様係数と乗算します。環境遮蔽テクスチャはRを使い、ambientとIBLの間接光だけを弱めます。発光テクスチャはsRGBから線形値へ変換した後、基本色とは独立した線形HDRの<code>emissive_factor</code>を掛けるため、1.0を超える発光を確認できます。環境遮蔽の模様を比べるときはIBLも有効にしてください。</p>
+<p><code>Alpha 3平面比較を表示</code>ボタンは、data URIへ埋め込んだ5種類の2×2 textureを持つ<code>pbr_fixture.gltf</code>を通常の<code>WebgApp.loadModel()</code>で読み、そのbase color textureを3枚の開いた平面へ適用します。平面は左から<code>OPAQUE</code>、<code>MASK</code>、<code>BLEND</code>で、同じcamera、照明、材質係数、textureを使います。fixture表示時は比較に必要なDeferredとIBLを自動的に有効にします。</p>
+<p>基本色textureの4画素にはalpha 1.0、約0.19、約0.86、約0.38が入っています。nearest samplingを明示しているため画素間でalphaは補間されません。<code>OPAQUE</code>は4領域のalphaを無視し、<code>MASK</code>は<code>alphaCutoff=0.5</code>未満の2領域をG-bufferへ書かず、<code>BLEND</code>は材質alphaが1.0でも4領域それぞれのtexture alphaで背景と合成します。背後には明暗checkerを置いているため、MASKでは硬い穴、BLENDではcheckerの透け方として差を同時に確認できます。</p>
+<p>3枚は背面を持たない片面平面です。閉じた立体の背面がMASKの穴を埋めたり、BLENDで前面と背面が重なったりしないため、alpha modeそのものを比較できます。double-sided pipelineと裏面法線反転は別の検査項目であり、この3平面比較には混在させません。</p>
+<p><code>透明PBR Fixtureを表示</code>ボタンは、alpha専用比較とは別に、元のglTF立方体を<code>BLEND</code>材質として表示します。base colorとnormalに加え、metallic-roughness、occlusion、独立HDR emissiveの5 textureを透明共有GGXへ接続し、Deferredと同じirradiance map、roughness別鏡面map、BRDF LUTを使います。さらにdirectional shadow、青いpoint light、橙色のcone lightを同時に有効化し、透明fragment自身の位置で影と局所光が評価されることを確認します。</p>
+<p><code>物理光源へ切替</code>ボタンはDeferredへ切り替え、相対強度と有限半径減衰からphotometric単位と逆二乗減衰へ切り替えます。photometric時のdirectional lightは照度lux、point lightとcone lightは光度candelaです。局所光には、光源中心で逆二乗式が無限大にならないようにする<code>minimumDistance</code>を必ず指定します。<code>radius</code>の内側では逆二乗減衰を使い、範囲端だけを連続的に0へ落とします。</p>
+<p>photometric時は<code>exposureEv100=9.0</code>を使用します。手続き生成環境のIBL強度500は表示比較用の尺度です。測光されたcd/m²との比較には、校正済みHDR画像とその測定条件を用意してください。この画面では、単位、距離減衰、露出の処理フローを一括で切り替え、透明物にも同じ局所光減衰が適用されることを確認します。</p>
+<p>コア側では<code>PbrBrdf.js</code>が直接光BRDFを共有し、<code>PbrEnvironmentReference.js</code>がCPU参照値、<code>PbrEnvironmentCompute.js</code>がGPU resourceを生成します。Compute出力はstorage書込みとsamplingの両方に対応する<code>rgba16float</code>です。BRDF LUTもR/Gだけを使う<code>rgba16float</code>とし、未使用channelを照明へ混ぜません。IBLを指定した場合は一様<code>ambient</code>を0にする必要があり、irradiance、prefiltered specular、BRDF LUT、sampler、mip数の一部が欠けていると例外になります。</p>
+<p>実行にはWebGPU対応ブラウザとHTTP serverが必要です。repository rootでserverを起動し、<code>/samples/pbr_reference/pbr_reference.html</code>を開きます。</p>
+<pre><code class="language-sh">python3 -m http.server 8000</code></pre>
+<p>サンプル固有のHDR入力、接続、表示用Forward shaderと、コアの数値契約は次で確認します。</p>
+<pre><code class="language-sh">node --experimental-default-type=module samples/pbr_reference/pbr_reference_test.mjs
+node --experimental-default-type=module samples/pbr_reference/pbr_forward_shader_test.mjs
+node headless_tests/core/radiance_hdr/headless_probe.js
+node headless_tests/core/pbr_environment_reference/headless_probe.js
+node headless_tests/core/pbr_environment_compute/headless_probe.js
+node headless_tests/core/pbr_environment_cache/headless_probe.js
+node headless_tests/core/pbr_environment_debug_pass/headless_probe.js
+node headless_tests/core/pbr_environment_evaluation/headless_probe.js
+node user/pbr_environment_asset/generate_pbr_environment_test.mjs</code></pre>
+<p>透明forward shaderは、GGX直接光、base colorとnormal、metallic-roughness、occlusion、独立HDR emissive、texture alpha、IBL、directional／spot shadow、point／cone lightを扱います。局所光はDeferredと同じ相対減衰または逆二乗減衰を使います。occlusionは直接光と発光には掛けず、IBLの間接光だけを弱めます。shadowは不透明G-buffer位置のscreen-space visibilityを流用せず、透明fragmentのview-space位置からshadow mapをPCF参照します。<code>SmoothShader</code>には派生shaderが材質textureと追加Bind Groupを拡張するhookを加え、標準SmoothShaderのlayoutと表示はそのまま使います。</p>
+    </article>
+  </main>
+</body>
+</html>

@@ -1,5 +1,5 @@
 // ---------------------------------------------------------
-// headless_tests/core/compute_ssr_pass/api_contracts.js  2026/07/23
+// headless_tests/core/compute_ssr_pass/api_contracts.js  2026/08/10
 //   Headless ray and roughness-pyramid contracts for ComputeSsrPass
 // ---------------------------------------------------------
 import assert from "node:assert/strict";
@@ -7,7 +7,10 @@ import CameraFrame from "../../../webg/CameraFrame.js";
 import ComputeSsrPass, {
   COMPUTE_SSR_DEFAULTS,
   COMPUTE_SSR_INPUT_FORMAT,
+  COMPUTE_SSR_INTEGRATION_MODES,
   COMPUTE_SSR_MATERIAL_FORMAT,
+  COMPUTE_SSR_OUTPUT_FORMAT,
+  COMPUTE_SSR_PBR_COMPOSITE_WGSL,
   COMPUTE_SSR_VIEW_MODES,
   COMPUTE_SSR_WGSL
 } from "../../../webg/ComputeSsrPass.js";
@@ -162,11 +165,18 @@ assert.deepEqual(COMPUTE_SSR_VIEW_MODES, [
   "normal",
   "depth"
 ]);
+assert.deepEqual(COMPUTE_SSR_INTEGRATION_MODES, ["legacy", "pbr"]);
 assert.match(COMPUTE_SSR_WGSL, /projectToUv/);
 assert.match(COMPUTE_SSR_WGSL, /outputCoord/);
 assert.match(COMPUTE_SSR_WGSL, /earlyReflectivity/);
 assert.match(COMPUTE_SSR_WGSL, /for \(var i = 0; i < 128; i \+= 1\)/);
 assert.match(COMPUTE_SSR_WGSL, /reflectionWeight/);
+assert.match(COMPUTE_SSR_WGSL, /vec4f\(reflection, clamp\(confidence, 0\.0, 1\.0\)\)/);
+assert.match(COMPUTE_SSR_WGSL, /params\.control\.z < 0\.0/);
+assert.match(COMPUTE_SSR_PBR_COMPOSITE_WGSL, /quantizeToF16/);
+assert.match(COMPUTE_SSR_PBR_COMPOSITE_WGSL, /pbrSsrHasUsableRadiance/);
+assert.match(COMPUTE_SSR_PBR_COMPOSITE_WGSL, /baseWithoutSpecularIbl/);
+assert.match(COMPUTE_SSR_PBR_COMPOSITE_WGSL, /pbrEvaluateSpecularIblWeight/);
 
 // encodeはray、3段Pyramid、roughness filterの順にdispatchします
 {
@@ -232,15 +242,55 @@ assert.match(COMPUTE_SSR_WGSL, /reflectionWeight/);
     assert.ok(Math.abs(uniforms[index] - expected[index]) < 1e-6);
   }
   assert.deepEqual(probe.uniformWrites.at(-1).data, [1, 0, 0, 0]);
+  const fullSizeTarget = {
+    getWidth: () => 20,
+    getHeight: () => 10,
+    getView: () => ({ name: "full-size-view" }),
+    getFormat: () => COMPUTE_SSR_OUTPUT_FORMAT
+  };
+  const fusedOutput = pass.encode(probe.commandEncoder, resources, {
+    cameraFrame: createCameraFrame(),
+    integrationMode: "pbr",
+    pbrComposite: {
+      base: fullSizeTarget,
+      depth: resources.depth,
+      specularIbl: fullSizeTarget,
+      albedo: fullSizeTarget,
+      normal: resources.normal,
+      material: resources.material,
+      ambientOcclusion: fullSizeTarget,
+      brdfLut: { getView: () => ({ name: "brdf-lut-view" }) },
+      brdfSampler: { name: "brdf-sampler" },
+      output: fullSizeTarget
+    }
+  });
+  const pbrUniforms = probe.uniformWrites.filter(({ data }) => data.length === 12).at(-1).data;
+  assert.ok(pbrUniforms[10] < 0.0);
+  assert.equal(fusedOutput.getWidth(), 20);
+  assert.equal(fusedOutput.getHeight(), 10);
+  assert.deepEqual(probe.dispatches.at(-1), {
+    x: 3,
+    y: 2,
+    z: 1,
+    descriptor: {
+      label: "ssr-probe:pbr-roughness-composite",
+      timestampWrites: undefined
+    }
+  });
+  assert.deepEqual(probe.uniformWrites.at(-1).data.slice(0, 4), [
+    Math.fround(COMPUTE_SSR_DEFAULTS.intensity), 0, 0, 0
+  ]);
   assert.equal(pass.resize(20, 10), false);
   assert.equal(pass.resize(32, 24), true);
   assert.equal(pass.getOutputTarget().getWidth(), 16);
   assert.equal(pass.getOutputTarget().getHeight(), 12);
   const rayUniformBuffer = pass.computePass.uniformBuffer;
   const roughnessUniformBuffer = pass.roughnessPass.uniformBuffer;
+  const pbrCompositeUniformBuffer = pass.pbrCompositePass.uniformBuffer;
   assert.equal(pass.destroy(), true);
   assert.equal(rayUniformBuffer.destroyed, true);
   assert.equal(roughnessUniformBuffer.destroyed, true);
+  assert.equal(pbrCompositeUniformBuffer.destroyed, true);
   assert.equal(pass.destroy(), false);
   assert.throws(() => pass.getOutputTarget(), /is destroyed/);
 }
@@ -272,6 +322,21 @@ assert.match(COMPUTE_SSR_WGSL, /reflectionWeight/);
       view: "ao"
     }),
     /view must be one of/
+  );
+  assert.throws(
+    () => pass.encode(probe.commandEncoder, resources, {
+      cameraFrame,
+      integrationMode: "unknown"
+    }),
+    /integrationMode must be one of: legacy, pbr/
+  );
+  assert.throws(
+    () => pass.encode(probe.commandEncoder, resources, {
+      cameraFrame,
+      integrationMode: "pbr",
+      pbrComposite: {}
+    }),
+    /pbrComposite resources require base target/
   );
   assert.throws(
     () => pass.encode(probe.commandEncoder, resources, {

@@ -1,0 +1,55 @@
+<!doctype html>
+<!-- void_strike.html 2026/09/25 -->
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <title>VOID STRIKE — webg 3D shooter</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main class="stage" id="stage">
+    <canvas id="canvas" width="1280" height="800" aria-label="VOID STRIKE 3D space battle"></canvas>
+    <header class="topline">
+      <a class="brand" href="index.html" aria-label="VOID STRIKE guide">VOID<span>STRIKE</span><small>RIFT DEFENSE DIVISION</small></a>
+      <div class="telemetry" aria-label="combat status">
+        <div><span>SCORE</span><b id="hud-score">0000000</b></div>
+        <div><span>WAVE</span><b id="hud-wave">01</b></div>
+        <div><span>HULL</span><b id="hud-hull">◆◆◆</b></div>
+        <div><span>CHAIN</span><b id="hud-combo">READY</b></div>
+      </div>
+    </header>
+    <div class="reticle" aria-hidden="true"><i></i><b></b></div>
+    <div class="wave-banner" id="wave-banner" aria-live="polite">WAVE 01</div>
+    <div class="boost-meter" aria-label="boost energy">
+      <span>AFTERBURNER</span><div><i id="boost-fill"></i></div>
+    </div>
+    <section class="overlay" id="overlay" aria-labelledby="overlay-title">
+      <div class="overlay-card">
+        <p class="overlay-kicker" id="overlay-kicker">DEEP SPACE · SECTOR 07</p>
+        <h1 id="overlay-title">VOID STRIKE</h1>
+        <p class="overlay-copy" id="overlay-copy">PILOT THE LAST INTERCEPTOR THROUGH THE RIFT.</p>
+        <button id="start-run" class="primary-button">START RUN</button>
+        <div class="overlay-controls">WASD / ARROWS MOVE <span>SPACE FIRE</span><span>SHIFT BOOST</span></div>
+      </div>
+    </section>
+    <div class="bottom-left"><span>SECTOR 07</span><b>RIFT VECTOR: <i>STABLE</i></b></div>
+    <div class="touch-pad" aria-label="movement controls">
+      <button class="touch-key up" data-control="up" aria-label="move up">▲</button>
+      <button class="touch-key left" data-control="left" aria-label="move left">◀</button>
+      <button class="touch-key down" data-control="down" aria-label="move down">▼</button>
+      <button class="touch-key right" data-control="right" aria-label="move right">▶</button>
+    </div>
+    <nav class="combat-controls" aria-label="combat controls">
+      <button id="pause-button" class="small-button">PAUSE</button>
+      <button id="sound-button" class="small-button" aria-pressed="false">SOUND OFF</button>
+      <button id="fire-button" class="fire-button" data-control="fire" aria-label="fire">FIRE</button>
+      <button class="boost-button" data-control="boost" aria-label="boost">BOOST</button>
+    </nav>
+    <div id="loading" class="loading"><span class="loader"></span><b>CALIBRATING RIFT SYSTEM</b></div>
+    <pre id="error-panel" class="error-panel" hidden></pre>
+  </main>
+  <script type="module" src="main.js"></script>
+</body>
+</html>

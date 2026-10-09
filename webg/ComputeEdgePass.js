@@ -348,7 +348,7 @@ export default class ComputeEdgePass {
     }
   }
 
-  // edge強度、閾値、元sceneとのmix比を検証し、shader内clampへ誤入力を隠しません
+  // edge強度、閾値、元sceneとのmix比を検証し、shaderへ有効な入力だけを渡します
   validateEncodeOptions(options = {}) {
     return {
       strength: util.readOptionalFiniteNumber(

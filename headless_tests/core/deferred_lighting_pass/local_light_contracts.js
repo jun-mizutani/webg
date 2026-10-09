@@ -1,5 +1,5 @@
 // ---------------------------------------------------------
-// headless_tests/core/deferred_lighting_pass/headless_probe.js  2026/07/13
+// headless_tests/core/deferred_lighting_pass/headless_probe.js  2026/08/03
 //   Local Light input, packing, and cone attenuation contracts
 // ---------------------------------------------------------
 import assert from "node:assert/strict";
@@ -8,7 +8,8 @@ import DeferredLightingPass, {
   buildDeferredLightingWgsl,
   DEFERRED_LOCAL_LIGHT_STRIDE_FLOATS,
   DEFERRED_LOCAL_LIGHT_TYPE_IDS,
-  DEFERRED_LOCAL_LIGHT_TYPES
+  DEFERRED_LOCAL_LIGHT_TYPES,
+  DEFERRED_LIGHTING_UNIT_SYSTEMS
 } from "../../../webg/DeferredLightingPass.js";
 import { CAMERA_REVERSE_Z } from "../../../webg/DepthConvention.js";
 import Matrix from "../../../webg/Matrix.js";
@@ -81,6 +82,7 @@ function makeResources(width = 16, height = 8) {
     albedo: { ...visibility },
     normal: { getView: () => ({}) },
     material: { ...visibility },
+    emissive: { ...visibility },
     depth: { depthConvention: CAMERA_REVERSE_Z, getDepthSampleView: () => ({}) },
     shadowVisibility: { ...visibility },
     spotShadowVisibility: { ...visibility },
@@ -113,14 +115,61 @@ function directionAtAngleFromDown(angleDegrees) {
 // Local Lightは4個のvec4fであり、cone係数は距離減衰とは別に一度だけ乗算されます
 {
   assert.deepEqual(DEFERRED_LOCAL_LIGHT_TYPES, ["point", "cone"]);
+  assert.deepEqual(DEFERRED_LIGHTING_UNIT_SYSTEMS, ["relative", "photometric"]);
   assert.deepEqual(DEFERRED_LOCAL_LIGHT_TYPE_IDS, { point: 0, cone: 1 });
   assert.equal(DEFERRED_LOCAL_LIGHT_STRIDE_FLOATS, 16);
   const wgsl = buildDeferredLightingWgsl(64);
   assert.match(wgsl, /struct LocalLight\s*\{[\s\S]+positionRadius\s*:\s*vec4f,[\s\S]+colorIntensity\s*:\s*vec4f,[\s\S]+directionInnerCos\s*:\s*vec4f,[\s\S]+outerCosAndType\s*:\s*vec4f/);
   assert.match(wgsl, /let lightToSurface = -surfaceToLight/);
+  assert.match(wgsl, /fn pbrEvaluateLocalLightAngularAttenuation\(/);
   assert.match(wgsl, /smoothstep\(\s*light\.outerCosAndType\.x,\s*light\.directionInnerCos\.w,\s*coneCos\s*\)/);
   assert.match(wgsl, /\* distanceAttenuation\s*\n\s*\* angularAttenuation/);
   assert.match(wgsl, /if \(angularAttenuation > 0\.0\)/);
+  assert.match(wgsl, /fn pbrEvaluateDistanceAttenuation\(/);
+  assert.match(wgsl, /rangeAttenuation \/ max\(/);
+}
+
+// photometricではcandelaを逆二乗減衰へ渡し、近接限界をbufferの予約slotへ明示します
+{
+  const probe = createGpuProbe();
+  const pass = new DeferredLightingPass(probe.gpu, {
+    width: 16,
+    height: 8,
+    maxLights: 1
+  });
+  await pass.ready;
+  const light = {
+    type: "point",
+    position: [0.0, 0.0, -3.0],
+    color: [1.0, 0.8, 0.6],
+    radius: 12.0,
+    intensity: 120.0,
+    minimumDistance: 0.25
+  };
+  pass.encode(probe.commandEncoder, makeResources(), {
+    cameraFrame: makeFrame(),
+    directionalLight: null,
+    spotLight: null,
+    unitSystem: "photometric",
+    lights: [light]
+  });
+  const packed = probe.writes.at(-2).data;
+  assert.deepEqual(packed.slice(12, 16), [0.0, 0.0, 1.0, 0.25]);
+  assert.throws(() => pass.encode(probe.commandEncoder, makeResources(), {
+    cameraFrame: makeFrame(),
+    directionalLight: null,
+    spotLight: null,
+    unitSystem: "photometric",
+    lights: [{ ...light, minimumDistance: undefined }]
+  }), /minimumDistance is required in photometric mode/);
+  assert.throws(() => pass.encode(probe.commandEncoder, makeResources(), {
+    cameraFrame: makeFrame(),
+    directionalLight: null,
+    spotLight: null,
+    unitSystem: "relative",
+    lights: [light]
+  }), /minimumDistance requires photometric unitSystem/);
+  pass.destroy();
 }
 
 // 真下、inner/outer間、範囲外、上方向を数値化し、coneが単調に減衰することを確認します
@@ -179,6 +228,11 @@ function directionAtAngleFromDown(angleDegrees) {
       }
     ]
   });
+
+  const shared = pass.getLocalLightBindingResources();
+  assert.equal(shared.buffer, pass.lightBuffer);
+  assert.equal(shared.count, 2);
+  assert.equal(shared.maxLights, 2);
 
   const packed = probe.writes.at(-2).data;
   assert.equal(packed.length, 2 * DEFERRED_LOCAL_LIGHT_STRIDE_FLOATS);

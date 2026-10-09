@@ -1,18 +1,18 @@
 <!doctype html>
-<!-- webg/book/examples/06_01.html 2026/04/24 -->
+<!-- book/examples/06_01.html 2026/10/04 -->
 <html lang="ja">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>06_01 orbit camera</title>
-  <link rel="stylesheet" href="./example.css" />
+  <link rel="stylesheet" href="./examples_common.css" />
 </head>
 <body>
   <div class="page">
     <h1>book/examples</h1>
     <h2>06_01 orbit camera</h2>
     <div class="section-card">
-      <p>`book/06_カメラ制御とEyeRig.md` の「6.6 まずは orbit camera を動かす」を、視点変化が分かりやすい複数 object 付きで実行できるようにした例です</p>
+      <p>`book/06_カメラ制御とEyeRig.md` のorbit cameraの説明を、視点変化が分かりやすい複数 object 付きで実行できるようにした例です</p>
       <p class="note">ドラッグで orbit、ホイールで zoom しながら、`cameraRig -> cameraRod -> eye` に対して `EyeRig` がどう働くかを確認できます</p>
     </div>
 
@@ -48,6 +48,7 @@ const app = new WebgApp({
 });
 await app.init();
 
+// 指定した寸法の立方体を作り、描画用のGPUバッファと単色材質を準備して返す
 const makeBox = (size, color) => {
   const shape = new Shape(app.getGPU());
   shape.applyPrimitiveAsset(Primitive.cube(size, shape.getPrimitiveOptions()));
@@ -120,6 +121,7 @@ app.message.setLines("status", [
 });
 
 app.start({
+  // 配置した三つのNodeをそれぞれ別の軸で回転させ、カメラの見え方を確認する
   onUpdate: () => {
     center.rotateY(0.9);
     left.rotateX(0.6);

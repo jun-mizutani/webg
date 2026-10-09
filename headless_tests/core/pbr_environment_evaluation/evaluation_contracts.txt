@@ -1,0 +1,1 @@
+CPU white furnace evaluation, BRDF LUT edge clamping, and logical texture memory accounting

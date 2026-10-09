@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// SmoothShader.js 2026/07/23
+// SmoothShader.js 2026/08/10
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // ---------------------------------------------
@@ -91,8 +91,10 @@ export default class SmoothShader extends Shader {
     this.OFF_FOG_PARAMS = 80;
     this.OFF_DEBUG_FLAGS = 84; // backfaceDebug/unused/unused/unused
     this.OFF_DEBUG_COLOR = 88; // backfaceColor/unused/unused/unused
+    this.OFF_TRANSMISSION = 92; // strength/IOR/thickness/unused
+    this.OFF_VOLUME = 96; // attenuation color RGB/inverse attenuation distance
 
-    this.UNIFORM_FLOAT_COUNT = 92;
+    this.UNIFORM_FLOAT_COUNT = 100;
     this.UNIFORM_SIZE = this.UNIFORM_FLOAT_COUNT * Float32Array.BYTES_PER_ELEMENT;
     this.uniformStride = alignTo(this.UNIFORM_SIZE, 256);
     this.maxUniforms = 2048;
@@ -102,6 +104,26 @@ export default class SmoothShader extends Shader {
     // Roughness mask用shaderは透明面の色を出さず、material roughnessだけをRenderTargetへ記録する
     // roughnessSpecularは透明forward描画でroughnessをPhong鏡面指数とピーク強度へ反映する
     this.roughnessMask = options.roughnessMask === true;
+    // Transmission maskは透明面のview-space法線を記録し、後段の画面空間屈折で参照する
+    // Roughness maskとは出力channelとblend規則が異なるため、同じshader instanceでは併用しない
+    this.transmissionMask = options.transmissionMask === true;
+    // Transmission exit variantは閉じた透明meshの裏面だけを描き、前面とのview-space距離差を求める
+    // 通常色、roughness mask、前面maskとは出力channelとdepth write規則が異なるため独立variantとする
+    this.transmissionExit = options.transmissionExit === true;
+    // Volume maskはentryと同じfront materialの吸収色と距離を別targetへ記録する
+    // entry法線やexit depthとchannelを競合させず、Beer-Lambert計算だけへ渡す
+    this.transmissionVolumeMask = options.transmissionVolumeMask === true;
+    const specialOutputCount = [
+      this.roughnessMask,
+      this.transmissionMask,
+      this.transmissionExit,
+      this.transmissionVolumeMask
+    ].filter(Boolean).length;
+    if (specialOutputCount > 1) {
+      throw new Error(
+        "SmoothShader special output variants cannot be enabled together"
+      );
+    }
     this.roughnessSpecular = options.roughnessSpecular === true;
     this.backgroundFrostBindGroupLayout = null;
     this.backgroundFrostBindGroup = null;
@@ -117,7 +139,7 @@ export default class SmoothShader extends Shader {
       normal_strength: 1.0,
       // color[3]は既存texture混合の意味を保ち、描画透明度は独立したalphaで指定する
       alpha: 1.0,
-      // Frost用SmoothShaderでは、roughness省略時に従来の透明表示を変えない
+      // Frost用SmoothShaderでは、roughness省略時も透明表示を維持する
       // 明示値があるmaterialだけが背景ぼかしへ参加する
       roughness: (this.backgroundFrost || this.roughnessMask) ? 0.04 : 0.46,
       emissive: 0,
@@ -135,7 +157,13 @@ export default class SmoothShader extends Shader {
       fog_mode: 0.0,
       flat_shading: 0,
       backface_debug: options.backfaceDebug ? 1 : 0,
-      backface_color: [1.0, 0.0, 1.0, 1.0]
+      backface_color: [1.0, 0.0, 1.0, 1.0],
+      // Transmission値は通常shaderでは未使用で、専用mask variantだけが参照する
+      transmission: 0.0,
+      ior: 1.5,
+      thickness: 0.0,
+      attenuation_color: [1.0, 1.0, 1.0],
+      attenuation_distance: Infinity
     };
 
     this.change = {};
@@ -159,6 +187,8 @@ export default class SmoothShader extends Shader {
     this.depthCompare = CAMERA_REVERSE_Z.compare;
     this.colorFormat = options.colorFormat ?? this.gpu.format;
     this.translucentPipeline = null;
+    this.doubleSidedPipeline = null;
+    this.doubleSidedTranslucentPipeline = null;
 
     this.wgslSrc = `
       struct DrawUniforms {
@@ -176,6 +206,8 @@ export default class SmoothShader extends Shader {
         fogParams : vec4<f32>,
         debugFlags : vec4<f32>,
         debugColor : vec4<f32>,
+        transmissionParams : vec4<f32>,
+        volumeParams : vec4<f32>,
       };
 
       struct SkinUniforms {
@@ -217,6 +249,21 @@ export default class SmoothShader extends Shader {
         @location(3) vWeight : vec3<f32>,
         @builtin(front_facing) frontFacing : bool,
       };
+
+      // 単位法線XYZを2成分へoctahedral encodeする
+      // TransparencyPassのentry／exit targetはRGだけで完全なview-space法線を保持する
+      fn encodeOctNormal(value : vec3<f32>) -> vec2<f32> {
+        var n = normalize(value);
+        n /= abs(n.x) + abs(n.y) + abs(n.z);
+        var p = n.xy;
+        if (n.z < 0.0) {
+          p = (vec2<f32>(1.0) - abs(p.yx)) * vec2<f32>(
+            select(-1.0, 1.0, p.x >= 0.0),
+            select(-1.0, 1.0, p.y >= 0.0)
+          );
+        }
+        return p * 0.5 + vec2<f32>(0.5);
+      }
 
       @vertex
       fn vs_main(input : VertexInput) -> VertexOutput {
@@ -280,9 +327,72 @@ export default class SmoothShader extends Shader {
         // RenderTarget側のmax blendにより透明面が重なるpixelでは最大roughnessが残る
         let maskRoughness = clamp(u.normalMapParams.z, 0.04, 1.0);
         return vec4<f32>(maskRoughness, maskRoughness, maskRoughness, 1.0);
+        ` : this.transmissionMask ? `
+        // oct encodeしたview-space法線、材質Transmission、前面linear view depthを一枚へ保存する
+        // sort済み透明triangleを奥から手前へreplace描画するため、最前面材質の値がpixelへ残る
+        var transmissionNormal = normalize(input.vNormal);
+        transmissionNormal = select(-transmissionNormal, transmissionNormal, input.frontFacing);
+        // 通常PBR surfaceと同じnormal textureを前面maskへ適用し、細かな凹凸でも屈折方向を変える
+        // 接線属性がなくてもfragment微分からTBNを再構成できる点は通常描画と同じ契約にする
+        if (u.flags.w != 0.0) {
+          let ntex = textureSampleLevel(myNormalTexture, mySampler, input.vTexCoord, 0.0).xyz
+            * 2.0 - vec3<f32>(1.0, 1.0, 1.0);
+          let dp1 = dpdx(input.vPosition);
+          let dp2 = dpdy(input.vPosition);
+          let duv1 = dpdx(input.vTexCoord);
+          let duv2 = dpdy(input.vTexCoord);
+          let det = duv1.x * duv2.y - duv1.y * duv2.x;
+          if (abs(det) > 1.0e-8) {
+            let invDet = 1.0 / det;
+            var tangent = (dp1 * duv2.y - dp2 * duv1.y) * invDet;
+            var bitangent = (-dp1 * duv2.x + dp2 * duv1.x) * invDet;
+            if (length(tangent) > 1.0e-8 && length(bitangent) > 1.0e-8) {
+              tangent = normalize(tangent);
+              bitangent = normalize(bitangent);
+              tangent = tangent - transmissionNormal * dot(transmissionNormal, tangent);
+              if (length(tangent) > 1.0e-8) {
+                tangent = normalize(tangent);
+                let handedness = select(
+                  -1.0,
+                  1.0,
+                  dot(cross(transmissionNormal, tangent), bitangent) >= 0.0
+                );
+                bitangent = normalize(cross(transmissionNormal, tangent)) * handedness;
+                let mapped = normalize(
+                  mat3x3<f32>(tangent, bitangent, transmissionNormal) * ntex
+                );
+                let normalWeight = clamp(u.normalMapParams.x, 0.0, 2.0);
+                transmissionNormal = normalize(mix(transmissionNormal, mapped, normalWeight));
+              }
+            }
+          }
+        }
+        let transmissionStrength = clamp(u.transmissionParams.x, 0.0, 1.0);
+        return vec4f(
+          encodeOctNormal(transmissionNormal),
+          transmissionStrength,
+          max(-input.vPosition.z, 0.0)
+        );
+        ` : this.transmissionExit ? `
+        // front faceをcullした専用passで最初に見える裏面情報を記録する
+        // R=linear view depth、GB=oct encodeした外向きview-space法線、A=同じmaterialのIOR
+        // Thicknessは実際のentry→exit光路長からTransparencyPass側で求めるため保存しない
+        let exitNormal = normalize(input.vNormal);
+        return vec4f(
+          max(-input.vPosition.z, 0.0),
+          encodeOctNormal(exitNormal),
+          max(u.transmissionParams.y, 1.0)
+        );
+        ` : this.transmissionVolumeMask ? `
+        // entryと同じfront materialの線形吸収色と距離の逆数をVolume targetへ保存する
+        // 距離InfinityはCPU側で逆数0となり、Beer-Lambert指数0すなわち吸収なしになる
+        return vec4f(
+          clamp(u.volumeParams.rgb, vec3f(0.0), vec3f(1.0)),
+          max(u.volumeParams.a, 0.0)
+        );
         ` : `
 
-        // roughness mask variantではこの通常照明部分をWGSLへ生成しません
+        // roughness mask variantではこの通常照明部分をWGSLへ含めず、mask用の照明式を生成します
         // 無条件returnの後へ不要なコードを連結せず、compilerのunreachable警告を防ぎます
         let uAmb = u.params.x;
         let uSpec = u.params.y;
@@ -443,13 +553,15 @@ export default class SmoothShader extends Shader {
       hasDynamicOffset: true
     });
 
-    // group1 は base texture と normal texture をまとめる
-    // normal map を使わない場合でも 1x1 の既定 normal texture を bind して形を固定する
+    // group1 は base texture と normal textureを基本形とし、派生shaderだけが末尾bindingを追加できる
+    // normal mapを使わない場合でも1x1の既定normal textureをbindしてlayoutを固定する
+    const additionalGroup1Entries = this.getAdditionalGroup1LayoutEntries();
     this.bindGroupLayout1 = device.createBindGroupLayout({
       entries: [
         { binding: 0, visibility: GPUShaderStage.FRAGMENT, sampler: { type: "filtering" } },
         { binding: 1, visibility: GPUShaderStage.FRAGMENT, texture: { sampleType: "float" } },
-        { binding: 2, visibility: GPUShaderStage.FRAGMENT, texture: { sampleType: "float" } }
+        { binding: 2, visibility: GPUShaderStage.FRAGMENT, texture: { sampleType: "float" } },
+        ...additionalGroup1Entries
       ]
     });
 
@@ -483,11 +595,13 @@ export default class SmoothShader extends Shader {
     if (this.backgroundFrostBindGroupLayout) {
       pipelineLayouts.push(this.backgroundFrostBindGroupLayout);
     }
+    const additionalBindGroupLayouts = this.createAdditionalBindGroupLayouts();
+    pipelineLayouts.push(...additionalBindGroupLayouts);
     const pipelineLayout = this.createPipelineLayout(pipelineLayouts);
 
     // OpaqueとTranslucentは同じshader/bind groupを共有し、depth writeだけをpipeline stateで分ける
     // Alpha値でpipeline stateを動的変更できないため、二つのpipelineを生成してdraw時に選択する
-    const createPipeline = (depthWriteEnabled, label) => device.createRenderPipeline({
+    const createPipeline = (depthWriteEnabled, cullMode, label) => device.createRenderPipeline({
       label,
       layout: pipelineLayout,
       vertex: {
@@ -521,7 +635,8 @@ export default class SmoothShader extends Shader {
                 color: { srcFactor: "one", dstFactor: "one", operation: "max" },
                 alpha: { srcFactor: "one", dstFactor: "one", operation: "max" }
               }
-            : {
+            : (this.transmissionMask || this.transmissionExit || this.transmissionVolumeMask)
+              ? undefined : {
                 color: { srcFactor: "src-alpha", dstFactor: "one-minus-src-alpha", operation: "add" },
                 alpha: { srcFactor: "one", dstFactor: "one-minus-src-alpha", operation: "add" }
               }
@@ -529,7 +644,7 @@ export default class SmoothShader extends Shader {
       },
       primitive: {
         topology: "triangle-list",
-        cullMode: this.cullMode,
+        cullMode,
         frontFace: this.frontFace
       },
       depthStencil: {
@@ -538,8 +653,20 @@ export default class SmoothShader extends Shader {
         format: CAMERA_REVERSE_Z.format
       }
     });
-    this.pipeline = createPipeline(this.depthWriteEnabled, "SmoothShader:opaque");
-    this.translucentPipeline = createPipeline(false, "SmoothShader:translucent");
+    this.pipeline = createPipeline(this.depthWriteEnabled, this.cullMode, "SmoothShader:opaque");
+    this.translucentPipeline = createPipeline(false, this.cullMode, "SmoothShader:translucent");
+    // glTF doubleSidedは材質単位なので、同じWGSLとBind Groupを使うcullなしの組合せを用意する
+    // draw時の明示指定で選び、片面材質を暗黙に両面化しない
+    this.doubleSidedPipeline = createPipeline(
+      this.depthWriteEnabled,
+      "none",
+      "SmoothShader:double-sided-opaque"
+    );
+    this.doubleSidedTranslucentPipeline = createPipeline(
+      false,
+      "none",
+      "SmoothShader:double-sided-translucent"
+    );
 
     this.uniformBindGroup = device.createBindGroup({
       layout: this.bindGroupLayout0,
@@ -552,6 +679,7 @@ export default class SmoothShader extends Shader {
     this.createDefaultTexture();
     this.createDefaultNormalTexture();
     this.createDefaultBoneBindGroup();
+    this.createAdditionalResources();
 
     this.setLightPosition(this.default.light);
     this.setColor(this.default.color);
@@ -576,7 +704,25 @@ export default class SmoothShader extends Shader {
     this.setFlatShading(this.default.flat_shading);
     this.setBackfaceDebug(this.default.backface_debug);
     this.setBackfaceColor(this.default.backface_color);
+    this.setTransmission(this.default.transmission);
+    this.setIor(this.default.ior);
+    this.setThickness(this.default.thickness);
   }
+
+  // 派生shaderがgroup1へ材質textureを追加するための空hook
+  // binding 0から2はbase／normal用として固定し、派生側は3以降だけを返す
+  getAdditionalGroup1LayoutEntries() {
+    return [];
+  }
+
+  // 派生shaderがgroup3以降をpipeline layoutへ追加するための空hook
+  // SmoothShader本体はbackground Frostを使う場合だけgroup3を先に追加する
+  createAdditionalBindGroupLayouts() {
+    return [];
+  }
+
+  // pipeline layoutと基本resourceの確定後に派生shader専用resourceを作る空hook
+  createAdditionalResources() {}
 
   // default の 1x1 白テクスチャを作る
   createDefaultTexture() {
@@ -607,14 +753,21 @@ export default class SmoothShader extends Shader {
     );
     this.defaultNormalTextureView = this.defaultNormalTexture.createView();
 
+    const additionalEntries = this.getAdditionalDefaultGroup1Entries();
     this.defaultTextureBindGroup = this.device.createBindGroup({
       layout: this.bindGroupLayout1,
       entries: [
         { binding: 0, resource: this.defaultSampler },
         { binding: 1, resource: this.defaultTextureView },
-        { binding: 2, resource: this.defaultNormalTextureView }
+        { binding: 2, resource: this.defaultNormalTextureView },
+        ...additionalEntries
       ]
     });
+  }
+
+  // 派生shaderが拡張済みgroup1の既定resourceを追加するための空hook
+  getAdditionalDefaultGroup1Entries() {
+    return [];
   }
 
   // non-bone draw 用の空 bone bind group を作る
@@ -896,6 +1049,62 @@ export default class SmoothShader extends Shader {
     this.updateUniforms();
   }
 
+  // 透明材質が入射光を透過光へ配分する割合をmask用uniformへ保存する
+  // PbrForwardShaderは残りをsurface側へ明示的に配分し、未屈折背景とは混合しない
+  setTransmission(value) {
+    if (!Number.isFinite(value) || value < 0.0 || value > 1.0) {
+      throw new Error("SmoothShader transmission must be a finite number between 0.0 and 1.0");
+    }
+    this.uniformData[this.OFF_TRANSMISSION + 0] = Number(value);
+    this.updateUniforms();
+  }
+
+  // 空気を外側とする透明材質の屈折率をmask用uniformへ保存する
+  // 1.0では屈折offsetが0となり、上限2.5は現在のsampleとglTF IOR範囲に合わせる
+  setIor(value) {
+    if (!Number.isFinite(value) || value < 1.0 || value > 2.5) {
+      throw new Error("SmoothShader IOR must be a finite number between 1.0 and 2.5");
+    }
+    this.uniformData[this.OFF_TRANSMISSION + 1] = Number(value);
+    this.updateUniforms();
+  }
+
+  // 旧screen-space近似とのAPI互換用に材質の相対Thickness値を保持する
+  // 現在の閉じたvolumeの2面屈折ではentry→exitの実光路長を使うため屈折量には使用しない
+  setThickness(value) {
+    if (!Number.isFinite(value) || value < 0.0 || value > 4.0) {
+      throw new Error("SmoothShader thickness must be a finite number between 0.0 and 4.0");
+    }
+    this.uniformData[this.OFF_TRANSMISSION + 2] = Number(value);
+    this.updateUniforms();
+  }
+
+  // Beer-Lambert吸収で単位距離後に残る線形RGB比率をVolume mask uniformへ保存する
+  // 材質入力の0から1を厳密に検証し、色空間変換はloaderまたは呼び出し側で完了させる
+  setAttenuationColor(value) {
+    if (!Array.isArray(value) || value.length < 3
+        || !value.slice(0, 3).every((component) =>
+          Number.isFinite(component) && component >= 0.0 && component <= 1.0)) {
+      throw new Error(
+        "SmoothShader attenuation color must contain three finite values from 0.0 to 1.0"
+      );
+    }
+    this.uniformData[this.OFF_VOLUME + 0] = Number(value[0]);
+    this.uniformData[this.OFF_VOLUME + 1] = Number(value[1]);
+    this.uniformData[this.OFF_VOLUME + 2] = Number(value[2]);
+    this.updateUniforms();
+  }
+
+  // 正のattenuation distanceを逆数へ変換し、Infinityを吸収なしの0としてGPUへ保存する
+  // Shaderが除算を行わないため、0除算とInfinity uniformのdevice差を描画前に除去できる
+  setAttenuationDistance(value) {
+    if (value !== Infinity && (!Number.isFinite(value) || value <= 0.0)) {
+      throw new Error("SmoothShader attenuation distance must be positive or Infinity");
+    }
+    this.uniformData[this.OFF_VOLUME + 3] = value === Infinity ? 0.0 : 1.0 / Number(value);
+    this.updateUniforms();
+  }
+
   // TransparencyPassが生成したblur済みHDR sceneをgroup 3へ結び付ける
   // resizeでtexture viewが変わった場合だけbind groupを作り直す
   setBackgroundFrostTexture(source) {
@@ -1040,6 +1249,11 @@ export default class SmoothShader extends Shader {
     this.updateParam(param, "flat_shading", this.setFlatShading);
     this.updateParam(param, "backface_debug", this.setBackfaceDebug);
     this.updateParam(param, "backface_color", this.setBackfaceColor);
+    this.updateParam(param, "transmission", this.setTransmission);
+    this.updateParam(param, "ior", this.setIor);
+    this.updateParam(param, "thickness", this.setThickness);
+    this.updateParam(param, "attenuation_color", this.setAttenuationColor);
+    this.updateParam(param, "attenuation_distance", this.setAttenuationDistance);
     this.updateTexture(param);
   }
 
@@ -1071,10 +1285,25 @@ export default class SmoothShader extends Shader {
     else if (key === "flat_shading") this.setFlatShading(value);
     else if (key === "backface_debug") this.setBackfaceDebug(value);
     else if (key === "backface_color") this.setBackfaceColor(value);
+    else if (key === "transmission") this.setTransmission(value);
+    else if (key === "ior") this.setIor(value);
+    else if (key === "thickness") this.setThickness(value);
+    else if (key === "attenuation_color") this.setAttenuationColor(value);
+    else if (key === "attenuation_distance") this.setAttenuationDistance(value);
   }
 
   // Shape.draw()がopaque/translucentの描画目的に応じたpipelineを選ぶ入口
   getPipeline(_hasSkeleton = false, options = {}) {
+    // 物理Transmissionのentryはfront face、exitはback faceだけを必要とする
+    // glTF doubleSidedは照明時のculling指定であり、体積境界の選択を無効化してはいけないため無視する
+    if (this.transmissionMask || this.transmissionExit || this.transmissionVolumeMask) {
+      return options.translucent === true ? this.translucentPipeline : this.pipeline;
+    }
+    if (options.doubleSided === true) {
+      return options.translucent === true
+        ? this.doubleSidedTranslucentPipeline
+        : this.doubleSidedPipeline;
+    }
     return options.translucent === true ? this.translucentPipeline : this.pipeline;
   }
 
@@ -1100,6 +1329,8 @@ export default class SmoothShader extends Shader {
     this._dummySkinBuffer = null;
     this.pipeline = null;
     this.translucentPipeline = null;
+    this.doubleSidedPipeline = null;
+    this.doubleSidedTranslucentPipeline = null;
     return true;
   }
 }

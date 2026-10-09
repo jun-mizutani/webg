@@ -1,0 +1,720 @@
+# 2026/09/20: tools/buildAssets.mjsから生成
+# 形状と階層はModelYAML、PBR材質と描画設定はSceneYAMLに保存
+"format": "webg-scene"
+"version": 1
+"name": "circular-breaker-2"
+"modelAssetUrl": "./model.yaml"
+"materials":
+  -
+    "assetMaterialId": "floor-material"
+    "pbr":
+      "color": [0.12, 0.17, 0.23, 1]
+      "metallic": 0.72
+      "roughness": 0.18
+      "specular": 1
+  -
+    "assetMaterialId": "object-material"
+    "pbr":
+      "color": [0.38, 0.8, 1, 1]
+      "metallic": 0.15
+      "roughness": 0.4
+      "specular": 1
+  -
+    "assetMaterialId": "shadow-material"
+    "pbr":
+      "color": [0.015, 0.02, 0.025, 1]
+      "metallic": 0
+      "roughness": 0.95
+      "specular": 1
+  -
+    "assetMaterialId": "ring-pink"
+    "pbr":
+      "color": [0.95, 0.08, 0.32, 1]
+      "metallic": 0.45
+      "roughness": 0.22
+      "specular": 1
+      "emissive_factor": [2.4, 0.025, 0.16]
+  -
+    "assetMaterialId": "ring-green"
+    "pbr":
+      "color": [0.03, 0.65, 0.9, 1]
+      "metallic": 0.45
+      "roughness": 0.22
+      "specular": 1
+      "emissive_factor": [0.015, 1.2, 2.4]
+  -
+    "assetMaterialId": "wall-material"
+    "pbr":
+      "color": [0.32, 0.42, 0.53, 1]
+      "metallic": 0.85
+      "roughness": 0.2
+      "specular": 1
+  -
+    "assetMaterialId": "marker-0"
+    "pbr":
+      "color": [0.95, 0.4, 0.3, 1]
+      "metallic": 0.75
+      "roughness": 0.2
+      "specular": 1
+  -
+    "assetMaterialId": "marker-1"
+    "pbr":
+      "color": [0.98, 0.7, 0.28, 1]
+      "metallic": 0.75
+      "roughness": 0.2
+      "specular": 1
+  -
+    "assetMaterialId": "marker-2"
+    "pbr":
+      "color": [0.94, 0.9, 0.3, 1]
+      "metallic": 0.75
+      "roughness": 0.2
+      "specular": 1
+  -
+    "assetMaterialId": "marker-3"
+    "pbr":
+      "color": [0.35, 0.82, 0.36, 1]
+      "metallic": 0.75
+      "roughness": 0.2
+      "specular": 1
+  -
+    "assetMaterialId": "marker-4"
+    "pbr":
+      "color": [0.3, 0.78, 0.95, 1]
+      "metallic": 0.75
+      "roughness": 0.2
+      "specular": 1
+  -
+    "assetMaterialId": "marker-5"
+    "pbr":
+      "color": [0.36, 0.5, 0.96, 1]
+      "metallic": 0.75
+      "roughness": 0.2
+      "specular": 1
+  -
+    "assetMaterialId": "marker-6"
+    "pbr":
+      "color": [0.66, 0.42, 0.96, 1]
+      "metallic": 0.75
+      "roughness": 0.2
+      "specular": 1
+  -
+    "assetMaterialId": "marker-7"
+    "pbr":
+      "color": [0.96, 0.42, 0.76, 1]
+      "metallic": 0.75
+      "roughness": 0.2
+      "specular": 1
+"bindings":
+  -
+    "id": "scene-floor"
+    "node": "floor"
+    "material": "floor-material"
+  -
+    "id": "scene-ring-0"
+    "node": "ring-0"
+    "material": "ring-pink"
+  -
+    "id": "scene-ring-1"
+    "node": "ring-1"
+    "material": "ring-green"
+  -
+    "id": "scene-ring-2"
+    "node": "ring-2"
+    "material": "ring-pink"
+  -
+    "id": "scene-ring-3"
+    "node": "ring-3"
+    "material": "ring-green"
+  -
+    "id": "scene-ring-4"
+    "node": "ring-4"
+    "material": "ring-pink"
+  -
+    "id": "scene-ring-5"
+    "node": "ring-5"
+    "material": "ring-green"
+  -
+    "id": "scene-ring-6"
+    "node": "ring-6"
+    "material": "ring-pink"
+  -
+    "id": "scene-wall-0"
+    "node": "wall-0"
+    "material": "marker-0"
+  -
+    "id": "scene-wall-1"
+    "node": "wall-1"
+    "material": "wall-material"
+  -
+    "id": "scene-wall-2"
+    "node": "wall-2"
+    "material": "wall-material"
+  -
+    "id": "scene-wall-3"
+    "node": "wall-3"
+    "material": "wall-material"
+  -
+    "id": "scene-wall-4"
+    "node": "wall-4"
+    "material": "wall-material"
+  -
+    "id": "scene-wall-5"
+    "node": "wall-5"
+    "material": "wall-material"
+  -
+    "id": "scene-wall-6"
+    "node": "wall-6"
+    "material": "marker-1"
+  -
+    "id": "scene-wall-7"
+    "node": "wall-7"
+    "material": "wall-material"
+  -
+    "id": "scene-wall-8"
+    "node": "wall-8"
+    "material": "wall-material"
+  -
+    "id": "scene-wall-9"
+    "node": "wall-9"
+    "material": "wall-material"
+  -
+    "id": "scene-wall-10"
+    "node": "wall-10"
+    "material": "wall-material"
+  -
+    "id": "scene-wall-11"
+    "node": "wall-11"
+    "material": "wall-material"
+  -
+    "id": "scene-wall-12"
+    "node": "wall-12"
+    "material": "marker-2"
+  -
+    "id": "scene-wall-13"
+    "node": "wall-13"
+    "material": "wall-material"
+  -
+    "id": "scene-wall-14"
+    "node": "wall-14"
+    "material": "wall-material"
+  -
+    "id": "scene-wall-15"
+    "node": "wall-15"
+    "material": "wall-material"
+  -
+    "id": "scene-wall-16"
+    "node": "wall-16"
+    "material": "wall-material"
+  -
+    "id": "scene-wall-17"
+    "node": "wall-17"
+    "material": "wall-material"
+  -
+    "id": "scene-wall-18"
+    "node": "wall-18"
+    "material": "marker-3"
+  -
+    "id": "scene-wall-19"
+    "node": "wall-19"
+    "material": "wall-material"
+  -
+    "id": "scene-wall-20"
+    "node": "wall-20"
+    "material": "wall-material"
+  -
+    "id": "scene-wall-21"
+    "node": "wall-21"
+    "material": "wall-material"
+  -
+    "id": "scene-wall-22"
+    "node": "wall-22"
+    "material": "wall-material"
+  -
+    "id": "scene-wall-23"
+    "node": "wall-23"
+    "material": "wall-material"
+  -
+    "id": "scene-wall-24"
+    "node": "wall-24"
+    "material": "marker-4"
+  -
+    "id": "scene-wall-25"
+    "node": "wall-25"
+    "material": "wall-material"
+  -
+    "id": "scene-wall-26"
+    "node": "wall-26"
+    "material": "wall-material"
+  -
+    "id": "scene-wall-27"
+    "node": "wall-27"
+    "material": "wall-material"
+  -
+    "id": "scene-wall-28"
+    "node": "wall-28"
+    "material": "wall-material"
+  -
+    "id": "scene-wall-29"
+    "node": "wall-29"
+    "material": "wall-material"
+  -
+    "id": "scene-wall-30"
+    "node": "wall-30"
+    "material": "marker-5"
+  -
+    "id": "scene-wall-31"
+    "node": "wall-31"
+    "material": "wall-material"
+  -
+    "id": "scene-wall-32"
+    "node": "wall-32"
+    "material": "wall-material"
+  -
+    "id": "scene-wall-33"
+    "node": "wall-33"
+    "material": "wall-material"
+  -
+    "id": "scene-wall-34"
+    "node": "wall-34"
+    "material": "wall-material"
+  -
+    "id": "scene-wall-35"
+    "node": "wall-35"
+    "material": "wall-material"
+  -
+    "id": "scene-wall-36"
+    "node": "wall-36"
+    "material": "marker-6"
+  -
+    "id": "scene-wall-37"
+    "node": "wall-37"
+    "material": "wall-material"
+  -
+    "id": "scene-wall-38"
+    "node": "wall-38"
+    "material": "wall-material"
+  -
+    "id": "scene-wall-39"
+    "node": "wall-39"
+    "material": "wall-material"
+  -
+    "id": "scene-wall-40"
+    "node": "wall-40"
+    "material": "wall-material"
+  -
+    "id": "scene-wall-41"
+    "node": "wall-41"
+    "material": "wall-material"
+  -
+    "id": "scene-wall-42"
+    "node": "wall-42"
+    "material": "marker-7"
+  -
+    "id": "scene-wall-43"
+    "node": "wall-43"
+    "material": "wall-material"
+  -
+    "id": "scene-wall-44"
+    "node": "wall-44"
+    "material": "wall-material"
+  -
+    "id": "scene-wall-45"
+    "node": "wall-45"
+    "material": "wall-material"
+  -
+    "id": "scene-wall-46"
+    "node": "wall-46"
+    "material": "wall-material"
+  -
+    "id": "scene-wall-47"
+    "node": "wall-47"
+    "material": "wall-material"
+  -
+    "id": "scene-paddle-body"
+    "node": "paddle-body"
+    "material": "object-material"
+  -
+    "id": "scene-paddle-shadow-body"
+    "node": "paddle-shadow-body"
+    "material": "shadow-material"
+  -
+    "id": "scene-puck"
+    "node": "puck"
+    "material": "object-material"
+  -
+    "id": "scene-puck-shadow"
+    "node": "puck-shadow"
+    "material": "shadow-material"
+  -
+    "id": "scene-prototype-base"
+    "node": "prototype-base"
+    "material": "object-material"
+  -
+    "id": "scene-prototype-tall"
+    "node": "prototype-tall"
+    "material": "object-material"
+  -
+    "id": "scene-prototype-short"
+    "node": "prototype-short"
+    "material": "object-material"
+  -
+    "id": "scene-block-00"
+    "node": "block-00"
+    "material": "object-material"
+  -
+    "id": "scene-block-00-tall"
+    "node": "block-00-tall"
+    "material": "object-material"
+  -
+    "id": "scene-block-00-short"
+    "node": "block-00-short"
+    "material": "object-material"
+  -
+    "id": "scene-block-01"
+    "node": "block-01"
+    "material": "object-material"
+  -
+    "id": "scene-block-01-tall"
+    "node": "block-01-tall"
+    "material": "object-material"
+  -
+    "id": "scene-block-01-short"
+    "node": "block-01-short"
+    "material": "object-material"
+  -
+    "id": "scene-block-02"
+    "node": "block-02"
+    "material": "object-material"
+  -
+    "id": "scene-block-02-tall"
+    "node": "block-02-tall"
+    "material": "object-material"
+  -
+    "id": "scene-block-02-short"
+    "node": "block-02-short"
+    "material": "object-material"
+  -
+    "id": "scene-block-03"
+    "node": "block-03"
+    "material": "object-material"
+  -
+    "id": "scene-block-03-tall"
+    "node": "block-03-tall"
+    "material": "object-material"
+  -
+    "id": "scene-block-03-short"
+    "node": "block-03-short"
+    "material": "object-material"
+  -
+    "id": "scene-block-04"
+    "node": "block-04"
+    "material": "object-material"
+  -
+    "id": "scene-block-04-tall"
+    "node": "block-04-tall"
+    "material": "object-material"
+  -
+    "id": "scene-block-04-short"
+    "node": "block-04-short"
+    "material": "object-material"
+  -
+    "id": "scene-block-05"
+    "node": "block-05"
+    "material": "object-material"
+  -
+    "id": "scene-block-05-tall"
+    "node": "block-05-tall"
+    "material": "object-material"
+  -
+    "id": "scene-block-05-short"
+    "node": "block-05-short"
+    "material": "object-material"
+  -
+    "id": "scene-block-06"
+    "node": "block-06"
+    "material": "object-material"
+  -
+    "id": "scene-block-06-tall"
+    "node": "block-06-tall"
+    "material": "object-material"
+  -
+    "id": "scene-block-06-short"
+    "node": "block-06-short"
+    "material": "object-material"
+  -
+    "id": "scene-block-07"
+    "node": "block-07"
+    "material": "object-material"
+  -
+    "id": "scene-block-07-tall"
+    "node": "block-07-tall"
+    "material": "object-material"
+  -
+    "id": "scene-block-07-short"
+    "node": "block-07-short"
+    "material": "object-material"
+  -
+    "id": "scene-block-08"
+    "node": "block-08"
+    "material": "object-material"
+  -
+    "id": "scene-block-08-tall"
+    "node": "block-08-tall"
+    "material": "object-material"
+  -
+    "id": "scene-block-08-short"
+    "node": "block-08-short"
+    "material": "object-material"
+  -
+    "id": "scene-block-09"
+    "node": "block-09"
+    "material": "object-material"
+  -
+    "id": "scene-block-09-tall"
+    "node": "block-09-tall"
+    "material": "object-material"
+  -
+    "id": "scene-block-09-short"
+    "node": "block-09-short"
+    "material": "object-material"
+  -
+    "id": "scene-block-10"
+    "node": "block-10"
+    "material": "object-material"
+  -
+    "id": "scene-block-10-tall"
+    "node": "block-10-tall"
+    "material": "object-material"
+  -
+    "id": "scene-block-10-short"
+    "node": "block-10-short"
+    "material": "object-material"
+  -
+    "id": "scene-block-11"
+    "node": "block-11"
+    "material": "object-material"
+  -
+    "id": "scene-block-11-tall"
+    "node": "block-11-tall"
+    "material": "object-material"
+  -
+    "id": "scene-block-11-short"
+    "node": "block-11-short"
+    "material": "object-material"
+  -
+    "id": "scene-block-12"
+    "node": "block-12"
+    "material": "object-material"
+  -
+    "id": "scene-block-12-tall"
+    "node": "block-12-tall"
+    "material": "object-material"
+  -
+    "id": "scene-block-12-short"
+    "node": "block-12-short"
+    "material": "object-material"
+  -
+    "id": "scene-block-13"
+    "node": "block-13"
+    "material": "object-material"
+  -
+    "id": "scene-block-13-tall"
+    "node": "block-13-tall"
+    "material": "object-material"
+  -
+    "id": "scene-block-13-short"
+    "node": "block-13-short"
+    "material": "object-material"
+  -
+    "id": "scene-block-14"
+    "node": "block-14"
+    "material": "object-material"
+  -
+    "id": "scene-block-14-tall"
+    "node": "block-14-tall"
+    "material": "object-material"
+  -
+    "id": "scene-block-14-short"
+    "node": "block-14-short"
+    "material": "object-material"
+  -
+    "id": "scene-block-15"
+    "node": "block-15"
+    "material": "object-material"
+  -
+    "id": "scene-block-15-tall"
+    "node": "block-15-tall"
+    "material": "object-material"
+  -
+    "id": "scene-block-15-short"
+    "node": "block-15-short"
+    "material": "object-material"
+  -
+    "id": "scene-block-16"
+    "node": "block-16"
+    "material": "object-material"
+  -
+    "id": "scene-block-16-tall"
+    "node": "block-16-tall"
+    "material": "object-material"
+  -
+    "id": "scene-block-16-short"
+    "node": "block-16-short"
+    "material": "object-material"
+  -
+    "id": "scene-block-17"
+    "node": "block-17"
+    "material": "object-material"
+  -
+    "id": "scene-block-17-tall"
+    "node": "block-17-tall"
+    "material": "object-material"
+  -
+    "id": "scene-block-17-short"
+    "node": "block-17-short"
+    "material": "object-material"
+  -
+    "id": "scene-block-18"
+    "node": "block-18"
+    "material": "object-material"
+  -
+    "id": "scene-block-18-tall"
+    "node": "block-18-tall"
+    "material": "object-material"
+  -
+    "id": "scene-block-18-short"
+    "node": "block-18-short"
+    "material": "object-material"
+  -
+    "id": "scene-block-19"
+    "node": "block-19"
+    "material": "object-material"
+  -
+    "id": "scene-block-19-tall"
+    "node": "block-19-tall"
+    "material": "object-material"
+  -
+    "id": "scene-block-19-short"
+    "node": "block-19-short"
+    "material": "object-material"
+  -
+    "id": "scene-block-20"
+    "node": "block-20"
+    "material": "object-material"
+  -
+    "id": "scene-block-20-tall"
+    "node": "block-20-tall"
+    "material": "object-material"
+  -
+    "id": "scene-block-20-short"
+    "node": "block-20-short"
+    "material": "object-material"
+  -
+    "id": "scene-block-21"
+    "node": "block-21"
+    "material": "object-material"
+  -
+    "id": "scene-block-21-tall"
+    "node": "block-21-tall"
+    "material": "object-material"
+  -
+    "id": "scene-block-21-short"
+    "node": "block-21-short"
+    "material": "object-material"
+  -
+    "id": "scene-block-22"
+    "node": "block-22"
+    "material": "object-material"
+  -
+    "id": "scene-block-22-tall"
+    "node": "block-22-tall"
+    "material": "object-material"
+  -
+    "id": "scene-block-22-short"
+    "node": "block-22-short"
+    "material": "object-material"
+  -
+    "id": "scene-block-23"
+    "node": "block-23"
+    "material": "object-material"
+  -
+    "id": "scene-block-23-tall"
+    "node": "block-23-tall"
+    "material": "object-material"
+  -
+    "id": "scene-block-23-short"
+    "node": "block-23-short"
+    "material": "object-material"
+  -
+    "id": "scene-block-24"
+    "node": "block-24"
+    "material": "object-material"
+  -
+    "id": "scene-block-24-tall"
+    "node": "block-24-tall"
+    "material": "object-material"
+  -
+    "id": "scene-block-24-short"
+    "node": "block-24-short"
+    "material": "object-material"
+  -
+    "id": "scene-block-25"
+    "node": "block-25"
+    "material": "object-material"
+  -
+    "id": "scene-block-25-tall"
+    "node": "block-25-tall"
+    "material": "object-material"
+  -
+    "id": "scene-block-25-short"
+    "node": "block-25-short"
+    "material": "object-material"
+  -
+    "id": "scene-block-26"
+    "node": "block-26"
+    "material": "object-material"
+  -
+    "id": "scene-block-26-tall"
+    "node": "block-26-tall"
+    "material": "object-material"
+  -
+    "id": "scene-block-26-short"
+    "node": "block-26-short"
+    "material": "object-material"
+  -
+    "id": "scene-block-27"
+    "node": "block-27"
+    "material": "object-material"
+  -
+    "id": "scene-block-27-tall"
+    "node": "block-27-tall"
+    "material": "object-material"
+  -
+    "id": "scene-block-27-short"
+    "node": "block-27-short"
+    "material": "object-material"
+"renderer":
+  "profile": "studio"
+  "width": 960
+  "height": 640
+  "clearColor": [0.012, 0.018, 0.035, 1]
+  "environment":
+    "preset": "dark-studio"
+    "resolution":
+      "width": 128
+      "height": 64
+  "dof":
+    "enabled": false
+  "pipeline":
+    "lighting":
+      "ambient": 0
+      "directionalIntensity": 0.12
+      "environmentIntensity": 0.65
+    "ssr":
+      "intensity": 0.95
+      "distance": 100
+      "thickness": 0.42
+      "steps": 64
+    "toneMap":
+      "exposure": 0.95

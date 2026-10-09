@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>joint</title>
+  <link rel="icon" href="data:," />
+  <!-- 2026/08/26 -->
+  <style>
+    body { margin: 2rem auto; max-width: 68rem; padding: 0 1rem 3rem; background: #eef3f8; color: #183247; font: 16px/1.75 sans-serif; }
+    main { background: #ffffff; padding: 1.5rem 2rem; border: 1px solid #c8d5e2; border-radius: 1rem; }
+    a { color: #0c629e; }
+    code, pre { background: #edf3f8; border-radius: .25rem; padding: .1rem .3rem; }
+    pre { padding: 1rem; overflow: auto; }
+    h1, h2 { line-height: 1.3; }
+    h2 { margin-top: 2rem; border-bottom: 1px solid #c8d5e2; padding-bottom: .25rem; }
+    .sample { border: 1px solid #c8d5e2; border-radius: .6rem; padding: .8rem 1rem; margin: 1rem 0; }
+  </style>
+</head>
+<body>
+<main>
+  <h1>joint</h1>
+  <p><a href="./index.en.html">English</a> | 日本語</p>
+  <p><code>joint</code> は、同じ重力JointシナリオをCPU版とGPU Compute版で比較するサンプルファミリーです。初期位置、Joint距離、ロープ寸法、Capsule姿勢、カメラは<code>jointScenario.js</code>にまとめています</p>
+
+  <div class="sample">
+    <h2><code>joint_cpu_node</code></h2>
+    <p>webgコアのCPU版<code>PhysicsSpace</code>と通常の<code>Node</code>描画で、CPU版Joint solverと標準描画経路を確認します</p>
+    <p><a href="./joint_cpu_node.html">joint_cpu_node.htmlを実行</a>　|　<a href="./joint_cpu_node.md">実装説明</a>　|　<a href="./joint_cpu_node.en.md">English</a></p>
+  </div>
+  <div class="sample">
+    <h2><code>joint_compute</code></h2>
+    <p><code>ComputePhysicsSpace</code>のGPU Joint bufferとWGSL XPBD solverで物理を更新し、ping-pong<code>BodyState</code>をvertex shaderから直接描画します</p>
+    <p><a href="./joint_compute.html">joint_compute.htmlを実行</a>　|　<a href="./joint_compute.md">実装説明</a>　|　<a href="./joint_compute.en.md">English</a></p>
+  </div>
+  <div class="sample">
+    <h2><code>joint_compute_node</code></h2>
+    <p><code>joint_compute</code>と同じGPU物理を使い、明示的なstate readback後に<code>syncNodesFromPhysics()</code>で通常のNodeへ同期して<code>Space.draw()</code>で描画します</p>
+    <p><a href="./joint_compute_node.html">joint_compute_node.htmlを実行</a>　|　<a href="./joint_compute_node.md">実装説明</a>　|　<a href="./joint_compute_node.en.md">English</a></p>
+  </div>
+
+  <h2>共通シナリオ</h2>
+  <p>三つのアプリは、振り子、6本の吊りロープ、ロープ中央を横切るkinematic Capsuleからなる同じシナリオを使います。振り子のDistanceJoint距離は小振幅近似の<code>T=2π√(L/g)</code>を<code>L=|g|(T/(2π))²</code>へ変形して、重力<code>9.80665 m/s²</code>と目標周期<code>3 s</code>から計算します。ロープlinkは半径<code>0.06 m</code>、芯線長<code>0.18 m</code>、全長<code>0.30 m</code>、中心間隔<code>0.305 m</code>、見かけの隙間約<code>0.005 m</code>、質量<code>0.50 kg</code>です</p>
+  <p>操作Capsuleは重力を受けないkinematic bodyで、local Y軸をX軸回転のquaternionでworld Z軸へ向けています。起動時はD方向へ移動し、A/Dで左右を切り替え、端で停止します。Qの<code>quasiStatic</code>は位置をfixed stepごとに処方して接触速度0を渡し、Iの<code>impact</code>は<code>0.80 m/s</code>の処方速度を接触solverへ渡します</p>
+
+  <h2>操作</h2>
+  <p><code>A</code>: 左へ移動　<code>D</code>: 右へ移動　<code>Q</code>: quasiStatic　<code>I</code>: impact　<code>P</code>: pause/resume　<code>R</code>: reset　<code>H</code>: Help Panel表示切替　Drag: camera orbit　Wheel: camera zoom</p>
+  <p>Help Panelは各アプリの起動状態に従います。展開すると、物理条件、body／Joint数、振り子の理論周期と実測周期、ロープ速度、角速度、Joint誤差などを表示します。画面へHUD文字は重ねません</p>
+
+  <p><a href="./README.md">README.md</a>　|　<a href="./README.en.md">README.en.md</a></p>
+</main>
+</body>
+</html>

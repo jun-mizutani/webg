@@ -1,5 +1,5 @@
 // ---------------------------------------------
-//  ModelBuilder.js  2026/07/25
+//  ModelBuilder.js  2026/09/09
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // ---------------------------------------------
@@ -138,7 +138,7 @@ export default class ModelBuilder {
     shape.primitiveCount = geometry.polygonCount ?? Math.floor(indices.length / 3);
     shape.positionArray = positions.slice();
     shape.indicesArray = indices.slice();
-    // ModelAsset 1.0のmeshは従来どおり単一materialなので、全triangleを互換slot 0へ割り当てる
+    // ModelAsset 1.0のmeshは単一materialとして扱い、全triangleをslot 0へ割り当てる
     // 複数material対応asset形式へ拡張するときはgeometry側のslot配列をここで明示的に読み込む
     shape.triangleMaterialIndices = new Array(shape.primitiveCount).fill(0);
     shape.normalArray = normals ? normals.slice() : new Array(shape.vertexCount * 3).fill(0);
@@ -486,12 +486,15 @@ export default class ModelBuilder {
         space,
         rootNodes,
         isDestroyed: false,
+        // 指定IDのruntime animationを解決し、個別操作の対象を返します
         getAnimation(id) {
           return animationMap.get(String(id ?? "")) ?? null;
         },
+        // このinstantiationに登録されたanimation名を定義順で返します
         getAnimationNames() {
           return [...animationMap.keys()];
         },
+        // ModelAssetのanimation bindingをShapeへ取り付け、取り付け数を返します
         bindAnimationBindings() {
           let boundCount = 0;
           for (let i = 0; i < bindingEntries.length; i++) {
@@ -506,18 +509,22 @@ export default class ModelBuilder {
           }
           return boundCount;
         },
+        // 指定animationを先頭から開始し、開始後のanimationを返します
         startAnimation(id) {
           const animation = requireRuntimeAnimation(animationMap, id, "startAnimation");
           animation.start();
           return animation;
         },
+        // 指定animationを初期状態から再開始します
         restartAnimation(id) {
           return this.startAnimation(id);
         },
+        // 指定animationを再生APIへ渡し、再生後のanimationを返します
         playAnimation(id) {
           const animation = requireRuntimeAnimation(animationMap, id, "playAnimation");
           return animation.play();
         },
+        // 全animationを先頭から開始し、開始したclip数を返します
         startAllAnimations() {
           const list = [...animationMap.values()];
           for (let i = 0; i < list.length; i++) {
@@ -525,9 +532,11 @@ export default class ModelBuilder {
           }
           return list.length;
         },
+        // 全animationを先頭から再開始し、再開始したclip数を返します
         restartAllAnimations() {
           return this.startAllAnimations();
         },
+        // 全animationを現在の再生仕様で再生し、再生したclip数を返します
         playAllAnimations() {
           const list = [...animationMap.values()];
           for (let i = 0; i < list.length; i++) {
@@ -535,16 +544,19 @@ export default class ModelBuilder {
           }
           return list.length;
         },
+        // 指定animationの更新を一時停止し、現在の姿勢を保持します
         pauseAnimation(id) {
           const animation = requireRuntimeAnimation(animationMap, id, "pauseAnimation");
           animation.schedule.pause = true;
           return animation;
         },
+        // 指定animationの更新を再開し、次のframeから時間を進めます
         resumeAnimation(id) {
           const animation = requireRuntimeAnimation(animationMap, id, "resumeAnimation");
           animation.schedule.pause = false;
           return animation;
         },
+        // 全animationを一時停止し、現在の姿勢をまとめて保持します
         pauseAllAnimations() {
           const list = [...animationMap.values()];
           for (let i = 0; i < list.length; i++) {
@@ -552,6 +564,7 @@ export default class ModelBuilder {
           }
           return list.length;
         },
+        // 全animationを再開し、次のframeから時間をまとめて進めます
         resumeAllAnimations() {
           const list = [...animationMap.values()];
           for (let i = 0; i < list.length; i++) {
@@ -559,9 +572,11 @@ export default class ModelBuilder {
           }
           return list.length;
         },
+        // boolean設定に応じて全animationのpauseまたはresumeを選びます
         setAnimationsPaused(paused) {
           return paused ? this.pauseAllAnimations() : this.resumeAllAnimations();
         },
+        // Node、Shape、animation参照を依存順に解放し、破棄数を返します
         destroy(options = {}) {
           if (this.isDestroyed) {
             return 0;
@@ -902,12 +917,15 @@ export default class ModelBuilder {
         space,
         rootNodes,
         isDestroyed: false,
+        // 2回目以降の呼出しを含め、指定IDのruntime animationを解決します
         getAnimation(id) {
           return animationMap.get(String(id ?? "")) ?? null;
         },
+        // このinstantiationに登録されたanimation名を定義順で返します
         getAnimationNames() {
           return [...animationMap.keys()];
         },
+        // ModelAssetのanimation bindingをShapeへ取り付け、取り付け数を返します
         bindAnimationBindings() {
           let boundCount = 0;
           for (let i = 0; i < bindingEntries.length; i++) {
@@ -922,18 +940,22 @@ export default class ModelBuilder {
           }
           return boundCount;
         },
+        // 指定animationを先頭から開始し、開始後のanimationを返します
         startAnimation(id) {
           const animation = requireRuntimeAnimation(animationMap, id, "startAnimation");
           animation.start();
           return animation;
         },
+        // 指定animationを初期状態から再開始します
         restartAnimation(id) {
           return this.startAnimation(id);
         },
+        // 指定animationを再生APIへ渡し、再生後のanimationを返します
         playAnimation(id) {
           const animation = requireRuntimeAnimation(animationMap, id, "playAnimation");
           return animation.play();
         },
+        // 全animationを先頭から開始し、開始したclip数を返します
         startAllAnimations() {
           const list = [...animationMap.values()];
           for (let i = 0; i < list.length; i++) {
@@ -941,9 +963,11 @@ export default class ModelBuilder {
           }
           return list.length;
         },
+        // 全animationを先頭から再開始し、再開始したclip数を返します
         restartAllAnimations() {
           return this.startAllAnimations();
         },
+        // 全animationを現在の再生仕様で再生し、再生したclip数を返します
         playAllAnimations() {
           const list = [...animationMap.values()];
           for (let i = 0; i < list.length; i++) {
@@ -951,16 +975,19 @@ export default class ModelBuilder {
           }
           return list.length;
         },
+        // 指定animationの更新を一時停止し、現在の姿勢を保持します
         pauseAnimation(id) {
           const animation = requireRuntimeAnimation(animationMap, id, "pauseAnimation");
           animation.schedule.pause = true;
           return animation;
         },
+        // 指定animationの更新を再開し、次のframeから時間を進めます
         resumeAnimation(id) {
           const animation = requireRuntimeAnimation(animationMap, id, "resumeAnimation");
           animation.schedule.pause = false;
           return animation;
         },
+        // 全animationを一時停止し、現在の姿勢をまとめて保持します
         pauseAllAnimations() {
           const list = [...animationMap.values()];
           for (let i = 0; i < list.length; i++) {
@@ -968,6 +995,7 @@ export default class ModelBuilder {
           }
           return list.length;
         },
+        // 全animationを再開し、次のframeから時間をまとめて進めます
         resumeAllAnimations() {
           const list = [...animationMap.values()];
           for (let i = 0; i < list.length; i++) {
@@ -975,9 +1003,11 @@ export default class ModelBuilder {
           }
           return list.length;
         },
+        // boolean設定に応じて全animationのpauseまたはresumeを選びます
         setAnimationsPaused(paused) {
           return paused ? this.pauseAllAnimations() : this.resumeAllAnimations();
         },
+        // Node、Shape、animation参照を依存順に解放し、破棄数を返します
         destroy(options = {}) {
           if (this.isDestroyed) {
             return 0;
@@ -1110,6 +1140,7 @@ export default class ModelBuilder {
       shapeResources,
       instantiations: liveInstantiations,
       isDestroyed: false,
+      // runtimeのtemplate Nodeから新しいNode treeを作り、Node mapを返します
       createNodeTree(space) {
         console.assert(!this.isDestroyed, "runtime.createNodeTree() requires a live runtime");
         if (this.isDestroyed) {
@@ -1120,9 +1151,11 @@ export default class ModelBuilder {
           setActive: true
         }).nodeMap;
       },
+      // 現在activeなinstantiationへanimation bindingを渡します
       bindAnimationBindings() {
         return requireActiveInstantiation("bindAnimationBindings").bindAnimationBindings();
       },
+      // runtimeをspaceへinstantiateし、表示Node、Shape、animationをまとめて返します
       instantiate(space, instantiateOptions = {}) {
         console.assert(!this.isDestroyed, "runtime.instantiate() requires a live runtime");
         if (this.isDestroyed) {
@@ -1133,45 +1166,59 @@ export default class ModelBuilder {
           setActive: true
         });
       },
+      // active instantiationから指定IDのanimationを解決します
       getAnimation(id) {
         return requireActiveInstantiation("getAnimation").getAnimation(id);
       },
+      // runtimeが保持するanimation名を返し、active instantiationが無い場合は定義名を使います
       getAnimationNames() {
         return activeInstantiation?.getAnimationNames?.() ?? [...clipNames];
       },
+      // active instantiationの指定animationを先頭から開始します
       startAnimation(id) {
         return requireActiveInstantiation("startAnimation").startAnimation(id);
       },
+      // active instantiationの指定animationを再開始します
       restartAnimation(id) {
         return this.startAnimation(id);
       },
+      // active instantiationの指定animationを再生します
       playAnimation(id) {
         return requireActiveInstantiation("playAnimation").playAnimation(id);
       },
+      // active instantiationの全animationを開始します
       startAllAnimations() {
         return requireActiveInstantiation("startAllAnimations").startAllAnimations();
       },
+      // active instantiationの全animationを再開始します
       restartAllAnimations() {
         return this.startAllAnimations();
       },
+      // active instantiationの全animationを再生します
       playAllAnimations() {
         return requireActiveInstantiation("playAllAnimations").playAllAnimations();
       },
+      // active instantiationの指定animationを一時停止します
       pauseAnimation(id) {
         return requireActiveInstantiation("pauseAnimation").pauseAnimation(id);
       },
+      // active instantiationの指定animationを再開します
       resumeAnimation(id) {
         return requireActiveInstantiation("resumeAnimation").resumeAnimation(id);
       },
+      // active instantiationの全animationを一時停止します
       pauseAllAnimations() {
         return requireActiveInstantiation("pauseAllAnimations").pauseAllAnimations();
       },
+      // active instantiationの全animationを再開します
       resumeAllAnimations() {
         return requireActiveInstantiation("resumeAllAnimations").resumeAllAnimations();
       },
+      // boolean設定に応じてactive instantiationの全animationを停止または再開します
       setAnimationsPaused(paused) {
         return paused ? this.pauseAllAnimations() : this.resumeAllAnimations();
       },
+      // template Shapeと全instantiationを解放し、runtimeを破棄済みへ更新します
       destroy() {
         if (this.isDestroyed) {
           return 0;

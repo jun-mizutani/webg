@@ -1,0 +1,685 @@
+/* 2026/10/02: 戦場、操作パネル、狭い画面の配置 */
+
+:root {
+  color-scheme: dark;
+  --bg: #0d171b;
+  --ink: #e7e9db;
+  --muted: #91a69e;
+  --gold: #d2b77b;
+  --line: #2b3d3d;
+  --cyan: #74dcce;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font: 14px/1.6 system-ui,-apple-system,sans-serif;
+}
+
+button, a, summary {
+  -webkit-tap-highlight-color: transparent;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+  background: #17282b;
+  border: 1px solid #466057;
+  border-radius: 5px;
+  padding: 10px 15px;
+  cursor: pointer;
+  transition: background .15s;
+}
+
+button:hover:enabled {
+  background: #29463f;
+}
+
+button:disabled {
+  opacity: .4;
+  cursor: default;
+}
+
+button:focus-visible, summary:focus-visible, a:focus-visible {
+  outline: 2px solid var(--cyan);
+  outline-offset: 3px;
+}
+
+/* ページ見出しと再開始ボタン */
+header {
+  max-width: 1260px;
+  margin: 0 auto;
+  height: 85px;
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  padding: 0 30px;
+  border-bottom: 1px solid var(--line);
+  background: #111e23;
+}
+
+.brand {
+  display: flex;
+  gap: 15px;
+  align-items: center;
+}
+
+.sigil {
+  font: 40px Georgia;
+  color: var(--gold);
+}
+
+small {
+  font-size: 10px;
+  letter-spacing: 2px;
+  color: var(--gold);
+}
+
+h1 {
+  font: 26px/1.2 Georgia,serif;
+  margin: 3px 0;
+}
+
+h2 {
+  font-size: 19px;
+  margin: 8px 0;
+}
+
+p {
+  color: var(--muted);
+  margin: 10px 0;
+}
+
+.chapter {
+  margin-left: auto;
+  letter-spacing: 2px;
+  color: #b8c8bc;
+}
+
+.chapter span {
+  color: #50675f;
+  margin: 0 14px;
+}
+
+/* 戦場は960×720までとし、操作パネルを横に置く */
+main {
+  display: grid;
+  grid-template-columns: minmax(0,1fr) 300px;
+  width: min(100%,1260px);
+  margin: 0 auto;
+  height: 720px;
+  min-height: 0;
+}
+
+.battlefield {
+  position: relative;
+  min-width: 0;
+  overflow: hidden;
+  background: #101c20;
+  min-height: 0;
+}
+
+.stage {
+  position: absolute;
+  inset: 0;
+}
+
+.stage canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  touch-action: none;
+}
+
+.webg-embedded-canvas-host {
+  max-width: 100%;
+}
+
+#labels {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.unit-label {
+  position: absolute;
+  transform: translate(-50%,-100%);
+  font-size: 10px;
+  text-align: center;
+  text-shadow: 0 2px 3px #000;
+  white-space: nowrap;
+}
+
+.unit-label b {
+  font-weight: 500;
+  padding: 2px 5px;
+  color: #e8f8ef;
+  background: #102725ba;
+  border-radius: 3px;
+}
+
+.unit-label.enemy b {
+  color: #fbbca9;
+  background: #351c1dba;
+}
+
+.health {
+  height: 3px;
+  width: 38px;
+  margin: 4px auto;
+  background: #173c37;
+  border-radius: 2px;
+}
+
+.health i {
+  display: block;
+  height: 100%;
+  background: #8cdfb0;
+}
+
+.enemy .health i {
+  background: #ef7f6f;
+}
+
+.field-top {
+  position: absolute;
+  top: 25px;
+  left: 28px;
+  right: 28px;
+  display: flex;
+  justify-content: space-between;
+  align-items: start;
+  pointer-events: none;
+}
+
+.location {
+  font: 12px Georgia;
+  letter-spacing: 2px;
+  color: #b6c9bf;
+}
+
+.location small {
+  display: block;
+  margin-top: 6px;
+  font: 10px system-ui;
+  color: #71877c;
+  letter-spacing: 1px;
+}
+
+#phase {
+  background: #162b2ce8;
+  border: 1px solid #42695c;
+  border-radius: 3px;
+  color: var(--cyan);
+  padding: 7px 14px;
+  font-size: 12px;
+  letter-spacing: 1px;
+}
+
+.field-bottom {
+  position: absolute;
+  bottom: 20px;
+  left: 28px;
+  right: 28px;
+  pointer-events: none;
+}
+
+.field-bottom p {
+  color: #d6e3d8;
+  background: #0d2125dc;
+  border-left: 2px solid var(--gold);
+  padding: 10px 13px;
+  max-width: 650px;
+  font-size: 13px;
+}
+
+.field-bottom>span {
+  color: #6e8d82;
+  font-size: 11px;
+}
+
+.legend {
+  position: absolute;
+  bottom: 112px;
+  left: 28px;
+  display: flex;
+  gap: 16px;
+  color: #a5bfb2;
+  font-size: 11px;
+  pointer-events: none;
+}
+
+.legend i {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  margin-right: 3px;
+  transform: rotate(45deg);
+}
+
+.cyan {
+  background: #67c7bb;
+}
+
+.gold {
+  background: #d4b670;
+}
+
+.red {
+  background: #e97866;
+}
+
+/* 戦闘の状態と操作をまとめる。長い内容はパネル内でスクロールする */
+aside {
+  overflow-y: auto;
+  padding: 25px 22px;
+  background: #111e23;
+  border-left: 1px solid var(--line);
+}
+
+aside section {
+  margin-bottom: 24px;
+}
+
+.mission {
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 14px;
+}
+
+.mission h2 {
+  font-family: Georgia,serif;
+  color: #e2d2a6;
+}
+
+.mission p {
+  font-size: 12px;
+}
+
+.section-label {
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 1px;
+  color: #b6c8bb;
+  display: flex;
+  justify-content: space-between;
+}
+
+.section-label span {
+  font-size: 9px;
+  color: #657e74;
+}
+
+.party-card {
+  display: flex;
+  gap: 12px;
+  width: 100%;
+  text-align: left;
+  margin-top: 7px;
+  padding: 10px;
+  background: #16252a;
+  border-color: #2e4441;
+}
+
+.party-card.selected {
+  border-color: var(--gold);
+  background: #243731;
+}
+
+.portrait {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 38px;
+  font-size: 22px;
+  color: var(--gold);
+  background: #203632;
+  border-radius: 3px;
+}
+
+.party-info {
+  flex: 1;
+}
+
+.party-info strong {
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.party-info small {
+  letter-spacing: 0;
+  margin-left: 9px;
+  color: #7a9990;
+}
+
+.party-info p {
+  font-size: 10px;
+  margin: 2px 0 0;
+  color: #a7bcae;
+}
+
+.party-card.fallen {
+  opacity: .4;
+}
+
+#selection {
+  border: 1px solid var(--line);
+  padding: 15px;
+  border-radius: 5px;
+  margin-bottom: 13px;
+}
+
+#stats {
+  display: flex;
+  gap: 15px;
+  color: #c5dacd;
+  font-size: 12px;
+}
+
+#ability {
+  font-size: 11px;
+  min-height: 32px;
+}
+
+#wait {
+  width: 100%;
+  padding: 7px;
+  font-size: 12px;
+}
+
+.primary {
+  background: #35564a;
+  border: 1px solid #7da78a;
+  width: 100%;
+  color: #e1eed8;
+  display: flex;
+  justify-content: space-between;
+}
+
+.journal {
+  margin-top: 22px;
+}
+
+#log {
+  padding: 0;
+  list-style: none;
+  max-height: 155px;
+  overflow: auto;
+  font-size: 11px;
+  color: #89a599;
+}
+
+#log li {
+  padding: 6px 0;
+  border-bottom: 1px solid #203332;
+}
+
+#log li:first-child {
+  color: #d4dfbf;
+}
+
+details {
+  border-top: 1px solid var(--line);
+  padding: 12px 0;
+  color: #a7bcae;
+  font-size: 12px;
+}
+
+summary {
+  cursor: pointer;
+}
+
+details p {
+  font-size: 11px;
+}
+
+.doc {
+  color: #6f9c8f;
+  font-size: 11px;
+  text-decoration: none;
+}
+
+#grid {
+  display: grid;
+  grid-template-columns: repeat(9,1fr);
+  gap: 3px;
+}
+
+#grid button {
+  font-size: 10px;
+  padding: 4px 0;
+  border-color: #3c5750;
+}
+
+#grid button.ally {
+  color: var(--cyan);
+}
+
+#grid button.enemy {
+  color: #e78573;
+}
+
+#grid button.reachable {
+  background: #2c6259;
+}
+
+#grid button.active {
+  border-color: var(--gold);
+}
+
+#loading {
+  position: fixed;
+  inset: 0;
+  background: #0d171bf5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  z-index: 30;
+}
+
+#loading[hidden], #result[hidden], #error[hidden] {
+  display: none;
+}
+
+#loading h2 {
+  font: 30px Georgia;
+  margin: 8px;
+}
+
+#loading p {
+  font-size: 12px;
+}
+
+#result {
+  position: fixed;
+  inset: 0;
+  background: #051419bb;
+  display: grid;
+  place-items: center;
+  z-index: 20;
+  backdrop-filter: blur(5px);
+}
+
+#result>div {
+  text-align: center;
+  padding: 45px;
+  max-width: 420px;
+  border: 1px solid #798c64;
+  background: #15252b;
+  border-radius: 7px;
+}
+
+#result h2 {
+  font: 36px Georgia;
+  color: var(--gold);
+}
+
+#result p {
+  font-size: 13px;
+}
+
+#error {
+  position: fixed;
+  bottom: 10px;
+  left: 10px;
+  right: 10px;
+  z-index: 40;
+  background: #551d25;
+  padding: 20px;
+  white-space: pre-wrap;
+}
+
+/* 幅が減ったら操作パネルを縮め、さらに狭い画面では下へ移す */
+@media(max-width:900px) {
+  main {
+    grid-template-columns: minmax(0,1fr) 250px;
+  }
+
+  aside {
+    padding: 20px 15px;
+  }
+
+  .battlefield {
+    min-height: 0;
+  }
+
+  header {
+    padding: 0 20px;
+  }
+
+  .chapter {
+    font-size: 11px;
+  }
+
+  .field-top, .field-bottom {
+    left: 18px;
+    right: 18px;
+  }
+
+  .legend {
+    left: 18px;
+  }
+
+}
+
+@media(max-width:650px) {
+  header {
+    height: 70px;
+    padding: 0 15px;
+    gap: 12px;
+  }
+
+  .chapter {
+    display: none;
+  }
+
+  header>button {
+    margin-left: auto;
+    font-size: 11px;
+    padding: 7px 10px;
+  }
+
+  h1 {
+    font-size: 22px;
+  }
+
+  .brand .sigil {
+    font-size: 30px;
+  }
+
+  main {
+    display: block;
+    height: auto;
+    min-height: 0;
+  }
+
+  .battlefield {
+    height: 64vh;
+    min-height: 440px;
+  }
+
+  aside {
+    overflow-y: visible;
+    border-top: 1px solid var(--line);
+    border-left: none;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+    padding: 20px;
+  }
+
+  aside section {
+    margin-bottom: 0;
+  }
+
+  .mission, .journal, details, .doc {
+    grid-column: 1/-1;
+  }
+
+  #end-turn {
+    grid-column: 1/-1;
+    align-self: end;
+  }
+
+  .field-top {
+    top: 15px;
+  }
+
+  .location {
+    font-size: 9px;
+  }
+
+  .field-bottom {
+    bottom: 10px;
+  }
+
+  .field-bottom p {
+    font-size: 11px;
+  }
+
+  .field-bottom>span {
+    font-size: 9px;
+  }
+
+  .legend {
+    bottom: 92px;
+    font-size: 9px;
+    gap: 10px;
+  }
+
+  #phase {
+    font-size: 10px;
+    padding: 5px 9px;
+  }
+
+  #selection {
+    margin: 0;
+  }
+
+  #stats {
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+
+  .party-card {
+    padding: 7px;
+    gap: 6px;
+  }
+
+  .party-info small {
+    display: block;
+    margin-left: 0;
+  }
+
+  .portrait {
+    width: 24px;
+    font-size: 17px;
+  }
+
+}

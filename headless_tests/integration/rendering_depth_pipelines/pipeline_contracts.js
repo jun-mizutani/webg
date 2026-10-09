@@ -1,5 +1,5 @@
 // ---------------------------------------------------------
-// headless_tests/integration/rendering_depth_pipelines/pipeline_contracts.js  2026/07/28
+// headless_tests/integration/rendering_depth_pipelines/pipeline_contracts.js  2026/08/03
 //   GPU pipeline descriptor contracts for Reverse-Z drawing
 // ---------------------------------------------------------
 import assert from "node:assert/strict";
@@ -48,12 +48,15 @@ async function readDepthStencil(ShaderClass, options = undefined) {
     ? new ShaderClass(probe.gpu)
     : new ShaderClass(probe.gpu, options);
   assert.equal(await shader.init(), true, `${ShaderClass.name} init`);
-  const expectedPipelineCount = ShaderClass === SmoothShader ? 2 : 1;
+  const expectedPipelineCount = ShaderClass === SmoothShader ? 4 : 1;
   assert.equal(probe.pipelines.length, expectedPipelineCount, `${ShaderClass.name} pipeline count`);
   if (ShaderClass === SmoothShader) {
     assert.equal(probe.pipelines[0].depthStencil.depthWriteEnabled, true);
     assert.equal(probe.pipelines[1].depthStencil.depthWriteEnabled, false);
     assert.equal(probe.pipelines[1].depthStencil.depthCompare, "greater");
+    assert.equal(probe.pipelines[0].primitive.cullMode, "back");
+    assert.equal(probe.pipelines[2].primitive.cullMode, "none");
+    assert.equal(probe.pipelines[3].depthStencil.depthWriteEnabled, false);
   }
   return probe.pipelines[0].depthStencil;
 }

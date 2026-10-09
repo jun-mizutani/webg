@@ -10,7 +10,7 @@ import util from "./util.js";
 
 // ParticleEmitter:
 // - 短命な particle をまとめて spawn / update / draw するための小さな管理 class
-// - 既存の Billboard と procedural texture を再利用し、毎回 sample 側で同じ管理コードを書かなくて済むようにする
+// - Billboard と procedural texture を使って particle の生成・更新・描画を行う
 // - どんな種類の particle を出しているかを preset でまとめ、ゲーム側は emit() に集中できるようにする
 
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));

@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// Phong.js       2026/07/13
+// Phong.js       2026/10/04
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // ---------------------------------------------
@@ -9,7 +9,7 @@ import { CAMERA_REVERSE_Z } from "../../webg/DepthConvention.js";
 import { alignTo } from "../../webg/SkinningConfig.js";
 
 export default class Phong extends Shader {
-  // Phong用デフォルト材質/Uniformオフセットを定義する
+  // Phong用デフォルトマテリアル/Uniformオフセットを定義する
   constructor(gpu, options = {}) {
     // 汎用メッシュ向けPhongシェーダ
     // Shape.draw() から modelView/normal/color/light などを受け取って描画する
@@ -76,13 +76,13 @@ struct Uniforms {
   // - w != 0.0 なら点光源、w == 0.0 なら方向ベクトルとして扱う
   lightPos : vec4f,
   // ベース色
-  // - texture を使わない場合はこの色だけで描画し、
+  // - 単色描画ではこの色だけで描画し、
   //   texture を使う場合は sampled color と乗算する
   color : vec4f,
-  // 材質パラメータ 0
+  // マテリアルパラメータ 0
   // x=ambient, y=specular, z=power, w=emissive
   params0 : vec4f,
-  // 材質パラメータ 1
+  // マテリアルパラメータ 1
   // x=useTexture, y=backfaceDebug
   params1 : vec4f,
   // フォグ色
@@ -124,6 +124,7 @@ struct FSIn {
 };
 
 @vertex
+// 頂点の位置と法線を視点空間へ変換し、投影座標と照明計算用の値を次の段階へ渡す
 fn vsMain(input : VSIn) -> VSOut {
   var output : VSOut;
 
@@ -141,15 +142,16 @@ fn vsMain(input : VSIn) -> VSOut {
   output.vPosition = worldPos.xyz;
 
   // 4. 法線も normal 行列で eye space へ変換してから渡す
-  //    法線は位置と違って平行移動の影響を受けないため w=0.0 で掛ける
+  //    法線は方向ベクトルとして w=0.0 で掛け、回転と拡大縮小を反映する
   output.vNormal = (uniforms.normalMat * vec4f(input.normal, 0.0)).xyz;
 
-  // 5. UV はこの段階では加工せず、そのままフラグメント側へ渡す
+  // 5. UV は頂点に設定した値をそのままフラグメント側へ渡す
   output.vTexCoord = input.texCoord;
   return output;
 }
 
 @fragment
+// 補間された法線と材質からPhong照明を計算し、必要に応じてテクスチャとフォグを反映する
 fn fsMain(input : FSIn) -> @location(0) vec4f {
   // 1. frontFacing を見て、裏面では法線方向を反転する
   //    両面描画時にそのままの法線を使うと、裏面側だけ lighting が反転して
@@ -174,7 +176,7 @@ fn fsMain(input : FSIn) -> @location(0) vec4f {
   let eyeVec = normalize(-input.vPosition);
   let refVec = normalize(reflect(-litVec, nnormal));
 
-  // 4. uniform へ packed してある材質値を取り出す
+  // 4. uniform へ packed してあるマテリアル値を取り出す
   let ambient = uniforms.params0.x;
   let specular = uniforms.params0.y;
   let power = uniforms.params0.z;
@@ -182,8 +184,8 @@ fn fsMain(input : FSIn) -> @location(0) vec4f {
   var diff : f32;
   var ispec : f32;
 
-  // 5. 発光材質でなければ通常の拡散反射 + 鏡面反射を計算する
-  //    emissive != 0.0 のときは照明を受けない発光物として扱い、
+  // 5. 発光マテリアルでなければ通常の拡散反射 + 鏡面反射を計算する
+  //    emissive != 0.0 のときは素材色を発光色として使い、
   //    拡散項だけを強制的に 1.0 - ambient 相当へ寄せる
   if (emissive == 0.0) {
     diff = max(dot(nnormal, litVec), 0.0) * (1.0 - ambient);
@@ -329,7 +331,7 @@ fn fsMain(input : FSIn) -> @location(0) vec4f {
     });
   }
 
-  // デフォルト材質辞書を更新し対応setterを呼ぶ
+  // デフォルトマテリアル辞書を更新し対応setterを呼ぶ
   setDefaultParam(key, value) {
     this.default[key] = value;
     if (key === "color") this.setColor(value);
@@ -362,9 +364,9 @@ fn fsMain(input : FSIn) -> @location(0) vec4f {
     this.updateUniforms();
   }
 
-  // 現状 no-op
+  // 既存APIとの共通の呼び出し口としてテクスチャ単位指定を受け付ける
   setTextureUnit(tex_unit) {
-    // No-op in WebGPU. Kept for compatibility.
+    // WebGPUではバインドグループがテクスチャの接続先を管理する
   }
 
   // 発光フラグを設定する

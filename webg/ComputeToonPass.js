@@ -62,7 +62,7 @@ fn main(@builtin(global_invocation_id) id : vec3<u32>) {
   let levels = params.values.x;
   let intensity = max(max(source.r, source.g), source.b);
   let quantized = quantizeIntensity(intensity, levels, params.values.z);
-  // 1.0未満だけshadow floorを適用し、High Dynamic Range側の輝度は変更しません
+  // 1.0未満だけshadow floorを適用し、High Dynamic Range側の輝度を保持します
   let lifted = select(
     params.control.x + (1.0 - params.control.x) * quantized,
     quantized,
@@ -148,14 +148,14 @@ export default class ComputeToonPass {
     this.destroyed = false;
   }
 
-  // destroy後の利用を例外にし、破棄済みresourceを再利用しません
+  // destroy後の利用を例外にし、liveなresourceだけを使います
   requireAlive() {
     if (this.destroyed) {
       throw new Error(`${this.label} has been destroyed`);
     }
   }
 
-  // 段階数、混合比、gammaを用途に応じた範囲で検証し、誤入力をshader内で隠しません
+  // 段階数、混合比、gammaを用途に応じた範囲で検証し、shaderへ有効な入力だけを渡します
   validateEncodeOptions(options = {}) {
     return {
       levels: util.readOptionalInteger(

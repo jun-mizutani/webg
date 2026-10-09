@@ -184,7 +184,7 @@ blockquote {
 <h2>Controls</h2>
 <ul><li>Drag: orbit camera</li><li><code>Shift + Drag</code>: pan</li><li>Mouse wheel / <code>[ / ]</code>: zoom</li><li><code>Space</code>: add 4 boxes</li><li><code>P</code>: pause / resume</li><li><code>R</code>: return positions, poses, and velocities to their initial states</li><li>Add a URL parameter such as <code>?count=60</code> to change the initial body count</li></ul>
 <h2>Implementation Details</h2>
-<ul><li>If you want to inspect solver values rather than visible behavior, run <code>unittest/physics_collider/headless_probe.js</code> with Node</li><li><code>headless_probe.js</code> is used for numeric investigation of cases such as the standing beam and cube-corner balance. This sample is responsible for on-screen interaction checks, while the headless probe handles numeric diagnostics</li><li>Contract verification for <code>PhysicsSpace</code> is handled by <code>unittest/physics_space_contracts</code>, while this sample focuses on the appearance of rotating box contacts</li></ul>
+<ul><li>To inspect solver values, run <code>unittest/physics_collider/headless_probe.js</code> with Node</li><li><code>headless_probe.js</code> is used for numeric investigation of cases such as the standing beam and cube-corner balance. This sample is responsible for on-screen interaction checks, while the headless probe handles numeric diagnostics</li><li>Contract verification for <code>PhysicsSpace</code> is handled by <code>unittest/physics_space_contracts</code>, while this sample focuses on the appearance of rotating box contacts</li></ul>
     </article>
   </main>
 </body>

@@ -1,5 +1,5 @@
 // ---------------------------------------------
-//  FullscreenPass.js  2026/07/25
+//  FullscreenPass.js  2026/09/09
 //   Final display texture presentation pass
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -200,6 +200,7 @@ fn fsMain(input : VSOut) -> @location(0) vec4f {
     this.gpu.queue.writeBuffer(this.vertexBuffer, 0, vertices);
   }
 
+  // 入力画像のformatを検証し、次の全画面描画でサンプルするsourceへ登録します
   setSource(texture) {
     this.texture = this.validateSource(texture);
   }

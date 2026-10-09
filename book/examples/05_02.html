@@ -1,18 +1,18 @@
 <!doctype html>
-<!-- webg/book/examples/05_02.html 2026/04/24 -->
+<!-- book/examples/05_02.html 2026/10/04 -->
 <html lang="ja">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>05_02 WebgApp で短く書く</title>
-  <link rel="stylesheet" href="./example.css" />
+  <link rel="stylesheet" href="./examples_common.css" />
 </head>
 <body>
   <div class="page">
     <h1>book/examples</h1>
     <h2>05_02 WebgApp で短く書く</h2>
     <div class="section-card">
-      <p>`book/05_WebgAppによるアプリ構成.md` の「5.7 同じことを `WebgApp` で短く書く」を、固定 canvas の教材ページでそのまま試せる形にした例です</p>
+      <p>`book/05_WebgAppによるアプリ構成.md` の`WebgApp`によるアプリ構成を、固定 canvas の教材ページでそのまま試せる形にした例です</p>
       <p class="note">`WebgApp` が `Screen`、camera rig、入力、HUD の土台をまとめて初期化する流れを見やすくしています</p>
     </div>
 
@@ -80,14 +80,15 @@ app.message.setLines("status", [
 });
 
 app.start({
+  // 入力中の矢印キーと経過秒数から立方体の回転角を更新する
   onUpdate(ctx) {
     if (ctx.input.has("arrowleft")) {
-      box.rotateY(-1.2);
+      box.rotateY(-1.2 * ctx.deltaSec);
     }
     if (ctx.input.has("arrowright")) {
-      box.rotateY(1.2);
+      box.rotateY(1.2 * ctx.deltaSec);
     }
-    box.rotateX(0.3);
+    box.rotateX(0.3 * ctx.deltaSec);
   }
 });
     </script>

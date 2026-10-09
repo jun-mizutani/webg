@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>webg SceneYAML object animation</title>
+  <link rel="icon" href="data:," />
+  <link rel="stylesheet" href="./index.css" />
+  <style>
+    html, body { height: auto; min-height: 100%; overflow: auto; }
+    body { display: block; }
+    .animation-page { width: min(960px, 100%); margin: 0 auto; }
+    header, .controls { padding: 12px 16px; }
+    h1 { margin: 0 0 8px; font-size: 1.25rem; }
+    p { margin: 8px 0; line-height: 1.5; }
+    a { color: #9cc9ff; }
+    .controls { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+    .controls + .controls { padding-top: 0; }
+    button:disabled { opacity: 0.45; cursor: default; }
+    select, input { font: inherit; }
+    #seek-time { width: 6em; }
+    .project-stage { width: 100%; max-height: none; }
+    #status, #error { position: static; white-space: pre-wrap; overflow-wrap: anywhere; margin: 0 16px 12px; }
+    #error { color: #ffb5ae; }
+  </style>
+</head>
+<body>
+  <main class="animation-page" data-state="initializing">
+    <header>
+      <h1>SceneYAML / object animation</h1>
+      <p><a href="./">サンプル一覧</a> · <a href="./scene_animation.yaml">SceneYAML</a> · <a href="./scene_animation.html?gzip=1">gzip版で実行</a></p>
+      <p>青いゲートが上下移動・回転し、子の球と取っ手が追従します。床と左の柱は固定です。ドラッグで視点回転、ホイールでズーム。</p>
+    </header>
+    <div class="controls" aria-label="アニメーション操作">
+      <label>Clip <select id="clip" disabled></select></label>
+      <label><input id="loop" type="checkbox" disabled /> Loop</label>
+      <button id="play" type="button" disabled>Play</button>
+      <button id="pause" type="button" disabled>Pause</button>
+      <button id="resume" type="button" disabled>Resume</button>
+      <button id="stop-animation" type="button" disabled>Stop（姿勢保持）</button>
+      <label>秒 <input id="seek-time" type="number" min="0" step="0.1" value="1" required disabled /></label>
+      <button id="seek" type="button" disabled>Seek（一時停止）</button>
+      <button id="reset-animations" type="button" disabled>Reset animations</button>
+    </div>
+    <div class="controls" aria-label="シーン操作">
+      <button id="start-frames" type="button" disabled>Start frames</button>
+      <button id="stop-frames" type="button" disabled>Stop frames</button>
+      <button id="reset" type="button" disabled>Reset scene</button>
+      <span>フレーム停止中の姿勢変更は、Start frames 後に描画されます。</span>
+    </div>
+    <pre id="error" role="alert" hidden></pre>
+    <pre id="status" aria-live="off">initializing...</pre>
+    <div class="project-stage">
+      <canvas id="canvas" width="960" height="640" aria-label="ゲートのアニメーション表示"></canvas>
+    </div>
+  </main>
+  <script type="module" src="./scene_animation_demo.js"></script>
+</body>
+</html>

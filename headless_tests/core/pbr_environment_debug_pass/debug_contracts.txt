@@ -1,0 +1,1 @@
+Validates fullscreen radiance, irradiance, specular mip, and BRDF LUT inspection, aspect fitting, nearest texel display, exposure stops, selected-UV crosshair, strict inputs, resize, and destruction.

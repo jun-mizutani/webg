@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// Collada.js     2026/07/25
+// Collada.js     2026/09/09
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // ---------------------------------------------
@@ -520,10 +520,12 @@ export default class Collada {
     }
   }
 
+  // COLLADA読み込みで生成したmesh一覧を返し、Shape生成段階へ渡します
   getMeshes() {
     return this.meshes;
   }
 
+  // 読み込み済みmesh数を返し、読み込み結果の診断へ利用します
   getMeshCount() {
     return this.mesh_count;
   }
@@ -1483,6 +1485,7 @@ export default class Collada {
     this.skipToClosingTag(Collada.ID.scene);
   }
 
+  // COLLADA animationの解析結果を返し、ModelBuilderのanimation登録へ渡します
   getAnimation() {
     return this.anim;
   }

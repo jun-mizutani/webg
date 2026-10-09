@@ -369,7 +369,7 @@ function applyWireframeState() {
   }
 }
 
-// 周回視点を初期状態へ戻し、前回の状態を残さない
+  // 周回視点を初期状態へ戻す
 function resetOrbit(size = state.modelSize, options = {}) {
   const maxSize = Math.max(2.4, Number(size?.max) || PLACEHOLDER_SIZE.max);
   const target = Array.isArray(options.target) && options.target.length >= 3
@@ -480,7 +480,7 @@ function takeViewerScreenshot() {
   });
 }
 
-// エラーの状態を初期状態へ戻し、前回の状態を残さない
+  // エラーの状態を初期状態へ戻す
 function clearErrorState() {
   state.lastError = "";
   app.removeOverlayPanel("embeddedViewerError");

@@ -1,0 +1,38 @@
+<!doctype html>
+<!-- 2026/09/19: ModelYAML読込み・共有配置・原文保存サンプル -->
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ModelYAML — webg</title>
+<link rel="icon" href="data:,">
+<style>
+body { margin: 0; background: #111c2b; color: #e4edf8; font: 16px/1.7 sans-serif; }
+main { max-width: 960px; margin: auto; padding: 20px; }
+h1 { margin: 0; } a { color: #8dd7ff; }
+.webg-embedded-canvas-host { max-width: 100%; height: auto !important; }
+canvas { display: block; width: 100% !important; height: auto !important; }
+.controls { display: flex; flex-wrap: wrap; gap: 10px; margin: 14px 0; }
+button { font: inherit; padding: 6px 14px; cursor: pointer; }
+pre { overflow: auto; max-height: 380px; padding: 16px; background: #091322; }
+#status { white-space: pre-wrap; } #error { color: #ffb5b5; }
+</style>
+</head>
+<body>
+<main>
+<h1>ModelYAML</h1>
+<p>1つのモデル定義から3組を配置します。ドラッグで回転、ホイールで拡大縮小できます。</p>
+<canvas id="canvas" width="900" height="560"></canvas>
+<div class="controls">
+<button id="rotate" disabled>回転を開始</button>
+<button id="save" disabled>YAML保存</button>
+<button id="gzip" disabled>gzip YAML保存</button>
+<a href="index.html">使い方</a> / <a href="index.en.html">English guide</a>
+</div>
+<p id="status" role="status">ModelYAMLを読み込み中…</p>
+<pre id="error" role="alert" hidden></pre>
+<details><summary>読み込んだYAML原文（コメントを含む）</summary><pre id="source"></pre></details>
+</main>
+<script type="module" src="main.js"></script>
+</body>
+</html>

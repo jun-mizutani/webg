@@ -1,0 +1,3 @@
+ComputePerlinNoise2D API contracts
+
+材質に依存しない周期Perlin fBmのWGSL、typed parameter buffer、field寸法、dispatch数、入力検証、fieldとgeneratorの破棄を検査します

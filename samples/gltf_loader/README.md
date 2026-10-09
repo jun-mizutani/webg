@@ -63,7 +63,7 @@
 - CommandPalette から animation の replay / pause / resume、wireframe、screenshot、JSON 出力、camera reset を実行できることを確認します
 - Help Panel は現在値と操作説明、CommandPalette は設定変更と実行操作という役割で読めることを確認します
 
-AI / 利用者向けの読み取りポイント
+読み取りポイント
 - 「表示は合っているが scale がどこで反映されたか分からない」ときは、まず meshes[].meta.staticBake と nodes[].matrix を見ます。
 - 「animation はあるが再生されない」ときは、animations[].targetSkeleton と nodes[].animationBindings の対応を見ます。
 - 「clip が再生されない」ときは、Help Panel の Anim / Clip0 表示と JSON の binding を見比べます。

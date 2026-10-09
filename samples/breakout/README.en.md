@@ -74,7 +74,7 @@ English | [日本語](README.md)
 - As a minimal verification sample for game-oriented APIs, this sample prioritizes an easy-to-follow flow for state, input, HUD, and collision checks over flashy visuals
 - The ball is created with `Primitive.sphere()`, while the paddle, bricks, walls, and backdrop are created as arbitrarily sized box meshes through `createBoxShape()` inside the sample
 - The ball uses a sphere collision shape, and the paddle, bricks, and walls use AABB collision shapes
-- However, the collision test used for actual game progression is not the `enter` result from `Space.stepCollisions()`, but the sample-side simplified 2D check using `circleIntersectsBox()`
+- However, the collision test used for actual game progression uses the sample-side simplified 2D check `circleIntersectsBox()`
 - Nodes and collision bodies are registered in `Space`, but in this sample it is used mainly as the foundation for placing game elements in a 3D scene
 - The result screen groups `clear / game over / time up` into the same phase and changes only the reason text
-- Input processing assumes normalized key names and action names from the `WebgApp / InputController` side instead of handling raw `event.key` directly
+- Input processing assumes normalized key names and action names from the `WebgApp / InputController` side through the input API

@@ -63,7 +63,7 @@ English | [日本語](README.md)
 - Confirm that the CommandPalette can run animation replay / pause / resume, wireframe, screenshot, JSON export, and camera reset
 - Confirm that the Help Panel is used for current values and operation hints, while the CommandPalette is used for changing settings and running commands
 
-## Reading Points for AI / Users
+## Reading Points
 - If "the display looks correct but you cannot tell where scale was applied", inspect `meshes[].meta.staticBake` and `nodes[].matrix` first
 - If "animations exist but do not play", inspect the relationship between `animations[].targetSkeleton` and `nodes[].animationBindings`
 - If "a clip does not play", compare the Help Panel `Anim / Clip0` display with the bindings in the JSON

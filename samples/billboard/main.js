@@ -77,8 +77,7 @@ const createFloorShape = (gpu) => {
 
 // `core`の形状を生成し、後続処理で利用できる状態にする
 const createCoreShape = (gpu) => {
-  // 旧 sample の大きな回転柱は存在感が強すぎたため、
-  // particle の見えを邪魔しにくい小さめの sphere へ差し替える
+  // particle の見えを妨げない小さめの sphere を中心オブジェクトにする
   const shape = new Shape(gpu);
   shape.applyPrimitiveAsset(Primitive.sphere(CORE_RADIUS, 24, 24, shape.getPrimitiveOptions()));
   shape.endShape();
@@ -355,7 +354,7 @@ const start = async () => {
     }
   };
 
-  // `particles`を初期状態へ戻し、前回の状態を残さない
+  // `particles`を初期状態へ戻す
   const clearParticles = () => {
     for (let i = 0; i < particles.length; i++) {
       particles[i].life = 0.0;

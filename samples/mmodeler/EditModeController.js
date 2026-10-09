@@ -201,7 +201,7 @@ export default class EditModeController {
   }
 
   // Edit Mode 中は controller 内部の session state を返す
-  // session がまだ無い起動直後や Object Mode 中は、既存処理との互換のため ModelerScene field を返す
+  // sessionがない起動直後やObject Mode中は、ModelerScene fieldを返す
   getEditMeshState() {
     return this.editSession ?? this.scene;
   }

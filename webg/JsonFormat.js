@@ -1,5 +1,5 @@
 // ---------------------------------------------
-//  JsonFormat.js    2026/07/25
+//  JsonFormat.js    2026/09/09
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // ---------------------------------------------
@@ -8,6 +8,7 @@ function repeatIndent(level, unit) {
   return unit.repeat(level);
 }
 
+// 配列やnullを除く通常のJSON objectであることを判定し、整形対象を区別します
 function isPlainObject(value) {
   return value !== null && typeof value === "object" && !Array.isArray(value);
 }
@@ -18,6 +19,7 @@ function isFiniteNumberArray(value) {
     && value.every((item) => typeof item === "number" && Number.isFinite(item));
 }
 
+// JSONへ出力できないundefined、function、symbolを判定し、出力規則へ接続します
 function isJsonOmittable(value) {
   return value === undefined || typeof value === "function" || typeof value === "symbol";
 }

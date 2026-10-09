@@ -1,6 +1,7 @@
 // ---------------------------------------------
-// BonePhong.js    2026/07/13
-//   WebGPU Version
+// BonePhong.js    2026/10/04
+//   Copyright (c) 2026 Jun Mizutani,
+//   released under the MIT open source license.
 // ---------------------------------------------
 
 'use strict';
@@ -19,12 +20,12 @@ export default class BonePhong extends Shader {
     
     // 定数定義
     this.MAX_BONES = DEFAULT_MAX_SKIN_BONES;
-    // 1 bone = vec4 x 3 = 12 floats = 48 bytes
+    // 1本のボーンの行列を3個のvec4として保持し、12個のfloat（48バイト）を使う
     this.BONE_DATA_SIZE = this.MAX_BONES * SKIN_MATRIX_FLOATS_PER_BONE;
     this.BONE_VECTOR_COUNT = this.MAX_BONES * SKIN_MATRIX_VECTORS_PER_BONE;
     
-    // Uniform Buffer Layout Offsets (Float32Array index)
-    // 1 mat4 = 16 floats
+    // 各行列と材質値の格納位置を、Float32Arrayの要素番号として定義する
+    // 4×4行列は16個のfloatとして保持する
     this.OFF_PROJ   = 0;
     this.OFF_VIEW   = 16;
     this.OFF_NORM   = 32;
@@ -36,7 +37,7 @@ export default class BonePhong extends Shader {
     this.OFF_FOG_PARAMS = 68; // vec4 (near, far, density, mode)
     this.OFF_BONES  = 72; // vec4 array start
 
-    // Uniform Buffer Size (in floats)
+    // 行列、材質、ボーンパレットを含むuniformの総要素数を求める
     this.UNIFORM_FLOAT_COUNT = 72 + this.BONE_DATA_SIZE;
     this.UNIFORM_SIZE = this.UNIFORM_FLOAT_COUNT * 4;
     // WebGPUのdynamic offsetは256バイト境界が必要
@@ -65,19 +66,19 @@ export default class BonePhong extends Shader {
 
     this.change = {};
     
-    // CPU side buffer for uniforms
+    // CPU側でuniform値を組み立てる配列を確保する
     this.uniformData = new Float32Array(this.UNIFORM_FLOAT_COUNT);
     this._dummySkinBuffer = null;
     this._dummySkinVertexCapacity = 0;
     this.cullMode = options.backfaceDebug ? "none" : (options.cullMode ?? "back");
     this.frontFace = options.frontFace ?? "ccw";
     
-    // WGSL Shader Code
+    // 頂点変形と画素の照明計算を行うWGSLを定義する
     this.wgslSrc = `
       struct Uniforms {
         projMatrix : mat4x4<f32>,
         viewMatrix : mat4x4<f32>,
-        normalMatrix : mat4x4<f32>, // padding to mat4 alignment
+        normalMatrix : mat4x4<f32>, // mat4の配置規則に合わせて4×4の領域を確保する
         lightPos   : vec4<f32>,
         color      : vec4<f32>,
         // x: amb, y: spec, z: power, w: emit
@@ -118,11 +119,12 @@ export default class BonePhong extends Shader {
       };
 
       @vertex
+      // ボーンの影響度で位置と法線を変形し、視点と投影の変換後の値を次の段階へ渡す
       fn vs_main(input : VertexInput) -> VertexOutput {
         var output : VertexOutput;
         var mat : mat4x4<f32>;
         
-        // Bone Calculation
+        // スキニングの有効状態に応じて、単位行列または影響度で合成したボーン行列を選ぶ
         if (u.flags.x == 0.0) {
           mat = mat4x4<f32>(
             vec4<f32>(1.0, 0.0, 0.0, 0.0),
@@ -149,7 +151,7 @@ export default class BonePhong extends Shader {
           v2  = u.bones[i0 + 2] * input.weight.x + u.bones[i1 + 2] * input.weight.y;
           v2 += u.bones[i2 + 2] * input.weight.z + u.bones[i3 + 2] * input.weight.w;
 
-          // Construct matrix (Column-Major) from computed rows
+          // 合成した3行の成分を列単位に並べ直し、WGSLの4×4行列を作る
           mat[0] = vec4<f32>(v0.x, v1.x, v2.x, 0.0);
           mat[1] = vec4<f32>(v0.y, v1.y, v2.y, 0.0);
           mat[2] = vec4<f32>(v0.z, v1.z, v2.z, 0.0);
@@ -159,11 +161,11 @@ export default class BonePhong extends Shader {
         output.vTexCoord = input.texCoord;
         output.vWeight = input.weight.xyz;
         
-        // World Position
+        // スキニング後の位置へモデルビュー行列を掛け、視点空間の座標を求める
         let pos4 = u.viewMatrix * mat * vec4<f32>(input.position, 1.0);
         output.vPosition = pos4.xyz;
         
-        // Normal (Using mat3 logic on mat4 data)
+        // 法線を方向ベクトルとしてボーン行列と法線行列で変換する
         let normMat = u.normalMatrix * mat;
         output.vNormal = (normMat * vec4<f32>(input.normal, 0.0)).xyz;
 
@@ -172,9 +174,10 @@ export default class BonePhong extends Shader {
       }
 
       @fragment
+      // 補間された法線と材質からPhong照明を計算し、必要に応じてテクスチャとフォグを反映する
       fn fs_main(input : FragmentInput) -> @location(0) vec4<f32> {
         if (u.flags.z != 0.0) {
-          // weight debug color: R=w0, G=w1, B=w2.
+          // 最初の3本のボーンの影響度をR、G、Bへ対応させ、重みの分布を色で表示する
           let c = clamp(input.vWeight, vec3<f32>(0.0), vec3<f32>(1.0));
           return vec4<f32>(c, 1.0);
         }
@@ -186,7 +189,7 @@ export default class BonePhong extends Shader {
         let white = vec3<f32>(1.0, 1.0, 1.0);
         let nnormal = normalize(input.vNormal);
 
-        // Light Position Logic
+        // 点光源では画素から光源への方向、平行光では設定済みの光の方向を求める
         if (u.lightPos.w != 0.0) {
           lit_vec = normalize(u.lightPos.xyz - input.vPosition);
         } else {
@@ -196,7 +199,7 @@ export default class BonePhong extends Shader {
         let eye_vec = normalize(-input.vPosition);
         let ref_vec = normalize(reflect(-lit_vec, nnormal));
 
-        // Unpack params
+        // 材質の環境光、鏡面反射、光沢の指数、発光フラグをuniformから取り出す
         let uAmb = u.params.x;
         let uSpec = u.params.y;
         let uSpecPower = u.params.z;
@@ -210,7 +213,7 @@ export default class BonePhong extends Shader {
           Ispec = 0.0;
         }
 
-        // Texture Logic
+        // テクスチャ利用フラグに応じて、素材色と画像の色を組み合わせる
         if (u.flags.y != 0.0) {
            let texColor = textureSample(myTexture, mySampler, input.vTexCoord);
            finalColor = u.color * texColor;
@@ -248,44 +251,44 @@ export default class BonePhong extends Shader {
     // BonePhong専用の:
     // 1) シェーダ
     // 2) 2系統頂点バッファレイアウト
-    // 3) uniform/bone/texture bind group
+    // 3) 行列と材質のuniform、およびテクスチャを渡すバインドグループ
     // を構築する
     const device = this.device;
 
-    // 1. Create Shader Module
+    // 1) WGSLをGPUで実行するシェーダーモジュールを作る
     const shaderModule = this.createShaderModule(this.wgslSrc);
 
-    // 2. Create Uniform Buffer
+    // 2) 描画ごとの行列と材質値を保持するuniformバッファを作る
     // 複数Shapeを同一RenderPassで描くため、描画ごとのuniformスロットを確保する
     this.createUniformBuffer(this.uniformStride * this.maxUniforms);
 
-    // 3. Create Bind Group Layouts
-    // Group 0: Uniforms
+    // 3) uniformとテクスチャのバインド位置を定義する
+    // グループ0は行列、材質、ボーンパレットを含むuniformを扱う
     this.bindGroupLayout0 = this.createUniformBindGroupLayout({
       hasDynamicOffset: true
     });
 
-    // Group 1: Texture (Sampler + TextureView)
+    // グループ1はテクスチャとサンプラーを扱う
     this.bindGroupLayout1 = this.createTextureBindGroupLayout({
       samplerBinding: 0,
       textureBinding: 1
     });
 
-    // 4. Create Pipeline Layout
+    // 4) 二つのバインドグループの構成を描画パイプラインへ渡す
     const pipelineLayout = this.createPipelineLayout([
       this.bindGroupLayout0,
       this.bindGroupLayout1
     ]);
 
-    // 5. Create Render Pipeline
+    // 5) 二つの頂点バッファと深度規則を使う描画パイプラインを作る
     this.pipeline = device.createRenderPipeline({
       layout: pipelineLayout,
       vertex: {
         module: shaderModule,
         entryPoint: 'vs_main',
-        // Shape.endShape() for skinned meshes builds two vertex buffers:
-        // - vertexBuffer0: pos(3) normal(3) uv(2)
-        // - vertexBuffer1: boneIndex(4) weight(4)
+        // スキン付きメッシュのShape.endShape()は属性を二つの頂点バッファへ分ける
+        // 第1バッファには位置3成分、法線3成分、UV2成分を格納する
+        // 第2バッファにはボーン番号4成分と影響度4成分を格納する
         buffers: [
           {
             arrayStride: 8 * 4,
@@ -327,7 +330,7 @@ export default class BonePhong extends Shader {
       }
     });
 
-    // 6. Create BindGroup 0 (Uniforms)
+    // 6) uniformバッファをグループ0へ結び付ける
     this.uniformBindGroup = device.createBindGroup({
       layout: this.bindGroupLayout0,
       entries: [{
@@ -339,8 +342,7 @@ export default class BonePhong extends Shader {
     this.bindGroup1Cache = new WeakMap();
     this.createDefaultTexture();
 
-    // Initialize material/light defaults so samples that only set a subset
-    // of parameters (e.g. color + texture flag) do not end up with zero ambient.
+    // 環境光を含む材質と照明の既定値を設定し、色など一部の値を指定する例も同じ初期条件で描く
     this.setLightPosition(this.default.light);
     this.setColor(this.default.color);
     this.useTexture(this.default.use_texture);
@@ -408,6 +410,7 @@ export default class BonePhong extends Shader {
     });
   }
 
+  // 静的メッシュ用に影響度が0の補助頂点バッファを用意し、必要な容量を確保して再利用する
   getDummySkinVertexBuffer(vertexCount) {
     if (vertexCount <= 0) vertexCount = 1;
     if (this._dummySkinBuffer && this._dummySkinVertexCapacity >= vertexCount) {
@@ -431,7 +434,7 @@ export default class BonePhong extends Shader {
     // 投影行列をuniformへ反映
     this.projectionMatrix = m.clone();
     this.uniformData.set(m.mat, this.OFF_PROJ);
-    this.updateUniforms(); // Consider batching updates if performance is key
+    this.updateUniforms(); // 行列の更新をuniformバッファへ反映する
   }
 
   // モデルビュー行列を設定する
@@ -461,16 +464,10 @@ export default class BonePhong extends Shader {
     this.updateUniforms();
   }
 
-  // 材質/フラグの内部同期を行う
+  // 材質同期用の共通インターフェースとして呼び出し口を保持する
+  // このシェーダーの各setterはuniform配列への書き込みとGPUへの反映をその場で行う
   _updateParams() {
-    const d = this.default; // Fallback to current values
-    // Logic needs to track current state since setters are individual.
-    // Using `this.change` or `this.default` from base class strategy.
-    
-    // Simplification: We write directly to buffer memory
-    // Buffer layout: x: amb, y: spec, z: power, w: emit
-    // Note: We need to store these values to re-pack them because they are set individually.
-    // Let's assume we read from uniformData (not ideal but works if initialized) or store local cache.
+    const d = this.default; // 共通の既定材質を参照する
   }
 
   // 環境光係数を設定する
@@ -563,10 +560,9 @@ export default class BonePhong extends Shader {
     if (param.texture) this.useTexture(1);
   }
 
-  // 現状 no-op
+  // 既存APIとの共通の呼び出し口としてテクスチャ単位指定を受け付ける
   setTextureUnit(unit) {
-    // Not needed in WebGPU (BindGroups handle binding), 
-    // but kept for API compatibility if logic relies on it.
+    // WebGPUではバインドグループがテクスチャの接続先を管理する
   }
 
   // ボーン行列パレットをUniformへ書き込む

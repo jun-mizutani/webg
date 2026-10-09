@@ -1,5 +1,5 @@
 // ---------------------------------------------------------
-// headless_tests/core/deferred_lighting_pass/headless_probe.js  2026/07/12
+// headless_tests/core/deferred_lighting_pass/headless_probe.js  2026/08/03
 //   Spot light cone and visibility contracts for DeferredLightingPass
 // ---------------------------------------------------------
 import assert from "node:assert/strict";
@@ -73,6 +73,7 @@ function makeResources(width = 16, height = 8) {
     albedo: { getView: () => ({}), getWidth: () => width, getHeight: () => height },
     normal: { getView: () => ({}) },
     material: { getView: () => ({}), getWidth: () => width, getHeight: () => height },
+    emissive: { getView: () => ({}), getWidth: () => width, getHeight: () => height },
     depth: { depthConvention: CAMERA_REVERSE_Z, getDepthSampleView: () => ({}) },
     shadowVisibility: visibility,
     spotShadowVisibility: { ...visibility },
@@ -84,7 +85,9 @@ function makeResources(width = 16, height = 8) {
 {
   const wgsl = buildDeferredLightingWgsl(4);
   assert.match(wgsl, /let cone = clamp\(\(spotCos - outerCos\) \/ \(innerCos - outerCos\)/);
-  assert.match(wgsl, /let attenuation = pow\(max\(1\.0 - distance \/ radius, 0\.0\), 2\.0\)/);
+  assert.match(wgsl, /let attenuation = pbrEvaluateDistanceAttenuation\(/);
+  assert.match(wgsl, /params\.spotCone\.y,/);
+  assert.match(wgsl, /params\.spotCone\.z/);
   assert.match(wgsl, /\* attenuation\s*\n\s*\* cone/);
   assert.match(wgsl, /\) \* spotShadowVisibility/);
   assert.doesNotMatch(wgsl, /spotShadowVisibility \* spotShadowVisibility/);
@@ -123,7 +126,7 @@ function makeResources(width = 16, height = 8) {
     view: "spotShadow"
   });
   const uniforms = probe.writes.at(-1).data;
-  assert.equal(uniforms.length, 32);
+  assert.equal(uniforms.length, 52);
   assert.deepEqual(uniforms.slice(4, 8), [0.0, 5.0, 0.0, 1.0]);
   const expectedPosition = frame.worldPointToView(position);
   for (let index = 0; index < 3; index += 1) {
@@ -142,6 +145,53 @@ function makeResources(width = 16, height = 8) {
     .map((value) => Math.fround(value)));
   assert.ok(Math.abs(uniforms[27] - innerCos) < 1.0e-6);
   assert.ok(Math.abs(uniforms[28] - outerCos) < 1.0e-6);
+  pass.destroy();
+}
+
+// photometric spotはcandela、逆二乗減衰、近距離で式を有限にする明示値を同じuniformへ格納します
+{
+  const probe = createGpuProbe();
+  const pass = new DeferredLightingPass(probe.gpu, {
+    label: "v2-deferred-photometric-spot",
+    width: 16,
+    height: 8
+  });
+  await pass.ready;
+  const frame = makeFrame();
+  const physicalSpot = {
+    position: [0.0, 3.0, -6.0],
+    direction: [0.0, -1.0, 0.0],
+    color: [1.0, 0.9, 0.7],
+    radius: 20.0,
+    intensity: 1500.0,
+    innerCos: Math.cos(25.0 * Math.PI / 180.0),
+    outerCos: Math.cos(40.0 * Math.PI / 180.0),
+    minimumDistance: 0.2
+  };
+  pass.encode(probe.commandEncoder, makeResources(), {
+    cameraFrame: frame,
+    directionalLight: null,
+    spotLight: physicalSpot,
+    unitSystem: "photometric",
+    lights: []
+  });
+  const uniforms = probe.writes.at(-1).data;
+  assert.equal(uniforms[29], 1.0);
+  assert.ok(Math.abs(uniforms[30] - 0.2) < 1.0e-6);
+  assert.throws(() => pass.encode(probe.commandEncoder, makeResources(), {
+    cameraFrame: frame,
+    directionalLight: null,
+    spotLight: { ...physicalSpot, minimumDistance: undefined },
+    unitSystem: "photometric",
+    lights: []
+  }), /spotLight\.minimumDistance is required in photometric mode/);
+  assert.throws(() => pass.encode(probe.commandEncoder, makeResources(), {
+    cameraFrame: frame,
+    directionalLight: null,
+    spotLight: physicalSpot,
+    unitSystem: "relative",
+    lights: []
+  }), /spotLight\.minimumDistance requires photometric unitSystem/);
   pass.destroy();
 }
 

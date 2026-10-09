@@ -131,7 +131,7 @@ export default class ModelerRenderer {
   }
 
   // Edit Mode の選択 face overlay Shape を再構築する
-  // 選択 face が無い場合や Edit Mode ではない場合は、既存 overlay node を取り除いて終了する
+  // 選択 face が無い場合や Edit Mode ではない場合は、overlay node を取り除いて終了する
   rebuildSelectedFaceShape(options = {}) {
     this.removeNodeTree(this.selectedFaceNode);
     this.selectedFaceNode = null;
@@ -324,13 +324,13 @@ export default class ModelerRenderer {
     });
   }
 
-  // 旧 3D marker node を使わないため marker root を空に保つ
+  // 3D marker nodeを使わず、marker rootを空に保つ
   rebuildMarkers() {
     this.removeNodeTree(this.markerRoot);
     this.markerRoot = null;
   }
 
-  // 旧 grid shape が残っている場合だけ取り除く
+  // grid shapeが残っている場合だけ取り除く
   clearGridRoot() {
     this.removeNodeTree(this.gridRoot);
     this.gridRoot = null;

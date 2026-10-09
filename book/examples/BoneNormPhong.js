@@ -1,6 +1,7 @@
 // ---------------------------------------------
-// BoneNormPhong.js 2026/07/13
-//   WebGPU Version
+// BoneNormPhong.js 2026/10/04
+//   Copyright (c) 2026 Jun Mizutani,
+//   released under the MIT open source license.
 // ---------------------------------------------
 
 'use strict';
@@ -123,6 +124,7 @@ export default class BoneNormPhong extends Shader {
       };
 
       @vertex
+      // ボーンの影響度で位置と法線を変形し、視点と投影の変換後の値を次の段階へ渡す
       fn vs_main(input : VertexInput) -> VertexOutput {
         var output : VertexOutput;
         var mat : mat4x4<f32>;
@@ -181,6 +183,7 @@ export default class BoneNormPhong extends Shader {
       }
 
       @fragment
+      // 補間された法線と材質からPhong照明を計算し、必要に応じてテクスチャとフォグを反映する
       fn fs_main(input : FragmentInput) -> @location(0) vec4<f32> {
         // BonePhong と同じ差分:
         // - weight_debug が有効な間は lighting より先に weight 可視化色を返す
@@ -660,9 +663,9 @@ export default class BoneNormPhong extends Shader {
     }
   }
 
-  // 現状 no-op
+  // 既存APIとの共通の呼び出し口としてテクスチャ単位指定を受け付ける
   setTextureUnit(_unit) {
-    // No-op in WebGPU.
+    // WebGPUではバインドグループがテクスチャの接続先を管理する
   }
 
   // ボーン行列パレットをUniformへ書き込む

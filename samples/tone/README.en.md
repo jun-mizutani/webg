@@ -60,6 +60,6 @@ If `Reverb Mix` is high and `Release` is long, the direct sound and reverberatio
 ## Related Documents
 
 - [18_サウンドの設計.md](../../book/18_サウンドの設計.md)
-- [付録C_API一覧.md](../../book/付録C_API一覧.md)
+- [付録D_API一覧.md](../../book/付録D_API一覧.md)
 - [samples/tone/main.js](./main.js)
 - [samples/tone/tone.html](./tone.html)

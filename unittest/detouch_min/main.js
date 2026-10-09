@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// unittest/detouch_min/main.js  2026/07/25
+// unittest/detouch_min/main.js  2026/10/04
 //   detouch_min sample
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -29,7 +29,7 @@ const setProjection = (screen, shader, angle = 52) => {
 // 棒と先端ノードの距離を同じ値にそろえ、親切り替え前後の見えを読みやすくする
 const ROD_LENGTH = 40.0;
 
-// `rod`の形状を生成し、後続処理で利用できる状態にする
+// アームの棒を基本形状から作り、親変更前後の相対位置を読む目印にする
 const createRodShape = (gpu, length, radius, color) => {
   const shape = new Shape(gpu);
   // Primitive.prism を細い棒として使い、軸形状の確認に必要な見えだけを残す
@@ -45,7 +45,7 @@ const createRodShape = (gpu, length, radius, color) => {
   return shape;
 };
 
-// `sphere`の形状を生成し、後続処理で利用できる状態にする
+// 付け替え対象の球を作り、world位置の保持を数値と描画で確認する
 const createSphereShape = (gpu, radius, color, ambient = 0.38) => {
   const shape = new Shape(gpu);
   shape.applyPrimitiveAsset(Primitive.sphere(radius, 18, 12, shape.getPrimitiveOptions()));
@@ -60,11 +60,12 @@ const createSphereShape = (gpu, radius, color, ambient = 0.38) => {
   return shape;
 };
 
+// 3成分の座標を一定の桁数で文字列にし、親変更前後の差を読みやすくする
 const formatVec3 = (vec) => {
   return `${vec[0].toFixed(2)}, ${vec[1].toFixed(2)}, ${vec[2].toFixed(2)}`;
 };
 
-// `distance3`は座標または数値を計算し、後続処理で使う結果を返す
+// 2つのworld座標の距離を求め、親変更による位置の差分を数値化する
 const distance3 = (vecA, vecB) => {
   const dx = vecA[0] - vecB[0];
   const dy = vecA[1] - vecB[1];
@@ -72,7 +73,7 @@ const distance3 = (vecA, vecB) => {
   return Math.sqrt(dx * dx + dy * dy + dz * dz);
 };
 
-// このインスタンスの初期化段階で、必要な状態と資源を準備して処理を開始する
+// 同じ形の2本のアームと球を配置し、親変更時のworld位置の差分を表示する
 const start = async ({ screen, gpu, setStatus, setViewportLayout, startLoop, document }) => {
   // Shape 全体に共通の SmoothShader を設定し、色付きの棒と球だけで状態差を見えるようにする
   const shader = new SmoothShader(gpu);
@@ -112,7 +113,7 @@ const start = async ({ screen, gpu, setStatus, setViewportLayout, startLoop, doc
   let lastAction = "idle";
   let lastDelta = 0.0;
 
-  // `captureTransition`は受け取った値を処理し、後続処理で利用する状態または結果を生成する
+  // 親変更の前後にworld位置を取得し、座標差を結果表示へ記録する
   const captureTransition = (label, action) => {
     // 親変更の前後で world 位置を採取し、見た目位置がどれだけ保たれたかを数値で残す
     const before = sphere.getWorldPosition();
@@ -122,7 +123,7 @@ const start = async ({ screen, gpu, setStatus, setViewportLayout, startLoop, doc
     lastDelta = distance3(before, after);
   };
 
-  // 状態を初期状態へ戻し、前回の状態を残さない
+  // 球のworld位置を保持したまま親を右先端へ戻し、次の親変更の開始点を揃える
   const resetState = () => {
     // 最小 test として再現しやすいよう、右先端へ戻す初期化経路を持っておく
     captureTransition("reset-to-right", () => {
@@ -133,7 +134,7 @@ const start = async ({ screen, gpu, setStatus, setViewportLayout, startLoop, doc
     });
   };
 
-  // `exchangeParent`は受け取った値を処理し、後続処理で利用する状態または結果を生成する
+  // 球の親を左右の先端間で変更し、world位置を保持する指定の効果を比較する
   const exchangeParent = () => {
     // 左右どちらかの先端へ付け替え、attach 時の world 位置保持を確認する
     captureTransition("exchange-left-right", () => {
@@ -161,7 +162,7 @@ const start = async ({ screen, gpu, setStatus, setViewportLayout, startLoop, doc
   };
 
   document.addEventListener("keydown", (event) => {
-    // unittest なので操作は最小の 3 つに絞り、何を確認する test かをぶらさない
+    // 3つの操作に絞り、親変更とworld位置の対応を確認する
     const key = event.key.toLowerCase();
     if (key === " ") exchangeParent();
     if (key === "d") detachAttachRight();

@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// ComputePyramidBlurPass.js  2026/07/24
+// ComputePyramidBlurPass.js  2026/08/11
 //   Full-resolution blur reconstructed from a continuous image pyramid
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -8,7 +8,7 @@ import ComputePass from "./ComputePass.js";
 import ComputeImagePyramid, {
   COMPUTE_IMAGE_PYRAMID_DEFAULTS,
   validatePyramidLevels
-} from "./ComputeImagePyramid.js?v=20260723_image_pyramid";
+} from "./ComputeImagePyramid.js";
 import StorageTargetFactory, {
   resizeTarget
 } from "./StorageTargetFactory.js";

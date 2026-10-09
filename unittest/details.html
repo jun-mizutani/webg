@@ -1,0 +1,117 @@
+<!doctype html>
+<!-- unittest/details.html 2026/10/04: 各確認ページのテキストを共通のHTMLで表示する -->
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>webg unittest 説明</title>
+  <style>
+    body { margin: 0; color: #203344; background: #f1f3f7; font: 16px/1.8 system-ui, sans-serif; }
+    main { max-width: 920px; margin: 32px auto; padding: 28px; background: #fff; border-radius: 12px; }
+    nav { display: flex; flex-wrap: wrap; gap: 24px; }
+    a { color: #315f9b; }
+    h1 { overflow-wrap: anywhere; }
+    h2 { margin-top: 32px; font-size: 1.25rem; border-bottom: 1px solid #ccd4df; }
+    p, li { overflow-wrap: anywhere; }
+    li { margin: 6px 0; }
+    code { font: 0.92em/1.6 ui-monospace, monospace; background: #f1f3f7; padding: 2px 4px; }
+    @media (max-width: 640px) { main { margin: 12px; padding: 20px; } }
+  </style>
+</head>
+<body>
+  <main>
+    <nav aria-label="確認ページの案内">
+      <a href="index.html">unittest一覧</a>
+      <a id="run" hidden>確認画面を開く</a>
+      <a id="source" hidden download>説明原文を保存</a>
+    </nav>
+    <h1 id="title">webg unittest 説明</h1>
+    <article id="description" aria-live="polite">説明を読み込んでいます…</article>
+  </main>
+  <script type="module">
+    // 説明原文の参照先を基準にリンクを解決し、本文とコード名をDOMの文字として表示する
+    // HTML文字列への挿入を避け、原文中の記号も読み手へそのまま伝える
+    function appendInline(parent, text, sourceUrl) {
+      const tokens = /`([^`]+)`|\[([^\]]+)\]\(([^)]+)\)/g;
+      let start = 0;
+      for (const match of text.matchAll(tokens)) {
+        parent.append(document.createTextNode(text.slice(start, match.index)));
+        if (match[1] !== undefined) {
+          const code = document.createElement("code");
+          code.textContent = match[1];
+          parent.append(code);
+        } else {
+          const url = new URL(match[3], sourceUrl);
+          if (url.protocol === "http:" || url.protocol === "https:") {
+            const link = document.createElement("a");
+            link.textContent = match[2];
+            link.href = url.href;
+            parent.append(link);
+          } else {
+            parent.append(document.createTextNode(match[0]));
+          }
+        }
+        start = match.index + match[0].length;
+      }
+      parent.append(document.createTextNode(text.slice(start)));
+    }
+
+    // 空行で区切った原文を、見出し・箇条書き・段落へ組み立てて確認条件を読みやすくする
+    function renderDescription(text, sourceUrl) {
+      const article = document.getElementById("description");
+      article.replaceChildren();
+      const name = document.getElementById("title").textContent;
+      for (const block of text.trim().split(/\n\s*\n/)) {
+        // ページ名はh1で示し、原文先頭の同じ識別名は一箇所にまとめる
+        if ([name, `確認ページ: ${name}`, `${name} unittest`].includes(block.trim())) continue;
+        const lines = block.split("\n");
+        while (lines.length > 0) {
+          const first = lines.shift();
+          if (/^- /.test(first)) {
+            const entries = [first];
+            while (lines.length > 0 && /^- /.test(lines[0])) entries.push(lines.shift());
+            const list = document.createElement("ul");
+            for (const line of entries) {
+              const item = document.createElement("li");
+              appendInline(item, line.slice(2), sourceUrl);
+              list.append(item);
+            }
+            article.append(list);
+          } else {
+            const isHeading = first.length <= 32 && !/[。.]$/.test(first)
+              && (lines.length === 0 || /^- /.test(lines[0]) || /^#+\s/.test(first));
+            const element = document.createElement(isHeading ? "h2" : "p");
+            const content = isHeading ? first : [first, ...lines.splice(0)].join("\n");
+            appendInline(element, content.replace(/^#+\s*/, ""), sourceUrl);
+            article.append(element);
+          }
+        }
+      }
+    }
+
+    // 指定したテストの説明だけを読み込み、実行と原文保存の参照先を同時に設定する
+    async function start() {
+      const name = new URLSearchParams(location.search).get("test") ?? "";
+      if (!/^[a-z_]+$/.test(name)) throw new Error("一覧から確認したいテストを選んでください");
+      const sourceUrl = new URL(`./${name}/${name}.txt`, location.href);
+      const response = await fetch(sourceUrl);
+      if (!response.ok) throw new Error(`説明の取得結果: HTTP ${response.status}`);
+      const text = await response.text();
+      document.title = `${name} | webg unittest 説明`;
+      document.getElementById("title").textContent = name;
+      const run = document.getElementById("run");
+      run.href = `./${name}/index.html`;
+      run.hidden = false;
+      const source = document.getElementById("source");
+      source.href = sourceUrl.href;
+      source.hidden = false;
+      renderDescription(text, sourceUrl);
+    }
+
+    // 読み込みや形式の例外を本文に表示し、一覧から選び直せる案内を残す
+    start().catch((error) => {
+      document.getElementById("description").textContent = error.message;
+    });
+  </script>
+</body>
+</html>

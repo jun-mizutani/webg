@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// unittest/theme/main.js  2026/07/25
+// unittest/theme/main.js  2026/10/04
 //   theme unittest
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -20,8 +20,8 @@ const FIXED_PANEL_ID = "theme-preview";
 
 // unittest/theme の確認対象:
 // - WebgApp.setUiTheme() で debugDock / OverlayPanel / error panel をまとめて差し替えられるか
-// - preset ごとに透明度、accent、文字色が破綻せず読めるか
-// - runtime 中の theme 切替で debug key, diagnostics, OverlayPanel が崩れないか
+// - presetごとの透明度、accent、文字色で本文と操作案内が読めるか
+// - 実行中のtheme切替でdebug key、diagnostics、OverlayPanelの配置と内容が保たれるか
 const THEME_PRESETS = [
   {
     id: "dark",
@@ -95,7 +95,7 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 }, false);
 
-// `theme`の重ね合わせ表示を生成し、後続処理で利用できる状態にする
+// テーマ選択と操作案内のパネルを作り、ボタンと選択肢へ切替処理を接続する
 function buildThemeOverlay() {
   app.showOverlayPanel({
     id: "theme-controls",
@@ -144,7 +144,7 @@ function buildThemeOverlay() {
   };
 }
 
-// 形状の`colors`を現在の入力と実行状態に合わせて更新する
+// 選択したテーマの比較用配色を形状へ設定し、背景とUIの色に対する見え方を揃える
 function updateShapeColors(preset) {
   // theme 切替に連動して 3D 側の見え方も少し変え、
   // 半透明 panel 越しに scene を見たときの印象差も一度に確認できるようにする
@@ -168,7 +168,7 @@ function updateShapeColors(preset) {
   app.screen.setClearColor(app.clearColor);
 }
 
-// `overview`の`text`を生成し、後続処理で利用できる状態にする
+// テーマ名と配色の要点を案内パネルへ表示する文字列にまとめる
 function buildOverviewText(preset) {
   return [
     `preset=${preset.id}`,
@@ -181,7 +181,7 @@ function buildOverviewText(preset) {
   ].join("\n");
 }
 
-// `binding`の`text`を生成し、後続処理で利用できる状態にする
+// テーマを適用するUI要素と操作キーの対応を表示用の文字列へまとめる
 function buildBindingText() {
   const prefix = app?.getDebugKeyPrefixLabel?.() ?? "F9";
   return [
@@ -193,7 +193,7 @@ function buildBindingText() {
   ].join("\n");
 }
 
-// `preview`のパネルの`text`を生成し、後続処理で利用できる状態にする
+// 現在のテーマのパネル色と文字の見え方を確認する本文を作る
 function buildPreviewPanelText(preset) {
   return [
     "Theme Preview Panel",
@@ -205,7 +205,7 @@ function buildPreviewPanelText(preset) {
   ].join("\n");
 }
 
-// `preview`のパネルを現在の入力と実行状態に合わせて更新する
+// 選択したテーマの本文と配色をpreview panelへ反映する
 function syncPreviewPanel() {
   if (!previewPanelVisible) {
     app.removeOverlayPanel(FIXED_PANEL_ID);
@@ -229,14 +229,14 @@ function syncPreviewPanel() {
   });
 }
 
-// `preview`のパネルの`visible`を受け取り、現在の設定と後続処理へ反映する
+// preview panelの表示状態を切り替え、操作案内も同じ状態へ更新する
 function setPreviewPanelVisible(visible) {
   previewPanelVisible = visible === true;
   syncPreviewPanel();
   renderUi();
 }
 
-// `theme`の`preset`を対象の状態または描画設定へ反映する
+// テーマ番号を巡回させ、UI・背景・形状へ対応する配色を一括で適用する
 function applyThemePreset(nextIndex) {
   currentThemeIndex = (nextIndex + THEME_PRESETS.length) % THEME_PRESETS.length;
   const preset = THEME_PRESETS[currentThemeIndex];
@@ -247,7 +247,7 @@ function applyThemePreset(nextIndex) {
   renderUi();
 }
 
-// 操作画面の描画段階で、必要な描画命令と表示内容を記録する
+// テーマ、パネル表示、停止状態を操作パネルへ反映し、表示と内部状態を揃える
 function renderUi() {
   if (!ui || !app) return;
   const preset = THEME_PRESETS[currentThemeIndex];
@@ -278,7 +278,7 @@ function renderUi() {
   });
 }
 
-// `dock`の`rows`を生成し、後続処理で利用できる状態にする
+// 現在のテーマと診断情報をDebugDockへ表示する行にまとめる
 function buildDockRows(preset, envReport, frameCount) {
   const lines = [
     "theme unittest",
@@ -295,7 +295,7 @@ function buildDockRows(preset, envReport, frameCount) {
   return app.makeTextControlRows(lines);
 }
 
-// 診断情報を現在の入力と実行状態に合わせて更新する
+// 描画中の環境を確認し、テーマ・カメラ・フレームの値を診断情報へまとめる
 function refreshDiagnostics(frameCount) {
   const preset = THEME_PRESETS[currentThemeIndex];
   const envReport = app.checkEnvironment({
@@ -317,7 +317,7 @@ function refreshDiagnostics(frameCount) {
   return envReport;
 }
 
-// 検査情報のレポートを生成し、後続処理で利用できる状態にする
+// テーマ確認に使う環境・画面・フレーム情報を共有可能なレポートへまとめる
 function makeProbeReport(frameCount) {
   const preset = THEME_PRESETS[currentThemeIndex];
   const envReport = app.checkEnvironment({
@@ -342,16 +342,13 @@ function makeProbeReport(frameCount) {
   return report;
 }
 
-// カメラを初期状態へ戻し、前回の状態を残さない
+// カメラの角度と距離を比較用の初期値へ戻す
 function resetCamera() {
   orbit.setAngles(28.0, -14.0);
   orbit.setDistance(30.0);
 }
 
-function bindUiEvents() {
-}
-
-// このインスタンスの初期化段階で、必要な状態と資源を準備して処理を開始する
+// UIテーマ、比較用形状、カメラと操作パネルを準備し、実行中の配色変更を確認する
 async function start() {
   app = new WebgApp({
     document,
@@ -428,7 +425,7 @@ async function start() {
         setPreviewPanelVisible(!previewPanelVisible);
       } else if (lowerKey === "r") {
         resetCamera();
-      } else if (lowerKey === " ") {
+      } else if (lowerKey === "space") {
         paused = !paused;
         renderUi();
       }

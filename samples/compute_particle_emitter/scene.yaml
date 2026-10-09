@@ -1,0 +1,53 @@
+# 2026/09/22: 発生条件をSceneYAMLへ保存する標準Compute粒子サンプル
+format: webg-scene
+version: 1
+name: compute-particle-emitter
+materials:
+  - id: floor
+    color: [0.09, 0.14, 0.22, 1]
+    metallic: 0.4
+    roughness: 0.35
+    specular: 1
+objects:
+  - id: floor
+    shape: { type: box, size: [10, 0.2, 8] }
+    transform: { position: [0, -0.1, 0] }
+    material: floor
+  - id: obstacle
+    shape: { type: box, size: [1, 2, 1] }
+    transform: { position: [0, 1, 0.5] }
+    material: floor
+particleEmitters:
+  # idで取得して、UIから停止・再開・一括発生を操作する
+  - id: fountain
+    label: fountain
+    preset: fountain
+    capacity: 1024
+    seed: 42
+    overflow: reject
+    emission:
+      rate: 120
+      position: [-2, 0.2, 0]
+      direction: [0, 1, 0]
+      spreadAngle: 16
+      speed: [6, 8]
+      lifetime: [1, 2]
+  - id: sparks
+    label: sparks
+    preset: spark
+    capacity: 256
+    seed: 123
+    overflow: reject
+    simulation: { gravity: [0, -9.8, 0], drag: 0.1 }
+    appearance: { size: [0.04, 0.09] }
+renderer:
+  profile: studio
+  width: 900
+  height: 540
+  clearColor: [0.01, 0.015, 0.03, 1]
+  environment:
+    preset: dark-studio
+    resolution: { width: 128, height: 64 }
+  dof: { enabled: false }
+  pipeline:
+    toneMap: { exposure: 1 }

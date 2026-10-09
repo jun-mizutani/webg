@@ -1,18 +1,18 @@
 <!doctype html>
-<!-- webg/book/examples/03_01.html 2026/04/24 -->
+<!-- book/examples/03_01.html 2026/10/04 -->
 <html lang="ja">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>03_01 階層構造とローカル座標系</title>
-  <link rel="stylesheet" href="./example.css" />
+  <link rel="stylesheet" href="./examples_common.css" />
 </head>
 <body>
   <div class="page">
     <h1>book/examples</h1>
     <h2>03_01 階層構造とローカル座標系</h2>
     <div class="section-card">
-      <p>`book/03_3Dグラフィックスの基礎.md` に追加した、親子構造とローカル座標系の説明をそのまま動かして確認するための例です</p>
+      <p>`book/03_3D空間の基礎.md` の親子構造とローカル座標系の説明をそのまま動かして確認するための例です</p>
       <p class="note">左側は太陽・地球・月の自転と公転、右側は腰・肩・上腕・前腕・手の関節チェーンです。どちらも「親の変換が子へ伝わる」という同じ原理で動いていることを、status 行の world position とあわせて確認できます</p>
     </div>
 
@@ -218,15 +218,16 @@ app.showOverlayPanel(buildHelpPanelOptions({
 let elapsedSec = 0.0;
 
 app.start({
+  // 経過秒数に応じて公転と自転を進め、親子階層の状態を表示する
   onUpdate: ({ deltaSec }) => {
     elapsedSec += deltaSec;
 
     // 太陽系は親 pivot を回して公転を作り、本体 node を回して自転を作る
-    solar.sun.rotateY(0.35);
-    solar.earthOrbit.rotateY(0.90);
-    solar.earth.rotateY(2.20);
-    solar.moonOrbit.rotateY(2.80);
-    solar.moon.rotateY(1.20);
+    solar.sun.rotateY(0.2 * deltaSec);
+    solar.earthOrbit.rotateY(0.8 * deltaSec);
+    solar.earth.rotateY(2.5 * deltaSec);
+    solar.moonOrbit.rotateY(2.2 * deltaSec);
+    solar.moon.rotateY(1.6 * deltaSec);
 
     // 人体側は腰の揺れ、肩の振り、肘の曲げを分け、
     // 手先の world position が上流の関節すべてを反映することを確認する

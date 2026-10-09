@@ -27,7 +27,7 @@ This sample combines `WebgApp` with `ComputeEffectPipeline`. Application code do
 
 ## What to verify
 
-Look through a foreground translucent cell and verify that opaque cells and other translucent cells remain visible behind it. As the camera and panels move, sorting covers triangles across every Shape rather than sorting whole Shapes. At `alpha=1.0`, the same material slot 1 triangles move into the G-buffer and depth-writing path, so no transparency composition is needed.
+Look through a foreground translucent cell and verify that opaque cells and other translucent cells remain visible behind it. As the camera and panels move, sorting covers triangles across every Shape. At `alpha=1.0`, the same material slot 1 triangles move into the G-buffer and depth-writing path, so no transparency composition is needed.
 
 A yellow translucent torus with an outer diameter of 3.0, made from an independent Shape, is placed near the camera at the center of the screen. Where this torus overlaps a checkerboard panel, translucent triangles from different Shapes are also composited from back to front. `Transparent alpha` changes the translucent materials of both the torus and checkerboard panels, allowing cross-Shape composition to be compared at the same Alpha. At Alpha 1.0, every controlled triangle, including the torus, is classified into opaque rendering automatically.
 

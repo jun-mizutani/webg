@@ -1,0 +1,20 @@
+[
+  { "assetMaterialId": "mat_0", "materialId": "model-project-floor", "pbr": { "color": [0.24, 0.28, 0.34, 1.0], "metallic": 0.0, "roughness": 0.38, "specular": 0.72 } },
+  { "assetMaterialId": "mat_1", "materialId": "model-project-back-wall", "pbr": { "color": [0.86, 0.93, 0.97, 1.0], "metallic": 0.0, "roughness": 0.72, "specular": 0.72 } },
+  { "assetMaterialId": "mat_2", "materialId": "model-project-left-wall", "pbr": { "color": [0.86, 0.93, 0.97, 1.0], "metallic": 0.0, "roughness": 0.72, "specular": 0.72 } },
+  { "assetMaterialId": "mat_3", "materialId": "model-project-right-wall", "pbr": { "color": [0.86, 0.93, 0.97, 1.0], "metallic": 0.0, "roughness": 0.72, "specular": 0.72 } },
+  { "assetMaterialId": "mat_4", "materialId": "model-project-table-procedural", "preset": "ceramic.white.square", "uvMapping": "real-cuboid", "scale": 1.0, "appearance": { "metallic": 0.0, "roughness": 0.42, "specular": 0.64 } },
+  { "assetMaterialId": "mat_5", "materialId": "model-project-table-leg-1", "pbr": { "color": [0.93, 0.76, 0.60, 1.0], "metallic": 0.0, "roughness": 0.72, "specular": 0.72 } },
+  { "assetMaterialId": "mat_6", "materialId": "model-project-table-leg-2", "pbr": { "color": [0.93, 0.76, 0.60, 1.0], "metallic": 0.0, "roughness": 0.72, "specular": 0.72 } },
+  { "assetMaterialId": "mat_7", "materialId": "model-project-table-leg-3", "pbr": { "color": [0.93, 0.76, 0.60, 1.0], "metallic": 0.0, "roughness": 0.72, "specular": 0.72 } },
+  { "assetMaterialId": "mat_8", "materialId": "model-project-table-leg-4", "pbr": { "color": [0.93, 0.76, 0.60, 1.0], "metallic": 0.0, "roughness": 0.72, "specular": 0.72 } },
+  { "assetMaterialId": "mat_9", "materialId": "model-project-machine-base", "pbr": { "color": [0.68, 0.75, 0.92, 1.0], "metallic": 0.0, "roughness": 0.72, "specular": 0.72 } },
+  { "assetMaterialId": "mat_10", "materialId": "model-project-rail", "pbr": { "color": [0.45, 0.81, 0.87, 1.0], "metallic": 0.0, "roughness": 0.72, "specular": 0.72 } },
+  { "assetMaterialId": "mat_11", "materialId": "model-project-rail-support-1", "pbr": { "color": [0.68, 0.75, 0.92, 1.0], "metallic": 0.0, "roughness": 0.72, "specular": 0.72 } },
+  { "assetMaterialId": "mat_12", "materialId": "model-project-rail-support-2", "pbr": { "color": [0.68, 0.75, 0.92, 1.0], "metallic": 0.0, "roughness": 0.72, "specular": 0.72 } },
+  { "assetMaterialId": "mat_13", "materialId": "model-project-board-1", "pbr": { "color": [0.96, 0.56, 0.53, 1.0], "metallic": 0.0, "roughness": 0.72, "specular": 0.72 } },
+  { "assetMaterialId": "mat_14", "materialId": "model-project-board-2", "pbr": { "color": [0.96, 0.56, 0.53, 1.0], "metallic": 0.0, "roughness": 0.72, "specular": 0.72 } },
+  { "assetMaterialId": "mat_15", "materialId": "model-project-ball-procedural", "preset": "vinyl.cloudy.blue", "uvMapping": "real-sphere", "scale": 1.0, "appearance": { "metallic": 1.0, "roughness": 0.16, "specular": 1.0 } },
+  { "assetMaterialId": "mat_16", "materialId": "model-project-goal-1", "pbr": { "color": [0.50, 0.85, 0.67, 1.0], "metallic": 0.0, "roughness": 0.72, "specular": 0.72 } },
+  { "assetMaterialId": "mat_17", "materialId": "model-project-goal-2", "pbr": { "color": [0.50, 0.85, 0.67, 1.0], "metallic": 0.0, "roughness": 0.72, "specular": 0.72 } }
+]

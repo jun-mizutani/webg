@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// unittest/touch/main.js  2026/07/25
+// unittest/touch/main.js  2026/10/04
 //   touch unittest
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -13,10 +13,8 @@ import SmoothShader from "../../webg/SmoothShader.js";
 import Message from "../../webg/Message.js";
 import Touch from "../../webg/Touch.js";
 
-// AI向け注意:
-// この unittest は Touch 単体の hold/action 通知を低レイヤーで確認するため、
-// 意図的に WebgApp.attachInput() ではなく Screen + Touch + 手動 keyState で構成する。
-// 通常のアプリでは WebgApp / InputController.installTouchControls() の経路を優先する。
+// Touch の hold/action 通知を確認するため、Screen、Touch、手動の keyState で構成する
+// WebgApp.attachInput() を使うアプリとは異なり、Touch の入力通知を直接検証する
 
 // webgクラスの役割:
 // Screen : WebGPU初期化とフレーム描画
@@ -48,7 +46,7 @@ const start = async () => {
   Shape.prototype.shader = shader;
 
   const proj = new Matrix();
-  // `viewport`の配置を対象の状態または描画設定へ反映する
+  // viewportの寸法をScreenへ反映し、その縦横比で投影と画面配置を更新する
   const applyViewportLayout = () => {
     screen.resize(Math.max(1, Math.floor(window.innerWidth)), Math.max(1, Math.floor(window.innerHeight)));
     const fov = screen.getRecommendedFov(53.0);
@@ -85,8 +83,13 @@ const start = async () => {
   // 3) 操作用状態を準備する
   // キーボード/タッチ両方の押下状態を同じSetで管理する
   const keyState = new Set();
+  // ローカルのキー状態からholdの有無を取得し、touchとkeyboardの入力を比較する
   const has = (key) => keyState.has(key.toLowerCase());
+
+  // 受け取ったキーを小文字へ整え、ローカルのhold状態へ追加する
   const press = (key) => keyState.add(key.toLowerCase());
+
+  // 受け取ったキーを小文字へ整え、ローカルのhold状態を解除する
   const release = (key) => keyState.delete(key.toLowerCase());
 
   // 4) Messageで操作ガイドを表示する
@@ -170,7 +173,7 @@ const start = async () => {
       state.debugActionCount += 1;
     }
   };
-  // キーの`up`を受け取った段階で、対応する状態更新と処理を実行する
+  // 離されたキーのローカル状態を解除し、hold入力の終了を反映する
   const onKeyUp = (ev) => {
     const key = ev.key.toLowerCase();
     release(key);
@@ -186,6 +189,7 @@ const start = async () => {
     debugActionCount: 0
   };
 
+  // 値を上下限の範囲へ収め、更新量や操作パラメータを定めた範囲に保つ
   const clamp = (v, min, max) => Math.max(min, Math.min(max, v));
   let lastMs = performance.now();
 

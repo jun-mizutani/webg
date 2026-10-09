@@ -2,7 +2,7 @@ input_controller
 
 このページは、InputController の設計をゲーム向けの土台として確認するためのものです。
 
-ここで見たいのは、単にキーが押せるかどうかではありません。
+hold状態、actionへの割当、1フレームの通知を次の条件で確認します。
 physical key の継続状態が `keyState` で保たれるか、`registerActionMap()` で複数のキーを 1 つの action に束ねられるか、そして `pulseAction()` が touch ボタンや menu 系の one-shot 操作としてその frame にだけ見えるかを確認します。
 
 `getAction()` は継続入力を見る入口で、`wasActionPressed()` と `wasActionReleased()` は edge を見る入口です。

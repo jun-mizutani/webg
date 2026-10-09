@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// unittest/primitive_normal_map/main.js  2026/07/25
+// unittest/primitive_normal_map/main.js  2026/10/04
 //   primitive_normal_map sample
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -42,9 +42,9 @@ const PALETTE = [
   [0.82, 0.66, 0.94, 1.0]
 ];
 
-// 投影を受け取り、現在の設定と後続処理へ反映する
+// 現在の画面の縦横比と推奨視野角から透視投影を作り、比較用シェーダーへ設定する
 const setProjection = (screen, shader, angle = 50) => {
-  // 3x3 の比較が窮屈にならない固定投影へそろえる
+  // 3×3の比較形状が収まる固定の視野角へ揃える
   const proj = new Matrix();
   const fov = screen.getRecommendedFov(angle);
   proj.makeProjectionMatrix(0.1, 1200.0, fov, screen.getAspect());
@@ -53,7 +53,7 @@ const setProjection = (screen, shader, angle = 50) => {
 
 // テクスチャのX方向の反転を読み込み、検証済みのデータとして後続処理へ渡す
 const loadTextureFlipX = async (gpu, url) => {
-  // 既存 sample と同じ向きで比較できるよう、`num256.png` は X 反転して取り込む
+  // テクスチャの表示向きを基準画像に合わせるため、`num256.png` は X 反転して取り込む
   const response = await fetch(url);
   const blob = await response.blob();
   const bitmap = await createImageBitmap(blob);
@@ -78,7 +78,7 @@ const loadTextureFlipX = async (gpu, url) => {
   };
 };
 
-// 画像の法線を生成し、後続処理で利用できる状態にする
+// 画像の輝度から法線を生成し、画像由来の凹凸と通常の陰影を比較する
 const createImageNormal = async (gpu, rgba, width, height) => {
   // ベース texture と同じ画素から normal map を作ると、
   // 「元画像由来の凹凸」がどれだけ陰影へ反映されたかを見比べやすい
@@ -98,10 +98,10 @@ const createImageNormal = async (gpu, rgba, width, height) => {
   return tex;
 };
 
-// `procedural`の法線を生成し、後続処理で利用できる状態にする
+// noiseによる高さから法線を生成し、画像法線との陰影差を比較する
 const createProceduralNormal = async (gpu) => {
   // procedural 側は `shapes` で使っていた noise 系の条件を少し控えめにして、
-  // image 由来 normal と見分けやすいが強すぎない陰影にする
+  // image由来のnormalと比較しやすい強さの陰影を設定する
   const tex = new Texture(gpu);
   await tex.initPromise;
   await tex.buildNormalMapFromProceduralHeight({
@@ -121,7 +121,7 @@ const createProceduralNormal = async (gpu) => {
   return tex;
 };
 
-// 形状を生成し、後続処理で利用できる状態にする
+// 基本形状からGPU描画用のShapeを作り、比較条件に合わせた色と材質を設定する
 const createShape = (gpu, rowEntry, colEntry, colorTex, imageNormalTex, proceduralNormalTex, color) => {
   // 行は primitive 差、列は normal source 差だけを表す
   // それ以外の material 条件を固定し、比較対象を絞る
@@ -153,7 +153,7 @@ const createShape = (gpu, rowEntry, colEntry, colorTex, imageNormalTex, procedur
   return shape;
 };
 
-// このインスタンスの初期化段階で、必要な状態と資源を準備して処理を開始する
+// 3形状と3種類の法線設定を配置し、同じ画像・照明で陰影を比較する
 const start = async ({ screen, gpu, setStatus, setViewportLayout, startLoop, document }) => {
   const shader = new SmoothShader(gpu);
   await shader.init();

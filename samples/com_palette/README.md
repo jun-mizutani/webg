@@ -13,7 +13,7 @@
 ## 実行方法
 
 - [./com_palette.html](./com_palette.html) を開きます
-- WebGPUは使用しないため、通常のCanvas 2DとDOMを利用できるbrowserで動作します
+- Canvas 2DとDOMを利用できるbrowserで動作します
 
 ## 使用しているwebg機能
 

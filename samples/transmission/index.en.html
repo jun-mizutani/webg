@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>transmission</title>
+  <link rel="icon" href="data:," />
+  <!-- 2026/06/19 -->
+  <style>
+
+:root {
+  color-scheme: light;
+  --bg: #eef3f8;
+  --paper: rgba(255, 255, 255, 0.94);
+  --line: #c8d5e4;
+  --ink: #17324a;
+  --muted: #5c748b;
+  --accent: #1566ab;
+  --accent-soft: #dfeefe;
+  --code-bg: #f3f7fb;
+  --shadow: rgba(29, 52, 79, 0.10);
+}
+* { box-sizing: border-box; }
+html, body {
+  margin: 0;
+  min-height: 100%;
+}
+body {
+  background:
+    radial-gradient(circle at top left, rgba(21, 102, 171, 0.12), transparent 24%),
+    radial-gradient(circle at top right, rgba(255, 191, 118, 0.10), transparent 22%),
+    linear-gradient(180deg, #f8fbfd 0%, var(--bg) 100%);
+  color: var(--ink);
+  font: 16px/1.78 "Avenir Next", "Hiragino Sans", "Yu Gothic", sans-serif;
+}
+.page {
+  width: min(1080px, calc(100% - 28px));
+  margin: 0 auto;
+  padding: 24px 0 56px;
+}
+.hero,
+.doc {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  box-shadow: 0 22px 52px var(--shadow);
+}
+.hero {
+  padding: 22px 24px;
+  margin-bottom: 18px;
+}
+.hero h1 {
+  margin: 0 0 8px;
+  font-size: clamp(2rem, 4vw, 3rem);
+  line-height: 1.08;
+}
+.hero p {
+  margin: 0;
+  color: var(--muted);
+}
+.doc {
+  padding: 28px;
+}
+.doc > :first-child {
+  margin-top: 0;
+}
+h1, h2, h3, h4, h5, h6 {
+  line-height: 1.25;
+  margin: 1.45em 0 0.55em;
+}
+h1 {
+  font-size: 2.2rem;
+}
+h2 {
+  padding-bottom: 0.28em;
+  border-bottom: 1px solid var(--line);
+  font-size: 1.48rem;
+}
+h3 {
+  font-size: 1.14rem;
+}
+p, ul, ol, table, pre, blockquote {
+  margin: 0 0 1em;
+}
+ul, ol {
+  padding-left: 1.4em;
+}
+li + li {
+  margin-top: 0.26em;
+}
+a {
+  color: var(--accent);
+  text-decoration: none;
+}
+a:hover {
+  text-decoration: underline;
+}
+img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  border-radius: 16px;
+  border: 1px solid var(--line);
+  box-shadow: 0 12px 32px rgba(29, 52, 79, 0.08);
+  margin: 1.1em 0 1.4em;
+}
+code {
+  padding: 0.12em 0.38em;
+  border-radius: 0.45em;
+  background: var(--code-bg);
+  border: 1px solid #dbe6f1;
+  font: 0.92em/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+pre {
+  padding: 14px 16px;
+  overflow-x: auto;
+  border-radius: 14px;
+  background: #0f1720;
+  color: #ecf5ff;
+}
+pre code {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #ffffff;
+}
+th, td {
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  text-align: left;
+  vertical-align: top;
+}
+th {
+  background: #f5f9fc;
+}
+hr {
+  border: 0;
+  border-top: 1px solid var(--line);
+  margin: 1.5em 0;
+}
+blockquote {
+  padding: 0.3em 0 0.3em 1em;
+  border-left: 4px solid #c9dbef;
+  color: var(--muted);
+}
+@media (max-width: 720px) {
+  .page {
+    width: min(100% - 18px, 1080px);
+    padding-top: 16px;
+  }
+  .hero,
+  .doc {
+    border-radius: 18px;
+  }
+  .doc {
+    padding: 20px;
+  }
+}
+
+  </style>
+</head>
+<body>
+  <main class="page">
+    <section class="hero">
+      <h1>transmission</h1>
+    </section>
+    <article class="doc">
+<h1>transmission</h1>
+<p><a href="index.html">日本語</a> | English</p>
+<h2>Overview</h2>
+<p><code>transmission</code> is a test application for transparent PBR surfaces and screen-space refraction. A sphere, a thick slab, and a torus keep independent material values so that normal gradients, silhouettes, Transmission, and IOR can be compared against brick joints and Oak grain while the ray enters and exits each object.</p>
+<p>The complete 16-by-9 back wall uses the <code>brick.running.red</code> brick texture, while the floor uses the <code>wood.oak.mixed-sawn</code> Oak texture, mixing quarter-sawn and flat-sawn grain per board with the board length directed into the scene. Both are created through the core <code>ProceduralMaterials.createPreset()</code> API and attached to Shapes with <code>applyTo()</code>. UV repeat counts come from each preset's physical tile dimensions, so the brickwork and boards retain a consistent scale instead of stretching one copy across an entire surface.</p>
+<p>The regular brick joints provide clear reference lines for the direction and magnitude of refractive displacement. The Oak floor exposes refraction and absorption on an oblique surface, while both Normal textures show how the opaque surroundings respond to PBR lighting. A texture-generation or shader-validation error is reported as a startup failure rather than switching to an untextured material.</p>
+<p>The pass order is opaque G-buffer, deferred PBR lighting, an entry target containing an octahedral normal, Transmission, and linear view depth, a front-material attenuation target, an exit target containing depth, an octahedral normal, and IOR, air-to-medium refraction, front/back boundary marching with binary-search refinement, at most one total-internal-reflection bounce, medium-to-air refraction, opaque-depth background ray marching, an explicit clear-color, constant-color, or HDR-environment result for an unresolved background ray, Beer-Lambert absorption over the complete internal optical path, roughness Frost, transparent PBR forward composition, and Tone Mapping.</p>
+<p>Open the CommandPalette with <code>/</code> or a double click. Select Sphere, Slab, or Torus directly, then adjust that material's Transmission, IOR, Roughness, Surface Alpha, Absorption RGB, and Absorption Distance. Transmission is the fraction allocated to absorbed refracted light; the remainder is allocated to the PBR surface. Surface Alpha is the baseline surface contribution at Transmission 1.0, and lowering Transmission makes the non-transmitted surface contribution more opaque. Absorption RGB is the linear color remaining after the configured distance; a shorter distance produces stronger absorption. <code>T</code> toggles transmission, Space pauses motion, and <code>R</code> restores defaults. The sample explicitly selects <code>transmissionRayMissFallback: &quot;clear&quot;</code>, so an unresolved ray uses the application's clear color. Enable <code>Ray Debug</code> in the CommandPalette to classify why a ray used a fallback: red means an invalid same-pixel volume, orange means entry refraction failure, magenta means a boundary was not found on the initial or reflected internal segment, yellow means total internal reflection remains after one reflection, cyan means no usable outside distance, and green means background not found. The Help panel reports FPS averaged from the frame count and actual elapsed time over 0.2 seconds, and updates it every 0.2 seconds. It also reports the ComputeEffectPipeline, G-buffer Render, their combined GPU, and JavaScript processing percentages relative to the average frame interval. The final copy to the presentation target is not included in the GPU total. GPU timing is shown as <code>unavailable</code> rather than 0% when timestamp queries cannot be used. It uses the core defaults of 42 maximum view-space distance, 0.10 hit tolerance, and 48 base steps. Both the internal and outgoing-background traversals increase their step counts toward an approximately 8-pixel interval along the ray's screen-space major axis, giving a default range of 48 to 96 steps. Five binary-search iterations then narrow a detected crossing interval to 1/32. Hit tolerance specifies the depth-intersection range used by the ray search.</p>
+<p>To diagnose periodic stalls, the sample records only frames that take at least 20 ms, cross 16 fragmented transparent batches, increase the batch count by at least 16, cross 4 ms of queue CPU time, or change the global-sort state. Up to 64 records are retained in a ring buffer, while normal frames do not build detailed objects or JSON. Run <code>getTransmissionAnomalyLog()</code> in the browser console to retrieve the records in chronological order. Each record includes local and world angles in degrees (yaw, pitch, and roll) and positions for transparent Nodes, projected bounds, interfering pairs, triangle counts, per-instance batch runs, queue CPU timings, and the latest CPU and GPU pass timings. GPU timestamps are the latest asynchronously read-back values and may not belong to exactly the same frame as the stall.</p>
+<p>Transparent-instance interference first uses the eight corners of each local AABB as an inexpensive coarse test. Only candidate instances receive a tight projected-bounds calculation from the vertices of their actual transparent triangles. This removes excessive screen overlap caused by AABB corners that do not exist on a sphere or torus surface. If the short side of the overlap rectangle that remains between tight bounds is at most 8 pixels in the render target, the instances remain independent, preferring stable frame time over exact ordering in that narrow boundary strip. Diagnostics and anomaly records report the number of ignored pairs and the largest ignored overlap.</p>
+<p>The entry target stores a complete view-space normal through octahedral encoding, Transmission, and entry depth. The exit target stores exit depth, an octahedral exit normal, and IOR. The compute shader reconstructs the entry position, applies Snell refraction from air to the medium, and marches both the front entry target and back exit target to find the first boundary. Five binary-search steps refine the crossing. If medium-to-air refraction produces total internal reflection, the shader reflects the ray inside the medium, searches both boundary targets again, and attempts medium-to-air refraction at the second boundary. It then marches the outgoing ray against opaque G-buffer depth. Beer-Lambert transmittance is <code>attenuationColor ^ (opticalDistance / attenuationDistance)</code>, where <code>opticalDistance</code> includes both internal segments when reflection occurs. A valid hit stores the absorbed refraction directly and does not mix the unrefracted color from the same pixel. The forward PBR pass uses <code>surfaceAlpha = 1 - effectiveTransmission * (1 - materialSurfaceAlpha)</code> so that the non-transmitted fraction belongs to the material surface instead of creating a background ghost.</p>
+<p><code>transmissionRayMissFallback</code> controls rays whose background cannot be resolved from screen-space data. <code>&quot;auto&quot;</code> samples the HDR environment radiance in the outgoing direction when <code>environment.radiance</code> exists and otherwise uses the clear color passed to <code>renderScene()</code>. <code>&quot;environment&quot;</code> requires radiance and reports an error instead of silently changing to clear color. <code>&quot;clear&quot;</code> always uses the clear color. <code>&quot;constant&quot;</code> requires <code>transmissionRayMissColor</code>, specified in display sRGB like <code>WebgApp.clearColor</code>; <code>TransparencyPass</code> converts it once for the linear HDR pass. The color is rejected in every non-constant mode, and constant mode is rejected when the color is missing.</p>
+<pre><code class="language-js">pipeline.encode(gpu.commandEncoder, {
+  // ...other effect settings
+  transparency: {
+    transmissionEnabled: true,
+    transmissionRayMissFallback: &quot;constant&quot;,
+    transmissionRayMissColor: [0.04, 0.06, 0.10, 1.0]
+  }
+});</code></pre>
+<p>If no outgoing direction exists because an internal boundary was not found or the second boundary still produces total internal reflection, environment mode does not invent a direction and uses the clear color. Constant mode still uses its specified color. White with infinite distance is the no-absorption default. Disabling Transmission, or setting a material's Transmission to zero, bypasses refraction and retains the regular alpha-surface behavior. This remains a screen-space, single-layer approximation: the fallback does not reconstruct hidden geometry, and overlapping volumes, dispersion, multiple glass layers, and more than one internal reflection are not fully handled. This sample configures transmission, IOR and volume absorption directly through webg material parameters. glTF <code>KHR_materials_transmission</code>, <code>KHR_materials_ior</code>, and <code>KHR_materials_volume</code> loading and Alpha 1 physical transmission are outside this sample's documented scope.</p>
+<p><code>Ray Debug</code> is a classification view separate from the fallback selected for normal rendering. Its diagnostic color takes precedence over the fallback while debugging is enabled. Front/back boundary searches and one internal reflection run whether the view is enabled or disabled. Magenta identifies a missing boundary on either the initial or reflected internal segment, while yellow identifies a ray that is still totally internally reflected at the second boundary and would require another bounce.</p>
+    </article>
+  </main>
+</body>
+</html>

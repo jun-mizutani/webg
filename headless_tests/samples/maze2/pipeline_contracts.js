@@ -1,5 +1,5 @@
 // ---------------------------------------------------------
-// headless_tests/samples/maze2/headless_probe.js  2026/08/01
+// headless_tests/samples/maze2/headless_probe.js  2026/08/11
 //   v2 integrated CameraFrame and effect contracts for maze2
 // ---------------------------------------------------------
 import assert from "node:assert/strict";
@@ -134,7 +134,7 @@ const indexEn = read("../../../samples/maze2/index.en.html");
 
 // 色付き照明panelも抽出できるPyramid Bloomを有効にする
 {
-  assert.match(main, /import\s*\{\s*COMPUTE_BLOOM_DEFAULTS\s*\}\s*from\s*"\.\.\/\.\.\/webg\/ComputeBloomPass\.js\?v=20260723_image_pyramid"/);
+  assert.match(main, /import\s*\{\s*COMPUTE_BLOOM_DEFAULTS\s*\}\s*from\s*"\.\.\/\.\.\/webg\/ComputeBloomPass\.js"/);
   assert.match(main, /bloomEnabled:\s*true/);
   assert.match(main, /bloomStrength:\s*1\.10/);
   assert.match(main, /bloomThreshold:\s*0\.60/);
@@ -171,7 +171,7 @@ const indexEn = read("../../../samples/maze2/index.en.html");
     /screen\.beginPresentPass\([\s\S]+copyPass\.draw\(finalColor\);[\s\S]+screen\.clearDepthBuffer\(\);/
   );
   assert.doesNotMatch(main, /screen\.beginPass\(\{[\s\S]{0,180}depthView:\s*null/);
-  assert.match(html, /main\.js\?v=20260801_mt19937_initial_view/);
+  assert.match(html, /main\.js/);
 }
 
 // READMEとHTML版は日英で同じPipeline、Camera Frame、無効化効果を説明する

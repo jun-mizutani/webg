@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// unittest/shared/UnitTestApp.js  2026/07/25
+// unittest/shared/UnitTestApp.js  2026/10/04
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // ---------------------------------------------
@@ -7,7 +7,7 @@ import Screen from "../../webg/Screen.js";
 
 // UnitTestApp:
 // - unittest 向けに Screen 初期化、viewport 追従、status 表示、例外表示を薄く共通化する
-// - WebgApp のように Scene / Camera / Input まで抱え込まず、低レベル API の確認が見えたまま残る薄さを保つ
+// - Scene / Camera / Input は各ページで準備し、低レベルAPIを直接確認できる構成を保つ
 // - 各 unittest は「何を描くか」に集中し、起動 boilerplate の重複を減らす
 
 const getViewportSize = (win) => {
@@ -17,16 +17,17 @@ const getViewportSize = (win) => {
   };
 };
 
-// 状態表示の`writer`を生成し、後続処理で利用できる状態にする
+// 結果表示のDOM要素と、その本文を更新する関数をまとめて用意する
 const createStatusWriter = (doc, elementId) => {
   const statusEl = elementId ? doc.getElementById(elementId) : null;
+  // 現在の検証状態を結果表示のDOM要素へ書き込む
   const setStatus = (message) => {
     if (statusEl) statusEl.textContent = message;
   };
   return { statusEl, setStatus };
 };
 
-// エラーのメッセージを現在の入力と状態から求め、呼び出し元へ返す
+// 通常の例外・イベント・Promise rejectionから表示用のエラーメッセージを取り出す
 const formatErrorMessage = (value) => {
   if (value?.error?.message) return value.error.message;
   if (value?.reason?.message) return value.reason.message;
@@ -34,7 +35,7 @@ const formatErrorMessage = (value) => {
   return String(value);
 };
 
-// `unit`の`test`のアプリケーションを生成し、後続処理で利用できる状態にする
+// ScreenとGPUを初期化し、viewport追従・状態表示・描画ループの共通窓口を返す
 export const createUnitTestApp = async (options = {}) => {
   const doc = options.document ?? document;
   const win = options.window ?? window;
@@ -54,7 +55,7 @@ export const createUnitTestApp = async (options = {}) => {
 
   let viewportCallback = typeof options.onResize === "function" ? options.onResize : null;
 
-  // `viewport`の配置を対象の状態または描画設定へ反映する
+  // viewportの寸法をScreenへ反映し、その縦横比で投影と画面配置を更新する
   const applyViewportLayout = () => {
     const size = getViewportSize(win);
     screen.resize(size.width, size.height);
@@ -78,9 +79,9 @@ export const createUnitTestApp = async (options = {}) => {
     });
   }
 
-  // `loop`の初期化段階で、必要な状態と資源を準備して処理を開始する
+  // フレームごとの描画関数をrequestAnimationFrameへ接続し、連続表示を開始する
   const startLoop = (drawFrame) => {
-    // `frame`は処理周期の開始または終了に必要な状態を更新する
+    // 時刻を描画関数へ渡し、そのフレームの処理後に次の描画を予約する
     const frame = (timeMs) => {
       drawFrame(timeMs);
       win.requestAnimationFrame(frame);
@@ -96,6 +97,7 @@ export const createUnitTestApp = async (options = {}) => {
     statusEl,
     setStatus,
     applyViewportLayout,
+    // ページ固有の投影・配置処理を登録し、現在のviewportにも直ちに適用する
     setViewportLayout: (callback) => {
       viewportCallback = typeof callback === "function" ? callback : null;
       applyViewportLayout();
@@ -104,7 +106,7 @@ export const createUnitTestApp = async (options = {}) => {
   };
 };
 
-// `unit`の`test`のアプリケーションの初期化段階で、必要な状態と資源を準備して処理を開始する
+// DOMの準備後に共通初期化とページ固有処理を実行し、例外を結果欄へ表示する
 export const bootUnitTestApp = (options, start) => {
   const doc = options?.document ?? document;
   const win = options?.window ?? window;
@@ -112,7 +114,7 @@ export const bootUnitTestApp = (options, start) => {
   doc.addEventListener("DOMContentLoaded", () => {
     const { setStatus } = createStatusWriter(doc, options?.statusElementId ?? "status");
 
-    // エラーを受け取った段階で、対応する状態更新と処理を実行する
+    // ブラウザの例外とPromise rejectionを受け取り、検証画面に原因を表示する
     const onError = (event) => {
       const msg = formatErrorMessage(event);
       setStatus(`error:\n${msg}`);

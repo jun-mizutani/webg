@@ -1,0 +1,20 @@
+確認ページ: scene_mesh
+
+目的
+- createWebgSceneAppでscene.yamlを読み、独自meshの描画と明示的な衝突形状によるCompute物理更新を確認します。
+
+準備条件
+- 同じ楔形meshにBox・Sphere・Capsuleをそれぞれ設定し、床へ落下させます。
+- 表示meshと衝突形状は、各経路を比較するために個別に指定しています。
+
+操作と期待結果
+- HTTP配信したindex.htmlをWebGPU対応ブラウザで開きます。
+- GPU読み戻しの回数が増え、meshBox / meshSphere / meshCapsuleの高さが減少します。
+- 3体すべてがy=0.3〜0.7へ到達し、その範囲に揃うとPASSになります。
+- このPASSは床付近への到達の確認です。長時間のsleepやsolver全体の精度は専用の物理検査で確認します。
+
+形式検証
+- node unittest/scene_mesh/check.mjsで、頂点・面の展開、衝突形状、表示専用作品、primitive作品、入力エラーの検出をNode.js上で確認します。
+
+関連する利用例
+- YAMLからアプリを構築する流れはsamples/project_appを参照できます。

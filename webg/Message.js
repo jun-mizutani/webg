@@ -1,21 +1,21 @@
 // ---------------------------------------------
-// Message.js     2026/07/25
+// Message.js     2026/08/11
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // ---------------------------------------------
 
-import Text from "./Text.js?v=20260430_fontfix1";
+import Text from "./Text.js";
 import util from "./util.js";
 
 export default class Message extends Text {
   // 高レベルHUD API を持つメッセージ描画クラスを初期化する
   constructor(gpu, options = {}) {
-    // 公開向けには
+    // 公開APIは
     // - setLine(id, text, options)
     // - setBlock(id, lines, options)
     // - replaceAll(entries)
-    // を主APIにし、AI が x/y と index を毎回手管理しなくて済む形へ寄せる
-    // 既存の setMessage() は sample 移行のための薄い wrapper として残す
+    // 行・ブロック単位で更新し、呼び出し側にx/yとindexの管理を要求しない
+    // setMessage()は単一メッセージを更新する互換APIとして提供する
     super(gpu, options);
     this.color = [1.0, 1.0, 1.0];
     this.entries = new Map();
@@ -272,7 +272,7 @@ export default class Message extends Text {
     this.autoId = 0;
   }
 
-  // 旧 API: n番スロットへ 1 行 text を置く
+  // 座標指定の1行メッセージを更新する互換API
   setMessage(n, x, y, text) {
     return this.setLine(String(n), text, {
       x,
@@ -281,7 +281,7 @@ export default class Message extends Text {
     });
   }
 
-  // 旧 API: auto id で 1 行 text を追加する
+  // 自動IDで1行メッセージを追加する互換API
   writeMessage(x, y, text) {
     return this.setLine(`auto_${this.autoId++}`, text, {
       x,
@@ -290,12 +290,12 @@ export default class Message extends Text {
     });
   }
 
-  // 旧 API: n番メッセージを削除する
+  // IDを指定してメッセージを削除する互換API
   delMessage(n) {
     this.remove(String(n));
   }
 
-  // 旧 API: 全メッセージを削除する
+  // すべてのメッセージを削除する互換API
   clearMessages() {
     this.clear();
   }

@@ -10,7 +10,7 @@
 
 青いcamera vehicleとオレンジ色のtarget vehicleは、カーブ、上り下り、bankを含む同じtrackを位相をずらして走ります。OrbitとFirst Personではcamera vehicleを基準としたカメラ配置を確認し、Followではcamera vehicleに取り付けたカメラが、別に動くtarget vehicleへ視線だけを滑らかに向け続けることを確認します。
 
-このサンプルで確認した仕様は `webg/EyeRig.js` へ取り込まれています。サンプルはコアの `EyeRig` を直接使い、Follow、回転した親の下でのOrbit座標変換、First Personの独立lookYaw入力をまとめて確認します。
+サンプルはコアの `EyeRig` を直接使い、Follow、回転した親の下でのOrbit座標変換、First Personの独立lookYaw入力をまとめて確認します。
 
 ## 実行方法
 
@@ -29,9 +29,9 @@
 
 ## 確認ポイント
 
-Orbitでは、camera rigをcamera vehicleの子にした場合、vehicleの移動、pitch、rollがbaseへ継承されます。`H`で独立camera anchorへ付け替えると、vehicleと同じ位置を移動しながら回転は継承しません。この違いがEyeRigのmodeではなく、アプリケーションが作る階層構造によることを確認します。
+Orbitでは、camera rigをcamera vehicleの子にした場合、vehicleの移動、pitch、rollがbaseへ継承されます。`H`で独立camera anchorへ付け替えると、vehicleと同じ位置を移動しながら回転は継承しません。この違いがアプリケーションの階層構造によることを確認します。
 
-First Personでは、baseをcamera vehicleの後方、上方、右側へ置きます。camera bodyの前方はlocal `-Z`、camera vehicleの前方はlocal `+Z`なので、`bodyYaw: 180`によって両方の前方軸を一致させています。`W`はbodyYawで回転したbodyのlocal `-Z`、`D`はlocal `+X`へ進み、反対方向を`S / A`で確認できます。ドラッグの水平差分はbodyYawではなくeyeのlookYawへ反映され、lookYawは移動方向を変えないため、vehicleの進行方向を維持したまま周囲を見られます。`Q / E`ではbaseを親座標系内で上下へ移動できます。
+First Personでは、baseをcamera vehicleの後方、上方、右側へ置きます。camera bodyの前方はlocal `-Z`、camera vehicleの前方はlocal `+Z`なので、`bodyYaw: 180`によって両方の前方軸を一致させています。`W`はbodyYawで回転したbodyのlocal `-Z`、`D`はlocal `+X`へ進み、反対方向を`S / A`で確認できます。ドラッグの水平差分はeyeのlookYawへ反映され、lookYawは移動方向を変えないため、vehicleの進行方向を維持したまま周囲を見られます。`Q / E`ではbaseを親座標系内で上下へ移動できます。
 
 Followでは、baseはcamera vehicleの子として固定され、target vehicleの位置へ移動しません。rodはアプリケーションが決める比較的安定した基準角度を保持し、eyeはtarget vehicleを見るための動的なローカル姿勢だけを担当します。Help panelの `follow dot` が1に近いほど、eyeのworld前方がtarget方向へ一致しています。
 
@@ -59,5 +59,5 @@ Followの姿勢補間にはフレームレート非依存のresponse係数と最
 ## 実装ファイル
 
 - `main.js`: scene、vehicle軌道、mode切り替え、UI、diagnosticsを構成する
-- `eye_rig.txt`: 利用者とAI向けに、目的、処理フロー、実装判断を詳しく説明する
+- `eye_rig.txt`: 目的、処理フロー、データ構成を詳しく説明する
 - `book/06_カメラ制御とEyeRig.md`: コア実装とカメラ操作の基準となる第6章

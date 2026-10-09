@@ -1,0 +1,62 @@
+// ---------------------------------------------
+// samples/circular_breaker2/constants.js  2026/09/22
+//   circular_breaker2 sample
+//   Copyright (c) 2026 Jun Mizutani,
+//   released under the MIT open source license.
+// ---------------------------------------------
+// 角度変換用の定数（degree <-> radian）
+export const DEG = Math.PI / 180.0;
+export const RAD = 180.0 / Math.PI;
+
+// アリーナやオブジェクト配置の基準寸法
+export const ARENA_RADIUS = 62.0;
+export const ARENA_WALL_RADIUS = ARENA_RADIUS + 4.0;
+export const BLOCK_RING_RADIUS = 54.0;
+export const BLOCK_COUNT = 28;
+export const BLOCK_HIT_RADIUS = 4.0;
+export const FLOOR_HEIGHT = 2.4;
+export const FLOOR_Y = -2.8;
+export const FLOOR_TOP_Y = FLOOR_Y + FLOOR_HEIGHT * 0.5;
+export const FLOOR_PATTERN_Y = FLOOR_TOP_Y + 0.08;
+export const FLOOR_RING_Y = FLOOR_TOP_Y + 0.16;
+export const SHADOW_Y = FLOOR_TOP_Y + 0.06;
+
+// パドル寸法・可動範囲
+export const PADDLE_HALF_LEN = 6.2;
+export const PADDLE_HALF_DEPTH = 1.5;
+export const PADDLE_Y = 2.2;
+export const PADDLE_MOVE_LIMIT = ARENA_RADIUS - 10.0;
+
+// パック寸法
+export const PUCK_RADIUS = 1.8;
+export const PUCK_Y = 2.0;
+
+// 衝突ごとに32粒を発生させ、長い寿命でも複数回の火花を表示できる容量を確保する
+// 発生数2倍と寿命1.5倍に合わせ、同程度の衝突頻度で保持できる粒子枠を3倍にする
+export const PARTICLE_POOL = 480;
+export const PARTICLES_PER_HIT = 32;
+
+// ステージ進行設定
+export const STAGE_TIME_LIMIT_SEC = 60.0;
+export const STAGE_BASE_TARGET_BREAKS = 5;
+export const STAGE_INTRO_MAX_SEC = 10.0;
+export const STAGE_CLEAR_BANNER_SEC = 3.0;
+export const STAGE_LAUNCH_RANDOM_DEG = 20.0;
+
+// 汎用ユーティリティ（2D平面XZでの計算を中心に使用）
+export const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+export const len2 = (x, z) => Math.sqrt(x * x + z * z);
+export const dot2 = (ax, az, bx, bz) => ax * bx + az * bz;
+
+// `norm2`は座標または数値を計算し、後続処理で使う結果を返す
+export const norm2 = (x, z) => {
+  const d = Math.sqrt(x * x + z * z);
+  if (d <= 1.0e-6) return [0.0, 0.0];
+  return [x / d, z / d];
+};
+
+// `reflect2`は受け取った値を処理し、後続処理で利用する状態または結果を生成する
+export const reflect2 = (vx, vz, nx, nz) => {
+  const vv = dot2(vx, vz, nx, nz);
+  return [vx - 2.0 * vv * nx, vz - 2.0 * vv * nz];
+};

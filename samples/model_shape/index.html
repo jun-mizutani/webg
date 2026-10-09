@@ -174,13 +174,13 @@ blockquote {
 <p><a href="index.en.html">English</a> | 日本語</p>
 <p><img src="./model_shape.jpg" alt="model_shape" /></p>
 <h2>概要</h2>
-<ul><li>Primitive.js が返す ModelAsset を ModelValidator で検証し、ModelBuilder で Shape に変換して表示するサンプルです。</li><li>法線マップ付きで複数形状を並べますが、形状生成経路を Shape 直書きではなく Primitive -&gt; ModelAsset -&gt; validate -&gt; build に揃えている点が主な特徴です。</li><li>WebgApp.js を使って、初期化、メッセージ表示、ループを高レベル API でまとめています。</li></ul>
+<ul><li>Primitive.js が返す ModelAsset を ModelValidator で検証し、ModelBuilder で Shape に変換して表示するサンプルです。</li><li>法線マップ付きで複数形状を並べますが、形状生成経路を Primitive -&gt; ModelAsset -&gt; validate -&gt; build に揃えている点が主な特徴です。</li><li>WebgApp.js を使って、初期化、メッセージ表示、ループを高レベル API でまとめています。</li></ul>
 <h2>実行方法</h2>
 <ul><li>実行ファイルは <a href="./model_shape.html">./model_shape.html</a> です</li><li>WebGPU に対応したブラウザで開き、必要に応じて help panel や HUD と合わせて確認してください</li></ul>
 <h2>使用している webg 機能</h2>
 <ul><li>WebgApp: 標準初期化、描画ループ、操作ガイド表示</li><li>Primitive: 基本プリミティブを ModelAsset として生成</li><li>ModelAsset: データ表現の共通入口</li><li>ModelValidator: geometry / animation / node などの整合検証</li><li>ModelBuilder: ModelAsset から Shape 群を構築</li><li>SmoothShader: 通常テクスチャ + 法線マップ描画</li><li>Texture.buildNormalMapFromHeightMap: 同一画像から法線マップ生成</li></ul>
 <h2>確認ポイント</h2>
-<ul><li>Primitive が返した ModelAsset をそのまま validator に通せることを確認します</li><li>ModelBuilder を経由して生成した Shape でも、法線マップ付き描画が成立することを確認します</li><li>shapes と比べて、見え方の差より Primitive -&gt; ModelAsset -&gt; validate -&gt; build の処理フローを追うサンプルであることを確認します</li><li>ワイヤーフレーム切り替えや法線マップON / OFFで、生成経路が変わっても表示制御が破綻しないことを確認します</li></ul>
+<ul><li>Primitive が返した ModelAsset をそのまま validator に通せることを確認します</li><li>ModelBuilder を経由して生成した Shape でも、法線マップ付き描画が成立することを確認します</li><li>shapes と比べて、見え方の差より Primitive -&gt; ModelAsset -&gt; validate -&gt; build の処理フローを追うサンプルであることを確認します</li><li>ワイヤーフレーム切り替えや法線マップON / OFFで、各生成経路で同じ表示制御が働くことを確認します</li></ul>
 <h2>操作方法</h2>
 <ul><li>ドラッグ / 矢印キー: オービットカメラ回転</li><li>ホイール / [ / ]: ズーム</li><li>Space: 回転の一時停止</li><li>N: 法線マップ ON / OFF</li><li>W: ワイヤーフレーム ON / OFF</li><li>R: カメラを初期位置へ戻す</li></ul>
     </article>

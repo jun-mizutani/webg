@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>joint</title>
+  <link rel="icon" href="data:," />
+  <!-- 2026/08/26 -->
+  <style>
+    body { margin: 2rem auto; max-width: 68rem; padding: 0 1rem 3rem; background: #eef3f8; color: #183247; font: 16px/1.75 sans-serif; }
+    main { background: #ffffff; padding: 1.5rem 2rem; border: 1px solid #c8d5e2; border-radius: 1rem; }
+    a { color: #0c629e; }
+    code, pre { background: #edf3f8; border-radius: .25rem; padding: .1rem .3rem; }
+    pre { padding: 1rem; overflow: auto; }
+    h1, h2 { line-height: 1.3; }
+    h2 { margin-top: 2rem; border-bottom: 1px solid #c8d5e2; padding-bottom: .25rem; }
+    .sample { border: 1px solid #c8d5e2; border-radius: .6rem; padding: .8rem 1rem; margin: 1rem 0; }
+  </style>
+</head>
+<body>
+<main>
+  <h1>joint</h1>
+  <p>日本語 | <a href="./index.html">English</a></p>
+  <p><code>joint</code> is a sample family for comparing the same gravity-driven Joint scenario through CPU and GPU Compute paths. Initial positions, Joint distances, rope dimensions, Capsule orientation, and camera settings are defined in <code>jointScenario.js</code></p>
+
+  <div class="sample">
+    <h2><code>joint_cpu_node</code></h2>
+    <p>Uses webg's CPU <code>PhysicsSpace</code> and ordinary <code>Node</code> drawing to show the CPU Joint solver and standard rendering path</p>
+    <p><a href="./joint_cpu_node.html">Run joint_cpu_node.html</a> | <a href="./joint_cpu_node.en.md">Implementation notes</a> | <a href="./joint_cpu_node.md">日本語</a></p>
+  </div>
+  <div class="sample">
+    <h2><code>joint_compute</code></h2>
+    <p>Updates physics with the <code>ComputePhysicsSpace</code> GPU Joint buffer and WGSL XPBD solver, then renders the ping-pong <code>BodyState</code> directly from a vertex shader</p>
+    <p><a href="./joint_compute.html">Run joint_compute.html</a> | <a href="./joint_compute.en.md">Implementation notes</a> | <a href="./joint_compute.md">日本語</a></p>
+  </div>
+  <div class="sample">
+    <h2><code>joint_compute_node</code></h2>
+    <p>Uses the same GPU physics as <code>joint_compute</code>, then applies an explicit state readback to ordinary Nodes with <code>syncNodesFromPhysics()</code> and renders through <code>Space.draw()</code></p>
+    <p><a href="./joint_compute_node.html">Run joint_compute_node.html</a> | <a href="./joint_compute_node.en.md">Implementation notes</a> | <a href="./joint_compute_node.md">日本語</a></p>
+  </div>
+
+  <h2>Shared scenario</h2>
+  <p>All three applications use the same pendulum, six hanging ropes, and kinematic Capsule crossing the rope centers. The pendulum DistanceJoint length is calculated by rearranging the small-amplitude relation <code>T=2π√(L/g)</code> as <code>L=|g|(T/(2π))²</code>, using gravity <code>9.80665 m/s²</code> and target period <code>3 s</code>. Rope links have a <code>0.06 m</code> radius, a <code>0.18 m</code> centerline segment, a <code>0.30 m</code> total length, a <code>0.305 m</code> center spacing, an apparent gap of about <code>0.005 m</code>, and a mass of <code>0.50 kg</code></p>
+  <p>The driver Capsule is a gravity-free kinematic body. Its local Y axis is rotated around X by a quaternion so that it points along world Z. Startup moves in the D direction; A/D changes direction and the Capsule stops at either edge. Q selects <code>quasiStatic</code>, which prescribes position at each fixed step and passes zero contact velocity. I selects <code>impact</code>, which passes a prescribed speed of <code>0.80 m/s</code> to the contact solver</p>
+
+  <h2>Controls</h2>
+  <p><code>A</code>: move left　<code>D</code>: move right　<code>Q</code>: quasiStatic　<code>I</code>: impact　<code>P</code>: pause/resume　<code>R</code>: reset　<code>H</code>: toggle Help Panel　Drag: orbit camera　Wheel: zoom camera</p>
+  <p>Each application follows its own Help Panel startup state. When expanded, it reports physical conditions, body and Joint counts, pendulum target and measured periods, rope speeds, angular speeds, and Joint error. No HUD text is drawn over the scene</p>
+
+  <p><a href="./README.en.md">README.en.md</a> | <a href="./README.md">README.md</a></p>
+</main>
+</body>
+</html>

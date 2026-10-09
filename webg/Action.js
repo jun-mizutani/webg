@@ -12,8 +12,7 @@ export default class Action {
   constructor(anim, options = {}) {
     // 1本の Animation(= clip) の内部キーフレーム区間を
     // pattern として再利用し、それらを action として束ねる
-    // 既存の addKeyPattern / addAction / startAction / playAction を残しつつ、
-    // object ベース API へ寄せるための土台として使う
+    // キーパターンとアクションをobject形式で管理し、再生状態をIDで参照できるようにする
     this.anim = anim;
     this.actions = {};
     this.patterns = [];
@@ -33,7 +32,7 @@ export default class Action {
   // 現在の clip から key 範囲妥当性を確認する
   validatePatternRange(id, fromKey, toKey) {
     // Animation 側に key 範囲 helper がある場合はそちらを使い、
-    // ない場合だけ従来どおり数値の大小関係だけで判定する
+    // helperがない場合はfromKeyとtoKeyの大小関係で判定する
     if (typeof this.anim?.isValidKeyRange === "function") {
       if (!this.anim.isValidKeyRange(fromKey, toKey)) {
         const keyCount = typeof this.anim?.getKeyCount === "function"
@@ -140,7 +139,7 @@ export default class Action {
 
   // キー区間パターンを登録する
   addKeyPattern(name, time, from, to) {
-    // 既存 sample 互換のため、返り値は配列 index のまま維持する
+    // 配列indexを返し、pattern登録結果を既存の呼び出し規約で受け取れるようにする
     const pattern = this.addPattern({
       id: name,
       entryDurationMs: time,
@@ -203,8 +202,7 @@ export default class Action {
 
   // パターン列をアクション名で登録する
   addAction(name, pattern_list) {
-    // 既存 API は pattern index 配列を受け取るため、
-    // ここで pattern id 配列へ正規化して保持する
+    // pattern index配列またはpattern ID配列をpattern ID配列へ正規化して保持する
     return this.addActionDef({
       id: name,
       patterns: pattern_list
@@ -378,7 +376,7 @@ export default class Action {
     return ip;
   }
 
-  // 旧 API 名互換
+  // play()を旧名称から呼び出す互換API
   playAction() {
     return this.play();
   }

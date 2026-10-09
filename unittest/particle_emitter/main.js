@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// unittest/particle_emitter/main.js  2026/04/10
+// unittest/particle_emitter/main.js  2026/10/04
 //   particle_emitter unittest
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -10,9 +10,9 @@ import Shape from "../../webg/Shape.js";
 import ParticleEmitter from "../../webg/ParticleEmitter.js";
 
 // この test は、ParticleEmitter を「単体テスト」と「使用例」の両方として読めるようにする
-// まず headless の自動テストでロジックを確認し、そのあと WebgApp の実画面で
+// まずブラウザ内のスタブで自動チェックを行い、その後WebgAppの実画面で
 // particle が飛ぶ様子を確認できるようにしている
-// コードの読み手が関数名だけで推測しなくて済むよう、各段階の意図をコメントで残す
+// 生成・更新・描画の各段階を、値と表示の対応から確認する
 
 const AUTO_PARTICLE_MAX = 4;
 const PARTICLE_MAX = 320;
@@ -33,7 +33,7 @@ let passCount = 0;
 let failCount = 0;
 
 // 1 件分の結果を文字列として蓄積する
-// DOM へ逐次書き込まず、最後にまとめて表示することで PASS / FAIL の流れを追いやすくする
+// 最後にDOMへまとめて表示し、PASS / FAILの流れを読みやすくする
 const log = (line) => {
   lines.push(line);
 };
@@ -51,7 +51,7 @@ const check = (label, condition, detail = "") => {
 };
 
 // 近い値同士を比較するための小さな helper
-// particle の位置や life は float で動くので、完全一致ではなく誤差込みで確認する
+// particleの位置とlifeは浮動小数点で更新するため、許容誤差内の一致を確認する
 const approx = (value, expected, epsilon = 0.0001) => Math.abs(value - expected) <= epsilon;
 
 const drawLog = {
@@ -117,7 +117,7 @@ const fakeShadowBillboard = {
 };
 
 // まずは renderer を fake に差し替えて、ParticleEmitter の内部ロジックだけを確認する
-// ここでは WebGPU を使わず、preset / emit / update / draw / clear の流れを安定して検証する
+// 偽rendererへの呼び出しを記録し、preset / emit / update / draw / clearの順序と値を検証する
 const autoEmitter = new ParticleEmitter({
   maxParticles: AUTO_PARTICLE_MAX,
   useShadow: true,
@@ -324,15 +324,14 @@ const configureTouchRoot = (root) => {
   }
 };
 
-// touch の action ボタンで即時処理した入力を、次 frame の edge 判定で
-// もう一度拾わないようにする
+// touchボタンで即時処理したactionを消費済みとして記録し、1回の操作を1回のburstへ対応させる
 const suppressNextActionEdge = (action) => {
   const key = String(action ?? "").toLowerCase();
   if (!key) return;
   manualRuntime.state.suppressedEdges.add(key);
 };
 
-// floor は粒子の落下先を見せるための背景であり、ParticleEmitter の主題ではない
+// floorは粒子の落下先とshadow billboardの位置を読む基準面にする
 // ただし地面があると shadow billboard の役割が分かりやすくなるので、薄い床を置いている
 const createFloorShape = (gpu) => {
   const shape = new Shape(gpu);
@@ -359,7 +358,7 @@ const createBeaconShape = (gpu) => {
     has_bone: 0,
     color: [0.90, 0.56, 0.18, 1.0],
     ambient: 0.10,
-    specular: 1.20,
+    specular: 1.0,
     power: 88.0,
     emissive: 0.0
   });
@@ -367,7 +366,7 @@ const createBeaconShape = (gpu) => {
 };
 
 // emitter の preset を切り替え、必要なら短い preview burst を出す
-// sample 側からは setPreset() をどう使うかが分かるよう、切り替えと発射を分けずに並べて見せる
+// presetの切替とpreview burstを順に行い、設定と粒子表示の対応を確認する
 const applyPreset = (name, { previewBurst = true } = {}) => {
   const normalized = String(name ?? PRESET_ORDER[0]).toLowerCase();
   const nextIndex = PRESET_ORDER.indexOf(normalized);
@@ -387,9 +386,8 @@ const applyPreset = (name, { previewBurst = true } = {}) => {
   renderManualPanel();
 };
 
-// strict 化後の ParticleEmitter.emit() は、preset に依存した暗黙補完をしない
-// そのため sample 側でも、現在の preset defaults を読み出して必要な配列と数値を
-// すべて明示した emit options を組み立てる
+// ParticleEmitter.emit()へ渡す値を、現在のpreset defaultsから組み立てる
+// 位置・速度・重力・色と各spreadを明示し、burstの開始条件を揃える
 const buildBurstEmitOptions = () => {
   const preset = manualRuntime.emitter.getPreset();
   const defaults = preset.defaults;
@@ -708,7 +706,7 @@ const startVisualPhase = async () => {
   });
   configureTouchRoot(touchRoot);
 
-  // 起動直後に 1 回 burst して、画面が空のまま始まらないようにする
+  // 起動直後に1回burstし、初期表示で粒子の動きを確認できるようにする
   // これで visual sample としても、すぐ particle の動きを見やすくなる
   manualRuntime.state.lastInput = "startup";
   emitBurst("startup", 18);

@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// unittest/phong_debug/main.js  2026/07/25
+// unittest/phong_debug/main.js  2026/10/04
 //   phong_debug sample
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -25,7 +25,7 @@ import {
 
 const MOTION_SPEED = 0.00055;
 
-// `folded`のパネルを生成し、後続処理で利用できる状態にする
+// 折れた2枚の面を作り、同じ照明で表面と裏面の診断色を比較する
 const makeFoldedPanel = (gpu, shader, texture) => {
   const shape = new Shape(gpu);
   shape.setShader(shader);
@@ -61,12 +61,12 @@ const makeFoldedPanel = (gpu, shader, texture) => {
   return shape;
 };
 
-// 法線のマップの`tube`を生成し、後続処理で利用できる状態にする
+// 開いた筒へ画像法線を設定し、裏面診断と細かい陰影を同時に確認する
 const makeNormalMapTube = (gpu, shader, texture, normalTexture) => {
   const shape = new Shape(gpu);
   shape.setShader(shader);
   // revolution 系の筒で、normal map と backface_debug を同時に確認する
-  // Y 軸方向の直線を回して作るので、上下が塞がらない筒として扱える
+  // Y軸方向の直線を回転させ、上下を開いた筒を構築する
   // webg の UV は左下原点なので、見え方を合わせるため V を内部補正する
   shape.applyPrimitiveAsset(
     Primitive.revolution(1, 32, [4.8, 12.0, 4.8, -12.0], false, {
@@ -91,7 +91,7 @@ const makeNormalMapTube = (gpu, shader, texture, normalTexture) => {
   return shape;
 };
 
-// `skinned`の`tube`を生成し、後続処理で利用できる状態にする
+// 2ボーンの筒へ法線と重み色の設定を割り当て、姿勢変化時の表示を比較する
 const makeSkinnedTube = (gpu, shader, texture, normalTexture, weightDebug, useNormalMap) => {
   const { shape, skeleton, j0, j1 } = createTwoBoneSkinnedTube(gpu, { flipV: true });
   shape.setShader(shader);
@@ -113,7 +113,7 @@ const makeSkinnedTube = (gpu, shader, texture, normalTexture, weightDebug, useNo
   return { shape, skeleton, j0, j1 };
 };
 
-// このインスタンスの初期化段階で、必要な状態と資源を準備して処理を開始する
+// 折れ板と筒を配置し、裏面・画像法線・ボーン・重み表示の組み合わせを比較する
 const start = async ({ screen, gpu, setStatus, setViewportLayout, startLoop }) => {
   const foldedShader = new SmoothShader(gpu, { backfaceDebug: true });
   await foldedShader.init();

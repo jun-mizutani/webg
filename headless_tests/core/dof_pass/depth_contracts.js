@@ -1,5 +1,5 @@
 // ---------------------------------------------------------
-// headless_tests/core/dof_pass/headless_probe.js  2026/07/13
+// headless_tests/core/dof_pass/headless_probe.js  2026/09/23
 //   Camera Reverse-Z contracts for the render-pass DofPass
 // ---------------------------------------------------------
 import assert from "node:assert/strict";
@@ -152,6 +152,7 @@ assert.throws(
     sceneTarget: {},
     renderFrameToken: null,
     cameraFrame: null,
+    resolveFrameFocusDistance() { calls.push("frame-focus"); },
     updateUniforms() { calls.push("uniforms"); },
     resizeToScreen() { calls.push("resize"); },
     runDepthDebugPass() { calls.push("depth"); },
@@ -169,7 +170,10 @@ assert.throws(
   assert.equal(pass.cameraFrame, frame);
   assert.equal(pass.sceneTarget.cameraFrame, frame);
   DofPass.prototype.render.call(pass, screen, { renderFrameToken });
-  assert.deepEqual(calls, ["uniforms", "resize", "begin", "depth", "focus", "stage", "composite"]);
+  assert.deepEqual(calls, [
+    "frame-focus", "uniforms", "resize", "begin", "frame-focus",
+    "depth", "focus", "stage", "composite"
+  ]);
   assert.throws(
     () => DofPass.prototype.render.call(pass, screen, {
       renderFrameToken: otherRenderFrameToken

@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// samples/maze/main.js  2026/08/01
+// samples/maze/main.js  2026/08/11
 //   Walk-through maze sample generated at runtime
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -12,7 +12,7 @@ import Primitive from "../../webg/Primitive.js";
 import Diagnostics from "../../webg/Diagnostics.js";
 import FullscreenPass from "../../webg/FullscreenPass.js";
 import { buildErrorPanelOptions, buildHelpPanelOptions } from "../../webg/OverlayPanelPresets.js";
-import ComputeEffectPipeline from "../../webg/ComputeEffectPipeline.js?v=20260723_dof_coverage";
+import ComputeEffectPipeline from "../../webg/ComputeEffectPipeline.js";
 import CommandPalette from "../../webg/CommandPalette.js";
 import { COMPUTE_EDGE_BLEND_MODES } from "../../webg/ComputeEdgePass.js";
 import util from "../../webg/util.js";

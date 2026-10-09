@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// Tween.js       2026/07/25
+// Tween.js       2026/09/09
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // ---------------------------------------------
@@ -98,6 +98,7 @@ export default class Tween {
     };
   }
 
+  // easing mapに指定名が登録されているかを判定し、入力検証へ利用します
   static isKnownEasing(name) {
     return Object.prototype.hasOwnProperty.call(Tween.getEasingMap(), String(name).toLowerCase());
   }

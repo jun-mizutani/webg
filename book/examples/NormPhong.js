@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// NormPhong.js    2026/07/13
+// NormPhong.js    2026/10/04
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // ---------------------------------------------
@@ -9,7 +9,7 @@ import { CAMERA_REVERSE_Z } from "../../webg/DepthConvention.js";
 import { alignTo } from "../../webg/SkinningConfig.js";
 
 export default class NormPhong extends Shader {
-  // `Phong` 相当の材質に法線マップ拡張パラメータを追加して初期化する
+  // `Phong` 相当のマテリアルに法線マップ拡張パラメータを追加して初期化する
   constructor(gpu, options = {}) {
     super(gpu);
     this.default = {
@@ -103,6 +103,7 @@ struct FSIn {
 };
 
 @vertex
+// 頂点の位置と法線を視点空間へ変換し、投影座標と照明計算用の値を次の段階へ渡す
 fn vsMain(input : VSIn) -> VSOut {
   // 頂点シェーダ本体は Phong と同じ
   // - normal map の差分はフラグメント側で法線を作り直すところに集約する
@@ -116,6 +117,7 @@ fn vsMain(input : VSIn) -> VSOut {
 }
 
 @fragment
+// 補間された法線と材質からPhong照明を計算し、必要に応じてテクスチャとフォグを反映する
 fn fsMain(input : FSIn) -> @location(0) vec4f {
   // Phong との差分 1:
   // - params1 の割り当てを normal map 用に拡張する
@@ -137,7 +139,7 @@ fn fsMain(input : FSIn) -> @location(0) vec4f {
     // Phong との差分 3:
     // - normal map を読み、TBN 行列で tangent space から eye space へ戻す
     // WGSL制約回避:
-    // dpdx/dpdy 由来の非一様制御フロー内では textureSample が使えないため、
+    // dpdx/dpdyを使う分岐内でもLODを明確に指定できるように、
     // 明示LODの textureSampleLevel(..., 0.0) で法線マップを読む
     let ntex = textureSampleLevel(uNormalTexture, uSampler, input.vTexCoord, 0.0).xyz * 2.0 - vec3f(1.0, 1.0, 1.0);
 
@@ -149,7 +151,7 @@ fn fsMain(input : FSIn) -> @location(0) vec4f {
     let duv2 = dpdy(input.vTexCoord);
 
     // UV ヤコビアンの行列式
-    // - UV が退化していると 0 付近になり、接線空間を安全に作れない
+    // - UV が退化していると0付近になるため、十分な値がある場合に接線空間を構成する
     let det = duv1.x * duv2.y - duv1.y * duv2.x;
     if (abs(det) > 1.0e-8) {
       let invDet = 1.0 / det;
@@ -394,7 +396,7 @@ fn fsMain(input : FSIn) -> @location(0) vec4f {
     return bindGroup;
   }
 
-  // 既定材質辞書を更新し対応setterを呼ぶ
+  // 既定マテリアル辞書を更新し対応setterを呼ぶ
   setDefaultParam(key, value) {
     this.default[key] = value;
     if (key === "color") this.setColor(value);
@@ -441,9 +443,9 @@ fn fsMain(input : FSIn) -> @location(0) vec4f {
     this.updateUniforms();
   }
 
-  // 現状 no-op
+  // 既存APIとの共通の呼び出し口としてテクスチャ単位指定を受け付ける
   setTextureUnit(_tex_unit) {
-    // No-op in WebGPU. Kept for compatibility.
+    // WebGPUではバインドグループがテクスチャの接続先を管理する
   }
 
   // 発光フラグを設定する

@@ -1,11 +1,11 @@
 // ---------------------------------------------
-// ComputeDofPass.js  2026/07/25
+// ComputeDofPass.js  2026/09/09
 //   Linear High Dynamic Range depth of field pass with image pyramid
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // ---------------------------------------------
 import ComputePass from "./ComputePass.js";
-import ComputeImagePyramid from "./ComputeImagePyramid.js?v=20260723_dof_coverage";
+import ComputeImagePyramid from "./ComputeImagePyramid.js";
 import { CAMERA_REVERSE_Z } from "./DepthConvention.js";
 import {
   createGBufferProjectionParams,
@@ -26,6 +26,7 @@ export const COMPUTE_DOF_DEFAULTS = Object.freeze({
   enabled: true,
   debugView: "composite",
   sharpnessWidth: 0.15,
+  focusTransitionWidth: 0.85,
   sharpnessPower: 1.0
 });
 
@@ -40,6 +41,7 @@ export const COMPUTE_DOF_VIEW_MODES = Object.freeze([
 // 符号付きCoCに従って近景と遠景を別々のpremultiplied色と被覆率へ分離します
 // clear backgroundと合焦領域を除外してから低域画像を作ることで、
 // 合焦した輪郭がscene全体のblurを介して背景へ広がることを防ぎます
+// CoCのB/Aには、近景・遠景のlinearDepth * blurWeightを保存し、後段の遮蔽判定へ渡します
 export const COMPUTE_DOF_COC_EXTRACT_WGSL = `
 struct Params {
   values : vec4f,
@@ -61,6 +63,18 @@ fn cocStage(distance : f32) -> f32 {
   return clamp((distance / params.values.y) * params.values.z, 0.0, 4.0);
 }
 
+fn focusBlurWeight(stage : f32) -> f32 {
+  let hold = params.shape.x;
+  let transition = params.shape.w;
+  // transition=0は現行の境界を明示的に選ぶ値として扱います
+  if (transition <= 0.0) {
+    return select(0.0, 1.0, stage > hold);
+  }
+  let normalized = clamp((stage - hold) / transition, 0.0, 1.0);
+  // 合焦帯の外側でsceneから最初のblurへ滑らかに接続します
+  return normalized * normalized * (3.0 - 2.0 * normalized);
+}
+
 @compute @workgroup_size(8, 8, 1)
 fn main(@builtin(global_invocation_id) id : vec3<u32>) {
   let dims = textureDimensions(sceneTexture);
@@ -80,23 +94,25 @@ fn main(@builtin(global_invocation_id) id : vec3<u32>) {
   let delta = linearDepth - params.values.x;
   let stage = cocStage(abs(delta));
   let scene = textureLoad(sceneTexture, coord, 0);
-  // 元解像度ではgeometryが存在する画素のcoverageを常に1にします
-  // CoC stageをAlphaへ掛けず、独立したmetadata targetへ保存します
-  let layer = vec4f(scene.rgb, 1.0);
-  if (stage <= params.shape.x) {
+  let blurWeight = focusBlurWeight(stage);
+  if (blurWeight <= 0.0) {
     textureStore(farOutputTexture, coord, vec4f(0.0));
     textureStore(nearOutputTexture, coord, vec4f(0.0));
     textureStore(cocOutputTexture, coord, vec4f(0.0));
     return;
   }
+  // 合焦境界のぼけ率をpremultiplied colorとcoverageへ同じ値で渡します
+  let layer = vec4f(scene.rgb * blurWeight, blurWeight);
+  let depthMoment = linearDepth * blurWeight;
   if (delta > 0.0) {
     textureStore(farOutputTexture, coord, layer);
     textureStore(nearOutputTexture, coord, vec4f(0.0));
-    textureStore(cocOutputTexture, coord, vec4f(0.0, stage, 0.0, 0.0));
+    // R/Gはstage moment、B/Aはdepth momentとしてnear/farを分けて保持します
+    textureStore(cocOutputTexture, coord, vec4f(0.0, stage * blurWeight, 0.0, depthMoment));
   } else if (delta < 0.0) {
     textureStore(farOutputTexture, coord, vec4f(0.0));
     textureStore(nearOutputTexture, coord, layer);
-    textureStore(cocOutputTexture, coord, vec4f(stage, 0.0, 0.0, 0.0));
+    textureStore(cocOutputTexture, coord, vec4f(stage * blurWeight, 0.0, depthMoment, 0.0));
   } else {
     textureStore(farOutputTexture, coord, vec4f(0.0));
     textureStore(nearOutputTexture, coord, vec4f(0.0));
@@ -135,6 +151,18 @@ fn stagePosition(distance : f32, focusRange : f32) -> f32 {
   return clamp((distance / focusRange) * params.values.z, 0.0, 4.0);
 }
 
+fn focusBlurWeight(stage : f32) -> f32 {
+  let hold = params.shape.x;
+  let transition = params.shape.w;
+  // transition=0は現行の境界を明示的に選ぶ値として扱います
+  if (transition <= 0.0) {
+    return select(0.0, 1.0, stage > hold);
+  }
+  let normalized = clamp((stage - hold) / transition, 0.0, 1.0);
+  // 合焦帯の外側でsceneから最初のblurへ滑らかに接続します
+  return normalized * normalized * (3.0 - 2.0 * normalized);
+}
+
 fn smoothLevelFraction(value : f32) -> f32 {
   let clamped = clamp(value, 0.0, 1.0);
   let smoothWeight = clamped * clamped * (3.0 - 2.0 * clamped);
@@ -150,8 +178,7 @@ fn selectBlurLayer(
   stage : f32
 ) -> vec4f {
   let checkedStage = clamp(stage, 0.0, 4.0);
-  // 合焦帯を出たgeometryは最小でもlow-pass済みの1/2 Levelへ置き換えます
-  // 鮮明sceneから1/2 Levelへのcross-fadeは行いません
+  // 合焦帯を出たgeometryのblur側は最小でもlow-pass済みの1/2 Levelへ接続します
   if (checkedStage < 1.0) {
     return halfLayer;
   }
@@ -206,16 +233,113 @@ fn sourceStage(moment : f32, coverage : f32) -> f32 {
   return clamp(moment / coverage, 0.0, 4.0);
 }
 
-fn farSpreadLayer(uv : vec2f) -> vec4f {
-  let widestLayer = textureSampleLevel(farSixteenthTexture, levelSampler, uv, 0.0);
-  let cocMoment = textureSampleLevel(cocSixteenthTexture, levelSampler, uv, 0.0).g;
-  return farLayerAtStage(uv, sourceStage(cocMoment, widestLayer.a));
+fn sourceDepth(moment : f32, coverage : f32) -> f32 {
+  // depth momentとcoverageを同じfilterで処理し、ぼけ色の代表深度を復元します
+  if (coverage <= 0.0) {
+    return 0.0;
+  }
+  return moment / coverage;
 }
 
-fn nearSpreadLayer(uv : vec2f) -> vec4f {
+fn depthVisibility(receiverDepth : f32, sourceDepthValue : f32) -> f32 {
+  // 現在画素より奥のぼけ寄与を0、同じ深度と手前側の寄与を1として遮蔽します
+  if (sourceDepthValue > receiverDepth) {
+    return 0.0;
+  }
+  return 1.0;
+}
+
+fn depthAwareLayer(
+  layer : vec4f,
+  depthMoment : f32,
+  depthCoverage : f32,
+  receiverDepth : f32,
+  hasReceiverDepth : bool
+) -> vec4f {
+  // clear backgroundでは深度比較を省略し、近景・遠景の順序に沿って合成します
+  if (!hasReceiverDepth || layer.a <= 0.0 || depthCoverage <= 0.0) {
+    return layer;
+  }
+  let sourceDepthValue = sourceDepth(depthMoment, depthCoverage);
+  if (sourceDepthValue <= 0.0) {
+    return vec4f(0.0);
+  }
+  // 寄与元が現在の物体より手前にあるほど、ぼけlayerを前面へ残します
+  return layer * depthVisibility(receiverDepth, sourceDepthValue);
+}
+
+fn layerColor(layer : vec4f, fallback : vec3f) -> vec3f {
+  // premultiplied colorをcoverageで戻し、coverageが薄い輪郭では既存blurへ連続接続します
+  if (layer.a <= 0.0) {
+    return fallback;
+  }
+  return mix(fallback, layer.rgb / layer.a, clamp(layer.a, 0.0, 1.0));
+}
+
+fn farLayerAtStageWithDepth(
+  uv : vec2f,
+  stage : f32,
+  receiverDepth : f32,
+  hasReceiverDepth : bool
+) -> vec4f {
+  let widestLayer = textureSampleLevel(farSixteenthTexture, levelSampler, uv, 0.0);
+  let cocMetadata = textureSampleLevel(cocSixteenthTexture, levelSampler, uv, 0.0);
+  let layer = farLayerAtStage(uv, stage);
+  return depthAwareLayer(
+    layer,
+    cocMetadata.a,
+    widestLayer.a,
+    receiverDepth,
+    hasReceiverDepth
+  );
+}
+
+fn nearLayerAtStageWithDepth(
+  uv : vec2f,
+  stage : f32,
+  receiverDepth : f32,
+  hasReceiverDepth : bool
+) -> vec4f {
+  let widestLayer = textureSampleLevel(nearSixteenthTexture, levelSampler, uv, 0.0);
+  let cocMetadata = textureSampleLevel(cocSixteenthTexture, levelSampler, uv, 0.0);
+  let layer = nearLayerAtStage(uv, stage);
+  return depthAwareLayer(
+    layer,
+    cocMetadata.b,
+    widestLayer.a,
+    receiverDepth,
+    hasReceiverDepth
+  );
+}
+
+fn farSpreadLayer(
+  uv : vec2f,
+  receiverDepth : f32,
+  hasReceiverDepth : bool
+) -> vec4f {
+  let widestLayer = textureSampleLevel(farSixteenthTexture, levelSampler, uv, 0.0);
+  let cocMoment = textureSampleLevel(cocSixteenthTexture, levelSampler, uv, 0.0).g;
+  return farLayerAtStageWithDepth(
+    uv,
+    sourceStage(cocMoment, widestLayer.a),
+    receiverDepth,
+    hasReceiverDepth
+  );
+}
+
+fn nearSpreadLayer(
+  uv : vec2f,
+  receiverDepth : f32,
+  hasReceiverDepth : bool
+) -> vec4f {
   let widestLayer = textureSampleLevel(nearSixteenthTexture, levelSampler, uv, 0.0);
   let cocMoment = textureSampleLevel(cocSixteenthTexture, levelSampler, uv, 0.0).r;
-  return nearLayerAtStage(uv, sourceStage(cocMoment, widestLayer.a));
+  return nearLayerAtStageWithDepth(
+    uv,
+    sourceStage(cocMoment, widestLayer.a),
+    receiverDepth,
+    hasReceiverDepth
+  );
 }
 
 fn compositeCoverageLayer(baseColor : vec3f, layer : vec4f) -> vec3f {
@@ -270,7 +394,7 @@ fn main(@builtin(global_invocation_id) id : vec3<u32>) {
   let depth = textureLoad(depthTexture, coord, 0);
   let mode = i32(params.shape.z);
 
-  // clear background自身には距離もCoCもありません
+  // clear background自身は距離とCoCを持たない背景として扱います
   // 近景・遠景のfiltered coverageが届いた部分だけを各source stageで合成します
   if (isGBufferBackgroundDepth(depth)) {
     if (mode == 1 || mode == 2) {
@@ -278,8 +402,14 @@ fn main(@builtin(global_invocation_id) id : vec3<u32>) {
     } else if (params.values.w < 0.5) {
       textureStore(outputTexture, coord, scene);
     } else {
-      let farComposite = compositeCoverageLayer(scene.rgb, farSpreadLayer(uv));
-      let nearComposite = compositeCoverageLayer(farComposite, nearSpreadLayer(uv));
+      let farComposite = compositeCoverageLayer(
+        scene.rgb,
+        farSpreadLayer(uv, 0.0, false)
+      );
+      let nearComposite = compositeCoverageLayer(
+        farComposite,
+        nearSpreadLayer(uv, 0.0, false)
+      );
       textureStore(outputTexture, coord, vec4f(nearComposite, scene.a));
     }
     return;
@@ -302,20 +432,34 @@ fn main(@builtin(global_invocation_id) id : vec3<u32>) {
     return;
   }
 
-  let isOutOfFocus = stageValue > params.shape.x;
+  let blurWeight = focusBlurWeight(stageValue);
+  let isOutOfFocus = blurWeight > 0.0;
   let isOutOfFocusNear = delta < 0.0 && isOutOfFocus;
   var color = scene.rgb;
   if (isOutOfFocus && delta != 0.0) {
-    // 元geometry輪郭内部でもscene全体の同じ低周波Levelを使用します
-    // layer色をcoverageで正規化すると元物体色を復元するため、ここでは行いません
-    color = sceneBlurAtStage(uv, stageValue).rgb;
+    // 合焦帯を出た直後はsceneを残し、stage=1以降は現行のLevel補間へ接続します
+    let blurStage = max(stageValue, 1.0);
+    var blurColor = sceneBlurAtStage(uv, blurStage).rgb;
+    if (delta < 0.0) {
+      // 近景はnear depth momentに対応する色を使い、遠景の色が内部へ入り込む量を抑えます
+      let nearLayer = nearLayerAtStageWithDepth(uv, blurStage, linearDepth, true);
+      blurColor = layerColor(nearLayer, blurColor);
+    } else {
+      // 遠景はfar depth momentに対応する色を使い、近景の色が内部へ入り込む量を抑えます
+      let farLayer = farLayerAtStageWithDepth(uv, blurStage, linearDepth, true);
+      blurColor = layerColor(farLayer, blurColor);
+    }
+    color = mix(scene.rgb, blurColor, blurWeight);
   }
 
   // 近景blurは焦点面と遠景の手前へfiltered coverageに従って重ねます
   // 合焦帯のnear側も焦点面の一部なので、別の焦点外近景から届くcoverageを受け取ります
-  // 焦点外近景自身だけはscene blurで既に置換されているため、同じnear layerを重ねません
+  // 焦点外近景自身はscene blurで既に置換されているため、near layerを一度だけ重ねます
   if (!isOutOfFocusNear) {
-    color = compositeCoverageLayer(color, nearSpreadLayer(uv));
+    color = compositeCoverageLayer(
+      color,
+      nearSpreadLayer(uv, linearDepth, true)
+    );
   }
   textureStore(outputTexture, coord, vec4f(color, scene.a));
 }`;
@@ -515,6 +659,12 @@ export default class ComputeDofPass {
   // 焦点、投影、debug、Level補間のparameterを検証してshaderへ渡す値を返します
   validateEncodeOptions(options = {}) {
     this.rejectDeprecatedOptions(options);
+    if (Object.prototype.hasOwnProperty.call(options, "focusSource")) {
+      throw new Error(
+        `${this.label} focusSource is managed by ComputeEffectPipeline; `
+        + `pass a numeric focusDistance to ComputeDofPass.encode()`
+      );
+    }
     for (const name of ["projectionNear", "projectionFar"]) {
       if (Object.prototype.hasOwnProperty.call(options, name)) {
         throw new Error(
@@ -548,6 +698,18 @@ export default class ComputeDofPass {
         );
       }
     }
+    const sharpnessWidth = util.readOptionalFiniteNumber(
+      options.sharpnessWidth,
+      `${this.label} sharpnessWidth`,
+      COMPUTE_DOF_DEFAULTS.sharpnessWidth,
+      { min: 0.0, max: 0.95 }
+    );
+    const focusTransitionWidth = util.readOptionalFiniteNumber(
+      options.focusTransitionWidth,
+      `${this.label} focusTransitionWidth`,
+      COMPUTE_DOF_DEFAULTS.focusTransitionWidth,
+      { min: 0.0, max: 4.0 - sharpnessWidth }
+    );
     return {
       focusDistance: util.readOptionalFiniteNumber(
         options.focusDistance,
@@ -575,12 +737,8 @@ export default class ComputeDofPass {
       ),
       debugView,
       debugMode: debugView === "depth" ? 1.0 : debugView === "focus" ? 2.0 : 0.0,
-      sharpnessWidth: util.readOptionalFiniteNumber(
-        options.sharpnessWidth,
-        `${this.label} sharpnessWidth`,
-        COMPUTE_DOF_DEFAULTS.sharpnessWidth,
-        { min: 0.0, max: 0.95 }
-      ),
+      sharpnessWidth,
+      focusTransitionWidth,
       sharpnessPower: util.readOptionalFiniteNumber(
         options.sharpnessPower,
         `${this.label} sharpnessPower`,
@@ -679,7 +837,7 @@ export default class ComputeDofPass {
       params.sharpnessWidth,
       params.sharpnessPower,
       params.debugMode,
-      0.0
+      params.focusTransitionWidth
     ];
     this.cocExtractPass.setUniforms(commonUniforms);
     this.cocExtractPass.encode(commandEncoder, {
@@ -759,35 +917,42 @@ export default class ComputeDofPass {
       || pyramidChanged || farPyramidChanged || nearPyramidChanged || cocPyramidChanged;
   }
 
+  // DoFの大きなblur levelを取得し、互換性を保った後段入力へ渡します
   getBlurTarget() {
     return this.pyramid.getLevel(16);
   }
 
-  // 旧debug getterは表示名との互換性を維持し、固定Levelを返します
+  // 互換名のgetterとして固定Levelを返します
   getSmallBlurTarget() {
     return this.pyramid.getLevel(2);
   }
 
+  // DoFの中間blur levelを取得し、段階的な合成へ渡します
   getMediumBlurTarget() {
     return this.pyramid.getLevel(4);
   }
 
+  // DoFの大きなblur levelを取得し、遠近のぼけ合成へ渡します
   getLargeBlurTarget() {
     return this.pyramid.getLevel(16);
   }
 
+  // DoF pyramidの1/2解像度levelを取得し、段階的な縮小処理へ渡します
   getHalfTarget() {
     return this.pyramid.getLevel(2);
   }
 
+  // DoF pyramidの1/4解像度levelを取得し、段階的な縮小処理へ渡します
   getQuarterTarget() {
     return this.pyramid.getLevel(4);
   }
 
+  // DoF pyramidの1/8解像度levelを取得し、段階的な縮小処理へ渡します
   getEighthTarget() {
     return this.pyramid.getLevel(8);
   }
 
+  // DoF pyramidの1/16解像度levelを取得し、広いぼけの入力へ渡します
   getSixteenthTarget() {
     return this.pyramid.getLevel(16);
   }
@@ -798,6 +963,7 @@ export default class ComputeDofPass {
     return this.farFieldTarget;
   }
 
+  // 遠景専用pyramidの1/16解像度levelを取得し、遠景寄与の合成へ渡します
   getFarSixteenthTarget() {
     return this.farPyramid.getLevel(16);
   }
@@ -808,6 +974,7 @@ export default class ComputeDofPass {
     return this.nearFieldTarget;
   }
 
+  // 近景専用pyramidの1/16解像度levelを取得し、近景寄与の合成へ渡します
   getNearSixteenthTarget() {
     return this.nearPyramid.getLevel(16);
   }
@@ -818,6 +985,7 @@ export default class ComputeDofPass {
     return this.cocFieldTarget;
   }
 
+  // CoC専用pyramidの1/16解像度levelを取得し、深度モーメントの確認へ渡します
   getCocSixteenthTarget() {
     return this.cocPyramid.getLevel(16);
   }

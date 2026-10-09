@@ -1,10 +1,10 @@
 // ---------------------------------------------
-// samples/compute_texture/main.js  2026/07/21
+// samples/compute_texture/main.js  2026/08/11
 //   Compute Shader dynamic texture sample
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // ---------------------------------------------
-import WebgApp from "../../webg/WebgApp.js?v=20260614_compute_frame1";
+import WebgApp from "../../webg/WebgApp.js";
 import PingPongTexture from "../../webg/PingPongTexture.js";
 import { buildErrorPanelOptions, buildHelpPanelOptions } from "../../webg/OverlayPanelPresets.js";
 import Primitive from "../../webg/Primitive.js";

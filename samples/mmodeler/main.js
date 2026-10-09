@@ -79,7 +79,7 @@ class ModelerSmoothShader extends SmoothShader {
 
 class ModelerWebgApp extends WebgApp {
   // mmodeler の透視投影だけ、編集対象に寄せた depth range を使う。
-  // 正射影は従来の range を維持し、projection mode 切り替え時の見え方を不用意に変えない。
+  // 正射影は専用の range を使い、projection mode を切り替えても編集対象の見え方を保つ。
   updateProjection(viewAngle = this.viewAngle) {
     const proj = new Matrix();
     const vfov = this.screen.getRecommendedFov(viewAngle);
@@ -1322,7 +1322,7 @@ function cancelPendingMobileCanvasTap() {
 
 // mobile の single tap 選択を double tap 判定時間だけ遅延させる
 // 2 回目 tap や long press が来なかった場合だけ、保存した snapshot を handleCanvasClick へ渡して通常選択を確定する
-// desktop profile では操作感を変えないため、従来通り即時に handleCanvasClick を呼ぶ
+// desktop profile では即時に handleCanvasClick を呼ぶ
 function scheduleMobileCanvasTap(ev) {
   mobileInput.scheduleCanvasTap(ev, handleCanvasClick);
 }
@@ -2502,7 +2502,7 @@ function rebuildScene() {
   rebuildMeshShape();
   // Edit Mode の選択 face overlay Shape を再構築する
   rebuildSelectedFaceShape();
-  // 旧 3D marker node を使わないため marker root を空に保つ
+  // 3D marker nodeを使わず、marker rootを空に保つ
   rebuildMarkers();
   // editor / camera / diagnostics の現在状態を DOM status と HUD へ反映する
   updateStatus();
@@ -4112,7 +4112,7 @@ function handleCanvasPointerUp(ev) {
         // mobile では pointerup を確定にせず、指で隠れていた終点を確認できる preview として保持する
         boxSelectSession?.holdPreview(dragRect, additive);
       } else {
-        // desktop では従来通り drag 終了時点で矩形内の object / vertex / face を選択する
+        // desktop では drag 終了時点で矩形内の object / vertex / face を選択する
         selectByClientRect(dragRect, additive);
       }
       ev.preventDefault();
@@ -4148,7 +4148,7 @@ function handleCanvasPointerUp(ev) {
     rememberMobileCanvasTap(ev);
   }
   // mobile では single tap か double tap かを判定する短い猶予を置いてから選択を確定する
-  // desktop profile は従来通り即時に click selection を実行する
+  // desktop profile は即時に click selection を実行する
   scheduleMobileCanvasTap(ev);
   ev.preventDefault();
 }

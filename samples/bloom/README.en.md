@@ -25,8 +25,8 @@ English | [日本語](README.md)
 - `CommandPalette`: shows and edits current bloom parameter values in one settings panel
 
 ## Checkpoints
-- Confirm that the 3D scene is not drawn directly to the canvas but first to the offscreen target, then displayed after bloom compositing
-- Confirm that blur appears around the center sphere and the bright orbs, and that only the bright parts spread rather than the whole image simply becoming blurry
+- Confirm that the 3D scene is drawn first to the offscreen target, then displayed after bloom compositing
+- Confirm that blur appears around the center sphere and the bright orbs, and that the bright parts spread selectively
 - Confirm that glow also appears around the warm, blue, and pink emissive spheres in the upper-back area of the screen, so colored bloom is visible over the dark background
 - Confirm that the help panel appears at the upper left, that pressing `Hide Help` leaves only the `Show Help` button, and that `Show Help` restores it
 - Confirm that CommandPalette shows current values directly on steppers, selectors, and toggles, and that the values can be edited in place
@@ -36,7 +36,7 @@ English | [日本語](README.md)
 - When `U` switches blur quality between full and half, confirm how the blur appearance and blur-target size change
 - When changing `softKnee` with `Q / W`, `extractIntensity` with `A / S`, exposure with `T / Y`, and tone-map mode with `G`, confirm how the extraction boundary and final composite appearance change
 - In the `Tone Map` and `Exposure` rows on the CommandPalette, confirm that the colors are tone-mapped after bloom compositing
-- Confirm that the threshold boundary does not switch abruptly, and that `softKnee` makes highlights near the boundary extract more smoothly
+- Confirm that `softKnee` makes highlights near the threshold boundary extract smoothly
 - Because bloom extraction uses not only luma but also `max(rgb)` more strongly, confirm that strongly emissive blue and pink colors enter the extract view more easily
 - Use `V` to switch between `composite / scene / extract / extractHeat / blurA / blurB` and confirm that the extract colors themselves and the gain shown as heat can be inspected separately
 - Confirm that even when the viewport size changes, `BloomPass.resizeToScreen()` keeps the offscreen target in sync so bloom positions do not slip and resolution does not break

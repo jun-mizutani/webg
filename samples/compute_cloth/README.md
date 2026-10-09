@@ -15,7 +15,7 @@
 - 1 frameを3 substepへ分け、位置制限後の実際の移動量から速度を再計算して、下向き速度が補正後も残ることを防いでいます
 - 2頂点先を結ぶ曲げバネを追加し、下部が鋭く折れて自己交差して見える状態を抑えています
 - 風はカーテン全体で同じ前後方向へ周期的に反転し、位置によって振幅だけを変えることで、中央の折り返しと一方向への流出を防いでいます
-- 上端の固定位置は中央が0.18だけ下がる緩やかな弧にし、真っ直ぐ張った板ではなく吊られた布として見える形にしています
+- 上端の固定位置は中央が0.18だけ下がる緩やかな弧にし、吊られた布として見える形にしています
 - render pass は compute 後の storage buffer を vertex shader で読み、Wire / Flat / Smooth の表示 mode に応じて line-list または triangle-list として描画します
 
 ## 実行方法
@@ -82,5 +82,5 @@
 - render shader は vertex attribute で渡された cloth vertex index を使い、storage buffer 内の頂点位置を直接参照しています
 - Flat / Smooth は同じ triangle stream を使い、Flat は変形後の3頂点から作った面法線を WGSL の `@interpolate(flat)` で triangle 全体へ一定値として渡し、Smooth は grid 近傍から作った頂点法線を補間しています
 - 布の色は固定で、視点右上の光に対する diffuse と specular highlight によって揺れと面の向きを読み取ります
-- 操作説明と状態表示は独自 HUD ではなく OverlayPanel の help panel にまとめ、スマートフォンの単発操作は Touch ボタンへ分離しています
+- 操作説明と状態表示はOverlayPanel の help panel にまとめ、スマートフォンの単発操作は Touch ボタンへ分離しています
 - CPU 側へ頂点座標を戻さない構成なので、布や髪などの描画寄り simulation を GPU 内で完結させる例として確認できます

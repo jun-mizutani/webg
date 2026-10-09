@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// unittest/input_controller/main.js  2026/04/30
+// unittest/input_controller/main.js  2026/10/04
 //   input_controller unittest
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -47,7 +47,7 @@ const check = (label, condition, detail = "") => {
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
 
 // 手動確認用の見た目をこの test 専用に追加する
-// 既存のページに影響を広げすぎないよう、必要な CSS だけを足す
+// ページ固有の表示に必要な CSS だけを追加する
 const injectManualStyle = () => {
   if (document.getElementById("input-controller-style")) return;
   const style = document.createElement("style");
@@ -276,7 +276,7 @@ check("pulseAction press edge clears on next frame", autoInput.wasActionPressed(
 autoInput.detach();
 
 // pointerdown 既定抑止の適用範囲を確認する
-// target 未指定では従来どおり全文書を抑止し、
+// target 未指定では全文書を抑止し、
 // target 指定時はその element 内だけに範囲を絞れるようにする
 const defaultPointerInput = new InputController(document);
 let defaultPointerCount = 0;
@@ -462,6 +462,7 @@ const manualState = {
 // 画面更新と入力確認を毎 frame 進める
 // action の hold と edge を分けて読み、結果を marker と文字列に反映する
 let lastMs = performance.now();
+// 経過時間に応じて手動確認の状態を更新し、入力のholdとedgeを画面へ表示する
 const updateManual = () => {
   const now = performance.now();
   const dt = clamp((now - lastMs) / 1000.0, 0.0, 0.033);

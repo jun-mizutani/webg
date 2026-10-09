@@ -77,7 +77,8 @@
       font-size: 0.78rem;
     }
 
-    input {
+    input,
+    select {
       min-width: 0;
       padding: 7px 8px;
       border: 1px solid rgba(255, 255, 255, 0.18);
@@ -154,14 +155,13 @@
     }
   </style>
 </head>
-<body>
+<body data-benchmark-status="loading">
   <canvas id="canvas"></canvas>
   <section class="panel">
     <h1>compute_benchmark</h1>
     <p>
-      `ComputeEffectPipeline` と標準 compute effect API をそのまま使い、
-      render / shadow / SSAO / SSR / Transparency / Fog / Vignette などの GPU 負荷を
-      同じ scene 条件で比較する sample です
+      `ComputeEffectPipeline` の実行時PBR全段階を固定sceneで測り、
+      PBR最適化前後を比較するためのGPU基準値を作るsampleです
     </p>
     <div class="controls">
       <label>Samples
@@ -170,16 +170,22 @@
       <label>Warmup
         <input id="warmup" type="number" min="0" max="50" step="1" value="4">
       </label>
-      <label>Pyramid Radius
-        <input id="pyramidFilterRadius" type="number" min="0.25" max="3" step="0.25" value="1">
+      <label>Local Lights
+        <input id="localLights" type="number" min="0" max="128" step="1" value="8">
+      </label>
+      <label>PBR SSR
+        <select id="pbrSsrFusion">
+          <option value="fused" selected>Fused</option>
+          <option value="reference">Two-pass reference</option>
+        </select>
       </label>
     </div>
     <p class="note">
-      blurは1/2 → 1/4 → 1/8 → 1/16へ縮小し、
-      1/16からフル解像度へ段階的に拡大する処理全体を測定します
+      G-buffer、Shadow、SSAO、IBLを含むDeferred Lighting、PBR SSR、
+      Transmission/Frost/透明Forward、Tone Map、PBR全体を測定します
     </p>
     <div class="button-row">
-      <button id="run">Run Benchmark</button>
+      <button id="run">Run PBR Baseline</button>
       <button id="downloadJson" disabled>Download JSON</button>
       <button id="downloadCsv" disabled>Download CSV</button>
       <button id="preview">Refresh Preview</button>
@@ -191,6 +197,6 @@
       GPU driver、電源状態の影響を受けます
     </p>
   </section>
-  <script type="module" src="./main.js?v=20260724_pyramid_blur"></script>
+  <script type="module" src="./main.js"></script>
 </body>
 </html>

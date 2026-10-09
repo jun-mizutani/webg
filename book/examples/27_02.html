@@ -1,205 +1,250 @@
 <!doctype html>
-<!-- webg/book/examples/27_02.html 2026/06/15 -->
+<!-- book/examples/27_02.html 2026/10/04 -->
 <html lang="ja">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>27_02 Storage Buffer Compute</title>
-  <link rel="stylesheet" href="./example.css" />
-  <style>
-    .result-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(72px, 1fr));
-      gap: 8px;
-      margin-top: 14px;
-    }
-    .result-cell {
-      padding: 12px 8px;
-      border-radius: 8px;
-      background: #e7eef9;
-      text-align: center;
-      font: 600 15px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace;
-    }
-    .compute-steps {
-      margin: 14px 0 0;
-      padding-left: 24px;
-    }
-    .compute-steps li {
-      margin: 8px 0;
-    }
-  </style>
+  <title>27_02 Compute版物理エンジンの基本例</title>
+  <link rel="stylesheet" href="./examples_common.css" />
 </head>
 <body>
   <div class="page">
     <h1>book/examples</h1>
-    <h2>27_02 Storage Bufferによる1次元計算</h2>
+    <h2>27_02 Compute版物理エンジンの基本例 — GPU計算結果を通常のNodeへ同期</h2>
     <div class="section-card">
-      <p>この例は画像を描画せず、8個の数値をGPUへ渡して並列計算し、その結果をJavaScriptへ戻すまでの処理を確認します。入力配列の各要素へ <code>value × 2 + 1</code> を適用します。</p>
-      <ol class="compute-steps">
-        <li><code>[1, 2, 3, 4, 5, 6, 7, 8]</code>を入力用Storage Bufferへ転送します</li>
-        <li>Compute Shaderの各invocationが、担当する配列要素を1個ずつ読みます</li>
-        <li>計算結果を出力用Storage Bufferへ書き込みます</li>
-        <li>出力をCPUから読み取れるreadback Bufferへコピーします</li>
-        <li>JavaScriptで期待値と比較し、入力値と出力値の対応を下に表示します</li>
-      </ol>
-      <p>要素数は8ですが、WGSLの<code>@workgroup_size(64, 1, 1)</code>により64個のinvocationが起動します。先頭8個だけが計算し、残りは<code>index &gt;= count</code>の判定で何も書かずに終了します。入力Bufferは読み取り専用、出力Bufferは書き込み可能としてbindingを分け、どのresourceが変更されるかを明示しています。</p>
-      <p class="note">readbackはGPUとCPUの同期を伴うため、ここでは計算結果を確認する目的で使用しています。毎フレームの描画では、Compute結果をGPU内の次のPassへ直接渡す構成が基本です。</p>
-      <p id="status" class="note">GPU計算を準備しています</p>
-      <div id="result" class="result-grid" aria-live="polite"></div>
+      <p>Compute Physicsの計算だけをGPUへ任せ、利用者側のWGSLを書かずに通常の`WebgApp`、`Shape`、`Node`で描画する確認ページです</p>
+      <p>この例では、Compute Physics内部のWGSLで計算したBodyStateをreadback bufferへコピーし、CPU側へ読み戻してから通常のNodeへ位置と姿勢を同期します。利用者は描画用WGSLやGPU状態のバインドを用意しなくてよいため、CPU版に近い処理フローでCompute Physicsを利用できます</p>
+      <p>一方、毎フレームのreadback、GPUからCPUへの同期、Nodeの更新には追加の待ち時間とCPU処理が発生します。body数が多い場合やGPU上の計算結果をそのまま描画したい場合は27_03が適しています。body数が少ない場合や通常の`Shape`と`Node`を優先する場合は、この例の構成が簡単です。簡単な構成であることと、高速であることは同じではありません</p>
+      <p id="status" class="note">Compute Physicsとreadbackを初期化しています</p>
+    </div>
+
+    <div class="canvas-block">
+      <canvas id="canvas" width="960" height="720"></canvas>
     </div>
 
     <pre id="code"></pre>
 
     <script type="module" id="example-source">
-import ComputePass from "../../webg/ComputePass.js";
+import WebgApp from "../../webg/WebgApp.js";
+import Primitive from "../../webg/Primitive.js";
+import Shape from "../../webg/Shape.js";
+import Quat from "../../webg/Quat.js";
+import ComputePhysicsSpace from "../../webg/ComputePhysicsSpace.js";
+import ComputeBoxCollider from "../../webg/ComputeBoxCollider.js";
+import ComputePlaneCollider from "../../webg/ComputePlaneCollider.js";
 
-const scaleBiasWgsl = `
-struct Params {
-  values : vec4f,
-};
+const CANVAS_W = 960;
+const CANVAS_H = 720;
+const BODY_ID = 1;
+const BOUNDS = Object.freeze({
+  minX: -8.0,
+  maxX: 8.0,
+  minZ: -8.0,
+  maxZ: 8.0,
+  floorY: 0.0
+});
 
-@group(0) @binding(0)
-var<uniform> params : Params;
-
-@group(0) @binding(1)
-var<storage, read> source : array<f32>;
-
-@group(0) @binding(2)
-var<storage, read_write> destination : array<f32>;
-
-@compute @workgroup_size(64, 1, 1)
-fn main(@builtin(global_invocation_id) id : vec3<u32>) {
-  let index = id.x;
-  let count = u32(params.values.x);
-  if (index >= count) {
-    return;
-  }
-  destination[index] =
-    source[index] * params.values.y + params.values.z;
-}`;
-
-// GPUから読み戻した配列を、入力値との対応が分かるセルとしてページへ表示します
-function showResult(input, output) {
-  const result = document.getElementById("result");
-  result.replaceChildren();
-  for (let index = 0; index < output.length; index += 1) {
-    const cell = document.createElement("div");
-    cell.className = "result-cell";
-    cell.textContent = `${input[index]} → ${output[index]}`;
-    result.appendChild(cell);
-  }
-}
-
-// canvasを作らずWebGPU deviceを初期化し、Buffer Computeに必要な最小contextを返します
-async function createComputeGpu() {
-  if (!navigator.gpu) {
-    throw new Error("WebGPU is not available");
-  }
-  const adapter = await navigator.gpu.requestAdapter();
-  if (!adapter) {
-    throw new Error("WebGPU adapter is not available");
-  }
-  const device = await adapter.requestDevice();
-  return {
-    device,
-    queue: device.queue
-  };
-}
-
-// ComputePassでStorage Bufferを処理し、COPY_DST付きreadback Bufferから結果を取得します
-async function runStorageBufferCompute() {
-  const gpu = await createComputeGpu();
-  const inputValues = new Float32Array([1, 2, 3, 4, 5, 6, 7, 8]);
-  const byteLength = inputValues.byteLength;
-
-  const inputBuffer = gpu.device.createBuffer({
-    label: "27_02 input",
-    size: byteLength,
-    usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST
-  });
-  const outputBuffer = gpu.device.createBuffer({
-    label: "27_02 output",
-    size: byteLength,
-    usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC
-  });
-  const readbackBuffer = gpu.device.createBuffer({
-    label: "27_02 readback",
-    size: byteLength,
-    usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ
-  });
-  gpu.queue.writeBuffer(inputBuffer, 0, inputValues);
-
-  const computePass = new ComputePass(gpu, {
-    label: "27_02 scale bias",
-    code: scaleBiasWgsl,
-    workgroupSize: [64, 1, 1],
-    uniformFloats: 4,
-    bindings: [
-      { binding: 0, name: "params", type: "uniform-buffer" },
-      {
-        binding: 1,
-        name: "source",
-        type: "read-only-storage-buffer"
-      },
-      {
-        binding: 2,
-        name: "destination",
-        type: "storage-buffer"
-      }
-    ]
-  });
-  computePass.setUniforms(new Float32Array([
-    inputValues.length,
-    2.0,
-    1.0,
-    0.0
-  ]));
-
-  const commandEncoder = gpu.device.createCommandEncoder({
-    label: "27_02 command encoder"
-  });
-  computePass.encode(
-    commandEncoder,
-    {
-      source: inputBuffer,
-      destination: outputBuffer
+// ComputePhysicsSpaceへ渡す初期bodyを作り、CPU側のNodeとは別にGPU状態を定義します
+// idを明示してreadback後のNode同期先を毎回同じbodyへ固定します
+function createBodies() {
+  return [{
+    id: BODY_ID,
+    bodyType: "dynamic",
+    position: [0.0, 12.0, 0.0],
+    orientation: [1.0, 0.0, 0.0, 0.0],
+    linearVelocity: [0.0, 0.0, 0.0],
+    angularVelocity: [0.0, 0.0, 0.0],
+    collider: new ComputeBoxCollider([2.0, 2.0, 2.0]),
+    mass: 1.0,
+    material: {
+      restitution: 0.3,
+      friction: 0.5,
+      linearDamping: 0.20,
+      angularDamping: 0.20
     },
-    {
-      dispatchSize: [inputValues.length, 1, 1]
-    }
-  );
-  commandEncoder.copyBufferToBuffer(
-    outputBuffer,
-    0,
-    readbackBuffer,
-    0,
-    byteLength
-  );
-  gpu.queue.submit([commandEncoder.finish()]);
-
-  await readbackBuffer.mapAsync(GPUMapMode.READ);
-  const outputValues = new Float32Array(
-    readbackBuffer.getMappedRange().slice(0)
-  );
-  readbackBuffer.unmap();
-
-  const expected = [3, 5, 7, 9, 11, 13, 15, 17];
-  if (!expected.every((value, index) => outputValues[index] === value)) {
-    throw new Error(`Unexpected GPU result: ${Array.from(outputValues)}`);
-  }
-  showResult(inputValues, outputValues);
-  document.getElementById("status").textContent =
-    "PASS: 8 elements were computed and read back from the GPU";
-
-  computePass.destroy();
-  readbackBuffer.destroy();
-  outputBuffer.destroy();
-  inputBuffer.destroy();
+    color: [1.0, 0.50, 0.30, 1.0]
+  }];
 }
 
-runStorageBufferCompute().catch((error) => {
+// 通常のShape描画へ渡すBoxと床を作り、Compute側の衝突形状とは分離します
+// 床の上面をy=0へ合わせ、ComputePlaneColliderの位置と見た目の境界を一致させます
+function createShapes(gpu, shader) {
+  const boxShape = new Shape(gpu);
+  boxShape.applyPrimitiveAsset(Primitive.cube(2.0, boxShape.getPrimitiveOptions()));
+  boxShape.endShape();
+  boxShape.setShader(shader);
+  boxShape.setMaterial("smooth-shader", {
+    has_bone: 0,
+    use_texture: 0,
+    color: [1.0, 0.50, 0.30, 1.0]
+  });
+
+  const floorShape = new Shape(gpu);
+  floorShape.applyPrimitiveAsset(Primitive.cuboid(16.0, 0.1, 16.0, floorShape.getPrimitiveOptions()));
+  floorShape.endShape();
+  floorShape.setShader(shader);
+  floorShape.setMaterial("smooth-shader", {
+    has_bone: 0,
+    use_texture: 0,
+    color: [0.04, 0.28, 0.40, 1.0]
+  });
+  return { boxShape, floorShape };
+}
+
+// Compute PhysicsのGPU計算結果を通常Nodeへ非同期で反映します
+// readback bufferのmap完了を待つ間も描画を続け、次のframeで完了済み状態を表示します
+// ここでは使いやすさを優先してCPU同期を行うため、27_03のGPU状態直接描画より処理の説明は簡単ですが、同期コストは増えます
+function startNodeReadback(physics, readbackBuffer, boxNode, state) {
+  if (state.readbackPending || state.copyRecorded !== true) return;
+  state.readbackPending = physics.readStateReadback(readbackBuffer)
+    // GPUから読み戻した物理状態を検証し、対応するNodeの位置と姿勢へ反映する
+    .then((stateData) => {
+      // GPU BodyStateをIDで検証し、通常Nodeの位置とquaternionだけを更新します
+      // このNode同期が、GPU上の物理状態を通常のWebgApp描画へ渡す境目です
+      physics.syncNodeFromPhysics(BODY_ID, boxNode, stateData);
+      state.readbackError = null;
+    })
+    // 初期化や非同期処理の失敗を受け取り、原因を状態表示またはコンソールへ伝える
+    .catch((error) => {
+      state.readbackError = error;
+      console.error("book/examples/27_02 readback failed:", error);
+    })
+    // 読み戻しの終了時に待機状態を解除し、次のフレームで再びコピーできる状態へ戻す
+    .finally(() => {
+      state.copyRecorded = false;
+      state.readbackPending = null;
+    });
+}
+
+// WebgApp、通常描画用Node、Compute Physics、readback bufferを初期化します
+// 利用者側ではCompute PhysicsのGPU計算結果をNodeへ同期する処理だけを記述します
+async function start() {
+  const app = new WebgApp({
+    document,
+    layoutMode: "embedded",
+    useMessage: false,
+    fixedCanvasSize: { width: CANVAS_W, height: CANVAS_H, useDevicePixelRatio: false },
+    clearColor: [0.018, 0.035, 0.052, 1.0],
+    lightPosition: [120.0, 180.0, 140.0, 1.0],
+    camera: {
+      target: [0.0, 4.8, 0.0],
+      distance: 22.0,
+      yaw: 24.0,
+      pitch: -13.0
+    }
+  });
+  await app.init();
+  const gpu = app.getGPU();
+
+  // 通常のWebgApp camera操作を使い、描画は標準のShapeとNodeで行います
+  app.createOrbitEyeRig({
+    target: [0.0, 4.8, 0.0],
+    distance: 22.0,
+    yaw: 24.0,
+    pitch: -13.0,
+    minDistance: 10.0,
+    maxDistance: 40.0
+  });
+  const { boxShape, floorShape } = createShapes(gpu, app.shader);
+
+  // Nodeは通常の描画シーングラフへ置き、Computeのbodyとは分けて管理します
+  const boxNode = app.space.addNode(null, "box");
+  boxNode.setPosition(0.0, 12.0, 0.0);
+  boxNode.addShape(boxShape);
+  const floorNode = app.space.addNode(null, "floor");
+  floorNode.setPosition(0.0, -0.05, 0.0);
+  floorNode.addShape(floorShape);
+
+  // PlaneとBoxをGPU上のCompute Physicsへ登録し、内部WGSLの計算だけを利用します
+  const physics = new ComputePhysicsSpace(gpu, {
+    label: "book-26-02",
+    maxBodies: 1,
+    maxPlanes: 1,
+    bodies: createBodies(),
+    planes: [new ComputePlaneCollider([0.0, 1.0, 0.0], { planeDistance: 0.0 })],
+    bounds: BOUNDS,
+    gravity: [0.0, -9.8, 0.0],
+    fixedTimeStepMs: 1000.0 / 120.0,
+    maxSubSteps: 8,
+    solverIterations: 8,
+    persistentSleep: true
+  });
+  const readbackBuffer = physics.createStateReadbackBuffer();
+  const state = {
+    paused: false,
+    copyRecorded: false,
+    readbackPending: null,
+    readbackError: null
+  };
+
+  // Spaceで計算を止め、RでGPU bodyと通常Nodeの初期位置を同時に戻します
+  app.attachInput({
+    onKeyDown: (key, event) => {
+      if (event.repeat) return;
+      if (key === "space") state.paused = !state.paused;
+      if (key === "r") {
+        physics.setBodies(createBodies());
+        boxNode.setPosition(0.0, 12.0, 0.0);
+        boxNode.setQuat(new Quat());
+      }
+    }
+  });
+
+  app.start({
+    // 非同期の読み戻し結果と物理計算の状態を、画面内のメッセージへ表示する
+    onUpdate: () => {
+      const readbackStatus = state.readbackError
+        ? `readback ERROR: ${state.readbackError.message}`
+        : state.readbackPending
+          ? "readback: waiting"
+          : "readback: synced";
+      document.getElementById("status").textContent =
+        `${state.paused ? "PAUSED" : "RUNNING"}  Compute fixed steps: ${physics.getFixedStepCount()}  ${readbackStatus}  Space: pause  R: reset`;
+    },
+    // 描画前にCompute物理と読み戻し用コピーを記録し、通常のシーン描画へ処理を渡す
+    onBeforeDraw: (context) => {
+      // WebgAppが開始した通常Render Passを一度閉じ、同じcommand encoderへComputeを先に記録します
+      const frameGpu = context.screen.getGPU();
+      frameGpu.endPass();
+      if (!state.paused) {
+        physics.encode(frameGpu.commandEncoder, context.deltaSec * 1000.0);
+      }
+
+      // Compute完了後のBodyStateをreadback bufferへcopyし、submit後の非同期mapへ渡せる状態にします
+      if (!state.paused && !state.readbackPending && state.copyRecorded !== true) {
+        physics.encodeStateReadback(frameGpu.commandEncoder, readbackBuffer);
+        state.copyRecorded = true;
+      }
+
+      // 自動描画が続けられるよう、クリア済みの色と深度を保持したRender Passを再開します
+      context.screen.beginPass({ colorLoadOp: "load", depthClear: false });
+    },
+    onAfterDraw3d: (context) => {
+      // 通常Nodeの描画後にRender Passを閉じ、readback copyを含むcommand bufferをsubmitします
+      const frameGpu = context.screen.getGPU();
+      frameGpu.endPass();
+      frameGpu.submit();
+
+      // submit完了後にGPU bufferをmapし、次のframeでNodeへ反映します
+      // readbackを使う構成では、読み戻しが完了した物理状態を後続フレームのNode描画へ渡します
+      startNodeReadback(physics, readbackBuffer, boxNode, state);
+    }
+  });
+
+  // ページの終了時に描画を停止し、この例が確保したGPUリソースを解放する
+  window.addEventListener("pagehide", () => {
+    app.stop();
+    readbackBuffer.destroy();
+    physics.destroy();
+    boxShape.destroy();
+    floorShape.destroy();
+  }, { once: true });
+}
+
+// 初期化失敗を画面とconsoleへ明示し、停止した段階と原因を伝えます
+start().catch((error) => {
   document.getElementById("status").textContent = `Error: ${error.message}`;
-  console.error(error);
+  console.error("book/examples/27_02 failed:", error);
 });
     </script>
     <script>

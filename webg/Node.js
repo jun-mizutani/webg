@@ -1,5 +1,5 @@
 // ---------------------------------------------
-//  Node.js        2026/07/25
+//  Node.js        2026/08/11
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // ---------------------------------------------
@@ -65,8 +65,7 @@ export default class Node extends CoordinateSystem {
   }
 
   // Node 側でも local 行列合成 helper を持つ
-  // browser の module cache により CoordinateSystem の旧版が残っていても、
-  // Node 自身が uniform scale 対応 helper を持っていれば skinned mesh build を継続できる
+  // quaternion、uniform scale、positionを一つの行列へ適用する
   composeMatrixFromState(matrix, quat, position, scale = 1.0) {
     matrix.setByQuat(quat);
     matrix.applyUniformScale(scale);
@@ -523,7 +522,13 @@ export default class Node extends CoordinateSystem {
               modelview,
               normal,
               drawContext.translucentQueue,
-              { traversalOrder: drawContext.nextTraversalOrder() }
+              {
+                traversalOrder: drawContext.nextTraversalOrder(),
+                acquireEntry: drawContext.acquireEntry,
+                acquireInstanceSnapshot: drawContext.acquireInstanceSnapshot,
+                node: this,
+                shapeIndex: i
+              }
             );
           }
         } else if (drawContext.phase === "translucent-materials") {

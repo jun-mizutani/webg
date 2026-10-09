@@ -1,9 +1,9 @@
 camera_follow
 
 このページは、`WebgApp` の camera follow helper を確認するためのものです。
-まず headless の自動テストで helper の値の流れを確認し、そのあと実際の canvas 上で target と camera の関係を確認します。
+まずブラウザ内のスタブを使った自動チェックでhelperの値の流れを確認し、そのあと実際の canvas 上で target と camera の関係を確認します。
 
-このページで見たいのは、camera が動くことだけではありません。
+カメラの追従・即時配置・解除を、次の条件で確認します。
 `followNode()` が target node を登録して追従を開始すること、`lockOn()` が camera を target へ即時に合わせること、`clearCameraTarget()` が追従を解除することを確認します。
 visual phase では target を角のあるループで動かし、`follow` では camera が少し遅れて角を曲がり、`lock` ではその場でぴたりと合う違いを見ます。
 

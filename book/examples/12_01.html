@@ -1,19 +1,19 @@
 <!doctype html>
-<!-- webg/book/examples/12_01.html 2026/04/24 -->
+<!-- book/examples/12_01.html 2026/10/04 -->
 <html lang="ja">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>12_01 Action と AnimationState の最小例</title>
-  <link rel="stylesheet" href="./example.css" />
+  <title>12_01 HUD と overlay</title>
+  <link rel="stylesheet" href="./examples_common.css" />
 </head>
 <body>
   <div class="page">
     <h1>book/examples</h1>
-    <h2>12_01 Action と AnimationState の最小例</h2>
+    <h2>12_01 HUD と overlay</h2>
     <div class="section-card">
-      <p>`book/12_アニメーション.md` の `Action`、`AnimationState`、`getDebugInfo()` を、repo 内の `hand.glb` でそのまま試せる実行例です</p>
-      <p class="note">`1`〜`5` で pose 切替、`6` で rest、`/` で次の state、`@` で現在 pose を再始動します。status 行には `state`、`action`、`transition` が並ぶので、12章の層の違いを追いやすくしてあります</p>
+      <p>`book/12_UI表示の設計.md` の `app.message.setLines()` と `OverlayPanel` を 1 つの埋め込み page に集めた例です</p>
+      <p class="note">短い HUD は canvas 上、日本語の説明や長文は DOM overlay へ分ける構成を、そのまま見比べられます。`D` で dialogue 風 panel を出し直し、`F` で pre panel を開閉できます</p>
     </div>
 
     <div class="canvas-block">
@@ -25,36 +25,13 @@
     <script type="module" id="example-source">
 import WebgApp from "../../webg/WebgApp.js";
 import { buildHelpPanelOptions } from "../../webg/OverlayPanelPresets.js";
-import SmoothShader from "../../webg/SmoothShader.js";
-import Action from "../../webg/Action.js";
-import AnimationState from "../../webg/AnimationState.js";
-
-const GLTF_FILE = "../../samples/gltf_loader/hand.glb";
-
-const FINGER_PATTERNS = [
-  { id: "N1", fromKey: 2, toKey: 3, entryDurationMs: 250 },
-  { id: "N2", fromKey: 4, toKey: 5, entryDurationMs: 250 },
-  { id: "N3", fromKey: 6, toKey: 7, entryDurationMs: 250 },
-  { id: "N4", fromKey: 8, toKey: 9, entryDurationMs: 250 },
-  { id: "N5", fromKey: 10, toKey: 11, entryDurationMs: 250 },
-  { id: "N0", fromKey: 12, toKey: 13, entryDurationMs: 250 }
-];
-
-const STATE_DEFS = [
-  { id: "pose1", action: "N1" },
-  { id: "pose2", action: "N2" },
-  { id: "pose3", action: "N3" },
-  { id: "pose4", action: "N4" },
-  { id: "pose5", action: "N5" },
-  { id: "pose0", action: "N0" }
-];
+import Shape from "../../webg/Shape.js";
+import Primitive from "../../webg/Primitive.js";
 
 const app = new WebgApp({
   document,
-  shaderClass: SmoothShader,
   messageFontTexture: "../../webg/font512.png",
-  clearColor: [0.15, 0.16, 0.25, 1.0],
-  lightPosition: [0.0, 100.0, 1000.0, 1.0],
+  clearColor: [0.05, 0.07, 0.11, 1.0],
   layoutMode: "embedded",
   fixedCanvasSize: {
     width: 960,
@@ -62,170 +39,189 @@ const app = new WebgApp({
     useDevicePixelRatio: false
   },
   camera: {
-    target: [0.0, 0.0, 0.0],
-    distance: 12.0,
-    yaw: 0.0,
-    pitch: 10.0
+    target: [0.0, 0.8, 0.0],
+    distance: 9.0,
+    yaw: 20.0,
+    pitch: -10.0
   }
 });
 await app.init();
 
-const model = await app.loadModel(GLTF_FILE, {
-  format: "gltf",
-  instantiate: true,
-  startAnimations: false,
-  gltf: {
-    includeSkins: true
-  }
-});
-
-const runtime = model.runtime;
-const shapes = runtime.shapes;
-const clipId = model.getClipNames()[0];
-const animation = runtime.getAnimation(clipId);
-const rootNodeInfo = runtime.nodes.find((item) => item.parent === null) ?? runtime.nodes[0] ?? null;
-const modelRoot = rootNodeInfo ? (model.instantiated?.nodeMap?.get(rootNodeInfo.id) ?? null) : null;
-if (!animation || !modelRoot) {
-  throw new Error("Failed to prepare animation example");
-}
-
-const size = app.getShapeSize(shapes);
-app.cameraRig.setPosition(size.centerx, size.centery, size.centerz);
-app.eye.setPosition(0.0, 0.0, Math.max(1.0, size.max * 1.25));
-app.eye.setAttitude(0.0, 10.0, 0.0);
-
 const orbit = app.createOrbitEyeRig({
-    target: [size.centerx, size.centery, size.centerz],
-    distance: Math.max(1.0, size.max * 1.25),
-    yaw: 0.0,
-    pitch: 10.0,
-    minDistance: Math.max(0.5, size.max * 0.6),
-    maxDistance: Math.max(4.0, size.max * 3.0)
+    target: [0.0, 0.8, 0.0],
+    distance: 9.0,
+    yaw: 20.0,
+    pitch: -10.0,
+    minDistance: 5.0,
+    maxDistance: 18.0
 });
 
-const action = new Action(animation);
-for (let i = 0; i < FINGER_PATTERNS.length; i++) {
-  const pattern = FINGER_PATTERNS[i];
-  action.addPattern(pattern);
-  action.addAction(pattern.id, [pattern.id]);
-}
-action.setVerbose(false);
-
-const machine = new AnimationState(action, {
-  initialState: "pose0"
+const shape = new Shape(app.getGPU());
+shape.applyPrimitiveAsset(Primitive.cube(2.0, shape.getPrimitiveOptions()));
+shape.endShape();
+shape.setMaterial("smooth-shader", {
+  has_bone: 0,
+  use_texture: 0,
+  color: [1.0, 0.5, 0.3, 1.0],
+  ambient: 0.26,
+  specular: 0.86,
+  power: 40.0
 });
-for (let i = 0; i < STATE_DEFS.length; i++) {
-  const state = STATE_DEFS[i];
-  machine.addState({
-    id: state.id,
-    action: state.action
-  });
-}
 
-const state = {
-  desiredPoseId: "pose0",
-  autoCycle: false,
-  nextAutoCycleTimeMs: 0,
-  lastEvent: "startup"
-};
+const node = app.space.addNode(null, "ui-box");
+node.addShape(shape);
 
-const getPoseIndex = (stateId) => {
-  return Math.max(0, STATE_DEFS.findIndex((item) => item.id === stateId));
-};
-
-const getNextPoseId = () => {
-  const currentIndex = getPoseIndex(state.desiredPoseId);
-  return STATE_DEFS[(currentIndex + 1) % STATE_DEFS.length].id;
-};
-
-const setDesiredPose = (nextStateId) => {
-  state.desiredPoseId = nextStateId;
-  machine.setVariable("desiredPoseId", state.desiredPoseId);
-  state.lastEvent = `desired=${nextStateId}`;
-};
-
-const replayCurrentState = () => {
-  const currentStateId = machine.getCurrentState()?.id ?? state.desiredPoseId;
-  machine.setState(currentStateId, {
-    context: {
-      desiredPoseId: state.desiredPoseId,
-      nowMs: app.space.now()
-    },
-    force: true
-  });
-  state.lastEvent = `replay=${currentStateId}`;
-};
-
-machine.setState("pose0", {
-  context: {
-    desiredPoseId: state.desiredPoseId,
-    nowMs: app.space.now()
+const dialogueEntries = [
+  {
+    speaker: "guide",
+    title: "UI design example",
+    lines: [
+      "短い status は canvas HUD へ出します",
+      "長い説明文は DOM overlay へ分けます"
+    ]
   },
-  force: true
-});
-
-app.attachInput({
-  onKeyDown: (key, ev) => {
-    if (ev.repeat) return;
-    if (key === "1") setDesiredPose("pose1");
-    else if (key === "2") setDesiredPose("pose2");
-    else if (key === "3") setDesiredPose("pose3");
-    else if (key === "4") setDesiredPose("pose4");
-    else if (key === "5") setDesiredPose("pose5");
-    else if (key === "6") setDesiredPose("pose0");
-    else if (key === "/") setDesiredPose(getNextPoseId());
-    else if (key === "@") replayCurrentState();
-    else if (key === "p") {
-      state.autoCycle = !state.autoCycle;
-      state.nextAutoCycleTimeMs = 0;
-      state.lastEvent = `autoCycle=${state.autoCycle ? "on" : "off"}`;
-    } else if (key === "r") {
-      orbit.setAngles(0.0, 10.0);
-      orbit.setDistance(Math.max(1.0, size.max * 1.25));
-      state.lastEvent = "camera reset";
-    }
+  {
+    speaker: "guide",
+    lines: [
+      "この分離を先に決めておくと",
+      "役割が混ざりにくくなります"
+    ]
   }
-});
+];
+
+let dialogueIndex = 0;
+let dialogueActive = false;
+
+// 会話を先頭の項目から開始し、現在の内容を会話パネルへ表示する
+const openDialogue = () => {
+  dialogueIndex = 0;
+  dialogueActive = true;
+  syncDialoguePanel();
+};
+
+// 会話の進行状態から表示内容と次へ進む操作を組み立て、会話パネルへ反映する
+const syncDialoguePanel = () => {
+  const entry = dialogueEntries[dialogueIndex] ?? null;
+  if (!dialogueActive || !entry) {
+    app.hideOverlayPanel("ui-dialogue");
+    return;
+  }
+  app.showOverlayPanel({
+    id: "ui-dialogue",
+    title: entry.title ?? "Dialogue style panel",
+    lines: [
+      `[${entry.speaker ?? "guide"}]`,
+      ...entry.lines,
+      "",
+      "Enter / Space: next  D: restart dialogue"
+    ],
+    anchor: "bottom-left",
+    width: 360,
+    buttons: [
+      { id: "next", label: "Next", kind: "primary" }
+    ],
+    // 会話パネルの「次へ」操作を受け取り、会話を一項目進める
+    onAction: ({ actionId }) => {
+      if (actionId === "next") {
+        nextDialogue();
+      }
+    }
+  });
+};
+
+// 会話を次の項目へ進め、最後の項目を通過したら会話パネルを閉じる
+const nextDialogue = () => {
+  if (!dialogueActive) {
+    openDialogue();
+    return;
+  }
+  dialogueIndex += 1;
+  if (dialogueIndex >= dialogueEntries.length) {
+    dialogueActive = false;
+  }
+  syncDialoguePanel();
+};
+
+const panelText = [
+  "OverlayPanel pre format",
+  "",
+  "showOverlayPanel({ format: \"pre\" }) は",
+  "長い説明や診断結果を",
+  "落ち着いて読むための場所です",
+  "",
+  "Message と同じ canvas HUD へ",
+  "長文を詰め込まないことを",
+  "この章では勧めています"
+].join("\n");
+
+// 説明パネルの表示状態を切り替え、固定位置のUIを追加または終了する
+const toggleFixedPanel = () => {
+  if (app.hasOverlayPanel("ui-design-note")) {
+    app.removeOverlayPanel("ui-design-note");
+    return;
+  }
+  app.showOverlayPanel({
+    id: "ui-design-note",
+    title: "Preformatted note",
+    text: panelText,
+    format: "pre",
+    scrollY: true,
+    anchor: "top-right",
+    maxHeight: "38vh"
+  });
+};
 
 app.showOverlayPanel(buildHelpPanelOptions({
-  id: "example1201Help",
+  id: "example1401Help",
   anchor: "bottom-left",
   lines: [
-    "Drag: orbit camera  Wheel: zoom",
-    "1-5: pose1-pose5  6: pose0  /: next state  @: replay current",
-    "P: auto cycle on/off  R: reset camera"
+    "Drag: orbit camera",
+    "D: restart dialogue",
+    "F: toggle pre panel"
   ]
 }));
 
-app.start({
-  onUpdate: ({ deltaSec }) => {
-    modelRoot.rotateY(12.0 * deltaSec);
-
-    const nowMs = app.space.now();
-    if (state.autoCycle) {
-      if (state.nextAutoCycleTimeMs === 0) {
-        state.nextAutoCycleTimeMs = nowMs + 1200;
-      } else if (nowMs >= state.nextAutoCycleTimeMs) {
-        setDesiredPose(getNextPoseId());
-        state.nextAutoCycleTimeMs = nowMs + 1200;
-      }
+app.attachInput({
+  // 正規化されたキー名から操作を選び、停止状態、表示設定、カメラなどの対象を更新する
+  onKeyDown: (key, ev) => {
+    if (ev.repeat) return;
+    if (key === "d") {
+      openDialogue();
+    } else if (key === "enter" || key === "space") {
+      nextDialogue();
+    } else if (key === "f") {
+      toggleFixedPanel();
     }
+  }
+});
 
-    machine.update({
-      desiredPoseId: state.desiredPoseId,
-      nowMs
+openDialogue();
+
+let elapsedSec = 0.0;
+
+app.start({
+  // 物体の回転と経過時間を更新し、会話と固定パネルの操作案内を表示する
+  onUpdate: ({ deltaSec }) => {
+    elapsedSec += deltaSec;
+    node.rotateY(0.8);
+    node.rotateX(0.3);
+
+    app.message.setLines("guide", [
+      "guide lines -> short hints",
+      "status lines -> current state",
+      "overlay panel -> Japanese and long text"
+    ], {
+      anchor: "bottom-left",
+      x: 0,
+      y: -2,
+      width: 38,
+      wrap: true
     });
 
-    const actionInfo = action.getActionInfo();
-    const patternInfo = action.getPatternInfo();
-    const debugInfo = machine.getDebugInfo();
-    const transitionInfo = machine.getCurrentTransition();
-
     app.message.setLines("status", [
-      `desired=${state.desiredPoseId} current=${debugInfo.stateId ?? "-"}`,
-      `action=${debugInfo.actionId ?? "-"} pattern=${patternInfo?.id ?? "-"} transition=${transitionInfo?.label ?? "-"}`,
-      `playing=${debugInfo.playing ? "yes" : "no"} paused=${debugInfo.paused ? "yes" : "no"} auto=${state.autoCycle ? "on" : "off"} last=${state.lastEvent}`,
-      `clip=${clipId} actionIndex=${actionInfo.patternIndex}`
+      `dialogue=${dialogueActive ? "active" : "idle"}`,
+      `pre-panel=${app.hasOverlayPanel("ui-design-note") ? "open" : "closed"}`,
+      `time=${elapsedSec.toFixed(1)} sec`
     ], {
       anchor: "top-left",
       x: 0,

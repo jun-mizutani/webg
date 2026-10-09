@@ -136,7 +136,7 @@ export default class ComputeBlurPass {
     });
   }
 
-  // destroy後のresource利用をその場で検出し、破棄済みGPU objectへcommandを積みません
+  // destroy後のresource利用をその場で検出し、liveなGPU objectへcommandを積みます
   requireAlive() {
     if (this.destroyed) {
       throw new Error(`${this.label} has been destroyed`);
@@ -239,7 +239,7 @@ export default class ComputeBlurPass {
     return this.outputTarget;
   }
 
-  // viewport変更時に2個の内部targetを同じ寸法へ変更し、一方だけ古い状態を残しません
+  // viewport変更時に2個の内部targetを同じ寸法へ変更し、両方を現在寸法へそろえます
   resize(width, height) {
     this.requireAlive();
     const checkedWidth = util.readFiniteNumber(width, `${this.label} width`, {

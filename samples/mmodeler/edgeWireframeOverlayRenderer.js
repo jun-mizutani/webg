@@ -13,7 +13,7 @@ export default class EdgeWireframeOverlayRenderer {
     zBias = 0.00028
   } = {}) {
     // Screen.getGPU() が返す WebGPUContext を保持する
-    // app.start() の onAfterDraw3d から呼ぶ前提なので、描画時は既存の render pass
+    // app.start() の onAfterDraw3d から呼ぶため、描画時は現在の render pass
     // (gpu.passEncoder) にそのまま line-list を追加する
     this.gpu = gpu;
     this.device = null;
@@ -233,7 +233,7 @@ fn fsMain(input : VSOut) -> @location(0) vec4f {
 
   // 現在の頂点数を収められるよう GPU buffer 容量を必要に応じて拡張する
   ensureCapacity(vertexCount) {
-    // 既存 capacity で足りる限りは GPUBuffer を作り直さない
+    // 現在の capacity で足りる限りは GPUBuffer を作り直さない
     // 足りない場合だけ倍々に増やし、頻繁な再確保を避ける
     if (vertexCount <= this.vertexCapacity) {
       return;

@@ -1,0 +1,5 @@
+ComputeProceduralTile and ProceduralTileSpec API contracts
+
+完成済み材質specificationから整数pixel寸法を求め、13 patternのColor／Height／Normal用WGSLとparameterを作る契約、sampleがコアclassをimportする構成を検査します
+
+pebblesでは色とHeightの独立性、丸み、配置の乱雑さ、砂利の合成、周期、入力検証、高さ範囲をpebbles_contracts.jsで確認します。

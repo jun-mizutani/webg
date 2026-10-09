@@ -1,13 +1,13 @@
 // ---------------------------------------------
-// unittest/overlay_panel/main.js  2026/07/25
+// unittest/overlay_panel/main.js  2026/10/04
 //   overlay_panel unittest
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // ---------------------------------------------
-import WebgApp from "../../webg/WebgApp.js?v=20260430_overlaypanel";
-import Primitive from "../../webg/Primitive.js?v=20260430_overlaypanel";
-import Shape from "../../webg/Shape.js?v=20260430_overlaypanel";
-import { buildHelpPanelOptions } from "../../webg/OverlayPanelPresets.js?v=20260430_overlaypanel";
+import WebgApp from "../../webg/WebgApp.js";
+import Primitive from "../../webg/Primitive.js";
+import Shape from "../../webg/Shape.js";
+import { buildHelpPanelOptions } from "../../webg/OverlayPanelPresets.js";
 
 // webg クラスの役割:
 // WebgApp     : Screen / camera / input / HUD / OverlayPanel facade をまとめて初期化する
@@ -51,6 +51,7 @@ const wrapPanelError = (label, detail, fn) => {
 // 失敗した場合は visual phase へ進む前に status へ残す
 const runAutoChecks = () => {
   const lines = [];
+  // 条件の合否を記録し、失敗時は比較値を添えて原因を確認できる表示を作る
   const check = (label, condition, detail = "") => {
     lines.push(`${condition ? "PASS" : "FAIL"} ${label}${detail ? `: ${detail}` : ""}`);
   };
@@ -177,8 +178,7 @@ const createLogPanel = () => {
   });
 };
 
-// modal panel は pauseScene を持つが、自動停止はまだ入れず、
-// test 側で state を見て回転を止める構成にする
+// modal panelのpauseSceneをページの更新処理で読み、立方体の回転を一時停止する
 const createModalPanel = () => {
   const options = {
     id: "overlay-modal",
@@ -237,7 +237,7 @@ const createAnchorPanel = () => {
 };
 
 // action key は panel button と同じくらい素早く試したいので、
-// 新 API の panel 組み合わせに対する操作入口をここへまとめる
+// 配置・折り畳み・modalの操作をaction入力へまとめる
 const handleActions = () => {
   for (let i = 0; i < ANCHOR_ORDER.length; i++) {
     if (app.wasActionPressed(`anchor${i + 1}`)) {
@@ -278,7 +278,7 @@ const handleActions = () => {
   }
 };
 
-// このインスタンスの初期化段階で、必要な状態と資源を準備して処理を開始する
+// パネルの入力検証を実行し、配置・折り畳み・modalの操作を立方体と合わせて表示する
 const start = async () => {
   app = new WebgApp({
     document,

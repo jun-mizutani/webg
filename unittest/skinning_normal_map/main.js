@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// unittest/skinning_normal_map/main.js  2026/07/25
+// unittest/skinning_normal_map/main.js  2026/10/04
 //   skinning_normal_map sample
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -28,7 +28,7 @@ const OBJECT_HEAD_DEG = 45.0;
 const ROOT_YAW_DEG = 8.0;
 const CHILD_BEND_DEG = 60.0;
 
-// このインスタンスの初期化段階で、必要な状態と資源を準備して処理を開始する
+// 2ボーンの筒に画像法線を設定し、曲げ姿勢に対する陰影の追従を確認する
 const start = async ({ screen, gpu, setStatus, setViewportLayout, startLoop }) => {
   const shader = new SmoothShader(gpu);
   await shader.init();
@@ -78,7 +78,7 @@ const start = async ({ screen, gpu, setStatus, setViewportLayout, startLoop }) =
 
   startLoop((timeMs) => {
     // normal map 付きの unittest でも、変形量自体は左右対称にそろえ、
-    // 片側へ偏った姿勢ではなく正負の両方向で陰影が破綻しないかを見やすくする
+    // 正負の両方向へ曲げ、姿勢に対応する表面の陰影を比較する
     // 速度も半分へ落として、ハイライトと seam の追従を目で追いやすくする
     const phase = timeMs * BEND_SPEED;
     j0.setAttitude(0.0, Math.sin(phase * 0.7) * ROOT_YAW_DEG, 0.0);

@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// unittest/scene_loader_contracts/main.js  2026/07/25
+// unittest/scene_loader_contracts/main.js  2026/10/04
 //   scene_loader_contracts unittest
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -117,11 +117,12 @@ const SCENE_DATA = {
   ]
 };
 
+// 検証結果の1行を記録し、画面に表示するログへ追加する
 const log = (line) => {
   lines.push(line);
 };
 
-// 値を現在の入力と状態から求め、呼び出し元へ返す
+// 検証に使った値をJSON文字列へ変換し、変換時の例外は文字列表現で表示する
 const formatValue = (value) => {
   try {
     return JSON.stringify(value);
@@ -130,7 +131,7 @@ const formatValue = (value) => {
   }
 };
 
-// このインスタンスを検証し、後続処理が扱える共通形式へ整える
+// 条件の合否を記録し、失敗時は比較値を添えて原因を確認できる表示を作る
 const check = (label, condition, detail = "") => {
   if (condition) {
     passCount += 1;
@@ -141,7 +142,7 @@ const check = (label, condition, detail = "") => {
   }
 };
 
-// 投影を受け取り、現在の設定と後続処理へ反映する
+// 現在の画面の縦横比と推奨視野角から透視投影を作り、比較用シェーダーへ設定する
 const setProjection = (screen, shader, angle = 48.0) => {
   const proj = new Matrix();
   const fov = screen.getRecommendedFov(angle);
@@ -149,9 +150,10 @@ const setProjection = (screen, shader, angle = 48.0) => {
   shader.setProjectionMatrix(proj);
 };
 
+// 入力fixtureを複製し、各検証で独立したScene JSONを使う
 const cloneSceneData = () => JSON.parse(JSON.stringify(SCENE_DATA));
 
-// 状態表示を生成し、後続処理で利用できる状態にする
+// 物理runtimeの状態、crateの位置と姿勢、自動チェックの合否を表示用の行へまとめる
 const buildStatus = ({ runtime, paused, beforePos, afterPos }) => {
   const crateEntry = runtime.getEntry("crate");
   const floorEntry = runtime.getEntry("floor");
@@ -188,7 +190,7 @@ const buildStatus = ({ runtime, paused, beforePos, afterPos }) => {
   return linesOut.join("\n");
 };
 
-// このインスタンスの初期化段階で、必要な状態と資源を準備して処理を開始する
+// Scene JSONを検証・構築し、生成した物理Nodeの落下と停止を表示する
 const start = async ({ screen, gpu, setStatus, setViewportLayout, startLoop, document }) => {
   const shader = new SmoothShader(gpu);
   await shader.init();
@@ -228,7 +230,7 @@ const start = async ({ screen, gpu, setStatus, setViewportLayout, startLoop, doc
   eye.setPosition(0.0, -6.0, 80.0);
   eye.setAttitude(0.0, 0.0, 0.0);
 
-  // `crate`を初期状態へ戻し、前回の状態を残さない
+  // crateを指定の初期位置へ戻し、落下の比較を同じ開始条件からやり直す
   const resetCrate = () => {
     const body = crateEntry.physicsNode;
     body.wakeUp();

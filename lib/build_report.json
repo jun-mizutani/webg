@@ -1,0 +1,2458 @@
+{
+  "generatedAt": "2026-10-05T07:19:45.212Z",
+  "inventory": [
+    {
+      "path": "webg/Action.js",
+      "moduleName": "ActionModule",
+      "namedExports": {},
+      "defaultName": "Action",
+      "bytes": 12617,
+      "comments": 50,
+      "sha256": "8d2a3d5011a15f42a7fa16e19dd763627d23d23677a7668c729a6c249c3a308d"
+    },
+    {
+      "path": "webg/Animation.js",
+      "moduleName": "AnimationModule",
+      "namedExports": {},
+      "defaultName": "Animation",
+      "bytes": 9253,
+      "comments": 42,
+      "sha256": "b07d4259f496dd5208b8a1f0208d9ebe8a3915c5de880fd30f4d12011fb578a6"
+    },
+    {
+      "path": "webg/AnimationState.js",
+      "moduleName": "AnimationStateModule",
+      "namedExports": {},
+      "defaultName": "AnimationState",
+      "bytes": 9671,
+      "comments": 22,
+      "sha256": "dd906e2a0c47c018e2c5f06bc1f1e0bfddbb162a43719e53d0f451197b824aba"
+    },
+    {
+      "path": "webg/AudioSynth.js",
+      "moduleName": "AudioSynthModule",
+      "namedExports": {},
+      "defaultName": "AudioSynth",
+      "bytes": 27074,
+      "comments": 92,
+      "sha256": "cb1320701a61650dd7ad1b3cb624908315db470e544958b50e822b4ca336de06"
+    },
+    {
+      "path": "webg/Background.js",
+      "moduleName": "BackgroundModule",
+      "namedExports": {},
+      "defaultName": "Background",
+      "bytes": 7689,
+      "comments": 37,
+      "sha256": "f2f0110669ce03879c85a4293d529fa51ae48aa946a8769b1251421c031150d8"
+    },
+    {
+      "path": "webg/BallSocketJoint.js",
+      "moduleName": "BallSocketJointModule",
+      "namedExports": {},
+      "defaultName": "BallSocketJoint",
+      "bytes": 2934,
+      "comments": 12,
+      "sha256": "707602202bc7ddf4463042cc1856e3ce28691b4642527e695fc0e5e6ff1a4fc3"
+    },
+    {
+      "path": "webg/Billboard.js",
+      "moduleName": "BillboardModule",
+      "namedExports": {},
+      "defaultName": "Billboard",
+      "bytes": 7364,
+      "comments": 25,
+      "sha256": "7bc27bd6dfc03ed1b0cd7e83646d4dd62c1a4e1e43106fbf7d7a9d094695c68f"
+    },
+    {
+      "path": "webg/BillboardShader.js",
+      "moduleName": "BillboardShaderModule",
+      "namedExports": {},
+      "defaultName": "BillboardShader",
+      "bytes": 5412,
+      "comments": 13,
+      "sha256": "0019b67bd3b32eb9e8ac1b91cc7320da9aa0fd44cb69915d99d0e56a50473ab7"
+    },
+    {
+      "path": "webg/BloomPass.js",
+      "moduleName": "BloomPassModule",
+      "namedExports": {},
+      "defaultName": "BloomPass",
+      "bytes": 22266,
+      "comments": 52,
+      "sha256": "ed794cb0d8acab6ccfff57d8fa38c714c9603a250417c9a4a195e351a27b4ad9"
+    },
+    {
+      "path": "webg/BoxCollider.js",
+      "moduleName": "BoxColliderModule",
+      "namedExports": {},
+      "defaultName": "BoxCollider",
+      "bytes": 9013,
+      "comments": 22,
+      "sha256": "2578f6dcc443ca4fc1f7b0c3bd8d45a50798f3889219fcd1484d84d378539f9f"
+    },
+    {
+      "path": "webg/BoxContact.js",
+      "moduleName": "BoxContactModule",
+      "namedExports": {
+        "boxesOverlap": "BoxContact_boxesOverlap",
+        "buildBoxContact": "BoxContact_buildBoxContact",
+        "buildBoxContactGeometry": "BoxContact_buildBoxContactGeometry",
+        "createBoxPairAxisCache": "BoxContact_createBoxPairAxisCache",
+        "getBoxSupportFeature": "BoxContact_getBoxSupportFeature",
+        "getBoxSupportFeatureCenter": "BoxContact_getBoxSupportFeatureCenter"
+      },
+      "defaultName": null,
+      "bytes": 8416,
+      "comments": 25,
+      "sha256": "b3ea8caaa1c9cc3f9b2c0c85137dd97bc4c235442875e46186983ba280b0dbbf"
+    },
+    {
+      "path": "webg/CameraFrame.js",
+      "moduleName": "CameraFrameModule",
+      "namedExports": {
+        "createCameraFrameFromEye": "CameraFrame_createCameraFrameFromEye",
+        "createCameraTransformFrameFromEye": "CameraFrame_createCameraTransformFrameFromEye",
+        "createRenderFrameToken": "CameraFrame_createRenderFrameToken",
+        "isRenderFrameToken": "CameraFrame_isRenderFrameToken",
+        "resolveRenderFrameTokenCameraFrame": "CameraFrame_resolveRenderFrameTokenCameraFrame"
+      },
+      "defaultName": "CameraFrame",
+      "bytes": 8351,
+      "comments": 34,
+      "sha256": "1439b84aa5470ac582edd4d29b6a48e98ee831f3762e4d61895395adc8e9d35a"
+    },
+    {
+      "path": "webg/CapsuleCollider.js",
+      "moduleName": "CapsuleColliderModule",
+      "namedExports": {},
+      "defaultName": "CapsuleCollider",
+      "bytes": 17419,
+      "comments": 32,
+      "sha256": "78ad1e634126f9982640cd4365c4acbad4b911dad805d547c5c69d1a3d9e1cbe"
+    },
+    {
+      "path": "webg/Collada.js",
+      "moduleName": "ColladaModule",
+      "namedExports": {},
+      "defaultName": "Collada",
+      "bytes": 57625,
+      "comments": 139,
+      "sha256": "cc02d553a01e62ac9066d9f7d4643a43f8d77e1022db6dfb0fd5f0a3e28d95f8"
+    },
+    {
+      "path": "webg/ColladaShape.js",
+      "moduleName": "ColladaShapeModule",
+      "namedExports": {},
+      "defaultName": "ColladaShape",
+      "bytes": 23923,
+      "comments": 122,
+      "sha256": "2e52d387399297d20ef4fd1bb09af8f1e7a54fcbe2316f1f1830715ec6d01d67"
+    },
+    {
+      "path": "webg/Collider.js",
+      "moduleName": "ColliderModule",
+      "namedExports": {},
+      "defaultName": "Collider",
+      "bytes": 7709,
+      "comments": 37,
+      "sha256": "f2a7ab5f18fa50704bef99d4475abb222b13406deb6432a91ed5e715184de989"
+    },
+    {
+      "path": "webg/ColorSpace.js",
+      "moduleName": "ColorSpaceModule",
+      "namedExports": {
+        "COLOR_SPACE_WGSL": "ColorSpace_COLOR_SPACE_WGSL",
+        "SRGB_REFERENCE_GAMMA": "ColorSpace_SRGB_REFERENCE_GAMMA",
+        "linearChannelToSrgb": "ColorSpace_linearChannelToSrgb",
+        "srgbChannelToLinear": "ColorSpace_srgbChannelToLinear",
+        "srgbColorToLinear": "ColorSpace_srgbColorToLinear"
+      },
+      "defaultName": null,
+      "bytes": 2786,
+      "comments": 14,
+      "sha256": "876b7cdf710a9c1f9709c1e8faa1ec317efd097868cbe726d0ec57472a9691ac"
+    },
+    {
+      "path": "webg/CommandPalette.js",
+      "moduleName": "CommandPaletteModule",
+      "namedExports": {
+        "getDefaultCommandPaletteCss": "CommandPalette_getDefaultCommandPaletteCss"
+      },
+      "defaultName": "CommandPalette",
+      "bytes": 41889,
+      "comments": 88,
+      "sha256": "0ea774e79ddadc62968c0e78b6860a07814684044f37db004be2c45f20f2ba05"
+    },
+    {
+      "path": "webg/ComputeBloomPass.js",
+      "moduleName": "ComputeBloomPassModule",
+      "namedExports": {
+        "COMPUTE_BLOOM_COMPOSITE_WGSL": "ComputeBloomPass_COMPUTE_BLOOM_COMPOSITE_WGSL",
+        "COMPUTE_BLOOM_DEFAULTS": "ComputeBloomPass_COMPUTE_BLOOM_DEFAULTS",
+        "COMPUTE_BLOOM_EXTRACT_WGSL": "ComputeBloomPass_COMPUTE_BLOOM_EXTRACT_WGSL",
+        "COMPUTE_BLOOM_LEVELS": "ComputeBloomPass_COMPUTE_BLOOM_LEVELS",
+        "COMPUTE_BLOOM_STORAGE_FORMAT": "ComputeBloomPass_COMPUTE_BLOOM_STORAGE_FORMAT",
+        "COMPUTE_BLOOM_UPSAMPLE_WGSL": "ComputeBloomPass_COMPUTE_BLOOM_UPSAMPLE_WGSL"
+      },
+      "defaultName": "ComputeBloomPass",
+      "bytes": 22971,
+      "comments": 40,
+      "sha256": "2bbc301c11993f13edeca26b2ac8996138eefe82056cd586f389d59b5e17968d"
+    },
+    {
+      "path": "webg/ComputeBlurPass.js",
+      "moduleName": "ComputeBlurPassModule",
+      "namedExports": {
+        "COMPUTE_BLUR_DEFAULTS": "ComputeBlurPass_COMPUTE_BLUR_DEFAULTS",
+        "COMPUTE_BLUR_FORMAT": "ComputeBlurPass_COMPUTE_BLUR_FORMAT",
+        "COMPUTE_BLUR_WGSL": "ComputeBlurPass_COMPUTE_BLUR_WGSL"
+      },
+      "defaultName": "ComputeBlurPass",
+      "bytes": 9828,
+      "comments": 22,
+      "sha256": "01faa53eb4a2fbd93fc356be9dc5116f6d38bc4d61813dde54208c13f07b4bc7"
+    },
+    {
+      "path": "webg/ComputeBodyState.js",
+      "moduleName": "ComputeBodyStateModule",
+      "namedExports": {
+        "COMPUTE_PHYSICS_BODY_COMMAND_FLAGS": "ComputeBodyState_COMPUTE_PHYSICS_BODY_COMMAND_FLAGS",
+        "COMPUTE_PHYSICS_BODY_CONTROL_LAYOUT": "ComputeBodyState_COMPUTE_PHYSICS_BODY_CONTROL_LAYOUT",
+        "COMPUTE_PHYSICS_BODY_STATE_LAYOUT": "ComputeBodyState_COMPUTE_PHYSICS_BODY_STATE_LAYOUT",
+        "COMPUTE_PHYSICS_BODY_TYPES": "ComputeBodyState_COMPUTE_PHYSICS_BODY_TYPES",
+        "COMPUTE_PHYSICS_BROADPHASE_MODE": "ComputeBodyState_COMPUTE_PHYSICS_BROADPHASE_MODE",
+        "DEFAULT_BODY_CONTROL": "ComputeBodyState_DEFAULT_BODY_CONTROL",
+        "DEFAULT_BODY_MATERIAL": "ComputeBodyState_DEFAULT_BODY_MATERIAL",
+        "DEFAULT_COMPUTE_PHYSICS_SCALE": "ComputeBodyState_DEFAULT_COMPUTE_PHYSICS_SCALE",
+        "MAX_SOLVER_ITERATIONS": "ComputeBodyState_MAX_SOLVER_ITERATIONS",
+        "PARAM_FLOATS": "ComputeBodyState_PARAM_FLOATS",
+        "WORKGROUP_SIZE": "ComputeBodyState_WORKGROUP_SIZE"
+      },
+      "defaultName": null,
+      "bytes": 3774,
+      "comments": 21,
+      "sha256": "a92d9e1e474f0f42f49366533bf2e6e7c9d78778058972b93ae3975e8435b712"
+    },
+    {
+      "path": "webg/ComputeBoxCollider.js",
+      "moduleName": "ComputeBoxColliderModule",
+      "namedExports": {},
+      "defaultName": "ComputeBoxCollider",
+      "bytes": 24030,
+      "comments": 32,
+      "sha256": "381c59f529d08cab76131b9d6d638660aa605e324f0d9b6c3df9ec04c005e150"
+    },
+    {
+      "path": "webg/ComputeCapsuleCollider.js",
+      "moduleName": "ComputeCapsuleColliderModule",
+      "namedExports": {},
+      "defaultName": "ComputeCapsuleCollider",
+      "bytes": 18154,
+      "comments": 35,
+      "sha256": "eab2b3d99e9250acf713a99527820a70dea2ccb0f7f7820faab0fa246170d352"
+    },
+    {
+      "path": "webg/ComputeDofPass.js",
+      "moduleName": "ComputeDofPassModule",
+      "namedExports": {
+        "COMPUTE_DOF_COC_EXTRACT_WGSL": "ComputeDofPass_COMPUTE_DOF_COC_EXTRACT_WGSL",
+        "COMPUTE_DOF_COMPOSITE_WGSL": "ComputeDofPass_COMPUTE_DOF_COMPOSITE_WGSL",
+        "COMPUTE_DOF_DEFAULTS": "ComputeDofPass_COMPUTE_DOF_DEFAULTS",
+        "COMPUTE_DOF_FORMAT": "ComputeDofPass_COMPUTE_DOF_FORMAT",
+        "COMPUTE_DOF_LEVELS": "ComputeDofPass_COMPUTE_DOF_LEVELS",
+        "COMPUTE_DOF_VIEW_MODES": "ComputeDofPass_COMPUTE_DOF_VIEW_MODES"
+      },
+      "defaultName": "ComputeDofPass",
+      "bytes": 36053,
+      "comments": 34,
+      "sha256": "bd084e9f15ea7739a0ff0948cc05fb4a2bdbd8a070dd37268c41bceb7e38f43c"
+    },
+    {
+      "path": "webg/ComputeEdgePass.js",
+      "moduleName": "ComputeEdgePassModule",
+      "namedExports": {
+        "COMPUTE_EDGE_BLEND_MODES": "ComputeEdgePass_COMPUTE_EDGE_BLEND_MODES",
+        "COMPUTE_EDGE_DEFAULTS": "ComputeEdgePass_COMPUTE_EDGE_DEFAULTS",
+        "COMPUTE_EDGE_FORMAT": "ComputeEdgePass_COMPUTE_EDGE_FORMAT",
+        "COMPUTE_EDGE_GEOMETRY_WGSL": "ComputeEdgePass_COMPUTE_EDGE_GEOMETRY_WGSL",
+        "COMPUTE_EDGE_INPUT_FORMATS": "ComputeEdgePass_COMPUTE_EDGE_INPUT_FORMATS",
+        "COMPUTE_EDGE_WGSL": "ComputeEdgePass_COMPUTE_EDGE_WGSL"
+      },
+      "defaultName": "ComputeEdgePass",
+      "bytes": 20715,
+      "comments": 21,
+      "sha256": "3b8e9c6ca5bd764dd6c5a88afe5fb40663175d3c1d6612000205f65f420e15bd"
+    },
+    {
+      "path": "webg/ComputeEffectComposer.js",
+      "moduleName": "ComputeEffectComposerModule",
+      "namedExports": {
+        "COMPUTE_EFFECT_COMPOSER_FORMAT": "ComputeEffectComposer_COMPUTE_EFFECT_COMPOSER_FORMAT",
+        "COMPUTE_EFFECT_COMPOSER_MODES": "ComputeEffectComposer_COMPUTE_EFFECT_COMPOSER_MODES",
+        "COMPUTE_EFFECT_COMPOSER_WGSL": "ComputeEffectComposer_COMPUTE_EFFECT_COMPOSER_WGSL"
+      },
+      "defaultName": "ComputeEffectComposer",
+      "bytes": 14049,
+      "comments": 14,
+      "sha256": "17c924cf02ca9e0ed51c70b784b53f962a57e65c6f20c9c6fbcd00f1a68708a7"
+    },
+    {
+      "path": "webg/ComputeEffectPipeline.js",
+      "moduleName": "ComputeEffectPipelineModule",
+      "namedExports": {},
+      "defaultName": "ComputeEffectPipeline",
+      "bytes": 43743,
+      "comments": 59,
+      "sha256": "5983b0a3d13d5ccf96cc181a9d2f5f48864cc71b3ff88fe9a570b5c42e45dd27"
+    },
+    {
+      "path": "webg/ComputeEffectToneMapPass.js",
+      "moduleName": "ComputeEffectToneMapPassModule",
+      "namedExports": {
+        "COMPUTE_EFFECT_TONEMAP_INPUT_FORMAT": "ComputeEffectToneMapPass_COMPUTE_EFFECT_TONEMAP_INPUT_FORMAT",
+        "COMPUTE_EFFECT_TONEMAP_MODES": "ComputeEffectToneMapPass_COMPUTE_EFFECT_TONEMAP_MODES",
+        "COMPUTE_EFFECT_TONEMAP_OUTPUT_FORMAT": "ComputeEffectToneMapPass_COMPUTE_EFFECT_TONEMAP_OUTPUT_FORMAT",
+        "COMPUTE_EFFECT_TONEMAP_WGSL": "ComputeEffectToneMapPass_COMPUTE_EFFECT_TONEMAP_WGSL",
+        "computeEv100Exposure": "ComputeEffectToneMapPass_computeEv100Exposure"
+      },
+      "defaultName": "ComputeEffectToneMapPass",
+      "bytes": 9828,
+      "comments": 17,
+      "sha256": "a79be19de49a3f7eb030c96074ab5bf27531ca63f4fcf506c9048f06746a9543"
+    },
+    {
+      "path": "webg/ComputeFogPass.js",
+      "moduleName": "ComputeFogPassModule",
+      "namedExports": {
+        "COMPUTE_FOG_DEFAULTS": "ComputeFogPass_COMPUTE_FOG_DEFAULTS",
+        "COMPUTE_FOG_FORMAT": "ComputeFogPass_COMPUTE_FOG_FORMAT",
+        "COMPUTE_FOG_MODES": "ComputeFogPass_COMPUTE_FOG_MODES",
+        "COMPUTE_FOG_WGSL": "ComputeFogPass_COMPUTE_FOG_WGSL"
+      },
+      "defaultName": "ComputeFogPass",
+      "bytes": 9960,
+      "comments": 15,
+      "sha256": "79aac60f2d4cc5526edd7312566fbcdc6ffb6a264edbd578ffa6f5698efc3574"
+    },
+    {
+      "path": "webg/ComputeImagePyramid.js",
+      "moduleName": "ComputeImagePyramidModule",
+      "namedExports": {
+        "COMPUTE_IMAGE_PYRAMID_DEFAULTS": "ComputeImagePyramid_COMPUTE_IMAGE_PYRAMID_DEFAULTS",
+        "COMPUTE_IMAGE_PYRAMID_DEFAULT_LEVELS": "ComputeImagePyramid_COMPUTE_IMAGE_PYRAMID_DEFAULT_LEVELS",
+        "COMPUTE_IMAGE_PYRAMID_DOWNSAMPLE_WGSL": "ComputeImagePyramid_COMPUTE_IMAGE_PYRAMID_DOWNSAMPLE_WGSL",
+        "computePyramidDimension": "ComputeImagePyramid_computePyramidDimension",
+        "validatePyramidLevels": "ComputeImagePyramid_validatePyramidLevels"
+      },
+      "defaultName": "ComputeImagePyramid",
+      "bytes": 12175,
+      "comments": 22,
+      "sha256": "e0b10cd449401de3fc7f65c24bc00e4f7980fc278e41a8d9e110d8ab4f00c67d"
+    },
+    {
+      "path": "webg/ComputeJointBuffer.js",
+      "moduleName": "ComputeJointBufferModule",
+      "namedExports": {
+        "COMPUTE_PHYSICS_JOINT_LAYOUT": "ComputeJointBuffer_COMPUTE_PHYSICS_JOINT_LAYOUT",
+        "COMPUTE_PHYSICS_JOINT_TYPES": "ComputeJointBuffer_COMPUTE_PHYSICS_JOINT_TYPES"
+      },
+      "defaultName": "ComputeJointBuffer",
+      "bytes": 20460,
+      "comments": 38,
+      "sha256": "a5a309f1b163420cdd39214cd5f92ef5e0d0de6ec222fd3f84d72764a2ed21f4"
+    },
+    {
+      "path": "webg/ComputeJointSolver.js",
+      "moduleName": "ComputeJointSolverModule",
+      "namedExports": {
+        "createComputeJointWGSL": "ComputeJointSolver_createComputeJointWGSL"
+      },
+      "defaultName": "ComputeJointSolver",
+      "bytes": 18016,
+      "comments": 8,
+      "sha256": "5220c8e7e9191fc64414abd6fe22e744d67a0cfa22047cf0965c4e82da3e6f25"
+    },
+    {
+      "path": "webg/ComputeParticleEmitter.js",
+      "moduleName": "ComputeParticleEmitterModule",
+      "namedExports": {},
+      "defaultName": "ComputeParticleEmitter",
+      "bytes": 9486,
+      "comments": 20,
+      "sha256": "9454714f11d780523ed91993748d5909d40a8581c104c8b7e61f0bdfc9304938"
+    },
+    {
+      "path": "webg/ComputeParticlePass.js",
+      "moduleName": "ComputeParticlePassModule",
+      "namedExports": {},
+      "defaultName": "ComputeParticlePass",
+      "bytes": 3010,
+      "comments": 11,
+      "sha256": "8b185ccbb47a0f0e23096af7497b648eaf955ce70e5bce7bb5d245248a899439"
+    },
+    {
+      "path": "webg/ComputeParticleSettings.js",
+      "moduleName": "ComputeParticleSettingsModule",
+      "namedExports": {
+        "MAX_PARTICLE_COMMANDS": "ComputeParticleSettings_MAX_PARTICLE_COMMANDS",
+        "PARTICLE_PARAM_FLOATS": "ComputeParticleSettings_PARTICLE_PARAM_FLOATS",
+        "readComputeParticleSettings": "ComputeParticleSettings_readComputeParticleSettings",
+        "readParticleContinuous": "ComputeParticleSettings_readParticleContinuous",
+        "readParticleEmission": "ComputeParticleSettings_readParticleEmission",
+        "readParticleObject": "ComputeParticleSettings_readParticleObject",
+        "readSceneParticleEmitters": "ComputeParticleSettings_readSceneParticleEmitters"
+      },
+      "defaultName": null,
+      "bytes": 6684,
+      "comments": 10,
+      "sha256": "c243cd59346ada96e1509b936424ee2bf94f8d3238fc4c3f8fbad3a5972dd161"
+    },
+    {
+      "path": "webg/ComputeParticleShaders.js",
+      "moduleName": "ComputeParticleShadersModule",
+      "namedExports": {
+        "COMPUTE_PARTICLE_RENDER": "ComputeParticleShaders_COMPUTE_PARTICLE_RENDER",
+        "COMPUTE_PARTICLE_UPDATE": "ComputeParticleShaders_COMPUTE_PARTICLE_UPDATE",
+        "buildComputeParticleRenderWgsl": "ComputeParticleShaders_buildComputeParticleRenderWgsl"
+      },
+      "defaultName": null,
+      "bytes": 4953,
+      "comments": 7,
+      "sha256": "6f892ce816f60d75cadcd28dd6d8aaf1fd75ab08d4c102a148e59384f52676bd"
+    },
+    {
+      "path": "webg/ComputePass.js",
+      "moduleName": "ComputePassModule",
+      "namedExports": {
+        "DEFAULT_COMPUTE_WORKGROUP_SIZE": "ComputePass_DEFAULT_COMPUTE_WORKGROUP_SIZE",
+        "DEFAULT_STORAGE_TEXTURE_FORMAT": "ComputePass_DEFAULT_STORAGE_TEXTURE_FORMAT"
+      },
+      "defaultName": "ComputePass",
+      "bytes": 12874,
+      "comments": 25,
+      "sha256": "6363d7ccf755f24817b42f0fc5bb57c13241c1548edcb66567909bfef6cae365"
+    },
+    {
+      "path": "webg/ComputePerlinNoise2D.js",
+      "moduleName": "ComputePerlinNoise2DModule",
+      "namedExports": {
+        "ComputePerlinNoise2D": "ComputePerlinNoise2D_ComputePerlinNoise2D",
+        "createPerlinWgslLibrary": "ComputePerlinNoise2D_createPerlinWgslLibrary"
+      },
+      "defaultName": "ComputePerlinNoise2D",
+      "bytes": 18673,
+      "comments": 31,
+      "sha256": "a3472aa93c78fd82e46cb86d00cb9a05c4dc3241608a85612c130463634aa6fe"
+    },
+    {
+      "path": "webg/ComputePhysicsPipeline.js",
+      "moduleName": "ComputePhysicsPipelineModule",
+      "namedExports": {},
+      "defaultName": "ComputePhysicsPipeline",
+      "bytes": 14271,
+      "comments": 30,
+      "sha256": "f22104e040777e717eb1a0b58b575130c18bc58956c9e222c8f533b1f7a01aa1"
+    },
+    {
+      "path": "webg/ComputePhysicsReadback.js",
+      "moduleName": "ComputePhysicsReadbackModule",
+      "namedExports": {
+        "addContactListener": "ComputePhysicsReadback_addContactListener",
+        "cloneReadbackContact": "ComputePhysicsReadback_cloneReadbackContact",
+        "cloneReadbackContactEvents": "ComputePhysicsReadback_cloneReadbackContactEvents",
+        "cloneReadbackManifold": "ComputePhysicsReadback_cloneReadbackManifold",
+        "collectReadbackQueryEntries": "ComputePhysicsReadback_collectReadbackQueryEntries",
+        "createStateReadbackBuffer": "ComputePhysicsReadback_createStateReadbackBuffer",
+        "dispatchContactEventsFromReadback": "ComputePhysicsReadback_dispatchContactEventsFromReadback",
+        "emitReadbackContactEvents": "ComputePhysicsReadback_emitReadbackContactEvents",
+        "encodeStateReadback": "ComputePhysicsReadback_encodeStateReadback",
+        "getContactEventsFromReadback": "ComputePhysicsReadback_getContactEventsFromReadback",
+        "getContactsFromReadback": "ComputePhysicsReadback_getContactsFromReadback",
+        "getLastContactEvents": "ComputePhysicsReadback_getLastContactEvents",
+        "getLastContacts": "ComputePhysicsReadback_getLastContacts",
+        "getLastManifolds": "ComputePhysicsReadback_getLastManifolds",
+        "getManifoldsFromReadback": "ComputePhysicsReadback_getManifoldsFromReadback",
+        "getPlaneContactsFromReadback": "ComputePhysicsReadback_getPlaneContactsFromReadback",
+        "getReadbackBodyAabb": "ComputePhysicsReadback_getReadbackBodyAabb",
+        "getReadbackBodyAxes": "ComputePhysicsReadback_getReadbackBodyAxes",
+        "getReadbackBodyContact": "ComputePhysicsReadback_getReadbackBodyContact",
+        "getReadbackBodyHalfExtents": "ComputePhysicsReadback_getReadbackBodyHalfExtents",
+        "getReadbackBodyManifold": "ComputePhysicsReadback_getReadbackBodyManifold",
+        "getReadbackBodyPlaneContact": "ComputePhysicsReadback_getReadbackBodyPlaneContact",
+        "intersectReadbackBodyRay": "ComputePhysicsReadback_intersectReadbackBodyRay",
+        "offBeginContact": "ComputePhysicsReadback_offBeginContact",
+        "offEndContact": "ComputePhysicsReadback_offEndContact",
+        "offStayContact": "ComputePhysicsReadback_offStayContact",
+        "onBeginContact": "ComputePhysicsReadback_onBeginContact",
+        "onEndContact": "ComputePhysicsReadback_onEndContact",
+        "onStayContact": "ComputePhysicsReadback_onStayContact",
+        "overlapReadbackBodySphere": "ComputePhysicsReadback_overlapReadbackBodySphere",
+        "overlapSphereFromReadback": "ComputePhysicsReadback_overlapSphereFromReadback",
+        "queryAabbFromReadback": "ComputePhysicsReadback_queryAabbFromReadback",
+        "raycastAllFromReadback": "ComputePhysicsReadback_raycastAllFromReadback",
+        "raycastFromReadback": "ComputePhysicsReadback_raycastFromReadback",
+        "readBodyStateFromReadback": "ComputePhysicsReadback_readBodyStateFromReadback",
+        "readComputeQueryOptions": "ComputePhysicsReadback_readComputeQueryOptions",
+        "readStateReadback": "ComputePhysicsReadback_readStateReadback",
+        "readbackBoxOverlapsAabb": "ComputePhysicsReadback_readbackBoxOverlapsAabb",
+        "removeContactListener": "ComputePhysicsReadback_removeContactListener",
+        "rotateReadbackVector": "ComputePhysicsReadback_rotateReadbackVector",
+        "syncNodeFromPhysics": "ComputePhysicsReadback_syncNodeFromPhysics",
+        "syncNodesFromPhysics": "ComputePhysicsReadback_syncNodesFromPhysics",
+        "syncPhysicsFromNode": "ComputePhysicsReadback_syncPhysicsFromNode"
+      },
+      "defaultName": null,
+      "bytes": 41584,
+      "comments": 83,
+      "sha256": "18885269547509826b0dbf74e43ce7de5eeabbaf4b11b4330add344298addcad"
+    },
+    {
+      "path": "webg/ComputePhysicsShader.js",
+      "moduleName": "ComputePhysicsShaderModule",
+      "namedExports": {
+        "createComputePhysicsWGSL": "ComputePhysicsShader_createComputePhysicsWGSL"
+      },
+      "defaultName": null,
+      "bytes": 65835,
+      "comments": 13,
+      "sha256": "e175ca2f4dacbabbdf315b7ebb9b5fcf58b4247f80bdf70ca1dad0af92e21ae5"
+    },
+    {
+      "path": "webg/ComputePhysicsSpace.js",
+      "moduleName": "ComputePhysicsSpaceModule",
+      "namedExports": {
+        "COMPUTE_PHYSICS_BODY_COMMAND_FLAGS": "ComputePhysicsSpace_COMPUTE_PHYSICS_BODY_COMMAND_FLAGS",
+        "COMPUTE_PHYSICS_BODY_CONTROL_LAYOUT": "ComputePhysicsSpace_COMPUTE_PHYSICS_BODY_CONTROL_LAYOUT",
+        "COMPUTE_PHYSICS_BODY_STATE_LAYOUT": "ComputePhysicsSpace_COMPUTE_PHYSICS_BODY_STATE_LAYOUT",
+        "COMPUTE_PHYSICS_BODY_TYPES": "ComputePhysicsSpace_COMPUTE_PHYSICS_BODY_TYPES",
+        "COMPUTE_PHYSICS_BROADPHASE_MODE": "ComputePhysicsSpace_COMPUTE_PHYSICS_BROADPHASE_MODE",
+        "DEFAULT_COMPUTE_PHYSICS_SCALE": "ComputePhysicsSpace_DEFAULT_COMPUTE_PHYSICS_SCALE"
+      },
+      "defaultName": "ComputePhysicsSpace",
+      "bytes": 85679,
+      "comments": 210,
+      "sha256": "67a3aaac3d6fee92cfecbe1b682f69eddfb84efcc0575a4aefc49243a765ba72"
+    },
+    {
+      "path": "webg/ComputePlaneCollider.js",
+      "moduleName": "ComputePlaneColliderModule",
+      "namedExports": {},
+      "defaultName": "ComputePlaneCollider",
+      "bytes": 24898,
+      "comments": 36,
+      "sha256": "5ab63748c92f521e24c13ca5f93ddac8750aef67cdcb060b4e43283d6f29c82b"
+    },
+    {
+      "path": "webg/ComputeProceduralTile.js",
+      "moduleName": "ComputeProceduralTileModule",
+      "namedExports": {
+        "ComputeProceduralTile": "ComputeProceduralTile_ComputeProceduralTile",
+        "PATTERN_MODE_IDS": "ComputeProceduralTile_PATTERN_MODE_IDS",
+        "buildDimensions": "ComputeProceduralTile_buildDimensions"
+      },
+      "defaultName": "ComputeProceduralTile",
+      "bytes": 42060,
+      "comments": 54,
+      "sha256": "c9c8a43195681d319fbeb53369cf678ab01f701f7e433b44d1c981e8e5dee279"
+    },
+    {
+      "path": "webg/ComputePyramidBlurPass.js",
+      "moduleName": "ComputePyramidBlurPassModule",
+      "namedExports": {
+        "COMPUTE_PYRAMID_BLUR_DEFAULTS": "ComputePyramidBlurPass_COMPUTE_PYRAMID_BLUR_DEFAULTS",
+        "COMPUTE_PYRAMID_BLUR_FORMAT": "ComputePyramidBlurPass_COMPUTE_PYRAMID_BLUR_FORMAT",
+        "COMPUTE_PYRAMID_BLUR_LEVELS": "ComputePyramidBlurPass_COMPUTE_PYRAMID_BLUR_LEVELS",
+        "COMPUTE_PYRAMID_BLUR_UPSAMPLE_WGSL": "ComputePyramidBlurPass_COMPUTE_PYRAMID_BLUR_UPSAMPLE_WGSL"
+      },
+      "defaultName": "ComputePyramidBlurPass",
+      "bytes": 9720,
+      "comments": 22,
+      "sha256": "a29428bd21592c9b7671e95c930669023f1aed01aa820bdfb01035e2d9a45bf7"
+    },
+    {
+      "path": "webg/ComputeShadowPass.js",
+      "moduleName": "ComputeShadowPassModule",
+      "namedExports": {
+        "SHADOW_RESOLVE_WGSL": "ComputeShadowPass_SHADOW_RESOLVE_WGSL",
+        "createViewToLightClip": "ComputeShadowPass_createViewToLightClip",
+        "rejectRemovedShadowOptions": "ComputeShadowPass_rejectRemovedShadowOptions",
+        "validateStandardShadowDepth": "ComputeShadowPass_validateStandardShadowDepth"
+      },
+      "defaultName": "ComputeShadowPass",
+      "bytes": 10161,
+      "comments": 17,
+      "sha256": "36d76905a93582c311b27d1ce96beea4195c65c07bc3cd2d7767cd160dafe03a"
+    },
+    {
+      "path": "webg/ComputeShapeContact.js",
+      "moduleName": "ComputeShapeContactModule",
+      "namedExports": {
+        "buildBoxCapsuleContact": "ComputeShapeContact_buildBoxCapsuleContact",
+        "buildBoxSphereContact": "ComputeShapeContact_buildBoxSphereContact",
+        "buildCapsuleBoxContact": "ComputeShapeContact_buildCapsuleBoxContact",
+        "buildCapsuleCapsuleContact": "ComputeShapeContact_buildCapsuleCapsuleContact",
+        "buildCapsuleSphereContact": "ComputeShapeContact_buildCapsuleSphereContact",
+        "buildSphereBoxContact": "ComputeShapeContact_buildSphereBoxContact",
+        "buildSphereCapsuleContact": "ComputeShapeContact_buildSphereCapsuleContact"
+      },
+      "defaultName": null,
+      "bytes": 11143,
+      "comments": 35,
+      "sha256": "bdda1b15cf14af3ac4e5fb494bd3a38036b25e791090f62d74aa1da509d4c1da"
+    },
+    {
+      "path": "webg/ComputeSphereCollider.js",
+      "moduleName": "ComputeSphereColliderModule",
+      "namedExports": {},
+      "defaultName": "ComputeSphereCollider",
+      "bytes": 9706,
+      "comments": 30,
+      "sha256": "438ce2f49939581f422044846ad62dccea292b0229030dd965de58e5484c0a0c"
+    },
+    {
+      "path": "webg/ComputeSpotShadowPass.js",
+      "moduleName": "ComputeSpotShadowPassModule",
+      "namedExports": {
+        "SPOT_SHADOW_RESOLVE_WGSL": "ComputeSpotShadowPass_SPOT_SHADOW_RESOLVE_WGSL"
+      },
+      "defaultName": "ComputeSpotShadowPass",
+      "bytes": 8008,
+      "comments": 11,
+      "sha256": "7248d76e5614405ff80e90a0f1811c2d35228684e96c214c6ffc755207bb4c32"
+    },
+    {
+      "path": "webg/ComputeSsrPass.js",
+      "moduleName": "ComputeSsrPassModule",
+      "namedExports": {
+        "COMPUTE_SSR_DEFAULTS": "ComputeSsrPass_COMPUTE_SSR_DEFAULTS",
+        "COMPUTE_SSR_INPUT_FORMAT": "ComputeSsrPass_COMPUTE_SSR_INPUT_FORMAT",
+        "COMPUTE_SSR_INTEGRATION_MODES": "ComputeSsrPass_COMPUTE_SSR_INTEGRATION_MODES",
+        "COMPUTE_SSR_MATERIAL_FORMAT": "ComputeSsrPass_COMPUTE_SSR_MATERIAL_FORMAT",
+        "COMPUTE_SSR_OUTPUT_FORMAT": "ComputeSsrPass_COMPUTE_SSR_OUTPUT_FORMAT",
+        "COMPUTE_SSR_PBR_COMPOSITE_WGSL": "ComputeSsrPass_COMPUTE_SSR_PBR_COMPOSITE_WGSL",
+        "COMPUTE_SSR_ROUGHNESS_LEVELS": "ComputeSsrPass_COMPUTE_SSR_ROUGHNESS_LEVELS",
+        "COMPUTE_SSR_ROUGHNESS_WGSL": "ComputeSsrPass_COMPUTE_SSR_ROUGHNESS_WGSL",
+        "COMPUTE_SSR_VIEW_MODES": "ComputeSsrPass_COMPUTE_SSR_VIEW_MODES",
+        "COMPUTE_SSR_WGSL": "ComputeSsrPass_COMPUTE_SSR_WGSL"
+      },
+      "defaultName": "ComputeSsrPass",
+      "bytes": 57523,
+      "comments": 101,
+      "sha256": "4c4505f7d57c7a1a13cc6cd1c575c0f7b39bdf679b3d200bace6b53f6f8a8456"
+    },
+    {
+      "path": "webg/ComputeToonPass.js",
+      "moduleName": "ComputeToonPassModule",
+      "namedExports": {
+        "COMPUTE_TOON_DEFAULTS": "ComputeToonPass_COMPUTE_TOON_DEFAULTS",
+        "COMPUTE_TOON_FORMAT": "ComputeToonPass_COMPUTE_TOON_FORMAT",
+        "COMPUTE_TOON_WGSL": "ComputeToonPass_COMPUTE_TOON_WGSL"
+      },
+      "defaultName": "ComputeToonPass",
+      "bytes": 9299,
+      "comments": 18,
+      "sha256": "f013d06c7b8678b15d12edf6b1b89ae1d335ed18d001607935002e2b9ffc2574"
+    },
+    {
+      "path": "webg/ComputeVignettePass.js",
+      "moduleName": "ComputeVignettePassModule",
+      "namedExports": {
+        "COMPUTE_VIGNETTE_DEFAULTS": "ComputeVignettePass_COMPUTE_VIGNETTE_DEFAULTS",
+        "COMPUTE_VIGNETTE_FORMAT": "ComputeVignettePass_COMPUTE_VIGNETTE_FORMAT",
+        "COMPUTE_VIGNETTE_WGSL": "ComputeVignettePass_COMPUTE_VIGNETTE_WGSL"
+      },
+      "defaultName": "ComputeVignettePass",
+      "bytes": 8924,
+      "comments": 15,
+      "sha256": "208563548e18c09c55a19142ec1da53ce007d7c3d331d12e2e7e8fd8356315bf"
+    },
+    {
+      "path": "webg/CoordinateSystem.js",
+      "moduleName": "CoordinateSystemModule",
+      "namedExports": {},
+      "defaultName": "CoordinateSystem",
+      "bytes": 16039,
+      "comments": 81,
+      "sha256": "7a1993c6fe8b0a3b2143f4b03fb4cec19c3ad1974e7be3392e1544e19ac6fc27"
+    },
+    {
+      "path": "webg/CpuBoxPhysicsAdapter.js",
+      "moduleName": "CpuBoxPhysicsAdapterModule",
+      "namedExports": {},
+      "defaultName": "CpuBoxPhysicsAdapter",
+      "bytes": 38670,
+      "comments": 59,
+      "sha256": "6c9af77a49cf44d1e2c4707b187767b634657d5f683c859a8fd2b6eaaeed8acf"
+    },
+    {
+      "path": "webg/CpuBoxPhysicsSolver.js",
+      "moduleName": "CpuBoxPhysicsSolverModule",
+      "namedExports": {},
+      "defaultName": "CpuBoxPhysicsSolver",
+      "bytes": 107544,
+      "comments": 180,
+      "sha256": "c83e5ff94a10ee5aab7b46172dcc03e4df7390557190b3d6e4a68e043cb59ad9"
+    },
+    {
+      "path": "webg/CpuMixedPhysicsPipeline.js",
+      "moduleName": "CpuMixedPhysicsPipelineModule",
+      "namedExports": {
+        "stepMixedPhysicsSpace": "CpuMixedPhysicsPipeline_stepMixedPhysicsSpace"
+      },
+      "defaultName": null,
+      "bytes": 12979,
+      "comments": 32,
+      "sha256": "aabf59ffbd1c78f8017f757eded625383913e1b41148f84920fe8cc4baddd747"
+    },
+    {
+      "path": "webg/CpuPhysicsSolver.js",
+      "moduleName": "CpuPhysicsSolverModule",
+      "namedExports": {
+        "applyContactImpulse": "CpuPhysicsSolver_applyContactImpulse",
+        "applySharedManifoldImpulse": "CpuPhysicsSolver_applySharedManifoldImpulse",
+        "applyWarmStartToContactPoint": "CpuPhysicsSolver_applyWarmStartToContactPoint",
+        "applyWarmStartToManifolds": "CpuPhysicsSolver_applyWarmStartToManifolds",
+        "applyWarmStartToSharedManifold": "CpuPhysicsSolver_applyWarmStartToSharedManifold",
+        "buildComputeBoxCandidateMap": "CpuPhysicsSolver_buildComputeBoxCandidateMap",
+        "buildComputeBoxPredictedState": "CpuPhysicsSolver_buildComputeBoxPredictedState",
+        "buildComputeBoxPredictedWakeContact": "CpuPhysicsSolver_buildComputeBoxPredictedWakeContact",
+        "buildComputeContactTangents": "CpuPhysicsSolver_buildComputeContactTangents",
+        "buildContactTangents": "CpuPhysicsSolver_buildContactTangents",
+        "canAabbBroadphaseOverlap": "CpuPhysicsSolver_canAabbBroadphaseOverlap",
+        "canComputeBoxBroadphaseOverlap": "CpuPhysicsSolver_canComputeBoxBroadphaseOverlap",
+        "collectBroadphasePairs": "CpuPhysicsSolver_collectBroadphasePairs",
+        "collectBruteForceBroadphasePairs": "CpuPhysicsSolver_collectBruteForceBroadphasePairs",
+        "collectStepColliderEntries": "CpuPhysicsSolver_collectStepColliderEntries",
+        "collectSweepAabbBroadphasePairs": "CpuPhysicsSolver_collectSweepAabbBroadphasePairs",
+        "countPenetratingContacts": "CpuPhysicsSolver_countPenetratingContacts",
+        "getComputeBoxImpulseAccumulator": "CpuPhysicsSolver_getComputeBoxImpulseAccumulator",
+        "getComputeBoxSweptAabb": "CpuPhysicsSolver_getComputeBoxSweptAabb",
+        "getContactPointVelocity": "CpuPhysicsSolver_getContactPointVelocity",
+        "getFriction": "CpuPhysicsSolver_getFriction",
+        "getImpulseDenominator": "CpuPhysicsSolver_getImpulseDenominator",
+        "getManifoldCenterPoint": "CpuPhysicsSolver_getManifoldCenterPoint",
+        "getManifoldMaxPenetration": "CpuPhysicsSolver_getManifoldMaxPenetration",
+        "getRestitution": "CpuPhysicsSolver_getRestitution",
+        "getSolverInverseInertia": "CpuPhysicsSolver_getSolverInverseInertia",
+        "getSolverInverseMass": "CpuPhysicsSolver_getSolverInverseMass",
+        "isComputeBodyContact": "CpuPhysicsSolver_isComputeBodyContact",
+        "isComputeBoxContact": "CpuPhysicsSolver_isComputeBoxContact",
+        "isComputePlaneShapeContact": "CpuPhysicsSolver_isComputePlaneShapeContact",
+        "markSleepSupportFromContacts": "CpuPhysicsSolver_markSleepSupportFromContacts",
+        "pushBroadphasePairIfAllowed": "CpuPhysicsSolver_pushBroadphasePairIfAllowed",
+        "resolveComputeBodyContactPoint": "CpuPhysicsSolver_resolveComputeBodyContactPoint",
+        "resolveComputeBoxBody": "CpuPhysicsSolver_resolveComputeBoxBody",
+        "resolveComputeBoxContactPoint": "CpuPhysicsSolver_resolveComputeBoxContactPoint",
+        "resolveComputeContactPoint": "CpuPhysicsSolver_resolveComputeContactPoint",
+        "resolveComputePlaneContactPoint": "CpuPhysicsSolver_resolveComputePlaneContactPoint",
+        "resolveContactPoint": "CpuPhysicsSolver_resolveContactPoint",
+        "resolveImpactCenter": "CpuPhysicsSolver_resolveImpactCenter",
+        "resolveManifold": "CpuPhysicsSolver_resolveManifold",
+        "resolveManifoldPosition": "CpuPhysicsSolver_resolveManifoldPosition",
+        "resolveSharedManifoldFriction": "CpuPhysicsSolver_resolveSharedManifoldFriction",
+        "wakePredictedComputeBoxBodies": "CpuPhysicsSolver_wakePredictedComputeBoxBodies",
+        "wakeSleepingBodyForContact": "CpuPhysicsSolver_wakeSleepingBodyForContact"
+      },
+      "defaultName": null,
+      "bytes": 73724,
+      "comments": 117,
+      "sha256": "e698846b0a85775b15de0530092c5d86cdff940d176455a541412e2859128694"
+    },
+    {
+      "path": "webg/DebugConfig.js",
+      "moduleName": "DebugConfigModule",
+      "namedExports": {},
+      "defaultName": "DebugConfig",
+      "bytes": 1807,
+      "comments": 12,
+      "sha256": "2b25b0f7463286d5273caef5f1acea33f552da4b1c974885b4eae92b56491ae1"
+    },
+    {
+      "path": "webg/DebugDock.js",
+      "moduleName": "DebugDockModule",
+      "namedExports": {},
+      "defaultName": "DebugDock",
+      "bytes": 8000,
+      "comments": 20,
+      "sha256": "65b12f41705684df7df5c593ad014616650affa23c918152b4b0498cdbaefee8"
+    },
+    {
+      "path": "webg/DebugProbe.js",
+      "moduleName": "DebugProbeModule",
+      "namedExports": {},
+      "defaultName": "DebugProbe",
+      "bytes": 2776,
+      "comments": 12,
+      "sha256": "81f818ea2bf11b7cda00d7a8de4800b0cd934df5863fc77f9b8b7a9eab278f28"
+    },
+    {
+      "path": "webg/DeferredLightingPass.js",
+      "moduleName": "DeferredLightingPassModule",
+      "namedExports": {
+        "DEFERRED_LIGHTING_DEFAULTS": "DeferredLightingPass_DEFERRED_LIGHTING_DEFAULTS",
+        "DEFERRED_LIGHTING_OUTPUT_FORMAT": "DeferredLightingPass_DEFERRED_LIGHTING_OUTPUT_FORMAT",
+        "DEFERRED_LIGHTING_UNIT_SYSTEMS": "DeferredLightingPass_DEFERRED_LIGHTING_UNIT_SYSTEMS",
+        "DEFERRED_LIGHTING_VIEW_MODES": "DeferredLightingPass_DEFERRED_LIGHTING_VIEW_MODES",
+        "DEFERRED_LOCAL_LIGHT_STRIDE_FLOATS": "DeferredLightingPass_DEFERRED_LOCAL_LIGHT_STRIDE_FLOATS",
+        "DEFERRED_LOCAL_LIGHT_TYPES": "DeferredLightingPass_DEFERRED_LOCAL_LIGHT_TYPES",
+        "DEFERRED_LOCAL_LIGHT_TYPE_IDS": "DeferredLightingPass_DEFERRED_LOCAL_LIGHT_TYPE_IDS",
+        "buildDeferredLightingWgsl": "DeferredLightingPass_buildDeferredLightingWgsl"
+      },
+      "defaultName": "DeferredLightingPass",
+      "bytes": 49925,
+      "comments": 39,
+      "sha256": "46aa6495067aea15598b0cfda45508615bd0c977fb4dfa578724656d444748ca"
+    },
+    {
+      "path": "webg/DepthConvention.js",
+      "moduleName": "DepthConventionModule",
+      "namedExports": {
+        "CAMERA_REVERSE_Z": "DepthConvention_CAMERA_REVERSE_Z",
+        "SHADOW_STANDARD_Z": "DepthConvention_SHADOW_STANDARD_Z",
+        "isBackgroundDepth": "DepthConvention_isBackgroundDepth",
+        "linearizeDepth": "DepthConvention_linearizeDepth",
+        "projectViewDepth": "DepthConvention_projectViewDepth",
+        "readDepthRange": "DepthConvention_readDepthRange",
+        "requireDepthConvention": "DepthConvention_requireDepthConvention"
+      },
+      "defaultName": null,
+      "bytes": 6384,
+      "comments": 22,
+      "sha256": "cd0b76154949c1de623d81a1c178400d1803638edd530fa88739e1467a51c511"
+    },
+    {
+      "path": "webg/Diagnostics.js",
+      "moduleName": "DiagnosticsModule",
+      "namedExports": {},
+      "defaultName": "Diagnostics",
+      "bytes": 17977,
+      "comments": 39,
+      "sha256": "cf964181d1e2439c3cccc5d48ee6d83800b39a695afa10c18b7acba1e84edde6"
+    },
+    {
+      "path": "webg/DistanceJoint.js",
+      "moduleName": "DistanceJointModule",
+      "namedExports": {},
+      "defaultName": "DistanceJoint",
+      "bytes": 4172,
+      "comments": 14,
+      "sha256": "6465f8872a287320c215a44c3da5d4be0141da682d7f29c9aa18d0b72edb6816"
+    },
+    {
+      "path": "webg/DocumentAsset.js",
+      "moduleName": "DocumentAssetModule",
+      "namedExports": {},
+      "defaultName": "DocumentAsset",
+      "bytes": 10427,
+      "comments": 49,
+      "sha256": "0740f9b3ac2f0c0ace7c78643f53c22cf83910a2e38aeda77ffe8a86dd238f16"
+    },
+    {
+      "path": "webg/DofPass.js",
+      "moduleName": "DofPassModule",
+      "namedExports": {
+        "DOF_REVERSE_Z_WGSL": "DofPass_DOF_REVERSE_Z_WGSL",
+        "createDofProjectionParams": "DofPass_createDofProjectionParams"
+      },
+      "defaultName": "DofPass",
+      "bytes": 50904,
+      "comments": 112,
+      "sha256": "9f80cabe51c35c9654357cd665294ffcfd4f6d8b2b6af28b08abe10724389214"
+    },
+    {
+      "path": "webg/EyeRig.js",
+      "moduleName": "EyeRigModule",
+      "namedExports": {},
+      "defaultName": "EyeRig",
+      "bytes": 75882,
+      "comments": 140,
+      "sha256": "5ebf6f0f9be8355c51de417034464a2dac47f697b2421c41e43d2a69ae3ae647"
+    },
+    {
+      "path": "webg/FixedJoint.js",
+      "moduleName": "FixedJointModule",
+      "namedExports": {},
+      "defaultName": "FixedJoint",
+      "bytes": 4646,
+      "comments": 15,
+      "sha256": "6469589646844d18eeb4323d3596e007edf79281a77d9dacc41d4c30081b155c"
+    },
+    {
+      "path": "webg/Font.js",
+      "moduleName": "FontModule",
+      "namedExports": {},
+      "defaultName": "Font",
+      "bytes": 7117,
+      "comments": 27,
+      "sha256": "6f17962918a641a118b955bc4defa66e27e38d8bffe5e8401073cfe2106f94c7"
+    },
+    {
+      "path": "webg/Frame.js",
+      "moduleName": "FrameModule",
+      "namedExports": {},
+      "defaultName": "Frame",
+      "bytes": 6253,
+      "comments": 28,
+      "sha256": "37e017058f9c9d1f26b533786a52bbd92f4ac213b2e7590dada22933a9d86838"
+    },
+    {
+      "path": "webg/FrameTimer.js",
+      "moduleName": "FrameTimerModule",
+      "namedExports": {},
+      "defaultName": "FrameTimer",
+      "bytes": 13904,
+      "comments": 47,
+      "sha256": "8f38d3e1b5423681a0623f30c45b1b4f8e0daaeb39207718388d3904e975f33c"
+    },
+    {
+      "path": "webg/FrostedGlassPass.js",
+      "moduleName": "FrostedGlassPassModule",
+      "namedExports": {},
+      "defaultName": "FrostedGlassPass",
+      "bytes": 17632,
+      "comments": 63,
+      "sha256": "0d5eef99eb7f242440d4486381a01dafa213636a0b30edc098a06e09d6dfae88"
+    },
+    {
+      "path": "webg/FullscreenPass.js",
+      "moduleName": "FullscreenPassModule",
+      "namedExports": {
+        "FULLSCREEN_BLEND_MODES": "FullscreenPass_FULLSCREEN_BLEND_MODES",
+        "FULLSCREEN_SOURCE_FORMAT": "FullscreenPass_FULLSCREEN_SOURCE_FORMAT"
+      },
+      "defaultName": "FullscreenPass",
+      "bytes": 9319,
+      "comments": 19,
+      "sha256": "c89f92ca958a0c4a7baea25afea12f56acfd5d65bab2ebb7e3d9097916c09e67"
+    },
+    {
+      "path": "webg/GameAudioSynth.js",
+      "moduleName": "GameAudioSynthModule",
+      "namedExports": {},
+      "defaultName": "GameAudioSynth",
+      "bytes": 21012,
+      "comments": 45,
+      "sha256": "565d98a65d73f2490356f98655da187be6374588bc75148d63044d27c3620c5c"
+    },
+    {
+      "path": "webg/GameMusicPresets.js",
+      "moduleName": "GameMusicPresetsModule",
+      "namedExports": {
+        "GAME_MUSIC_PRESETS": "GameMusicPresets_GAME_MUSIC_PRESETS"
+      },
+      "defaultName": null,
+      "bytes": 15971,
+      "comments": 28,
+      "sha256": "40a79d12a60e7167fb29a229583ad6a9f930f7b05946f86cf3a92267c8beb68b"
+    },
+    {
+      "path": "webg/GameSoundPresets.js",
+      "moduleName": "GameSoundPresetsModule",
+      "namedExports": {
+        "GAME_SOUND_PRESETS": "GameSoundPresets_GAME_SOUND_PRESETS"
+      },
+      "defaultName": null,
+      "bytes": 6767,
+      "comments": 13,
+      "sha256": "d9b09a1edda0b75c3ffd9e2f4b16d891d6362cf5e50b6fa1327481a421da6c5d"
+    },
+    {
+      "path": "webg/GeometryBufferPass.js",
+      "moduleName": "GeometryBufferPassModule",
+      "namedExports": {
+        "GBUFFER_COLOR_FORMAT": "GeometryBufferPass_GBUFFER_COLOR_FORMAT",
+        "GBUFFER_DEPTH_FORMAT": "GeometryBufferPass_GBUFFER_DEPTH_FORMAT",
+        "GBUFFER_EMISSIVE_FORMAT": "GeometryBufferPass_GBUFFER_EMISSIVE_FORMAT",
+        "GBUFFER_MATERIAL_FORMAT": "GeometryBufferPass_GBUFFER_MATERIAL_FORMAT",
+        "GBUFFER_MIN_ROUGHNESS": "GeometryBufferPass_GBUFFER_MIN_ROUGHNESS",
+        "GBUFFER_NORMAL_FORMAT": "GeometryBufferPass_GBUFFER_NORMAL_FORMAT",
+        "GBUFFER_WGSL_COMMON": "GeometryBufferPass_GBUFFER_WGSL_COMMON",
+        "GeometryBufferPass": "GeometryBufferPass_GeometryBufferPass",
+        "createGBufferProjectionParams": "GeometryBufferPass_createGBufferProjectionParams"
+      },
+      "defaultName": "GeometryBufferPass",
+      "bytes": 56008,
+      "comments": 61,
+      "sha256": "1c94e0e9eb7017b9b27a07dc861b0878ae1747bce55c22fdce07827b3047f333"
+    },
+    {
+      "path": "webg/GlassMaskShader.js",
+      "moduleName": "GlassMaskShaderModule",
+      "namedExports": {},
+      "defaultName": "GlassMaskShader",
+      "bytes": 5247,
+      "comments": 21,
+      "sha256": "df4b1cdc658cb3e1c0802f6a078ca33fc916d09c9aa3f5c7ffd09097fdba8499"
+    },
+    {
+      "path": "webg/Gltf.js",
+      "moduleName": "GltfModule",
+      "namedExports": {},
+      "defaultName": "Gltf",
+      "bytes": 11184,
+      "comments": 27,
+      "sha256": "85815e72235f2d57807643c2149a9f83720d1e3a54704e470221c8652769c57a"
+    },
+    {
+      "path": "webg/GltfShape.js",
+      "moduleName": "GltfShapeModule",
+      "namedExports": {},
+      "defaultName": "GltfShape",
+      "bytes": 63283,
+      "comments": 121,
+      "sha256": "7910256cd30438654d5dc98623c2cb219fed00a2adbb06c646428abdd385e367"
+    },
+    {
+      "path": "webg/GpuParticleEmitter.js",
+      "moduleName": "GpuParticleEmitterModule",
+      "namedExports": {},
+      "defaultName": "GpuParticleEmitter",
+      "bytes": 14046,
+      "comments": 30,
+      "sha256": "7e895c4de71ab7360ad80ae863416633f369c421c2eeb00945f13c76baf0448b"
+    },
+    {
+      "path": "webg/GpuPassProfiler.js",
+      "moduleName": "GpuPassProfilerModule",
+      "namedExports": {
+        "readPerformanceTime": "GpuPassProfiler_readPerformanceTime"
+      },
+      "defaultName": "GpuPassProfiler",
+      "bytes": 12945,
+      "comments": 36,
+      "sha256": "d9126cad48eddc7397f8f267e673f69a4445c996d58412f3f68b2bc4af739f83"
+    },
+    {
+      "path": "webg/HingeJoint.js",
+      "moduleName": "HingeJointModule",
+      "namedExports": {},
+      "defaultName": "HingeJoint",
+      "bytes": 4697,
+      "comments": 12,
+      "sha256": "aeeaf86eed1f25ac26a6909f2c09f3f44d545ba04839b192e7c5d1680cb9c77e"
+    },
+    {
+      "path": "webg/InputController.js",
+      "moduleName": "InputControllerModule",
+      "namedExports": {},
+      "defaultName": "InputController",
+      "bytes": 15525,
+      "comments": 60,
+      "sha256": "4fe8ba9f6da701d3fbd4aed44845ddc1c114df04ebe38210a658064dfbc7bbb3"
+    },
+    {
+      "path": "webg/Joint.js",
+      "moduleName": "JointModule",
+      "namedExports": {},
+      "defaultName": "Joint",
+      "bytes": 5953,
+      "comments": 32,
+      "sha256": "0875df279254bd88a4c8b07a036c21b970f2c005f1b969220c4cacd7080381f8"
+    },
+    {
+      "path": "webg/JointConstraintRow.js",
+      "moduleName": "JointConstraintRowModule",
+      "namedExports": {},
+      "defaultName": "JointConstraintRow",
+      "bytes": 4298,
+      "comments": 14,
+      "sha256": "abe4f8cc959a3a96532731215c342b21f6d89f19653758d9cfe621ecedf7403b"
+    },
+    {
+      "path": "webg/JointMath.js",
+      "moduleName": "JointMathModule",
+      "namedExports": {
+        "JOINT_EPSILON": "JointMath_JOINT_EPSILON",
+        "RAD_TO_DEG": "JointMath_RAD_TO_DEG",
+        "addVec3": "JointMath_addVec3",
+        "addWorldAngularVelocity": "JointMath_addWorldAngularVelocity",
+        "applyAngularPositionImpulse": "JointMath_applyAngularPositionImpulse",
+        "applyAngularVelocityImpulse": "JointMath_applyAngularVelocityImpulse",
+        "applyPositionImpulse": "JointMath_applyPositionImpulse",
+        "applyVelocityImpulse": "JointMath_applyVelocityImpulse",
+        "applyWorldInverseInertia": "JointMath_applyWorldInverseInertia",
+        "applyWorldRotationVector": "JointMath_applyWorldRotationVector",
+        "buildOrthogonalBasis": "JointMath_buildOrthogonalBasis",
+        "conjugateQuat": "JointMath_conjugateQuat",
+        "crossVec3": "JointMath_crossVec3",
+        "dotVec3": "JointMath_dotVec3",
+        "getPointVelocity": "JointMath_getPointVelocity",
+        "getSolverInverseMass": "JointMath_getSolverInverseMass",
+        "getWorldAnchor": "JointMath_getWorldAnchor",
+        "getWorldAngularVelocity": "JointMath_getWorldAngularVelocity",
+        "getWorldRotationVectorBetween": "JointMath_getWorldRotationVectorBetween",
+        "inverseRotateVec3ByQuat": "JointMath_inverseRotateVec3ByQuat",
+        "isMovableBody": "JointMath_isMovableBody",
+        "lengthVec3": "JointMath_lengthVec3",
+        "multiplyQuat": "JointMath_multiplyQuat",
+        "normalizeVec3": "JointMath_normalizeVec3",
+        "readQuat": "JointMath_readQuat",
+        "readVec3": "JointMath_readVec3",
+        "rotateVec3ByQuat": "JointMath_rotateVec3ByQuat",
+        "scaleVec3": "JointMath_scaleVec3",
+        "subVec3": "JointMath_subVec3"
+      },
+      "defaultName": null,
+      "bytes": 12136,
+      "comments": 53,
+      "sha256": "058817c95d83a6ca82ee2dbca746b4a92929cf7cdf5a19fcf52e41ef2616dfe4"
+    },
+    {
+      "path": "webg/JointSolver.js",
+      "moduleName": "JointSolverModule",
+      "namedExports": {
+        "solveJoint": "JointSolver_solveJoint",
+        "solveJointXPBD": "JointSolver_solveJointXPBD"
+      },
+      "defaultName": null,
+      "bytes": 5818,
+      "comments": 17,
+      "sha256": "378f4941ebff707065eadbf4c61de704cf688b03e72f41066463ae1048689323"
+    },
+    {
+      "path": "webg/JsonFormat.js",
+      "moduleName": "JsonFormatModule",
+      "namedExports": {},
+      "defaultName": "JsonFormat",
+      "bytes": 2588,
+      "comments": 12,
+      "sha256": "0efd6819c90bb55531b69c8e2252911696da6182deae500f31b0a342ba8f0234"
+    },
+    {
+      "path": "webg/MaterialParameters.js",
+      "moduleName": "MaterialParametersModule",
+      "namedExports": {},
+      "defaultName": "MaterialParameters",
+      "bytes": 9290,
+      "comments": 34,
+      "sha256": "e8c51e7caf46f58ce7211ac98582fd3be8df0810ca64f2e8ecc7a9804e5fb590"
+    },
+    {
+      "path": "webg/Matrix.js",
+      "moduleName": "MatrixModule",
+      "namedExports": {},
+      "defaultName": "Matrix",
+      "bytes": 22442,
+      "comments": 82,
+      "sha256": "fe95b91c5fce0a711d969c3ce82a1f2d9e5a60f626fe78e793d00744fb271401"
+    },
+    {
+      "path": "webg/Mesh.js",
+      "moduleName": "MeshModule",
+      "namedExports": {},
+      "defaultName": "Mesh",
+      "bytes": 5070,
+      "comments": 35,
+      "sha256": "faf8028844962a53f9a1523f09979b51f4e806cb200e0458adc22b6230207080"
+    },
+    {
+      "path": "webg/Message.js",
+      "moduleName": "MessageModule",
+      "namedExports": {},
+      "defaultName": "Message",
+      "bytes": 16065,
+      "comments": 45,
+      "sha256": "e85fc9d057d5a2a4db68314ef6c9f58e59e2c7b56b5d08cf02b200fee3b5a88d"
+    },
+    {
+      "path": "webg/ModelAsset.js",
+      "moduleName": "ModelAssetModule",
+      "namedExports": {},
+      "defaultName": "ModelAsset",
+      "bytes": 10157,
+      "comments": 43,
+      "sha256": "7a9bc8f96a3d487e6da64c05250b36c24af2f5bb5774399ceed80e5cc3160afb"
+    },
+    {
+      "path": "webg/ModelBuilder.js",
+      "moduleName": "ModelBuilderModule",
+      "namedExports": {},
+      "defaultName": "ModelBuilder",
+      "bytes": 47239,
+      "comments": 108,
+      "sha256": "43ab1d123ff8ee98196ff544f36850d3548fab0442993d3f452006fe73c5be0b"
+    },
+    {
+      "path": "webg/ModelLoader.js",
+      "moduleName": "ModelLoaderModule",
+      "namedExports": {},
+      "defaultName": "ModelLoader",
+      "bytes": 7265,
+      "comments": 19,
+      "sha256": "764143a3a6f062e2af86147fe826e9ac1c39812826e93daa22b89d9d8a1ede71"
+    },
+    {
+      "path": "webg/ModelValidator.js",
+      "moduleName": "ModelValidatorModule",
+      "namedExports": {},
+      "defaultName": "ModelValidator",
+      "bytes": 22889,
+      "comments": 85,
+      "sha256": "6873fe6f43c027c4d6237129f22d4eb897c834139798753f775ea17ab5ed67a0"
+    },
+    {
+      "path": "webg/Node.js",
+      "moduleName": "NodeModule",
+      "namedExports": {},
+      "defaultName": "Node",
+      "bytes": 18931,
+      "comments": 71,
+      "sha256": "c8f2c8c4e3abb241a65751cb93fc21c1159fd19c7a2c238dd2fb1d2c85d3cfa3"
+    },
+    {
+      "path": "webg/OverlayPanel.js",
+      "moduleName": "OverlayPanelModule",
+      "namedExports": {},
+      "defaultName": "OverlayPanel",
+      "bytes": 30654,
+      "comments": 40,
+      "sha256": "f59553aa59813e35df5de8705d49ac114f33b7fe03617ea8bf1c5d6b06c6b296"
+    },
+    {
+      "path": "webg/OverlayPanelPresets.js",
+      "moduleName": "OverlayPanelPresetsModule",
+      "namedExports": {
+        "buildErrorPanelOptions": "OverlayPanelPresets_buildErrorPanelOptions",
+        "buildHelpPanelOptions": "OverlayPanelPresets_buildHelpPanelOptions"
+      },
+      "defaultName": null,
+      "bytes": 3566,
+      "comments": 9,
+      "sha256": "65ef68b8553ec2ae9be4eca661f888ac02a2f191031191c2f2126e9799e484cd"
+    },
+    {
+      "path": "webg/ParticleEmitter.js",
+      "moduleName": "ParticleEmitterModule",
+      "namedExports": {},
+      "defaultName": "ParticleEmitter",
+      "bytes": 16759,
+      "comments": 31,
+      "sha256": "858f69e36052648121171dddebecb6bc703cc893954a4a64497ca8ca623b3c31"
+    },
+    {
+      "path": "webg/PbrBrdf.js",
+      "moduleName": "PbrBrdfModule",
+      "namedExports": {
+        "PBR_BRDF_WGSL": "PbrBrdf_PBR_BRDF_WGSL",
+        "PBR_DIELECTRIC_F0": "PbrBrdf_PBR_DIELECTRIC_F0",
+        "PBR_IBL_WGSL": "PbrBrdf_PBR_IBL_WGSL",
+        "PBR_LOCAL_LIGHT_WGSL": "PbrBrdf_PBR_LOCAL_LIGHT_WGSL",
+        "PBR_MIN_DIRECTIONAL_ALBEDO": "PbrBrdf_PBR_MIN_DIRECTIONAL_ALBEDO",
+        "PBR_MIN_ROUGHNESS": "PbrBrdf_PBR_MIN_ROUGHNESS"
+      },
+      "defaultName": null,
+      "bytes": 7209,
+      "comments": 17,
+      "sha256": "163975d2e8a82cffac0e508cfcc28d29450fb8c7fd547c9bfa24e4e609004fa6"
+    },
+    {
+      "path": "webg/PbrEnvironment.js",
+      "moduleName": "PbrEnvironmentModule",
+      "namedExports": {
+        "float16BitsToFloat32": "PbrEnvironment_float16BitsToFloat32",
+        "float32ToFloat16Bits": "PbrEnvironment_float32ToFloat16Bits",
+        "validatePbrEnvironmentResources": "PbrEnvironment_validatePbrEnvironmentResources"
+      },
+      "defaultName": "PbrEnvironment",
+      "bytes": 10808,
+      "comments": 18,
+      "sha256": "5fb14d8a2dcc49fb706e34511741427f5abdb1fc810474f16b843f8da5eb955e"
+    },
+    {
+      "path": "webg/PbrEnvironmentCache.js",
+      "moduleName": "PbrEnvironmentCacheModule",
+      "namedExports": {
+        "PBR_ENVIRONMENT_CACHE_FORMAT": "PbrEnvironmentCache_PBR_ENVIRONMENT_CACHE_FORMAT",
+        "PBR_ENVIRONMENT_CACHE_VERSION": "PbrEnvironmentCache_PBR_ENVIRONMENT_CACHE_VERSION",
+        "PBR_ENVIRONMENT_GENERATOR_ID": "PbrEnvironmentCache_PBR_ENVIRONMENT_GENERATOR_ID",
+        "PbrEnvironmentCacheRepository": "PbrEnvironmentCache_PbrEnvironmentCacheRepository",
+        "decodePbrEnvironmentCache": "PbrEnvironmentCache_decodePbrEnvironmentCache",
+        "encodePbrEnvironmentCache": "PbrEnvironmentCache_encodePbrEnvironmentCache",
+        "loadPbrEnvironmentCache": "PbrEnvironmentCache_loadPbrEnvironmentCache"
+      },
+      "defaultName": null,
+      "bytes": 25922,
+      "comments": 26,
+      "sha256": "0dbb2bdc2e9e9bf5f618e1abed8f628866551ab92a0930c33836f2fd093eb790"
+    },
+    {
+      "path": "webg/PbrEnvironmentCompute.js",
+      "moduleName": "PbrEnvironmentComputeModule",
+      "namedExports": {
+        "PBR_ENVIRONMENT_BRDF_COMPUTE_WGSL": "PbrEnvironmentCompute_PBR_ENVIRONMENT_BRDF_COMPUTE_WGSL",
+        "PBR_ENVIRONMENT_COMPUTE_COMMON_WGSL": "PbrEnvironmentCompute_PBR_ENVIRONMENT_COMPUTE_COMMON_WGSL",
+        "PBR_ENVIRONMENT_DIFFUSE_COMPUTE_WGSL": "PbrEnvironmentCompute_PBR_ENVIRONMENT_DIFFUSE_COMPUTE_WGSL",
+        "PBR_ENVIRONMENT_SPECULAR_COMPUTE_WGSL": "PbrEnvironmentCompute_PBR_ENVIRONMENT_SPECULAR_COMPUTE_WGSL"
+      },
+      "defaultName": "PbrEnvironmentCompute",
+      "bytes": 29439,
+      "comments": 26,
+      "sha256": "82d533ee698567b64bf2b4763e706490273495a53a2c9ba42b65111cd744e87e"
+    },
+    {
+      "path": "webg/PbrEnvironmentDebugPass.js",
+      "moduleName": "PbrEnvironmentDebugPassModule",
+      "namedExports": {
+        "PBR_ENVIRONMENT_DEBUG_FORMAT": "PbrEnvironmentDebugPass_PBR_ENVIRONMENT_DEBUG_FORMAT",
+        "PBR_ENVIRONMENT_DEBUG_VIEWS": "PbrEnvironmentDebugPass_PBR_ENVIRONMENT_DEBUG_VIEWS",
+        "PBR_ENVIRONMENT_DEBUG_WGSL": "PbrEnvironmentDebugPass_PBR_ENVIRONMENT_DEBUG_WGSL",
+        "mapPbrEnvironmentDebugUv": "PbrEnvironmentDebugPass_mapPbrEnvironmentDebugUv"
+      },
+      "defaultName": "PbrEnvironmentDebugPass",
+      "bytes": 11785,
+      "comments": 17,
+      "sha256": "75f92d4de66eef064297c61960fed7b6c4c1482e5c86293f79dc7bf24d71df62"
+    },
+    {
+      "path": "webg/PbrEnvironmentEvaluation.js",
+      "moduleName": "PbrEnvironmentEvaluationModule",
+      "namedExports": {
+        "estimatePbrEnvironmentMemory": "PbrEnvironmentEvaluation_estimatePbrEnvironmentMemory",
+        "evaluatePbrIblEnergyCompensation": "PbrEnvironmentEvaluation_evaluatePbrIblEnergyCompensation",
+        "evaluatePbrWhiteFurnace": "PbrEnvironmentEvaluation_evaluatePbrWhiteFurnace",
+        "evaluatePbrWhiteFurnacePoint": "PbrEnvironmentEvaluation_evaluatePbrWhiteFurnacePoint",
+        "samplePbrBrdfLutClamped": "PbrEnvironmentEvaluation_samplePbrBrdfLutClamped"
+      },
+      "defaultName": null,
+      "bytes": 11306,
+      "comments": 15,
+      "sha256": "d28e44f2ea4059ae924f1c5e2ba66ebd963afa350c7522acf39a3799130a6249"
+    },
+    {
+      "path": "webg/PbrEnvironmentReference.js",
+      "moduleName": "PbrEnvironmentReferenceModule",
+      "namedExports": {
+        "createPbrEnvironmentImportanceDistribution": "PbrEnvironmentReference_createPbrEnvironmentImportanceDistribution",
+        "createPbrEnvironmentReferenceData": "PbrEnvironmentReference_createPbrEnvironmentReferenceData",
+        "pbrEnvironmentDirectionFromUv": "PbrEnvironmentReference_pbrEnvironmentDirectionFromUv",
+        "pbrHammersley": "PbrEnvironmentReference_pbrHammersley",
+        "pbrRadicalInverseVdc": "PbrEnvironmentReference_pbrRadicalInverseVdc",
+        "readPbrEnvironmentPreprocessOptions": "PbrEnvironmentReference_readPbrEnvironmentPreprocessOptions",
+        "samplePbrEquirectangularBilinear": "PbrEnvironmentReference_samplePbrEquirectangularBilinear"
+      },
+      "defaultName": null,
+      "bytes": 24082,
+      "comments": 34,
+      "sha256": "4c75d14ec1e9c182c976459c24145bb006823116231371ca5d291f5ea67034a9"
+    },
+    {
+      "path": "webg/PbrForwardShader.js",
+      "moduleName": "PbrForwardShaderModule",
+      "namedExports": {
+        "PBR_FORWARD_DEFAULT_MAX_LIGHTS": "PbrForwardShader_PBR_FORWARD_DEFAULT_MAX_LIGHTS",
+        "buildPbrForwardHdrWgsl": "PbrForwardShader_buildPbrForwardHdrWgsl"
+      },
+      "defaultName": "PbrForwardShader",
+      "bytes": 51362,
+      "comments": 51,
+      "sha256": "7bbaf2350d5b8eb766799c004df33fc4bd93d0e9646942e54071ac440712e579"
+    },
+    {
+      "path": "webg/PhysicsBackendAdapters.js",
+      "moduleName": "PhysicsBackendAdaptersModule",
+      "namedExports": {
+        "convertCpuAngularVelocityToCommon": "PhysicsBackendAdapters_convertCpuAngularVelocityToCommon",
+        "createComputeBodyDescriptor": "PhysicsBackendAdapters_createComputeBodyDescriptor",
+        "createComputeCollider": "PhysicsBackendAdapters_createComputeCollider",
+        "createComputePhysicsSpaceOptions": "PhysicsBackendAdapters_createComputePhysicsSpaceOptions",
+        "createComputePlaneCollider": "PhysicsBackendAdapters_createComputePlaneCollider",
+        "createComputePlaneColliders": "PhysicsBackendAdapters_createComputePlaneColliders",
+        "createCpuAngularVelocity": "PhysicsBackendAdapters_createCpuAngularVelocity",
+        "createCpuCollider": "PhysicsBackendAdapters_createCpuCollider",
+        "createCpuPhysicsNode": "PhysicsBackendAdapters_createCpuPhysicsNode",
+        "createCpuPhysicsSpace": "PhysicsBackendAdapters_createCpuPhysicsSpace",
+        "createCpuPhysicsSpaceOptions": "PhysicsBackendAdapters_createCpuPhysicsSpaceOptions",
+        "createCpuPlaneNode": "PhysicsBackendAdapters_createCpuPlaneNode",
+        "createCpuPlaneNodes": "PhysicsBackendAdapters_createCpuPlaneNodes",
+        "createCpuQuat": "PhysicsBackendAdapters_createCpuQuat",
+        "validateCommonBodyForBackends": "PhysicsBackendAdapters_validateCommonBodyForBackends"
+      },
+      "defaultName": null,
+      "bytes": 14261,
+      "comments": 49,
+      "sha256": "7e2c5df4a7cd413db881997781c331ac555f29bc8ad02e23c5f54a1be64ffe8d"
+    },
+    {
+      "path": "webg/PhysicsBodyRegistry.js",
+      "moduleName": "PhysicsBodyRegistryModule",
+      "namedExports": {
+        "addPhysicsBody": "PhysicsBodyRegistry_addPhysicsBody",
+        "getPhysicsBodies": "PhysicsBodyRegistry_getPhysicsBodies",
+        "removePhysicsBody": "PhysicsBodyRegistry_removePhysicsBody"
+      },
+      "defaultName": null,
+      "bytes": 1986,
+      "comments": 12,
+      "sha256": "14ae46b5b096acef9ec963f4a20f7b6086c264a60c8cb7f34ba2bf0988127b0e"
+    },
+    {
+      "path": "webg/PhysicsContactDispatcher.js",
+      "moduleName": "PhysicsContactDispatcherModule",
+      "namedExports": {
+        "PHYSICS_CONTACT_PAIR_KIND": "PhysicsContactDispatcher_PHYSICS_CONTACT_PAIR_KIND",
+        "buildPhysicsManifold": "PhysicsContactDispatcher_buildPhysicsManifold",
+        "collectPhysicsManifolds": "PhysicsContactDispatcher_collectPhysicsManifolds",
+        "flattenPhysicsManifoldContacts": "PhysicsContactDispatcher_flattenPhysicsManifoldContacts",
+        "getPhysicsContactPairKind": "PhysicsContactDispatcher_getPhysicsContactPairKind",
+        "isComputeBoxCandidatePair": "PhysicsContactDispatcher_isComputeBoxCandidatePair"
+      },
+      "defaultName": null,
+      "bytes": 6929,
+      "comments": 22,
+      "sha256": "129e4270d542b5b15f317998aa12c4b07b41d3059a0d44771718ecc989e63c54"
+    },
+    {
+      "path": "webg/PhysicsContactImpulseSolver.js",
+      "moduleName": "PhysicsContactImpulseSolverModule",
+      "namedExports": {
+        "solvePhysicsContactImpulse": "PhysicsContactImpulseSolver_solvePhysicsContactImpulse",
+        "solvePhysicsRollingResistance": "PhysicsContactImpulseSolver_solvePhysicsRollingResistance"
+      },
+      "defaultName": null,
+      "bytes": 15733,
+      "comments": 29,
+      "sha256": "52c1efbbd23db5eb700f8ce7edf41a4a08a3346646fef254cd904afceac0c86c"
+    },
+    {
+      "path": "webg/PhysicsDescriptor.js",
+      "moduleName": "PhysicsDescriptorModule",
+      "namedExports": {
+        "COMMON_PHYSICS_BODY_TYPES": "PhysicsDescriptor_COMMON_PHYSICS_BODY_TYPES",
+        "COMMON_PHYSICS_MOTION_MODES": "PhysicsDescriptor_COMMON_PHYSICS_MOTION_MODES",
+        "COMMON_PHYSICS_SHAPE_TYPES": "PhysicsDescriptor_COMMON_PHYSICS_SHAPE_TYPES",
+        "DEG_TO_RAD": "PhysicsDescriptor_DEG_TO_RAD",
+        "RAD_TO_DEG": "PhysicsDescriptor_RAD_TO_DEG",
+        "normalizeBodyDescriptor": "PhysicsDescriptor_normalizeBodyDescriptor",
+        "normalizePlane": "PhysicsDescriptor_normalizePlane",
+        "normalizeShape": "PhysicsDescriptor_normalizeShape",
+        "normalizeTransformDescriptor": "PhysicsDescriptor_normalizeTransformDescriptor",
+        "normalizeVec3": "PhysicsDescriptor_normalizeVec3",
+        "normalizeWorldDescriptor": "PhysicsDescriptor_normalizeWorldDescriptor"
+      },
+      "defaultName": null,
+      "bytes": 11392,
+      "comments": 29,
+      "sha256": "82b9d5ee46b12281bb89f3657e6abdf316c9d8e56fcb11bac3668b474193bd7f"
+    },
+    {
+      "path": "webg/PhysicsEvents.js",
+      "moduleName": "PhysicsEventsModule",
+      "namedExports": {
+        "addPhysicsContactListener": "PhysicsEvents_addPhysicsContactListener",
+        "buildPhysicsContactEvents": "PhysicsEvents_buildPhysicsContactEvents",
+        "buildPhysicsContactMap": "PhysicsEvents_buildPhysicsContactMap",
+        "emitPhysicsContactEvents": "PhysicsEvents_emitPhysicsContactEvents",
+        "emitPhysicsContactList": "PhysicsEvents_emitPhysicsContactList",
+        "getPhysicsContactPairKey": "PhysicsEvents_getPhysicsContactPairKey",
+        "getPhysicsManifoldPairKey": "PhysicsEvents_getPhysicsManifoldPairKey",
+        "isPhysicsTriggerContact": "PhysicsEvents_isPhysicsTriggerContact",
+        "readPhysicsContactListener": "PhysicsEvents_readPhysicsContactListener",
+        "removePhysicsContactListener": "PhysicsEvents_removePhysicsContactListener"
+      },
+      "defaultName": null,
+      "bytes": 3752,
+      "comments": 17,
+      "sha256": "74cd89e76b2610e6d4acda1b48574e308a656628fafd56c7ecf8a9f406d77a07"
+    },
+    {
+      "path": "webg/PhysicsJointPipeline.js",
+      "moduleName": "PhysicsJointPipelineModule",
+      "namedExports": {
+        "applyJointXpbdVelocityUpdate": "PhysicsJointPipeline_applyJointXpbdVelocityUpdate",
+        "applyRegisteredBoxJointVelocityUpdate": "PhysicsJointPipeline_applyRegisteredBoxJointVelocityUpdate",
+        "createJointXpbdPreStepTransformMap": "PhysicsJointPipeline_createJointXpbdPreStepTransformMap",
+        "solveJointsXPBD": "PhysicsJointPipeline_solveJointsXPBD",
+        "syncStateMapAfterJointSolver": "PhysicsJointPipeline_syncStateMapAfterJointSolver",
+        "wakeEnabledJointBodies": "PhysicsJointPipeline_wakeEnabledJointBodies"
+      },
+      "defaultName": null,
+      "bytes": 6645,
+      "comments": 18,
+      "sha256": "cc202cce172705488911c4e18d6a1981186d7d7375338bf9add29445e702fd85"
+    },
+    {
+      "path": "webg/PhysicsMaterialPairs.js",
+      "moduleName": "PhysicsMaterialPairsModule",
+      "namedExports": {
+        "mixContactValue": "PhysicsMaterialPairs_mixContactValue"
+      },
+      "defaultName": "PhysicsMaterialPairs",
+      "bytes": 7562,
+      "comments": 11,
+      "sha256": "b9e37f4a650fdde505f98c9a32ec263b78637ae3e691e39da9ffda2bebd85c47"
+    },
+    {
+      "path": "webg/PhysicsMath.js",
+      "moduleName": "PhysicsMathModule",
+      "namedExports": {
+        "addVec3": "PhysicsMath_addVec3",
+        "applyWorldInverseInertia": "PhysicsMath_applyWorldInverseInertia",
+        "buildAxisAngleQuat": "PhysicsMath_buildAxisAngleQuat",
+        "buildComputeStepQuat": "PhysicsMath_buildComputeStepQuat",
+        "buildDeltaQuaternionStep": "PhysicsMath_buildDeltaQuaternionStep",
+        "buildQuatFromUnitVectors": "PhysicsMath_buildQuatFromUnitVectors",
+        "cloneContact": "PhysicsMath_cloneContact",
+        "cloneManifold": "PhysicsMath_cloneManifold",
+        "cloneVec3": "PhysicsMath_cloneVec3",
+        "crossVec3": "PhysicsMath_crossVec3",
+        "degVec3ToRad": "PhysicsMath_degVec3ToRad",
+        "distanceSqVec3": "PhysicsMath_distanceSqVec3",
+        "dotVec3": "PhysicsMath_dotVec3",
+        "getQuatArray": "PhysicsMath_getQuatArray",
+        "getUpAxisFromGravity": "PhysicsMath_getUpAxisFromGravity",
+        "isSupportNormal": "PhysicsMath_isSupportNormal",
+        "lengthVec3": "PhysicsMath_lengthVec3",
+        "normalizeVec3": "PhysicsMath_normalizeVec3",
+        "radVec3ToDeg": "PhysicsMath_radVec3ToDeg",
+        "readOptionalVec3": "PhysicsMath_readOptionalVec3",
+        "readVec3": "PhysicsMath_readVec3",
+        "rotateVec3ByQuat": "PhysicsMath_rotateVec3ByQuat",
+        "scaleVec3": "PhysicsMath_scaleVec3",
+        "subVec3": "PhysicsMath_subVec3"
+      },
+      "defaultName": null,
+      "bytes": 11808,
+      "comments": 40,
+      "sha256": "c4f60a45015842664b89de224e79841bc964367fcca391d2dfc76411fd801d80"
+    },
+    {
+      "path": "webg/PhysicsNode.js",
+      "moduleName": "PhysicsNodeModule",
+      "namedExports": {},
+      "defaultName": "PhysicsNode",
+      "bytes": 27207,
+      "comments": 109,
+      "sha256": "ef955b0ab695f8a864abdabafad7bef8dab1e9abb78a36ce6213eda4e98e45ba"
+    },
+    {
+      "path": "webg/PhysicsQueries.js",
+      "moduleName": "PhysicsQueriesModule",
+      "namedExports": {
+        "assertPhysicsQueryFilter": "PhysicsQueries_assertPhysicsQueryFilter",
+        "collectPhysicsQueryEntries": "PhysicsQueries_collectPhysicsQueryEntries",
+        "collectPhysicsRayHits": "PhysicsQueries_collectPhysicsRayHits",
+        "getPhysicsQueryState": "PhysicsQueries_getPhysicsQueryState",
+        "intersectPhysicsAabb": "PhysicsQueries_intersectPhysicsAabb",
+        "matchesPhysicsQueryLayer": "PhysicsQueries_matchesPhysicsQueryLayer",
+        "matchesPhysicsQueryTriggerMode": "PhysicsQueries_matchesPhysicsQueryTriggerMode",
+        "raycastPhysicsBody": "PhysicsQueries_raycastPhysicsBody",
+        "readPhysicsCollisionBits": "PhysicsQueries_readPhysicsCollisionBits",
+        "readPhysicsOverlapSphereOptions": "PhysicsQueries_readPhysicsOverlapSphereOptions",
+        "readPhysicsQueryAabbOptions": "PhysicsQueries_readPhysicsQueryAabbOptions",
+        "readPhysicsRaycastOptions": "PhysicsQueries_readPhysicsRaycastOptions"
+      },
+      "defaultName": null,
+      "bytes": 6618,
+      "comments": 22,
+      "sha256": "2b2b6c06c81efc61ccb436cb455b4ba4cfe4f4a080bbac1ae498aefba68f9cb7"
+    },
+    {
+      "path": "webg/PhysicsSettings.js",
+      "moduleName": "PhysicsSettingsModule",
+      "namedExports": {
+        "initializePhysicsSpaceSettings": "PhysicsSettings_initializePhysicsSpaceSettings"
+      },
+      "defaultName": null,
+      "bytes": 6390,
+      "comments": 16,
+      "sha256": "af9585f499bc3ac171d00a3ac94c094923d5cfe7b5fcdd41ad32fddfb6249884"
+    },
+    {
+      "path": "webg/PhysicsSpace.js",
+      "moduleName": "PhysicsSpaceModule",
+      "namedExports": {},
+      "defaultName": "PhysicsSpace",
+      "bytes": 54435,
+      "comments": 198,
+      "sha256": "db9002e75c797ec3749bba263601343dae9dee8aad0a04b5e3503bb9d0717423"
+    },
+    {
+      "path": "webg/PhysicsStepPipeline.js",
+      "moduleName": "PhysicsStepPipelineModule",
+      "namedExports": {
+        "stepPhysicsSpace": "PhysicsStepPipeline_stepPhysicsSpace"
+      },
+      "defaultName": null,
+      "bytes": 12466,
+      "comments": 36,
+      "sha256": "162660c4fdd4dc090b6f5dcb573fafbe49d95692ddfae7a7f696c15e7f2664f1"
+    },
+    {
+      "path": "webg/PingPongBuffer.js",
+      "moduleName": "PingPongBufferModule",
+      "namedExports": {},
+      "defaultName": "PingPongBuffer",
+      "bytes": 3960,
+      "comments": 28,
+      "sha256": "9d1935321e50d14479b40224a822cc150b075e08e2926601d63aaf839cd23402"
+    },
+    {
+      "path": "webg/PingPongTarget.js",
+      "moduleName": "PingPongTargetModule",
+      "namedExports": {},
+      "defaultName": "PingPongTarget",
+      "bytes": 6152,
+      "comments": 32,
+      "sha256": "2f0ed1f0f3de891f777353961ab6b727c926aaa547b42122a4b5bca34c35cb80"
+    },
+    {
+      "path": "webg/PingPongTexture.js",
+      "moduleName": "PingPongTextureModule",
+      "namedExports": {},
+      "defaultName": "PingPongTexture",
+      "bytes": 3798,
+      "comments": 26,
+      "sha256": "a45c81ce0059d134963e3021ce6a47d231c4afd7066a3715610f7cecf22df4d2"
+    },
+    {
+      "path": "webg/PlaneBoxContact.js",
+      "moduleName": "PlaneBoxContactModule",
+      "namedExports": {
+        "buildPlaneBoxSupportContact": "PlaneBoxContact_buildPlaneBoxSupportContact",
+        "buildPlaneTangentBasis": "PlaneBoxContact_buildPlaneTangentBasis",
+        "isPlaneSupportProjectionBalanced": "PlaneBoxContact_isPlaneSupportProjectionBalanced"
+      },
+      "defaultName": null,
+      "bytes": 5831,
+      "comments": 15,
+      "sha256": "7ca94cc77d33ad4f77993afc625e4225805cac75f9eeb62a8d00c6e570ca855e"
+    },
+    {
+      "path": "webg/PlaneCollider.js",
+      "moduleName": "PlaneColliderModule",
+      "namedExports": {},
+      "defaultName": "PlaneCollider",
+      "bytes": 6025,
+      "comments": 20,
+      "sha256": "185f56c19e0ed46c69bfc3fedebc5eeb022bdc76d46359c41289b0794fc2e720"
+    },
+    {
+      "path": "webg/Primitive.js",
+      "moduleName": "PrimitiveModule",
+      "namedExports": {},
+      "defaultName": "Primitive",
+      "bytes": 20435,
+      "comments": 88,
+      "sha256": "6cee418a44601fb022a030b1801b9df7bb27d8fac36c51ba13bf76c7f1af4b4b"
+    },
+    {
+      "path": "webg/ProceduralEnvironment.js",
+      "moduleName": "ProceduralEnvironmentModule",
+      "namedExports": {
+        "PROCEDURAL_ENVIRONMENT_PRESETS": "ProceduralEnvironment_PROCEDURAL_ENVIRONMENT_PRESETS",
+        "createProceduralEnvironmentData": "ProceduralEnvironment_createProceduralEnvironmentData",
+        "createProceduralEnvironmentPng": "ProceduralEnvironment_createProceduralEnvironmentPng",
+        "createProceduralEnvironmentRadiance": "ProceduralEnvironment_createProceduralEnvironmentRadiance",
+        "encodeProceduralEnvironmentPng": "ProceduralEnvironment_encodeProceduralEnvironmentPng",
+        "listProceduralEnvironmentPresets": "ProceduralEnvironment_listProceduralEnvironmentPresets"
+      },
+      "defaultName": null,
+      "bytes": 35160,
+      "comments": 66,
+      "sha256": "2bf4016e0abd2d5f6f9490c2eca9f44fbcf8f8d3f3170f4b84677086cbcaa6f1"
+    },
+    {
+      "path": "webg/ProceduralMaterials.js",
+      "moduleName": "ProceduralMaterialsModule",
+      "namedExports": {
+        "ProceduralMaterial": "ProceduralMaterials_ProceduralMaterial",
+        "ProceduralMaterials": "ProceduralMaterials_ProceduralMaterials"
+      },
+      "defaultName": "ProceduralMaterials",
+      "bytes": 39505,
+      "comments": 69,
+      "sha256": "1e2c9b63cb9525ac5ee7e177c9b42de26a1d2a52d8fec4c1677e6495d9078d50"
+    },
+    {
+      "path": "webg/ProceduralPebblePattern.js",
+      "moduleName": "ProceduralPebblePatternModule",
+      "namedExports": {
+        "createPebblePatternWgsl": "ProceduralPebblePattern_createPebblePatternWgsl",
+        "getPebbleGrid": "ProceduralPebblePattern_getPebbleGrid",
+        "samplePebbleLayer": "ProceduralPebblePattern_samplePebbleLayer"
+      },
+      "defaultName": null,
+      "bytes": 8223,
+      "comments": 22,
+      "sha256": "f594b70f995f6b3927efefa917b4e2b4348cfa05dbcfe58cd012e52247eed626"
+    },
+    {
+      "path": "webg/ProceduralTileSpec.js",
+      "moduleName": "ProceduralTileSpecModule",
+      "namedExports": {
+        "PATTERN_MODES": "ProceduralTileSpec_PATTERN_MODES",
+        "PEBBLE_DEFAULTS": "ProceduralTileSpec_PEBBLE_DEFAULTS",
+        "ProceduralTileSpec": "ProceduralTileSpec_ProceduralTileSpec"
+      },
+      "defaultName": "ProceduralTileSpec",
+      "bytes": 15284,
+      "comments": 34,
+      "sha256": "72ae41da3c27de5957cdd753b1fedeae89fa096e971dbff1968fe5018106ce70"
+    },
+    {
+      "path": "webg/Quat.js",
+      "moduleName": "QuatModule",
+      "namedExports": {},
+      "defaultName": "Quat",
+      "bytes": 7047,
+      "comments": 30,
+      "sha256": "4a1b045cb161ee4e01fcf5226448cb376ac8809a007058bc5c3e84eea4f713c6"
+    },
+    {
+      "path": "webg/RadianceHdr.js",
+      "moduleName": "RadianceHdrModule",
+      "namedExports": {
+        "LINEAR_SRGB_PRIMARIES": "RadianceHdr_LINEAR_SRGB_PRIMARIES",
+        "RADIANCE_HDR_DEFAULT_MAX_PIXELS": "RadianceHdr_RADIANCE_HDR_DEFAULT_MAX_PIXELS",
+        "RADIANCE_STANDARD_PRIMARIES": "RadianceHdr_RADIANCE_STANDARD_PRIMARIES",
+        "RADIANCE_STANDARD_TO_LINEAR_SRGB_MATRIX": "RadianceHdr_RADIANCE_STANDARD_TO_LINEAR_SRGB_MATRIX",
+        "convertRadianceHdrToLinearSrgb": "RadianceHdr_convertRadianceHdrToLinearSrgb",
+        "decodeRadianceHdr": "RadianceHdr_decodeRadianceHdr",
+        "loadRadianceHdr": "RadianceHdr_loadRadianceHdr",
+        "radianceEnvironmentDirectionToUv": "RadianceHdr_radianceEnvironmentDirectionToUv",
+        "validateRadianceHdrForEquirectangularIbl": "RadianceHdr_validateRadianceHdrForEquirectangularIbl"
+      },
+      "defaultName": null,
+      "bytes": 27418,
+      "comments": 39,
+      "sha256": "2743fac35d1e901c3eaf51bb7ab691f897845e3453c6edea0fd67a18b0a28064"
+    },
+    {
+      "path": "webg/RenderTarget.js",
+      "moduleName": "RenderTargetModule",
+      "namedExports": {},
+      "defaultName": "RenderTarget",
+      "bytes": 6220,
+      "comments": 27,
+      "sha256": "ca3d03f31bf0bea87bf5090ceb7ee858a6a49b3cbeb3468dffb5af22dbb6e9eb"
+    },
+    {
+      "path": "webg/SceneAsset.js",
+      "moduleName": "SceneAssetModule",
+      "namedExports": {},
+      "defaultName": "SceneAsset",
+      "bytes": 5521,
+      "comments": 24,
+      "sha256": "cd71ef0d8a49079415d582db4405e9068337f4cfc8f156f4215cec0aa77759d6"
+    },
+    {
+      "path": "webg/SceneLoader.js",
+      "moduleName": "SceneLoaderModule",
+      "namedExports": {},
+      "defaultName": "SceneLoader",
+      "bytes": 18173,
+      "comments": 58,
+      "sha256": "236661256801c64eaf8a0bcc9850803c25cbc7e5765a8e886efd8f8a5084d398"
+    },
+    {
+      "path": "webg/SceneText.js",
+      "moduleName": "SceneTextModule",
+      "namedExports": {
+        "compressSceneYAML": "SceneText_compressSceneYAML",
+        "readSceneText": "SceneText_readSceneText"
+      },
+      "defaultName": null,
+      "bytes": 1384,
+      "comments": 3,
+      "sha256": "8b62a21cd03164908bf872c2b052a44095396b2c688e91dbdf5a5ba3a7234e10"
+    },
+    {
+      "path": "webg/SceneValidator.js",
+      "moduleName": "SceneValidatorModule",
+      "namedExports": {},
+      "defaultName": "SceneValidator",
+      "bytes": 20842,
+      "comments": 61,
+      "sha256": "15f90deb7dc9193381902c49995a006be61c15bba8c2fcdacc3a2fcae435062b"
+    },
+    {
+      "path": "webg/SceneYaml.js",
+      "moduleName": "SceneYamlModule",
+      "namedExports": {
+        "parseSceneYAML": "SceneYaml_parseSceneYAML",
+        "parseSceneYAMLDocument": "SceneYaml_parseSceneYAMLDocument",
+        "stringifySceneYAML": "SceneYaml_stringifySceneYAML"
+      },
+      "defaultName": "SceneYaml",
+      "bytes": 19299,
+      "comments": 43,
+      "sha256": "ce8a72dff383b7f2ed4de06d8996065f88912841332a23090b798b04ba32a84f"
+    },
+    {
+      "path": "webg/Schedule.js",
+      "moduleName": "ScheduleModule",
+      "namedExports": {},
+      "defaultName": "Schedule",
+      "bytes": 4662,
+      "comments": 32,
+      "sha256": "3cacf595ee8f738209e853c5141472d299b65f9c160e0a934d521649942b7517"
+    },
+    {
+      "path": "webg/Screen.js",
+      "moduleName": "ScreenModule",
+      "namedExports": {},
+      "defaultName": "Screen",
+      "bytes": 21307,
+      "comments": 86,
+      "sha256": "15d84eca64d622a4a4fe4d30d02d4f884f22319dd72e281b43db2c3074ed5f72"
+    },
+    {
+      "path": "webg/SeparableBlurPass.js",
+      "moduleName": "SeparableBlurPassModule",
+      "namedExports": {},
+      "defaultName": "SeparableBlurPass",
+      "bytes": 13681,
+      "comments": 37,
+      "sha256": "2c0df0e4f59f19d1bd53ea8a9bb09d38681a380834228df7e92ce3f9f5d16d16"
+    },
+    {
+      "path": "webg/Shader.js",
+      "moduleName": "ShaderModule",
+      "namedExports": {},
+      "defaultName": "Shader",
+      "bytes": 10142,
+      "comments": 35,
+      "sha256": "8d29020bc651f368c0bee6f486fea2d976816ce3f90951030fe20d956ee692d4"
+    },
+    {
+      "path": "webg/ShadowMapPass.js",
+      "moduleName": "ShadowMapPassModule",
+      "namedExports": {
+        "SHADOW_MAP_DEPTH_FORMAT": "ShadowMapPass_SHADOW_MAP_DEPTH_FORMAT",
+        "createDirectionalLightMatrices": "ShadowMapPass_createDirectionalLightMatrices",
+        "createFrustumFitDirectionalLightMatrices": "ShadowMapPass_createFrustumFitDirectionalLightMatrices"
+      },
+      "defaultName": "ShadowMapPass",
+      "bytes": 29676,
+      "comments": 49,
+      "sha256": "079a41b3ac77a5029edf979d4b1749a41b2ba0b1b1ab70e14489a8017cccabcf"
+    },
+    {
+      "path": "webg/Shape.js",
+      "moduleName": "ShapeModule",
+      "namedExports": {},
+      "defaultName": "Shape",
+      "bytes": 69919,
+      "comments": 177,
+      "sha256": "d9c3e4f80ac6f656c010ec89e80ce49f6f4a5cd8714b9ee46c44509dac7136d7"
+    },
+    {
+      "path": "webg/ShapeResource.js",
+      "moduleName": "ShapeResourceModule",
+      "namedExports": {},
+      "defaultName": "ShapeResource",
+      "bytes": 6639,
+      "comments": 29,
+      "sha256": "11b02b071a432a7bdcbc5d1e38ff259237b2a6a5d39afc4680671a9067e00fe8"
+    },
+    {
+      "path": "webg/Skeleton.js",
+      "moduleName": "SkeletonModule",
+      "namedExports": {},
+      "defaultName": "Skeleton",
+      "bytes": 10537,
+      "comments": 42,
+      "sha256": "1147414f6a0c0173dc5d86bb5f1970aa9ab7c877ee04c5647940e2ec863fc28a"
+    },
+    {
+      "path": "webg/SkinningConfig.js",
+      "moduleName": "SkinningConfigModule",
+      "namedExports": {
+        "DEFAULT_MAX_SKIN_BONES": "SkinningConfig_DEFAULT_MAX_SKIN_BONES",
+        "SKIN_MATRIX_FLOATS_PER_BONE": "SkinningConfig_SKIN_MATRIX_FLOATS_PER_BONE",
+        "SKIN_MATRIX_VECTORS_PER_BONE": "SkinningConfig_SKIN_MATRIX_VECTORS_PER_BONE",
+        "alignTo": "SkinningConfig_alignTo"
+      },
+      "defaultName": null,
+      "bytes": 1181,
+      "comments": 15,
+      "sha256": "e57098b9371dc62ad9ac281e5dd98493f15be1711e2f1747056754cb912b9d07"
+    },
+    {
+      "path": "webg/SmoothShader.js",
+      "moduleName": "SmoothShaderModule",
+      "namedExports": {},
+      "defaultName": "SmoothShader",
+      "bytes": 54991,
+      "comments": 120,
+      "sha256": "f8bf9a5e4000990d1f7ce5895ae96f1d5ca156d6f6495ce443368d97085e8e33"
+    },
+    {
+      "path": "webg/Space.js",
+      "moduleName": "SpaceModule",
+      "namedExports": {},
+      "defaultName": "Space",
+      "bytes": 54318,
+      "comments": 194,
+      "sha256": "2ca4731e75984a43892117766ca24b11de346ec602c2a7eca9af2b96cb764859"
+    },
+    {
+      "path": "webg/SphereCollider.js",
+      "moduleName": "SphereColliderModule",
+      "namedExports": {},
+      "defaultName": "SphereCollider",
+      "bytes": 8499,
+      "comments": 19,
+      "sha256": "af03d4574ade83e4b057c520d37fe355f943a645c504a56e31ae4ae65b6af5fd"
+    },
+    {
+      "path": "webg/SpotShadowMapPass.js",
+      "moduleName": "SpotShadowMapPassModule",
+      "namedExports": {
+        "createSpotLightMatrices": "SpotShadowMapPass_createSpotLightMatrices"
+      },
+      "defaultName": "SpotShadowMapPass",
+      "bytes": 3741,
+      "comments": 13,
+      "sha256": "e694467156a0c508fb02dc83dd0b2e021df376b9faf34c45804a9b039aa05f2e"
+    },
+    {
+      "path": "webg/SsaoPass.js",
+      "moduleName": "SsaoPassModule",
+      "namedExports": {
+        "SSAO_BILATERAL_WGSL": "SsaoPass_SSAO_BILATERAL_WGSL",
+        "SSAO_DEFAULTS": "SsaoPass_SSAO_DEFAULTS",
+        "SSAO_WGSL": "SsaoPass_SSAO_WGSL"
+      },
+      "defaultName": "SsaoPass",
+      "bytes": 19801,
+      "comments": 30,
+      "sha256": "b83259d79355fd51dfda6b0de68a67dfbe3c403fe512dde81a0d40110a150bd7"
+    },
+    {
+      "path": "webg/Stack.js",
+      "moduleName": "StackModule",
+      "namedExports": {},
+      "defaultName": "Stack",
+      "bytes": 1275,
+      "comments": 16,
+      "sha256": "80a2afe6c1c4f8a7e4a59731495847bd1b2795b72481c33fb2bada7ab8c8b412"
+    },
+    {
+      "path": "webg/StorageTargetFactory.js",
+      "moduleName": "StorageTargetFactoryModule",
+      "namedExports": {
+        "getDefaultStorageTargetUsage": "StorageTargetFactory_getDefaultStorageTargetUsage",
+        "resizeTarget": "StorageTargetFactory_resizeTarget"
+      },
+      "defaultName": "StorageTargetFactory",
+      "bytes": 4761,
+      "comments": 14,
+      "sha256": "b5f45551302ecebd416fa6ddebad36f5b5a87e7dc8f0d61625cce1285d85451a"
+    },
+    {
+      "path": "webg/Task.js",
+      "moduleName": "TaskModule",
+      "namedExports": {},
+      "defaultName": "Task",
+      "bytes": 6854,
+      "comments": 38,
+      "sha256": "67eacd6ade65eabf2f83371adc0f95cee5a7a230abb31eb67d45066440d879be"
+    },
+    {
+      "path": "webg/Text.js",
+      "moduleName": "TextModule",
+      "namedExports": {},
+      "defaultName": "Text",
+      "bytes": 15943,
+      "comments": 57,
+      "sha256": "a6c4f0665f6d70090bc7bfee10b0f60f758e5c682ed38009127cbe268b66fc81"
+    },
+    {
+      "path": "webg/Texture.js",
+      "moduleName": "TextureModule",
+      "namedExports": {},
+      "defaultName": "Texture",
+      "bytes": 28585,
+      "comments": 157,
+      "sha256": "7d8958613e78e80ab33329551f196b82fe307327c2d847f49436dbe5014387da"
+    },
+    {
+      "path": "webg/ToneSynth.js",
+      "moduleName": "ToneSynthModule",
+      "namedExports": {},
+      "defaultName": "ToneSynth",
+      "bytes": 21945,
+      "comments": 64,
+      "sha256": "598a5bcec885faf7273c1b26bba671d0af9f38975ba335072e524bd8f07ce396"
+    },
+    {
+      "path": "webg/Touch.js",
+      "moduleName": "TouchModule",
+      "namedExports": {},
+      "defaultName": "Touch",
+      "bytes": 31424,
+      "comments": 49,
+      "sha256": "c9ca928579e3932a83900601d09b338bf0dfa37daafa26462cda5020d1669334"
+    },
+    {
+      "path": "webg/TranslucentRenderQueue.js",
+      "moduleName": "TranslucentRenderQueueModule",
+      "namedExports": {
+        "TRANSLUCENT_SMALL_OVERLAP_PIXEL_LIMIT": "TranslucentRenderQueue_TRANSLUCENT_SMALL_OVERLAP_PIXEL_LIMIT"
+      },
+      "defaultName": "TranslucentRenderQueue",
+      "bytes": 41744,
+      "comments": 63,
+      "sha256": "cd8391a9d74d24d64fecaf444c926944d77fc7abe28ae6c289dfb4aaf9f582f3"
+    },
+    {
+      "path": "webg/TransparencyPass.js",
+      "moduleName": "TransparencyPassModule",
+      "namedExports": {
+        "FROST_MIN_ROUGHNESS": "TransparencyPass_FROST_MIN_ROUGHNESS",
+        "FROST_PYRAMID_LEVELS": "TransparencyPass_FROST_PYRAMID_LEVELS",
+        "TRANSMISSION_COMPOSITE_WGSL": "TransparencyPass_TRANSMISSION_COMPOSITE_WGSL",
+        "TRANSMISSION_DEFAULTS": "TransparencyPass_TRANSMISSION_DEFAULTS",
+        "TRANSPARENCY_GPU_PROFILE_NAMES": "TransparencyPass_TRANSPARENCY_GPU_PROFILE_NAMES",
+        "computeFrostPyramidMaxLevel": "TransparencyPass_computeFrostPyramidMaxLevel"
+      },
+      "defaultName": "TransparencyPass",
+      "bytes": 67744,
+      "comments": 65,
+      "sha256": "3049dc5e359bf26e776a9185d898fb6133482c31e0bdce3c97bf7402cc4534eb"
+    },
+    {
+      "path": "webg/Tween.js",
+      "moduleName": "TweenModule",
+      "namedExports": {},
+      "defaultName": "Tween",
+      "bytes": 10347,
+      "comments": 45,
+      "sha256": "2c1711a973d72aababebfaa13afffbd1d7a101dc11cded7b8fc6327275121fe8"
+    },
+    {
+      "path": "webg/VignettePass.js",
+      "moduleName": "VignettePassModule",
+      "namedExports": {},
+      "defaultName": "VignettePass",
+      "bytes": 8923,
+      "comments": 29,
+      "sha256": "7e81d9009e9f8217c9ae7cec31fd7ed9f41117bea5668a4fde02f51162a5d552"
+    },
+    {
+      "path": "webg/WaterBody.js",
+      "moduleName": "WaterBodyModule",
+      "namedExports": {},
+      "defaultName": "WaterBody",
+      "bytes": 4676,
+      "comments": 16,
+      "sha256": "68077eeea496de6e7e94631e53c633d44ef3063463f28d8050f9f1d1d1bc0c0c"
+    },
+    {
+      "path": "webg/WaterCausticField.js",
+      "moduleName": "WaterCausticFieldModule",
+      "namedExports": {},
+      "defaultName": "WaterCausticField",
+      "bytes": 6457,
+      "comments": 13,
+      "sha256": "88ae0fdd8783f630432f995170dea55a0382ca7cb4e3a32ba86faefc06f163d4"
+    },
+    {
+      "path": "webg/WaterDepthPass.js",
+      "moduleName": "WaterDepthPassModule",
+      "namedExports": {},
+      "defaultName": "WaterDepthPass",
+      "bytes": 3875,
+      "comments": 16,
+      "sha256": "d4c3ae095971a5f198424ac3656deff2374cf4559ddb6bc9868416969fe605be"
+    },
+    {
+      "path": "webg/WaterLayerPass.js",
+      "moduleName": "WaterLayerPassModule",
+      "namedExports": {},
+      "defaultName": "WaterLayerPass",
+      "bytes": 5946,
+      "comments": 13,
+      "sha256": "516b6eaef2f30bff6cdb9c88663b5e0d8b028c8dfcff5cbd89cd632bfc1b35d3"
+    },
+    {
+      "path": "webg/WaterLightingWgsl.js",
+      "moduleName": "WaterLightingWgslModule",
+      "namedExports": {
+        "WATER_LIGHTING_BINDINGS": "WaterLightingWgsl_WATER_LIGHTING_BINDINGS",
+        "WATER_LIGHTING_DIFFUSE": "WaterLightingWgsl_WATER_LIGHTING_DIFFUSE"
+      },
+      "defaultName": null,
+      "bytes": 2874,
+      "comments": 6,
+      "sha256": "024b2ff3796ad1ae9b954cec6d56f7f9e0b8bedc3e09898aeae628fbd6a2ab35"
+    },
+    {
+      "path": "webg/WaterReceiverMask.js",
+      "moduleName": "WaterReceiverMaskModule",
+      "namedExports": {},
+      "defaultName": "WaterReceiverMask",
+      "bytes": 2408,
+      "comments": 14,
+      "sha256": "656f2239d366d653586add18dc3faaff2928b97fe5dd681134db5bfe4bb520df"
+    },
+    {
+      "path": "webg/WaterSurfacePass.js",
+      "moduleName": "WaterSurfacePassModule",
+      "namedExports": {},
+      "defaultName": "WaterSurfacePass",
+      "bytes": 5865,
+      "comments": 11,
+      "sha256": "c6e63ffda3ff847652c778c2e5d53afd89d24131c4fe023487eaf3e524fb50de"
+    },
+    {
+      "path": "webg/WaterSurfaceWgsl.js",
+      "moduleName": "WaterSurfaceWgslModule",
+      "namedExports": {
+        "buildWaterSurfaceWgsl": "WaterSurfaceWgsl_buildWaterSurfaceWgsl"
+      },
+      "defaultName": null,
+      "bytes": 8758,
+      "comments": 8,
+      "sha256": "68a241de300e155f0218ad68cd6fd2bba6ea69e540bbe11c143d12f79f9b48e9"
+    },
+    {
+      "path": "webg/WaterSystem.js",
+      "moduleName": "WaterSystemModule",
+      "namedExports": {},
+      "defaultName": "WaterSystem",
+      "bytes": 7650,
+      "comments": 23,
+      "sha256": "3ec234030af8a63e18e2ab7870c304ad287113708fbd271f5d59fa6d4348ac10"
+    },
+    {
+      "path": "webg/WaterWaveWgsl.js",
+      "moduleName": "WaterWaveWgslModule",
+      "namedExports": {
+        "WATER_WAVE_WGSL": "WaterWaveWgsl_WATER_WAVE_WGSL"
+      },
+      "defaultName": null,
+      "bytes": 6060,
+      "comments": 6,
+      "sha256": "f65fd1880e0b4fa8fc1100865c288165f2a532ebeb971338853d4a38e56d907d"
+    },
+    {
+      "path": "webg/WebgApp.js",
+      "moduleName": "WebgAppModule",
+      "namedExports": {},
+      "defaultName": "WebgApp",
+      "bytes": 136008,
+      "comments": 335,
+      "sha256": "03e497b4ff5e91b363074d59e702520964d63d972c24d5386c5e55411690374c"
+    },
+    {
+      "path": "webg/WebgUiTheme.js",
+      "moduleName": "WebgUiThemeModule",
+      "namedExports": {
+        "DEFAULT_UI_FOREST_THEME": "WebgUiTheme_DEFAULT_UI_FOREST_THEME",
+        "DEFAULT_UI_LIGHT_THEME": "WebgUiTheme_DEFAULT_UI_LIGHT_THEME",
+        "DEFAULT_UI_SUNSET_THEME": "WebgUiTheme_DEFAULT_UI_SUNSET_THEME",
+        "DEFAULT_UI_THEME": "WebgUiTheme_DEFAULT_UI_THEME",
+        "UI_THEME_PRESETS": "WebgUiTheme_UI_THEME_PRESETS",
+        "mergeUiTheme": "WebgUiTheme_mergeUiTheme"
+      },
+      "defaultName": null,
+      "bytes": 9058,
+      "comments": 24,
+      "sha256": "2a6127238869a0e0a9e484984858ada612d247123f358f4c16d6bdf92eaf7428"
+    },
+    {
+      "path": "webg/Wireframe.js",
+      "moduleName": "WireframeModule",
+      "namedExports": {},
+      "defaultName": "Wireframe",
+      "bytes": 14056,
+      "comments": 36,
+      "sha256": "5178c26368dbc12c7ea1d948c87f73867599640282abf1195bad2f2cadac2a41"
+    },
+    {
+      "path": "webg/app/AuthoringVocabulary.js",
+      "moduleName": "AuthoringVocabularyModule",
+      "namedExports": {
+        "COLLIDER_RELATIONS": "AuthoringVocabulary_COLLIDER_RELATIONS",
+        "GEOMETRY_TYPES": "AuthoringVocabulary_GEOMETRY_TYPES",
+        "STABLE_ID_PATTERN": "AuthoringVocabulary_STABLE_ID_PATTERN",
+        "TRANSFORM_SPACES": "AuthoringVocabulary_TRANSFORM_SPACES",
+        "copyAuthoringEnum": "AuthoringVocabulary_copyAuthoringEnum",
+        "isStableIdentifier": "AuthoringVocabulary_isStableIdentifier",
+        "readStableIdentifier": "AuthoringVocabulary_readStableIdentifier"
+      },
+      "defaultName": null,
+      "bytes": 1713,
+      "comments": 13,
+      "sha256": "91711d21bd8c338ce29037b7e4171cec2c5c76b1cd8c44057dcd8341fdd5deca"
+    },
+    {
+      "path": "webg/app/CameraDofConstraint.js",
+      "moduleName": "CameraDofConstraintModule",
+      "namedExports": {
+        "installCameraDofConstraint": "CameraDofConstraint_installCameraDofConstraint"
+      },
+      "defaultName": null,
+      "bytes": 10455,
+      "comments": 20,
+      "sha256": "2b92c4cb6b1616d072459e8c7731f539d4ee8ba63d9630d563be23097973aa40"
+    },
+    {
+      "path": "webg/app/ComputePhysicsBackend.js",
+      "moduleName": "ComputePhysicsBackendModule",
+      "namedExports": {},
+      "defaultName": "ComputePhysicsBackend",
+      "bytes": 12253,
+      "comments": 47,
+      "sha256": "548565000c279bc0a5a4f71d07496e44384965456cb5d2cddccf736d329f30ab"
+    },
+    {
+      "path": "webg/app/CpuPhysicsBackend.js",
+      "moduleName": "CpuPhysicsBackendModule",
+      "namedExports": {},
+      "defaultName": "CpuPhysicsBackend",
+      "bytes": 6572,
+      "comments": 30,
+      "sha256": "4be4b688f139c3c5948134f3427f5fe4f40b056035b075cd565a7400d64b2349"
+    },
+    {
+      "path": "webg/app/JointBindings.js",
+      "moduleName": "JointBindingsModule",
+      "namedExports": {
+        "readAnchors": "JointBindings_readAnchors",
+        "readJointDefinitions": "JointBindings_readJointDefinitions"
+      },
+      "defaultName": "JointBindings",
+      "bytes": 9985,
+      "comments": 16,
+      "sha256": "fd866f27521d6d8e8a27f6de90a6f2c809fb4b6ee26a3cf150d686538ada7c89"
+    },
+    {
+      "path": "webg/app/JointDefinition.js",
+      "moduleName": "JointDefinitionModule",
+      "namedExports": {
+        "validateAnchors": "JointDefinition_validateAnchors",
+        "validateJoints": "JointDefinition_validateJoints"
+      },
+      "defaultName": null,
+      "bytes": 4037,
+      "comments": 9,
+      "sha256": "cc3e2b8a1d4b5afd1be27a0a011c8f38fbba09e0599da6c4bde1f2eec6a6e976"
+    },
+    {
+      "path": "webg/app/ModelPhysicsDiagnostics.js",
+      "moduleName": "ModelPhysicsDiagnosticsModule",
+      "namedExports": {
+        "distanceBetweenPoints": "ModelPhysicsDiagnostics_distanceBetweenPoints",
+        "readInitialJointLength": "ModelPhysicsDiagnostics_readInitialJointLength",
+        "readJointStateSnapshot": "ModelPhysicsDiagnostics_readJointStateSnapshot",
+        "readNodeWorldPoint": "ModelPhysicsDiagnostics_readNodeWorldPoint"
+      },
+      "defaultName": null,
+      "bytes": 5697,
+      "comments": 16,
+      "sha256": "a14618af06f78f638ae00aa706506a05cd3015b5ac69cf6e114bb18e3734df19"
+    },
+    {
+      "path": "webg/app/ModelSpatialCorrespondence.js",
+      "moduleName": "ModelSpatialCorrespondenceModule",
+      "namedExports": {
+        "compareGeometryToCollider": "ModelSpatialCorrespondence_compareGeometryToCollider",
+        "createModelSpatialCorrespondence": "ModelSpatialCorrespondence_createModelSpatialCorrespondence",
+        "readColliderDefinition": "ModelSpatialCorrespondence_readColliderDefinition",
+        "readLocalGeometry": "ModelSpatialCorrespondence_readLocalGeometry",
+        "readNodeSpatialPose": "ModelSpatialCorrespondence_readNodeSpatialPose"
+      },
+      "defaultName": null,
+      "bytes": 9063,
+      "comments": 16,
+      "sha256": "31240486405630f088bee86cb91a325205c3abf00732a4793d9253c10266a25b"
+    },
+    {
+      "path": "webg/app/PbrRenderer.js",
+      "moduleName": "PbrRendererModule",
+      "namedExports": {
+        "PBR_PIPELINE_MANIFEST_KEYS": "PbrRenderer_PBR_PIPELINE_MANIFEST_KEYS",
+        "PBR_RENDERER_MANIFEST_KEYS": "PbrRenderer_PBR_RENDERER_MANIFEST_KEYS",
+        "PBR_RENDERER_PROFILES": "PbrRenderer_PBR_RENDERER_PROFILES",
+        "resolvePbrDofOptions": "PbrRenderer_resolvePbrDofOptions",
+        "resolvePbrRendererProfile": "PbrRenderer_resolvePbrRendererProfile",
+        "validatePbrEnvironmentOptions": "PbrRenderer_validatePbrEnvironmentOptions",
+        "validatePbrPipelineOptions": "PbrRenderer_validatePbrPipelineOptions",
+        "validatePbrRendererOptions": "PbrRenderer_validatePbrRendererOptions"
+      },
+      "defaultName": "PbrRenderer",
+      "bytes": 33087,
+      "comments": 54,
+      "sha256": "c576ba919a2a279bde5a5ffa5fe6aad889ee84a4cd6df7352e6a4a5e2ee83055"
+    },
+    {
+      "path": "webg/app/PhysicsBinding.js",
+      "moduleName": "PhysicsBindingModule",
+      "namedExports": {},
+      "defaultName": "PhysicsBinding",
+      "bytes": 9779,
+      "comments": 28,
+      "sha256": "6061ca7e476e53acdcacd11e96eaf2f4f1c75cbbb930af042cec7004a7ce70e1"
+    },
+    {
+      "path": "webg/app/PrimitiveScene.js",
+      "moduleName": "PrimitiveSceneModule",
+      "namedExports": {
+        "createPrimitiveNode": "PrimitiveScene_createPrimitiveNode",
+        "createPrimitivePhysicsManifest": "PrimitiveScene_createPrimitivePhysicsManifest",
+        "createPrimitiveScene": "PrimitiveScene_createPrimitiveScene",
+        "expandPrimitiveObjectSet": "PrimitiveScene_expandPrimitiveObjectSet",
+        "readPrimitiveDefinitions": "PrimitiveScene_readPrimitiveDefinitions",
+        "readPrimitiveMaterialManifest": "PrimitiveScene_readPrimitiveMaterialManifest",
+        "readPrimitiveObjectDefinitions": "PrimitiveScene_readPrimitiveObjectDefinitions"
+      },
+      "defaultName": null,
+      "bytes": 37887,
+      "comments": 49,
+      "sha256": "66a434f2139cbc59cfa4e3aa0ee8ecf2ebf479a18b56fce694940877e71a6a2f"
+    },
+    {
+      "path": "webg/app/SceneAnimations.js",
+      "moduleName": "SceneAnimationsModule",
+      "namedExports": {
+        "readAnimationScale": "SceneAnimations_readAnimationScale",
+        "readSceneAnimationDefinitions": "SceneAnimations_readSceneAnimationDefinitions"
+      },
+      "defaultName": "SceneAnimations",
+      "bytes": 14092,
+      "comments": 34,
+      "sha256": "59bf5db7df0e2328d6747e6223a2387957c5e55bd466dbee74ef349383eb8881"
+    },
+    {
+      "path": "webg/app/SceneDefinition.js",
+      "moduleName": "SceneDefinitionModule",
+      "namedExports": {},
+      "defaultName": "SceneDefinition",
+      "bytes": 63317,
+      "comments": 72,
+      "sha256": "55883f7e03ad1adf49fed7486cfc2978fec076decad8a45fe9f4e2fac52b7f5a"
+    },
+    {
+      "path": "webg/app/SceneFrame.js",
+      "moduleName": "SceneFrameModule",
+      "namedExports": {},
+      "defaultName": "SceneFrame",
+      "bytes": 18376,
+      "comments": 48,
+      "sha256": "9435e5413fe818c7ec34ad4a109e9b4abcfe285fccc95fd214189d5e1d51cf55"
+    },
+    {
+      "path": "webg/app/SceneHelpers.js",
+      "moduleName": "SceneHelpersModule",
+      "namedExports": {
+        "createComputeCollider": "SceneHelpers_createComputeCollider",
+        "createCpuCollider": "SceneHelpers_createCpuCollider",
+        "readBodyOptions": "SceneHelpers_readBodyOptions",
+        "readExplicitPose": "SceneHelpers_readExplicitPose",
+        "readNodePose": "SceneHelpers_readNodePose",
+        "readNodePoseInSpace": "SceneHelpers_readNodePoseInSpace",
+        "readNodeWorldPose": "SceneHelpers_readNodeWorldPose",
+        "readOptions": "SceneHelpers_readOptions",
+        "readShapeOptions": "SceneHelpers_readShapeOptions",
+        "writeNodePose": "SceneHelpers_writeNodePose",
+        "writeNodePoseInSpace": "SceneHelpers_writeNodePoseInSpace"
+      },
+      "defaultName": null,
+      "bytes": 13235,
+      "comments": 32,
+      "sha256": "03cb543f96d560dca8c90dca82df116e5bf39afd44116336130b8ae9e52cb3f1"
+    },
+    {
+      "path": "webg/app/SceneMesh.js",
+      "moduleName": "SceneMeshModule",
+      "namedExports": {
+        "appendSceneMesh": "SceneMesh_appendSceneMesh",
+        "readSceneMesh": "SceneMesh_readSceneMesh",
+        "readSceneMeshes": "SceneMesh_readSceneMeshes"
+      },
+      "defaultName": null,
+      "bytes": 3733,
+      "comments": 10,
+      "sha256": "9861a8cbd98927c89d6b95c55ec7d6b4736b2d91b78b3011f7b05112f5304fea"
+    },
+    {
+      "path": "webg/app/ScenePhysics.js",
+      "moduleName": "ScenePhysicsModule",
+      "namedExports": {},
+      "defaultName": "ScenePhysics",
+      "bytes": 10395,
+      "comments": 54,
+      "sha256": "b023dfa295fa9f5a5c170fd59cf7a7b6cbc6f53535c77e4cfba0ac9833f0af7c"
+    },
+    {
+      "path": "webg/app/SceneRuntimeHelpers.js",
+      "moduleName": "SceneRuntimeHelpersModule",
+      "namedExports": {
+        "alignPrimitiveRoots": "SceneRuntimeHelpers_alignPrimitiveRoots"
+      },
+      "defaultName": null,
+      "bytes": 1877,
+      "comments": 8,
+      "sha256": "9b7dc1d533fcf56480965a72d046b0f0d7f8d5f11733e6b4b6e56e4df04b9eae"
+    },
+    {
+      "path": "webg/app/WebgSceneApp.js",
+      "moduleName": "WebgSceneAppModule",
+      "namedExports": {
+        "createWebgSceneApp": "WebgSceneApp_createWebgSceneApp"
+      },
+      "defaultName": "WebgSceneApp",
+      "bytes": 28592,
+      "comments": 68,
+      "sha256": "faba6177e86cd19981139754c7c43f2f704c685c4377617d3c2b2c071fcda859"
+    },
+    {
+      "path": "webg/app/index.js",
+      "moduleName": "AppModule",
+      "namedExports": {
+        "ComputeParticleEmitter": "App_ComputeParticleEmitter",
+        "DocumentAsset": "App_DocumentAsset",
+        "ModelAsset": "App_ModelAsset",
+        "PBR_RENDERER_PROFILES": "App_PBR_RENDERER_PROFILES",
+        "PbrRenderer": "App_PbrRenderer",
+        "SceneAsset": "App_SceneAsset",
+        "SceneDefinition": "App_SceneDefinition",
+        "ScenePhysics": "App_ScenePhysics",
+        "WaterBody": "App_WaterBody",
+        "WebgSceneApp": "App_WebgSceneApp",
+        "compressSceneYAML": "App_compressSceneYAML",
+        "createWebgSceneApp": "App_createWebgSceneApp",
+        "parseSceneYAML": "App_parseSceneYAML",
+        "parseSceneYAMLDocument": "App_parseSceneYAMLDocument",
+        "resolvePbrDofOptions": "App_resolvePbrDofOptions",
+        "resolvePbrRendererProfile": "App_resolvePbrRendererProfile",
+        "stringifySceneYAML": "App_stringifySceneYAML",
+        "validatePbrEnvironmentOptions": "App_validatePbrEnvironmentOptions",
+        "validatePbrPipelineOptions": "App_validatePbrPipelineOptions",
+        "validatePbrRendererOptions": "App_validatePbrRendererOptions"
+      },
+      "defaultName": null,
+      "bytes": 1545,
+      "comments": 9,
+      "sha256": "67149864729404189af0940356167fc557f207d74266bfb870306fc58b00ab43"
+    },
+    {
+      "path": "webg/util.js",
+      "moduleName": "utilModule",
+      "namedExports": {},
+      "defaultName": "util",
+      "bytes": 30557,
+      "comments": 115,
+      "sha256": "a7e6ad251f10073a7affd87b007306296b187989e91a1d3a8cf3bb7b31446754"
+    }
+  ],
+  "variants": [
+    {
+      "filename": "webg.core.js",
+      "bytes": 3735556,
+      "gzipBytes": 885066,
+      "comments": 8703
+    },
+    {
+      "filename": "webg.core.min.js",
+      "bytes": 1977791,
+      "gzipBytes": 513517,
+      "comments": 2
+    }
+  ],
+  "warnings": []
+}

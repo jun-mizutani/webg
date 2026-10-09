@@ -1,19 +1,19 @@
 <!doctype html>
-<!-- webg/book/examples/07_02.html 2026/04/24 -->
+<!-- book/examples/07_02.html 2026/10/04 -->
 <html lang="ja">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>07_02 SmoothShader 4経路の比較</title>
-  <link rel="stylesheet" href="./example.css" />
+  <link rel="stylesheet" href="./examples_common.css" />
 </head>
 <body>
   <div class="page">
     <h1>book/examples</h1>
     <h2>07_02 SmoothShader 4経路の比較</h2>
     <div class="section-card">
-      <p>`book/07_シェーダーとマテリアル.md` の `SmoothShader` が、static / skinned / normal map の 4 経路を 1 本で扱うことを確認する実行例です</p>
-      <p class="note">上段は `has_bone = 0` の static mesh、下段は `has_bone = 1` の skinned mesh です。右列だけ `use_normal_map = 1` にしており、同じ `SmoothShader` に対して材質パラメータだけで経路が切り替わることを見比べられます</p>
+      <p>`book/07_シェーダーとマテリアル.md` の `SmoothShader` が、static / skinned / normal map の 4 経路を 1 本で扱うことを確認する実行例です</p>
+      <p class="note">上段は `has_bone = 0` の static mesh、下段は `has_bone = 1` の skinned mesh です。右列だけ `use_normal_map = 1` にしており、同じ `SmoothShader` に対してマテリアルパラメータだけで経路が切り替わることを見比べられます</p>
     </div>
 
     <div class="canvas-block">
@@ -161,9 +161,10 @@ const state = {
 };
 
 app.attachInput({
+  // 正規化されたキー名から操作を選び、停止状態、表示設定、カメラなどの対象を更新する
   onKeyDown: (key, ev) => {
     if (ev.repeat) return;
-    if (key === " ") {
+    if (key === "space") {
       state.paused = !state.paused;
     } else if (key === "r") {
       orbit.setAngles(14.0, -8.0);
@@ -185,6 +186,7 @@ app.showOverlayPanel(buildHelpPanelOptions({
 let elapsedSec = 0.0;
 
 app.start({
+  // 停止状態を確認して静的メッシュとボーンの姿勢を更新し、法線マップの比較条件を表示する
   onUpdate: ({ deltaSec }) => {
     if (!state.paused) {
       elapsedSec += deltaSec;

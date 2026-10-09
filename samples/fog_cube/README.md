@@ -29,7 +29,7 @@
 - Z / X で density を変え、exp fog の減衰の強さが滑らかに変化するかを確認します。
 - C で fog color を切り替えたとき、背景色と fog 色が揃って scene 全体の空気感が変わることを確認します。暗い青系だけでなく、白い霧のような preset も含まれます。
 - 4 で一部の cube だけを wireframe 表示にし、5 で scene 全体を wireframe 表示にします。wireframe の線も通常描画と同じ fog 設定で遠景に溶け込むことを確認します。
-- orbit camera を動かしても、object 単位ではなく view 距離ベースで fog が掛かり続けることを確認します。
+- orbit camera を動かしても、view 距離ベースで fog が掛かり続けることを確認します。
 
 ## 操作方法
 - ドラッグ / 矢印キー: オービットカメラ回転

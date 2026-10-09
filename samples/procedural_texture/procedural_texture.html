@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>webg Procedural Tiled Texture</title>
+  <link rel="icon" href="data:," />
+  <!-- 2026/08/06 -->
+  <style>
+    :root {
+      color-scheme: dark;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Hiragino Sans", sans-serif;
+      background: #0b1117;
+      color: #e6edf3;
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      margin: 0;
+      min-height: 100%;
+      background:
+        radial-gradient(circle at 34% 12%, rgba(66, 91, 112, 0.34), transparent 34%),
+        #0b1117;
+    }
+
+    body {
+      display: grid;
+      place-items: start center;
+      padding: 18px;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 960px 250px;
+      gap: 18px;
+      align-items: start;
+    }
+
+    .stage {
+      position: relative;
+      width: 960px;
+      height: 720px;
+      overflow: hidden;
+      border: 1px solid rgba(216, 229, 239, 0.16);
+      border-radius: 10px;
+      background: #111a23;
+      box-shadow: 0 22px 60px rgba(0, 0, 0, 0.42);
+    }
+
+    #canvas {
+      display: block;
+      width: 960px;
+      height: 720px;
+    }
+
+    .panel {
+      padding: 16px;
+      border: 1px solid rgba(216, 229, 239, 0.16);
+      border-radius: 10px;
+      background: rgba(17, 26, 35, 0.88);
+      box-shadow: 0 18px 44px rgba(0, 0, 0, 0.30);
+    }
+
+    h1 {
+      margin: 0 0 7px;
+      font-size: 18px;
+      letter-spacing: 0.03em;
+    }
+
+    .summary {
+      margin: 0 0 16px;
+      color: #aebdca;
+      font-size: 12px;
+      line-height: 1.55;
+    }
+
+    #faceLegend {
+      display: grid;
+      gap: 11px;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    #faceLegend li {
+      display: grid;
+      grid-template-columns: 17px 1fr;
+      gap: 9px;
+      align-items: start;
+    }
+
+    .swatch {
+      width: 17px;
+      height: 17px;
+      margin-top: 1px;
+      border: 1px solid rgba(255, 255, 255, 0.28);
+      border-radius: 3px;
+    }
+
+    #faceLegend strong,
+    #faceLegend small {
+      display: block;
+    }
+
+    #faceLegend strong {
+      color: #ecf3f8;
+      font-size: 12px;
+      font-weight: 650;
+    }
+
+    #faceLegend small {
+      margin-top: 2px;
+      color: #98a9b7;
+      font-size: 10px;
+      line-height: 1.4;
+    }
+
+    .note {
+      margin: 16px 0 0;
+      padding-top: 12px;
+      border-top: 1px solid rgba(216, 229, 239, 0.12);
+      color: #aebdca;
+      font-size: 11px;
+      line-height: 1.55;
+    }
+
+    @media (max-width: 1260px) {
+      .layout {
+        grid-template-columns: minmax(0, 960px);
+      }
+      .panel {
+        width: min(960px, 100%);
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="layout">
+    <section class="stage" aria-label="Procedural texture comparison canvas">
+      <canvas id="canvas" width="960" height="720"></canvas>
+    </section>
+    <aside class="panel">
+      <h1>7種類の材質preset / 6面比較</h1>
+      <p class="summary">木材3種、コンクリート2種、赤レンガ、ツヤのあるビニールタイルを扱います。+Zの編集材質はPalette先頭ページから直接選択できます</p>
+      <ul id="faceLegend"></ul>
+      <p class="note"><code>/</code>またはCanvasのダブルクリック／ダブルタップで生成パラメータを変更できます。<code>F9</code>の後に<code>M</code>でDebugDock、<code>V</code>で設定入りJSONをコピーできます</p>
+    </aside>
+  </main>
+  <script type="module" src="./main.js"></script>
+</body>
+</html>

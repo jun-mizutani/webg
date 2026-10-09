@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// unittest/compression/main.js  2026/04/27
+// unittest/compression/main.js  2026/10/04
 //   compression unittest
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -36,7 +36,7 @@ const encoder = new TextEncoder();
 const validator = new ModelValidator();
 
 // Compression Streams API が使える環境か確認する
-// CompressionStream だけでは復元確認ができないため、DecompressionStream も必須にしている
+// 圧縮と復元を一組で確認するため、両方のStreams APIへの対応を調べる
 function supportsCompressionStreams() {
   return typeof CompressionStream === "function"
     && typeof DecompressionStream === "function"
@@ -44,7 +44,7 @@ function supportsCompressionStreams() {
     && typeof Response === "function";
 }
 
-// JS 文字列長ではなく UTF-8 byte 数を測る
+// UTF-8へ変換したbyte数を測り、保存データのサイズを比較する
 // JSON に日本語や非 ASCII が入った場合も、実際に圧縮される byte 数で比較する
 function byteLength(text) {
   return encoder.encode(text).byteLength;
@@ -65,7 +65,7 @@ function formatRatio(originalBytes, compressedBytes) {
 }
 
 // JSON 文字列を Blob stream に変換し、CompressionStream に流して gzip Blob を作る
-// CompressionStream は byte stream を扱うため、ModelAsset の構造はここでは変更しない
+// ModelAssetのJSON構造を保ち、そのUTF-8 byte streamを圧縮する
 async function compressText(text, format = "gzip") {
   if (format !== "gzip") {
     throw new Error(`unsupported compression format: ${format}`);
@@ -147,7 +147,7 @@ function setStatus(message, className = "") {
 }
 
 // API 対応状況と state の有無に応じて button の有効 / 無効を更新する
-// 圧縮結果がない状態では decompress と download を押せないようにする
+// 圧縮結果の準備状態に合わせ、復元と保存のボタンを有効化する
 function updateButtons() {
   const supported = supportsCompressionStreams();
   ui.compress.disabled = !supported;
@@ -267,7 +267,7 @@ function installHandlers() {
   });
 
   // 直近の gzip Blob を `.json.gz` として保存する
-  // 中身は ModelAsset JSON の gzip byte stream で、JSON 構造そのものは変更していない
+  // ModelAssetのJSON構造を保ったgzip byte streamを保存する
   ui.downloadCompressed.addEventListener("click", () => {
     if (!state.compressedBlob) return;
     const name = state.sourceFilename.replace(/\.json$/i, "") || "modelasset";

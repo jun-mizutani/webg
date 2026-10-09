@@ -1,0 +1,442 @@
+<!doctype html>
+<!-- book/examples/27_03.html 2026/10/04 -->
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>27_03 Compute版の高速化構成</title>
+  <link rel="stylesheet" href="./examples_common.css" />
+</head>
+<body>
+  <div class="page">
+    <h1>book/examples</h1>
+    <h2>27_03 Compute版の高速化構成 — GPU状態を直接描画</h2>
+    <div class="section-card">
+      <p>`book/27_物理エンジンを使う.md` の床と箱の最小例を、Compute Shaderで実行する固定canvasへ調整した確認ページです</p>
+      <p>この例は、CPUとGPU間の転送を削減できる高速化構成です。Compute Physicsが更新したGPU上のBodyStateを、位置や姿勢としてCPUへ読み戻さず、描画用WGSLの頂点シェーダーが直接参照します。そのため、GPU上で物理計算から描画までを続けられ、body数が増えたときにreadback、CPU側のNode同期、CPUでの頂点変換を省けることが主な利点です</p>
+      <p>ただし、GPU状態を直接描画すれば常に速くなるわけではありません。body数が少ない場合は差が小さく、描画用WGSLとバインド設定を利用者側で用意する必要があります。通常の`Shape`と`Node`を簡単に使いたい場合は、27_02のように計算結果をreadbackして同期する方法が適しています</p>
+      <p id="status" class="note">Compute Physicsを初期化しています</p>
+    </div>
+
+    <div class="canvas-block">
+      <canvas id="canvas" width="960" height="720"></canvas>
+    </div>
+
+    <pre id="code"></pre>
+
+    <script type="module" id="example-source">
+import WebgApp from "../../webg/WebgApp.js";
+import Primitive from "../../webg/Primitive.js";
+import Shape from "../../webg/Shape.js";
+import Matrix from "../../webg/Matrix.js";
+import ComputePhysicsSpace from "../../webg/ComputePhysicsSpace.js";
+import ComputeBoxCollider from "../../webg/ComputeBoxCollider.js";
+import ComputePlaneCollider from "../../webg/ComputePlaneCollider.js";
+import { CAMERA_REVERSE_Z } from "../../webg/DepthConvention.js";
+
+const CANVAS_W = 960;
+const CANVAS_H = 720;
+const BOUNDS = Object.freeze({
+  minX: -8.0,
+  maxX: 8.0,
+  minZ: -8.0,
+  maxZ: 8.0,
+  floorY: 0.0
+});
+const CLEAR_COLOR = Object.freeze([0.018, 0.035, 0.052, 1.0]);
+
+// BodyStateの8個のvec4型をComputePhysicsSpaceと同じ順序で宣言します
+// 箱の位置と姿勢は、頂点シェーダーが現在のGPUバッファから直接読みます
+// この方式はGPU計算から描画までのreadbackとNode同期を省けるため、多数のbodyで有利になりやすい一方、描画用WGSLが必要です
+const RENDER_SHADER = `
+// ComputePhysicsSpaceのBodyStateと同じ8個のvec4を並べ、ストレージバッファのstrideを一致させます
+struct BodyState {
+  position : vec4f,
+  orientation : vec4f,
+  linearVelocityInvMass : vec4f,
+  angularVelocitySleep : vec4f,
+  halfExtentsSleepCounter : vec4f,
+  inverseInertiaLocal : vec4f,
+  material : vec4f,
+  color : vec4f,
+};
+// JavaScript側から毎フレーム転送する投影行列、視点行列、ライト情報です
+struct RenderParams {
+  projection : mat4x4f,
+  view : mat4x4f,
+  light : vec4f,
+};
+// 描画専用の床のモデル行列と表示色を格納します
+struct ObjectParams {
+  model : mat4x4f,
+  color : vec4f,
+};
+// バインディング番号0はCompute後の現在状態、番号1と2は描画用の固定情報を読みます
+@group(0) @binding(0) var<storage, read> states : array<BodyState>;
+@group(0) @binding(1) var<uniform> params : RenderParams;
+@group(0) @binding(2) var<uniform> object : ObjectParams;
+
+struct VertexInput {
+  @location(0) position : vec3f,
+  @location(1) normal : vec3f,
+};
+// 共通の頂点処理からフラグメントシェーダーへ渡す視点座標、法線、色です
+struct VertexOutput {
+  @builtin(position) position : vec4f,
+  @location(0) viewPosition : vec3f,
+  @location(1) viewNormal : vec3f,
+  @location(2) color : vec3f,
+};
+
+// 姿勢クォータニオンを合成し、状態バッファの姿勢を頂点変換へ使える形にします
+fn quatMultiply(a : vec4f, b : vec4f) -> vec4f {
+  return vec4f(
+    a.x*b.x-a.y*b.y-a.z*b.z-a.w*b.w,
+    a.x*b.y+a.y*b.x+a.z*b.w-a.w*b.z,
+    a.x*b.z-a.y*b.w+a.z*b.x+a.w*b.y,
+    a.x*b.w+a.y*b.z-a.z*b.y+a.w*b.x
+  );
+}
+
+// ローカル座標の頂点または法線をクォータニオンでワールド座標へ回転します
+fn quatRotate(q : vec4f, value : vec3f) -> vec3f {
+  let conjugate = vec4f(q.x, -q.y, -q.z, -q.w);
+  return quatMultiply(quatMultiply(q, vec4f(0.0, value)), conjugate).yzw;
+}
+
+// ワールド座標を視点、投影の順に変換し、共通の照明計算入力を作ります
+fn makeOutput(worldPosition : vec3f, worldNormal : vec3f, baseColor : vec3f) -> VertexOutput {
+  var output : VertexOutput;
+  let viewPosition = params.view * vec4f(worldPosition, 1.0);
+  output.position = params.projection * viewPosition;
+  output.viewPosition = viewPosition.xyz;
+  output.viewNormal = normalize((params.view * vec4f(worldNormal, 0.0)).xyz);
+  output.color = baseColor;
+  return output;
+}
+
+@vertex
+// 物理ボディのGPU状態を頂点変換へ使い、インスタンスごとの箱を描画する
+fn boxVertex(input : VertexInput, @builtin(instance_index) instanceIndex : u32) -> VertexOutput {
+  // インスタンス番号から対応するBodyStateをGPU上で読み、描画します
+  let state = states[instanceIndex];
+  // 単位Boxの頂点を半サイズで拡大し、クォータニオンでワールド姿勢へ回転します
+  let worldNormal = normalize(quatRotate(state.orientation, input.normal));
+  let worldPosition = state.position.xyz + quatRotate(
+    state.orientation,
+    input.position * state.halfExtentsSleepCounter.xyz
+  );
+  // sleepフラグが立ったボディは少し暗くし、停止状態を描画だけで確認できるようにします
+  let color = select(
+    state.color.rgb,
+    state.color.rgb * 0.58,
+    state.angularVelocitySleep.w > 0.5
+  );
+  return makeOutput(worldPosition, worldNormal, color);
+}
+
+@vertex
+// 床専用のモデル行列で位置と法線を変換し、共通の照明計算へ渡す
+fn floorVertex(input : VertexInput) -> VertexOutput {
+  // 描画用の床は床専用のモデル行列でワールド座標へ移します
+  let worldPosition = (object.model * vec4f(input.position, 1.0)).xyz;
+  let worldNormal = normalize((object.model * vec4f(input.normal, 0.0)).xyz);
+  return makeOutput(worldPosition, worldNormal, object.color.rgb);
+}
+
+@fragment
+// 法線とライト方向から拡散反射と鏡面反射を求め、画素の表示色を返す
+fn fragmentMain(input : VertexOutput) -> @location(0) vec4f {
+  // 視点空間の法線とライト方向から拡散反射と簡易な鏡面反射を計算します
+  let normal = normalize(input.viewNormal);
+  let lightDirection = normalize(params.light.xyz);
+  let viewDirection = normalize(-input.viewPosition);
+  let diffuse = max(dot(normal, lightDirection), 0.0);
+  let halfVector = normalize(lightDirection + viewDirection);
+  let specular = pow(max(dot(normal, halfVector), 0.0), 64.0) * params.light.w;
+  return vec4f(input.color * (0.20 + diffuse * 0.80) + vec3f(specular), 1.0);
+}`;
+
+// ComputePhysicsSpaceのBodyStateを直接参照するBoxと、固定メッシュの床を一つの描画パスへ記録します
+// 呼出側が物理更新と描画を同じコマンドエンコーダーへ並べ、Compute Passと描画をまとめて送信します
+class ComputeBookRenderer {
+  // GPU、描画形状、Computeで交互に使うバッファを受け取り、再利用するリソースを作ります
+  constructor(gpu, options) {
+    this.gpu = gpu;
+    this.device = gpu.device;
+    this.queue = gpu.queue;
+    this.boxShape = options.boxShape;
+    this.floorShape = options.floorShape;
+    this.createResources(options.stateBuffers, options.format);
+  }
+
+  // シェーダー、ユニフォーム、パイプライン、各状態バッファ用のバインドグループを初期化します
+  // BodyStateのストライドとShapeの頂点レイアウトを固定し、フレームごとのパイプライン再生成を避けます
+  createResources(stateBuffers, format) {
+    // カメラ行列と床のモデル行列を別バッファへ分け、描画ではGPU上のBodyStateを読み取ります
+    this.paramBuffer = this.device.createBuffer({
+      label: "27_03 render params",
+      size: 36 * Float32Array.BYTES_PER_ELEMENT,
+      usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST
+    });
+    this.objectBuffer = this.device.createBuffer({
+      label: "27_03 floor object params",
+      size: 20 * Float32Array.BYTES_PER_ELEMENT,
+      usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST
+    });
+    // 物理状態を読むバッファ、カメラ情報、床の表示情報を一つのバインドグループへ固定します
+    const bindGroupLayout = this.device.createBindGroupLayout({
+      entries: [
+        { binding: 0, visibility: GPUShaderStage.VERTEX, buffer: { type: "read-only-storage" } },
+        { binding: 1, visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT, buffer: { type: "uniform" } },
+        { binding: 2, visibility: GPUShaderStage.VERTEX, buffer: { type: "uniform" } }
+      ]
+    });
+    const module = this.device.createShaderModule({ label: "27_03 render shader", code: RENDER_SHADER });
+    const pipelineLayout = this.device.createPipelineLayout({ bindGroupLayouts: [bindGroupLayout] });
+    // 指定した頂点入口に対応する描画パイプラインを作り、共通のレイアウトと深度規則を適用する
+    const makePipeline = (label, entryPoint) => this.device.createRenderPipeline({
+      label,
+      layout: pipelineLayout,
+      vertex: {
+        module,
+        entryPoint,
+        buffers: [{
+          arrayStride: 32,
+          attributes: [
+            { shaderLocation: 0, offset: 0, format: "float32x3" },
+            { shaderLocation: 1, offset: 12, format: "float32x3" }
+          ]
+        }]
+      },
+      fragment: { module, entryPoint: "fragmentMain", targets: [{ format }] },
+      primitive: { topology: "triangle-list", cullMode: "back", frontFace: "ccw" },
+      depthStencil: {
+        format: CAMERA_REVERSE_Z.format,
+        depthWriteEnabled: true,
+        depthCompare: CAMERA_REVERSE_Z.compare
+      }
+    });
+    // 同じ頂点シェーダー群から、GPU状態を読むBox用と固定床用の二つの描画パイプラインを作ります
+    this.boxPipeline = makePipeline("27_03 box pipeline", "boxVertex");
+    this.floorPipeline = makePipeline("27_03 floor pipeline", "floorVertex");
+    // 交互に使う二本のBodyStateへ同じカメラ・床情報を結び付け、入れ替え後も同じバインドグループを再利用します
+    this.bindGroups = stateBuffers.map((buffer) => this.device.createBindGroup({
+      layout: bindGroupLayout,
+      entries: [
+        { binding: 0, resource: { buffer } },
+        { binding: 1, resource: { buffer: this.paramBuffer } },
+        { binding: 2, resource: { buffer: this.objectBuffer } }
+      ]
+    }));
+    // 物理Planeはy=0に置き、床メッシュの上面だけをy=0へ合わせて表示上の境界を一致させます
+    const floorModel = new Matrix();
+    floorModel.position([0.0, -0.05, 0.0]);
+    const floorParams = new Float32Array(20);
+    floorParams.set(floorModel.mat, 0);
+    floorParams.set([0.04, 0.28, 0.40, 1.0], 16);
+    this.queue.writeBuffer(this.objectBuffer, 0, floorParams);
+  }
+
+  // カメラの投影行列と視点行列だけをユニフォームへ転送し、ボディ姿勢はGPU状態へ残します
+  // ライトの位置と強さも同じユニフォームへまとめ、描画用の位置と姿勢はGPU上のBodyStateから読み取ります
+  writeCamera(projection, view) {
+    const values = new Float32Array(36);
+    values.set(projection.mat, 0);
+    values.set(view.mat, 16);
+    values.set([0.42, 0.78, 0.56, 0.55], 32);
+    this.queue.writeBuffer(this.paramBuffer, 0, values);
+  }
+
+  // 床とGPU上のBoxを同じ描画パスへ記録し、現在の交互使用バッファをそのまま描画します
+  // bodyCountはComputePhysicsSpaceの登録数から受け取り、登録済みのbodyだけをインスタンス描画します
+  encode(encoder, state, colorView, depthView) {
+    // 画面と深度を初期化し、以降の床とBoxを同じ深度判定へ入れる描画パスを開始します
+    const pass = encoder.beginRenderPass({
+      label: "27_03 render",
+      colorAttachments: [{
+        view: colorView,
+        loadOp: "clear",
+        storeOp: "store",
+        clearValue: {
+          r: CLEAR_COLOR[0],
+          g: CLEAR_COLOR[1],
+          b: CLEAR_COLOR[2],
+          a: CLEAR_COLOR[3]
+        }
+      }],
+      depthStencilAttachment: {
+        view: depthView,
+        depthLoadOp: "clear",
+        depthStoreOp: "store",
+        depthClearValue: CAMERA_REVERSE_Z.clearValue
+      }
+    });
+    // 床は固定モデル行列を使うため、物理BodyStateのインスタンス数とは独立して一度だけ描画します
+    const bindGroup = this.bindGroups[state.bufferIndex];
+    pass.setBindGroup(0, bindGroup);
+    pass.setPipeline(this.floorPipeline);
+    pass.setVertexBuffer(0, this.floorShape.vertexBuffer);
+    pass.setIndexBuffer(this.floorShape.indexBuffer, this.floorShape.indexFormat);
+    pass.drawIndexed(this.floorShape.indexCount, 1);
+    // 箱は現在の状態バッファをバインドし、各インスタンスの位置・姿勢・寸法・停止状態を頂点シェーダーで読みます
+    pass.setPipeline(this.boxPipeline);
+    pass.setVertexBuffer(0, this.boxShape.vertexBuffer);
+    pass.setIndexBuffer(this.boxShape.indexBuffer, this.boxShape.indexFormat);
+    pass.drawIndexed(this.boxShape.indexCount, state.bodyCount);
+    // 描画命令を閉じ、同じコマンドエンコーダーへ記録されたCompute処理の後で実行できる状態にします
+    pass.end();
+  }
+
+  // この例で生成したユニフォームバッファだけを破棄し、ComputePhysicsSpaceの状態は呼出側へ残します
+  destroy() {
+    this.paramBuffer.destroy();
+    this.objectBuffer.destroy();
+  }
+}
+
+// CPU版の床と箱の例に対応する初期ボディを毎回同じ内容で作ります
+// Compute版では衝突形状とボディ記述をComputePhysicsSpaceへ渡して登録します
+function createBodies() {
+  return [{
+    bodyType: "dynamic",
+    position: [0.0, 12.0, 0.0],
+    orientation: [1.0, 0.0, 0.0, 0.0],
+    linearVelocity: [0.0, 0.0, 0.0],
+    angularVelocity: [0.0, 0.0, 0.0],
+    collider: new ComputeBoxCollider([2.0, 2.0, 2.0]),
+    mass: 1.0,
+    material: {
+      restitution: 0.3,
+      friction: 0.5,
+      linearDamping: 0.20,
+      angularDamping: 0.20
+    },
+    color: [1.0, 0.50, 0.30, 1.0]
+  }];
+}
+
+// Primitiveから単位Boxと見た目の床を作り、直接描画パイプラインへ渡せるShapeにします
+// Boxは辺長2、床は厚さ0.2として、物理Planeのy=0と床上面を一致させます
+function createShapes(gpu) {
+  const boxShape = new Shape(gpu);
+  boxShape.applyPrimitiveAsset(Primitive.cube(2.0, boxShape.getPrimitiveOptions()));
+  boxShape.endShape();
+  const floorShape = new Shape(gpu);
+  floorShape.applyPrimitiveAsset(Primitive.cuboid(16.0, 0.1, 16.0, floorShape.getPrimitiveOptions()));
+  floorShape.endShape();
+  return { boxShape, floorShape };
+}
+
+// Compute Physics、直接描画処理、固定カメラを初期化し、Computeと描画を同じコマンドエンコーダーへ記録します
+// queue.submitはこのフレーム処理で一度だけ行い、位置と姿勢はGPU内で計算から描画へ渡します
+async function start() {
+  // Compute優先構成のWebgAppを選び、この例の描画処理をフレームの描画担当として登録します
+  const app = new WebgApp({
+    document,
+    computeFrame: true,
+    autoDrawScene: false,
+    layoutMode: "embedded",
+    fixedCanvasSize: { width: CANVAS_W, height: CANVAS_H, useDevicePixelRatio: false },
+    clearColor: CLEAR_COLOR,
+    camera: {
+      target: [0.0, 4.8, 0.0],
+      distance: 22.0,
+      yaw: 24.0,
+      pitch: -13.0
+    }
+  });
+  await app.init();
+  // WebGPUのデバイスとcanvasを初期化した後、以降のComputeと描画で同じGPU実体を共有します
+  const gpu = app.getGPU();
+  app.createOrbitEyeRig({
+    target: [0.0, 4.8, 0.0],
+    distance: 22.0,
+    yaw: 24.0,
+    pitch: -13.0,
+    minDistance: 10.0,
+    maxDistance: 40.0
+  });
+  // 物理状態を直接描くBoxと、Planeの位置を示す固定床メッシュを準備します
+  const { boxShape, floorShape } = createShapes(gpu);
+  const physics = new ComputePhysicsSpace(gpu, {
+    label: "book-26-03",
+    maxBodies: 1,
+    maxPlanes: 1,
+    bodies: createBodies(),
+    planes: [new ComputePlaneCollider([0.0, 1.0, 0.0], { planeDistance: 0.0 })],
+    bounds: BOUNDS,
+    gravity: [0.0, -9.8, 0.0],
+    fixedTimeStepMs: 1000.0 / 120.0,
+    maxSubSteps: 8,
+    solverIterations: 8,
+    persistentSleep: true
+  });
+  // ComputePhysicsSpaceの二本のBodyStateを描画側へ渡し、描画中のCPU同期を不要にします
+  const renderer = new ComputeBookRenderer(gpu, {
+    boxShape,
+    floorShape,
+    stateBuffers: physics.getStateBuffers(),
+    format: gpu.format
+  });
+  let paused = false;
+  const status = document.getElementById("status");
+  // 一時停止と初期状態への復帰だけを用意し、表示用の位置と姿勢は物理計算の結果に合わせます
+  app.attachInput({
+    onKeyDown: (key, event) => {
+      if (event.repeat) return;
+      if (key === "space") paused = !paused;
+      if (key === "r") physics.setBodies(createBodies());
+    }
+  });
+  app.start({
+    // 停止状態と固定刻みの計算回数を、GPU直接描画の状態表示へ反映する
+    onUpdate: () => {
+      status.textContent = `${paused ? "PAUSED" : "RUNNING"}  ComputePhysicsSpace  fixed steps: ${physics.getFixedStepCount()}  Space: pause  R: reset`;
+    },
+    // フレームの経過秒数でCompute物理を進め、同じエンコーダーへGPU状態の直接描画を記録して送信する
+    onComputeFrame: ({ deltaSec }) => {
+      // 1フレーム分のコマンドエンコーダーを作り、動作中だけCompute Physicsの固定刻みを記録します
+      const encoder = gpu.device.createCommandEncoder({ label: "27_03 frame" });
+      if (!paused) physics.encode(encoder, deltaSec * 1000.0);
+      // Compute後に選ばれた現在のBodyStateを描画するため、カメラ行列だけを更新します
+      app.eye.setWorldMatrix();
+      const view = new Matrix();
+      view.makeView(app.eye.worldMatrix);
+      renderer.writeCamera(app.projectionMatrix, view);
+      // Computeの出力バッファを描画パスへ直接渡し、位置の更新と表示をGPU上でつなぎます
+      // 物理計算と描画を同じGPU上でつなぐことが、この例で確認する高速化の候補です
+      renderer.encode(
+        encoder,
+        physics.getRenderState(),
+        gpu.context.getCurrentTexture().createView(),
+        gpu.depthView
+      );
+      // Computeと描画を一つのGPUコマンドバッファとして送信し、次のフレームへ進めます
+      gpu.queue.submit([encoder.finish()]);
+    }
+  });
+  // ページの終了時に描画を停止し、この例が確保したGPUリソースを解放する
+  window.addEventListener("pagehide", () => {
+    app.stop();
+    renderer.destroy();
+    physics.destroy();
+    boxShape.destroy();
+    floorShape.destroy();
+  }, { once: true });
+}
+
+// 初期化失敗を画面とコンソールへ明示し、停止した段階と原因を伝えます
+start().catch((error) => {
+  const status = document.getElementById("status");
+  status.textContent = `Error: ${error.message}`;
+  console.error("book/examples/27_03 failed:", error);
+});
+    </script>
+    <script>
+      document.getElementById("code").textContent =
+        document.getElementById("example-source").textContent.trim();
+    </script>
+  </div>
+</body>
+</html>

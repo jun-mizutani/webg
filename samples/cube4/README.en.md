@@ -12,7 +12,7 @@ English | [日本語](README.md)
 - Before the game starts, pieces do not fall automatically, so you can inspect the controls while watching the rotation demo of every block type
 - During gameplay, the HUD is reduced to a single `score / level / layer` line, and the operation guide is shown only before the start and on game over
 - The sample includes ghost display, next-piece display, high-score saving, screenshots, sound effects, and BGM
-- Layer clear does not require every cell in a layer to match exactly; a clear occurs when at least 29 of the 36 cells in one layer are filled, and score changes according to occupancy rate
+- A layer clears when at least 29 of its 36 cells are filled, and score changes according to occupancy rate
 
 ## How to Run
 - Open [./cube4.html](./cube4.html)

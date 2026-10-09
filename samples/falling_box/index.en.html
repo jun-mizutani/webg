@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>falling_box</title>
+  <link rel="icon" href="data:," />
+  <!-- 2026/08/28 -->
+  <style>
+    :root { color-scheme: light; --bg: #eef3f8; --paper: #fff; --line: #c8d5e4; --ink: #17324a; --muted: #5c748b; --accent: #1566ab; }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; min-height: 100%; }
+    body { background: linear-gradient(180deg, #f8fbfd 0%, var(--bg) 100%); color: var(--ink); font: 16px/1.78 "Avenir Next", "Hiragino Sans", "Yu Gothic", sans-serif; }
+    .page { width: min(1080px, calc(100% - 28px)); margin: 0 auto; padding: 24px 0 56px; }
+    .hero, .doc { background: rgba(255, 255, 255, 0.94); border: 1px solid var(--line); border-radius: 18px; box-shadow: 0 18px 42px rgba(29, 52, 79, 0.10); }
+    .hero { padding: 22px 24px; margin-bottom: 18px; }
+    .hero h1 { margin: 0 0 8px; font-size: clamp(2rem, 4vw, 3rem); line-height: 1.08; }
+    .hero p { margin: 0; color: var(--muted); }
+    .doc { padding: 28px; }
+    .doc > :first-child { margin-top: 0; }
+    h2 { margin: 1.45em 0 0.55em; padding-bottom: 0.28em; border-bottom: 1px solid var(--line); font-size: 1.48rem; line-height: 1.25; }
+    p, ul { margin: 0 0 1em; }
+    ul { padding-left: 1.4em; }
+    li + li { margin-top: 0.26em; }
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    code { padding: 0.12em 0.38em; border-radius: 0.45em; background: #f3f7fb; border: 1px solid #dbe6f1; font: 0.92em/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    @media (max-width: 720px) { .page { width: min(100% - 18px, 1080px); padding-top: 16px; } .doc { padding: 20px; } }
+  </style>
+</head>
+<body>
+<main class="page">
+  <header class="hero">
+    <h1>falling_box</h1>
+    <p>English | <a href="README.md">日本語</a></p>
+    <p>Compare the same 200-box scenario with the CPU core and Compute core.</p>
+  </header>
+  <article class="doc">
+    <h2>Overview</h2>
+    <p>This sample compares a 200-box falling scenario in CPU and Compute versions. The CPU page uses the normal <code>PhysicsSpace</code> API and its CPU Box contact implementation, while the Compute page uses the core <code>ComputePhysicsSpace</code>. Both start with the same seed, initial transforms, angular velocities, gravity, five Plane boundaries, fixed timestep, solver iterations, and sleep settings.</p>
+    <h2>How to Run</h2>
+    <ul>
+      <li><a href="./falling_box_cpu.html">CPU falling_box_cpu.html</a>: registers <code>PhysicsNode</code> and <code>PlaneCollider</code> objects with the normal <code>PhysicsSpace</code></li>
+      <li><a href="./falling_box_compute.html">Compute falling_box_compute.html</a>: uses the GPU BodyState and WGSL solver of <code>ComputePhysicsSpace</code></li>
+    </ul>
+    <p>The Help Panel starts collapsed. Press <code>H</code> to inspect frame interval, GPU Render and JavaScript load, active bodies, sleeping bodies, and fixed-step count.</p>
+    <h2>Shared Scenario</h2>
+    <p>The initial conditions are defined in <code>fallingBoxScenario.js</code>. The 200 bodies are arranged in layers with placement jitter reproduced from seed <code>20260822</code>. Each body is a Box, and five Planes represent the floor and four walls. Gravity is <code>-4.9 m/s²</code>, the fixed timestep is <code>1/120 s</code>, and the solver uses 14 iterations.</p>
+    <p>The CPU page converts the shared descriptors into <code>PhysicsNode</code> and <code>BoxCollider</code> objects, then registers the five Planes as static <code>PhysicsNode</code> objects in <code>PhysicsSpace</code>. <code>PhysicsSpace</code> converts those registered Planes into solver inputs and resolves the Box/Plane contacts in one CPU path. The visible floor board is a separate normal Node, so the floor is not solved twice. The Compute page converts the same descriptors into GPU BodyState records for <code>ComputePhysicsSpace</code>.</p>
+    <h2>What to Check</h2>
+    <p>Run both pages with the same conditions and confirm that the 200 bodies fall, contact the boundary Planes, and move toward a settled state. The goal is to inspect the complete fall, contact, and sleep process and the CPU Node-rendering versus Compute GPU-state-rendering difference rather than bit-for-bit numerical equality.</p>
+    <h2>Controls</h2>
+    <ul>
+      <li><code>P</code> or <code>Space</code>: pause / resume</li>
+      <li><code>R</code>: reload the page and reset the initial conditions</li>
+      <li><code>H</code>: expand / collapse the Help Panel</li>
+      <li>Drag: orbit the camera; mouse wheel: zoom</li>
+    </ul>
+  </article>
+</main>
+</body>
+</html>

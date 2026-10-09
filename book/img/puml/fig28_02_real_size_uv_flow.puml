@@ -1,0 +1,29 @@
+@startuml
+title 物体寸法から実寸テクスチャの反復回数を求める
+left to right direction
+skinparam backgroundColor white
+skinparam shadowing true
+skinparam dpi 150
+skinparam defaultFontName Yu Gothic UI
+skinparam defaultFontSize 18
+skinparam rectangle {
+  RoundCorner 24
+  BorderColor black
+  BackgroundColor #f7fbff
+}
+rectangle "直方体の辺長[m]\n2 × 3 × 4" as Size #eaf7e8
+rectangle "mapRealCuboid()\n各面のmeter UV" as UV
+rectangle "presetの一周期[m]\ntileSizeMeters" as Tile #f4edff
+rectangle "表示寸法倍率\nscale" as Scale #f4edff
+rectangle "描画用UV\nmeter UV ÷ (周期 × scale)" as Result #fdeaea
+rectangle "Shape.endShape()\n換算済みUVをGPUへ転送" as End #eaf7e8
+Size --> UV
+UV --> Result
+Tile --> Result
+Scale --> Result
+Result --> End
+note bottom of Scale
+大きいほど模様が大きくなり
+反復回数は少なくなる
+end note
+@enduml

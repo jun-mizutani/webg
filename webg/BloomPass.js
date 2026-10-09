@@ -1,5 +1,5 @@
 // ---------------------------------------------
-//  BloomPass.js    2026/07/25
+//  BloomPass.js    2026/09/09
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // ---------------------------------------------
@@ -334,7 +334,7 @@ fn fsMain(input : VSOut) -> @location(0) vec4f {
   // 描画先を生成し、後続処理で利用できる状態にする
   async createTargets() {
     // sceneTargetは通常カメラから見た3D sceneを描くため、Screenと同じCamera Reverse-Zを使います
-    // 深度規約をRenderTargetへ明示し、形式だけが同じ別規約や規約不明のdepthを混在させません
+    // 深度規約をRenderTargetへ明示し、同じ規約のdepthだけを混在させます
     this.sceneTarget = new RenderTarget(this.gpu, {
       label: "BloomPass:scene",
       width: this.width,
@@ -383,6 +383,7 @@ fn fsMain(input : VSOut) -> @location(0) vec4f {
     return { view, sampler };
   }
 
+  // Compute/fragment shaderが参照するlayoutとresource entryを結び、後段のdrawで再利用します
   createBindGroup(layout, entries) {
     return this.device.createBindGroup({ layout, entries });
   }
@@ -492,26 +493,32 @@ fn fsMain(input : VSOut) -> @location(0) vec4f {
     return this;
   }
 
+  // 元の3D sceneを描いたHDR color/depth targetを取得します
   getSceneTarget() {
     return this.sceneTarget;
   }
 
+  // threshold抽出後の明るい画素を保持するtargetを取得します
   getExtractTarget() {
     return this.extractTarget;
   }
 
+  // 抽出強度を可視化するheat targetを取得し、診断表示へ渡します
   getExtractHeatTarget() {
     return this.extractHeatTarget;
   }
 
+  // separable blurの往路targetを取得し、追加passの入力へ渡します
   getBlurTargetA() {
     return this.blurPass?.getTargetA?.() ?? null;
   }
 
+  // separable blurの復路targetを取得し、追加passの入力へ渡します
   getBlurTargetB() {
     return this.blurPass?.getTargetB?.() ?? null;
   }
 
+  // bloom blur targetの解像度倍率を取得し、外部passの寸法計算へ渡します
   getBlurScale() {
     return this.blurScale;
   }

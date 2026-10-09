@@ -19,11 +19,10 @@ const README_FILES = [
   { source: "README.en.md", output: "index.en.html", lang: "en" }
 ];
 
-// コマンドラインから渡された sample 名を読み取り、指定がなければ従来通り全 sample を対象にする
+// コマンドラインから渡された sample 名を読み取り、指定がなければ全 sample を対象にする
 // 例:
 //   node samples/build_readme_html.js
 //   node samples/build_readme_html.js dof
-//   node samples/build_readme_html.js dof compute_effect
 const readRequestedSampleNames = () => process.argv
   .slice(2)
   .filter((name) => name.trim() !== "");

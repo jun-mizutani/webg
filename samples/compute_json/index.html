@@ -175,7 +175,7 @@ blockquote {
 <p><code>compute_json</code> は、ModelAsset JSON に含まれる3Dモデルとアニメーションを読み込み、再生中のシーンへ <code>ComputeEffectPipeline</code> の画面効果を適用する汎用JSONビューアです。特定のモデル名、部品名、座標には依存していないため、<code>MODEL_ASSET_FILE</code> を別のModelAsset JSONへ変更しても同じ表示・アニメーション・効果確認の処理を利用できます。</p>
 <p>同梱の <code>modelasset.json</code> にはスケルトンアニメーションがあり、頂点が動くモデルにToonやEdgeなどの効果が追従する様子を確認できます。初期状態ではToonとEdgeを有効にし、ほかの効果は操作によって個別に追加します。</p>
 <h2>実行方法</h2>
-<p><code>./compute_json.html</code> をWebGPU対応ブラウザで開きます。ローカルファイルを直接開くのではなく、このリポジトリをHTTPサーバーで公開してアクセスしてください。</p>
+<p><code>./compute_json.html</code> をWebGPU対応ブラウザで開きます。このリポジトリをHTTPサーバーで公開してアクセスしてください。</p>
 <p>別のモデルを表示するときは、ModelAsset JSONまたはgzip圧縮したModelAsset JSONをこのフォルダへ置き、<code>main.js</code> の <code>MODEL_ASSET_FILE</code> を変更します。カメラの注視点、距離、移動量、ライト範囲はロードしたshape全体のbounding boxから決めるため、サンプルモデルと大きさが異なるモデルにも追従します。</p>
 <h2>使用しているwebgの機能</h2>
 <p><code>WebgApp.loadModel()</code> はJSONを読み込み、再生可能なruntimeとクリップ情報を作成します。<code>startAnimations: true</code> によりアニメーションを開始し、フレーム更新時にはruntimeのアニメーションを進めてから描画します。</p>

@@ -117,7 +117,7 @@ export function createViewToLightClip(cameraFrame, lightViewProjection) {
 }
 
 // resolveへ渡るShadow Map resourceが通常Z生成物であることをidentityで確認します
-// 同じdepth32floatでもcamera Reverse-Z textureは意味が異なるためformat比較だけでは受け入れません
+// 同じdepth32floatでもcamera Reverse-Z textureは意味が異なるためdepth規約まで検証します
 export function validateStandardShadowDepth(shadowDepth, label) {
   if (!shadowDepth || shadowDepth.depthConvention !== SHADOW_STANDARD_Z) {
     throw new Error(`${label} shadowDepth must use SHADOW_STANDARD_Z`);
@@ -130,8 +130,7 @@ export function validateStandardShadowDepth(shadowDepth, label) {
   return { shadowDepth, width, height };
 }
 
-// visibility passから照明責務を外した後も旧optionを黙って無視しないようにします
-// 呼び出し側が移行未完のまま見た目だけ変わる状態を、encode前の明示エラーとして検出します
+// 削除済みoptionを無視せず、encode前に明示的なエラーとして検出します
 export function rejectRemovedShadowOptions(options, label, names) {
   for (const name of names) {
     if (options[name] !== undefined) {

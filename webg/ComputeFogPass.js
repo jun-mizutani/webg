@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// ComputeFogPass.js  2026/07/25
+// ComputeFogPass.js  2026/08/14
 //   Full-screen High Dynamic Range fog using opaque G-buffer depth
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -18,7 +18,7 @@ import util from "./util.js";
 export const COMPUTE_FOG_FORMAT = "rgba16float";
 export const COMPUTE_FOG_MODES = Object.freeze(["linear", "exp"]);
 export const COMPUTE_FOG_DEFAULTS = Object.freeze({
-  color: Object.freeze([0.1, 0.15, 0.1]),
+  color: [0.1, 0.15, 0.1],
   near: 20.0,
   far: 80.0,
   density: 0.03,

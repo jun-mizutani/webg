@@ -80,7 +80,7 @@ export function buildIcosphere(shape, radius = 1.0, subdivisions = 2) {
     { integer: true, min: 0, max: 6 }
   );
 
-  // 球面法線を明示するため、Shape側の面法線加算は使用しません。
+  // 球面法線を明示するため、Shape側の面法線加算を省きます
   shape.setAutoCalcNormals(false);
 
   const vertices = [];
@@ -528,7 +528,7 @@ async function start() {
     },
     toneMap: {
       // 照明モデル比較ではSmoothShaderと同じ飽和条件にそろえ、
-      // Reinhardによる中間輝度とハイライトの追加圧縮を比較差へ混ぜません。
+      // Reinhardによる中間輝度とハイライトの追加圧縮を比較差から分けます
       mode: "linear",
       exposure: 1.0,
       saturation: 1.0,

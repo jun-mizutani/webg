@@ -1,5 +1,5 @@
 // ---------------------------------------------------------
-// headless_tests/core/deferred_lighting_pass/headless_probe.js  2026/07/13
+// headless_tests/core/deferred_lighting_pass/headless_probe.js  2026/08/03
 //   headless contracts for DeferredLightingPass
 // ---------------------------------------------------------
 import assert from "node:assert/strict";
@@ -133,6 +133,7 @@ function createResources(width, height) {
     albedo: { ...sized, getView: () => ({ name: "albedo-view" }) },
     normal: { ...sized, getView: () => ({ name: "normal-view" }) },
     material: { ...sized, getView: () => ({ name: "material-view" }) },
+    emissive: { ...sized, getView: () => ({ name: "emissive-view" }) },
     depth: {
       ...sized,
       depthConvention: CAMERA_REVERSE_Z,
@@ -163,7 +164,8 @@ assert.deepEqual(DEFERRED_LIGHTING_VIEW_MODES, [
   "specular",
   "roughness",
   "metallic",
-  "emissive"
+  "emissive",
+  "occlusion"
 ]);
 assert.match(buildDeferredLightingWgsl(32), /array<LocalLight>/);
 assert.match(buildDeferredLightingWgsl(32), /directionInnerCos\s*:\s*vec4f/);
@@ -213,7 +215,7 @@ assert.match(buildDeferredLightingWgsl(32), /reconstructGBufferViewPosition/);
   });
   const uniformWrite = probe.uniformWrites.at(-1).data;
   const expectedUniforms = [0.1, 100, 0.5, 16 / 9, 2, 2, 0, 0];
-  assert.equal(uniformWrite.length, 32);
+  assert.equal(uniformWrite.length, 52);
   for (let index = 0; index < expectedUniforms.length; index += 1) {
     assert.ok(Math.abs(uniformWrite[index] - expectedUniforms[index]) < 1e-6);
   }

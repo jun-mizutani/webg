@@ -4,7 +4,7 @@ touch
 - `webg/Touch.js` の汎用タッチボタンUIを使い、押下中入力（hold）と単発入力（action）を確認するページです。
 - キーボード入力とタッチ入力を同じ状態管理に流し、操作実装を1系統にまとめる方法を確認します。
 
-このサンプルで使うwebg機能
+使用するwebg機能
 - `Touch`: 仮想ボタンUI生成、hold/actionイベント通知
 - `Message`: 入力状態と操作ガイド表示
 - `Space` / `Node` / `Shape` / `SmoothShader`: 3D立方体の移動・回転表示
@@ -21,6 +21,6 @@ touch
 - デバッグ用URL例: `index.html?touchButtons=5` / `index.html?touchButtons=8` / `index.html?touchButtons=12`
 
 実装確認の見方
-- このページは `Touch` 単体の hold/action 通知を見るため、意図的に `WebgApp.attachInput()` を使っていません。
+- このページは `Touch` 単体の hold/action 通知を見るため、ローカルのキー状態へ直接通知を接続しています。
 - 通常のアプリでは `InputController.installTouchControls()` や `WebgApp` の入力経路を優先してください。
-- key 名は raw の `event.key` ではなく、`InputController` の正規化後の名前で比較する前提です。
+- このページのkeyboardは生の`event.key`を小文字に変換して扱います。アプリで`InputController`へ接続するときは、その正規化済みキー名に合わせます。

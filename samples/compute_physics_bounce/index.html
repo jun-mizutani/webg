@@ -178,7 +178,7 @@ blockquote {
 <h2>実行方法</h2>
 <ul><li>実行ファイルは <a href="./compute_physics_bounce.html">./compute_physics_bounce.html</a> です</li><li>WebGPU に対応したブラウザで開き、必要に応じて help panel や HUD と合わせて確認してください</li></ul>
 <h2>確認ポイント</h2>
-<ul><li>既存samples/physics_bounceのCPU剛体版に対するCompute Shader比較用サンプルです。</li><li>Pでpause、Rでreset、Cで球体同士の衝突をON/OFFできます。</li><li>TouchボタンのT/C/P/Rからも、傾斜、衝突、pause、resetを操作できます。</li><li>URLの?count=で球数を指定できます。既定96、最大512です。</li><li>総当たり判定のため計算量はO(N^2)です。空間グリッドなどの高速ブロードフェーズは行いません。</li><li>球体は回転自由度を持たず、線形速度だけを解く簡易剛体です。</li><li>Help panelのCompute load、Render load、GPU load、JS loadを使い、球数変更時にどの区間が増えるか比較できます。</li></ul>
+<ul><li>GPU Compute ShaderとCPU剛体シミュレーションの処理結果を比較するサンプルです。</li><li>Pでpause、Rでreset、Cで球体同士の衝突をON/OFFできます。</li><li>TouchボタンのT/C/P/Rからも、傾斜、衝突、pause、resetを操作できます。</li><li>URLの?count=で球数を指定できます。既定96、最大512です。</li><li>総当たり判定のため計算量はO(N^2)です。空間グリッドなどの高速ブロードフェーズは行いません。</li><li>球体は回転自由度を持たず、線形速度だけを解く簡易剛体です。</li><li>Help panelのCompute load、Render load、GPU load、JS loadを使い、球数変更時にどの区間が増えるか比較できます。</li></ul>
     </article>
   </main>
 </body>

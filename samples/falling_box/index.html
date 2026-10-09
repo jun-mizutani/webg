@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>falling_box</title>
+  <link rel="icon" href="data:," />
+  <!-- 2026/08/28 -->
+  <style>
+    :root { color-scheme: light; --bg: #eef3f8; --paper: #fff; --line: #c8d5e4; --ink: #17324a; --muted: #5c748b; --accent: #1566ab; }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; min-height: 100%; }
+    body { background: linear-gradient(180deg, #f8fbfd 0%, var(--bg) 100%); color: var(--ink); font: 16px/1.78 "Avenir Next", "Hiragino Sans", "Yu Gothic", sans-serif; }
+    .page { width: min(1080px, calc(100% - 28px)); margin: 0 auto; padding: 24px 0 56px; }
+    .hero, .doc { background: rgba(255, 255, 255, 0.94); border: 1px solid var(--line); border-radius: 18px; box-shadow: 0 18px 42px rgba(29, 52, 79, 0.10); }
+    .hero { padding: 22px 24px; margin-bottom: 18px; }
+    .hero h1 { margin: 0 0 8px; font-size: clamp(2rem, 4vw, 3rem); line-height: 1.08; }
+    .hero p { margin: 0; color: var(--muted); }
+    .doc { padding: 28px; }
+    .doc > :first-child { margin-top: 0; }
+    h2 { margin: 1.45em 0 0.55em; padding-bottom: 0.28em; border-bottom: 1px solid var(--line); font-size: 1.48rem; line-height: 1.25; }
+    p, ul { margin: 0 0 1em; }
+    ul { padding-left: 1.4em; }
+    li + li { margin-top: 0.26em; }
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    code { padding: 0.12em 0.38em; border-radius: 0.45em; background: #f3f7fb; border: 1px solid #dbe6f1; font: 0.92em/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    @media (max-width: 720px) { .page { width: min(100% - 18px, 1080px); padding-top: 16px; } .doc { padding: 20px; } }
+  </style>
+</head>
+<body>
+<main class="page">
+  <header class="hero">
+    <h1>falling_box</h1>
+    <p><a href="README.en.md">English</a> | 日本語</p>
+    <p>同じ200体BoxシナリオをCPUコア版とComputeコア版で比較します</p>
+  </header>
+  <article class="doc">
+    <h2>概要</h2>
+    <p>200体のBox落下シナリオをCPU版とCompute版で比較します。CPU版は通常の<code>PhysicsSpace</code>を使い、Box/Plane接触にはCPUのBox接触処理を適用します。Compute版はコアの<code>ComputePhysicsSpace</code>を使用します。両方とも同じseed、初期配置、姿勢、角速度、重力、五つのPlane境界、fixed step、solver反復数、sleep条件で開始します。</p>
+    <h2>実行方法</h2>
+    <ul>
+      <li><a href="./falling_box_cpu.html">CPU版 falling_box_cpu.html</a>: <code>PhysicsNode</code>と<code>PlaneCollider</code>を通常の<code>PhysicsSpace</code>へ登録します</li>
+      <li><a href="./falling_box_compute.html">Compute版 falling_box_compute.html</a>: <code>ComputePhysicsSpace</code>のGPU BodyStateとWGSL solverを使います</li>
+    </ul>
+    <p>起動時のHelp Panelは畳まれています。<code>H</code>で展開するとframe間隔、GPU Render時間・負荷率、JavaScript時間・負荷率、active body数、sleeping body数、fixed step数を確認できます。</p>
+    <h2>共通シナリオ</h2>
+    <p>初期条件は<code>fallingBoxScenario.js</code>へまとめています。200体をlayerとして配置し、seed<code>20260822</code>から配置の揺らぎを再現します。各bodyはBoxで、五つのPlaneは床と四壁を表します。重力は<code>-4.9m/s²</code>、fixed stepは<code>1/120s</code>、solver反復数は14です。</p>
+    <p>CPU版は共通descriptorを<code>PhysicsNode</code>と<code>BoxCollider</code>へ変換し、五つのPlaneをstaticな<code>PhysicsNode</code>として<code>PhysicsSpace</code>へ登録します。<code>PhysicsSpace</code>は登録したPlaneをsolver入力へ変換し、登録NodeのBox/Plane接触を一つのCPU処理で解決します。表示用の床板は物理Planeとは別の通常Nodeとして作るため、床を二重に接触計算しません。Compute版は同じdescriptorをGPU BodyStateへ変換し、<code>ComputePhysicsSpace</code>へ登録します。</p>
+    <h2>確認内容</h2>
+    <p>CPU版とCompute版を同じ条件で起動し、200体が落下して境界Planeと接触し、衝突後に停止へ向かうことを確認します。同じ初期条件から落下、接触、sleepへ向かう処理全体と、CPUのPhysicsNode描画・ComputeのGPU BodyState描画の違いを確認します。</p>
+    <h2>操作方法</h2>
+    <ul>
+      <li><code>P</code>または<code>Space</code>: pause / resume</li>
+      <li><code>R</code>: ページを再読み込みして初期条件へreset</li>
+      <li><code>H</code>: Help Panelの展開 / 折りたたみ</li>
+      <li>ドラッグ: camera orbit、ホイール: zoom</li>
+    </ul>
+  </article>
+</main>
+</body>
+</html>

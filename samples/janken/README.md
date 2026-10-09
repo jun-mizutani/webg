@@ -41,7 +41,7 @@
   - グー: hand の N0=12-13
   - チョキ: hand の N2=4-5
   - パー: hand の N5=10-11
-- AnimationState は再生品質自体を変えるものではなく、どの hand action を始めるかを整理するために使っています
+- AnimationState は開始する hand action を選ぶために使っています
 - janken では入力イベントごとに AnimationState.setState(..., force: true) を呼び、同じ手でも action を再始動できる構成にしています
 - 2 つの hand は runtime.instantiate() で別々に生成しているため、同じ mesh resource を共有していても Skeleton と Animation の runtime 状態は別です
 - `hand.glb`では、GはN0の12-13、CはN2の4-5、PはN5の10-11を使います

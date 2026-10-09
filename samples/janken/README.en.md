@@ -41,7 +41,7 @@ English | [日本語](README.md)
 - Rock: `N0=12-13` on the hand
 - Scissors: `N2=4-5` on the hand
 - Paper: `N5=10-11` on the hand
-- `AnimationState` is not used to improve playback quality itself, but to organize which hand action should be started
+- `AnimationState` selects the hand action to start
 - In `janken`, `AnimationState.setState(..., force: true)` is called on every input event so the action can restart even when the same hand is chosen
 - The two hands are generated separately through `runtime.instantiate()`, so even though they share the same mesh resources, the runtime state of `Skeleton` and `Animation` is separate
 - In `hand.glb`, `G` uses `N0 12-13`, `C` uses `N2 4-5`, and `P` uses `N5 10-11`

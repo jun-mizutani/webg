@@ -1,820 +1,406 @@
 <!DOCTYPE html>
+<!-- 2026/10/02: 目的別の開発案内を追加し、現在のbook章番号へ対応 -->
 <html lang="ja">
 <head>
-<meta name="google-site-verification" content="2ktNc9rn5kPZnlB2vtjqln7jiuzFkOgum3Qtzz6J4Ro" />
 <meta charset="UTF-8" />
+<meta name="google-site-verification" content="2ktNc9rn5kPZnlB2vtjqln7jiuzFkOgum3Qtzz6J4Ro" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>webg サンプル一覧</title>
 <style>
 :root {
   color-scheme: light;
-  --bg: #eef3f8;
-  --panel: rgba(255, 255, 255, 0.92);
-  --line: #c7d2e0;
-  --text: #17324a;
-  --muted: #587086;
-  --accent: #1463a5;
-  --accent-soft: #dbeefe;
+  --bg: #edf3f8;
+  --panel: #ffffff;
+  --line: #c8d5e2;
+  --text: #183247;
+  --muted: #526b80;
+  --accent: #0c629e;
+  --chapter: #76531a;
 }
 * { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
 body {
   margin: 0;
   font: 16px/1.7 "Avenir Next", "Hiragino Sans", "Yu Gothic", sans-serif;
   color: var(--text);
-  background:
-    radial-gradient(circle at top left, rgba(20, 99, 165, 0.12), transparent 24%),
-    radial-gradient(circle at top right, rgba(20, 99, 165, 0.08), transparent 20%),
-    linear-gradient(180deg, #f9fbfd 0%, var(--bg) 100%);
+  background: linear-gradient(180deg, #f8fbfd 0%, var(--bg) 100%);
 }
-main {
-  width: min(1240px, calc(100% - 32px));
-  margin: 0 auto;
-  padding: 28px 0 56px;
-}
+a { color: var(--accent); }
+a:hover { text-decoration-thickness: 2px; }
+code { font-family: "SFMono-Regular", Consolas, monospace; }
+main { width: min(1180px, calc(100% - 32px)); margin: 0 auto; padding: 32px 0 64px; }
 .hero,
-.panel,
-.card {
+.guide,
+.category {
   background: var(--panel);
   border: 1px solid var(--line);
-  border-radius: 20px;
-  box-shadow: 0 18px 48px rgba(35, 57, 83, 0.08);
+  border-radius: 16px;
+  box-shadow: 0 12px 32px rgba(35, 57, 83, 0.07);
 }
-.hero { padding: 28px; }
-.hero h1 { margin: 0 0 10px; font-size: clamp(2rem, 4vw, 3.2rem); line-height: 1.1; }
-.hero p { margin: 0; color: var(--muted); }
-.hero img { width: 100%; margin-top: 18px; border-radius: 16px; border: 1px solid var(--line); }
-.panel { margin-top: 20px; padding: 20px 22px; }
-.panel h2,
-.listing h2 { margin: 0 0 10px; font-size: 1.2rem; }
-.panel p,
-.panel li { color: var(--muted); }
-.panel a,
-.links a,
-.quick-links a { color: var(--accent); text-decoration: none; }
-.panel a:hover,
-.links a:hover,
-.quick-links a:hover { text-decoration: underline; }
-.quick-links { display: flex; flex-wrap: wrap; gap: 12px 18px; margin: 14px 0 0; padding: 0; list-style: none; }
-.toolbar { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 12px; align-items: center; }
-.toolbar input { width: 100%; padding: 12px 14px; font: inherit; border-radius: 12px; border: 1px solid var(--line); background: white; color: var(--text); }
+.hero { padding: 28px 30px; }
+.hero h1 { margin: 0 0 8px; font-size: clamp(2rem, 5vw, 3.1rem); line-height: 1.15; }
+.hero p { max-width: 900px; margin: 8px 0 0; color: var(--muted); }
+.hero img { width: 100%; max-height: 360px; object-fit: cover; margin-top: 20px; border: 1px solid var(--line); border-radius: 12px; }
+.guide { margin-top: 20px; padding: 22px 26px; }
+.guide h2 { margin: 0 0 8px; font-size: 1.25rem; }
+.guide p { margin: 7px 0; color: var(--muted); }
+.category-nav { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 8px 18px; margin: 14px 0 0; padding: 0; list-style: none; }
+.category-nav a { display: block; padding: 6px 0; text-decoration: none; }
+.category-nav a:hover { text-decoration: underline; }
+.toolbar { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 14px; align-items: center; }
+.toolbar input { width: 100%; padding: 12px 14px; font: inherit; color: var(--text); background: #fff; border: 1px solid var(--line); border-radius: 10px; }
 .count { color: var(--muted); white-space: nowrap; }
-.listing { margin-top: 24px; }
-.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; }
-.card { padding: 18px; }
-.card-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
-.card h3 { margin: 0; font-size: 1.05rem; }
-.badge { flex: none; display: inline-flex; align-items: center; min-height: 28px; padding: 0 10px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); font-size: 0.78rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; }
-.summary { min-height: 4.8em; margin: 14px 0 16px; color: var(--muted); }
-.links { display: flex; flex-wrap: wrap; gap: 10px 14px; }
-@media (max-width: 720px) {
-  main { width: min(100% - 20px, 1240px); padding-top: 18px; }
-  .hero,
-  .panel,
-  .card { border-radius: 16px; }
+.category { margin-top: 24px; overflow: hidden; scroll-margin-top: 16px; }
+.category-header { padding: 20px 24px 16px; background: #f8fbfe; border-bottom: 1px solid var(--line); }
+.category-title { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px 16px; }
+.category h2 { margin: 0; font-size: 1.45rem; }
+.chapter { color: var(--chapter); font-size: 0.9rem; font-weight: 700; }
+.category-header p { margin: 6px 0 0; color: var(--muted); }
+.catalog-head,
+.catalog-item { display: grid; grid-template-columns: minmax(170px, 0.75fr) minmax(360px, 2.7fr) minmax(250px, 1fr); gap: 20px; align-items: start; }
+.catalog-head { padding: 9px 24px; color: var(--muted); background: #f5f8fb; border-bottom: 1px solid var(--line); font-size: 0.82rem; font-weight: 700; letter-spacing: 0.04em; }
+.catalog-item { padding: 17px 24px; border-bottom: 1px solid #dde6ee; scroll-margin-top: 16px; }
+.catalog-item:last-child { border-bottom: 0; }
+.catalog-item:nth-child(even) { background: #fbfdff; }
+.sample-name { margin: 0; overflow-wrap: anywhere; font: 700 1rem/1.45 "SFMono-Regular", Consolas, monospace; }
+.description { margin: 0; color: #344f65; }
+.actions { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; }
+.actions a { white-space: nowrap; }
+.actions .primary { font-weight: 700; }
+.source-link { font-size: 0.88rem; color: var(--muted); }
+.category[hidden],
+.catalog-item[hidden] { display: none; }
+@media (max-width: 880px) {
+  main { width: min(100% - 20px, 1180px); padding-top: 18px; }
+  .hero, .guide, .category { border-radius: 12px; }
+  .hero, .guide { padding: 20px; }
+  .catalog-head { display: none; }
+  .catalog-item { grid-template-columns: 1fr; gap: 8px; padding: 17px 20px; }
+  .category-header { padding: 18px 20px 14px; }
+}
+@media (max-width: 560px) {
   .toolbar { grid-template-columns: 1fr; }
 }
 </style>
 </head>
 <body>
 <main>
-  <section class="hero">
+  <header class="hero">
     <h1>webg samples</h1>
-    <p>サンプルの全文は各 README へ移し、ここでは実行ファイルと README への入口を見やすく整理しています。実行ページは各 sample フォルダ内の <code>サンプル名/サンプル名.html</code> です。</p>
+    <p>63本の公開サンプルを、bookの章に対応する分野別に整理しています。各分野の中はフォルダ名のアルファベット順です。概要で目的を確認し、実行ページで動作を試してから、詳細説明へ進めます。</p>
     <img src="./samples.jpg" alt="webg samples preview" />
+  </header>
+
+  <section class="guide" aria-labelledby="guide-title">
+    <h2 id="guide-title">一覧と詳細説明の使い分け</h2>
+    <p>初めて開発する場合は、<a href="../book/examples/guide.html">実行例から始める開発案内</a>で、目的に合う出発点と、次に追加する機能の例を選べます。人とAIが同じコードと確認ポイントを使うための案内です。</p>
+    <p><strong>実行</strong>はサンプルアプリケーションを開きます。<strong>詳細（日本語）</strong>は<code>README.md</code>と同内容をUTF-8のHTMLにしたページです。生のMarkdownをブラウザーへ直接表示しないため、Webサーバーの文字コード判定による文字化けを避けられます。原文が必要な場合は<strong>README.mdを保存</strong>を利用してください。</p>
+    <p>開発用の目視確認は<a href="../unittest/index.html">unittest一覧</a>、book本文の実行例は<a href="../book/examples/index.html">book examples一覧</a>、sample・unittest・headless testの違いは<a href="./README.md" download>samples/README.md</a>にあります。</p>
+    <p>YAMLによるモデルとシーンの扱いは、<a href="./model_yaml/model_yaml.html">ModelYAML単体の読込・配置</a>、<a href="./scene_model_yaml/scene_model_yaml.html">SceneYAML＋ModelYAMLによるPBR表示・物理</a>の順に試せます。画面で配置や材質を編集する場合は<a href="./edit_yaml/edit_yaml.html">SceneYAMLエディタ</a>を利用してください。</p>
+    <p>開発時にコアmoduleを強制再importする場合は、<a href="./cache_clear_webg/cache_clear_webg.html"><code>cache_clear_webg</code>（webg core cache clear）</a>を使えます。全<code>webg</code> moduleを一意な<code>?v=...</code>付きURLでimportし、コア自身のimport文は変更しません。</p>
+    <p><code>WebgApp</code>を使うサンプルは通常release modeで起動します。<code>F9</code>のあとに<code>M</code>でdebug / release mode、<code>C</code>で診断情報、<code>V</code>で診断JSONをコピーできます。</p>
   </section>
-  <section class="panel">
-    <h2>参照先</h2>
-    <p>動作確認用のアプリ一覧は <a href="../unittest/index.html">../unittest/index.html</a>、book 内の実行用 HTML 一覧は <a href="../book/examples/index.html">../book/examples/index.html</a> を参照してください。</p>
-    <p>sample、unittest、headless testの境界とcompute sampleの比較結果は <a href="./README.md">samples/README.md</a> に整理しています。</p>
-    <p><code>WebgApp</code> を使う sample は通常 release mode で起動します。デバッグ情報を見たい場合は sample 画面で <code>F9</code> を押してから <code>M</code> を押すと debug / release mode を切り替えられます。診断情報の copy は <code>F9</code> のあとに <code>C</code>、JSON copy は <code>F9</code> のあとに <code>V</code> です。</p>
+
+  <section class="guide" aria-labelledby="recent-demos-title">
+    <h2 id="recent-demos-title">最近追加したデモ</h2>
+    <p><a href="./lumen/lumen.html">LUMEN</a>は金属・ガラスのPBR、色付き照明、Compute粒子と物理、音楽を組み合わせた光の展示です。<a href="./lumen/index.html">詳細説明</a></p>
+    <p><a href="./neon_coaster/neon_coaster.html">NEON COASTER</a>はFollowカメラで立体コースを走り、外周に広がるビル街の夜景と変化するレールを見せます。<a href="./neon_coaster/index.html">詳細説明</a></p>
+    <p><a href="./void_strike/void_strike.html">VOID STRIKE</a>はPBR、複数色の照明、Compute火花を使った3Dシューティングです。<a href="./void_strike/index.html">詳細説明</a></p>
   </section>
-  <section class="panel">
-    <h2>compute sample の見分け方</h2>
-    <p><code>compute_bloom</code>、<code>compute_dof</code>、<code>compute_physics_bounce</code>は非compute版との比較ペアです。<code>compute_effect</code>は統合API、<code>compute_benchmark</code>は計測、<code>compute_json</code>はModelAsset viewerを担当します。</p>
-    <p><code>compute_ssao_gbuffer</code>は、G-buffer normalと正式な<code>SsaoPass</code>を使うSSAOの単体確認用サンプルです。</p>
-  </section>
-  <section class="panel">
-    <h2>クイックリンク</h2>
-    <ul class="quick-links">
-      <li><a href="#animation_state">animation_state</a></li>
-      <li><a href="#axis">axis</a></li>
-      <li><a href="#billboard">billboard</a></li>
-      <li><a href="#bloom">bloom</a></li>
-      <li><a href="#bone_creature">bone_creature</a></li>
-      <li><a href="#breakout">breakout</a></li>
-      <li><a href="#circular_breaker">circular_breaker</a></li>
-      <li><a href="#collada_loader">collada_loader</a></li>
-      <li><a href="#collisions">collisions</a></li>
-      <li><a href="#com_palette">com_palette</a></li>
-      <li><a href="#compute_bloom">compute_bloom</a></li>
-      <li><a href="#compute_cloth">compute_cloth</a></li>
-      <li><a href="#compute_deferred_lighting">compute_deferred_lighting</a></li>
-      <li><a href="#compute_dof">compute_dof</a></li>
-      <li><a href="#compute_edge">compute_edge</a></li>
-      <li><a href="#compute_effect">compute_effect</a></li>
-      <li><a href="#compute_benchmark">compute_benchmark</a></li>
-      <li><a href="#compute_json">compute_json</a></li>
-      <li><a href="#compute_particles">compute_particles</a></li>
-      <li><a href="#compute_physics_bounce">compute_physics_bounce</a></li>
-      <li><a href="#compute_postprocess">compute_postprocess</a></li>
-      <li><a href="#compute_shadow_map">compute_shadow_map</a></li>
-      <li><a href="#compute_ssao_gbuffer">compute_ssao_gbuffer</a></li>
-      <li><a href="#compute_ssr">compute_ssr</a></li>
-      <li><a href="#compute_texture">compute_texture</a></li>
-      <li><a href="#compute_vignette">compute_vignette</a></li>
-      <li><a href="#cube4">cube4</a></li>
-      <li><a href="#demo_spheres">demo_spheres</a></li>
-      <li><a href="#detouch">detouch</a></li>
-      <li><a href="#dof">dof</a></li>
-      <li><a href="#embedded_glb_viewer">embedded_glb_viewer</a></li>
-      <li><a href="#eye_rig">eye_rig</a></li>
-      <li><a href="#fog_cube">fog_cube</a></li>
-      <li><a href="#gltf_loader">gltf_loader</a></li>
-      <li><a href="#high_level">high_level</a></li>
-      <li><a href="#janken">janken</a></li>
-      <li><a href="#json_loader">json_loader</a></li>
-      <li><a href="#low_level">low_level</a></li>
-      <li><a href="#lowlevel_terrain">lowlevel_terrain</a></li>
-      <li><a href="#maze">maze</a></li>
-      <li><a href="#maze2">maze2</a></li>
-      <li><a href="#materials">materials</a></li>
-      <li><a href="#opacity">opacity</a></li>
-      <li><a href="#mmodeler">mmodeler</a></li>
-      <li><a href="#model_shape">model_shape</a></li>
-      <li><a href="#physics_bounce">physics_bounce</a></li>
-      <li><a href="#physics_collider">physics_collider</a></li>
-      <li><a href="#proctex">proctex</a></li>
-      <li><a href="#scene">scene</a></li>
-      <li><a href="#shapes">shapes</a></li>
-      <li><a href="#skinning">skinning</a></li>
-      <li><a href="#sound">sound</a></li>
-      <li><a href="#tone">tone</a></li>
-    </ul>
-  </section>
-  <section class="panel">
-    <h2>検索</h2>
+
+  <nav class="guide" aria-labelledby="category-nav-title">
+    <h2 id="category-nav-title">分野から探す</h2>
+    <ul class="category-nav" id="categoryNav"></ul>
+  </nav>
+
+  <section class="guide" aria-labelledby="search-title">
+    <h2 id="search-title">名前・説明から検索</h2>
     <div class="toolbar">
-      <input id="search" type="search" placeholder="サンプル名または説明で絞り込み" aria-label="サンプル検索" />
-      <div class="count"><span id="visibleCount">51</span> / 51 samples</div>
+      <input id="search" type="search" placeholder="例: camera、物理、PBR、テクスチャ" aria-label="サンプル検索" />
+      <div class="count"><span id="visibleCount">63</span> / <span id="totalCount">63</span> samples</div>
     </div>
   </section>
-  <section class="listing">
-    <h2>サンプル一覧</h2>
-    <div class="grid">
-      <article class="card" data-name="animation_state" data-summary="samples/gltf_loader/hand.glb の手を読み込み、各指ポーズの action 自体は Action で再生しつつ、「今どの action を選ぶか」は AnimationState が決める構成を確認できます。">
-        <div class="card-head">
-          <span class="badge">Sample</span>
-          <h3 id="animation_state">animation_state</h3>
-        </div>
-        <p class="summary">samples/gltf_loader/hand.glb の手を読み込み、各指ポーズの action 自体は Action で再生しつつ、「今どの action を選ぶか」は AnimationState が決める構成を確認できます。</p>
-        <div class="links">
-          <a href="./animation_state/animation_state.html">Demo</a>
-          <a href="./animation_state/index.html">README JA</a>
-          <a href="./animation_state/index.en.html">README EN</a>
-        </div>
-      </article>
-      <article class="card" data-name="axis" data-summary="3D 空間の原点に X / Y / Z の基準軸を置き、座標系の向きとスケール感を確認する教育用サンプルです">
-        <div class="card-head">
-          <span class="badge">Sample</span>
-          <h3 id="axis">axis</h3>
-        </div>
-        <p class="summary">3D 空間の原点に X / Y / Z の基準軸を置き、座標系の向きとスケール感を確認する教育用サンプルです</p>
-        <div class="links">
-          <a href="./axis/axis.html">Demo</a>
-          <a href="./axis/index.html">README JA</a>
-          <a href="./axis/index.en.html">README EN</a>
-        </div>
-      </article>
-      <article class="card" data-name="billboard" data-summary="Billboard クラスで、常に camera 正面を向く particle 表現を描画するサンプルです">
-        <div class="card-head">
-          <span class="badge">Sample</span>
-          <h3 id="billboard">billboard</h3>
-        </div>
-        <p class="summary">Billboard クラスで、常に camera 正面を向く particle 表現を描画するサンプルです</p>
-        <div class="links">
-          <a href="./billboard/billboard.html">Demo</a>
-          <a href="./billboard/index.html">README JA</a>
-          <a href="./billboard/index.en.html">README EN</a>
-        </div>
-      </article>
-      <article class="card" data-name="bloom" data-summary="BloomPass を使って、3D scene を一度 offscreen RenderTarget へ描いてから bloom 合成して canvas へ戻すサンプルです。">
-        <div class="card-head">
-          <span class="badge">Sample</span>
-          <h3 id="bloom">bloom</h3>
-        </div>
-        <p class="summary">BloomPass を使って、3D scene を一度 offscreen RenderTarget へ描いてから bloom 合成して canvas へ戻すサンプルです。</p>
-        <div class="links">
-          <a href="./bloom/bloom.html">Demo</a>
-          <a href="./bloom/index.html">README JA</a>
-          <a href="./bloom/index.en.html">README EN</a>
-        </div>
-      </article>
-      <article class="card" data-name="bone_creature" data-summary="複数のスキンメッシュ（触手）を同時にアニメーションし、ボーン変形と法線マップの見え方を確認するサンプルです。">
-        <div class="card-head">
-          <span class="badge">Sample</span>
-          <h3 id="bone_creature">bone_creature</h3>
-        </div>
-        <p class="summary">複数のスキンメッシュ（触手）を同時にアニメーションし、ボーン変形と法線マップの見え方を確認するサンプルです。</p>
-        <div class="links">
-          <a href="./bone_creature/bone_creature.html">Demo</a>
-          <a href="./bone_creature/index.html">README JA</a>
-          <a href="./bone_creature/index.en.html">README EN</a>
-        </div>
-      </article>
-      <article class="card" data-name="breakout" data-summary="webg のゲーム向け基礎機能を使って、3D 表現を取り入れたシンプルなブロック崩しを作るサンプルです。">
-        <div class="card-head">
-          <span class="badge">Sample</span>
-          <h3 id="breakout">breakout</h3>
-        </div>
-        <p class="summary">webg のゲーム向け基礎機能を使って、3D 表現を取り入れたシンプルなブロック崩しを作るサンプルです。</p>
-        <div class="links">
-          <a href="./breakout/breakout.html">Demo</a>
-          <a href="./breakout/index.html">README JA</a>
-          <a href="./breakout/index.en.html">README EN</a>
-        </div>
-      </article>
-      <article class="card" data-name="circular_breaker" data-summary="webgの基本機能（シーン管理、衝突、HUD、音）をまとめて使った3Dブロック崩しの統合サンプルです。">
-        <div class="card-head">
-          <span class="badge">Sample</span>
-          <h3 id="circular_breaker">circular_breaker</h3>
-        </div>
-        <p class="summary">webgの基本機能（シーン管理、衝突、HUD、音）をまとめて使った3Dブロック崩しの統合サンプルです。</p>
-        <div class="links">
-          <a href="./circular_breaker/circular_breaker.html">Demo</a>
-          <a href="./circular_breaker/index.html">README JA</a>
-          <a href="./circular_breaker/index.en.html">README EN</a>
-        </div>
-      </article>
-      <article class="card" data-name="collada_loader" data-summary="main.js 内で指定した Collada (.dae) ファイルを読み込み、ModelAsset に正規化してから表示するサンプルです。">
-        <div class="card-head">
-          <span class="badge">Sample</span>
-          <h3 id="collada_loader">collada_loader</h3>
-        </div>
-        <p class="summary">main.js 内で指定した Collada (.dae) ファイルを読み込み、ModelAsset に正規化してから表示するサンプルです。</p>
-        <div class="links">
-          <a href="./collada_loader/collada_loader.html">Demo</a>
-          <a href="./collada_loader/index.html">README JA</a>
-          <a href="./collada_loader/index.en.html">README EN</a>
-        </div>
-      </article>
-      <article class="card" data-name="collisions" data-summary="space.checkCollisions() で軸平行境界ボックス重なり判定（AABB, 広域）の候補を取り、サンプル内の球 vs mesh 距離判定で詳細衝突を検証するサンプルです。">
-        <div class="card-head">
-          <span class="badge">Sample</span>
-          <h3 id="collisions">collisions</h3>
-        </div>
-        <p class="summary">space.checkCollisions() で軸平行境界ボックス重なり判定（AABB, 広域）の候補を取り、サンプル内の球 vs mesh 距離判定で詳細衝突を検証するサンプルです。</p>
-        <div class="links">
-          <a href="./collisions/collisions.html">Demo</a>
-          <a href="./collisions/index.html">README JA</a>
-          <a href="./collisions/index.en.html">README EN</a>
-        </div>
-      </article>
-      <article class="card" data-name="com_palette" data-summary="CommandPalette.js self-contained UI component sample.">
-        <div class="card-head">
-          <span class="badge">UI</span>
-          <h3 id="com_palette">com_palette</h3>
-        </div>
-        <p class="summary">CommandPalette.js が default style、起動 gesture、button、stepper、select を持つ高水準 UI 部品の実験サンプルです。</p>
-        <div class="links">
-          <a href="./com_palette/com_palette.html">Demo</a>
-          <a href="./com_palette/index.html">README JA</a>
-          <a href="./com_palette/index.en.html">README EN</a>
-        </div>
-      </article>
-      <article class="card" data-name="compute_bloom" data-summary="samples/bloom の比較対象となる Compute Shader 版です。">
-        <div class="card-head">
-          <span class="badge">Compute</span>
-          <h3 id="compute_bloom">compute_bloom</h3>
-        </div>
-        <p class="summary">samples/bloom の比較対象となる Compute Shader 版です。</p>
-        <div class="links">
-          <a href="./compute_bloom/compute_bloom.html">Demo</a>
-          <a href="./compute_bloom/index.html">README JA</a>
-          <a href="./compute_bloom/index.en.html">README EN</a>
-        </div>
-      </article>
-      <article class="card" data-name="compute_cloth" data-summary="WebGPU の Compute Shader を使い、格子状の布を mass-spring モデルで更新するサンプルです">
-        <div class="card-head">
-          <span class="badge">Compute</span>
-          <h3 id="compute_cloth">compute_cloth</h3>
-        </div>
-        <p class="summary">WebGPU の Compute Shader を使い、格子状の布を mass-spring モデルで更新するサンプルです</p>
-        <div class="links">
-          <a href="./compute_cloth/compute_cloth.html">Demo</a>
-          <a href="./compute_cloth/index.html">README JA</a>
-          <a href="./compute_cloth/index.en.html">README EN</a>
-        </div>
-      </article>
-      <article class="card" data-name="compute_deferred_lighting" data-summary="GeometryBufferPassとDeferredLightingPassを使い、G-bufferから多数ライトを評価します。">
-        <div class="card-head">
-          <span class="badge">Compute</span>
-          <h3 id="compute_deferred_lighting">compute_deferred_lighting</h3>
-        </div>
-        <p class="summary">sample-local MRT passでalbedo、view-space normal、depthをG-bufferへ出力します。</p>
-        <div class="links">
-          <a href="./compute_deferred_lighting/compute_deferred_lighting.html">Demo</a>
-          <a href="./compute_deferred_lighting/index.html">README JA</a>
-          <a href="./compute_deferred_lighting/index.en.html">README EN</a>
-        </div>
-      </article>
-      <article class="card" data-name="compute_dof" data-summary="共通画像ピラミッドとCompute ShaderでDoFを合成する正式なサンプルです。">
-        <div class="card-head">
-          <span class="badge">Compute</span>
-          <h3 id="compute_dof">compute_dof</h3>
-        </div>
-        <p class="summary">1/2、1/4、1/8、1/16の連続low-pass画像を焦点距離に応じて補間し、近景・遠景の広いDoFと滑らかさを両立します。</p>
-        <div class="links">
-          <a href="./compute_dof/compute_dof.html">Demo</a>
-          <a href="./compute_dof/index.html">README JA</a>
-          <a href="./compute_dof/index.en.html">README EN</a>
-        </div>
-      </article>
-      <article class="card" data-name="compute_edge" data-summary="scene color の 3x3 近傍を Compute Shader で読み、Sobel filter によるエッジ検出を行います。">
-        <div class="card-head">
-          <span class="badge">Compute</span>
-          <h3 id="compute_edge">compute_edge</h3>
-        </div>
-        <p class="summary">scene color の 3x3 近傍を Compute Shader で読み、Sobel filter によるエッジ検出を行います。</p>
-        <div class="links">
-          <a href="./compute_edge/compute_edge.html">Demo</a>
-          <a href="./compute_edge/index.html">README JA</a>
-          <a href="./compute_edge/index.en.html">README EN</a>
-        </div>
-      </article>
-      <article class="card" data-name="compute_effect" data-summary="Deferred Lighting、Shadow visibility、SSAO、SSR、HDR post effectを第2版ComputeEffectPipelineで統合するサンプルです。">
-        <div class="card-head">
-          <span class="badge">Compute</span>
-          <h3 id="compute_effect">compute_effect</h3>
-        </div>
-        <p class="summary">明示材質G-buffer、Deferred Lighting、Shadow visibility、SSAO、SSR、HDR post effect、Tone Mapping、最終表示を統合します。</p>
-        <div class="links">
-          <a href="./compute_effect/compute_effect.html">Demo</a>
-          <a href="./compute_effect/index.html">README JA</a>
-          <a href="./compute_effect/index.en.html">README EN</a>
-        </div>
-      </article>
-      <article class="card" data-name="compute_benchmark" data-summary="ComputeEffectPipeline と標準 compute effect API をそのまま使い、render、shadow、SSAO、SSR、DoF、Bloom などの GPU 負荷を同一 scene 条件で比較する計測サンプルです。">
-        <div class="card-head">
-          <span class="badge">Compute</span>
-          <h3 id="compute_benchmark">compute_benchmark</h3>
-        </div>
-        <p class="summary">ComputeEffectPipeline と標準 compute effect API をそのまま使い、render、shadow、SSAO、SSR、DoF、Bloom などの GPU 負荷を同一 scene 条件で比較する計測サンプルです。</p>
-        <div class="links">
-          <a href="./compute_benchmark/compute_benchmark.html">Demo</a>
-          <a href="./compute_benchmark/index.html">README JA</a>
-          <a href="./compute_benchmark/index.en.html">README EN</a>
-        </div>
-      </article>
-      <article class="card" data-name="compute_json" data-summary="ModelAsset JSON のアニメーションを再生しながら、ComputeEffectPipeline の画面効果を切り替えて確認できる汎用 JSON ビューアです。">
-        <div class="card-head">
-          <span class="badge">Compute</span>
-          <h3 id="compute_json">compute_json</h3>
-        </div>
-        <p class="summary">ModelAsset JSON のアニメーションを再生しながら、ComputeEffectPipeline の画面効果を切り替えて確認できる汎用 JSON ビューアです。</p>
-        <div class="links">
-          <a href="./compute_json/compute_json.html">Demo</a>
-          <a href="./compute_json/index.html">README JA</a>
-          <a href="./compute_json/index.en.html">README EN</a>
-        </div>
-      </article>
-      <article class="card" data-name="compute_particles" data-summary="WebGPU の Compute Shader を使い、大量の粒子を GPU 側で更新して描画するサンプルです">
-        <div class="card-head">
-          <span class="badge">Compute</span>
-          <h3 id="compute_particles">compute_particles</h3>
-        </div>
-        <p class="summary">WebGPU の Compute Shader を使い、大量の粒子を GPU 側で更新して描画するサンプルです</p>
-        <div class="links">
-          <a href="./compute_particles/compute_particles.html">Demo</a>
-          <a href="./compute_particles/index.html">README JA</a>
-          <a href="./compute_particles/index.en.html">README EN</a>
-        </div>
-      </article>
-      <article class="card" data-name="compute_physics_bounce" data-summary="球体の位置、半径、速度、反発係数、摩擦係数、色をstorage bufferへ保持します。">
-        <div class="card-head">
-          <span class="badge">Compute</span>
-          <h3 id="compute_physics_bounce">compute_physics_bounce</h3>
-        </div>
-        <p class="summary">球体の位置、半径、速度、反発係数、摩擦係数、色をstorage bufferへ保持します。</p>
-        <div class="links">
-          <a href="./compute_physics_bounce/compute_physics_bounce.html">Demo</a>
-          <a href="./compute_physics_bounce/index.html">README JA</a>
-          <a href="./compute_physics_bounce/index.en.html">README EN</a>
-        </div>
-      </article>
-      <article class="card" data-name="compute_postprocess" data-summary="第20章のポストプロセス描画フローを、fragment shader の FullscreenPass ではなく Compute Shader で加工するサンプルです。">
-        <div class="card-head">
-          <span class="badge">Compute</span>
-          <h3 id="compute_postprocess">compute_postprocess</h3>
-        </div>
-        <p class="summary">第20章のポストプロセス描画フローを、fragment shader の FullscreenPass ではなく Compute Shader で加工するサンプルです。</p>
-        <div class="links">
-          <a href="./compute_postprocess/compute_postprocess.html">Demo</a>
-          <a href="./compute_postprocess/index.html">README JA</a>
-          <a href="./compute_postprocess/index.en.html">README EN</a>
-        </div>
-      </article>
-      <article class="card" data-name="compute_shadow_map" data-summary="static/skinned Shapeのdirectional light depthをRender Passで生成し、Compute Shaderでshadow mapを評価します。">
-        <div class="card-head">
-          <span class="badge">Compute</span>
-          <h3 id="compute_shadow_map">compute_shadow_map</h3>
-        </div>
-        <p class="summary">webg coreのShadowMapPassでstatic/skinned Shapeの単一directional light shadow mapを検証します。spot shadowは別コアAPIとして高水準pipelineから利用できます。</p>
-        <div class="links">
-          <a href="./compute_shadow_map/compute_shadow_map.html">Demo</a>
-          <a href="./compute_shadow_map/index.html">README JA</a>
-          <a href="./compute_shadow_map/index.en.html">README EN</a>
-        </div>
-      </article>
-      <article class="card" data-name="compute_ssao_gbuffer" data-summary="GeometryBufferPassとSsaoPassを使い、G-buffer normalとdepthからSSAOを計算します。">
-        <div class="card-head">
-          <span class="badge">Compute</span>
-          <h3 id="compute_ssao_gbuffer">compute_ssao_gbuffer</h3>
-        </div>
-        <p class="summary">GeometryBufferPassとSsaoPassを使い、G-buffer normalとdepthからSSAOを計算します。</p>
-        <div class="links">
-          <a href="./compute_ssao_gbuffer/compute_ssao_gbuffer.html">Demo</a>
-          <a href="./compute_ssao_gbuffer/index.html">README JA</a>
-          <a href="./compute_ssao_gbuffer/index.en.html">README EN</a>
-        </div>
-      </article>
-      <article class="card" data-name="compute_ssr" data-summary="GeometryBufferPassとComputeSsrPassを使い、G-bufferからscreen-space reflectionを計算します。">
-        <div class="card-head">
-          <span class="badge">Compute</span>
-          <h3 id="compute_ssr">compute_ssr</h3>
-        </div>
-        <p class="summary">sample-local G-bufferのalbedo、view-space normal、depthをCompute Shaderから読みます。</p>
-        <div class="links">
-          <a href="./compute_ssr/compute_ssr.html">Demo</a>
-          <a href="./compute_ssr/index.html">README JA</a>
-          <a href="./compute_ssr/index.en.html">README EN</a>
-        </div>
-      </article>
-      <article class="card" data-name="compute_texture" data-summary="WebGPU の Compute Shader を使い、2 枚の texture を ping-pong しながら毎フレーム内容を書き換えるサンプルです">
-        <div class="card-head">
-          <span class="badge">Compute</span>
-          <h3 id="compute_texture">compute_texture</h3>
-        </div>
-        <p class="summary">WebGPU の Compute Shader を使い、2 枚の texture を ping-pong しながら毎フレーム内容を書き換えるサンプルです</p>
-        <div class="links">
-          <a href="./compute_texture/compute_texture.html">Demo</a>
-          <a href="./compute_texture/index.html">README JA</a>
-          <a href="./compute_texture/index.en.html">README EN</a>
-        </div>
-      </article>
-      <article class="card" data-name="compute_vignette" data-summary="VignettePass の fragment shader 版と比較するため、同じ周辺減衰を Compute Shader 1 dispatch で処理します。">
-        <div class="card-head">
-          <span class="badge">Compute</span>
-          <h3 id="compute_vignette">compute_vignette</h3>
-        </div>
-        <p class="summary">VignettePass の fragment shader 版と比較するため、同じ周辺減衰を Compute Shader 1 dispatch で処理します。</p>
-        <div class="links">
-          <a href="./compute_vignette/compute_vignette.html">Demo</a>
-          <a href="./compute_vignette/index.html">README JA</a>
-          <a href="./compute_vignette/index.en.html">README EN</a>
-        </div>
-      </article>
-      <article class="card" data-name="cube4" data-summary="webg ベースで作った 3D falling-block game です">
-        <div class="card-head">
-          <span class="badge">Sample</span>
-          <h3 id="cube4">cube4</h3>
-        </div>
-        <p class="summary">webg ベースで作った 3D falling-block game です</p>
-        <div class="links">
-          <a href="./cube4/cube4.html">Demo</a>
-          <a href="./cube4/index.html">README JA</a>
-          <a href="./cube4/index.en.html">README EN</a>
-        </div>
-      </article>
-      <article class="card" data-name="demo_spheres" data-summary="球体を複数配置し、色・テクスチャ・回転・カメラ操作をまとめて確認するサンプルです。">
-        <div class="card-head">
-          <span class="badge">Sample</span>
-          <h3 id="demo_spheres">demo_spheres</h3>
-        </div>
-        <p class="summary">球体を複数配置し、色・テクスチャ・回転・カメラ操作をまとめて確認するサンプルです。</p>
-        <div class="links">
-          <a href="./demo_spheres/demo_spheres.html">Demo</a>
-          <a href="./demo_spheres/index.html">README JA</a>
-          <a href="./demo_spheres/index.en.html">README EN</a>
-        </div>
-      </article>
-      <article class="card" data-name="detouch" data-summary="ノードの親子関係を実行中に attach / detach で切り替えるサンプルです。">
-        <div class="card-head">
-          <span class="badge">Sample</span>
-          <h3 id="detouch">detouch</h3>
-        </div>
-        <p class="summary">ノードの親子関係を実行中に attach / detach で切り替えるサンプルです。</p>
-        <div class="links">
-          <a href="./detouch/detouch.html">Demo</a>
-          <a href="./detouch/index.html">README JA</a>
-          <a href="./detouch/index.en.html">README EN</a>
-        </div>
-      </article>
-      <article class="card" data-name="dof" data-summary="DofPass の多段階ぼかしと focus / stage debug view を確認する被写界深度サンプルです。">
-        <div class="card-head">
-          <span class="badge">Sample</span>
-          <h3 id="dof">dof</h3>
-        </div>
-        <p class="summary">DofPass の多段階ぼかしを使い、Focus Range を stage 1つ分の幅として調整できます。</p>
-        <div class="links">
-          <a href="./dof/dof.html">Demo</a>
-          <a href="./dof/index.html">README JA</a>
-          <a href="./dof/index.en.html">README EN</a>
-        </div>
-      </article>
-      <article class="card" data-name="embedded_glb_viewer" data-summary="WebgApp の layoutMode: "embedded" と fixedCanvasSize を使い、本文の途中へ埋め込んだ canvas の中で .glb ビューアを動かすサンプルです">
-        <div class="card-head">
-          <span class="badge">Sample</span>
-          <h3 id="embedded_glb_viewer">embedded_glb_viewer</h3>
-        </div>
-        <p class="summary">WebgApp の layoutMode: "embedded" と fixedCanvasSize を使い、本文の途中へ埋め込んだ canvas の中で .glb ビューアを動かすサンプルです</p>
-        <div class="links">
-          <a href="./embedded_glb_viewer/embedded_glb_viewer.html">Demo</a>
-          <a href="./embedded_glb_viewer/index.html">README JA</a>
-          <a href="./embedded_glb_viewer/index.en.html">README EN</a>
-        </div>
-      </article>
-      <article class="card" data-name="maze" data-summary="user/walk_around の first-person 移動、spot light、衝突判定、レーダー表示を引き継ぎつつ、固定モデルではなく fixed-seed の procedural maze を runtime 生成して歩くサンプルです。">
-        <div class="card-head">
-          <span class="badge">Sample</span>
-          <h3 id="maze">maze</h3>
-        </div>
-        <p class="summary">user/walk_around の first-person 移動、spot light、衝突判定、レーダー表示を引き継ぎつつ、固定モデルではなく fixed-seed の procedural maze を runtime 生成して歩くサンプルです。</p>
-        <div class="links">
-          <a href="./maze/maze.html">Demo</a>
-          <a href="./maze/index.html">README JA</a>
-          <a href="./maze/index.en.html">README EN</a>
-        </div>
-      </article>
-      <article class="card" data-name="maze2" data-summary="4m cellのprocedural mazeを八角形断面のSF通路として生成し、Deferred Lighting、SSR、geometry edge、色付き天井panel、first-person collision、heading-up radarをまとめて確認するサンプルです。">
-        <div class="card-head">
-          <span class="badge">Sample</span>
-          <h3 id="maze2">maze2</h3>
-        </div>
-        <p class="summary">4m cellのprocedural mazeを八角形断面のSF通路として生成し、Deferred Lighting、SSR、geometry edge、色付き天井panel、first-person collision、heading-up radarをまとめて確認するサンプルです。</p>
-        <div class="links">
-          <a href="./maze2/maze2.html">Demo</a>
-          <a href="./maze2/index.html">README JA</a>
-          <a href="./maze2/index.en.html">README EN</a>
-        </div>
-      </article>
-      <article class="card" data-name="materials" data-summary="同じ16個のイコスフィアをSmoothShaderとDeferred Lightingで切り替え、材質パラメーターと照明モデルの違いを比較します。">
-        <div class="card-head">
-          <span class="badge">Sample</span>
-          <h3 id="materials">materials</h3>
-        </div>
-        <p class="summary">同じ16個のイコスフィアをSmoothShaderとDeferred Lightingで切り替え、材質パラメーターと照明モデルの違いを比較します。</p>
-        <div class="links">
-          <a href="./materials/materials.html">Demo</a>
-          <a href="./materials/index.html">README JA</a>
-          <a href="./materials/index.en.html">README EN</a>
-        </div>
-      </article>
-      <article class="card" data-name="opacity" data-summary="1つのShapeに不透明・半透明materialを混在させ、全Shapeの透明triangle sortとComputeEffectPipeline後段効果を確認します。">
-        <div class="card-head">
-          <span class="badge">Sample</span>
-          <h3 id="opacity">opacity</h3>
-        </div>
-        <p class="summary">1つのShapeに不透明・半透明materialを混在させ、全Shapeの透明triangle sortとComputeEffectPipeline後段効果を確認します。</p>
-        <div class="links">
-          <a href="./opacity/opacity.html">Demo</a>
-          <a href="./opacity/index.html">README JA</a>
-          <a href="./opacity/index.en.html">README EN</a>
-        </div>
-      </article>
-      <article class="card" data-name="eye_rig" data-summary="Orbit、First Person、Followの役割と、アプリケーションが作るcamera階層の違いを確認するサンプルです。">
-        <div class="card-head">
-          <span class="badge">Sample</span>
-          <h3 id="eye_rig">eye_rig</h3>
-        </div>
-        <p class="summary">Orbit、First Person、Followの役割と、アプリケーションが作るcamera階層の違いを確認するサンプルです。</p>
-        <div class="links">
-          <a href="./eye_rig/eye_rig.html">Demo</a>
-          <a href="./eye_rig/index.html">README JA</a>
-          <a href="./eye_rig/index.en.html">README EN</a>
-        </div>
-      </article>
-      <article class="card" data-name="fog_cube" data-summary="shader 側に追加した fog を、WebgApp ベースのサンプルで一通り試すためのサンプルです。">
-        <div class="card-head">
-          <span class="badge">Sample</span>
-          <h3 id="fog_cube">fog_cube</h3>
-        </div>
-        <p class="summary">shader 側に追加した fog を、WebgApp ベースのサンプルで一通り試すためのサンプルです。</p>
-        <div class="links">
-          <a href="./fog_cube/fog_cube.html">Demo</a>
-          <a href="./fog_cube/index.html">README JA</a>
-          <a href="./fog_cube/index.en.html">README EN</a>
-        </div>
-      </article>
-      <article class="card" data-name="gltf_loader" data-summary="main.js 内で指定した glTF / GLB ファイルを読み込み、ModelAsset に正規化してから表示するサンプルです。">
-        <div class="card-head">
-          <span class="badge">Sample</span>
-          <h3 id="gltf_loader">gltf_loader</h3>
-        </div>
-        <p class="summary">main.js 内で指定した glTF / GLB ファイルを読み込み、ModelAsset に正規化してから表示するサンプルです。</p>
-        <div class="links">
-          <a href="./gltf_loader/gltf_loader.html">Demo</a>
-          <a href="./gltf_loader/index.html">README JA</a>
-          <a href="./gltf_loader/index.en.html">README EN</a>
-        </div>
-      </article>
-      <article class="card" data-name="high_level" data-summary="README.md の「標準の使い方」にある WebgApp 例を、すぐ実行して確認できるサンプルとして切り出したものです">
-        <div class="card-head">
-          <span class="badge">Sample</span>
-          <h3 id="high_level">high_level</h3>
-        </div>
-        <p class="summary">README.md の「標準の使い方」にある WebgApp 例を、すぐ実行して確認できるサンプルとして切り出したものです</p>
-        <div class="links">
-          <a href="./high_level/high_level.html">Demo</a>
-          <a href="./high_level/index.html">README JA</a>
-          <a href="./high_level/index.en.html">README EN</a>
-        </div>
-      </article>
-      <article class="card" data-name="janken" data-summary="samples/gltf_loader/hand.glb の手モデルと AnimationState を使って、ジャンケンを行うサンプルです。">
-        <div class="card-head">
-          <span class="badge">Sample</span>
-          <h3 id="janken">janken</h3>
-        </div>
-        <p class="summary">samples/gltf_loader/hand.glb の手モデルと AnimationState を使って、ジャンケンを行うサンプルです。</p>
-        <div class="links">
-          <a href="./janken/janken.html">Demo</a>
-          <a href="./janken/index.html">README JA</a>
-          <a href="./janken/index.en.html">README EN</a>
-        </div>
-      </article>
-      <article class="card" data-name="json_loader" data-summary="main.js 内で指定した ModelAsset JSON ファイルを読み込み、そのまま表示するサンプルです。">
-        <div class="card-head">
-          <span class="badge">Sample</span>
-          <h3 id="json_loader">json_loader</h3>
-        </div>
-        <p class="summary">main.js 内で指定した ModelAsset JSON ファイルを読み込み、そのまま表示するサンプルです。</p>
-        <div class="links">
-          <a href="./json_loader/json_loader.html">Demo</a>
-          <a href="./json_loader/index.html">README JA</a>
-          <a href="./json_loader/index.en.html">README EN</a>
-        </div>
-      </article>
-      <article class="card" data-name="low_level" data-summary="README.md の「標準の使い方」にある low-level 例を、そのまま実行しやすいサンプルとして切り出したものです">
-        <div class="card-head">
-          <span class="badge">Sample</span>
-          <h3 id="low_level">low_level</h3>
-        </div>
-        <p class="summary">README.md の「標準の使い方」にある low-level 例を、そのまま実行しやすいサンプルとして切り出したものです</p>
-        <div class="links">
-          <a href="./low_level/low_level.html">Demo</a>
-          <a href="./low_level/index.html">README JA</a>
-          <a href="./low_level/index.en.html">README EN</a>
-        </div>
-      </article>
-      <article class="card" data-name="lowlevel_terrain" data-summary="WebgApp で camera と HUD を整え、terrain mesh そのものは Shape の low-level API だけで作るサンプルです">
-        <div class="card-head">
-          <span class="badge">Sample</span>
-          <h3 id="lowlevel_terrain">lowlevel_terrain</h3>
-        </div>
-        <p class="summary">WebgApp で camera と HUD を整え、terrain mesh そのものは Shape の low-level API だけで作るサンプルです</p>
-        <div class="links">
-          <a href="./lowlevel_terrain/lowlevel_terrain.html">Demo</a>
-          <a href="./lowlevel_terrain/index.html">README JA</a>
-          <a href="./lowlevel_terrain/index.en.html">README EN</a>
-        </div>
-      </article>
-      <article class="card" data-name="mmodeler" data-summary="スマートフォンやタブレットのタッチ操作に最適化した Blender 風の 3D modeler です">
-        <div class="card-head">
-          <span class="badge">Sample</span>
-          <h3 id="mmodeler">mmodeler</h3>
-        </div>
-        <p class="summary">スマートフォンやタブレットのタッチ操作に最適化した Blender 風の 3D modeler です</p>
-        <div class="links">
-          <a href="./mmodeler/mmodeler.html">Demo</a>
-          <a href="./mmodeler/index.html">README JA</a>
-          <a href="./mmodeler/index.en.html">README EN</a>
-        </div>
-      </article>
-      <article class="card" data-name="model_shape" data-summary="Primitive.js が返す ModelAsset を ModelValidator で検証し、ModelBuilder で Shape に変換して表示するサンプルです。">
-        <div class="card-head">
-          <span class="badge">Sample</span>
-          <h3 id="model_shape">model_shape</h3>
-        </div>
-        <p class="summary">Primitive.js が返す ModelAsset を ModelValidator で検証し、ModelBuilder で Shape に変換して表示するサンプルです。</p>
-        <div class="links">
-          <a href="./model_shape/model_shape.html">Demo</a>
-          <a href="./model_shape/index.html">README JA</a>
-          <a href="./model_shape/index.en.html">README EN</a>
-        </div>
-      </article>
-      <article class="card" data-name="physics_bounce" data-summary="PhysicsSpace の中で複数の sphere が床、壁、球同士で反発しながら跳ねる見え方を確認するサンプルです">
-        <div class="card-head">
-          <span class="badge">Sample</span>
-          <h3 id="physics_bounce">physics_bounce</h3>
-        </div>
-        <p class="summary">PhysicsSpace の中で複数の sphere が床、壁、球同士で反発しながら跳ねる見え方を確認するサンプルです</p>
-        <div class="links">
-          <a href="./physics_bounce/physics_bounce.html">Demo</a>
-          <a href="./physics_bounce/index.html">README JA</a>
-          <a href="./physics_bounce/index.en.html">README EN</a>
-        </div>
-      </article>
-      <article class="card" data-name="physics_collider" data-summary="BoxCollider を持つ複数の body が、回転しながら落下し、空中や床上で接触し、押し合いながら落ち着いていく見え方を確認するサンプルです">
-        <div class="card-head">
-          <span class="badge">Sample</span>
-          <h3 id="physics_collider">physics_collider</h3>
-        </div>
-        <p class="summary">BoxCollider を持つ複数の body が、回転しながら落下し、空中や床上で接触し、押し合いながら落ち着いていく見え方を確認するサンプルです</p>
-        <div class="links">
-          <a href="./physics_collider/physics_collider.html">Demo</a>
-          <a href="./physics_collider/index.html">README JA</a>
-          <a href="./physics_collider/index.en.html">README EN</a>
-        </div>
-      </article>
-      <article class="card" data-name="proctex" data-summary="WebgApp を土台に、Texture.js の手続きハイトマップ生成と法線マップ生成を同時に確認するサンプルです。">
-        <div class="card-head">
-          <span class="badge">Sample</span>
-          <h3 id="proctex">proctex</h3>
-        </div>
-        <p class="summary">WebgApp を土台に、Texture.js の手続きハイトマップ生成と法線マップ生成を同時に確認するサンプルです。</p>
-        <div class="links">
-          <a href="./proctex/proctex.html">Demo</a>
-          <a href="./proctex/index.html">README JA</a>
-          <a href="./proctex/index.en.html">README EN</a>
-        </div>
-      </article>
-      <article class="card" data-name="scene" data-summary="Scene JSON を SceneAsset.load() で読み込み、WebgApp.validateScene() と WebgApp.loadScene() を通してそのまま表示するサンプルです。">
-        <div class="card-head">
-          <span class="badge">Sample</span>
-          <h3 id="scene">scene</h3>
-        </div>
-        <p class="summary">Scene JSON を SceneAsset.load() で読み込み、WebgApp.validateScene() と WebgApp.loadScene() を通してそのまま表示するサンプルです。</p>
-        <div class="links">
-          <a href="./scene/scene.html">Demo</a>
-          <a href="./scene/index.html">README JA</a>
-          <a href="./scene/index.en.html">README EN</a>
-        </div>
-      </article>
-      <article class="card" data-name="shapes" data-summary="primitive 系サンプル群の中では、texture / image normal / procedural normal の見え方比較を 1 本へ寄せる主入口です。">
-        <div class="card-head">
-          <span class="badge">Sample</span>
-          <h3 id="shapes">shapes</h3>
-        </div>
-        <p class="summary">primitive 系サンプル群の中では、texture / image normal / procedural normal の見え方比較を 1 本へ寄せる主入口です。</p>
-        <div class="links">
-          <a href="./shapes/shapes.html">Demo</a>
-          <a href="./shapes/index.html">README JA</a>
-          <a href="./shapes/index.en.html">README EN</a>
-        </div>
-      </article>
-      <article class="card" data-name="skinning" data-summary="ウェイト分布や回転軸を切り替えながら、スキニング変形を詳細に観察する教材向けサンプルです。">
-        <div class="card-head">
-          <span class="badge">Sample</span>
-          <h3 id="skinning">skinning</h3>
-        </div>
-        <p class="summary">ウェイト分布や回転軸を切り替えながら、スキニング変形を詳細に観察する教材向けサンプルです。</p>
-        <div class="links">
-          <a href="./skinning/skinning.html">Demo</a>
-          <a href="./skinning/index.html">README JA</a>
-          <a href="./skinning/index.en.html">README EN</a>
-        </div>
-      </article>
-      <article class="card" data-name="sound" data-summary="AudioSynth と GameAudioSynth を使い、SE と BGM を同じ画面で調整しながら確認するサンプルです。">
-        <div class="card-head">
-          <span class="badge">Sample</span>
-          <h3 id="sound">sound</h3>
-        </div>
-        <p class="summary">AudioSynth と GameAudioSynth を使い、SE と BGM を同じ画面で調整しながら確認するサンプルです。</p>
-        <div class="links">
-          <a href="./sound/sound.html">Demo</a>
-          <a href="./sound/index.html">README JA</a>
-          <a href="./sound/index.en.html">README EN</a>
-        </div>
-      </article>
-      <article class="card" data-name="tone" data-summary="ToneSynth だけを使い、単音または3和音で波形、envelope、reverb の違いを確認するサンプルです。">
-        <div class="card-head">
-          <span class="badge">Sample</span>
-          <h3 id="tone">tone</h3>
-        </div>
-        <p class="summary">ToneSynth だけを使い、単音または3和音で波形、envelope、reverb の違いを確認するサンプルです。</p>
-        <div class="links">
-          <a href="./tone/tone.html">Demo</a>
-          <a href="./tone/index.html">README JA</a>
-          <a href="./tone/index.en.html">README EN</a>
-        </div>
-      </article>
-    </div>
-  </section>
+
+  <div id="catalog"></div>
 </main>
 <script>
+const categories = [
+  {
+    id: 'foundations',
+    title: '基礎・アプリケーション構成',
+    chapters: 'book 第03〜06章',
+    summary: '座標軸、最初の描画、WebgApp、カメラという、ほかの分野に共通する土台を確認します。',
+    items: [
+      ['axis', '3D空間の原点にX・Y・Zの基準軸を置き、webgの座標系、軸の向き、物体の大きさと距離感を最小構成で確認します。'],
+      ['demo_spheres', '複数の球を配置し、色、テクスチャ、回転、照明、カメラ操作を一つの画面で試して、基本的な3Dシーンの組み立てを確認します。'],
+      ['eye_rig', '周回、主観、追従の各カメラを切り替え、アプリケーションが作るカメラ階層と、視点移動・注視・姿勢の違いを比較します。'],
+      ['high_level', 'WebgAppを使う標準構成で、初期化、シーン作成、更新、描画をまとめます。まずwebgを動かしたい場合の基本入口です。'],
+      ['low_level', '画面、シェーダー、行列、ノードを個別に扱う低い層のAPIで描画し、WebgAppがまとめている処理を直接確認します。']
+    ]
+  },
+  {
+    id: 'shaders',
+    title: 'シェーダー・材質・形状',
+    chapters: 'book 第07章・第38〜39章',
+    summary: 'シェーダー、材質、頂点・面、低い層の形状構築と、見た目を決めるデータの関係を確認します。',
+    items: [
+      ['billboard', 'Billboardで板状の形状を常にカメラ正面へ向け、煙や光、粒子などを一枚の画像で表す基本的な描画方法を確認します。'],
+      ['detouch', 'ノードの親子関係を実行中にattach・detachで切り替え、見た目のワールド位置を保ちながら階層を変更する方法を確認します。'],
+      ['fog_cube', 'シェーダーへ追加した霧を立方体のシーンで試し、カメラからの距離に応じた色の混合と、霧の濃度による見え方を確認します。'],
+      ['lowlevel_terrain', 'WebgAppでカメラとHUDを用意し、地形メッシュはShapeの低い層のAPIだけで構築して、両方の使い分けを確認します。'],
+      ['materials', '同じ16個の球を標準シェーダーと遅延照明で切り替え、色、光沢、粗さなどの材質値と照明モデルによる差を比較します。'],
+      ['model_shape', 'Primitiveが返すModelAssetを検証し、ModelBuilderで描画用Shapeへ変換するデータ処理を確認します。'],
+      ['shapes', '代表的な基本形状を並べ、通常のテクスチャ、画像由来の法線、手続き生成した法線による表面の見え方をまとめて比較します。']
+    ]
+  },
+  {
+    id: 'assets',
+    title: 'モデル読込・シーン',
+    chapters: 'book 第08〜11章',
+    summary: 'ModelYAML・JSON・外部モデル形式からModelAssetを読み込み、形状を構築します。SceneYAMLからModelYAMLを参照し、シーンのPBR材質と物理設定を適用する方法も確認できます。',
+    items: [
+      ['collada_loader', '指定したCollada（.dae）ファイルを読み込み、webgのModelAssetへ正規化してからシーンへ配置・表示します。'],
+      ['embedded_glb_viewer', 'WebgAppの埋め込み配置を使い、ページ内の限られた領域へGLBビューアーを組み込み、モデルと操作UIを表示します。'],
+      ['gltf_loader', '指定したglTFまたはGLBファイルを読み込み、ModelAssetへ正規化して、材質やアニメーションを含むモデルを表示します。'],
+      ['json_loader', '指定したwebgのModelAsset JSONを読み込み、検証・構築して表示する、独自モデル形式の最小ビューアーです。'],
+      ['model_yaml', 'コメント付きModelYAMLを読み込み、共有モデルの3組配置、個別回転、YAML原文とgzip保存を確認します。'],
+      ['scene_model_yaml', 'ModelYAMLに形状・Node・初期配置、SceneYAMLにモデル参照・PBR材質・物理設定を記述します。3個のBoxを240HzのCompute物理で落下させ、開始・停止・初期位置への復帰、両YAMLの原文表示と保存を確認します。'],
+      ['scene', 'Scene JSONを読み込み、validateScene()で検証してからloadScene()で構築し、宣言的なシーン定義を表示します。']
+    ]
+  },
+  {
+    id: 'animation',
+    title: 'アニメーション・スキニング',
+    chapters: 'book 第10〜11章・第40章',
+    summary: 'クリップの再生と状態選択、ボーンによる頂点変形、複数の動作を持つモデルの制御を確認します。',
+    items: [
+      ['animation_state', '手のモデルを読み込み、各指ポーズの再生をAction、現在の動作選択をAnimationStateへ分ける構成を確認します。'],
+      ['bone_creature', '複数のスキンメッシュでできた触手を同時にアニメーションし、ボーン変形、法線マップ、複数個体の更新を確認します。'],
+      ['compute_json', 'ModelAsset JSONのアニメーションを再生しながら、Computeによる画面効果を切り替えてモデルの見え方を確認するビューアーです。'],
+      ['janken', '手のモデルとAnimationStateを使ってジャンケンを行い、入力、状態遷移、対応するアニメーションの選択をまとめて確認します。'],
+      ['skinning', 'ウェイト分布、ボーンの回転軸、変形量を切り替え、頂点が複数の骨から受ける影響を段階的に観察する教材用サンプルです。']
+    ]
+  },
+  {
+    id: 'interaction',
+    title: 'UI・入力・音',
+    chapters: 'book 第12〜16章',
+    summary: '画面上の選択UI、タッチ操作、効果音、BGM、音色生成をアプリケーションへ組み込む方法を確認します。',
+    items: [
+      ['com_palette', 'CommandPaletteを単独で使い、候補の表示、キーボードによる絞り込みと選択、コマンド実行の基本動作を確認します。'],
+      ['mmodeler', 'スマートフォンやタブレットのタッチ操作に合わせた3Dモデラーです。形状編集、視点操作、モデル保存を一つのアプリで扱います。'],
+      ['edit_yaml', 'SceneYAMLを読み書きする3Dシーンエディタです。配置、材質、物理設定、頂点座標、面の押し出しを編集できます。'],
+      ['sound', 'AudioSynthとGameAudioSynthで効果音とBGMを再生し、音量、音色、残響を同じ画面で調整して確認します。'],
+      ['tone', 'ToneSynthで単音または三和音を鳴らし、波形、音の立ち上がりと減衰、残響による音色の違いを比較します。']
+    ]
+  },
+  {
+    id: 'applications',
+    title: 'ゲーム・統合アプリ',
+    chapters: 'book 第05章・第09〜16章・第26章・第30章',
+    summary: '描画、入力、UI、衝突、音など複数の機能をまとめ、遊べるアプリケーションとして構成した例です。',
+    items: [
+      ['fantasy', '段差を移動して戦う小さなPBRゲームです。直接Shapeの材質、Nodeの歩行、選択、GPU粒子、リサイズ、解放の接続を関数ごとに読めます。'],
+      ['breakout', 'webgのゲーム向け基礎機能を使った3Dブロック崩しです。入力、ボール移動、衝突、得点、画面表示を小さなゲームへ統合します。'],
+      ['circular_breaker', '円形の3Dブロック崩しを題材に、シーン管理、衝突判定、HUD、入力、効果音を一つのゲームへまとめる統合例です。'],
+      ['circular_breaker2', 'SceneYAMLでシーンとPBR材質、ModelYAMLでメッシュとNode配置を定義し、旧版の円形ブロック崩しのゲーム処理へ接続するリニューアル例です。'],
+      ['cube4', '立体的な落下ブロックゲームです。盤面、落下・回転操作、判定、表示更新を組み合わせた、ゲーム全体の構成を確認します。'],
+      ['maze', '固定seedから迷路を生成し、一人称カメラ、スポットライト、壁との衝突、レーダー表示を使って内部を歩く統合サンプルです。'],
+      ['maze2', 'SF風の通路迷路に遅延照明、SSR、輪郭、色付き天井、一人称衝突、進行方向連動レーダーを統合した発展例です。'],
+      ['neon_coaster', '閉じた立体コースを4両の車両が自動走行し、Follow EyeRig、外周72棟のビル街、PBR、色付き遅延照明、SSR、Bloom、Compute粒子、音楽を一つの夜景へ統合したジェットコースターデモです。'],
+      ['project_app', 'project JSONからPBR、Compute physics、Joint、objectSets、Blender制作シーンを構成する高水準APIの独立サンプルです。'],
+      ['karakuri', 'つみき、ボール、坂、ドミノを画面で置いて動かし、SceneYAMLを保存して遊ぶ、子ども向けのからくり作成・再生アプリです。'],
+      ['void_strike', '星間リフトへ侵攻する敵編隊を、WASD移動、二門レーザー、ブーストで迎撃する3Dシューティングです。PBR、複数色の遅延照明、Bloom、Compute火花、ウェーブ進行を統合しています。']
+    ]
+  },
+  {
+    id: 'physics',
+    title: '衝突判定・物理',
+    chapters: 'book 第15章・第27〜28章・第42章',
+    summary: '問い合わせ用の衝突判定、CPU版の剛体物理、GPUで更新するCompute版物理を用途別に確認します。',
+    items: [
+      ['collisions', 'AABBで広く接触候補を探し、球とメッシュの距離で詳細判定する二段階の衝突検査を、判定結果の表示とともに確認します。'],
+      ['compute_physics', '同じ72体のBox、Sphere、CapsuleシナリオをComputePhysicsSpaceとCPUのPhysicsSpaceで実行し、形状接触、停止、GPU/CPUの速度表示を比較します。'],
+      ['compute_physics_bounce', '球の位置、半径、速度、反発、摩擦、色をGPUのstorage bufferへ保持し、Compute版とCPU版の跳ね返りを比較します。'],
+      ['falling_box', '同じ200体のBox落下シナリオをCPUのPhysicsSpaceとComputePhysicsSpaceで実行し、Plane境界、接触、停止を比較します。CPU版のBox/Plane接触にはCPUによるBoxの新接触処理を使います。'],
+      ['falling_dominoes', 'ComputePhysicsSpaceとBox Colliderで、直立したドミノの連鎖接触、衝突によるwake、倒れた後のpersistent sleepを確認します。'],
+      ['falling_dominoes_cpu', '公開Compute版と同じドミノシナリオをCPUのPhysicsSpaceで実行し、CPUによるBoxの新接触処理によるBox/Plane接触、連鎖、床による支持、persistent sleepを確認します。'],
+      ['joint', '同じ振り子と6本の吊りロープをCPU PhysicsSpace、GPU Compute直接描画、GPU readbackからNode描画の3方式で比較します。'],
+      ['physics_bounce', 'CPU版PhysicsSpaceで複数の球を動かし、床、壁、球同士の反発と摩擦によって運動が変化する見え方を確認します。'],
+      ['physics_collider', 'Box Colliderを持つ複数のbodyを落下・回転させ、空中と床上の接触、押し合い、摩擦、停止までの剛体挙動を確認します。']
+    ]
+  },
+  {
+    id: 'rendering',
+    title: '画面効果・PBR',
+    chapters: 'book 第23〜25章・第30〜36章',
+    summary: '描画済み画像への効果、物理ベース材質、環境光、透明・透過を含む統合描画を比較します。',
+    items: [
+      ['bloom', '3Dシーンを一度画面外へ描き、明るい部分を抽出・ぼかして元画像へ合成するBloomPassの処理を確認します。'],
+      ['compute_benchmark', 'G-buffer、影、SSAO、IBL付き遅延照明、SSR、Transmission、透明描画、tone mappingを固定シーンで測定します。'],
+      ['dof', 'DofPassの多段階ぼかしで被写界深度を作り、焦点距離、ぼかし量、処理段階の診断表示による違いを確認します。'],
+      ['lumen', '光の観測所LUMEN。SceneYAML、金属とガラスのPBR、複数の色付き光源、反射、Bloom、Compute粒子・物理、手続き材質、Jazzを組み合わせた操作できる展示です。'],
+      ['opacity', '一つのShapeに不透明・半透明材質を混在させ、透明三角形の並べ替えと、PBR統合後の画面効果を確認します。'],
+      ['aquarium', '提供されたGLBイルカの泳ぎと遊泳経路を組み合わせた水中展示。イルカ・水底・岩へコースティクスを当て、停止と受光対象の切替を確認します。'],
+      ['water', 'PBRの拡散反射へ集光を接続し、同じ波の水面を表示します。独立ON/OFF、受光対象の登録、環境反射、透明面・粒子の前後、GPU資源解放を確認できます。'],
+      ['pbr_reference', '同じ材質と環境で前方・遅延PBRを切り替え、IBL、実写HDR、SSR、alpha mode、透明PBRを統合比較します。'],
+      ['transmission', '透明PBR表面越しの背景を、屈折率、吸収、粗さを変えて比較し、球・板・トーラスによるscreen-space透過を確認します。']
+    ]
+  },
+  {
+    id: 'compute',
+    title: 'Compute・手続き生成',
+    chapters: 'book 第20〜22章・第26〜29章',
+    summary: 'Compute Shaderによる独立したGPU計算と、画像に依存しない形状・テクスチャ生成を確認します。',
+    items: [
+      ['compute_cloth', '格子状の布を質点とばねのモデルとしてGPUで更新し、隣接点の拘束、重力、固定点による布の変形を描画します。'],
+      ['compute_particle_emitter', 'SceneYAMLから標準Compute粒子を構築し、一括・連続発生、停止、容量通知とPBR・Bloomへの合成を確認します。'],
+      ['compute_particles', '大量の粒子の位置と速度をCompute Shaderで更新し、GPU上の同じ状態を描画に利用するGPU-firstの粒子処理を確認します。'],
+      ['compute_texture', '二枚のテクスチャをping-pongしながらCompute Shaderで毎フレーム更新し、画像をGPU内で継続的に変化させます。'],
+      ['procedural_texture', 'CPUで材質別のColor・Height mapを生成し、Heightから作るNormal mapとともに立方体の六面へ適用して比較します。'],
+      ['proctex', 'Texture.jsの手続きハイトマップ生成と、そこからの法線マップ生成を同時に行い、表面の凹凸表現を確認します。'],
+      ['texture_catalog', '手続きテクスチャのpresetを選択・編集し、立方体とColor・Normal mapで確認して、完成したdefinitionを保存します。']
+    ]
+  }
+];
+
+function createLink(label, href, className = '', download = false) {
+  const link = document.createElement('a');
+  link.textContent = label;
+  link.href = href;
+  if (className) link.className = className;
+  if (download) link.download = '';
+  return link;
+}
+
+// フォルダ名と実行HTML名が一致しないサンプルファミリーだけ、目次側で明示的なリンクを使います
+const sampleLinkOverrides = {
+  falling_box: {
+    run: './falling_box/falling_box_cpu.html',
+    detail: './falling_box/index.html',
+    english: './falling_box/index.en.html',
+    readme: './falling_box/README.md'
+  },
+  joint: {
+    run: './joint/joint_cpu_node.html',
+    detail: './joint/index.html',
+    english: './joint/index.en.html',
+    readme: './joint/README.md'
+  },
+  project_app: {
+    run: './project_app/',
+    detail: './project_app/README.md',
+    english: './project_app/index.en.html',
+    readme: './project_app/README.md'
+  },
+  karakuri: {
+    run: './karakuri/',
+    detail: './karakuri/index.html',
+    english: './karakuri/index.en.html',
+    readme: './karakuri/README.md'
+  }
+};
+
+function renderCatalog() {
+  const nav = document.getElementById('categoryNav');
+  const catalog = document.getElementById('catalog');
+  let total = 0;
+
+  for (const category of categories) {
+    category.items.sort((a, b) => a[0].localeCompare(b[0], 'en'));
+    total += category.items.length;
+
+    const navItem = document.createElement('li');
+    navItem.append(createLink(`${category.title}（${category.items.length}）`, `#${category.id}`));
+    nav.append(navItem);
+
+    const section = document.createElement('section');
+    section.className = 'category';
+    section.id = category.id;
+    section.dataset.category = '';
+
+    const header = document.createElement('div');
+    header.className = 'category-header';
+    const titleRow = document.createElement('div');
+    titleRow.className = 'category-title';
+    const heading = document.createElement('h2');
+    heading.textContent = category.title;
+    const chapters = document.createElement('span');
+    chapters.className = 'chapter';
+    chapters.textContent = category.chapters;
+    titleRow.append(heading, chapters);
+    const summary = document.createElement('p');
+    summary.textContent = category.summary;
+    header.append(titleRow, summary);
+    section.append(header);
+
+    const columnHead = document.createElement('div');
+    columnHead.className = 'catalog-head';
+    for (const label of ['サンプル名', '何を確認できるか', '実行と詳細']) {
+      const span = document.createElement('span');
+      span.textContent = label;
+      columnHead.append(span);
+    }
+    section.append(columnHead);
+
+    for (const [name, description] of category.items) {
+      const item = document.createElement('article');
+      item.className = 'catalog-item';
+      item.id = name;
+      item.dataset.search = `${category.title} ${category.chapters} ${category.summary}`;
+      const itemTitle = document.createElement('h3');
+      itemTitle.className = 'sample-name';
+      itemTitle.textContent = name;
+      const text = document.createElement('p');
+      text.className = 'description';
+      text.textContent = description;
+      const actions = document.createElement('div');
+      actions.className = 'actions';
+      const links = sampleLinkOverrides[name] ?? {
+        run: `./${name}/${name}.html`,
+        detail: `./${name}/index.html`,
+        english: `./${name}/index.en.html`,
+        readme: `./${name}/README.md`
+      };
+      actions.append(
+        createLink('実行', links.run, 'primary'),
+        createLink('詳細（日本語）', links.detail),
+        createLink('English', links.english),
+        createLink('README.mdを保存', links.readme, 'source-link', true)
+      );
+      item.append(itemTitle, text, actions);
+      section.append(item);
+    }
+    catalog.append(section);
+  }
+
+  document.getElementById('visibleCount').textContent = String(total);
+  document.getElementById('totalCount').textContent = String(total);
+}
+
+renderCatalog();
+
 const search = document.getElementById('search');
-const cards = Array.from(document.querySelectorAll('.card'));
+const items = Array.from(document.querySelectorAll('.catalog-item'));
+const categorySections = Array.from(document.querySelectorAll('[data-category]'));
 const visibleCount = document.getElementById('visibleCount');
-search.addEventListener('input', () => {
-  const query = search.value.trim().toLowerCase();
+
+function updateSearch() {
+  const query = search.value.trim().toLocaleLowerCase('ja');
   let visible = 0;
-  for (const card of cards) {
-    const haystack = (card.dataset.name + ' ' + card.dataset.summary).toLowerCase();
+  for (const item of items) {
+    const haystack = `${item.textContent} ${item.dataset.search}`.toLocaleLowerCase('ja');
     const show = !query || haystack.includes(query);
-    card.style.display = show ? '' : 'none';
+    item.hidden = !show;
     if (show) visible += 1;
   }
+  for (const category of categorySections) {
+    category.hidden = !category.querySelector('.catalog-item:not([hidden])');
+  }
   visibleCount.textContent = String(visible);
-});
+}
+
+search.addEventListener('input', updateSearch);
 </script>
 </body>
 </html>

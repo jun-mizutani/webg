@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// samples/maze2/main.js  2026/08/01
+// samples/maze2/main.js  2026/08/11
 //   Octagonal sci-fi walk-through maze
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -14,7 +14,7 @@ import FullscreenPass from "../../webg/FullscreenPass.js";
 import ComputeEffectPipeline from "../../webg/ComputeEffectPipeline.js";
 import {
   COMPUTE_BLOOM_DEFAULTS
-} from "../../webg/ComputeBloomPass.js?v=20260723_image_pyramid";
+} from "../../webg/ComputeBloomPass.js";
 import { buildErrorPanelOptions, buildHelpPanelOptions } from "../../webg/OverlayPanelPresets.js";
 import CommandPalette from "../../webg/CommandPalette.js";
 import util from "../../webg/util.js";
@@ -1819,7 +1819,7 @@ async function start() {
   app.setDiagnosticsStage("runtime");
 
   globalThis.mazeSample = {
-    // 自動試験や開発者ツールから、迷路と視点の現在状態を読み取れる形で返す
+    // mazeSampleから迷路と視点の現在状態を読み取れる形で返す
     getState: () => ({
       seed: MAZE_SEED,
       roomCount: mazeState?.rooms?.length ?? 0,

@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// DebugDock.js    2026/07/25
+// DebugDock.js    2026/09/09
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // ---------------------------------------------
@@ -45,6 +45,7 @@ export default class DebugDock {
       : [];
   }
 
+  // 診断表の行を空にし、次回syncで新しい観測結果を表示できる状態へ戻します
   clearRows() {
     this.rows = [];
   }

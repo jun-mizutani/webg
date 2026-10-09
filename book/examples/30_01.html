@@ -1,0 +1,125 @@
+<!doctype html>
+<!-- book/examples/30_01.html 2026/10/04 -->
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>30_01 metallicとroughness</title>
+  <link rel="stylesheet" href="./examples_common.css" />
+</head>
+<body>
+  <div class="page">
+    <h1>book/examples</h1>
+    <h2>30_01 metallicとroughness</h2>
+    <div class="section-card">
+      <p>同じbase colorへ異なるmetallicとroughnessを設定し、拡散反射、鏡面反射、ハイライトの広がりを比較します</p>
+      <p id="status" class="note">PBRマテリアルを準備しています</p>
+    </div>
+
+    <div class="canvas-block">
+      <canvas id="canvas" width="960" height="640"></canvas>
+    </div>
+
+    <pre id="code"></pre>
+
+    <script type="module" id="example-source">
+import WebgApp from "../../webg/WebgApp.js";
+import ComputeEffectPipeline from "../../webg/ComputeEffectPipeline.js";
+import FullscreenPass from "../../webg/FullscreenPass.js";
+import Primitive from "../../webg/Primitive.js";
+import Shape from "../../webg/Shape.js";
+
+// 固定キャンバスとカメラを準備し、PBRパイプラインへ描画を接続する
+const app = new WebgApp({
+  document,
+  canvas: document.getElementById("canvas"),
+  autoDrawScene: false,
+  fixedCanvasSize: {
+    width: 960,
+    height: 640,
+    useDevicePixelRatio: false
+  },
+  clearColor: [0.045, 0.06, 0.085, 1],
+  camera: { target: [0, 0, -1], distance: 12, yaw: 0, pitch: -5 }
+});
+let pipeline = null;
+let copyPass = null;
+
+// 一つの球へPBR G-bufferが必要とする材質値をすべて設定します
+function addSphere(name, position, metallic, roughness) {
+  const shape = new Shape(app.getGPU());
+  shape.applyPrimitiveAsset(Primitive.sphere(1.45, 40, 28, shape.getPrimitiveOptions()));
+  shape.endShape();
+  shape.setMaterial("smooth-shader", {
+    color: [0.82, 0.38, 0.10, 1],
+    specular: 1,
+    roughness,
+    metallic,
+    occlusion: 1,
+    emissive_factor: [0, 0, 0]
+  });
+  const node = app.space.addNode(null, name);
+  node.setPosition(...position);
+  node.addShape(shape);
+}
+
+// 比較用のPBR球と効果パイプラインを準備し、材質の違いを同じ照明で描画する
+async function start() {
+  await app.init();
+  addSphere("dielectric-smooth", [-4.8, 0, 0], 0, 0.12);
+  addSphere("dielectric-rough", [-1.6, 0, 0], 0, 0.72);
+  addSphere("metal-smooth", [1.6, 0, 0], 1, 0.12);
+  addSphere("metal-rough", [4.8, 0, 0], 1, 0.72);
+  pipeline = new ComputeEffectPipeline(app.getGPU(), {
+    // 端末のdevicePixelRatioを反映した描画バッファの幅と高さを使い、入力画像と出力先の寸法をそろえます
+    width: app.screen.getWidth(),
+    height: app.screen.getHeight(),
+    lighting: { ambient: 0.035, directionalIntensity: 2.2 },
+    toneMap: { mode: "reinhard", exposure: 1.25 }
+  });
+  copyPass = new FullscreenPass(app.getGPU());
+  await Promise.all([pipeline.ready, copyPass.init()]);
+  document.getElementById("status").textContent = "左から非金属smooth、非金属rough、金属smooth、金属roughです";
+  app.start({
+    // DPR変更やlayout更新後もoffscreen targetとcanvasの描画buffer寸法を一致させます
+    onUpdate: ({ screen }) => pipeline.resize(screen.getWidth(), screen.getHeight()),
+
+    // この例はマテリアル値だけを比較するためShadow Map生成を省略します
+    // renderScene()とencode()には同じshadowEnabledを渡し、一つのframe内で影の入力条件を一致させます
+    onBeforeDraw: ({ cameraFrame }) => pipeline.renderScene(
+      app.space,
+      cameraFrame,
+      app.clearColor,
+      { shadowEnabled: false }
+    ),
+    // 3D描画後に必要な画面効果を順番に記録し、最終カラー画像をキャンバスへ表示する
+    onAfterDraw3d: ({ cameraFrame }) => {
+      const gpu = app.getGPU();
+      gpu.endPass();
+      const output = pipeline.encode(gpu.commandEncoder, {
+        cameraFrame,
+        ssaoEnabled: false,
+        shadowEnabled: false,
+        ssrEnabled: false,
+        bloomEnabled: false
+      });
+      app.screen.beginPresentPass({ clearColor: app.clearColor, colorLoadOp: "clear" });
+      copyPass.draw(output);
+      app.screen.clearDepthBuffer();
+    }
+  });
+}
+// ページの終了時に、この例が確保したGPUリソースを解放する
+window.addEventListener("pagehide", () => {
+  copyPass?.destroy();
+  pipeline?.destroy();
+}, { once: true });
+start();
+    </script>
+    <script>
+      document.getElementById("code").textContent =
+        document.getElementById("example-source").textContent.trim();
+    </script>
+  </div>
+</body>
+</html>

@@ -10,7 +10,7 @@ export const DEFAULT_COMPUTE_WORKGROUP_SIZE = Object.freeze([8, 8, 1]);
 export const DEFAULT_STORAGE_TEXTURE_FORMAT = "rgba8unorm";
 
 // WGSL、明示的binding、pipeline、dispatchを一つの契約として管理します
-// command encoderとsubmitは呼び出し側が所有し、Render Passとの実行順をこのクラスへ推測させません
+// command encoderとsubmitは呼び出し側が所有し、Render Passとの実行順を呼び出し側が明示します
 export default class ComputePass {
   // WebGPU contextとshader定義を検証し、内部Uniform BufferとCompute Pipelineを生成します
   constructor(gpu, options = {}) {
@@ -191,7 +191,7 @@ export default class ComputePass {
     return entry;
   }
 
-  // binding番号順のlayoutを生成し、WGSLとの対応を配列位置から推測しません
+  // binding番号順のlayoutを生成し、WGSLとの対応をbinding番号で明示します
   createBindGroupLayout() {
     return this.device.createBindGroupLayout({
       label: `${this.label}:layout`,
@@ -273,7 +273,7 @@ export default class ComputePass {
     ));
   }
 
-  // 指定command encoderへCompute Passを追加し、command bufferのsubmitは行いません
+  // 指定command encoderへCompute Passを追加し、command bufferのsubmitは呼び出し側へ渡します
   // timestampWritesは呼び出し側が計測範囲を決め、明示寸法はresource基準より優先します
   encode(commandEncoder, resources, options = {}) {
     this.requireAlive();

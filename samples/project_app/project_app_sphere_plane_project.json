@@ -1,0 +1,77 @@
+{
+  "name": "sphere-plane-project-app",
+  "version": 1,
+  "materials": [
+    {
+      "id": "floor-material",
+      "color": [0.22, 0.28, 0.38, 1.0],
+      "metallic": 0.0,
+      "roughness": 0.42,
+      "specular": 0.72
+    },
+    {
+      "id": "ball-material",
+      "color": [0.94, 0.30, 0.08, 1.0],
+      "metallic": 0.15,
+      "roughness": 0.20,
+      "specular": 1.0
+    }
+  ],
+  "physics": {
+    "space": {
+      "gravity": [0.0, -9.8, 0.0],
+      "fixedTimeStepMs": 8.3333333333,
+      "maxSubSteps": 8,
+      "solverIterations": 10,
+      "maxBodies": 1,
+      "defaultRestitution": 0.12,
+      "defaultFriction": 0.48,
+      "persistentSleep": true,
+      "planes": [
+        { "normal": [0.0, 1.0, 0.0], "planeDistance": 0.0 }
+      ]
+    }
+  },
+  "objects": [
+    {
+      "id": "floor",
+      "shape": { "type": "box", "size": [12.0, 0.3, 8.0] },
+      "transform": { "position": [0.0, -0.15, 0.0] },
+      "material": "floor-material"
+    },
+    {
+      "id": "ball",
+      "shape": { "type": "sphere", "radius": 0.5 },
+      "transform": { "position": [0.0, 3.2, 0.0] },
+      "material": "ball-material",
+      "physics": {
+        "bodyType": "dynamic",
+        "mass": 1.0,
+        "linearDamping": 0.04,
+        "angularDamping": 0.06,
+        "material": { "restitution": 0.18, "friction": 0.36 }
+      }
+    }
+  ],
+  "renderer": {
+    "profile": "studio",
+    "width": 960,
+    "height": 640,
+    "clearColor": [0.012, 0.018, 0.028, 1.0],
+    "environment": {
+      "preset": "dark-studio",
+      "resolution": { "width": 128, "height": 64 }
+    },
+    "dof": { "enabled": false },
+    "pipeline": {
+      "lighting": {
+        "ambient": 0.0,
+        "directionalIntensity": 1.05,
+        "environmentIntensity": 0.42
+      },
+      "ssao": { "radius": 12.0, "strength": 1.15, "samples": 8 },
+      "ssr": { "intensity": 0.65, "distance": 24.0, "steps": 28 },
+      "toneMap": { "exposure": 1.0 }
+    }
+  }
+}

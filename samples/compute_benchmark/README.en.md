@@ -6,52 +6,60 @@ English | [日本語](README.md)
 
 ## Overview
 
-`compute_benchmark` is a sample for comparing how much GPU time each standard compute-effect API costs when used from `ComputeEffectPipeline`. While `samples/compute_effect` focuses on the look and interaction of a 3D application that combines multiple effects, this sample focuses on measurement: it helps application developers decide which effects are affordable for a target device under one shared scene condition.
+`compute_benchmark` measures every runtime stage used to build PBR output through `ComputeEffectPipeline`, covering PBR geometry, lighting, reflection, transparency, and output conversion. The measurement scope is limited to PBR processing so unrelated post-processing is not included in the baseline.
 
-This sample measures the standard-resolution behavior of `ComputeEffectPipeline`, `ComputePyramidBlurPass`, `ComputeBloomPass`, `ComputeDofPass`, `SsaoPass`, `ComputeSsrPass`, and related passes directly. The fixed benchmark scene includes a floor, walls, multiple opaque objects, a translucent object, and varied reflectivity so that the G-buffer, shadow map, transparency composition, screen-space reflection, Fog, and post effects all receive meaningful input.
+The fixed scene contains opaque objects with varied roughness and metallic values, a closed transmission sphere, a floor, and walls. Lighting combines a directional light, a selectable number of point lights, and a linear-HDR procedural IBL environment. SSR uses `pbr-ssr` to replace specular IBL, and the transparent sphere specifies IOR and attenuation distance. Deferred PBR, IBL, PBR SSR, transmission, frost, and transparent forward shading therefore all execute in every baseline run.
 
-## Measured Cases
+## Measured Stages
 
-`gbuffer-render` measures G-buffer creation, `shadow-map` measures shadow-map rendering, and `shadow-visibility` measures the compute stage that derives direct-light visibility from the G-buffer and shadow map. These cases provide the baseline cost that later effects depend on.
+`gbuffer-render` renders opaque geometry into albedo, view-space normal, PBR material, emissive, and Reverse-Z depth targets. `shadow-map` renders the directional shadow map, while `shadow-visibility` derives screen-space direct-light visibility from the G-buffer and shadow map.
 
-`blur`, `toon`, `dof`, `bloom`, `ssao`, `ssr-ray`, `ssr-composer`, `transparency`, `fog`, `tone-map`, `edge`, and `vignette` measure individual stages. `transparency` includes the two Frost blur levels, roughness mask, and translucent-triangle draw performed by `TransparencyPass`. `fog` consumes the transparency-composited HDR scene and opaque G-buffer depth. `vignette` consumes the display-color result after Tone Map and Edge.
+`ssao` includes both low-resolution AO generation and depth/normal bilateral reconstruction in `SsaoPass`. `deferred-lighting-pbr` evaluates GGX lighting with the directional light, local lights, SSAO, and precomputed IBL, producing both HDR lighting and the specular IBL component. `ssr-pbr` measures the `ComputeSsrPass` sequence of ray marching, roughness pyramid, and roughness filtering. `pbr-ssr-composer` measures the independent specular-IBL replacement pass. `ssr-pbr-fused` performs ray marching and the pyramid, then combines roughness filtering and specular-IBL replacement in one final dispatch. The two-stage sum and the fused case can therefore be compared in the same run.
 
-`blur` measures the complete `ComputePyramidBlurPass`. It reduces the linear HDR scene continuously to 1/2, 1/4, 1/8, and 1/16 through `ComputeImagePyramid`, then enlarges the 1/16 image progressively through 1/8, 1/4, 1/2, and full resolution. Each downsample uses a 13-tap low-pass filter, and each upsample uses a 9-tap tent filter. Only the lowest-frequency image is enlarged, so intermediate Levels do not add extra color energy.
+`transparency-pbr` measures the whole transparent-surface stage. The sample also reads the named GPU profiler built into `TransparencyPass` and adds the following internal intervals as `transparency:*` rows:
 
-The final `full-pipeline` case enables shadow, SSAO, SSR, automatic transparency composition, Fog, Toon, DoF, Bloom, Tone Map, Edge, and Vignette in the current `ComputeEffectPipeline` order. The translucent material in the fixed scene ensures that transparency composition actually runs. This lets you compare both individual adoption cost and a representative combined stack inside one tool.
+- `transmissionMask`: draws front-surface normal, transmission strength, and depth
+- `transmissionVolume`: draws attenuation color and attenuation distance
+- `transmissionExit`: draws back-face position, normal, and IOR
+- `transmissionComposite`: applies two-surface refraction and Beer-Lambert absorption to the background
+- `frostPyramid`: builds lower-frequency backgrounds for transparent roughness
+- `roughnessMask`: draws the maximum transparent-surface roughness
+- `frostComposite`: selects and combines the frost background through the roughness mask
+- `forward`: shades transparent PBR surfaces with shadows, local lights, and IBL
+
+`tone-map` converts the linear HDR color after transparency into display color with Reinhard tone mapping. The final `full-pbr-pipeline` case records all top-level stages in one frame through `renderScene()` and `encode()`. It is an end-to-end measurement baseline that includes the actual texture handoffs and command sequence.
+
+CPU or GPU preprocessing of an environment map happens at application startup or asset-build time and is measured separately from per-frame PBR. This sample creates a small precomputed procedural environment at startup and excludes its generation time. Fog, Toon, DoF, Bloom, Edge, and Vignette are also excluded from the PBR baseline.
 
 ## How to Run
 
-- Open [./compute_benchmark.html](./compute_benchmark.html)
-- Use a browser and GPU that support WebGPU and `timestamp-query`
-- `Samples` controls the number of recorded measurements, while `Warmup` controls the number of pre-runs excluded from statistics
-- `Pyramid Radius` controls the sample spacing during downsampling and upsampling; its default is `1.0`, with a range from `0.25` through `3.0`
-- `Pyramid Radius` applies only to the standalone `blur` measurement
-- `dof`, `bloom`, and `full-pipeline` use fixed conditions based on each effect's defaults
+1. Open [compute_benchmark.html](./compute_benchmark.html) in a browser that supports WebGPU and `timestamp-query`
+2. Enter the number of recorded runs in `Samples` and the excluded pre-runs in `Warmup`
+3. Enter a point-light count from `0` through `128` in `Local Lights`; the default is `8`
+4. `PBR SSR` defaults to `Fused`; select `Two-pass reference` when comparing the two SSR execution modes
+5. Use `Refresh Preview` to inspect the fixed scene, IBL background, reflections, and transmission sphere
+6. Press `Run PBR Baseline`, then keep the browser tab and window in the foreground until every case finishes
+7. Save the result with `Download JSON` or `Download CSV` when needed
 
-Press `Run Benchmark` to measure each case after its warmup passes, then inspect the average, standard deviation, min, and max in the table. Use `Download JSON` or `Download CSV` to save the results. The JSON output also stores raw samples together with canvas size, DPR, browser metadata, `pyramidFilterRadius`, and `pyramidLevels` so that later cross-device comparisons remain traceable.
+Inputs outside their documented ranges are not corrected automatically. An invalid integer or light count stops the measurement and reports the error. Resolution uses the canvas physical pixel size, so results made with different window sizes or DPR values are not directly comparable. Keep canvas dimensions, DPR, local-light count, power state, browser, and GPU driver consistent when comparing two runs.
 
-The preview and measured cases that include tone mapping use a fixed Reinhard exposure of `2.0`, making the dark regions readable without changing the benchmark lighting inputs. This value is also recorded as `toneMapExposure` in the JSON metadata.
+## Reading the Results
 
-## How to Read the Results
+A top-level row containing one render/compute pass, or a sequence that can receive beginning and ending timestamps in its internal pass descriptors, uses `timestamp-query` GPU time and displays `gpu` in the `timer` column. `full-pbr-pipeline` places its beginning timestamp on the first shadow-map render pass and its ending timestamp on the final tone-map pass, measuring every PBR pass between them as GPU time. Standalone transparency cannot attach one outer interval to a single pass descriptor, so only `transparency-pbr` measures from immediately before command submission through queue completion and displays `queue`. `avg ms` is the mean, `median` is the median, `P95` is the slow-side five-percent boundary, `min/max` is the observed range, and `n` is the recorded count. Start with the median for normal cost, inspect P95 and max for instability, and investigate outliers when the mean differs substantially from the median.
 
-The reported time is meant to compare the GPU cost of each pass itself. The shared input preparation step is rebuilt before every case so the conditions stay consistent, but that preparation time is not folded into the pass result. This makes it easier to compare questions like “how expensive is DoF itself” or “how much extra cost does Bloom add.” When you want a broader frame-level estimate, check `full-pipeline` together with the Help Panel in `samples/compute_effect`.
+The `timer` column shows `profile` for `transparency:*` rows. These values come from the rolling GPU timestamp statistics retained by `TransparencyPass` for at most 60 frames. The table shows their median, mean, minimum, and maximum. P95 and standard deviation are `--` because the pass does not expose its raw sample array. The outer `transparency-pbr` interval measures the entire transparent stage, so it will not exactly equal the sum of its internal intervals.
 
-Some cases internally execute multiple passes, and single-pass timestamps can become unstable depending on the browser and GPU driver. For those cases, this sample measures queue completion time instead. The `timer` column shows only `gpu` or `queue`: `gpu` means a `timestamp-query` GPU timestamp measurement, and `queue` means elapsed time from command submit to queue completion.
+`full-pbr-pipeline` includes the G-buffer and shadow-map render passes together with the PBR compute and transparent render passes in one command sequence. The measurement covers GPU execution; CPU scene traversal and JavaScript command encoding are outside this measurement scope. Use isolated rows to find stage proportions and `full-pbr-pipeline` to confirm the end-to-end runtime PBR improvement.
 
-`avg ms` is the average of the recorded runs after warmup. This is the first value to compare when you want to judge the relative cost of an effect or compare devices. `stddev` shows how much the measurement fluctuated across runs. A larger value means the result was less stable. `min/max` shows the smallest and largest observed times, which helps you see the spread caused by driver state, queue timing, or other runtime variation. `n` is the number of recorded runs used for the statistics, which matches `Samples`.
+The JSON output stores `rawSamplesMs` together with physical resolution, display dimensions, DPR, local-light count, PBR SSR fusion state, shadow-map size, SSAO, SSR, transmission, IBL, tone-map, excluded stages, and browser metadata. Before comparing two results, confirm that this metadata matches.
 
-`full-pipeline` is not a simple sum of the individual cases. It measures the end-to-end cost of running shadow, SSAO, SSR, transparency composition, Fog, Toon, DoF, Bloom, Tone Map, Edge, and Vignette together through `ComputeEffectPipeline` in one frame. That includes the real handoff between intermediate textures, the actual encode order, and the dependency chain where later stages read the output of earlier stages. Because of that, the sum of separately measured `transparency`, `fog`, `dof`, `bloom`, `edge`, and `vignette` does not necessarily match `full-pipeline`.
+## Implementation Checkpoints
 
-There are two main reasons why separate measurements and simultaneous execution can differ. First, an individual case isolates one pass, while `full-pipeline` executes the real chained workflow where earlier outputs feed later stages. Second, GPU cache behavior, resource reuse, command grouping, and queue-completion timing can differ between isolated and combined execution. As a result, `full-pipeline` can be a little smaller than the sum of individual cases in some environments, and a little larger in others.
-
-In this sample, `gbuffer-render` is often relatively small, so it can look as if the shared baseline is small enough that `full-pipeline` stays close to the sum of the effect-specific cases. That is one factor, but it does not fully explain the meaning of `full-pipeline`. A practical way to read the results is to use the individual cases to identify which effects are expensive, then use `full-pipeline` to estimate how much the whole frame increases when those effects are enabled together.
-
-## Checkpoints
-
-- `main.js` uses the published `webg/ComputeEffectPipeline.js` and related passes directly instead of keeping a sample-local duplicate pipeline
-- The same fixed scene can be used to compare cost differences among `render`, `shadow`, `SSAO`, `SSR`, transparency composition, `Fog`, `DoF`, `Bloom`, and `Vignette`
-- `fog` uses the HDR scene after transparency composition, while `vignette` uses display color after Tone Map and Edge
-- `blur` measures continuous reduction from 1/2 through 1/16 followed by progressive enlargement from 1/16 to full resolution
-- Changing `Pyramid Radius` changes only the sample spacing of `blur`; the conditions for `dof`, `bloom`, and `full-pipeline` remain unchanged
-- The JSON output stores canvas size, DPR, samples, warmup, and browser metadata so the measurement can be reused for device comparisons
+- The sample uses the published `ComputeEffectPipeline` and its pass objects directly, without a sample-local shader or duplicate pipeline
+- Every PBR case uses the same Camera Frame, fixed scene, directional light, local lights, IBL, SSR, and transmission settings
+- Shared inputs are prepared before each isolated case, while preparation time remains outside that case's timestamps
+- PBR SSR composition explicitly receives Deferred Lighting's specular IBL, G-buffer material, AO, and BRDF LUT
+- `Fused` reproduces the roughness output's `rgba16float` rounding and low-resolution pixel mapping, removing only the independent composer dispatch
+- `Two-pass reference` runs the roughness filter and composer sequentially only when comparison is explicitly selected
+- Transparency detail comes from `TransparencyPass.getPerformanceSnapshot()` and missing intervals are distinguished from measured values
+- The last result is exposed as `window.pbrBenchmarkResult`, and completion is visible through `body[data-benchmark-status="ready"]`

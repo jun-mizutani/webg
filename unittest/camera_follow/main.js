@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// unittest/camera_follow/main.js  2026/07/25
+// unittest/camera_follow/main.js  2026/10/04
 //   camera_follow unittest
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -135,7 +135,7 @@ check("lockOn stores mode", app.cameraFollow.mode === "lock");
 check("lockOn snaps immediately", approx(app.camera.target[0], 3.0) && approx(app.camera.target[1], 4.0) && approx(app.camera.target[2], 5.0), JSON.stringify(app.camera.target));
 check("lockOn inherits yaw immediately", approx(app.cameraRig.attitude[0], 10.0) && approx(app.cameraRig.attitude[1], 34.0) && approx(app.cameraRig.attitude[2], 56.0), JSON.stringify(app.cameraRig.attitude));
 
-// 追従解除後は、target の移動を camera へ反映しない
+// 追従解除後はカメラ位置を保持し、targetだけが移動することを確認する
 clearCameraTarget.call(app);
 lockTarget.state.position = [9.0, 9.0, 9.0];
 const updated = updateCameraTarget.call(app, 1.0 / 60.0);
@@ -203,7 +203,7 @@ const createPhongShape = (gpu, buildMesh, material) => {
   return shape;
 };
 
-// floor は単なる背景ではなく、target の位置変化を読むための基準面にする
+// floorはtargetの位置変化を読む基準面にする
 // 床があると camera が動いたときの相対位置が分かりやすい
 const createFloorShape = (gpu) => createPhongShape(gpu, (shape) => {
   shape.applyPrimitiveAsset(Primitive.cuboid(48.0, 1.0, 48.0, shape.getPrimitiveOptions()));

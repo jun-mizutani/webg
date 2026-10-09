@@ -74,7 +74,7 @@
 - このサンプルは、ゲーム向け API の最小確認として、見た目の派手さよりも state / input / HUD / collision 判定の流れを追いやすいことを優先しています。
 - Ball は Primitive.sphere() で作成し、Paddle / Brick / Wall / Backdrop はサンプル内の createBoxShape() で任意サイズの box mesh として作成しています。
 - Ball には sphere、Paddle / Brick / Wall には aabb の collision shape を設定しています。
-- ただし、ゲーム進行に使う衝突判定は Space.stepCollisions() の enter 結果ではなく、サンプル側の circleIntersectsBox() による 2D 的な簡易判定です。
+- ただし、ゲーム進行に使う衝突判定は サンプル側の circleIntersectsBox() による 2D 的な簡易判定です。
 - Space には node と collision body を登録していますが、このサンプルでは主に「3D シーン上にゲーム要素を配置する基盤」として使っています。
 - result 画面は clear / game over / time up を同じ phase へまとめ、終了理由だけを文言で切り替える構成にしています。
-- 入力処理では、生の event.key を直接扱うのではなく、WebgApp / InputController 側で正規化されたキー名と action 名を使う前提にしています。
+- 入力処理では、WebgApp / InputController 側で正規化されたキー名と action 名を使う前提にしています。

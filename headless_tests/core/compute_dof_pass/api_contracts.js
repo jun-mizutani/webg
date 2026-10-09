@@ -1,5 +1,5 @@
 // ---------------------------------------------------------
-// headless_tests/core/compute_dof_pass/api_contracts.js  2026/07/23
+// headless_tests/core/compute_dof_pass/api_contracts.js  2026/09/23
 //   Headless API contracts for image-pyramid ComputeDofPass
 // ---------------------------------------------------------
 import assert from "node:assert/strict";
@@ -42,6 +42,7 @@ function createProbe() {
     debugView: "composite",
     debugMode: 0.0,
     sharpnessWidth: 0.15,
+    focusTransitionWidth: 0.85,
     sharpnessPower: 1.0
   });
   assert.equal(probe.validateEncodeOptions({ debugView: "depth" }).debugMode, 1.0);
@@ -271,7 +272,7 @@ function createProbe() {
     "coc-uniforms",
     24.0, 5.0, 0.8, 0.0,
     Math.fround(0.2), 200.0, 0.5, 1.5,
-    0.25, 6.0, 2.0, 0.0
+    0.25, 6.0, 2.0, 0.85
   ]);
   assert.deepEqual(calls[2], [
     "coc-extract",
@@ -288,7 +289,7 @@ function createProbe() {
     "uniforms",
     24.0, 5.0, 0.8, 0.0,
     Math.fround(0.2), 200.0, 0.5, 1.5,
-    0.25, 6.0, 2.0, 0.0
+    0.25, 6.0, 2.0, 0.85
   ]);
   assert.deepEqual(calls[7], [
     "composite",

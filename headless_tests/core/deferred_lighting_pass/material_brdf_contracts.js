@@ -1,5 +1,5 @@
 // ---------------------------------------------------------
-// headless_tests/core/deferred_lighting_pass/headless_probe.js  2026/07/15
+// headless_tests/core/deferred_lighting_pass/headless_probe.js  2026/08/03
 //   Shared GGX material contracts for DeferredLightingPass
 // ---------------------------------------------------------
 import assert from "node:assert/strict";
@@ -83,6 +83,7 @@ function makeResources(width = 16, height = 8) {
     albedo: { ...sampled },
     normal: { getView: () => ({}) },
     material: { ...sampled },
+    emissive: { ...sampled },
     depth: { depthConvention: CAMERA_REVERSE_Z, getDepthSampleView: () => ({}) },
     shadowVisibility: { ...sampled },
     spotShadowVisibility: { ...sampled },
@@ -97,8 +98,10 @@ function makeResources(width = 16, height = 8) {
   assert.equal(calls.length, 4);
   assert.match(wgsl, /let distribution = alphaSquared/);
   assert.match(wgsl, /let geometry = geometryView \* geometryLight/);
-  assert.match(wgsl, /fn schlickWeight\(cosine : f32\) -> f32/);
-  assert.match(wgsl, /let fresnel = f0 \+ \(vec3f\(1\.0\) - f0\) \* schlickWeight\(vDotH\)/);
+  assert.match(wgsl, /fn pbrSchlickWeight\(cosine : f32\) -> f32/);
+  assert.match(wgsl, /fn pbrEvaluateDirectBrdf/);
+  assert.match(wgsl, /let fresnel = f0 \+ \(vec3f\(1\.0\) - f0\) \* pbrSchlickWeight\(vDotH\)/);
+  assert.match(wgsl, /return pbrEvaluateDirectBrdf\(/);
   assert.match(wgsl, /let diffuseBrdf = \(vec3f\(1\.0\) - fresnel\) \* \(1\.0 - metallic\)/);
   assert.doesNotMatch(wgsl, /pow\(max\(dot\([^\n]+\), 0\.0\), 32\.0\)/);
   assert.doesNotMatch(wgsl, /specular \* 0\.18/);
@@ -126,6 +129,58 @@ function makeResources(width = 16, height = 8) {
     metallic: 0.0,
     emissive: 0.0
   })[5], Math.fround(0.04));
+  pass.destroy();
+}
+
+// IBLはirradiance、roughness別鏡面map、BRDF LUTを一組として要求します
+{
+  const wgsl = buildDeferredLightingWgsl(8);
+  assert.match(wgsl, /fn evaluateImageBasedLighting/);
+  assert.match(wgsl, /textureSampleLevel\(\s*irradianceTexture/);
+  assert.match(wgsl, /textureSampleLevel\(\s*prefilteredSpecularTexture/);
+  assert.match(wgsl, /textureSampleLevel\(\s*brdfLutTexture/);
+  assert.match(wgsl, /pbrClampBrdfLutUv\(/);
+  assert.match(wgsl, /pbrEvaluateIblResponse\(/);
+  assert.match(wgsl, /roughness \* maxLod/);
+
+  const probe = createGpuProbe();
+  const pass = new DeferredLightingPass(probe.gpu, { width: 16, height: 8 });
+  await pass.ready;
+  const textureResource = { getView: () => ({}) };
+  const environment = {
+    irradiance: textureResource,
+    prefilteredSpecular: textureResource,
+    brdfLut: textureResource,
+    sampler: {},
+    specularMipCount: 4
+  };
+  const baseOptions = {
+    cameraFrame: makeFrame(),
+    directionalLight: null,
+    spotLight: null,
+    lights: [],
+    ambient: 0.0,
+    environment,
+    environmentIntensity: 2.0
+  };
+  assert.throws(() => pass.encode(probe.commandEncoder, makeResources(), {
+    ...baseOptions,
+    ambient: 0.1
+  }), /ambient must be 0 when environment is enabled/);
+  assert.throws(() => pass.encode(probe.commandEncoder, makeResources(), {
+    ...baseOptions,
+    environment: { ...environment, brdfLut: undefined }
+  }), /environment requires brdfLut\.getView/);
+  assert.throws(() => pass.encode(probe.commandEncoder, makeResources(), {
+    ...baseOptions,
+    environment: null
+  }), /environmentIntensity requires environment/);
+  assert.throws(() => pass.encode(probe.commandEncoder, makeResources(), {
+    ...baseOptions,
+    environment: { ...environment, unknown: true }
+  }), /environment\.unknown is not supported/);
+  pass.encode(probe.commandEncoder, makeResources(), baseOptions);
+  assert.deepEqual(probe.writes.at(-1).data.slice(44, 48), [1.0, 2.0, 4.0, 0.0]);
   pass.destroy();
 }
 

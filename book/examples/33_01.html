@@ -1,0 +1,528 @@
+<!doctype html>
+<!-- book/examples/33_01.html 2026/10/04 -->
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>33_01 PBR統合フロー</title>
+  <link rel="stylesheet" href="./examples_common.css" />
+</head>
+<body>
+  <div class="page">
+    <h1>book/examples</h1>
+    <h2>33_01 PBR統合フロー</h2>
+    <div class="section-card">
+      <p>この例は、<code>WebgApp</code>で構築した一つのシーンを<code>ComputeEffectPipeline</code>へ渡し、物理ベースレンダリング（Physically-Based Rendering：PBR）から最終表示までを連続して処理します。Shadow、Screen-Space Ambient Occlusion（SSAO）、Screen-Space Reflection（SSR）、透明・屈折、Fog、Bloom、Tone Mapping、Edge、Vignetteを同じフレームの処理として確認できます</p>
+      <p>PBRの見え方はマテリアル値だけでは決まりません。この例では、環境から届く拡散光を表すirradiance、roughnessごとに事前積分した鏡面反射、視線と表面の関係を補正するBRDF LUT、方向光と二つの点光源を、GGXに基づく同じ反射モデルへ接続します。コードだけで実行できるように小型の手続き環境データを使いますが、radiance、irradiance、prefiltered specular、BRDF LUTの役割はHDR環境マップを使う場合と同じです</p>
+      <p>シーンには、金属球、ピンク系の陶製タイルを貼った立方体、1.0を超える線形HDR値を持つ発光柱、屈折と吸収を行うガラス球を配置しています。金属球ではbase colorが鏡面反射色へ影響し、立方体では陶製タイルのColor、目地、Normal、roughnessによる非金属表面を確認できます。床、壁、立方体は<code>ProceduralMaterials</code>でColor、Height、Normalを生成し、<code>Primitive.mapRealCuboid()</code>の実寸UVを使って模様の大きさを決めています</p>
+      <p>不透明物は最初にPBR G-bufferへ表面情報を保存し、Deferred Lightingで直接光とImage-Based Lighting（IBL）を評価します。SSRはIBLへ反射色を単純加算せず、画面内で交差を確認できた範囲だけ鏡面IBLを画面内反射へ置き換えます。そのため、SSRが見つけられない画面外の情報はIBLに残り、両者を一つの鏡面反射として扱えます</p>
+      <p>ガラス球は不透明物とは別のPBR Forward描画で処理します。表面反射には不透明物と同じBRDFを使い、透過光はentry面で物体内へ屈折し、exit面で空気中へ戻ります。物体内を通った距離にはBeer–Lambert則による色吸収を適用し、屈折後の背景へ合成します。背景には環境画像を直接表示せず、青みがかったclear colorを使うため、IBLによる照明と画面背景を独立に確認できます</p>
+      <ol>
+        <li><code>PbrEnvironment</code>へradiance、irradiance、prefiltered specular、BRDF LUTを用意し、IBLで参照できるGPUリソースにします</li>
+        <li><code>ProceduralMaterials</code>で床、壁、立方体のColor、Height、Normalを生成し、実寸UVを持つ直方体へ適用します</li>
+        <li><code>renderScene()</code>で光源から見たShadow Mapを作り、カメラから見える不透明物をPBR G-bufferへ描画します</li>
+        <li><code>encode()</code>で直接光とIBL、SSAO、SSR、透明PBRとTransmission、Fog、Bloom、Tone Mapping、Edge、Vignetteの順にGPUコマンドを記録します</li>
+        <li>Tone Mapping後の表示テクスチャを<code>FullscreenPass</code>でCanvasへ転送し、その後に文字やHUDが使う深度バッファを再開します</li>
+      </ol>
+      <p>コード先頭の<code>EFFECTS</code>は、各効果の初期状態と<code>pipeline.encode()</code>へ渡す設定名を対応させています。すべての効果を有効にする必要があるという意味ではありません。S、A、R、T、F、B、E、Vキーで個別に切り替えると、Shadow、SSAO、SSR、Transmission、Fog、Bloom、Edge、Vignetteが最終画像へ加える変化を比較できます。PキーまたはSpaceキーはアニメーションだけを停止し、カメラはドラッグ、矢印キー、マウスホイールで操作できます</p>
+      <p id="status" class="note">ドラッグまたは矢印キーで視点を回転できます</p>
+    </div>
+
+    <div class="canvas-block">
+      <canvas id="canvas" width="960" height="720"></canvas>
+    </div>
+
+    <pre id="code"></pre>
+
+    <script type="module" id="example-source">
+import WebgApp from "../../webg/WebgApp.js";
+import ComputeEffectPipeline from "../../webg/ComputeEffectPipeline.js";
+import FullscreenPass from "../../webg/FullscreenPass.js";
+import PbrEnvironment from "../../webg/PbrEnvironment.js";
+import Primitive from "../../webg/Primitive.js";
+import ProceduralMaterials from "../../webg/ProceduralMaterials.js";
+import Shape from "../../webg/Shape.js";
+import { createProceduralEnvironmentData } from "../../webg/ProceduralEnvironment.js";
+
+const CANVAS_W = 960;
+const CANVAS_H = 720;
+let proceduralMaterials = null;
+let pbrEnvironment = null;
+
+// 正常終了と起動失敗の両方から呼び、生成済みtextureとbufferを一度だけ解放します
+function destroyProceduralMaterials() {
+  proceduralMaterials?.destroy();
+  proceduralMaterials = null;
+}
+
+// PBR SSRとIBLが共有するIrradiance、Specular mip、BRDF LUTを一度だけ解放します
+function destroyPbrEnvironment() {
+  pbrEnvironment?.destroy();
+  pbrEnvironment = null;
+}
+
+// PBR referenceとbenchmarkが共有する決定的な小型環境dataをGPU resourceへ転送します
+// Irradiance、roughness別Specular mip、BRDF LUTをそろえ、PBR SSR契約が必要とする環境入力を準備します
+function createBookPbrEnvironment(gpu) {
+  return new PbrEnvironment(gpu, {
+    label: "31-03-pbr-environment",
+    ...createProceduralEnvironmentData()
+  });
+}
+
+// 効果の有効状態を一箇所へ集めます
+// 各効果の初期状態とpipeline.encode()へ渡す設定名を対応させて読めます
+const EFFECTS = {
+  shadowEnabled: true,
+  ssaoEnabled: true,
+  ssrEnabled: true,
+  transmissionEnabled: true,
+  fogEnabled: false,
+  bloomEnabled: true,
+  edgeEnabled: false,
+  vignetteEnabled: true,
+  toonEnabled: false,
+  dofEnabled: false
+};
+
+// G-bufferと透明Forwardが共有するPBRマテリアル値を明示します
+// alphaが1未満のマテリアルはWebgApp側で透明triangle queueへ自動分類されます
+function createPbrMaterial(color, options = {}) {
+  return {
+    has_bone: 0,
+    use_texture: 0,
+    color: [color[0], color[1], color[2], 1.0],
+    alpha: options.alpha ?? 1.0,
+    ambient: 0.0,
+    specular: options.specular ?? 1.0,
+    metallic: options.metallic ?? 0.0,
+    roughness: options.roughness ?? 0.45,
+    power: 0.0,
+    emissive: 0.0,
+    emissive_factor: options.emissiveFactor ?? [0.0, 0.0, 0.0],
+    flat_shading: 0,
+    transmission: options.transmission ?? 0.0,
+    ior: options.ior ?? 1.5,
+    attenuation_color: options.attenuationColor ?? [1.0, 1.0, 1.0],
+    attenuation_distance: options.attenuationDistance ?? 1.0
+  };
+}
+
+// Primitiveの頂点とPBRマテリアルをShapeへ確定します
+function createPrimitiveShape(gpu, primitiveFactory, material) {
+  const shape = new Shape(gpu);
+  shape.applyPrimitiveAsset(primitiveFactory(shape.getPrimitiveOptions()));
+  shape.endShape();
+  shape.setMaterial("smooth-shader", material);
+  return shape;
+}
+
+// 実寸をUVへ記録した直方体へ、生成済みのColor／Normal／PBR設定をまとめて適用します
+// mapRealCuboid()は各面を独立したUV領域にするため、直方体の各面に対応する模様を独立して表示できます
+function createProceduralCuboidShape(
+  gpu,
+  dimensions,
+  proceduralMaterial,
+  { colorMultiplier = null, ...materialOptions } = {}
+) {
+  const shape = new Shape(gpu);
+  shape.applyPrimitiveAsset(Primitive.mapRealCuboid(...dimensions));
+  // scale付きマテリアルはCPU側の実寸UVをpresetのRepeat周期へ換算してからGPUへ転送します
+  proceduralMaterial.applyTo(shape, materialOptions);
+  if (colorMultiplier !== null) {
+    // applyTo()が登録したtextureとNormalを維持し、base colorの乗算値だけを上書きします
+    const material = shape.getMaterial();
+    shape.setMaterialAt(0, material.id, {
+      ...material.params,
+      color: colorMultiplier
+    });
+  }
+  shape.endShape();
+  return shape;
+}
+
+// SpaceへNodeを追加し、scene内の位置と姿勢をまとめて設定します
+function addShapeNode(app, name, shape, position, attitude = [0, 0, 0]) {
+  const node = app.space.addNode(null, name);
+  node.setPosition(...position);
+  node.setAttitude(...attitude);
+  node.addShape(shape);
+  return node;
+}
+
+// 石材床、ピンク系陶製タイル立方体、陶製タイル壁、金属、HDR発光、透明球を同じsceneへ配置
+function createScene(app, floorMaterial, wallMaterial, cubeMaterial) {
+  const gpu = app.getGPU();
+  // 床と壁は同じ実寸UV形状を使い、異なるpresetの実寸周期へ個別に換算します
+  const floor = createProceduralCuboidShape(gpu, [30, 0.8, 26], floorMaterial, {
+    // 床と壁の反射条件をそろえ、ColorとNormalの模様を比較します
+    roughness: 0.16,
+    specular: 0.76,
+    // Terrazzoの色模様を残したまま、床全体のbase colorを45%へ暗くします
+    colorMultiplier: [0.45, 0.45, 0.45, 1.0]
+  });
+  const backWall = createProceduralCuboidShape(
+    gpu, [30, 12, 0.8], wallMaterial
+  );
+  // 金の球
+  const goldSphere = createPrimitiveShape(
+    gpu,
+    (options) => Primitive.sphere(2.5, 36, 26, options),
+    createPbrMaterial([1.0, 0.70, 0], {
+      metallic: 0.99,
+      roughness: 0.05
+    })
+  );
+  // ceramic.white.squareのColor、目地、Height、Normalを使うピンク系の立方体
+  const pinkCeramicCube = createProceduralCuboidShape(
+    gpu,
+    [3.8, 3.8, 3.8],
+    cubeMaterial,
+    {
+      // 陶製タイルの反射を見やすくするため、粗さを下げて鏡面反射を最大にします
+      roughness: 0.10,
+      specular: 1.0
+    }
+  );
+  // 発光する柱
+  const emissivePillar = createPrimitiveShape(
+    gpu,
+    (options) => Primitive.cuboid(1.0, 5.6, 1.0, options),
+    createPbrMaterial([0.08, 0.10, 0.14], {
+      metallic: 0.0,
+      roughness: 0.5,
+      // 1.0を超える線形HDR値がBloomの光源になります
+      emissiveFactor: [5.5, 8.5, 0.35]
+    })
+  );
+  // ガラス球
+  const glassSphere = createPrimitiveShape(
+    gpu,
+    (options) => Primitive.sphere(2.35, 40, 28, options),
+    createPbrMaterial([0.72, 0.90, 1.0], {
+      // alpha < 1で透明描画、transmission > 0で背景屈折を指定します
+      alpha: 0.1,
+      specular: 1.0,
+      metallic: 0.0,
+      roughness: 0.2,
+      transmission: 0.98,
+      ior: 1.55,
+      attenuationColor: [0.72, 0.90, 1.0],
+      attenuationDistance: 2.0
+    })
+  );
+
+  // 初期位置と角度
+  addShapeNode(app, "floor", floor, [0, -3.4, -3]);
+  addShapeNode(app, "back-wall", backWall, [0, 1.7, -15.5]);
+  addShapeNode(app, "gold-sphere", goldSphere, [-4.6, -0.8, -5.8]),
+  addShapeNode(app, "glass-sphere", glassSphere, [0.0, -0.5, -2.2])
+  const animatedNodes = [
+    addShapeNode(app, "pink-ceramic-cube", pinkCeramicCube, [5.5, -1.0, -6.8], [0, 15, 10]),
+    addShapeNode(app, "emissive-pillar", emissivePillar, [0, 2.2, -10], [0, 24, 0]),
+  ];
+  return animatedNodes;
+}
+
+// Deferred Lightingへ追加する点光源
+const LOCAL_LIGHTS = [
+  {
+    type: "point",
+    position: [-15.0, 3.0, -5.0],
+    color: [1.0, 0.9, 0.8],
+    radius: 100.0,
+    intensity: 2.4
+  },
+  {
+    type: "point",
+    position: [10.0, 2.6, -4.0],
+    color: [0.88, 0.6, 0.2],
+    radius: 51.0,
+    intensity: 2.2
+  }
+];
+
+// 現在のON/OFFを画面へ表示し、各設定の効果を切り替えて確認できるようにします
+function updateStatus(state) {
+  document.getElementById("status").textContent =
+    `Shadow ${state.shadowEnabled ? "ON" : "OFF"} / ` +
+    `SSAO ${state.ssaoEnabled ? "ON" : "OFF"} / ` +
+    `SSR ${state.ssrEnabled ? "ON" : "OFF"} / ` +
+    `Transmission ${state.transmissionEnabled ? "ON" : "OFF"} / ` +
+    `Fog ${state.fogEnabled ? "ON" : "OFF"} / ` +
+    `Bloom ${state.bloomEnabled ? "ON" : "OFF"} / ` +
+    `Edge ${state.edgeEnabled ? "ON" : "OFF"} / ` +
+    `Vignette ${state.vignetteEnabled ? "ON" : "OFF"} / ` +
+    `Animation ${state.paused ? "PAUSED" : "RUNNING"} / ` +
+    "S/A/R/T/F/B/E/Vで効果、Pでanimationを切替";
+}
+
+// -------- app の作成 --------
+async function start() {
+  const app = new WebgApp({
+    document,
+    autoDrawScene: false,
+    renderMode: "ondemand",
+    layoutMode: "embedded",
+    fixedCanvasSize: {
+      width: CANVAS_W,
+      height: CANVAS_H,
+      useDevicePixelRatio: false
+    },
+    clearColor: [0.2, 0.2, 0.3, 1], // 背景色
+    viewAngle: 40,
+    projectionFar: 120,
+    camera: {
+      target: [1.1, -1.1, -5],
+      distance: 40,
+      yaw: 9.5,
+      pitch: -24.0,
+      roll: 2.6
+    }
+  });
+  await app.init();
+
+  app.createOrbitEyeRig({
+    target: [1.1, 0.0, -5],
+    distance: 28,
+    yaw: 9.5,
+    pitch: -24.0,
+    roll: 2.6,
+    minDistance: 10,
+    maxDistance: 24,
+    wheelZoomStep: 1
+  });
+  const gpu = app.getGPU();
+
+  // PBR SSRはBRDF LUTと置換元の鏡面IBLを必要とするため、Pipelineより先に環境を確定します
+  pbrEnvironment = createBookPbrEnvironment(gpu);
+
+  // 手続きテクスチャの生成
+  proceduralMaterials = new ProceduralMaterials(gpu);
+  let wallMaterial;
+  let pinkCeramicMaterial;
+  let terrazzoMaterial;
+  try {
+    wallMaterial = await proceduralMaterials.createPreset("ceramic.white.square", {
+      tile: {
+        color: {
+          base: [0.6, 0.60, 0.60],
+        },
+        joint: {
+          color: [0.9, 0.9, 0.9]
+        }
+      },
+      scale: 5
+    });
+    pinkCeramicMaterial = await proceduralMaterials.createPreset("ceramic.white.square", {
+      // 白タイルの部材寸法と目地を維持し、Color mapだけをピンク系へ変更します
+      tile: {
+        color: {
+          base: [0.72, 0.20, 0.20],
+          dirtColor: [0.38, 0.045, 0.07]
+        },
+        joint: {
+          color: [0.75, 0.75, 0.75]
+        }
+      },
+      // 立方体の各面で陶製タイルを前回の2倍の大きさで表示します
+      scale: 4
+    });
+    terrazzoMaterial = await proceduralMaterials.createPreset("stone.terrazzo.gray", {
+      // Terrazzo textureを実寸基準の10倍にし、大きな模様として表示します
+      scale: 10
+    });
+  } catch (error) {
+    destroyProceduralMaterials();
+    throw error;
+  }
+  const animatedNodes = createScene(
+    app,
+    terrazzoMaterial,
+    wallMaterial,
+    pinkCeramicMaterial
+  );
+
+  // Pipeline生成時には各PassがONになった時に使う既定パラメータを設定します
+  const pipeline = new ComputeEffectPipeline(gpu, {
+    width: app.screen.getWidth(),
+    height: app.screen.getHeight(),
+    lightDirection: [0.14, -0.8, 1.0],
+    lightTarget: [5.5, -1.0, -6.8],
+    lighting: {
+      unitSystem: "relative",
+      // environment有効時は定数ambientを0に設定し、拡散環境光をIrradianceから得ます
+      ambient: 0.0,
+      directionalColor: [1.0, 0.92, 0.82],
+      directionalIntensity: 1.55,
+      // 同じ環境resourceをIBLとPBR SSRの金属F0評価で共有します
+      environment: pbrEnvironment.getResources(),
+      environmentIntensity: 0.70,
+      environmentBackground: false,
+      environmentRotationDegrees: 0.0
+    },
+    // pbr-ssrは鏡面IBLだけを金属F0付きSSRへ置換し、直接光と拡散IBLを保持します
+    composer: { mode: "pbr-ssr" },
+    fog: {
+      enabled: EFFECTS.fogEnabled,
+      mode: "linear",
+      color: [0.10, 0.15, 0.23],
+      near: 18.0,
+      far: 72.0,
+      density: 0.03
+    },
+    bloom: {
+      enabled: EFFECTS.bloomEnabled,
+      threshold: 0.8,
+      softKnee: 0.55,
+      strength: 0.72,
+      filterRadius: 1.0
+    },
+    edge: {
+      enabled: EFFECTS.edgeEnabled,
+      mix: 0.18,
+      thickness: 1
+    },
+    vignette: {
+      enabled: EFFECTS.vignetteEnabled,
+      center: [0.5, 0.5],
+      radius: 0.78,
+      softness: 0.30,
+      strength: 0.28,
+      tint: [0.0, 0.0, 0.0]
+    },
+    toneMap: {
+      mode: "reinhard",
+      exposure: 1.20,
+      saturation: 1.0,
+      gamma: 2.2
+    }
+  });
+  const copyPass = new FullscreenPass(gpu);
+  await Promise.all([pipeline.ready, copyPass.init()]);
+
+  const state = {
+    ...EFFECTS,
+    paused: false
+  };
+  const keyBindings = new Map([
+    ["s", "shadowEnabled"],
+    ["a", "ssaoEnabled"],
+    ["r", "ssrEnabled"],
+    ["t", "transmissionEnabled"],
+    ["f", "fogEnabled"],
+    ["b", "bloomEnabled"],
+    ["e", "edgeEnabled"],
+    ["v", "vignetteEnabled"]
+  ]);
+
+  app.attachInput({
+    // 正規化されたキー名から操作を選び、停止状態、表示設定、カメラなどの対象を更新する
+    onKeyDown: (key, event) => {
+      if (event.repeat) return;
+      const settingName = keyBindings.get(key);
+      if (settingName) state[settingName] = !state[settingName];
+      else if (key === "p" || key === "space") state.paused = !state.paused;
+      updateStatus(state);
+      app.requestRender();
+    }
+  });
+  updateStatus(state);
+
+  app.start({
+    // アニメーションと描画先の寸法を更新し、材質と画面効果の比較状態を表示する
+    onUpdate: ({ deltaSec, screen }) => {
+      if (!state.paused) {
+        animatedNodes[0].rotateZ(12 * deltaSec);
+        animatedNodes[1].rotateZ(-18 * deltaSec);
+      }
+      // 画面寸法に依存するG-bufferと各Compute attachmentをまとめて追従させます
+      pipeline.resize(screen.getWidth(), screen.getHeight());
+    },
+
+    // WebgAppが確定した同一CameraFrameでShadow MapとG-bufferを描画します
+    onBeforeDraw: ({ cameraFrame }) => {
+      pipeline.renderScene(app.space, cameraFrame, app.clearColor, {
+        shadowEnabled: state.shadowEnabled
+      });
+    },
+
+    // 3D描画後に必要な画面効果を順番に記録し、最終カラー画像をキャンバスへ表示する
+    onAfterDraw3d: ({ cameraFrame }) => {
+      gpu.endPass();
+
+      // ONにする効果は対応するEnabled値をtrueにします
+      // 処理順はpipeline内部で管理され、呼び出し側は各効果の有効状態を指定します
+      const finalColor = pipeline.encode(gpu.commandEncoder, {
+        cameraFrame,
+        shadowEnabled: state.shadowEnabled,
+        ssaoEnabled: state.ssaoEnabled,
+        ssrEnabled: state.ssrEnabled,
+        fogEnabled: state.fogEnabled,
+        bloomEnabled: state.bloomEnabled,
+        edgeEnabled: state.edgeEnabled,
+        vignetteEnabled: state.vignetteEnabled,
+        toonEnabled: state.toonEnabled,
+        dofEnabled: state.dofEnabled,
+
+        // alpha < 1の透明描画は常に行い、この値で背景屈折だけをON/OFFします
+        transparency: {
+          transmissionEnabled: state.transmissionEnabled,
+          transmissionStrength: 1.0
+        },
+
+        // G-buffer後のPBR直接照明へ局所光を追加します
+        lights: LOCAL_LIGHTS,
+
+        // FogとBloomの値はframe単位でも上書きできます
+        fog: {
+          mode: "linear",
+          color: [0.10, 0.15, 0.23],
+          near: 18.0,
+          far: 72.0,
+          density: 0.03
+        },
+        bloom: {
+          threshold: 1.0,
+          softKnee: 0.55,
+          strength: 0.62,
+          filterRadius: 1.0
+        }
+      });
+
+      // Tone Mapと最終効果まで完了したtextureをcanvasへ転送します
+      app.screen.beginPresentPass({
+        clearColor: app.clearColor,
+        colorLoadOp: "clear"
+      });
+      copyPass.draw(finalColor);
+      // 後続のFontやHUDが使えるようにReverse-Z depth付きpassを再開します
+      app.screen.clearDepthBuffer();
+    }
+  });
+
+  // ページの終了時に描画を停止し、この例が確保したGPUリソースを解放する
+  window.addEventListener("pagehide", () => {
+    app.stop();
+    copyPass.destroy?.();
+    pipeline.destroy();
+    destroyProceduralMaterials();
+    destroyPbrEnvironment();
+  }, { once: true });
+}
+
+// 初期化や非同期処理の失敗を受け取り、原因を状態表示またはコンソールへ伝える
+start().catch((error) => {
+  destroyProceduralMaterials();
+  destroyPbrEnvironment();
+  document.getElementById("status").textContent = `Error: ${error.message}`;
+  console.error(error);
+});
+    </script>
+    <script>
+      document.getElementById("code").textContent =
+        document.getElementById("example-source").textContent.trim();
+    </script>
+  </div>
+</body>
+</html>

@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>procedural_texture</title>
+  <link rel="icon" href="data:," />
+  <!-- 2026/06/19 -->
+  <style>
+
+:root {
+  color-scheme: light;
+  --bg: #eef3f8;
+  --paper: rgba(255, 255, 255, 0.94);
+  --line: #c8d5e4;
+  --ink: #17324a;
+  --muted: #5c748b;
+  --accent: #1566ab;
+  --accent-soft: #dfeefe;
+  --code-bg: #f3f7fb;
+  --shadow: rgba(29, 52, 79, 0.10);
+}
+* { box-sizing: border-box; }
+html, body {
+  margin: 0;
+  min-height: 100%;
+}
+body {
+  background:
+    radial-gradient(circle at top left, rgba(21, 102, 171, 0.12), transparent 24%),
+    radial-gradient(circle at top right, rgba(255, 191, 118, 0.10), transparent 22%),
+    linear-gradient(180deg, #f8fbfd 0%, var(--bg) 100%);
+  color: var(--ink);
+  font: 16px/1.78 "Avenir Next", "Hiragino Sans", "Yu Gothic", sans-serif;
+}
+.page {
+  width: min(1080px, calc(100% - 28px));
+  margin: 0 auto;
+  padding: 24px 0 56px;
+}
+.hero,
+.doc {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  box-shadow: 0 22px 52px var(--shadow);
+}
+.hero {
+  padding: 22px 24px;
+  margin-bottom: 18px;
+}
+.hero h1 {
+  margin: 0 0 8px;
+  font-size: clamp(2rem, 4vw, 3rem);
+  line-height: 1.08;
+}
+.hero p {
+  margin: 0;
+  color: var(--muted);
+}
+.doc {
+  padding: 28px;
+}
+.doc > :first-child {
+  margin-top: 0;
+}
+h1, h2, h3, h4, h5, h6 {
+  line-height: 1.25;
+  margin: 1.45em 0 0.55em;
+}
+h1 {
+  font-size: 2.2rem;
+}
+h2 {
+  padding-bottom: 0.28em;
+  border-bottom: 1px solid var(--line);
+  font-size: 1.48rem;
+}
+h3 {
+  font-size: 1.14rem;
+}
+p, ul, ol, table, pre, blockquote {
+  margin: 0 0 1em;
+}
+ul, ol {
+  padding-left: 1.4em;
+}
+li + li {
+  margin-top: 0.26em;
+}
+a {
+  color: var(--accent);
+  text-decoration: none;
+}
+a:hover {
+  text-decoration: underline;
+}
+img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  border-radius: 16px;
+  border: 1px solid var(--line);
+  box-shadow: 0 12px 32px rgba(29, 52, 79, 0.08);
+  margin: 1.1em 0 1.4em;
+}
+code {
+  padding: 0.12em 0.38em;
+  border-radius: 0.45em;
+  background: var(--code-bg);
+  border: 1px solid #dbe6f1;
+  font: 0.92em/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+pre {
+  padding: 14px 16px;
+  overflow-x: auto;
+  border-radius: 14px;
+  background: #0f1720;
+  color: #ecf5ff;
+}
+pre code {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #ffffff;
+}
+th, td {
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  text-align: left;
+  vertical-align: top;
+}
+th {
+  background: #f5f9fc;
+}
+hr {
+  border: 0;
+  border-top: 1px solid var(--line);
+  margin: 1.5em 0;
+}
+blockquote {
+  padding: 0.3em 0 0.3em 1em;
+  border-left: 4px solid #c9dbef;
+  color: var(--muted);
+}
+@media (max-width: 720px) {
+  .page {
+    width: min(100% - 18px, 1080px);
+    padding-top: 16px;
+  }
+  .hero,
+  .doc {
+    border-radius: 18px;
+  }
+  .doc {
+    padding: 20px;
+  }
+}
+
+  </style>
+</head>
+<body>
+  <main class="page">
+    <section class="hero">
+      <h1>procedural_texture</h1>
+    </section>
+    <article class="doc">
+<h1>procedural_texture</h1>
+<p><a href="index.en.html">English</a> | 日本語</p>
+<p><img src="./procedural_texture.jpg" alt="procedural_texture"></p>
+<h2>概要</h2>
+<p><code>ProceduralTiledSurface</code>が生成するColor mapとHeight mapを、立方体の6面で比較するためのサンプルです。Height mapからNormal mapを生成し、Color mapと同じUVで各面へ貼ります。木材3種、コンクリート2種、赤レンガ、光沢のあるビニールタイルの7 presetを同じ形状と照明で観察できます。</p>
+<p>初期状態の6面は木材3種、コンクリート2種、赤レンガです。+ZはCommand Palette先頭ページから7 presetのいずれかへ直接変更でき、ビニールタイルも+Zで確認できます。独立CPU参照classの周期Perlin fBmを、木理の蛇行、コンクリートの色斑、レンガの焼きむら、大理石、Voronoiのwarp、VinylのCloudyとLinenへ材質別に利用します。Terrazzoは<code>util.js</code>の座標hashでモノトーンchipを配置します。</p>
+<p>各presetは材質に応じた<code>variationCell</code>を持ちます。OakとCedarは2部材×4行、Walnutは1/3のrunning-bond周期を閉じるため2部材×6行、コンクリートブロックは2部材×4行、stack配置のコンクリートパネルは1枚×1行、レンガは4×8、正方形のビニールタイルは4×4です。木材の初期LayoutはOakが1/2、Walnutが1/3、Cedarが1/4のrunning-bondです。周期境界をまたぐ一枚の部材は同じvariation IDへ折り返すため、部材途中で色や模様位相が切り替わりません。</p>
+<p>このサンプルはCPU参照実装です。WebGPU Compute Shaderによる生成、材質編集、preview、完成definitionの出力は、上位サンプルの<a href="../texture_catalog/README.md"><code>texture_catalog</code></a>で確認できます。</p>
+<h2>実行方法</h2>
+<p>実行ファイルは<a href="./procedural_texture.html">./procedural_texture.html</a>です。WebGPU対応ブラウザで開き、立方体をドラッグして各面へ回り込みます。ホイールまたはピンチで距離を変更し、目地の境界に付く法線マップの陰影を近距離から確認できます。<code>/</code>キー、またはCanvasのダブルクリック／ダブルタップでCommand Paletteを開くと、生成パラメータを実行中に変更できます。</p>
+<h2>使用しているwebg機能</h2>
+<p><code>WebgApp</code>はGPU初期化、描画ループ、Canvas、入力をまとめます。<code>WebgApp.createOrbitEyeRig()</code>はドラッグ、ホイール、タッチ操作を同じ軌道カメラへ接続します。</p>
+<p><code>buildHelpPanelOptions()</code>と<code>showOverlayPanel()</code>は、サンプル名、map生成の流れ、previewの左右順序、操作方法を一つのHelpPanelへ表示します。起動時は本文を隠した状態にし、必要なときだけCanvas左上の<code>Show Help</code>から開きます。これらの情報をCanvas内のFont HUDとして常時重ねないため、立方体とtexture previewを遮らず観察できます。</p>
+<p><code>CommandPalette</code>は+Z面を編集対象とし、5ページで構成します。各ページの左上に<code>Prev</code>、右上に<code>Next</code>を置きます。1ページ目にはOak、Walnut、Cedar、Panel、Block、Brick、Vinylの7ボタンを置きます。続くページで寸法、色、目地幅、白〜ダークグレーの目地tone、variation列数・行数、材質模様を編集します。Row Offsetは0、1/2、1/3、1/4から直接選択でき、Pattern modeはWood、Concrete、Brick、Marble、Voronoi、Cloudy、Linen、Terrazzo、Noneの直接選択です。</p>
+<p><code>Background</code>は編集対象となる+Z面のColor textureとNormal textureを、3D形状より奥の左下へ描画します。1:1で収まる場合は横並びまたは縦並びを自動選択し、どちらにも収まらない場合だけ縦横比を保って縮小します。cropや着色は行いません。</p>
+<p><code>Shape</code>は24頂点、12三角形から一つの立方体を構成し、面ごとに6つのmaterial slotを割り当てます。各面は<code>addVertexUV()</code>で4頂点へ反復UVを設定し、<code>addPlane()</code>で一つの四角面として登録します。反復回数を表す1より大きなUを球面UVの継ぎ目として補正させないため、頂点登録前に<code>setTextureMappingMode(1)</code>で平面mappingを明示します。それぞれのslotは別のColor textureとNormal textureを参照するため、一つのShapeでも面ごとに設定の異なるプロシージャルテクスチャを表示できます。</p>
+<p><code>Texture.setImage()</code>はCPU上で生成したColor mapとHeight mapをGPUへ転送します。<code>Texture.buildNormalMapFromHeightMap()</code>はHeight mapの近傍差分からNormal mapを生成します。Normal mapの傾きはHeight mapが表す実寸範囲と1pixelの物理寸法から計算するため、解像度だけを変更したときに凹凸の傾きが大きく変わらない構成です。</p>
+<p>微細な汚れと凹凸は<code>PerlinNoise2D.fillFbm()</code>で周期<code>Float32Array</code>へ一括生成し、Color／Height loopから参照します。+Z編集面は最大2件のLRU cacheを持つため、色や汚れ量などfield座標を変えないPalette変更では同じsurface detail fieldを再利用します。fieldはCPU中間値であり、Normal mapは最終Heightから一枚だけ生成します。</p>
+<h2>generatorの構成</h2>
+<p><code>ProceduralMaterials.resolve()</code>はコアの<code>webg/ProceduralMaterials.js</code>から完成したpresetを読み出し、<code>ProceduralTileSpec</code>で検証します。コア23 presetのうち、このCPU参照sampleは7 presetを選択対象とします。pattern編集では柾目、板目、mixを含む12 modeを選べます。Command Paletteで選択したpresetと上書きは+Z面だけへ適用します。未知のpreset、未知の項目、範囲外の値は例外にし、近い値や既定値へ置き換えません。</p>
+<h2>Command Paletteで変更できる値</h2>
+<p>1ページ目では7 presetを直接選択します。2ページ目では1m当たりのpixel数、部材の長辺と短辺、長手方向、積み方、行のずらし量を変更します。3ページ目では基準色RGB、部材ごとの色差、汚れ色RGBを変更します。4ページ目では汚れ量、目地tone、目地深さ、縁の丸み、目地幅、variation列数・行数を変更します。5ページ目では9種類のPattern modeを直接選択します。</p>
+<p>目地幅は0mも選択できます。0の場合は目地色、目地深さ、縁の丸みをすべて生成結果から除外し、目地部分の凹凸を作りません。</p>
+<p>目地幅のボタン刻みは現在の解像度の1 pixel分です。100、200、400 pixels/mでそれぞれ10mm、5mm、2.5mm刻みとなります。</p>
+<p>既定の表面寸法は、フローリング1800×150mm、コンクリートパネル1800×900mm、コンクリートブロック390×190mm、レンガ210×100mm、ビニールタイル300×300mmです。指定のある厚さはpreset metadataとF9 JSONへ保存する情報です。平面textureは表面の幅・高さと模様の設定から生成します。</p>
+<p>2〜5ページ左上の<code>Reset</code>は現在選択中のpreset基準値へ戻し、<code>Next</code>は次ページへ進みます。<code>Pixels / meter</code>は0.01m単位の目地幅などをpixelへ正確に換算できる100、200、400から選びます。<code>Layout</code>を<code>Stack</code>へ変更したときは、stack配置の定義に合わせて行のずらし量を0へ変更します。</p>
+<h2>設定値のJSON出力</h2>
+<p><code>F9</code>の後に<code>M</code>を押すとDebugDockを表示できます。Dockの<code>Copy JSON</code>、または<code>F9</code>の後に<code>V</code>を押すと、Command Paletteの現在値を<code>context.proceduralTexture.paletteSettings</code>へ含むdiagnostics JSONをコピーします。<code>variationCell</code>、実際のpreview配置、直近のCPU生成・texture/Normal・全体の所要時間も出力します。Palette変更時は+Zだけを再生成し、固定比較用5面のtextureを再利用します。</p>
+<p><code>ProceduralTiledSurface.generate()</code>は部材配置、目地位置、部材内座標、再現可能な乱数を一度計算し、同じ位置関係からColor mapとHeight mapを生成します。色の汚れはHeight mapへ自動的に混ぜないため、暗い汚れが誤って凹みとして表示されません。</p>
+<p><code>ProceduralTextureSet.create()</code>はColor、Height、Normalの3つの<code>Texture</code>を作ります。Normal mapはHeight mapの勾配から生成されます。表面全体の<code>roughness</code>はプロシージャルテクスチャの出力には含めず、通常のマテリアル値として指定しています。</p>
+<h2>長手方向とUV</h2>
+<p>部材寸法は<code>shortSizeMeters</code>と<code>longSizeMeters</code>で指定し、<code>longAxis</code>へ<code>&quot;u&quot;</code>または<code>&quot;v&quot;</code>を明示します。木目はshort座標に濃淡層を作り、long座標で層を蛇行させます。このため、部材の長手方向へ連続する木理になります。</p>
+<p>各面のUV終点は、3mの面寸法を生成textureの物理tile寸法で割って求めます。実寸の部材と目地を必要な回数だけ繰り返します。初期カメラ距離は6.75mで、3m立方体を近距離から観察します。</p>
+<h2>確認ポイント</h2>
+<ul>
+<li>オーク、ウォールナット、シダーで色、板幅、木理の細かさが異なること</li>
+<li>木目が板の長軸方向へ流れていること</li>
+<li>コンクリート平板とブロックが木目を持たず、方向性のない斑と粗さを持つこと</li>
+<li>赤レンガでrunning bond、焼きむら、粒状面が確認できること</li>
+<li>ビニールタイルで正方形目地、大理石、Voronoi、Cloudy、Linen、Terrazzoの模様、ほぼ平坦なNormal、光沢が確認できること</li>
+<li>どの面でもColor mapの目地とNormal mapの凹みが同じ位置にあること</li>
+<li>textureを繰り返す境界に色や法線の不連続な線が出ないこと</li>
+<li>左下の背景previewへ+Z面のColor mapとNormal mapの全体が同じscaleで表示され、既定値では縦並びになること</li>
+</ul>
+<h2>操作方法</h2>
+<ul>
+<li>ドラッグ: 立方体の周囲を軌道回転</li>
+<li>2本指ドラッグ: 視点の注視位置を平行移動</li>
+<li>ホイールまたはピンチ: ズーム</li>
+<li>矢印キー: 軌道回転</li>
+<li><code>[</code> / <code>]</code>: ズーム</li>
+<li><code>/</code>またはCanvasのダブルクリック／ダブルタップ: Command Paletteを開く</li>
+<li>Command Paletteの<code>Next</code>: 次ページへ進む</li>
+<li>Command Paletteの<code>Reset</code>: 基準値をプリセットへ戻す</li>
+<li><code>F9</code>の後に<code>M</code>: DebugDockの表示切替</li>
+<li><code>F9</code>の後に<code>V</code>: Palette設定を含むdiagnostics JSONをコピー</li>
+<li><code>Show Help</code> / <code>Hide Help</code>: HelpPanelの表示切替</li>
+</ul>
+
+    </article>
+  </main>
+</body>
+</html>

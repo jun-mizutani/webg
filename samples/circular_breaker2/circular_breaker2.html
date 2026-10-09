@@ -1,0 +1,47 @@
+<!doctype html>
+<!-- samples/circular_breaker2/circular_breaker2.html 2026/09/20 -->
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>circular_breaker2</title>
+  <style>
+    :root { color-scheme: dark; font-family: system-ui, sans-serif; }
+    body { margin: 0; height: 100dvh; display: flex; flex-direction: column; overflow: hidden; background: #080b16; color: #e9efff; }
+    header { flex: none; display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px 16px; padding: 6px 16px; }
+    header strong { font-size: 14px; white-space: nowrap; }
+    .stage { position: relative; flex: 1; min-height: 0; width: 100%; }
+    canvas { display: block; background: #080b16; }
+    #status, #help, #error {
+      position: absolute; left: 16px; right: 16px; white-space: pre-wrap;
+      pointer-events: none; text-shadow: 0 1px 3px #000; font-size: 14px;
+    }
+    #hud { flex: 1 1 400px; min-width: 0; color: #efffba; font-weight: 600; font-size: 12px; line-height: 1.5; overflow-wrap: anywhere; }
+    #status { top: 95px; color: #a8d6ff; font-size: 12px; }
+    #start-prompt {
+      position: absolute; left: 50%; top: 48%; transform: translate(-50%, -50%);
+      padding: 12px 18px; color: #ffffff; background: #081326cc;
+      border: 1px solid #9fd7ff; border-radius: 8px; text-align: center;
+      text-shadow: 0 1px 3px #000; font-size: 20px; font-weight: 700;
+      pointer-events: none;
+    }
+    #help { bottom: 76px; color: #d5ddf5; font-size: 12px; }
+    #error { top: 150px; padding: 12px; color: #ffd9df; background: #4c1422e8; border: 1px solid #ff8496; }
+    button { margin: 4px; padding: 6px 10px; }
+  </style>
+</head>
+<body>
+  <header>
+    <strong>circular_breaker2</strong>
+    <div id="hud">読み込み中</div>
+  </header>
+  <main class="stage">
+    <canvas id="canvas" width="960" height="640"></canvas>
+    <div id="status" hidden></div>
+    <div id="start-prompt" hidden>Enter / Space / クリックで開始</div>
+    <div id="help">ArrowLeft / ArrowRight: move　A / D: rotate　Enter / Space: start　R: reset　K: pause　P: screenshot</div>
+    <pre id="error" hidden></pre>
+  </main>
+  <script type="module" src="./main.js"></script>
+</body>
+</html>

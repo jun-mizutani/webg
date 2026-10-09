@@ -1,5 +1,5 @@
 // ---------------------------------------------
-//  DebugConfig.js 2026/07/25
+//  DebugConfig.js 2026/09/09
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // ---------------------------------------------
@@ -22,8 +22,7 @@ export default class DebugConfig {
     };
   }
 
-  // WebgApp を何も指定せずに起動したときは、利用者向けの画面を優先する
-  // DebugDock や probe は開発時に明示的に debug mode へ切り替えた場合だけ有効にする
+  // WebgApp の既定値では利用者向けの画面を優先し、debug mode の場合だけ DebugDock と probe を有効にする
   static mode = "release";
   static flags = DebugConfig.createFlags("release");
 
@@ -46,14 +45,17 @@ export default class DebugConfig {
     return this.flags;
   }
 
+  // 現在のモードが診断表示を有効にするdebugであることを返します
   static isDebug() {
     return this.mode === "debug";
   }
 
+  // 現在のモードが利用者向けのreleaseであることを返します
   static isRelease() {
     return this.mode === "release";
   }
 
+  // 指定した診断機能のflagが有効かを返し、呼出側の条件分岐を一つにそろえます
   static isEnabled(key) {
     return this.flags?.[key] === true;
   }

@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>WebgSceneAppサンプル</title>
+  <link rel="icon" href="data:," />
+  <!-- 2026/06/19 -->
+  <style>
+
+:root {
+  color-scheme: light;
+  --bg: #eef3f8;
+  --paper: rgba(255, 255, 255, 0.94);
+  --line: #c8d5e4;
+  --ink: #17324a;
+  --muted: #5c748b;
+  --accent: #1566ab;
+  --accent-soft: #dfeefe;
+  --code-bg: #f3f7fb;
+  --shadow: rgba(29, 52, 79, 0.10);
+}
+* { box-sizing: border-box; }
+html, body {
+  margin: 0;
+  min-height: 100%;
+}
+body {
+  background:
+    radial-gradient(circle at top left, rgba(21, 102, 171, 0.12), transparent 24%),
+    radial-gradient(circle at top right, rgba(255, 191, 118, 0.10), transparent 22%),
+    linear-gradient(180deg, #f8fbfd 0%, var(--bg) 100%);
+  color: var(--ink);
+  font: 16px/1.78 "Avenir Next", "Hiragino Sans", "Yu Gothic", sans-serif;
+}
+.page {
+  width: min(1080px, calc(100% - 28px));
+  margin: 0 auto;
+  padding: 24px 0 56px;
+}
+.hero,
+.doc {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  box-shadow: 0 22px 52px var(--shadow);
+}
+.hero {
+  padding: 22px 24px;
+  margin-bottom: 18px;
+}
+.hero h1 {
+  margin: 0 0 8px;
+  font-size: clamp(2rem, 4vw, 3rem);
+  line-height: 1.08;
+}
+.hero p {
+  margin: 0;
+  color: var(--muted);
+}
+.doc {
+  padding: 28px;
+}
+.doc > :first-child {
+  margin-top: 0;
+}
+h1, h2, h3, h4, h5, h6 {
+  line-height: 1.25;
+  margin: 1.45em 0 0.55em;
+}
+h1 {
+  font-size: 2.2rem;
+}
+h2 {
+  padding-bottom: 0.28em;
+  border-bottom: 1px solid var(--line);
+  font-size: 1.48rem;
+}
+h3 {
+  font-size: 1.14rem;
+}
+p, ul, ol, table, pre, blockquote {
+  margin: 0 0 1em;
+}
+ul, ol {
+  padding-left: 1.4em;
+}
+li + li {
+  margin-top: 0.26em;
+}
+a {
+  color: var(--accent);
+  text-decoration: none;
+}
+a:hover {
+  text-decoration: underline;
+}
+img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  border-radius: 16px;
+  border: 1px solid var(--line);
+  box-shadow: 0 12px 32px rgba(29, 52, 79, 0.08);
+  margin: 1.1em 0 1.4em;
+}
+code {
+  padding: 0.12em 0.38em;
+  border-radius: 0.45em;
+  background: var(--code-bg);
+  border: 1px solid #dbe6f1;
+  font: 0.92em/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+pre {
+  padding: 14px 16px;
+  overflow-x: auto;
+  border-radius: 14px;
+  background: #0f1720;
+  color: #ecf5ff;
+}
+pre code {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #ffffff;
+}
+th, td {
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  text-align: left;
+  vertical-align: top;
+}
+th {
+  background: #f5f9fc;
+}
+hr {
+  border: 0;
+  border-top: 1px solid var(--line);
+  margin: 1.5em 0;
+}
+blockquote {
+  padding: 0.3em 0 0.3em 1em;
+  border-left: 4px solid #c9dbef;
+  color: var(--muted);
+}
+@media (max-width: 720px) {
+  .page {
+    width: min(100% - 18px, 1080px);
+    padding-top: 16px;
+  }
+  .hero,
+  .doc {
+    border-radius: 18px;
+  }
+  .doc {
+    padding: 20px;
+  }
+}
+
+  </style>
+</head>
+<body>
+  <main class="page">
+    <section class="hero">
+      <h1>WebgSceneAppサンプル</h1>
+    </section>
+    <article class="doc">
+<h1>WebgSceneAppサンプル</h1>
+<p><code>project_app</code>は、webg 3.0の<code>WebgSceneApp</code>と高水準scene定義を使って、PBR表示、Compute physics、Joint、多数物体の配置を構成する独立サンプルです。</p>
+<p>このフォルダのHTML、JavaScript、SceneYAML project、scene assetで実行できます。高水準共通moduleの正規実装は<code>../../webg/app/</code>から読み込みます。</p>
+<h2>サンプルの順番</h2>
+<ol><li><a href="./project_app_sphere_plane.html">project_app_sphere_plane.html</a>で、<code>objects[]</code>、material、Sphere、Plane、Compute bodyの最小構成を確認します</li><li><a href="./project_app_joint.html">project_app_joint.html</a>で、<code>physics.joints[]</code>のbody参照をobject IDで指定します</li><li><a href="./project_app_joint_compute_node.html">project_app_joint_compute_node.html</a>で、SceneYAMLの複数Joint、GPU Compute physics、readback後のNode描画を確認します</li><li><a href="./project_app_object_set.html">project_app_object_set.html</a>で、prototypeと<code>grid3d</code>から16個のBoxを生成します</li><li><a href="./project_app_object_set_variants.html">project_app_object_set_variants.html</a>で、Sphere、Capsule、Boxのvariantと個体ごとの値を指定します</li><li><a href="./project_app_physics.html">project_app_physics.html</a>で、Blender制作シーンのscene asset、PBR manifest、Compute physicsを一つのprojectへ接続します</li><li><a href="./domino_36_03.html">domino_36_03.html</a>で、作品規模のprojectを確認します</li></ol>
+<p>各ページはWebGPU対応ブラウザーで開き、Start、Stop、Resetを操作できます。<code>project_app_physics.html</code>は<code>assets/domino2_scene_asset.json.gz</code>を読み込みます。</p>
+<p><code>project_app_joint_compute_node.html</code>は、<code>joint_compute_node.html</code>のロープ、振り子、通過CapsuleをSceneYAMLへ移した例です。物理bodyと61個のDistance Jointはproject YAMLで定義し、JavaScriptはkinematic Capsuleの移動、振り子connectorの表示同期、Start／Stop／Resetだけを担当します。<code>Q</code>でquasiStatic、<code>I</code>でimpact、<code>A</code>と<code>D</code>でCapsuleの移動方向を切り替えます。</p>
+<h2>SceneYAML object animation</h2>
+<p><a href="./scene_animation.html">scene_animation.html</a>は、独立した床・固定柱と、移動・回転するゲート、追従する子のSphere／Capsuleを表示します。<a href="./scene_animation.yaml">scene_animation.yaml</a>は<code>format: webg-scene</code>、<code>version: 1</code>の新形式です。<a href="./scene_animation_demo.js">JavaScript</a>は公開アニメーションAPIを使い、<code>renderMode: &quot;ondemand&quot;</code>、<code>physics: false</code>で動作します。HTTPサーバーからWebGPU対応ブラウザーで開いてください。</p>
+<p>Playは先頭から再生し、Loopは既定でオフです。PauseとStopは現在の姿勢を保持し、Resumeは一時停止から再開します。Seekは指定秒へ移動して一時停止します。Reset animationsは全clipを停止して基準配置へ戻し、Reset sceneはアニメーションと物理のリセットを呼びます（この例は物理なし）。Start frames／Stop framesはフレームループだけの操作です。フレーム停止中の姿勢変更は再開後に描画されます。</p>
+<p>ゲートの基準姿勢はEuler角でY軸15度、最初のキーは0度なので、ResetとSeek(0)の違いが分かります。キーの回転は<code>[w, x, y, z]</code>、位置は絶対local値です。親の正の一様scaleは一定です。2〜3秒は開いた姿勢を保持し、5秒で一回再生を終えます。</p>
+<p>圧縮版は<code>gzip -n -9 -c samples/project_app/scene_animation.yaml &gt; samples/project_app/scene_animation.yaml.gz</code>で生成し、<a href="./scene_animation.html?gzip=1">gzip版ページ</a>で読み込みます。任意の<a href="../../tools/scene_animation/browser_probe.js">ブラウザーprobe</a>はページのready後、コンソールで<code>await (await import('/tools/scene_animation/browser_probe.js')).runSceneAnimationProbe()</code>を実行します。再生・保持・seek・loop・resetの状態とUIを検査し、最後に基準配置へ戻します。画素、親子のworld姿勢、物理の検証は含みません。</p>
+<h2>利用者が編集する場所</h2>
+<ul><li>物体の形状、配置、物理値：SceneYAML projectの<code>objects[]</code></li><li>多数物体の共通定義と配置：<code>objectSets[]</code></li><li>色、metallic、roughness、specular：<code>materials</code></li><li>物体と材質の関係：<code>objects[].material</code></li><li>Jointの接続先：<code>physics.joints[]</code></li><li>Blenderのmesh、UV、Node：<code>assets/*.scene.json.gz</code></li></ul>
+<p>すべての実行サンプルがSceneYAML projectを参照します。JSON projectとJSONの外部manifestも、<code>SceneDefinition</code>の同じ検証処理で読み込めます。</p>
+<p>実行時の入口は各demo JavaScriptの<code>createWebgSceneApp()</code>です。WebgSceneAppがscene定義の検証、NodeとShapeの生成、PBR準備、Compute body登録、固定step、readback、Resetをまとめます。作品側のJavaScriptはカメラ、ボタン、作品固有の入力と表示だけを記述します。</p>
+<h2>内部module</h2>
+<p>各demoは<code>../../webg/app/index.js</code>から<code>createWebgSceneApp()</code>を読み込みます。アプリのシーン構築には、coreの<code>WebgSceneApp</code>、<code>SceneDefinition</code>、<code>ScenePhysics</code>を利用します。</p>
+    </article>
+  </main>
+</body>
+</html>

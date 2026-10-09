@@ -1,0 +1,29 @@
+# NEON COASTER 2026/09/26 — PBR描画と左右へ流すCompute粒子
+format: webg-scene
+version: 1
+name: neon-coaster
+particleEmitters:
+  - id: speed-trail
+    preset: spark
+    capacity: 4096
+    seed: 92526
+    overflow: replace-oldest
+    simulation: { gravity: [0, -0.15, 0], drag: 1.2 }
+    appearance:
+      colors: [[1, 0.04, 0.015], [1, 0.42, 0.03]]
+      size: [0.0125, 0.0325]
+      intensity: 7
+renderer:
+  profile: studio
+  width: 1280
+  height: 800
+  clearColor: [0.003, 0.008, 0.018, 1]
+  environment:
+    preset: dark-studio
+    resolution: { width: 256, height: 128 }
+  dof: { enabled: false }
+  pipeline:
+    shadow: { pcfRadius: 1 }
+    lighting: { ambient: 0, directionalIntensity: 0.25, environmentIntensity: 0.38 }
+    ssr: { intensity: 0.45, distance: 52, thickness: 0.32, steps: 64, resolutionScale: 0.8 }
+    toneMap: { exposure: 1.08, saturation: 1.12 }

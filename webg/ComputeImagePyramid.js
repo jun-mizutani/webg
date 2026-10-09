@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// ComputeImagePyramid.js  2026/07/25
+// ComputeImagePyramid.js  2026/08/14
 //   Continuous low-pass image pyramid for Compute effects
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -51,7 +51,7 @@ fn main(@builtin(global_invocation_id) id : vec3<u32>) {
   let texel = vec2f(1.0) / vec2f(sourceDims);
 
   // 中心、内側対角、外側軸、外側対角を合計1.0の重みで合成します
-  // 各段で低域通過処理を行うため、縮小を重ねても櫛状patternを残しません
+  // 各段で低域通過処理を行うため、縮小を重ねても滑らかな低域画像を保ちます
   var color = readSource(uv, vec2f(0.0, 0.0), texel) * 0.125;
   color += (
     readSource(uv, vec2f(-1.0, -1.0), texel)
@@ -105,7 +105,7 @@ export function validatePyramidLevels(levels, label = "ComputeImagePyramid level
       );
     }
   });
-  return Object.freeze(validated);
+  return validated;
 }
 
 export default class ComputeImagePyramid {
@@ -242,8 +242,22 @@ export default class ComputeImagePyramid {
     );
     // 全Levelで同じ半径を使い、解像度が下がるごとに画面上のfilter幅が自然に広がるようにします
     this.downsamplePass.setUniforms([filterRadius, 0.0, 0.0, 0.0]);
+    // 呼び出し側が必要とする最深Levelまでに限定し、後段で参照しない縮小passを記録しない
+    // 省略時は全Levelを生成する
+    const maxLevel = util.readOptionalFiniteNumber(
+      options.maxLevel,
+      `${this.label} maxLevel`,
+      this.levels[this.levels.length - 1],
+      { integer: true, min: 2 }
+    );
+    if (!this.levels.includes(maxLevel)) {
+      throw new Error(
+        `${this.label} maxLevel ${maxLevel} is not one of ${this.levels.join(", ")}`
+      );
+    }
+    const activeLevels = this.levels.slice(0, this.levels.indexOf(maxLevel) + 1);
     const timestampWrites = options.timestampWrites;
-    this.levels.forEach((divisor, index) => {
+    activeLevels.forEach((divisor, index) => {
       const output = this.targets.get(divisor);
       const firstTimestampWrites = index === 0 &&
         timestampWrites?.beginningOfPassWriteIndex !== undefined
@@ -252,7 +266,7 @@ export default class ComputeImagePyramid {
             beginningOfPassWriteIndex: timestampWrites.beginningOfPassWriteIndex
           }
         : undefined;
-      const lastTimestampWrites = index === this.levels.length - 1 &&
+      const lastTimestampWrites = index === activeLevels.length - 1 &&
         timestampWrites?.endOfPassWriteIndex !== undefined
         ? {
             querySet: timestampWrites.querySet,

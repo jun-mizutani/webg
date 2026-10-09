@@ -1,0 +1,17 @@
+# falling_dominoes_cpu
+
+## 目的
+
+公開Compute版の`samples/falling_dominoes`と同じ32体のドミノを、通常の`PhysicsSpace`、`PhysicsNode`、`BoxCollider`、`PlaneCollider`で動かします。左端のbodyへ初期角速度を与え、Box同士の接触を後続bodyへ伝え、最後にsleepへ入るまでを確認します。
+
+## CPU版とCompute版の対応
+
+CPU版はGPU BodyStateを使わず、`PhysicsSpace`が計算した位置、姿勢、速度、sleep状態を`PhysicsNode`へ同期して通常のWebgApp scene描画へ渡します。CPUのBox/Plane接触は、PhysicsSpaceへ統合したCPUのBox接触処理で行います。寸法、質量、重力、反発、摩擦、固定step、solver反復数、sleep条件、カメラはCompute版と同じです。
+
+CPU PhysicsNodeの角速度はdegree/secで保持されるため、共通の初期条件rad/secはNodeへ渡す境界でdegree/secへ変換します。Help Panelへ表示するときはrad/secへ戻します。
+
+## 操作と確認
+
+`falling_dominoes_cpu.html`をWebGPU対応ブラウザで開いてください。Help Panelは起動時に畳まれています。`H`で展開するとframe計測、active/sleeping body数、fixed step数を確認できます。`Space`は先頭bodyへ角速度を加え、`P`はpause、`R`は初期条件へreset、ドラッグはcamera orbit、ホイールはzoomです。
+
+先頭から後続へ連鎖すること、床Planeをすり抜けないこと、倒れたbodyが床上へ残ること、最後にsleeping数が増えることを確認します。CPU版とCompute版では、連鎖順序、床による支持、最終停止が同等であることを確認します。

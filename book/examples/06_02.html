@@ -1,11 +1,11 @@
 <!doctype html>
-<!-- webg/book/examples/06_02.html 2026/06/12 -->
+<!-- book/examples/06_02.html 2026/10/04 -->
 <html lang="ja">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>06_02 follow camera</title>
-  <link rel="stylesheet" href="./example.css" />
+  <link rel="stylesheet" href="./examples_common.css" />
 </head>
 <body>
   <div class="page">
@@ -25,7 +25,7 @@
     <script type="module" id="example-source">
 import WebgApp from "../../webg/WebgApp.js";
 import { buildHelpPanelOptions } from "../../webg/OverlayPanelPresets.js";
-import EyeRig from "../../webg/EyeRig.js?v=20260612_02";
+import EyeRig from "../../webg/EyeRig.js";
 import Shape from "../../webg/Shape.js";
 import Primitive from "../../webg/Primitive.js";
 
@@ -48,6 +48,7 @@ const app = new WebgApp({
 });
 await app.init();
 
+// 形状を組み立てる関数を実行し、GPUバッファと材質を確定したShapeを返す
 const makeShape = (buildAsset, material) => {
   const shape = new Shape(app.getGPU());
   buildAsset(shape);
@@ -59,6 +60,7 @@ const makeShape = (buildAsset, material) => {
   return shape;
 };
 
+// 指定寸法の直方体の頂点と面を作り、呼び出し元のShapeへ渡す
 const floorShape = makeShape((shape) => {
   shape.applyPrimitiveAsset(Primitive.cuboid(26.0, 0.8, 26.0, shape.getPrimitiveOptions()));
 }, {
@@ -72,6 +74,7 @@ const floor = app.space.addNode(null, "floor");
 floor.setPosition(0.0, -0.4, 0.0);
 floor.addShape(floorShape);
 
+// 指定寸法の直方体の頂点と面を作り、呼び出し元のShapeへ渡す
 const markerShape = makeShape((shape) => {
   shape.applyPrimitiveAsset(Primitive.cuboid(0.7, 0.5, 0.7, shape.getPrimitiveOptions()));
 }, {
@@ -90,6 +93,7 @@ for (let i = 0; i < 16; i++) {
 
 const targetRoot = app.space.addNode(null, "target-root");
 
+// 指定寸法の直方体の頂点と面を作り、呼び出し元のShapeへ渡す
 const bodyShape = makeShape((shape) => {
   shape.applyPrimitiveAsset(Primitive.cuboid(2.0, 2.2, 3.0, shape.getPrimitiveOptions()));
 }, {
@@ -102,6 +106,7 @@ const bodyShape = makeShape((shape) => {
 targetRoot.addShape(bodyShape);
 targetRoot.setPosition(8.0, 1.1, 0.0);
 
+// 指定半径と分割数の球の頂点と面を作り、呼び出し元のShapeへ渡す
 const headShape = makeShape((shape) => {
   shape.applyPrimitiveAsset(Primitive.sphere(0.75, 18, 18, shape.getPrimitiveOptions()));
 }, {
@@ -115,6 +120,7 @@ const head = app.space.addNode(targetRoot, "target-head");
 head.setPosition(0.0, 1.8, 0.0);
 head.addShape(headShape);
 
+// 指定寸法の直方体の頂点と面を作り、呼び出し元のShapeへ渡す
 const noseShape = makeShape((shape) => {
   shape.applyPrimitiveAsset(Primitive.cuboid(0.35, 0.35, 1.1, shape.getPrimitiveOptions()));
 }, {
@@ -164,6 +170,7 @@ app.showOverlayPanel(buildHelpPanelOptions({
 let elapsedSec = 0.0;
 
 app.start({
+  // 経過時間から追跡対象の位置と姿勢を求め、追跡カメラと状態表示を更新する
   onUpdate: ({ deltaSec }) => {
     elapsedSec += deltaSec;
     const angle = elapsedSec * 0.65;

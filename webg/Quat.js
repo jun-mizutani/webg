@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// Quat.js        2026/04/18
+// Quat.js        2026/09/09
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // ---------------------------------------------
@@ -7,10 +7,12 @@
 import Matrix from "./Matrix.js";
 import util from "./util.js";
 
+// 度数法の角度をQuaternion生成で使うラジアンへ変換します
 function RAD(degree) {
   return degree * Math.PI / 180.0;
 }
 
+// Quaternionから得たラジアン角を利用者向けの度数法へ変換します
 function DEG(radian) {
   return radian * 180.0 / Math.PI;
 }

@@ -29,7 +29,7 @@ English | [日本語](README.md)
 - Change `density` with `Z / X` and confirm that the attenuation strength of exponential fog changes smoothly
 - When switching fog-color presets with `C`, confirm that the background color and fog color line up and change the atmosphere of the whole scene. Presets include not only dark blue tones but also a white-mist style
 - Use `4` to show only some cubes in wireframe and `5` to show the whole scene in wireframe. Confirm that the wireframe lines also blend into the distance under the same fog settings as normal rendering
-- Confirm that even when the orbit camera moves, fog is still applied based on view distance rather than object identity
+- Confirm that even when the orbit camera moves, fog is still applied based on view distance
 
 ## Controls
 - Drag / arrow keys: orbit camera rotation

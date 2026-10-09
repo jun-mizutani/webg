@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// unittest/primitive_wireframe/main.js  2026/07/25
+// unittest/primitive_wireframe/main.js  2026/10/04
 //   primitive_wireframe sample
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -41,7 +41,7 @@ const PALETTE = [
   [0.92, 0.55, 0.66, 1.0]
 ];
 
-// 投影を受け取り、現在の設定と後続処理へ反映する
+// 現在の画面の縦横比と推奨視野角から透視投影を作り、比較用シェーダーへ設定する
 const setProjection = (screen, shader, angle = 50) => {
   // 3x3 配置の形状を一度に見渡しやすい固定投影へそろえる
   const proj = new Matrix();
@@ -50,7 +50,7 @@ const setProjection = (screen, shader, angle = 50) => {
   shader.setProjectionMatrix(proj);
 };
 
-// 形状を生成し、後続処理で利用できる状態にする
+// 基本形状からGPU描画用のShapeを作り、比較条件に合わせた色と材質を設定する
 const createShape = (gpu, entry, color) => {
   // unittest では material 条件を固定し、geometry 差と wireframe 切替だけを確認しやすくする
   const shape = new Shape(gpu);
@@ -64,7 +64,7 @@ const createShape = (gpu, entry, color) => {
   return shape;
 };
 
-// このインスタンスの初期化段階で、必要な状態と資源を準備して処理を開始する
+// 9形状を配置し、全体・個別のワイヤーフレーム切替で面と辺の対応を確認する
 const start = async ({ screen, gpu, setStatus, setViewportLayout, startLoop, document }) => {
   const shader = new SmoothShader(gpu);
   await shader.init();
@@ -95,7 +95,7 @@ const start = async ({ screen, gpu, setStatus, setViewportLayout, startLoop, doc
 
   const wireframeStates = Array.from({ length: shapes.length }, () => false);
 
-  // ワイヤーフレームの`states`を現在の入力と実行状態に合わせて更新する
+  // 各形状の切替状態をShapeへ設定し、個別操作と全体操作を同じ描画経路へ反映する
   const syncWireframeStates = () => {
     // shape ごとの現在状態をそのまま描画 object へ反映し、
     // 数字キーの個別切替と W の一括切替を同じ経路で扱う
@@ -105,7 +105,7 @@ const start = async ({ screen, gpu, setStatus, setViewportLayout, startLoop, doc
   };
 
   let paused = false;
-  // すべてのワイヤーフレームを受け取り、現在の設定と後続処理へ反映する
+  // すべての比較形状を同じ面表示または線表示へ切り替える
   const setAllWireframe = (enabled) => {
     // unittest の比較用に、全 primitive を同じ状態へまとめて切り替える
     for (let i = 0; i < wireframeStates.length; i++) {
@@ -124,7 +124,7 @@ const start = async ({ screen, gpu, setStatus, setViewportLayout, startLoop, doc
     return true;
   };
 
-  // `areAllWireframeEnabled`は受け取った値を処理し、後続処理で利用する状態または結果を生成する
+  // 全形状の線表示が有効かを調べ、全体切替の次の状態を決める
   const areAllWireframeEnabled = () => {
     for (let i = 0; i < wireframeStates.length; i++) {
       if (!wireframeStates[i]) return false;

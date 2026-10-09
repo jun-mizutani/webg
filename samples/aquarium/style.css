@@ -1,0 +1,21 @@
+:root { color-scheme: dark; font-family: system-ui, sans-serif; color: #d5ebed; background: #081a22; }
+* { box-sizing: border-box; }
+body { margin: 0; }
+header, main { width: min(100% - 40px, 960px); margin: auto; }
+header { display: flex; align-items: center; justify-content: space-between; padding: 26px 0 22px; }
+small { display: block; font-size: 10px; letter-spacing: .25em; color: #80afb6; }
+h1 { font-size: 23px; font-weight: 500; margin: 7px 0 0; letter-spacing: .1em; }
+a { color: #9bc9ce; font-size: 13px; text-decoration: none; }
+.exhibit { position: relative; border: 1px solid #21454e; overflow: hidden; border-radius: 5px; background: #031a25; }
+canvas { display: block; width: 100% !important; height: auto !important; aspect-ratio: 4 / 3; touch-action: none; }
+.caption { position: absolute; left: 27px; right: 27px; bottom: 23px; display: flex; justify-content: space-between; align-items: end; pointer-events: none; font-size: 12px; letter-spacing: .18em; }
+.caption small { margin-top: 8px; letter-spacing: .1em; }
+#status { font-size: 11px; color: #93bdc7; letter-spacing: .06em; }
+.controls { display: flex; gap: 24px; align-items: center; flex-wrap: wrap; padding: 20px 0 30px; font-size: 13px; }
+.controls span { margin-left: auto; color: #769fa9; font-size: 11px; }
+button { border: 1px solid #376370; border-radius: 4px; padding: 9px 23px; background: #153540; color: #d5ebed; cursor: pointer; }
+input { accent-color: #80ced7; }
+#errors { color: #ffb6a4; white-space: pre-wrap; }
+@media (max-width: 650px) { header, main { width: calc(100% - 24px); } h1 { font-size: 18px; } .controls { gap: 14px; } .caption { left: 16px; right: 16px; bottom: 16px; } .controls span { width: 100%; } }
+/* 固定960×720の描画を保ち、WebgAppが作るhostごと表示幅へ縮める。 */
+.webg-embedded-canvas-host { width: 100% !important; height: auto !important; aspect-ratio: 4 / 3; }

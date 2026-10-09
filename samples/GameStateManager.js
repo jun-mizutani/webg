@@ -249,7 +249,7 @@ export default class GameStateManager {
     this.paused = false;
   }
 
-  // このインスタンスを初期状態へ戻し、前回の状態を残さない
+  // このインスタンスを初期状態へ戻す
   reset() {
     this.currentStateId = null;
     this.currentState = null;

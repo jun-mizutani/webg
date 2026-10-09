@@ -50,5 +50,5 @@ English | [日本語](README.md)
 - `Q`: stop the sample
 
 ## Notes
-- `AnimationState` does not hold clip data itself; it is a thin control layer that receives existing `Action` objects as controllers
-- This sample uses only the connection `state.action -> Action.start(actionId)` and does not handle cross-fade or blend
+- `AnimationState` receives `Action` objects as controllers and selects the clip to play
+- This sample demonstrates direct action selection through `state.action -> Action.start(actionId)`

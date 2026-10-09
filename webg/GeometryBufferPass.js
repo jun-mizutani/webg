@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// GeometryBufferPass.js  2026/07/20
+// GeometryBufferPass.js  2026/08/04
 //   MRT Geometry Buffer pass
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -11,6 +11,8 @@ import {
   srgbColorToLinear
 } from "./ColorSpace.js";
 import { CAMERA_REVERSE_Z } from "./DepthConvention.js";
+import { PBR_MIN_ROUGHNESS } from "./PbrBrdf.js";
+import MaterialParameters from "./MaterialParameters.js";
 import { resizeTarget } from "./StorageTargetFactory.js";
 import {
   DEFAULT_MAX_SKIN_BONES,
@@ -23,11 +25,12 @@ import {
 export const GBUFFER_COLOR_FORMAT = "rgba8unorm-srgb";
 export const GBUFFER_NORMAL_FORMAT = "rgba8unorm";
 export const GBUFFER_MATERIAL_FORMAT = "rgba8unorm";
-export const GBUFFER_MIN_ROUGHNESS = 0.04;
+export const GBUFFER_EMISSIVE_FORMAT = "rgba16float";
+export const GBUFFER_MIN_ROUGHNESS = PBR_MIN_ROUGHNESS;
 export const GBUFFER_DEPTH_FORMAT = CAMERA_REVERSE_Z.format;
 
 // G-buffer書き込み側と読み取り側で共有するnormal、depth、view-space positionの規則を定義します
-// 利用側WGSLはParams内のprojection vec4を明示的に渡し、暗黙のuniform名へ依存しません
+// 利用側WGSLはParams内のprojection vec4を明示的に渡し、projection fieldへ直接対応します
 export const GBUFFER_WGSL_COMMON = `
 fn decodeGBufferNormal(encoded : vec3f) -> vec3f {
   return normalize(encoded * 2.0 - vec3f(1.0));
@@ -77,10 +80,10 @@ export function createGBufferProjectionParams(cameraFrame) {
   ]);
 }
 
-// attachment 0へalbedo、1へview-space normal、2へ材質値を書きます
-// 材質RGBAはspecular、roughness、metallic、emissiveの順です
+// attachment 0へalbedo、1へview-space normal、2へ材質値、3へHDR emissiveを書きます
+// 材質RGBAはspecular、roughness、metallic、occlusionの順です
 export class GeometryBufferPass {
-  // G-buffer layoutをoptionで明示し、未対応のnormal空間やcolor modeを既定値へ丸めません
+  // G-buffer layoutをoptionで明示し、対応するnormal空間やcolor modeを検証します
   constructor(gpu, options = {}) {
     if (!gpu) {
       throw new Error("GeometryBufferPass requires a WebGPU context");
@@ -135,6 +138,7 @@ export class GeometryBufferPass {
       { trim: true, allowEmpty: false }
     );
     this.materialFormat = GBUFFER_MATERIAL_FORMAT;
+    this.emissiveFormat = GBUFFER_EMISSIVE_FORMAT;
     this.depthConvention = CAMERA_REVERSE_Z;
     this.depthFormat = this.depthConvention.format;
     this.entries = [];
@@ -174,10 +178,18 @@ export class GeometryBufferPass {
       format: this.materialFormat,
       hasDepth: false
     });
+    this.emissiveTarget = new RenderTarget(gpu, {
+      label: `${this.label}:emissive`,
+      width: this.width,
+      height: this.height,
+      format: this.emissiveFormat,
+      hasDepth: false
+    });
     this.ready = Promise.all([
       this.colorTarget.ready,
       this.normalTarget.ready,
-      this.materialTarget.ready
+      this.materialTarget.ready,
+      this.emissiveTarget.ready
     ]);
 
     this.bindGroupLayout = this.device.createBindGroupLayout({
@@ -193,7 +205,14 @@ export class GeometryBufferPass {
       entries: [
         { binding: 0, visibility: GPUShaderStage.FRAGMENT, sampler: { type: "filtering" } },
         { binding: 1, visibility: GPUShaderStage.FRAGMENT, texture: { sampleType: "float" } },
-        { binding: 2, visibility: GPUShaderStage.FRAGMENT, texture: { sampleType: "float" } }
+        { binding: 2, visibility: GPUShaderStage.FRAGMENT, sampler: { type: "filtering" } },
+        { binding: 3, visibility: GPUShaderStage.FRAGMENT, texture: { sampleType: "float" } },
+        { binding: 4, visibility: GPUShaderStage.FRAGMENT, sampler: { type: "filtering" } },
+        { binding: 5, visibility: GPUShaderStage.FRAGMENT, texture: { sampleType: "float" } },
+        { binding: 6, visibility: GPUShaderStage.FRAGMENT, sampler: { type: "filtering" } },
+        { binding: 7, visibility: GPUShaderStage.FRAGMENT, texture: { sampleType: "float" } },
+        { binding: 8, visibility: GPUShaderStage.FRAGMENT, sampler: { type: "filtering" } },
+        { binding: 9, visibility: GPUShaderStage.FRAGMENT, texture: { sampleType: "float" } }
       ]
     });
     this.skinBindGroupLayout = this.device.createBindGroupLayout({
@@ -205,7 +224,9 @@ export class GeometryBufferPass {
       }]
     });
     this.createDefaultSurfaceResources();
-    this.pipeline = this.createPipeline();
+    this.pipeline = this.createPipeline("back");
+    this.doubleSidedPipeline = this.createPipeline("none");
+    this.wireframePipeline = this.createWireframePipeline();
   }
 
   // textureやskinningを使わないShapeでも同じpipeline layoutを使える既定resourceを作ります
@@ -233,13 +254,23 @@ export class GeometryBufferPass {
     });
     this.defaultColorTexture = createTexture(`${this.label}:default-color`, [255, 255, 255, 255]);
     this.defaultNormalTexture = createTexture(`${this.label}:default-normal`, [128, 128, 255, 255]);
+    this.defaultMaterialTexture = createTexture(`${this.label}:default-material`, [255, 255, 255, 255]);
+    this.defaultOcclusionTexture = createTexture(`${this.label}:default-occlusion`, [255, 255, 255, 255]);
+    this.defaultEmissiveTexture = createTexture(`${this.label}:default-emissive`, [0, 0, 0, 255]);
     this.defaultTextureBindGroup = this.device.createBindGroup({
       label: `${this.label}:default-textures`,
       layout: this.textureBindGroupLayout,
       entries: [
         { binding: 0, resource: this.defaultSampler },
         { binding: 1, resource: this.defaultColorTexture.createView() },
-        { binding: 2, resource: this.defaultNormalTexture.createView() }
+        { binding: 2, resource: this.defaultSampler },
+        { binding: 3, resource: this.defaultNormalTexture.createView() },
+        { binding: 4, resource: this.defaultSampler },
+        { binding: 5, resource: this.defaultMaterialTexture.createView() },
+        { binding: 6, resource: this.defaultSampler },
+        { binding: 7, resource: this.defaultOcclusionTexture.createView() },
+        { binding: 8, resource: this.defaultSampler },
+        { binding: 9, resource: this.defaultEmissiveTexture.createView() }
       ]
     });
     this.defaultBoneBuffer = this.device.createBuffer({
@@ -255,8 +286,8 @@ export class GeometryBufferPass {
   }
 
   // albedo、view normal、材質値を別attachmentへ書くv2 G-buffer pipelineを作ります
-  // 照明済みcolorをalbedoへ焼き込むlit modeは持たせません
-  createPipeline() {
+  // albedoは照明前のcolorとして保持し、照明済みcolorはDeferred Lightingで計算します
+  createPipeline(cullMode) {
     const module = this.device.createShaderModule({
       label: `${this.label}:shader`,
       code: `
@@ -267,6 +298,9 @@ struct DrawUniforms {
   albedo : vec4f,
   surface : vec4f,
   flags : vec4f,
+  emissive : vec4f,
+  pbrFlags : vec4f,
+  alphaParams : vec4f,
 };
 
 struct SkinUniforms {
@@ -276,7 +310,14 @@ struct SkinUniforms {
 @group(0) @binding(0) var<uniform> uniforms : DrawUniforms;
 @group(1) @binding(0) var surfaceSampler : sampler;
 @group(1) @binding(1) var colorTexture : texture_2d<f32>;
-@group(1) @binding(2) var normalTexture : texture_2d<f32>;
+@group(1) @binding(2) var normalSampler : sampler;
+@group(1) @binding(3) var normalTexture : texture_2d<f32>;
+@group(1) @binding(4) var materialSampler : sampler;
+@group(1) @binding(5) var metallicRoughnessTexture : texture_2d<f32>;
+@group(1) @binding(6) var occlusionSampler : sampler;
+@group(1) @binding(7) var occlusionTexture : texture_2d<f32>;
+@group(1) @binding(8) var emissiveSampler : sampler;
+@group(1) @binding(9) var emissiveTexture : texture_2d<f32>;
 @group(2) @binding(0) var<uniform> skin : SkinUniforms;
 
 struct VertexInput {
@@ -298,6 +339,7 @@ struct FragmentOutput {
   @location(0) albedo : vec4f,
   @location(1) normal : vec4f,
   @location(2) material : vec4f,
+  @location(3) emissive : vec4f,
 };
 
 ${COLOR_SPACE_WGSL}
@@ -345,14 +387,17 @@ fn vsMain(input : VertexInput) -> VertexOutput {
 }
 
 @fragment
-fn fsMain(input : VertexOutput) -> FragmentOutput {
+fn fsMain(
+  input : VertexOutput,
+  @builtin(front_facing) frontFacing : bool
+) -> FragmentOutput {
   // base textureとnormal mapを標準SmoothShaderと同じShape parameterで適用します
   var output : FragmentOutput;
   var normal = normalize(input.viewNormal);
   if (uniforms.flags.y != 0.0) {
     let sampledNormal = textureSampleLevel(
       normalTexture,
-      surfaceSampler,
+      normalSampler,
       input.texCoord,
       0.0
     ).xyz * 2.0 - vec3f(1.0);
@@ -375,16 +420,51 @@ fn fsMain(input : VertexOutput) -> FragmentOutput {
       normal = normalize(mix(normal, mapped, uniforms.flags.z));
     }
   }
+  // doubleSidedの裏面だけ法線を視点側へ反転し、片面材質は登録法線をそのまま使います
+  if (uniforms.alphaParams.w != 0.0 && !frontFacing) {
+    normal = -normal;
+  }
   // Shape colorとbase color textureは表示用sRGBとして指定されます
   // 両者を個別に線形化してから乗算し、照明前の線形albedoをG-bufferへ保存します
+  var baseTextureSample = vec4f(1.0);
   var linearAlbedo = srgbToLinear(uniforms.albedo.rgb);
   if (uniforms.flags.x != 0.0) {
-    let textureSrgb = textureSample(colorTexture, surfaceSampler, input.texCoord).rgb;
-    linearAlbedo *= srgbToLinear(textureSrgb);
+    baseTextureSample = textureSample(colorTexture, surfaceSampler, input.texCoord);
+    linearAlbedo *= srgbToLinear(baseTextureSample.rgb);
+  }
+  // alphaParams.xが1.0のMASKだけを閾値判定し、OPAQUEでは不透明面を描画します
+  // alphaParams.zはbaseColor factor、baseTextureSample.aはtexture alphaを表します
+  if (uniforms.alphaParams.x == 1.0
+      && uniforms.alphaParams.z * baseTextureSample.a < uniforms.alphaParams.y) {
+    discard;
   }
   output.albedo = vec4f(linearAlbedo, 1.0);
   output.normal = vec4f(normal * 0.5 + vec3f(0.5), 1.0);
-  output.material = uniforms.surface;
+  var roughness = uniforms.surface.y;
+  var metallic = uniforms.surface.z;
+  if (uniforms.pbrFlags.x != 0.0) {
+    let metallicRoughness = textureSample(
+      metallicRoughnessTexture,
+      materialSampler,
+      input.texCoord
+    );
+    roughness *= metallicRoughness.g;
+    metallic *= metallicRoughness.b;
+  }
+  var occlusion = uniforms.surface.w;
+  if (uniforms.pbrFlags.y != 0.0) {
+    occlusion *= textureSample(occlusionTexture, occlusionSampler, input.texCoord).r;
+  }
+  var linearEmissive = uniforms.emissive.rgb;
+  if (uniforms.pbrFlags.z != 0.0) {
+    let emissiveSrgb = textureSample(emissiveTexture, emissiveSampler, input.texCoord).rgb;
+    linearEmissive *= srgbToLinear(emissiveSrgb);
+  }
+  if (uniforms.pbrFlags.w != 0.0) {
+    linearEmissive = linearAlbedo * uniforms.emissive.w;
+  }
+  output.material = vec4f(uniforms.surface.x, roughness, metallic, occlusion);
+  output.emissive = vec4f(linearEmissive, 1.0);
   return output;
 }`
     });
@@ -424,12 +504,13 @@ fn fsMain(input : VertexOutput) -> FragmentOutput {
         targets: [
           { format: this.colorFormat },
           { format: this.normalFormat },
-          { format: this.materialFormat }
+          { format: this.materialFormat },
+          { format: this.emissiveFormat }
         ]
       },
       primitive: {
         topology: "triangle-list",
-        cullMode: "back",
+        cullMode,
         frontFace: "ccw"
       },
       depthStencil: {
@@ -440,8 +521,200 @@ fn fsMain(input : VertexOutput) -> FragmentOutput {
     });
   }
 
+  // Shape.setWireframe(true)の辺をG-bufferの四つのattachmentへ書くline-list pipelineを作ります
+  // 通常のtriangle pipelineと同じuniform・texture・skin bindingを使い、Compute PBRでも診断線の材質とdepthを保ちます
+  createWireframePipeline() {
+    const module = this.device.createShaderModule({
+      label: `${this.label}:wireframe-shader`,
+      code: `
+struct DrawUniforms {
+  projection : mat4x4f,
+  modelView : mat4x4f,
+  normalMatrix : mat4x4f,
+  albedo : vec4f,
+  surface : vec4f,
+  flags : vec4f,
+  emissive : vec4f,
+  pbrFlags : vec4f,
+  alphaParams : vec4f,
+};
+
+struct SkinUniforms {
+  bones : array<vec4f, ${DEFAULT_MAX_SKIN_BONES * SKIN_MATRIX_VECTORS_PER_BONE}>,
+};
+
+@group(0) @binding(0) var<uniform> uniforms : DrawUniforms;
+@group(1) @binding(0) var surfaceSampler : sampler;
+@group(1) @binding(1) var colorTexture : texture_2d<f32>;
+@group(1) @binding(2) var normalSampler : sampler;
+@group(1) @binding(3) var normalTexture : texture_2d<f32>;
+@group(1) @binding(4) var materialSampler : sampler;
+@group(1) @binding(5) var metallicRoughnessTexture : texture_2d<f32>;
+@group(1) @binding(6) var occlusionSampler : sampler;
+@group(1) @binding(7) var occlusionTexture : texture_2d<f32>;
+@group(1) @binding(8) var emissiveSampler : sampler;
+@group(1) @binding(9) var emissiveTexture : texture_2d<f32>;
+@group(2) @binding(0) var<uniform> skin : SkinUniforms;
+
+struct VertexInput {
+  @location(0) position : vec3f,
+  @location(1) normal : vec3f,
+  @location(2) texCoord : vec2f,
+  @location(3) boneIndex : vec4f,
+  @location(4) boneWeight : vec4f,
+};
+
+struct VertexOutput {
+  @builtin(position) position : vec4f,
+  @location(0) viewPosition : vec3f,
+  @location(1) viewNormal : vec3f,
+  @location(2) texCoord : vec2f,
+};
+
+struct FragmentOutput {
+  @location(0) albedo : vec4f,
+  @location(1) normal : vec4f,
+  @location(2) material : vec4f,
+  @location(3) emissive : vec4f,
+};
+
+${COLOR_SPACE_WGSL}
+
+@vertex
+fn vsMain(input : VertexInput) -> VertexOutput {
+  var output : VertexOutput;
+  var skinMatrix = mat4x4f(
+    vec4f(1.0, 0.0, 0.0, 0.0),
+    vec4f(0.0, 1.0, 0.0, 0.0),
+    vec4f(0.0, 0.0, 1.0, 0.0),
+    vec4f(0.0, 0.0, 0.0, 1.0)
+  );
+  if (uniforms.flags.w != 0.0) {
+    let i0 = i32(input.boneIndex.x) * 3;
+    let i1 = i32(input.boneIndex.y) * 3;
+    let i2 = i32(input.boneIndex.z) * 3;
+    let i3 = i32(input.boneIndex.w) * 3;
+    let v0 = skin.bones[i0] * input.boneWeight.x
+      + skin.bones[i1] * input.boneWeight.y
+      + skin.bones[i2] * input.boneWeight.z
+      + skin.bones[i3] * input.boneWeight.w;
+    let v1 = skin.bones[i0 + 1] * input.boneWeight.x
+      + skin.bones[i1 + 1] * input.boneWeight.y
+      + skin.bones[i2 + 1] * input.boneWeight.z
+      + skin.bones[i3 + 1] * input.boneWeight.w;
+    let v2 = skin.bones[i0 + 2] * input.boneWeight.x
+      + skin.bones[i1 + 2] * input.boneWeight.y
+      + skin.bones[i2 + 2] * input.boneWeight.z
+      + skin.bones[i3 + 2] * input.boneWeight.w;
+    skinMatrix[0] = vec4f(v0.x, v1.x, v2.x, 0.0);
+    skinMatrix[1] = vec4f(v0.y, v1.y, v2.y, 0.0);
+    skinMatrix[2] = vec4f(v0.z, v1.z, v2.z, 0.0);
+    skinMatrix[3] = vec4f(v0.w, v1.w, v2.w, 1.0);
+  }
+  let viewPosition = uniforms.modelView * skinMatrix * vec4f(input.position, 1.0);
+  output.position = uniforms.projection * viewPosition;
+  output.viewPosition = viewPosition.xyz;
+  output.viewNormal = normalize(
+    (uniforms.normalMatrix * skinMatrix * vec4f(input.normal, 0.0)).xyz
+  );
+  output.texCoord = input.texCoord;
+  return output;
+}
+
+@fragment
+fn fsMain(input : VertexOutput) -> FragmentOutput {
+  var output : FragmentOutput;
+  var linearAlbedo = srgbToLinear(uniforms.albedo.rgb);
+  if (uniforms.flags.x != 0.0) {
+    linearAlbedo *= srgbToLinear(
+      textureSample(colorTexture, surfaceSampler, input.texCoord).rgb
+    );
+  }
+  var roughness = uniforms.surface.y;
+  var metallic = uniforms.surface.z;
+  if (uniforms.pbrFlags.x != 0.0) {
+    let metallicRoughness = textureSample(
+      metallicRoughnessTexture,
+      materialSampler,
+      input.texCoord
+    );
+    roughness *= metallicRoughness.g;
+    metallic *= metallicRoughness.b;
+  }
+  var occlusion = uniforms.surface.w;
+  if (uniforms.pbrFlags.y != 0.0) {
+    occlusion *= textureSample(occlusionTexture, occlusionSampler, input.texCoord).r;
+  }
+  var linearEmissive = uniforms.emissive.rgb;
+  if (uniforms.pbrFlags.z != 0.0) {
+    linearEmissive *= srgbToLinear(
+      textureSample(emissiveTexture, emissiveSampler, input.texCoord).rgb
+    );
+  }
+  if (uniforms.pbrFlags.w != 0.0) {
+    linearEmissive = linearAlbedo * uniforms.emissive.w;
+  }
+  output.albedo = vec4f(linearAlbedo, 1.0);
+  output.normal = vec4f(normalize(input.viewNormal) * 0.5 + vec3f(0.5), 1.0);
+  output.material = vec4f(uniforms.surface.x, roughness, metallic, occlusion);
+  output.emissive = vec4f(linearEmissive, 1.0);
+  return output;
+}`
+    });
+    return this.device.createRenderPipeline({
+      label: `${this.label}:wireframe-pipeline`,
+      layout: this.device.createPipelineLayout({
+        bindGroupLayouts: [
+          this.bindGroupLayout,
+          this.textureBindGroupLayout,
+          this.skinBindGroupLayout
+        ]
+      }),
+      vertex: {
+        module,
+        entryPoint: "vsMain",
+        buffers: [
+          {
+            arrayStride: 8 * Float32Array.BYTES_PER_ELEMENT,
+            attributes: [
+              { shaderLocation: 0, offset: 0, format: "float32x3" },
+              { shaderLocation: 1, offset: 3 * 4, format: "float32x3" },
+              { shaderLocation: 2, offset: 6 * 4, format: "float32x2" }
+            ]
+          },
+          {
+            arrayStride: 8 * Float32Array.BYTES_PER_ELEMENT,
+            attributes: [
+              { shaderLocation: 3, offset: 0, format: "float32x4" },
+              { shaderLocation: 4, offset: 4 * 4, format: "float32x4" }
+            ]
+          }
+        ]
+      },
+      fragment: {
+        module,
+        entryPoint: "fsMain",
+        targets: [
+          { format: this.colorFormat },
+          { format: this.normalFormat },
+          { format: this.materialFormat },
+          { format: this.emissiveFormat }
+        ]
+      },
+      primitive: {
+        topology: "line-list",
+        cullMode: "none"
+      },
+      depthStencil: {
+        format: this.depthFormat,
+        depthWriteEnabled: true,
+        depthCompare: this.depthConvention.compare
+      }
+    });
+  }
+
   // 利用者向けmaterialをalbedo vec4とsurface vec4の連続8 floatへ変換します
-  // surfaceはspecular、roughness、metallic、emissiveの順で、単一materialValueは受け付けません
+  // surfaceはspecular、roughness、metallic、occlusionの順です
   packMaterial(material) {
     const checked = util.readPlainObject(material, `${this.label} material`);
     const albedo = util.readColor(checked.albedo, `${this.label} material.albedo`, undefined, 3);
@@ -460,19 +733,20 @@ fn fsMain(input : VertexOutput) -> FragmentOutput {
       `${this.label} material.metallic`,
       { min: 0.0, max: 1.0 }
     );
-    const emissive = util.readFiniteNumber(
-      checked.emissive,
-      `${this.label} material.emissive`,
+    const occlusion = util.readOptionalFiniteNumber(
+      checked.occlusion,
+      `${this.label} material.occlusion`,
+      1.0,
       { min: 0.0, max: 1.0 }
     );
     return new Float32Array([
       albedo[0], albedo[1], albedo[2], 1.0,
-      specular, roughness, metallic, emissive
+      specular, roughness, metallic, occlusion
     ]);
   }
 
   // 標準Shapeが保持するcolorと明示材質値をv2 G-buffer materialへ変換します
-  // roughness・metallicなどの省略を旧固定specularへ補正せず、未移行materialとして例外にします
+  // roughness・metallicなどの必須値を省略したmaterialは例外にします
   resolveShapeMaterial(shape, resolver = null, materialIndex = 0) {
     if (resolver !== null && typeof resolver !== "function") {
       throw new Error(`${this.label} materialResolver must be a function`);
@@ -496,7 +770,7 @@ fn fsMain(input : VertexOutput) -> FragmentOutput {
       specular: params?.specular,
       roughness: params?.roughness,
       metallic: params?.metallic,
-      emissive: params?.emissive
+      occlusion: params?.occlusion
     });
   }
 
@@ -521,19 +795,65 @@ fn fsMain(input : VertexOutput) -> FragmentOutput {
       undefined,
       4
     );
+    const baseColor = util.readColor(
+      params.color,
+      `${this.label} Shape base color`,
+      undefined,
+      4
+    );
+    const alphaFactor = util.readFiniteNumber(
+      baseColor[3] * multiply[3] + add[3],
+      `${this.label} Shape base color alpha after multiply/add`,
+      { min: 0.0, max: 1.0 }
+    );
+    const materialRecord = MaterialParameters.resolveShapeMaterial(shape, materialIndex);
+    const alphaMode = MaterialParameters.getAlphaMode(materialRecord, materialIndex);
+    const alphaCutoff = MaterialParameters.getAlphaCutoff(materialRecord, materialIndex);
+    const doubleSided = MaterialParameters.getDoubleSided(materialRecord, materialIndex);
     material[0] = material[0] * multiply[0] + add[0];
     material[1] = material[1] * multiply[1] + add[1];
     material[2] = material[2] * multiply[2] + add[2];
 
     const useTexture = Number(params.use_texture ?? defaults.use_texture ?? 0) !== 0;
     const useNormalMap = Number(params.use_normal_map ?? defaults.use_normal_map ?? 0) !== 0;
+    const useMetallicRoughnessTexture = Number(
+      params.use_metallic_roughness_texture
+      ?? defaults.use_metallic_roughness_texture
+      ?? 0
+    ) !== 0;
+    const useOcclusionTexture = Number(
+      params.use_occlusion_texture ?? defaults.use_occlusion_texture ?? 0
+    ) !== 0;
+    const useEmissiveTexture = Number(
+      params.use_emissive_texture ?? defaults.use_emissive_texture ?? 0
+    ) !== 0;
     const texture = params.texture ?? shape.texture ?? null;
     const normalTexture = params.normal_texture ?? defaults.normal_texture ?? null;
+    const metallicRoughnessTexture = params.metallic_roughness_texture
+      ?? defaults.metallic_roughness_texture
+      ?? null;
+    const occlusionTexture = params.occlusion_texture
+      ?? defaults.occlusion_texture
+      ?? null;
+    const emissiveTexture = params.emissive_texture
+      ?? defaults.emissive_texture
+      ?? null;
     if (useTexture && !texture) {
       throw new Error(`${this.label} Shape requires texture when use_texture is enabled`);
     }
     if (useNormalMap && !normalTexture) {
       throw new Error(`${this.label} Shape requires normal_texture when use_normal_map is enabled`);
+    }
+    if (useMetallicRoughnessTexture && !metallicRoughnessTexture) {
+      throw new Error(
+        `${this.label} Shape requires metallic_roughness_texture when enabled`
+      );
+    }
+    if (useOcclusionTexture && !occlusionTexture) {
+      throw new Error(`${this.label} Shape requires occlusion_texture when enabled`);
+    }
+    if (useEmissiveTexture && !emissiveTexture) {
+      throw new Error(`${this.label} Shape requires emissive_texture when enabled`);
     }
     const normalStrength = util.readFiniteNumber(
       params.normal_strength ?? defaults.normal_strength ?? 1.0,
@@ -544,13 +864,49 @@ fn fsMain(input : VertexOutput) -> FragmentOutput {
     if (shape.hasSkeleton && !skeleton) {
       throw new Error(`${this.label} skinned Shape requires a Skeleton`);
     }
+    const hasEmissiveFactor = params.emissive_factor !== undefined;
+    const legacyEmissive = util.readOptionalFiniteNumber(
+      params.emissive ?? defaults.emissive,
+      `${this.label} Shape emissive`,
+      0.0,
+      { min: 0.0, max: 1.0 }
+    );
+    if (hasEmissiveFactor && legacyEmissive !== 0.0) {
+      throw new Error(
+        `${this.label} Shape emissive_factor cannot be combined with legacy emissive`
+      );
+    }
+    const emissiveFactor = hasEmissiveFactor
+      ? util.readColor(
+        params.emissive_factor,
+        `${this.label} Shape emissive_factor`,
+        undefined,
+        3
+      ).map((value, index) => util.readFiniteNumber(
+        value,
+        `${this.label} Shape emissive_factor[${index}]`,
+        { min: 0.0 }
+      ))
+      : [0.0, 0.0, 0.0];
     return {
       material,
       useTexture,
       useNormalMap,
+      useMetallicRoughnessTexture,
+      useOcclusionTexture,
+      useEmissiveTexture,
       normalStrength,
       texture,
       normalTexture,
+      metallicRoughnessTexture,
+      occlusionTexture,
+      emissiveTexture,
+      emissiveFactor,
+      legacyEmissive,
+      alphaFactor,
+      alphaMode,
+      alphaCutoff,
+      doubleSided,
       skeleton
     };
   }
@@ -565,38 +921,77 @@ fn fsMain(input : VertexOutput) -> FragmentOutput {
     return { view, sampler };
   }
 
-  // base textureとnormal textureの組み合わせに対応するBind Groupを作ります
-  // Shape parameterが変わった場合だけentry側の参照を差し替え、毎frameの再生成を避けます
+  // base、normal、metallic-roughness、occlusion、emissiveの組合せを階層cacheから探します
+  getCachedTextureBindGroup(keys) {
+    let cache = this.textureBindGroups;
+    for (let index = 0; index < keys.length - 1; index += 1) {
+      const key = keys[index];
+      let next = cache.get(key);
+      if (!next) {
+        next = new WeakMap();
+        cache.set(key, next);
+      }
+      cache = next;
+    }
+    return { cache, key: keys.at(-1) };
+  }
+
+  // PBR surfaceで使う5種類のtextureと各samplerを一つのBind Groupへまとめます
+  // 無効な機能には意味が固定された1x1 textureを使い、有効なのに欠ける場合は前段で例外にします
   getTextureBindGroup(surface) {
-    if (!surface.useTexture && !surface.useNormalMap) {
+    if (
+      !surface.useTexture
+      && !surface.useNormalMap
+      && !surface.useMetallicRoughnessTexture
+      && !surface.useOcclusionTexture
+      && !surface.useEmissiveTexture
+    ) {
       return this.defaultTextureBindGroup;
     }
-    const baseKey = surface.texture ?? this.defaultColorTexture;
-    const normalKey = surface.normalTexture ?? this.defaultNormalTexture;
-    let normalCache = this.textureBindGroups.get(baseKey);
-    if (!normalCache) {
-      normalCache = new WeakMap();
-      this.textureBindGroups.set(baseKey, normalCache);
-    }
-    if (normalCache.has(normalKey)) {
-      return normalCache.get(normalKey);
-    }
+    const keys = [
+      surface.texture ?? this.defaultColorTexture,
+      surface.normalTexture ?? this.defaultNormalTexture,
+      surface.metallicRoughnessTexture ?? this.defaultMaterialTexture,
+      surface.occlusionTexture ?? this.defaultOcclusionTexture,
+      surface.emissiveTexture ?? this.defaultEmissiveTexture
+    ];
+    const cached = this.getCachedTextureBindGroup(keys);
+    if (cached.cache.has(cached.key)) return cached.cache.get(cached.key);
     const base = surface.useTexture
       ? this.resolveTextureResource(surface.texture, "texture")
       : { view: this.defaultColorTexture.createView(), sampler: this.defaultSampler };
     const normal = surface.useNormalMap
       ? this.resolveTextureResource(surface.normalTexture, "normal_texture")
-      : { view: this.defaultNormalTexture.createView(), sampler: base.sampler };
+      : { view: this.defaultNormalTexture.createView(), sampler: this.defaultSampler };
+    const material = surface.useMetallicRoughnessTexture
+      ? this.resolveTextureResource(
+        surface.metallicRoughnessTexture,
+        "metallic_roughness_texture"
+      )
+      : { view: this.defaultMaterialTexture.createView(), sampler: this.defaultSampler };
+    const occlusion = surface.useOcclusionTexture
+      ? this.resolveTextureResource(surface.occlusionTexture, "occlusion_texture")
+      : { view: this.defaultOcclusionTexture.createView(), sampler: this.defaultSampler };
+    const emissive = surface.useEmissiveTexture
+      ? this.resolveTextureResource(surface.emissiveTexture, "emissive_texture")
+      : { view: this.defaultEmissiveTexture.createView(), sampler: this.defaultSampler };
     const bindGroup = this.device.createBindGroup({
       label: `${this.label}:surface-textures`,
       layout: this.textureBindGroupLayout,
       entries: [
         { binding: 0, resource: base.sampler },
         { binding: 1, resource: base.view },
-        { binding: 2, resource: normal.view }
+        { binding: 2, resource: normal.sampler },
+        { binding: 3, resource: normal.view },
+        { binding: 4, resource: material.sampler },
+        { binding: 5, resource: material.view },
+        { binding: 6, resource: occlusion.sampler },
+        { binding: 7, resource: occlusion.view },
+        { binding: 8, resource: emissive.sampler },
+        { binding: 9, resource: emissive.view }
       ]
     });
-    normalCache.set(normalKey, bindGroup);
+    cached.cache.set(cached.key, bindGroup);
     return bindGroup;
   }
 
@@ -664,7 +1059,7 @@ fn fsMain(input : VertexOutput) -> FragmentOutput {
     if (!node || !shape) {
       throw new Error(`${this.label} draw entry requires node and shape`);
     }
-    const uniformData = new Float32Array(60);
+    const uniformData = new Float32Array(72);
     const uniformBuffer = this.device.createBuffer({
       label: `${this.label}:${node.name}:uniforms`,
       size: uniformData.byteLength,
@@ -702,7 +1097,7 @@ fn fsMain(input : VertexOutput) -> FragmentOutput {
     if (resource) {
       return resource;
     }
-    const uniformData = new Float32Array(60);
+    const uniformData = new Float32Array(72);
     const uniformBuffer = this.device.createBuffer({
       label: `${this.label}:${entry.node.name}:material-${materialIndex}:uniforms`,
       size: uniformData.byteLength,
@@ -733,28 +1128,52 @@ fn fsMain(input : VertexOutput) -> FragmentOutput {
   // scene node、Shape、意味を明示したmaterialをdraw entryとして登録します
   addShape(node, shape, material) {
     const packed = this.packMaterial(material);
+    const legacyEmissive = util.readOptionalFiniteNumber(
+      material?.emissive,
+      `${this.label} material.emissive`,
+      0.0,
+      { min: 0.0, max: 1.0 }
+    );
     const entry = this.createDrawEntry(node, shape, packed, {
       material: packed,
       useTexture: false,
       useNormalMap: false,
+      useMetallicRoughnessTexture: false,
+      useOcclusionTexture: false,
+      useEmissiveTexture: false,
       normalStrength: 1,
       texture: null,
       normalTexture: null,
+      metallicRoughnessTexture: null,
+      occlusionTexture: null,
+      emissiveTexture: null,
+      emissiveFactor: [0.0, 0.0, 0.0],
+      legacyEmissive,
+      alphaFactor: 1.0,
+      alphaMode: "OPAQUE",
+      alphaCutoff: 0.5,
+      doubleSided: false,
       skeleton: null
     });
     this.entries.push(entry);
     return entry;
   }
 
-  // 登録済みentryのmaterialだけを更新し、nodeやGPU bufferを作り直しません
+  // 登録済みentryのmaterialだけを更新し、nodeやGPU bufferを再利用します
   setMaterial(entry, material) {
     this.requireEntry(entry);
     entry.material = this.packMaterial(material);
     entry.surface.material = entry.material;
+    entry.surface.legacyEmissive = util.readOptionalFiniteNumber(
+      material?.emissive,
+      `${this.label} material.emissive`,
+      0.0,
+      { min: 0.0, max: 1.0 }
+    );
     return entry;
   }
 
-  // draw list内のentryだけを表示・非表示にし、scene graph側の状態は変更しません
+  // draw list内のentryだけを表示・非表示にし、scene graph側の状態を保持します
   setVisible(entry, visible) {
     this.requireEntry(entry);
     const checked = util.readOptionalBoolean(visible, `${this.label} visible`, undefined);
@@ -790,7 +1209,7 @@ fn fsMain(input : VertexOutput) -> FragmentOutput {
   }
 
   // SpaceのNodeとShapeを走査し、標準surface状態を持つdraw entryを同期します
-  // texture、normal map、skinningはShape自身の設定を読み、G-buffer専用の二重登録を要求しません
+  // texture、normal map、skinningはShape自身の設定を読み、G-buffer専用の追加登録を省きます
   syncSpaceEntries(space, options = {}) {
     if (!space || !Array.isArray(space.nodes)) {
       throw new Error(`${this.label} renderSpace requires a Space`);
@@ -858,6 +1277,7 @@ fn fsMain(input : VertexOutput) -> FragmentOutput {
       color: this.colorTarget,
       normal: this.normalTarget,
       material: this.materialTarget,
+      emissive: this.emissiveTarget,
       depth: this.colorTarget
     };
     return resources;
@@ -876,6 +1296,7 @@ fn fsMain(input : VertexOutput) -> FragmentOutput {
     resizeTarget(this.colorTarget, this.width, this.height);
     resizeTarget(this.normalTarget, this.width, this.height);
     resizeTarget(this.materialTarget, this.width, this.height);
+    resizeTarget(this.emissiveTarget, this.width, this.height);
   }
 
   // 独立したMRT Render Passを開始し、登録された可視entryを順番に描画します
@@ -914,7 +1335,13 @@ fn fsMain(input : VertexOutput) -> FragmentOutput {
           view: this.materialTarget.getView(),
           loadOp: "clear",
           storeOp: "store",
-          clearValue: { r: 0.0, g: 1.0, b: 0.0, a: 0.0 }
+          clearValue: { r: 0.0, g: 1.0, b: 0.0, a: 1.0 }
+        },
+        {
+          view: this.emissiveTarget.getView(),
+          loadOp: "clear",
+          storeOp: "store",
+          clearValue: { r: 0.0, g: 0.0, b: 0.0, a: 1.0 }
         }
       ],
       depthStencilAttachment: {
@@ -924,8 +1351,6 @@ fn fsMain(input : VertexOutput) -> FragmentOutput {
         depthClearValue: this.depthConvention.clearValue
       }
     });
-    pass.setPipeline(this.pipeline);
-
     for (const entry of entries) {
       if (!entry.visible) {
         continue;
@@ -935,28 +1360,43 @@ fn fsMain(input : VertexOutput) -> FragmentOutput {
       const normalMatrix = modelView.clone();
       normalMatrix.inverse();
       normalMatrix.transpose();
-      const materialCount = typeof entry.shape.getMaterialCount === "function"
+      const isWireframe = typeof entry.shape.isWireframe === "function"
+        && entry.shape.isWireframe();
+      const materialCount = isWireframe
+        ? 1
+        : (typeof entry.shape.getMaterialCount === "function"
         ? entry.shape.getMaterialCount()
-        : 1;
+        : 1);
       for (let materialIndex = 0; materialIndex < materialCount; materialIndex++) {
-        const alpha = typeof entry.shape.getMaterialAlpha === "function"
-          ? entry.shape.getMaterialAlpha(materialIndex)
-          : 1.0;
+        const materialRecord = MaterialParameters.resolveShapeMaterial(
+          entry.shape,
+          materialIndex
+        );
+        const alphaMode = MaterialParameters.getAlphaMode(materialRecord, materialIndex);
         // G-bufferは一pixelに一surfaceしか保持できないため、透明layerは後段forward passへ送る
-        if (alpha < 1.0) {
+        if (alphaMode === "BLEND") {
           continue;
         }
         const surface = typeof entry.shape.getShaderParametersForMaterial === "function"
           ? this.resolveShapeSurface(entry.shape, options.materialResolver ?? null, materialIndex)
           : entry.surface;
         const material = surface?.material ?? entry.material;
-        const drawInfo = typeof entry.shape.getMaterialDrawInfo === "function"
+        const drawInfo = isWireframe
+          ? {
+              buffer: entry.shape.wireIndexBuffer,
+              count: entry.shape.wireIndexCount,
+              format: entry.shape.wireIndexFormat
+            }
+          : (typeof entry.shape.getMaterialDrawInfo === "function"
           ? entry.shape.getMaterialDrawInfo(materialIndex)
           : {
               buffer: entry.shape.indexBuffer,
               count: entry.shape.indexCount,
               format: entry.shape.indexFormat
-            };
+            });
+        if (isWireframe && (!drawInfo.buffer || drawInfo.count <= 0)) {
+          throw new Error(`${this.label} wireframe Shape requires a line index buffer`);
+        }
         if (!drawInfo.buffer || drawInfo.count <= 0) {
           continue;
         }
@@ -972,12 +1412,33 @@ fn fsMain(input : VertexOutput) -> FragmentOutput {
           surface?.normalStrength ?? 1,
           surface?.skeleton ? 1 : 0
         ], 56);
+        materialDrawResource.uniformData.set([
+          ...(surface?.emissiveFactor ?? [0.0, 0.0, 0.0]),
+          surface?.legacyEmissive ?? 0.0
+        ], 60);
+        materialDrawResource.uniformData.set([
+          surface?.useMetallicRoughnessTexture ? 1 : 0,
+          surface?.useOcclusionTexture ? 1 : 0,
+          surface?.useEmissiveTexture ? 1 : 0,
+          surface?.legacyEmissive > 0.0 ? 1 : 0
+        ], 64);
+        materialDrawResource.uniformData.set([
+          surface?.alphaMode === "MASK" ? 1 : 0,
+          surface?.alphaCutoff ?? 0.5,
+          surface?.alphaFactor ?? 1.0,
+          surface?.doubleSided ? 1 : 0
+        ], 68);
         this.gpu.queue.writeBuffer(
           materialDrawResource.uniformBuffer,
           0,
           materialDrawResource.uniformData
         );
 
+        pass.setPipeline(
+          isWireframe
+            ? this.wireframePipeline
+            : (surface?.doubleSided ? this.doubleSidedPipeline : this.pipeline)
+        );
         pass.setBindGroup(0, materialDrawResource.bindGroup);
         pass.setBindGroup(1, this.getTextureBindGroup(surface));
         pass.setBindGroup(2, this.getSkinBindGroup(surface?.skeleton));
@@ -1002,7 +1463,7 @@ fn fsMain(input : VertexOutput) -> FragmentOutput {
   }
 
   // 標準SpaceからShapeとworld transformを収集し、独立したG-buffer Render Passへ描画します
-  // materialはShape.shaderParam.colorを使い、利用者はNodeとShapeを再登録する必要がありません
+  // materialはShape.shaderParam.colorを使い、利用者はNodeとShapeをそのまま再利用できます
   renderSpace(space, cameraFrame, clearColor, options = {}) {
     const entries = this.syncSpaceEntries(space, options);
     this.renderEntries(entries, cameraFrame, clearColor, options);
@@ -1028,9 +1489,13 @@ fn fsMain(input : VertexOutput) -> FragmentOutput {
     this.defaultBoneBuffer.destroy();
     this.defaultColorTexture.destroy();
     this.defaultNormalTexture.destroy();
+    this.defaultMaterialTexture.destroy();
+    this.defaultOcclusionTexture.destroy();
+    this.defaultEmissiveTexture.destroy();
     this.colorTarget.destroy();
     this.normalTarget.destroy();
     this.materialTarget.destroy();
+    this.emissiveTarget.destroy();
   }
 }
 

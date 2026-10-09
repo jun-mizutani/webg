@@ -40,6 +40,6 @@
 - ?count=60 のように URL へ付けると、初期 body 数を変更できます
 
 ## 実装の詳細
-- 見え方ではなく solver の数値を追いたい場合は unittest/physics_collider/headless_probe.js を node で実行してください
+- solver の数値を追いたい場合は unittest/physics_collider/headless_probe.js を node で実行してください
 - headless_probe.js は standing beam や cube corner balance の数値調査に使います。このサンプルは画面上の相互作用確認、headless probe は数値診断という役割分担です
 - PhysicsSpace の契約確認は unittest/physics_space_contracts が担当し、このサンプルは回転付き box 接触の見え方を担当します

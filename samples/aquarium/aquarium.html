@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>水光のアクアリウム / webg</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="style.css?v=20261003-2">
+</head>
+<body>
+  <header><div><small>WEBG · AQUARIUM</small><h1>水光のアクアリウム</h1></div>
+    <a href="index.html">説明とコード ↗</a></header>
+  <main>
+    <section class="exhibit" aria-label="イルカの水中展示">
+      <canvas id="canvas" width="960" height="720" aria-label="泳ぐイルカ。ドラッグで視点を回転、ホイールで拡大"></canvas>
+      <div class="caption"><span>DOLPHIN <small>光が揺れる、水の中へ。</small></span><span id="status" role="status">モデルを準備中…</span></div>
+    </section>
+    <section class="controls" aria-label="展示の操作">
+      <button id="view" disabled>水面上から見る</button>
+      <button id="pause" aria-pressed="false" disabled>一時停止</button>
+      <label><input id="caustics" type="checkbox" checked disabled> コースティクス</label>
+      <label><input id="dolphin-light" type="checkbox" checked disabled> イルカにも光を当てる</label>
+      <span>ドラッグで回転 · ホイールで拡大</span>
+    </section>
+    <p id="errors" role="alert" hidden></p>
+  </main>
+  <script type="module" src="main.js"></script>
+</body>
+</html>

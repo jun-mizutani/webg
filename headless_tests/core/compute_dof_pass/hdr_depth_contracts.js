@@ -1,5 +1,5 @@
 // ---------------------------------------------------------
-// headless_tests/core/compute_dof_pass/hdr_depth_contracts.js  2026/07/23
+// headless_tests/core/compute_dof_pass/hdr_depth_contracts.js  2026/09/23
 //   Linear HDR, image pyramid, and Camera Reverse-Z contracts for ComputeDofPass
 // ---------------------------------------------------------
 import assert from "node:assert/strict";
@@ -115,15 +115,17 @@ function makeResources(width = 16, height = 8, sceneFormat = COMPUTE_DOF_FORMAT)
   assert.match(COMPUTE_DOF_COC_EXTRACT_WGSL, /fn cocStage\(distance : f32\)/);
   assert.match(COMPUTE_DOF_COC_EXTRACT_WGSL, /if \(delta > 0\.0\)/);
   assert.match(COMPUTE_DOF_COC_EXTRACT_WGSL, /else if \(delta < 0\.0\)/);
-  assert.match(COMPUTE_DOF_COC_EXTRACT_WGSL, /let layer = vec4f\(scene\.rgb, 1\.0\)/);
+  assert.match(COMPUTE_DOF_COC_EXTRACT_WGSL, /let blurWeight = focusBlurWeight\(stage\)/);
+  assert.match(COMPUTE_DOF_COC_EXTRACT_WGSL, /let layer = vec4f\(scene\.rgb \* blurWeight, blurWeight\)/);
   assert.match(COMPUTE_DOF_COC_EXTRACT_WGSL, /var cocOutputTexture/);
-  assert.match(COMPUTE_DOF_COC_EXTRACT_WGSL, /vec4f\(0\.0, stage, 0\.0, 0\.0\)/);
-  assert.match(COMPUTE_DOF_COC_EXTRACT_WGSL, /vec4f\(stage, 0\.0, 0\.0, 0\.0\)/);
+  assert.match(COMPUTE_DOF_COC_EXTRACT_WGSL, /vec4f\(0\.0, stage \* blurWeight, 0\.0, depthMoment\)/);
+  assert.match(COMPUTE_DOF_COC_EXTRACT_WGSL, /vec4f\(stage \* blurWeight, 0\.0, depthMoment, 0\.0\)/);
   assert.doesNotMatch(COMPUTE_DOF_COC_EXTRACT_WGSL, /scene\.rgb \* coverage/);
   assert.match(COMPUTE_DOF_COC_EXTRACT_WGSL, /isGBufferBackgroundDepth\(depth\)/);
   assert.match(COMPUTE_DOF_COMPOSITE_WGSL, /isGBufferBackgroundDepth\(depth\)/);
   assert.match(COMPUTE_DOF_COMPOSITE_WGSL, /fn sceneBlurAtStage/);
-  assert.match(COMPUTE_DOF_COMPOSITE_WGSL, /color = sceneBlurAtStage\(uv, stageValue\)\.rgb/);
+  assert.match(COMPUTE_DOF_COMPOSITE_WGSL, /var blurColor = sceneBlurAtStage\(uv, blurStage\)\.rgb/);
+  assert.match(COMPUTE_DOF_COMPOSITE_WGSL, /color = mix\(scene\.rgb, blurColor, blurWeight\)/);
   assert.match(COMPUTE_DOF_COMPOSITE_WGSL, /let isOutOfFocusNear = delta < 0\.0 && isOutOfFocus/);
   assert.match(COMPUTE_DOF_COMPOSITE_WGSL, /if \(!isOutOfFocusNear\)/);
   assert.doesNotMatch(COMPUTE_DOF_COMPOSITE_WGSL, /stageValue <= params\.shape\.x\) \{\s*textureStore/);
@@ -131,10 +133,10 @@ function makeResources(width = 16, height = 8, sceneFormat = COMPUTE_DOF_FORMAT)
   assert.match(COMPUTE_DOF_COMPOSITE_WGSL, /moment \/ coverage/);
   assert.match(
     COMPUTE_DOF_COMPOSITE_WGSL,
-    /farComposite = compositeCoverageLayer\(scene\.rgb, farSpreadLayer\(uv\)\)/
+    /farComposite = compositeCoverageLayer\(\s*scene\.rgb,\s*farSpreadLayer\(uv, 0\.0, false\)\s*\)/
   );
   assert.doesNotMatch(COMPUTE_DOF_COMPOSITE_WGSL, /backgroundBlur/);
-  assert.match(COMPUTE_DOF_COMPOSITE_WGSL, /nearComposite = compositeCoverageLayer\(farComposite/);
+  assert.match(COMPUTE_DOF_COMPOSITE_WGSL, /nearComposite = compositeCoverageLayer\(\s*farComposite/);
   assert.match(COMPUTE_DOF_COMPOSITE_WGSL, /linearizeGBufferDepth\(depth, params\.projection\)/);
   assert.match(COMPUTE_DOF_COMPOSITE_WGSL, /vec4f\(vec3f\(depth\), 1\.0\)/);
   assert.doesNotMatch(COMPUTE_DOF_COMPOSITE_WGSL, /fn linearizeDepth\(/);
@@ -200,7 +202,7 @@ function makeResources(width = 16, height = 8, sceneFormat = COMPUTE_DOF_FORMAT)
     40, 8, 0.75, 1,
     0.25, 5000, Math.tan(Math.PI / 6), 2
   ].map((value) => Math.fround(value)));
-  assert.deepEqual(uniforms.slice(8, 12), [0.2, 1.5, 1, 0]
+  assert.deepEqual(uniforms.slice(8, 12), [0.2, 1.5, 1, 0.85]
     .map((value) => Math.fround(value)));
   assert.deepEqual(probe.writes.at(-2).data, [1.5, 0, 0, 0]
     .map((value) => Math.fround(value)));

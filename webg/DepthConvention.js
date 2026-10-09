@@ -1,14 +1,13 @@
 // ---------------------------------------------
-// DepthConvention.js  2026/07/12
+// DepthConvention.js  2026/08/14
 //   Shared camera and shadow depth conventions
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // ---------------------------------------------
 import util from "./util.js";
 
-// 深度形式、clear値、比較関数、near/farの対応を一つの変更不能objectへまとめます
-// formatだけを変更してcompareやclearを旧値のまま残す部分移行を防ぐため、
-// 利用側が任意objectを組み立てるconstructorは公開しません
+// 深度形式、clear値、比較関数、near/farの対応を一つの不変objectへまとめます
+// 深度設定は同じobjectから取得し、format・compare・clearの組み合わせを一体で管理します
 function createDepthConvention({
   name,
   format,
@@ -43,8 +42,8 @@ export const CAMERA_REVERSE_Z = createDepthConvention({
   compareEqual: "greater-equal"
 });
 
-// 第一実装期のShadow Mapは従来どおりnear=0、far=1の通常Zを維持します
-// camera depthと同じdepth32floatでも意味が異なるため、別のconventionとして扱います
+// Shadow Mapはnear=0、far=1の通常Zを使います
+// camera depthと同じdepth32floatでも比較方向と値の意味が異なるため、別のconventionとして扱います
 export const SHADOW_STANDARD_Z = createDepthConvention({
   name: "shadow-standard-z",
   format: "depth32float",
@@ -56,10 +55,10 @@ export const SHADOW_STANDARD_Z = createDepthConvention({
   compareEqual: "less-equal"
 });
 
-const KNOWN_DEPTH_CONVENTIONS = Object.freeze([
+const KNOWN_DEPTH_CONVENTIONS = [
   CAMERA_REVERSE_Z,
   SHADOW_STANDARD_Z
-]);
+];
 
 // API境界で既知のconventionそのものが渡されたことを確認します
 // 同じfieldを持つcloneを受け入れると、一部fieldだけを変更した独自規則が混入できるため拒否します
@@ -79,7 +78,7 @@ export function requireDepthConvention(value, label = "depth convention") {
 }
 
 // near/farを使う深度計算の入力を共通検証します
-// 無限farは利用側がInfinityを明示した場合だけ許可し、有限値の誤りを無限遠へ補正しません
+// 無限farは利用側がInfinityを明示した場合だけ許可し、有限値は有限farとして検証します
 export function readDepthRange(
   near,
   far,
@@ -101,22 +100,22 @@ export function readDepthRange(
     if (!allowInfiniteFar) {
       throw new Error(`${checkedLabel} far must be finite`);
     }
-    return Object.freeze({
+    return {
       near: checkedNear,
       far: Infinity,
       infiniteFar: true
-    });
+    };
   }
   const checkedFar = util.readFiniteNumber(
     far,
     `${checkedLabel} far`,
     { minExclusive: checkedNear }
   );
-  return Object.freeze({
+  return {
     near: checkedNear,
     far: checkedFar,
     infiniteFar: false
-  });
+  };
 }
 
 // 正のview-space距離をWebGPUの0から1のdepthへ投影します
@@ -168,7 +167,7 @@ export function projectViewDepth(
 }
 
 // depth textureから読んだ値を正のview-space距離へ戻します
-// 背景値は距離を持たないため先に例外とし、分母をepsilonへ丸めて有限距離を捏造しません
+// 背景値は距離を持たないため先に例外とし、実際の深度から計算できる距離だけを返します
 export function linearizeDepth(
   depth,
   near,
@@ -211,7 +210,7 @@ export function linearizeDepth(
 }
 
 // texture clearで書かれた背景値だけを背景として判定します
-// far付近の実geometryを背景へ吸収しないよう、許容幅や自動補正は設けません
+// far付近の実geometryを背景と区別するため、許容幅を使わず深度規約をそのまま判定します
 export function isBackgroundDepth(
   depth,
   convention = CAMERA_REVERSE_Z

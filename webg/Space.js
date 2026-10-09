@@ -1,5 +1,5 @@
 // ---------------------------------------------
-//  Space.js      2026/07/25
+//  Space.js      2026/08/11
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // ---------------------------------------------
@@ -12,6 +12,7 @@ import {
 } from "./CameraFrame.js";
 import Node from "./Node.js";
 import PhysicsNode from "./PhysicsNode.js";
+import TranslucentRenderQueue from "./TranslucentRenderQueue.js";
 
 // WebgAppや複数pass処理が渡すrender frameは、そのframeで確定済みの変換を共有します
 // 単純な低レベル利用者が渡すeye Nodeとは、公開class名ではなく必要な操作で区別します
@@ -39,12 +40,8 @@ export default class Space {
     this.time = 0;
     this.elapsedTime = 0;
     this.drawCount = 0;
-    // 透明triangleのglobal sort結果を1回のQueue writeで渡すframe動的Index Buffer
-    // 容量拡張前のBufferは、記録済みCommand Bufferから参照される可能性があるため保持する
-    this.sortedTranslucentIndexBuffer = null;
-    this.sortedTranslucentIndexCapacity = 0;
-    this.sortedTranslucentIndexDevice = null;
-    this.sortedTranslucentIndexBuffers = [];
+    // 透明描画固有の集計・sort・GPU Buffer管理は専用classへ委譲する
+    this.translucentRenderQueue = new TranslucentRenderQueue();
     this.startTime = util.now();
     this._collisionPrevMap = new Map();
     this._collisionBodyPrevMap = new Map();
@@ -271,145 +268,6 @@ export default class Space {
     return this;
   }
 
-  // 可視Shapeにalpha 1未満のmaterialを使うtriangleがあるか、GPU描画を始めずに判定する
-  // ComputeEffectPipelineはfalseならHDR copyと透明Render Pass自体を省略できる
-  hasTranslucentTriangles() {
-    for (const node of this.nodes) {
-      if (!node || !Array.isArray(node.shapes)) {
-        continue;
-      }
-      for (const shape of node.shapes) {
-        if (!shape || shape.isHidden || typeof shape.getMaterialCount !== "function") {
-          continue;
-        }
-        // Wireframeはmaterial alphaによらずopaque phaseでShape全体を一度だけ描く。
-        // 透明triangle用の後段パスを要求しない。
-        if (typeof shape.isWireframe === "function" && shape.isWireframe()) {
-          continue;
-        }
-        for (let materialIndex = 0; materialIndex < shape.getMaterialCount(); materialIndex++) {
-          if (shape.getMaterialAlpha(materialIndex) >= 1.0) {
-            continue;
-          }
-          const drawInfo = shape.getMaterialDrawInfo(materialIndex);
-          if (drawInfo.count > 0) {
-            return true;
-          }
-        }
-      }
-    }
-    return false;
-  }
-
-  // sort済みtriangle数を収めるuint32 Index Bufferを確保し、同じ容量ならframe間で再利用する
-  ensureSortedTranslucentIndexBuffer(gpu, indexCount) {
-    if (!gpu?.device || !gpu?.queue) {
-      throw new Error("Space sorted translucent drawing requires a ready WebGPU context");
-    }
-    const requiredCount = util.readFiniteNumber(
-      indexCount,
-      "Space sorted translucent index count",
-      { integer: true, min: 1 }
-    );
-    if (this.sortedTranslucentIndexDevice !== null
-        && this.sortedTranslucentIndexDevice !== gpu.device) {
-      this.sortedTranslucentIndexBuffer = null;
-      this.sortedTranslucentIndexCapacity = 0;
-    }
-    if (this.sortedTranslucentIndexBuffer
-        && this.sortedTranslucentIndexCapacity >= requiredCount) {
-      return this.sortedTranslucentIndexBuffer;
-    }
-    let capacity = 1;
-    while (capacity < requiredCount) {
-      capacity *= 2;
-    }
-    const buffer = gpu.device.createBuffer({
-      label: "space:sorted-translucent-indices",
-      size: capacity * Uint32Array.BYTES_PER_ELEMENT,
-      usage: GPUBufferUsage.INDEX | GPUBufferUsage.COPY_DST
-    });
-    this.sortedTranslucentIndexBuffer = buffer;
-    this.sortedTranslucentIndexCapacity = capacity;
-    this.sortedTranslucentIndexDevice = gpu.device;
-    this.sortedTranslucentIndexBuffers.push(buffer);
-    return buffer;
-  }
-
-  // global sort順を維持したIndex列を作り、連続する同一Shape・Material・変換を一括描画する
-  drawSortedTranslucentBatches(translucentQueue, options = {}) {
-    if (!Array.isArray(translucentQueue)) {
-      throw new Error("Space.drawSortedTranslucentBatches requires an array queue");
-    }
-    if (translucentQueue.length === 0) {
-      return 0;
-    }
-    const gpu = translucentQueue[0].shape?.gpu;
-    if (!gpu?.device || !gpu?.queue) {
-      throw new Error("Space sorted translucent entry requires a Shape with WebGPU context");
-    }
-    const sortedIndices = new Uint32Array(translucentQueue.length * 3);
-    const batches = [];
-    let batch = null;
-    for (let entryIndex = 0; entryIndex < translucentQueue.length; entryIndex++) {
-      const entry = translucentQueue[entryIndex];
-      if (entry.shape?.gpu?.device !== gpu.device) {
-        throw new Error("Space sorted translucent entries must use the same GPUDevice");
-      }
-      const index0 = entry.index0;
-      const index1 = entry.index1;
-      const index2 = entry.index2;
-      if (!Number.isInteger(index0) || index0 < 0 || index0 > 0xFFFFFFFF
-          || !Number.isInteger(index1) || index1 < 0 || index1 > 0xFFFFFFFF
-          || !Number.isInteger(index2) || index2 < 0 || index2 > 0xFFFFFFFF) {
-        throw new Error(
-          `Space sorted translucent triangle ${entry.triangleIndex} `
-          + `indices must be unsigned 32-bit integers: ${index0}, ${index1}, ${index2}`
-        );
-      }
-      const indexOffset = entryIndex * 3;
-      sortedIndices[indexOffset] = index0;
-      sortedIndices[indexOffset + 1] = index1;
-      sortedIndices[indexOffset + 2] = index2;
-      const continuesBatch = batch
-        && batch.shape === entry.shape
-        && batch.materialIndex === entry.materialIndex
-        && batch.modelview === entry.modelview
-        && batch.normal === entry.normal;
-      if (continuesBatch) {
-        batch.indexCount += 3;
-        continue;
-      }
-      batch = {
-        shape: entry.shape,
-        materialIndex: entry.materialIndex,
-        modelview: entry.modelview,
-        normal: entry.normal,
-        firstIndex: indexOffset,
-        indexCount: 3
-      };
-      batches.push(batch);
-    }
-    const indexBuffer = this.ensureSortedTranslucentIndexBuffer(gpu, sortedIndices.length);
-    gpu.queue.writeBuffer(indexBuffer, 0, sortedIndices);
-    for (const current of batches) {
-      current.shape.drawMaterial(
-        current.modelview,
-        current.normal,
-        current.materialIndex,
-        {
-          indexBuffer,
-          indexFormat: "uint32",
-          indexCount: current.indexCount,
-          firstIndex: current.firstIndex,
-          translucent: true,
-          shaderOverride: options.shaderOverride
-        }
-      );
-    }
-    return batches.length;
-  }
-
   // 描画段階: render frame、renderFrameToken、eye Nodeのいずれかでscene graphをview-spaceへ移します
   // options.filter を渡すと、半透明や mask 用 Shape などを pass ごとに選別できる
   draw(cameraOrFrame, options = {}) {
@@ -459,7 +317,7 @@ export default class Space {
       for (let i = 0; i < this.nodes.length; i++) {
         node = this.nodes[i];
         if (node.parent === null) {
-          // SpaceへNode互換の独自rootを登録する従来の低レベル利用では、1 frameに1回だけ
+          // SpaceへNode互換の独自rootを登録する低レベル利用では、1 frameに1回だけ
           // draw()が呼ばれる契約を保つ。透明triangle収集はShape構造を知るNode系だけが担当する
           if ((drawContext.phase === "collect-translucent"
               || drawContext.phase === "translucent-materials")
@@ -487,30 +345,30 @@ export default class Space {
           phase: "translucent-materials"
         });
         this.drawCount++;
-        return;
+        return null;
       }
-      const translucentQueue = [];
-      let traversalOrder = 0;
-      drawRoots({
+      // 同じframe内の別Render Passからprepare済みqueueを受け取った場合は、
+      // Node走査、triangle収集、sort、Index Buffer転送を繰り返さずshaderだけを交換して再描画する
+      const preparedQueue = options.preparedTranslucentQueue ?? null;
+      if (preparedQueue !== null) {
+        this.translucentRenderQueue.drawPrepared(preparedQueue, {
+          ...options,
+          lightVector: lightVec
+        });
+        this.drawCount++;
+        return preparedQueue;
+      }
+      // 透明queueは完全なCameraFrameを受け取れる場合だけ投影境界の非干渉判定を行う
+      // 公開のSpace.draw(eye)経路はprojectionを持たないため、queue側はglobal sortを使う
+      const collectedQueue = this.translucentRenderQueue.collectSortAndDraw(drawRoots, {
         ...options,
-        phase: "collect-translucent",
-        translucentQueue,
-        nextTraversalOrder() {
-          const current = traversalOrder;
-          traversalOrder += 1;
-          return current;
-        }
+        cameraFrame
       });
-      // cameraはlocal -Z方向を見るため、より負のview-space Zを持つ遠方triangleから描く
-      // 同じdepthではscene走査順と元triangle番号を使い、frame間で順序が揺れないようにする
-      translucentQueue.sort((a, b) =>
-        (a.viewDepth - b.viewDepth)
-        || (a.traversalOrder - b.traversalOrder)
-        || (a.triangleIndex - b.triangleIndex)
-      );
-      this.drawSortedTranslucentBatches(translucentQueue, options);
+      this.drawCount++;
+      return collectedQueue;
     }
     this.drawCount++;
+    return null;
   }
 
   // 収集済みスケルトンの骨を描画する

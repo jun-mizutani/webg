@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>falling_dominoes_cpu</title>
+  <link rel="icon" href="data:," />
+  <!-- 2026/06/19 -->
+  <style>
+
+:root {
+  color-scheme: light;
+  --bg: #eef3f8;
+  --paper: rgba(255, 255, 255, 0.94);
+  --line: #c8d5e4;
+  --ink: #17324a;
+  --muted: #5c748b;
+  --accent: #1566ab;
+  --accent-soft: #dfeefe;
+  --code-bg: #f3f7fb;
+  --shadow: rgba(29, 52, 79, 0.10);
+}
+* { box-sizing: border-box; }
+html, body {
+  margin: 0;
+  min-height: 100%;
+}
+body {
+  background:
+    radial-gradient(circle at top left, rgba(21, 102, 171, 0.12), transparent 24%),
+    radial-gradient(circle at top right, rgba(255, 191, 118, 0.10), transparent 22%),
+    linear-gradient(180deg, #f8fbfd 0%, var(--bg) 100%);
+  color: var(--ink);
+  font: 16px/1.78 "Avenir Next", "Hiragino Sans", "Yu Gothic", sans-serif;
+}
+.page {
+  width: min(1080px, calc(100% - 28px));
+  margin: 0 auto;
+  padding: 24px 0 56px;
+}
+.hero,
+.doc {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  box-shadow: 0 22px 52px var(--shadow);
+}
+.hero {
+  padding: 22px 24px;
+  margin-bottom: 18px;
+}
+.hero h1 {
+  margin: 0 0 8px;
+  font-size: clamp(2rem, 4vw, 3rem);
+  line-height: 1.08;
+}
+.hero p {
+  margin: 0;
+  color: var(--muted);
+}
+.doc {
+  padding: 28px;
+}
+.doc > :first-child {
+  margin-top: 0;
+}
+h1, h2, h3, h4, h5, h6 {
+  line-height: 1.25;
+  margin: 1.45em 0 0.55em;
+}
+h1 {
+  font-size: 2.2rem;
+}
+h2 {
+  padding-bottom: 0.28em;
+  border-bottom: 1px solid var(--line);
+  font-size: 1.48rem;
+}
+h3 {
+  font-size: 1.14rem;
+}
+p, ul, ol, table, pre, blockquote {
+  margin: 0 0 1em;
+}
+ul, ol {
+  padding-left: 1.4em;
+}
+li + li {
+  margin-top: 0.26em;
+}
+a {
+  color: var(--accent);
+  text-decoration: none;
+}
+a:hover {
+  text-decoration: underline;
+}
+img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  border-radius: 16px;
+  border: 1px solid var(--line);
+  box-shadow: 0 12px 32px rgba(29, 52, 79, 0.08);
+  margin: 1.1em 0 1.4em;
+}
+code {
+  padding: 0.12em 0.38em;
+  border-radius: 0.45em;
+  background: var(--code-bg);
+  border: 1px solid #dbe6f1;
+  font: 0.92em/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+pre {
+  padding: 14px 16px;
+  overflow-x: auto;
+  border-radius: 14px;
+  background: #0f1720;
+  color: #ecf5ff;
+}
+pre code {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #ffffff;
+}
+th, td {
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  text-align: left;
+  vertical-align: top;
+}
+th {
+  background: #f5f9fc;
+}
+hr {
+  border: 0;
+  border-top: 1px solid var(--line);
+  margin: 1.5em 0;
+}
+blockquote {
+  padding: 0.3em 0 0.3em 1em;
+  border-left: 4px solid #c9dbef;
+  color: var(--muted);
+}
+@media (max-width: 720px) {
+  .page {
+    width: min(100% - 18px, 1080px);
+    padding-top: 16px;
+  }
+  .hero,
+  .doc {
+    border-radius: 18px;
+  }
+  .doc {
+    padding: 20px;
+  }
+}
+
+  </style>
+</head>
+<body>
+  <main class="page">
+    <section class="hero">
+      <h1>falling_dominoes_cpu</h1>
+    </section>
+    <article class="doc">
+<h1>falling_dominoes_cpu</h1>
+<p>English | <a href="index.html">日本語</a></p>
+<h2>Overview</h2>
+<p>This sample simulates the same 32 dominoes as <code>samples/falling_dominoes</code>, but updates them with the CPU <code>PhysicsSpace</code>. Only the leftmost domino receives an initial angular velocity, and Box contacts propagate the fall through the remaining 31 bodies. The dimensions, mass, gravity, restitution, friction, fixed timestep, solver iteration count, sleep conditions, and camera match the Compute sample so the GPU BodyState path and the CPU <code>PhysicsNode</code> path can be compared as equivalent scenarios.</p>
+<p>The CPU Box/Plane contact path uses the contact processing in <code>PhysicsSpace</code>. The sample builds its physical scenario through <code>BoxCollider</code>, <code>PlaneCollider</code>, <code>PhysicsNode</code>, and <code>PhysicsSpace</code>.</p>
+<h2>How to Run</h2>
+<p>Open <a href="./falling_dominoes_cpu.html">`falling_dominoes_cpu.html`</a> in a WebGPU-capable browser. A row of dominoes appears in the center and falls from left to right. WebGPU is used for normal scene rendering, while the CPU <code>PhysicsSpace</code> performs the physics update. The Help Panel starts collapsed; press <code>H</code> to expand it and inspect the frame interval, GPU Render time and load, JavaScript time and load, active bodies, sleeping bodies, and fixed-step count.</p>
+<p>The initial camera matches the Compute sample: <code>target=(-0.16, -0.13, -0.06)</code>, <code>distance=0.28</code>, <code>yaw=-67.19</code>, <code>pitch=-43.59</code>, <code>roll=-29.93</code>, and <code>fovX=70.00</code>. Drag, wheel, keyboard, and pinch zoom use the same settings as the Compute sample.</p>
+<h2>webg Features Used</h2>
+<ul><li><code>WebgApp</code>: initializes WebGPU, the canvas, depth texture, camera, input, Help Panel, and frame timing</li><li><code>PhysicsSpace</code>: processes fixed steps, gravity, Box/Plane contacts, friction, restitution, position correction, and persistent sleep on the CPU</li><li><code>PhysicsNode</code>: stores CPU physics state and exposes solver-updated position, orientation, velocity, and sleep state to the scene</li><li><code>BoxCollider</code>: provides the finite Box contact shape and inertia for each domino</li><li><code>PlaneCollider</code>: provides the infinite floor contact shape</li><li><code>Primitive</code> and <code>Shape</code>: create the domino and floor-board render shapes attached to the PhysicsNodes</li><li><code>buildHelpPanelOptions()</code>: creates the collapsed startup Help Panel and displays frame timing and physics state</li></ul>
+<h2>Controls</h2>
+<ul><li><code>Space</code>: add angular velocity to the starter domino and restart the chain</li><li><code>P</code>: pause / resume</li><li><code>R</code>: reset to the initial arrangement</li><li><code>H</code>: expand / collapse the Help Panel</li><li>Drag: orbit the camera</li><li>Mouse wheel: zoom</li></ul>
+<h2>What to Check</h2>
+<p>Confirm that the red starter domino falls immediately and transfers contact to the later dominoes. Confirm that the dominoes do not pass through the floor Plane, that fallen bodies remain supported by the floor, and that the sleeping count in the Help Panel increases after the chain settles. The comparison checks equivalent behavior in chain order, floor support, and final settling.</p>
+<h2>Implementation Flow</h2>
+<p><code>createInitialDescriptors()</code> creates the same body positions, Box dimensions, mass, initial angular velocity, and material values as the Compute sample. CPU <code>PhysicsNode</code> stores angular velocity in degrees per second, so the descriptor’s radians-per-second value is converted at the boundary into the PhysicsNode. Help Panel speed values are converted back to radians per second so the displayed unit matches the Compute sample.</p>
+<p><code>createPhysicsSpace()</code> configures a 120 Hz fixed step, 10 solver iterations, a maximum of 4 substeps, and the Compute sample’s Box candidate padding, support-feature tolerance, position-correction slop, and sleep/wake thresholds. The floor is registered as a static <code>PhysicsNode</code> with a <code>PlaneCollider</code>; the visible thin floor board is a separate normal Node used only for rendering. The same floor is not registered as both a Box and a Plane, so the infinite Plane alone handles floor contacts.</p>
+<p>Each frame, <code>PhysicsSpace.step(deltaMs)</code> distributes elapsed time into fixed steps. Each fixed step performs gravity integration, damping, orientation integration, Box candidate generation, Box/Plane contacts, the local impulse solver, position correction, and sleep evaluation. The solver-updated <code>PhysicsNode</code> objects are drawn through the normal <code>WebgApp</code> scene path, unlike the Compute sample, whose vertex shader reads GPU BodyState directly.</p>
+<p>When <code>R</code> is pressed, the page reloads and creates a new <code>PhysicsSpace</code>, <code>PhysicsNode</code>, contact history, and sleep state from the initial conditions. Each trial starts with reset contact history and time accumulator.</p>
+    </article>
+  </main>
+</body>
+</html>

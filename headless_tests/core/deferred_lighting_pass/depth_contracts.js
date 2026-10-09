@@ -1,5 +1,5 @@
 // ---------------------------------------------------------
-// headless_tests/core/deferred_lighting_pass/headless_probe.js  2026/07/14
+// headless_tests/core/deferred_lighting_pass/headless_probe.js  2026/08/03
 //   Reverse-Z and Camera Frame contracts for DeferredLightingPass
 // ---------------------------------------------------------
 import assert from "node:assert/strict";
@@ -101,6 +101,7 @@ function makeFrame(position, far = 50000.0) {
     albedo: { getView: () => ({}), getWidth: () => 16, getHeight: () => 8 },
     normal: { getView: () => ({}) },
     material: { getView: () => ({}), getWidth: () => 16, getHeight: () => 8 },
+    emissive: { getView: () => ({}), getWidth: () => 16, getHeight: () => 8 },
     depth: { depthConvention: CAMERA_REVERSE_Z, getDepthSampleView: () => ({}) },
     shadowVisibility: {
       getView: () => ({}),
@@ -160,6 +161,7 @@ function makeFrame(position, far = 50000.0) {
     color: { getView: () => ({}), getWidth: () => 1, getHeight: () => 1 },
     normal: { getView: () => ({}) },
     material: { getView: () => ({}), getWidth: () => 1, getHeight: () => 1 },
+    emissive: { getView: () => ({}), getWidth: () => 1, getHeight: () => 1 },
     depth: { depthConvention: CAMERA_REVERSE_Z, getDepthSampleView: () => ({}) },
     shadowVisibility: { getView: () => ({}), getWidth: () => 1, getHeight: () => 1 },
     spotShadowVisibility: { getView: () => ({}), getWidth: () => 1, getHeight: () => 1 },

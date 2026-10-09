@@ -1,0 +1,30 @@
+@startuml
+title 手続きテクスチャを分けて検証する構成
+top to bottom direction
+skinparam backgroundColor white
+skinparam shadowing true
+skinparam dpi 150
+skinparam defaultFontName Yu Gothic UI
+skinparam defaultFontSize 18
+skinparam rectangle {
+  RoundCorner 24
+  BorderColor black
+  BackgroundColor #f7fbff
+}
+rectangle "ProceduralTileSpec\n部材寸法・目地・色・表面形状" as Spec #eaf7e8
+rectangle "CPU参照版\n画素値の正しさを判定" as CPU #fff5df
+rectangle "ComputeProceduralTile\nColor / Height / NormalをGPU生成" as GPU #f4edff
+rectangle "比較処理とGpuReadback\n必要な検証時だけ同期" as Compare #fff5df
+rectangle "ProceduralMaterial\n生成textureとPBR外観" as Material #eaf7e8
+rectangle "Shape\n実寸UVをGPU bufferへ確定" as Shape #fdeaea
+Spec --> CPU
+Spec --> GPU
+CPU --> Compare
+GPU --> Compare
+GPU --> Material
+Material --> Shape
+note right of Compare
+通常描画ではreadbackしない
+CPUは基準、GPUは実利用を担当
+end note
+@enduml

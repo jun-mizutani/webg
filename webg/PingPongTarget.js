@@ -145,7 +145,7 @@ export default class PingPongTarget {
   }
 
   // ownsResourcesがtrueの場合だけ管理中の2個を破棄し、保持している参照を解放します
-  // 外部resourceを包む非所有の組では、所有者を推測してTargetを破棄しません
+  // 外部resourceを包む非所有の組では、Targetの所有者を外部へ保持します
   destroy() {
     if (this.destroyed) {
       return false;

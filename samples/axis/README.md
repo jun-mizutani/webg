@@ -15,7 +15,7 @@
 - 赤い X、緑の Y、青の Z に加えて、はっきりした色の小さな四角錐を Z 軸の正負方向へ広い範囲に並べ、横方向はより密にして座標軸に近い面で奥行きと遠近法を確認しやすくしています
 - F で fog を切り替え、D で DOF を切り替えると、同じ scene でも depth cue の出方がどう変わるかを確認しやすくしています
 - V で composite / scene / depth / focusMask / stage / smallBlur / mediumBlur / largeBlur を切り替え、focus mask と staged blur の段階を目視比較しやすくしています
-- focusRange は最大 blur までの距離ではなく 1 stage 分の距離幅として扱い、focus 面から外れた部分のにじみ方を段階的に確認できます
+- focusRange は1 stage 分の距離幅として扱い、focus 面から外れた部分のにじみ方を段階的に確認できます
 - maxBlurMix を高めにして、焦点が合っている場合と外れている場合の差が見えやすいようにしています
 - 5 / 6 で focus range を変え、焦点の合う距離帯そのものを調整しやすくしています
 - 1 / 2 で sharpness width、3 / 4 で sharpness power を変え、focusRange に対する曲線の形を比べやすくしています

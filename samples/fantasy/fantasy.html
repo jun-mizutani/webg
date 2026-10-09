@@ -1,0 +1,101 @@
+<!doctype html>
+<!-- 2026/10/02: 翠の砦の実行ページ。説明はindex.html、正本はREADME.md -->
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>翠の砦 — Fantasy Tactics / webg</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header>
+    <div class="brand">
+      <span class="sigil">✦</span>
+      <div><small>FANTASY TACTICS</small><h1>翠の砦</h1></div>
+    </div>
+    <div class="chapter">第一戦 <span>／</span> 水に沈んだ星晶の丘</div>
+    <button id="restart" disabled>最初から</button>
+  </header>
+
+  <main>
+    <!-- Canvasと頭上ラベルの表示範囲はstageにそろえる -->
+    <section class="battlefield" aria-label="高低差のある3D戦場">
+      <div class="stage">
+        <canvas id="canvas" width="960" height="720"
+          aria-label="ユニットか移動先をクリックして操作する3Dマップ"></canvas>
+        <div id="labels" aria-hidden="true"></div>
+      </div>
+      <div class="field-top">
+        <span class="location">STARFALL KEEP <small>水中 · 標高 0 — 2</small></span>
+        <div id="phase" role="status">準備中</div>
+      </div>
+      <div class="legend">
+        <span><i class="cyan"></i> 移動可能</span>
+        <span><i class="gold"></i> 選択中</span>
+        <span><i class="red"></i> 敵</span>
+      </div>
+      <div class="field-bottom">
+        <p id="hint" role="status">PBRとGPU粒子を準備しています…</p>
+        <span>ドラッグで回転 · ホイールで拡大</span>
+      </div>
+    </section>
+
+    <!-- 操作はmain.jsの行動処理へ接続する。UIに戦闘ルールを複製しない -->
+    <aside>
+      <section class="mission">
+        <small>MISSION</small>
+        <h2>星晶を守り抜け</h2>
+        <p>水に沈んだ丘の敵をすべて倒す。<br>高所からの攻撃はダメージ +3。</p>
+        <label><input id="caustics" type="checkbox" checked disabled> 水中のコースティクス</label>
+      </section>
+      <section>
+        <h2 class="section-label">部隊 <span>YOUR PARTY</span></h2>
+        <div id="party"></div>
+      </section>
+      <section id="selection">
+        <small>SELECTED UNIT</small>
+        <h2 id="unit-name">戦場を準備中</h2>
+        <div id="stats"></div>
+        <p id="ability"></p>
+        <button id="wait" disabled>このユニットを待機</button>
+      </section>
+      <button class="primary" id="end-turn" disabled>味方ターンを終了 <span>→</span></button>
+      <section class="journal">
+        <h2 class="section-label">戦闘記録</h2>
+        <ol id="log" aria-live="polite"></ol>
+      </section>
+
+      <details>
+        <summary>操作・ルール</summary>
+        <p>味方を選択 → 青いマスで移動 → 射程内の敵をクリックして攻撃。
+          各ユニットは1ターンに移動1回・攻撃1回。攻撃後は移動できません。
+          「待機」でそのユニットの行動を終了します。</p>
+        <p>上下1段まで移動でき、上りは移動力2、平地・下りは1。
+          味方・敵・障害物は通れません。遠隔攻撃は障害物を越えます。
+          全敵撃破で勝利、味方全滅で敗北。</p>
+      </details>
+      <details class="map-details">
+        <summary>マスをボタンで操作</summary>
+        <p>列・行は左上から1〜9。キーボードでも選択できます。</p>
+        <div id="grid" role="group" aria-label="戦場のマス"></div>
+      </details>
+      <a class="doc" href="index.html">説明とコードの読み方 ↗</a>
+    </aside>
+  </main>
+
+  <!-- 初期化・勝敗・エラーは別の表示にし、戦場のDOMを作り直さない -->
+  <div id="loading" role="status">
+    <span class="sigil">✦</span><h2>翠の砦</h2>
+    <p>戦場の光と材質を準備しています</p>
+  </div>
+  <div id="result" hidden>
+    <div>
+      <small id="result-caption"></small><h2 id="result-title"></h2>
+      <p id="result-text"></p><button id="again">もう一度戦う</button>
+    </div>
+  </div>
+  <pre id="error" role="alert" hidden></pre>
+  <script type="module" src="main.js"></script>
+</body>
+</html>

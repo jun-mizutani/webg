@@ -63,6 +63,6 @@ English | [日本語](README.md)
 - The compute shader in `main.js` separates the sampled texture as read and the storage texture as write, so the next frame is produced without destroying the previous frame's content
 - Because the same two textures are swapped every frame in a ping-pong configuration, dynamic texture feedback can continue entirely inside the GPU
 - Pointer input passes coordinates, radius, injection energy for afterimages, click-pulse progress, and center coordinates from the CPU to uniforms, while the actual injection range, color inversion, and color addition are judged per pixel in the compute shader
-- On the render side, the sphere is drawn by packing `Primitive.sphere()` geometry positions, UVs, and indices into raw render-pipeline buffers, reusing the existing UV layout that makes the seam less noticeable
+- On the render side, the sphere is drawn by packing `Primitive.sphere()` geometry positions, UVs, and indices into raw render-pipeline buffers, using a UV layout that makes the seam less noticeable
 - The sphere samples the texture through those UVs and uses directional light, specular, and rim light so the face direction and the wrapping state are easy to read
 - The sample can be used as an entry point for dynamic texture generation such as postprocess, reactive HUDs, procedural patterns, and paintable effect maps

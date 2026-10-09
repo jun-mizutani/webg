@@ -1,0 +1,99 @@
+# 表示専用objectの移動と回転を確認するSceneYAMLです。物理bodyは作りません。
+format: webg-scene
+version: 1
+name: scene-animation
+
+# 既存PBRサンプルと同じmanifest形式で材質を指定します。
+materials:
+  - id: floor-material
+    color: [0.14, 0.2, 0.28, 1]
+    metallic: 0.0
+    roughness: 0.48
+  - id: gate-material
+    color: [0.08, 0.5, 0.88, 1]
+    metallic: 0.15
+    roughness: 0.3
+  - id: marker-material
+    color: [1.0, 0.5, 0.08, 1]
+    metallic: 0.25
+    roughness: 0.28
+
+objects:
+  # アニメーション階層から独立した床です。上面は高さ0mです。
+  - id: floor
+    shape: { type: box, size: [7, 0.2, 5] }
+    transform:
+      position: [0, -0.1, 0]
+      orientation: [0, 0, 0]
+    material: floor-material
+  # 左の柱を固定し、ゲートだけが動いていることを見分けます。
+  - id: fixed-post
+    shape: { type: capsule, radius: 0.12, segmentLength: 2.2 }
+    transform:
+      position: [-1.75, 1.22, 0]
+      orientation: [0, 0, 0]
+    material: marker-material
+  # 基準配置はY軸まわりに15度です。ResetでこのEuler姿勢へ戻ります。
+  # Playの先頭キーは0度なので、ResetとSeek(0)の違いを確認できます。
+  - id: gate
+    shape: { type: box, size: [2.6, 1.4, 0.16] }
+    transform:
+      position: [0, 1.1, 0]
+      orientation: [0, 15, 0]
+      scale: [1.1, 1.1, 1.1] # 正の一様scaleを再生中も保持します。
+    material: gate-material
+  # 子の位置はゲートlocalです。親の移動・回転・scaleに追従します。
+  - id: gate-marker
+    parent: gate
+    shape: { type: sphere, radius: 0.16 }
+    transform:
+      position: [-0.95, 0.45, 0.2]
+      orientation: [0, 0, 0]
+    material: marker-material
+  - id: gate-handle
+    parent: gate
+    shape: { type: capsule, radius: 0.065, segmentLength: 0.32 }
+    transform:
+      position: [0.95, 0, 0.23]
+      orientation: [0, 0, 90] # 静的なEuler角は[X軸, Y軸, Z軸]の度数です。
+    material: marker-material
+
+animations:
+  - id: gate-motion
+    # 全trackで共有する時刻（秒）です。開いた姿勢を1秒間保持します。
+    keyframes:
+      - { id: closed, time: 0 }
+      - { id: open, time: 2 }
+      - { id: hold, time: 3 }
+      - { id: returned, time: 5 }
+    tracks:
+      - id: gate-transform
+        target: { object: gate }
+        interpolation: { position: linear, quaternion: slerp }
+        # 姿勢は絶対local値です。quaternionの順番は[w, x, y, z]です。
+        # このroot objectではlocal位置がシーン座標と一致します。
+        poses:
+          - position: [0, 1.1, 0]
+            quaternion: [1, 0, 0, 0]
+          - position: [0, 2.1, 0]
+            quaternion: [0.7071067812, 0, 0.7071067812, 0]
+          - position: [0, 2.1, 0]
+            quaternion: [0.7071067812, 0, 0.7071067812, 0]
+          - position: [0, 1.1, 0]
+            quaternion: [1, 0, 0, 0]
+
+# PBR表示設定です。描画はJS側でondemand、物理はfalseに指定します。
+renderer:
+  profile: studio
+  width: 960
+  height: 640
+  clearColor: [0.012, 0.018, 0.028, 1]
+  environment:
+    preset: dark-studio
+    resolution: { width: 128, height: 64 }
+  dof: { enabled: false }
+  pipeline:
+    lighting: { ambient: 0.0, directionalIntensity: 1.05, environmentIntensity: 0.42 }
+    ssao: { radius: 12, strength: 1.15, samples: 8 }
+    ssr: { intensity: 0.65, distance: 24, steps: 28 }
+    toneMap: { exposure: 1.0 }

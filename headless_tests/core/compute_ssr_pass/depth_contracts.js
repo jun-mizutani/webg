@@ -1,5 +1,5 @@
 // ---------------------------------------------------------
-// headless_tests/core/compute_ssr_pass/depth_contracts.js  2026/07/23
+// headless_tests/core/compute_ssr_pass/depth_contracts.js  2026/08/04
 //   Reverse-Z depth contracts for ray and roughness-pyramid ComputeSsrPass
 // ---------------------------------------------------------
 import assert from "node:assert/strict";

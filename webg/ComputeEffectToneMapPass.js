@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// ComputeEffectToneMapPass.js  2026/07/25
+// ComputeEffectToneMapPass.js  2026/08/03
 //   Linear High Dynamic Range to display color compute pass
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -24,6 +24,16 @@ export const COMPUTE_EFFECT_TONEMAP_MODES = Object.freeze([
 // Tone Map前後の意味をformat名と共に固定し、途中passの8 bit色を誤接続できないようにする
 export const COMPUTE_EFFECT_TONEMAP_INPUT_FORMAT = "rgba16float";
 export const COMPUTE_EFFECT_TONEMAP_OUTPUT_FORMAT = "rgba8unorm";
+
+// EV100からsaturation-based camera exposure係数を計算します
+// 1.2はISO 100と標準的なlens attenuationから得る最大luminance係数です
+export function computeEv100Exposure(ev100) {
+  const checkedEv100 = util.readFiniteNumber(ev100, "Tone Map exposureEv100", {
+    min: -24.0,
+    max: 24.0
+  });
+  return 1.0 / (2 ** checkedEv100 * 1.2);
+}
 
 export const COMPUTE_EFFECT_TONEMAP_WGSL = `
 struct Params {
@@ -151,7 +161,7 @@ export default class ComputeEffectToneMapPass {
   }
 
   // 最終変換へ渡すscene、depth、出力の形式と寸法をdispatch前に照合します
-  // getFormatを持たない任意texture wrapperは色空間を証明できないため受け付けません
+  // getFormatを持つtexture wrapperだけを受け付け、色空間を検証できるresourceを使います
   validateResources(resources) {
     const scene = resources?.scene;
     const depth = resources?.depth;
@@ -191,12 +201,21 @@ export default class ComputeEffectToneMapPass {
   encode(commandEncoder, resources, options = {}) {
     this.requireAlive();
     const checkedResources = this.validateResources(resources);
-    const exposure = util.readOptionalFiniteNumber(
-      options.exposure,
-      `${this.label} exposure`,
-      1.0,
-      { min: 0, max: 4 }
-    );
+    const hasExposure = Object.prototype.hasOwnProperty.call(options, "exposure");
+    const hasExposureEv100 = Object.prototype.hasOwnProperty.call(options, "exposureEv100");
+    if (hasExposure && hasExposureEv100) {
+      throw new Error(
+        `${this.label} exposure and exposureEv100 cannot be specified together`
+      );
+    }
+    const exposure = hasExposureEv100
+      ? computeEv100Exposure(options.exposureEv100)
+      : util.readOptionalFiniteNumber(
+          options.exposure,
+          `${this.label} exposure`,
+          1.0,
+          { min: 0, max: 4 }
+        );
     const saturation = util.readOptionalFiniteNumber(
       options.saturation,
       `${this.label} saturation`,

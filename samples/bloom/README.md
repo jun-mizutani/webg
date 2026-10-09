@@ -20,13 +20,13 @@
 - EyeRig(type="orbit"): シーン全体を見回すオービット視点
 - RenderTarget: 3D scene の描画先となる offscreen color/depth texture
 - BloomDebugFullscreenPass: canvas と同じ色形式の scene / extract と、低解像度の blur target を正規化 UV で画面全体へ拡大して診断表示する
-- WebgApp.light.mode = "world-node": カメラ固定ではなく world 空間に置いた light を使うフロー
+- WebgApp.light.mode = "world-node": world 空間に置いた light を使うフロー
 - Shape: glow object と floor の形状生成
 - CommandPalette: bloom parameter の current value を表示しながら変更する設定パネル
 
 ## 確認ポイント
-- 3D scene が直接 canvas ではなく offscreen target に描かれ、その後 bloom 合成を経て表示されることを確認します
-- 中央球と周囲の bright orb の周辺ににじみが出て、単なる blur ではなく明るい部分だけが広がることを確認します
+- 3D scene がまず offscreen target に描かれ、その後 bloom 合成を経て表示されることを確認します
+- 中央球と周囲の bright orb の周辺ににじみが出て、明るい部分を選択して広げることを確認します
 - 画面上部奥の暖色 / 青 / ピンクの emissive 球の周囲にも glow が出て、背景色の暗い領域へ色付き bloom が乗ることを確認します
 - 左上の help panel に操作説明が表示され、Hide Help を押すと Show Help ボタンだけが残り、Show Help で再表示できることを確認します
 - CommandPalette は Strength などの現在値を stepper / select / toggle 上へ表示し、その場で変更できることを確認します
@@ -36,7 +36,7 @@
 - U で blur quality を full / half へ切り替えたとき、にじみの見え方と blur target サイズがどう変わるかを確認します
 - Q / W で softKnee、A / S で extractIntensity、T / Y で exposure、G で tone map mode を切り替えたとき、抽出境界と最終合成の見え方がどう変わるかを確認します
 - CommandPalette の Tone Map と Exposure の row で、bloom 合成後の色を tone mapping していることを確認します
-- threshold 境界だけが急に切り替わるのではなく、softKnee により highlight 周辺が少し滑らかに抽出されることを確認します
+- softKnee により threshold 境界の highlight 周辺が少し滑らかに抽出されることを確認します
 - bloom extract は luma だけでなく max(rgb) も強めに使うため、青やピンクの強い emissive が extract view に乗りやすいことを確認します
 - V で composite / scene / extract / extractHeat / blurA / blurB を切り替え、extract そのものの色と、gain を heat 表示した状態を切り分けて確認できることを確認します
 - viewport サイズが変わっても BloomPass.resizeToScreen() により offscreen target が追従し、ぼけの位置ずれや解像度崩れが起きないことを確認します

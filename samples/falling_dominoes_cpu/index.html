@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>falling_dominoes_cpu</title>
+  <link rel="icon" href="data:," />
+  <!-- 2026/06/19 -->
+  <style>
+
+:root {
+  color-scheme: light;
+  --bg: #eef3f8;
+  --paper: rgba(255, 255, 255, 0.94);
+  --line: #c8d5e4;
+  --ink: #17324a;
+  --muted: #5c748b;
+  --accent: #1566ab;
+  --accent-soft: #dfeefe;
+  --code-bg: #f3f7fb;
+  --shadow: rgba(29, 52, 79, 0.10);
+}
+* { box-sizing: border-box; }
+html, body {
+  margin: 0;
+  min-height: 100%;
+}
+body {
+  background:
+    radial-gradient(circle at top left, rgba(21, 102, 171, 0.12), transparent 24%),
+    radial-gradient(circle at top right, rgba(255, 191, 118, 0.10), transparent 22%),
+    linear-gradient(180deg, #f8fbfd 0%, var(--bg) 100%);
+  color: var(--ink);
+  font: 16px/1.78 "Avenir Next", "Hiragino Sans", "Yu Gothic", sans-serif;
+}
+.page {
+  width: min(1080px, calc(100% - 28px));
+  margin: 0 auto;
+  padding: 24px 0 56px;
+}
+.hero,
+.doc {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  box-shadow: 0 22px 52px var(--shadow);
+}
+.hero {
+  padding: 22px 24px;
+  margin-bottom: 18px;
+}
+.hero h1 {
+  margin: 0 0 8px;
+  font-size: clamp(2rem, 4vw, 3rem);
+  line-height: 1.08;
+}
+.hero p {
+  margin: 0;
+  color: var(--muted);
+}
+.doc {
+  padding: 28px;
+}
+.doc > :first-child {
+  margin-top: 0;
+}
+h1, h2, h3, h4, h5, h6 {
+  line-height: 1.25;
+  margin: 1.45em 0 0.55em;
+}
+h1 {
+  font-size: 2.2rem;
+}
+h2 {
+  padding-bottom: 0.28em;
+  border-bottom: 1px solid var(--line);
+  font-size: 1.48rem;
+}
+h3 {
+  font-size: 1.14rem;
+}
+p, ul, ol, table, pre, blockquote {
+  margin: 0 0 1em;
+}
+ul, ol {
+  padding-left: 1.4em;
+}
+li + li {
+  margin-top: 0.26em;
+}
+a {
+  color: var(--accent);
+  text-decoration: none;
+}
+a:hover {
+  text-decoration: underline;
+}
+img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  border-radius: 16px;
+  border: 1px solid var(--line);
+  box-shadow: 0 12px 32px rgba(29, 52, 79, 0.08);
+  margin: 1.1em 0 1.4em;
+}
+code {
+  padding: 0.12em 0.38em;
+  border-radius: 0.45em;
+  background: var(--code-bg);
+  border: 1px solid #dbe6f1;
+  font: 0.92em/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+pre {
+  padding: 14px 16px;
+  overflow-x: auto;
+  border-radius: 14px;
+  background: #0f1720;
+  color: #ecf5ff;
+}
+pre code {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #ffffff;
+}
+th, td {
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  text-align: left;
+  vertical-align: top;
+}
+th {
+  background: #f5f9fc;
+}
+hr {
+  border: 0;
+  border-top: 1px solid var(--line);
+  margin: 1.5em 0;
+}
+blockquote {
+  padding: 0.3em 0 0.3em 1em;
+  border-left: 4px solid #c9dbef;
+  color: var(--muted);
+}
+@media (max-width: 720px) {
+  .page {
+    width: min(100% - 18px, 1080px);
+    padding-top: 16px;
+  }
+  .hero,
+  .doc {
+    border-radius: 18px;
+  }
+  .doc {
+    padding: 20px;
+  }
+}
+
+  </style>
+</head>
+<body>
+  <main class="page">
+    <section class="hero">
+      <h1>falling_dominoes_cpu</h1>
+    </section>
+    <article class="doc">
+<h1>falling_dominoes_cpu</h1>
+<p><a href="index.en.html">English</a> | 日本語</p>
+<h2>概要</h2>
+<p><code>samples/falling_dominoes</code>と同じ32個のドミノを、通常の<code>PhysicsSpace</code>でシミュレーションするサンプルです。左端のドミノだけへ初期角速度を与え、後続31個へBox接触を順番に伝えます。Compute版と同じ寸法、質量、重力、反発係数、摩擦係数、固定刻み、solver反復数、sleep条件、カメラを使い、GPU上でBodyStateを更新する方式と、CPU上で<code>PhysicsNode</code>を更新する方式を比較できます。</p>
+<p>CPU版のBox/Plane接触は、<code>PhysicsSpace</code>のCPU接触処理を使います。<code>BoxCollider</code>、<code>PlaneCollider</code>、<code>PhysicsNode</code>を通常のwebg APIで登録し、Plane Nodeをsolverの明示的なPlane入力へ変換します。画面に見える床板は描画専用Nodeとして分け、物理Planeと二重に接触計算しません。</p>
+<h2>実行方法</h2>
+<p>実行ファイルは<a href="./falling_dominoes_cpu.html">`falling_dominoes_cpu.html`</a>です。WebGPU対応ブラウザで開くと、画面中央のドミノ列が左から右へ順番に倒れます。WebGPUは通常のscene描画に使い、物理更新はCPUの<code>PhysicsSpace</code>が行い、結果を<code>PhysicsNode</code>へ同期します。Help Panelは起動時に畳まれているため、<code>H</code>で展開するとframe間隔、GPU Render時間・負荷率、JavaScript時間・負荷率、active body数、sleeping body数、fixed step数を確認できます。</p>
+<p>初期カメラはCompute版と同じく、<code>target=(-0.16, -0.13, -0.06)</code>、<code>distance=0.28</code>、<code>yaw=-67.19</code>、<code>pitch=-43.59</code>、<code>roll=-29.93</code>、<code>fovX=70.00</code>です。ドラッグ、ホイール、キー、pinchによるzoom速度もCompute版と同じ設定です。</p>
+<h2>使用しているwebg機能</h2>
+<ul><li><code>WebgApp</code>: WebGPU、canvas、depth texture、カメラ、入力、Help Panel、frame計測を初期化する<ul><li><code>PhysicsSpace</code>: fixed step、予測AABB、候補生成、Box/Plane接触、摩擦、反発、position correction、persistent sleepをCPU上で処理する</li></ul></li></ul><ul><li><code>PhysicsNode</code>: CPU物理状態を保持し、solverが更新した位置・姿勢・速度・sleep状態をsceneへ反映する</li><li><code>BoxCollider</code>: ドミノの有限サイズBoxの接触形状と慣性を提供する</li><li><code>PlaneCollider</code>: 無限床の接触形状を提供する</li><li><code>Primitive</code>と<code>Shape</code>: PhysicsNodeへ追加するドミノと床板の描画形状を作る</li><li><code>buildHelpPanelOptions()</code>: 起動時に畳まれたHelp Panelを作り、frame計測と物理状態を表示する</li></ul>
+<h2>操作方法</h2>
+<ul><li><code>Space</code>: 先頭ドミノへ角速度を加えて連鎖を再開する</li><li><code>P</code>: pause / resume</li><li><code>R</code>: 初期配置へresetする</li><li><code>H</code>: Help Panelの展開 / 折りたたみ</li><li>ドラッグ: camera orbit</li><li>ホイール: zoom</li></ul>
+<h2>確認内容</h2>
+<p>起動直後に先頭の赤いドミノが倒れ、後続のドミノへ接触が伝わることを確認します。ドミノが床Planeをすり抜けず、倒れたbodyが床上に残ること、最後に複数bodyがsleepしてHelp Panelのsleeping数へ反映されることを確認します。Compute版との比較では、連鎖の順序、床による支持、最終的な停止という動作が同等であることを確認するサンプルです。</p>
+<h2>実装の流れ</h2>
+<p><code>createInitialDescriptors()</code>は、Compute版と同じ32体の位置、Box寸法、質量、初期角速度、材質値を生成します。CPUの<code>PhysicsNode</code>が角速度をdegree/secで保持するため、descriptorのrad/secを<code>PhysicsNode</code>へ渡す境界でdegree/secへ変換します。変換後もHelp Panelの速度表示はrad/secへ戻して、Compute版の表示単位と合わせています。</p>
+<p><code>createPhysicsSpace()</code>はfixed stepを120Hz、solver反復数を10、最大sub step数を4として、Compute版のBox候補余白、support feature許容値、位置補正slop、sleep・wake閾値を<code>PhysicsSpace</code>へ設定します。床は<code>PlaneCollider</code>付きstatic <code>PhysicsNode</code>として<code>PhysicsSpace</code>へ登録し、画面に見える薄い床板は描画専用の通常Nodeとして別に作ります。PhysicsSpaceは登録されたPlaneをsolver入力へ変換するため、boundsから別のPlaneを追加しません。</p>
+<p>各frameでは<code>PhysicsSpace.step(deltaMs)</code>が実時間をfixed stepへ分配し、各fixed stepで重力積分、damping、姿勢積分、予測AABB、候補生成、Box/Plane接触、local impulse solver、position correction、sleep判定を実行します。solverが更新した<code>PhysicsNode</code>は通常の<code>WebgApp</code> scene描画で表示されるため、GPU BodyStateをvertex shaderから直接読むCompute版とは描画状態の受け渡しが異なります。</p>
+<p><code>R</code>によるresetではページを再読み込みし、PhysicsSpace、PhysicsNode、接触履歴、sleep状態を初期条件から作り直します。各試行は接触履歴と時間accumulatorを初期化して開始します。</p>
+    </article>
+  </main>
+</body>
+</html>

@@ -1,0 +1,3 @@
+PbrEnvironmentCompute API contracts
+
+CPU参照と同じHammersley点列、方向変換、roughness規則を使うCompute Shader前処理と、厳密な入力検証、resource破棄を検査します

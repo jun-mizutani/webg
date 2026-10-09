@@ -1,0 +1,50 @@
+@startuml
+title ProceduralMaterial と実寸Primitiveの構築順序
+
+top to bottom direction
+skinparam backgroundColor white
+skinparam shadowing true
+skinparam dpi 150
+skinparam defaultFontName Yu Gothic UI
+skinparam defaultFontSize 18
+skinparam rectangle {
+  RoundCorner 24
+  BorderColor black
+  BackgroundColor #f7fbff
+  FontColor black
+}
+skinparam ArrowColor black
+skinparam ranksep 22
+skinparam nodesep 22
+
+rectangle "Primitive.mapRealCuboid(x, y, z)\n各面の辺長[m]をUVへ記録したModelAsset" as Primitive #eaf7e8
+rectangle "new Shape(gpu)" as NewShape
+rectangle "shape.applyPrimitiveAsset(asset)\npositions / indices / meter UVを\nCPU配列へコピー" as Apply
+rectangle "proceduralMaterials.createPreset(id, { scale })\nColor / Height / Normal textureを生成" as Create #f4edff
+rectangle "material.applyTo(shape)\nUV ÷ (tileSizeMeters × scale)\nPBR material parameterを設定" as Material #f4edff
+rectangle "shape.endShape()\n換算済みUVを含む頂点bufferをGPUへ転送" as EndShape #fdeaea
+rectangle "node.addShape(shape)\nsceneへ配置して描画" as Scene #eaf7e8
+
+Primitive --> Apply
+NewShape --> Apply
+Create --> Material
+Apply --> Material
+Material --> EndShape
+EndShape --> Scene
+
+note top of Primitive
+物体寸法とUVの単位をmeterでそろえる
+面ごとに幅と高さを使い分ける
+end note
+
+note left of Material
+scale 1: presetの実寸
+scale 2: textureを2倍の大きさで表示
+scale 0.5: textureを半分の大きさで表示
+end note
+
+note left of EndShape
+scale付きapplyToをこの後に呼ぶと
+CPU UVとGPU bufferの不一致で例外
+end note
+@enduml

@@ -1,5 +1,5 @@
 // ---------------------------------------------
-//  RenderTarget.js  2026/07/12
+//  RenderTarget.js  2026/09/09
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // ---------------------------------------------
@@ -21,7 +21,7 @@ export default class RenderTarget {
     this.hasDepth = options.hasDepth !== false;
     // 被写界深度のような後段 pass から深度 texture を読みたい場合は、
     // sampleDepth を true にすると TEXTURE_BINDING usage を追加する
-    // depth format 自体は既存 pipeline と合わせるため従来値を既定に保つ
+    // depth formatはdepthConventionから取得する
     this.sampleDepth = options.sampleDepth === true;
     this.depthConvention = this.hasDepth
       ? requireDepthConvention(options.depthConvention, `${this.label} depthConvention`)
@@ -67,7 +67,7 @@ export default class RenderTarget {
     this.sampler = this.device.createSampler(samplerDescriptor);
   }
 
-  // texture を作り直す前に旧 GPU 資源を破棄する
+  // textureを作り直す前に現在のGPU資源を破棄する
   destroyTextures() {
     if (this.colorTexture) {
       this.colorTexture.destroy();
@@ -133,46 +133,57 @@ export default class RenderTarget {
     this.sampler = null;
   }
 
+  // 現在のcolor/depth target幅を返し、画面やpassの寸法計算へ渡します
   getWidth() {
     return this.width;
   }
 
+  // 現在のcolor/depth target高さを返し、画面やpassの寸法計算へ渡します
   getHeight() {
     return this.height;
   }
 
+  // color textureのformatを返し、後段passの入力検証へ渡します
   getFormat() {
     return this.format;
   }
 
+  // color texture本体を返し、GPU copyや外部resource接続へ利用します
   getTexture() {
     return this.colorTexture;
   }
 
+  // color texture viewを返し、render passの描画先へ渡します
   getView() {
     return this.colorView;
   }
 
+  // color viewを明示名で返し、色入力を要求するpassへ渡します
   getColorView() {
     return this.colorView;
   }
 
+  // depth attachment用viewを返し、depth render passへ渡します
   getDepthView() {
     return this.depthView;
   }
 
+  // depth texture本体を返し、depth copyやresource管理へ利用します
   getDepthTexture() {
     return this.depthTexture;
   }
 
+  // shader sampling用depth viewを返し、DoFやSSRの深度入力へ渡します
   getDepthSampleView() {
     return this.depthSampleView;
   }
 
+  // depth textureがshader sampling用途で生成されたかを返します
   isDepthSampled() {
     return this.sampleDepth;
   }
 
+  // color texture用samplerを返し、全画面passのtexture samplingへ渡します
   getSampler() {
     return this.sampler;
   }

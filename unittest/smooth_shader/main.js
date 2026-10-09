@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// unittest/smooth_shader/main.js  2026/07/25
+// unittest/smooth_shader/main.js  2026/10/04
 //   smooth_shader sample
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -29,7 +29,7 @@ const STATIC_ROTATE_X = 0.28;
 const STATIC_ROTATE_Y = 0.42;
 const STATIC_FLAT_ROTATE_Y = 0.35;
 
-// `static`の形状を生成し、後続処理で利用できる状態にする
+// static meshへ画像・法線・flat shadingの指定を設定する
 const createStaticShape = (gpu, texture, normalTexture, options = {}) => {
   const {
     useNormalMap = false,
@@ -59,10 +59,10 @@ const createStaticShape = (gpu, texture, normalTexture, options = {}) => {
   return shape;
 };
 
-// `skinned`の形状を生成し、後続処理で利用できる状態にする
+// 2ボーンのメッシュを作り、画像法線の有無に応じたSmoothShader材質を設定する
 const createSkinnedShape = (gpu, texture, normalTexture, useNormalMap, color) => {
   // skinned mesh 側は 2 ボーン prism に固定し、
-  // normal map の有無と bone palette 分離後の経路だけを見やすくする
+  // normal mapの有無と、独立したbone paletteによる変形を比較しやすくする
   const rig = createTwoBoneSkinnedPrism(gpu, {
     flipU: true,
     radius: 4.0,
@@ -85,7 +85,7 @@ const createSkinnedShape = (gpu, texture, normalTexture, useNormalMap, color) =>
   return rig;
 };
 
-// このインスタンスの初期化段階で、必要な状態と資源を準備して処理を開始する
+// static、skinned、法線、flat shadingの比較用メッシュを同じ照明で表示する
 const start = async ({ screen, gpu, setStatus, setViewportLayout, startLoop, document }) => {
   const shader = new SmoothShader(gpu);
   await shader.init();

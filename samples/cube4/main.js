@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// samples/cube4/main.js  2026/07/25
+// samples/cube4/main.js  2026/09/20
 //   cube4
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -191,7 +191,7 @@ const computeBeveledBoxDims = (width, height, depth, bevel) => {
   const hy = height * 0.5;
   const hz = depth * 0.5;
 
-  // ベベル量は入力 bevel をそのまま面取り量にせず、既存デザインに合わせて 0.3 倍で使う
+  // ベベル量は入力 bevel の 0.3 倍にして、機械的な面取りの比率を保つ
   // ただし大きすぎるベベルは中央面や側帯を消してしまうため、箱半サイズに対する上限を設ける
   const maxBevel = Math.min(hx, hy, hz) * 0.45;
   const b = bevel * 0.3;
@@ -321,8 +321,8 @@ const createSharedBeveledBoxShape = (gpu, width, height, depth, bevel, color, ma
   // outerPts はベベル内側の外周、innerPts は少し持ち上げた中央パネル
   // 中央面と段差面を分けて追加することで、箱全体に機械パネルのような陰影を作る
   const addRaisedPanel = (outerPts, innerPts) => {
-    // 既存版と同じ段構成を保ったまま、頂点 index だけを共有化する
-    // 共有頂点化の有無による法線処理の違いを比較しやすくするため、この面構成自体は変えない
+    // 外周、段差、中央パネルの面構成を保ち、頂点 index だけを共有する
+    // 面構成を固定することで、共有頂点による法線処理を確認できる
     addFace(innerPts);
     for (let i = 0; i < outerPts.length; i++) {
       const next = (i + 1) % outerPts.length;
@@ -1703,8 +1703,9 @@ const start = async () => {
   audio.setSeVolume(0.78);
   audio.setSeReverb(0.14);
   audio.setBgmVolume(0.18);
+  audio.setMelody("music_evening");
+  // 曲の推奨テンポを適用した後、このゲーム向けの96 BPMへ設定する
   audio.setBpm(96);
-  audio.setMelody("night_drive");
   audio.setBgmDelay(0.20, 0.18, 0.12);
   audio.setBgmReverb(0.18, 0.26);
 

@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>fantasy</title>
+  <link rel="icon" href="data:," />
+  <!-- 2026/10/02: READMEから生成 -->
+  <style>
+
+:root {
+  color-scheme: light;
+  --bg: #eef3f8;
+  --paper: rgba(255, 255, 255, 0.94);
+  --line: #c8d5e4;
+  --ink: #17324a;
+  --muted: #5c748b;
+  --accent: #1566ab;
+  --accent-soft: #dfeefe;
+  --code-bg: #f3f7fb;
+  --shadow: rgba(29, 52, 79, 0.10);
+}
+* { box-sizing: border-box; }
+html, body {
+  margin: 0;
+  min-height: 100%;
+}
+body {
+  background:
+    radial-gradient(circle at top left, rgba(21, 102, 171, 0.12), transparent 24%),
+    radial-gradient(circle at top right, rgba(255, 191, 118, 0.10), transparent 22%),
+    linear-gradient(180deg, #f8fbfd 0%, var(--bg) 100%);
+  color: var(--ink);
+  font: 16px/1.78 "Avenir Next", "Hiragino Sans", "Yu Gothic", sans-serif;
+}
+.page {
+  width: min(1080px, calc(100% - 28px));
+  margin: 0 auto;
+  padding: 24px 0 56px;
+}
+.hero,
+.doc {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  box-shadow: 0 22px 52px var(--shadow);
+}
+.hero {
+  padding: 22px 24px;
+  margin-bottom: 18px;
+}
+.hero h1 {
+  margin: 0 0 8px;
+  font-size: clamp(2rem, 4vw, 3rem);
+  line-height: 1.08;
+}
+.hero p {
+  margin: 0;
+  color: var(--muted);
+}
+.doc {
+  padding: 28px;
+}
+.doc > :first-child {
+  margin-top: 0;
+}
+h1, h2, h3, h4, h5, h6 {
+  line-height: 1.25;
+  margin: 1.45em 0 0.55em;
+}
+h1 {
+  font-size: 2.2rem;
+}
+h2 {
+  padding-bottom: 0.28em;
+  border-bottom: 1px solid var(--line);
+  font-size: 1.48rem;
+}
+h3 {
+  font-size: 1.14rem;
+}
+p, ul, ol, table, pre, blockquote {
+  margin: 0 0 1em;
+}
+ul, ol {
+  padding-left: 1.4em;
+}
+li + li {
+  margin-top: 0.26em;
+}
+a {
+  color: var(--accent);
+  text-decoration: none;
+}
+a:hover {
+  text-decoration: underline;
+}
+img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  border-radius: 16px;
+  border: 1px solid var(--line);
+  box-shadow: 0 12px 32px rgba(29, 52, 79, 0.08);
+  margin: 1.1em 0 1.4em;
+}
+code {
+  padding: 0.12em 0.38em;
+  border-radius: 0.45em;
+  background: var(--code-bg);
+  border: 1px solid #dbe6f1;
+  font: 0.92em/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+pre {
+  padding: 14px 16px;
+  overflow-x: auto;
+  border-radius: 14px;
+  background: #0f1720;
+  color: #ecf5ff;
+}
+pre code {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #ffffff;
+}
+th, td {
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  text-align: left;
+  vertical-align: top;
+}
+th {
+  background: #f5f9fc;
+}
+hr {
+  border: 0;
+  border-top: 1px solid var(--line);
+  margin: 1.5em 0;
+}
+blockquote {
+  padding: 0.3em 0 0.3em 1em;
+  border-left: 4px solid #c9dbef;
+  color: var(--muted);
+}
+@media (max-width: 720px) {
+  .page {
+    width: min(100% - 18px, 1080px);
+    padding-top: 16px;
+  }
+  .hero,
+  .doc {
+    border-radius: 18px;
+  }
+  .doc {
+    padding: 20px;
+  }
+}
+
+  </style>
+</head>
+<body>
+  <main class="page">
+    <section class="hero">
+      <h1>fantasy</h1>
+    </section>
+    <article class="doc">
+<h1>fantasy — 翠の砦</h1>
+<p><a href="index.en.html">English</a> | 日本語</p>
+<p><img src="fantasy.jpg" alt="翠の砦"></p>
+<h2>概要</h2>
+<p>高低差のある9×9マップで、剣士・魔術師・弓使いの3人を動かして敵3体を倒すターン制ゲームです。PBR（物理ベースレンダリング）のシーンに、動くNode、クリック選択、DOMの操作パネル、GPU粒子、勝敗と再開始を足す小さな統合例です。</p>
+<p>外部モデルや音声ファイルは不要です。形状はPrimitiveで生成し、手足と装備をNodeの親子構造で接続します。戦闘ルールはGPUとDOMから独立しており、マスの経路と表示アニメーションを段階的に追えます。</p>
+<p>戦場は水に沈んだ砦です。地形・装飾・部隊へコアのコースティクスを適用し、青緑の照明、距離フォグ、上へ漂う粒子で水中を表現します。「水中のコースティクス」を切り替えると、地面を流れる集光を比較できます。OFFでも水中の色とフォグは残ります。</p>
+<h2>実行と操作</h2>
+<p>WebGPU対応ブラウザで<a href="fantasy.html">fantasy.html</a>を開きます。リポジトリ全体をHTTPで配信し、localhostまたはHTTPSを使ってください。初回はPBRとGPU粒子を準備します。</p>
+<ol>
+<li>3Dの味方、または部隊一覧から操作するユニットを選びます。</li>
+<li>青いマスをクリックして移動します。</li>
+<li>射程内の敵をクリックして攻撃します。</li>
+<li>他の味方を操作し、最後に「味方ターンを終了」で敵の行動へ進みます。</li>
+</ol>
+<p>各ユニットは移動1回・攻撃1回です。攻撃だけの行動も可能です。移動は攻撃前に行い、攻撃後は「待機」で行動を終了します。「待機」で個別に行動を終了します。敵は移動して射程に入り、攻撃可能な味方のうちHPが低い相手を狙います。</p>
+<p>移動は上下左右、段差は1段までです。上りは移動力2、平地・下りは1を消費します。生存ユニットと障害物は通り抜けられません。高所からの攻撃はダメージ+3。射程はマス距離で、遠隔攻撃は障害物を越えます。命中は確定です。</p>
+<p>全敵撃破で勝利、味方全滅で敗北。「最初から」「もう一度戦う」で再開始します。「マスをボタンで操作」を開くと、TabとEnterでも同じ選択・移動・攻撃を行えます。</p>
+<p>ドラッグで視点を回し、ホイールで拡大します。初期視点は斜めから見下ろす透視投影です。大きい画面ではCanvasを960×720とし、狭い画面では幅に合わせ、操作パネルを下へ配置します。</p>
+<h2>使用しているwebgの機能</h2>
+<ul>
+<li><code>WebgSceneApp</code>: SceneDefinitionと同じ構造のmanifest objectから、PBRとGPU粒子をまとめて起動します。ゲームの更新は<code>onUpdate({ deltaSec })</code>へ置きます。</li>
+<li><code>Shape</code>・<code>Primitive</code>・<code>Node</code>: 胴体、関節、装備を作ります。親の移動に子部品が追従し、四肢の差分回転で歩行を表します。</li>
+<li>PBR材質・環境光・影・Bloom・Fog: 草と石は粗く、鎧と金の装備は金属度を高くします。環境光は<code>blue-sky</code>、鉛直方向光は淡い青色です。</li>
+<li><code>WaterBody</code>・<code>PbrRenderer.setWater()</code>: 水面の波から照度を作り、地形と動く部隊の直接拡散光へ投影します。水面の屈折表示はOFFとし、操作するマスを読みやすく保ちます。</li>
+<li><code>Space.raycast()</code>: 画面座標をReverse-Z対応のレイへ変え、地形またはキャラクターを選択します。判定はAABBです。</li>
+<li><code>ComputeParticleEmitter</code>: 足元、魔法、火花、漂う光を別装置で発生させます。標準入口が更新とPBRへの合成を行います。</li>
+</ul>
+<p><code>physics:false</code>にして、経路探索と高低差を作品側のマス規則で扱います。剛体物理、外部モデルのスキニング、clip再生は使いません。</p>
+<h2>確認ポイント</h2>
+<ul>
+<li>リオを選び、補助盤の「列4 行5 高さ1」へ移動すると、上りのコストを含む4の移動力を使い、標高0から1へ歩きます。</li>
+<li>移動中は手足と上下動、到着した足元の粒子を確認します。行動中のボタンは無効になり、表示が終わってからマスを確定します。</li>
+<li>フィンは射程4、ルナは射程3です。射程外のクリックではHPを変えず、説明を表示します。</li>
+<li>攻撃の軌跡、着弾粒子、被弾の揺れ、HP減少、戦闘不能の表示を確認します。</li>
+<li>敵ターンの高所攻撃にはログで「高所 +3」が付きます。次の味方ターンには行動権が戻ります。</li>
+<li>再開始でHP、配置、ターン、ログ、粒子が戻ります。GPU資源は再利用します。</li>
+<li>カメラ回転と画面の幅変更後も、頭上ラベルとクリック位置が3D表示に合うことを確認します。</li>
+<li>集光が地形とユニットの移動に追従し、ON/OFF後も移動・攻撃・ターン進行を続けられることを確認します。</li>
+</ul>
+<h2>コードを読む順序</h2>
+<ol>
+<li><strong><code>main.js</code>の<code>start()</code></strong>: 一つの入口からシーンを起動し、動くNodeと入力を追加してから<code>start()</code>します。描画ループや粒子のstepを別に作りません。</li>
+<li><strong><code>scene.js</code>の<code>createManifest()</code></strong>: 配置・共通材質・PBR・粒子を初期データとして読みます。地形のマスと描画高度は<code>rules.mjs</code>から生成します。</li>
+<li><strong><code>visuals.js</code>の<code>part()</code>と<code>character()</code></strong>: 直接Shapeへ指定するRGBAとPBR材質、Nodeの親子関係、手動Shapeの所有者を確認します。</li>
+<li><strong><code>main.js</code>の<code>choose()</code>→<code>move()</code>→<code>updateMotion()</code></strong>: マスを選び、表示を待ち、論理座標を確定する順序を追います。<code>rules.mjs</code>の<code>paths()</code>は上りのコストを含む経路探索です。</li>
+<li><strong><code>main.js</code>の<code>makePointerRay()</code>・<code>pickTile()</code>・<code>updateLabels()</code></strong>: 3Dの選択とDOMの表示へ同じカメラを使う箇所を読みます。</li>
+<li><strong><code>FantasyApp.js</code>と終了処理</strong>: CSS寸法、Canvas、PBRの描画先を同期し、Observer・手動Shape・標準入口をそれぞれ解放します。</li>
+</ol>
+<p><code>main.js</code>の<code>reset()</code>はこのゲームの再開始で、コアの<code>WebgSceneApp.reset()</code>とは別の関数です。HPや行動権の復元はゲーム側の責任です。</p>
+<h2>水中の照明を接続する</h2>
+<p><code>main.js</code>の<code>connectWater()</code>で、全体を覆う幅・奥行き18m、平均水面高さ6mの<code>WaterBody</code>を作ります。地形と部隊の親Nodeを<code>addReceiver()</code>へ渡すと、手足・装備を含む子Shapeへ登録が引き継がれます。移動マーカーと選択リングは対象から外します。描画ループの<code>update()</code>では<code>setTime()</code>で秒単位の時刻だけを更新します。</p>
+<pre><code class="language-js">await sceneApp.renderer.setWater(water, {
+  causticsEnabled: true,
+  surfaceEnabled: false,
+  quality: &quot;high&quot;
+});
+</code></pre>
+<p>ON/OFF時は<code>sceneApp.stop()</code>で新しいframeを止め、<code>setWater()</code>の準備を待ってから再開します。OFFで専用GPU資源を解放し、再ONでも戦闘状態と登録済みNodeを引き継ぎます。再開始では水域を再利用します。</p>
+<p>これは水中の雰囲気を作る照明演出です。RGB吸収の設定は集光の減衰に使い、カメラまでの濁りは標準Fogで近似します。水中カメラの屈折・全反射・水面の裏側は描画しません。任意物体への集光は水平照度画像の投影近似で、影とPBRの鏡面反射は標準パイプラインが処理します。詳細は<a href="../water/index.html">waterの使い方</a>を参照してください。</p>
+<h2>一つずつ変更して学ぶ</h2>
+<ul>
+<li><strong>鎧の粗さを変える</strong>: <code>visuals.js</code>の<code>palette.steel.roughness</code>を0.28から0.65へ変えます。カメラを回してハイライトの広がりを比較します。地形の共通材質は<code>scene.js</code>側です。</li>
+<li><strong>移動力を変える</strong>: <code>rules.mjs</code>のリオの<code>move</code>を4から3へ変えます。最初の「列4 行5」へ届かなくなることを確認します。経路と青い表示は同じ結果から更新されます。</li>
+<li><strong>歩行をゆっくりにする</strong>: <code>main.js</code>の<code>move()</code>にある区間の<code>duration</code>を増やします。HPや射程を変えず、移動中の入力停止と到着時のマス確定を確認します。</li>
+<li><strong>粒子を変える</strong>: <code>scene.js</code>の<code>steps.appearance.colors</code>の二つのRGB色を変えます。<code>main.js</code>の発生位置やゲームの経路はそのまま使えます。</li>
+</ul>
+<p>一つ変更するごとに上の確認ポイントを試します。材質、ルール、表示速度、効果を同時に変えない方が、結果の原因を判断しやすくなります。</p>
+<h2>文書と自動確認</h2>
+<p><a href="fantasy_design.md">fantasy_design.md</a>はゲームの設計と機能の範囲です。<code>camera_reference.json</code>には初期視点の参照値を保存しています。<a href="../../book/examples/fantasy_guide.html">bookの「PBRシーンから小さなゲームへ」</a>と併せると、単機能の例からこの構成へ進む境界を確認できます。</p>
+<p>リポジトリのルートから次を実行すると、GPUを使わず地形・経路・占有・射程・敵の計画・勝敗を確認できます。描画と操作はブラウザで別に確認します。</p>
+<pre><code class="language-sh">node --test samples/fantasy/rules.test.mjs
+</code></pre>
+
+    </article>
+  </main>
+</body>
+</html>

@@ -1,0 +1,35 @@
+format: webg-scene
+version: 1
+name: SceneYAML mesh physics
+meshes:
+  - id: wedge
+    vertices: [[-0.5,-0.5,-0.5],[0.5,-0.5,-0.5],[0.5,-0.5,0.5],[-0.5,-0.5,0.5],[-0.5,0.5,-0.5],[0.5,0.5,-0.5]]
+    faces: [[0,1,2,3],[0,4,5,1],[0,3,4],[1,5,2],[3,2,5,4]]
+objects:
+  - id: floor
+    shape: {type: box, size: [10,0.2,8]}
+    transform: {position: [0,-0.1,0]}
+    material: {color: [0.25,0.3,0.35,1]}
+    physics: {bodyType: static}
+  - id: meshBox
+    mesh: wedge
+    transform: {position: [-2,3,0]}
+    material: {color: [0.2,0.6,0.9,1], flatShading: true}
+    physics: {bodyType: dynamic, mass: 1, shape: {type: box, size: [1,1,1]}}
+  - id: meshSphere
+    mesh: wedge
+    transform: {position: [0,3,0]}
+    material: {color: [0.9,0.5,0.2,1], flatShading: true}
+    physics: {bodyType: dynamic, mass: 1, shape: {type: sphere, radius: 0.5}}
+  - id: meshCapsule
+    mesh: wedge
+    transform: {position: [2,3,0]}
+    material: {color: [0.4,0.8,0.3,1], flatShading: true}
+    physics: {bodyType: dynamic, mass: 1, shape: {type: capsule, radius: 0.3, segmentLength: 0.4}}
+physics:
+  space: {gravity: [0,-9.80665,0], fixedTimeStepMs: 4.166666666666667, maxBodies: 4, solverIterations: 12}
+renderer:
+  profile: studio
+  width: 960
+  height: 640
+  environment: {preset: dark-studio, resolution: {width: 128, height: 64}}

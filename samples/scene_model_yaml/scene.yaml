@@ -1,0 +1,75 @@
+# 2026/09/19: SceneYAML — 外部モデルの参照・PBR表示・物理条件
+format: webg-scene
+version: 1
+name: scene-and-model-yaml
+# このURLはscene.yaml自身の場所を基準に解決する
+modelAssetUrl: ./model.yaml
+materials:
+  # assetMaterialIdはModelYAMLのmaterials[].idと一致させる
+  - assetMaterialId: box-material
+    pbr:
+      color: [0.12, 0.6, 0.9, 1]
+      metallic: 0.65
+      roughness: 0.26
+      specular: 1
+  - assetMaterialId: floor-material
+    pbr:
+      color: [0.25, 0.3, 0.38, 1]
+      metallic: 0
+      roughness: 0.55
+      specular: 0.7
+objects:
+  # nodeはModelYAMLのnodes[].id、idは作品側の物体名
+  - id: floor
+    node: floor-node
+    material: floor-material
+    physics:
+      bodyType: static
+      colliderRelation: match
+      shape: { type: box, size: [8, 0.3, 6] }
+  - id: falling-box-1
+    node: box-node-1
+    material: box-material
+    physics:
+      bodyType: dynamic
+      mass: 1
+      colliderRelation: match
+      shape: { type: box, size: [1, 1, 1] }
+  - id: falling-box-2
+    node: box-node-2
+    material: box-material
+    physics:
+      bodyType: dynamic
+      mass: 1
+      colliderRelation: match
+      shape: { type: box, size: [1, 1, 1] }
+  - id: falling-box-3
+    node: box-node-3
+    material: box-material
+    physics:
+      bodyType: dynamic
+      mass: 1
+      colliderRelation: match
+      shape: { type: box, size: [1, 1, 1] }
+physics:
+  space:
+    gravity: [0, -9.8, 0]
+    fixedTimeStepMs: 4.1666666667
+    maxSubSteps: 8
+    solverIterations: 14
+    maxBodies: 4
+    defaultRestitution: 0.12
+    defaultFriction: 0.55
+    persistentSleep: true
+renderer:
+  profile: studio
+  width: 900
+  height: 560
+  clearColor: [0.015, 0.023, 0.035, 1]
+  environment:
+    preset: dark-studio
+    resolution: { width: 128, height: 64 }
+  dof: { enabled: false }
+  pipeline:
+    lighting: { ambient: 0, directionalIntensity: 1.05, environmentIntensity: 0.55 }
+    toneMap: { exposure: 1 }

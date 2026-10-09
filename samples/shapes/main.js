@@ -154,8 +154,7 @@ const createImageNormalTexture = async (gpu, rgba, width, height) => {
 
 // `procedural`の法線の`textures`を生成し、後続処理で利用できる状態にする
 const createProceduralNormalTextures = async (gpu) => {
-  // 旧 `shapes` で使っていた procedural normal の 2 系統を残し、
-  // image normal と同じ sample 上で見比べられるようにする
+  // procedural normal の 2 系統を生成し、image normal と同じ画面で見比べられるようにする
   const noise = new Texture(gpu);
   await noise.initPromise;
   await noise.buildNormalMapFromProceduralHeight({
@@ -301,8 +300,7 @@ const start = async () => {
     camera: {
       // 3x3 配置の primitive 群は z=-28 に並べているため、
       // target まで z=-28 に寄せると rig 自体が物体中心へ入り込みやすい
-      // 旧 sample の見えに近い全体比較へ戻すため、target は原点へ置き、
-      // distance でまとめて引いた視点を作る
+      // target を原点へ置き、distance で全体を見渡せる視点を作る
       target: [0.0, 0.0, 0.0],
       distance: 50.0,
       yaw: 0.0,
@@ -517,7 +515,7 @@ const start = async () => {
       const vp = app.projectionMatrix.clone();
       vp.mul(view);
       // primitive 番号ラベルは毎 frame の投影結果に合わせて全件差し替える
-      // 旧 setMessage(slot, x, y, text) ではなく、現在の setLine(id, text, options) へ寄せる
+      // setLine(id, text, options) で投影位置にラベルを配置する
       labels.clear();
       for (let i = 0; i < nodes.length; i++) {
         const cell = worldToCell(vp, nodes[i].getWorldPosition());

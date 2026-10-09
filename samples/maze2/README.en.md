@@ -12,12 +12,12 @@ Rendering uses `ComputeEffectPipeline`. The G-buffer, Deferred Shading, SSR, Blo
 Each cell has a thin longitudinal ceiling panel centered at `y = 3.95m`, with a point Local Light for corridor illumination below it at `y = 3.70m`.
 The point Local Light illuminates all directions with a radius of `7.2m` and an intensity of `5.2`, lighting the corridor below while producing a strong direct reflection on the fixture underside about `0.2375m` above the light.
 The structural ceiling uses a `roughness` of `0.55` to broaden and weaken narrow specular highlights from the point lights.
-Because the Shadow Map is disabled, geometry between a point light and an illuminated surface does not occlude the light.
+Point lights provide direct lighting with the Shadow Map disabled. Lighting omits geometry occlusion so the corridor and light placement can be inspected.
 The fixture-wide `emissive` value is reduced to `0.10`; the main high-dynamic-range highlight instead comes from direct lighting on the underside with `specular = 0.80` and `roughness = 0.10`.
 White lights account for 60% of cells, while green, orange, and red each account for 13.3%.
 Up to 64 nearby lights are evaluated.
 SSR is applied to the floor, walls, slopes, and ceiling.
-Bloom uses `threshold = 0.60`, `softKnee = 0.40`, `strength = 1.10`, and `1/32 Weight = 0.80`, producing a broad glow from the underside HDR reflection rather than from fixture-wide self-emission.
+Bloom uses `threshold = 0.60`, `softKnee = 0.40`, `strength = 1.10`, and `1/32 Weight = 0.80`, producing a broad glow from the underside HDR reflection.
 The Shadow Map and SSAO effects remain disabled.
 
 Detailed geometry rules are documented in [maze2_spec.md](./maze2_spec.md).

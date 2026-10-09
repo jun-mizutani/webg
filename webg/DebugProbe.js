@@ -1,5 +1,5 @@
 // ---------------------------------------------
-//  DebugProbe.js  2026/07/25
+//  DebugProbe.js  2026/09/09
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // ---------------------------------------------
@@ -69,14 +69,17 @@ export default class DebugProbe {
     return null;
   }
 
+  // 送信済みで結果を待っているprobeが存在するかを返します
   hasPending() {
     return this.pending.length > 0;
   }
 
+  // 結果待ちprobeの数を返し、診断UIの進行状況表示へ渡します
   getPendingCount() {
     return this.pending.length;
   }
 
+  // 最後に完了したprobe結果を返し、診断表示の更新へ利用します
   getLastResult() {
     return this.lastResult;
   }

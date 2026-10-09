@@ -21,7 +21,7 @@
 - WebGPU に対応したブラウザで開き、必要に応じて help panel や HUD と合わせて確認してください
 
 ## 確認ポイント
-- 既存samples/physics_bounceのCPU剛体版に対するCompute Shader比較用サンプルです。
+- GPU Compute ShaderとCPU剛体シミュレーションの処理結果を比較するサンプルです。
 - Pでpause、Rでreset、Cで球体同士の衝突をON/OFFできます。
 - TouchボタンのT/C/P/Rからも、傾斜、衝突、pause、resetを操作できます。
 - URLの?count=で球数を指定できます。既定96、最大512です。

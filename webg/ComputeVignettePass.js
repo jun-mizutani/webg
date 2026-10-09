@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// ComputeVignettePass.js  2026/07/25
+// ComputeVignettePass.js  2026/08/14
 //   Final display-color vignette compute pass
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -12,11 +12,11 @@ import util from "./util.js";
 
 export const COMPUTE_VIGNETTE_FORMAT = "rgba8unorm";
 export const COMPUTE_VIGNETTE_DEFAULTS = Object.freeze({
-  center: Object.freeze([0.5, 0.5]),
+  center: [0.5, 0.5],
   radius: 0.9,
   softness: 0.35,
   strength: 0.65,
-  tint: Object.freeze([0.0, 0.0, 0.0]),
+  tint: [0.0, 0.0, 0.0],
   enabled: false
 });
 

@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>SceneYAMLとModelYAMLの組合せ</title>
+  <link rel="icon" href="data:," />
+  <!-- 2026/06/19 -->
+  <style>
+
+:root {
+  color-scheme: light;
+  --bg: #eef3f8;
+  --paper: rgba(255, 255, 255, 0.94);
+  --line: #c8d5e4;
+  --ink: #17324a;
+  --muted: #5c748b;
+  --accent: #1566ab;
+  --accent-soft: #dfeefe;
+  --code-bg: #f3f7fb;
+  --shadow: rgba(29, 52, 79, 0.10);
+}
+* { box-sizing: border-box; }
+html, body {
+  margin: 0;
+  min-height: 100%;
+}
+body {
+  background:
+    radial-gradient(circle at top left, rgba(21, 102, 171, 0.12), transparent 24%),
+    radial-gradient(circle at top right, rgba(255, 191, 118, 0.10), transparent 22%),
+    linear-gradient(180deg, #f8fbfd 0%, var(--bg) 100%);
+  color: var(--ink);
+  font: 16px/1.78 "Avenir Next", "Hiragino Sans", "Yu Gothic", sans-serif;
+}
+.page {
+  width: min(1080px, calc(100% - 28px));
+  margin: 0 auto;
+  padding: 24px 0 56px;
+}
+.hero,
+.doc {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  box-shadow: 0 22px 52px var(--shadow);
+}
+.hero {
+  padding: 22px 24px;
+  margin-bottom: 18px;
+}
+.hero h1 {
+  margin: 0 0 8px;
+  font-size: clamp(2rem, 4vw, 3rem);
+  line-height: 1.08;
+}
+.hero p {
+  margin: 0;
+  color: var(--muted);
+}
+.doc {
+  padding: 28px;
+}
+.doc > :first-child {
+  margin-top: 0;
+}
+h1, h2, h3, h4, h5, h6 {
+  line-height: 1.25;
+  margin: 1.45em 0 0.55em;
+}
+h1 {
+  font-size: 2.2rem;
+}
+h2 {
+  padding-bottom: 0.28em;
+  border-bottom: 1px solid var(--line);
+  font-size: 1.48rem;
+}
+h3 {
+  font-size: 1.14rem;
+}
+p, ul, ol, table, pre, blockquote {
+  margin: 0 0 1em;
+}
+ul, ol {
+  padding-left: 1.4em;
+}
+li + li {
+  margin-top: 0.26em;
+}
+a {
+  color: var(--accent);
+  text-decoration: none;
+}
+a:hover {
+  text-decoration: underline;
+}
+img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  border-radius: 16px;
+  border: 1px solid var(--line);
+  box-shadow: 0 12px 32px rgba(29, 52, 79, 0.08);
+  margin: 1.1em 0 1.4em;
+}
+code {
+  padding: 0.12em 0.38em;
+  border-radius: 0.45em;
+  background: var(--code-bg);
+  border: 1px solid #dbe6f1;
+  font: 0.92em/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+pre {
+  padding: 14px 16px;
+  overflow-x: auto;
+  border-radius: 14px;
+  background: #0f1720;
+  color: #ecf5ff;
+}
+pre code {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #ffffff;
+}
+th, td {
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  text-align: left;
+  vertical-align: top;
+}
+th {
+  background: #f5f9fc;
+}
+hr {
+  border: 0;
+  border-top: 1px solid var(--line);
+  margin: 1.5em 0;
+}
+blockquote {
+  padding: 0.3em 0 0.3em 1em;
+  border-left: 4px solid #c9dbef;
+  color: var(--muted);
+}
+@media (max-width: 720px) {
+  .page {
+    width: min(100% - 18px, 1080px);
+    padding-top: 16px;
+  }
+  .hero,
+  .doc {
+    border-radius: 18px;
+  }
+  .doc {
+    padding: 20px;
+  }
+}
+
+  </style>
+</head>
+<body>
+  <main class="page">
+    <section class="hero">
+      <h1>SceneYAMLとModelYAMLの組合せ</h1>
+    </section>
+    <article class="doc">
+<h1>SceneYAMLとModelYAMLの組合せ</h1>
+<p><a href="index.en.html">English</a> | <a href="scene_model_yaml.html">実行</a></p>
+<h2>概要</h2>
+<p>SceneYAMLからModelYAMLを参照し、3個の青いBoxをPBRで表示して床へ落とします。個別モデルの形状を保存するModelYAMLと、作品全体の表示・物理条件を保存するSceneYAMLを一緒に使うサンプルです。</p>
+<p><a href="model.yaml">model.yaml</a>には1mのBoxと8×0.3×6mの床のgeometry、マテリアルID、4つのNode、初期位置を記述します。同じBoxメッシュを3つのNodeから参照し、中心の高さを2m、3m、4mに設定しています。<a href="scene.yaml">scene.yaml</a>はmodelAssetUrl: ./model.yamlでこのモデルを読み込み、PBRの色・金属度・粗さ、環境光、重力、衝突形状を指定します。</p>
+<h2>起動と操作</h2>
+<p>リポジトリをHTTPサーバーで配信し、WebGPU対応ブラウザで<a href="scene_model_yaml.html">scene_model_yaml.html</a>を開いてください。localhostまたはHTTPSを使用します。起動時は物理を停止しているので、初期配置を見渡せます。ドラッグで視点を回し、ホイールで距離を変更します。</p>
+<p>「開始」でBoxが床へ落下し、「停止」で物理の進行を止めます。「初期位置へ」は物理を停止し、ModelYAMLの初期位置へ戻します。描画とカメラ操作は物理の停止中も利用できます。画面には4 body、4 binding、固定更新240Hz、両文書のコメント数を表示します。</p>
+<h2>二つのYAMLのつながり</h2>
+<p>SceneYAMLのobjects[].nodeはModelYAMLのnodes[].idを参照します。objects[].idは作品側で物体を識別する名前です。例えばfalling-box-1がbox-node-1へ対応します。現行の外部モデル経路では、初期位置をModelYAMLのNodeへ記述し、SceneYAMLのobjectsでそのNodeと物理設定を結び付けます。</p>
+<p>SceneYAMLのmaterials[].assetMaterialIdはModelYAMLのmaterials[].idへ一致させます。この例ではbox-materialへ青い金属の外観を適用し、floor-materialへ粗い床の外観を適用します。マテリアルを共有する3個のBoxには同じ外観が反映されます。</p>
+<p>表示メッシュと衝突形状は別々に記述します。SceneYAMLのphysics.shapeにBoxの寸法を明示し、colliderRelation: matchとspatialMatch: require-matchで表示との寸法対応を確認します。床をstatic、3個のBoxをdynamicにします。Boxの質量は各1kg、重力はY方向へ-9.8m/s²、固定時間刻みは1000/240ms、solverIterationsは14です。</p>
+<h2>読込みと保存</h2>
+<p>main.jsはSceneAsset.load(&quot;./scene.yaml&quot;)で原文と値を読み込み、assertValid()後にcreateWebgSceneApp({ project: sceneAsset })へ渡します。WebgSceneAppがSceneDefinitionを使って相対URLを解決し、ModelAsset.loadでModelYAMLを読み込みます。モデルの構築、PBRマテリアルの適用、Compute物理bodyの登録、Node同期をコアの高水準APIへ任せます。</p>
+<p>読み込み済みのModelAssetはsceneApp.model.assetから取得します。原文表示にも読み込み済みのAssetを使います。画面下部の二つの折り畳み欄で、コメントを含む原文を確認できます。</p>
+<p>「SceneYAML保存」と「ModelYAML保存」は、それぞれ入力の初期定義を原文のまま保存します。保存対象は初期定義で、実行中の物体位置とは分けて扱います。保存したscene.yamlとmodel.yamlは同じフォルダへ置き、相対参照を維持してください。外部モデルはModelYAMLの保存ボタンで個別に保存します。</p>
+<h2>ファイルと実装メモ</h2>
+<p>scene_model_yaml.htmlが実行ページ、main.jsが初期化とボタン処理、scene.yamlが作品設定、model.yamlがモデル定義です。日英READMEとindexに同じ説明を掲載しています。</p>
+<p>両Assetの値を変更せず、物理結果は実行時のNodeへ同期するため、保存時にYAMLコメントを保持できます。起動・保存のエラーは画面へ表示します。実行中の物理や描画エラーでは更新を止めます。終了時はWebgSceneApp.destroy()でリソースを解放します。</p>
+<p>このサンプルは、SceneYAMLのinline mesh経路と外部ModelYAML経路のうち、外部モデルを使う構成を示します。ModelYAMLだけの読込みと複数配置は<a href="../model_yaml/index.html">model_yaml</a>も参照してください。</p>
+    </article>
+  </main>
+</body>
+</html>

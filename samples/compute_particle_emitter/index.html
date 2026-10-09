@@ -1,0 +1,17 @@
+<!doctype html>
+<!-- 2026/09/22: READMEと同じ使用方法・実装説明 -->
+<html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>compute_particle_emitter</title><style>body{max-width:900px;margin:40px auto;padding:0 20px;font:16px/1.8 sans-serif;background:#101b2b;color:#e2ebf5}a{color:#82d5ff}code{color:#ffc57b}</style></head><body>
+<h1>compute_particle_emitter</h1>
+<p><a href="index.en.html">English</a> | 日本語</p>
+<h2>何をするサンプルか</h2>
+<p>SceneYAMLで定義した標準Compute粒子を、PBRシーンへ表示します。左側の噴水は連続発生、中央の火花と右側の光点はボタンによる一括発生です。GPUが初期位置・速度・寿命を生成し、その後の移動も更新します。利用するアプリは発生位置と条件を指定します。</p>
+<h2>実行と操作</h2>
+<p><a href="compute_particle_emitter.html">compute_particle_emitter.html</a>をHTTPサーバー経由で開いてください。ドラッグで視点回転、ホイールで拡大縮小できます。</p>
+<p>「火花を64粒」「光点を64粒」で一括発生し、「連続発生を停止」で噴水の新しい発生を止めます。「一時停止」は全粒子の移動と寿命を保持します。停止中の一括発生は再開時まで保留されます。「全粒子を消去」は粒子と保留要求を消し、発生設定を保ちます。連続発生中は次の更新から再び粒子が生まれます。</p>
+<p>「Bloom OFF／ON」で光のにじみを比較できます。Bloomを止めても粒子の更新と表示は続きます。中央のBoxと床には不透明深度による遮蔽が働きます。粒子の床との物理衝突は別の機能として扱います。</p>
+<h2>実装と設定</h2>
+<p><code>scene.yaml</code>の<code>particleEmitters</code>に<code>fountain</code>と<code>sparks</code>を定義しています。<code>WebgSceneApp</code>が初期化時に読み込み、<code>getComputeParticleEmitter(id)</code>で取得します。<code>main.js</code>ではさらに<code>createComputeParticleEmitter({ preset: "light", capacity: 256 }, "light")</code>で光点を追加します。</p>
+<p><code>emit(64, { position, direction, spreadAngle, speed, lifetime })</code>で発生条件を渡します。角度は度、速度はワールド長さ/秒、寿命は秒です。<code>startEmission({ rate, ... })</code>は秒当たり発生数を指定します。重力と速度減衰は<code>simulation</code>、二つのHDR色・強度・半径範囲は<code>appearance</code>で調整できます。全Emitterはアプリ終了時に解放されます。</p>
+<p>表示する推定数は、最大寿命からCPUで求めた予約数です。保留要求も含みます。容量不足時は<code>emit()</code>の<code>accepted</code>・<code>rejected</code>・<code>reason</code>と診断の拒否数で確認できます。このサンプルは満杯の要求を拒否する<code>overflow: "reject"</code>です。初期値と移動はGPUに保持し、毎frameのGPU readbackを伴いません。</p>
+<p>標準粒子は透明合成後のHDRへ加算し、Bloomとトーンマッピングを共有します。SSRは粒子描画前のシーンを参照します。独自WGSLで粒子の動きを設計する例は、<a href="../compute_particles/index.html">compute_particles</a>にあります。</p>
+</body></html>

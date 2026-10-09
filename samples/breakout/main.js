@@ -554,7 +554,7 @@ const start = async () => {
     });
   };
 
-  // 段階を初期状態へ戻し、前回の状態を残さない
+  // 段階を初期状態へ戻す
   const resetLevel = () => {
     state.paddleX = 0.0;
     state.ballX = 0.0;
@@ -627,7 +627,7 @@ const start = async () => {
     });
   };
 
-  // `after`の`life`の`lost`を初期状態へ戻し、前回の状態を残さない
+  // `after`の`life`の`lost`を初期状態へ戻す
   const resetAfterLifeLost = () => {
     state.combo = 0;
     renderGameHud();

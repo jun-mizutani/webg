@@ -177,7 +177,7 @@ blockquote {
 <p><code>com_palette</code>は、コアの<code>webg/CommandPalette.js</code>をWebgAppから独立したUI部品として使うサンプルです。button、toggle、stepper、select、排他的なmode switchを一つのpaletteへ配置し、command定義とapplication stateをどのように接続するかを確認します。</p>
 <p>画面中央の2D previewとHUDは、paletteが更新する同じ<code>state</code>を読みます。<code>Obj / Edit / Scpt</code>を切り替えると選択中buttonのactive表示とpreviewが同時に変わり、toggleやstepperを操作すると次のframeから背景や図形へ反映されます。これにより、CommandPalette自身へapplication固有の状態を持たせず、利用側の状態を表示・更新する基本構成を確認できます。</p>
 <h2>実行方法</h2>
-<ul><li><a href="./com_palette.html">./com_palette.html</a> を開きます</li><li>WebGPUは使用しないため、通常のCanvas 2DとDOMを利用できるbrowserで動作します</li></ul>
+<ul><li><a href="./com_palette.html">./com_palette.html</a> を開きます</li><li>Canvas 2DとDOMを利用できるbrowserで動作します</li></ul>
 <h2>使用しているwebg機能</h2>
 <ul><li><code>CommandPalette</code>: command定義からpaletteのDOMを生成し、開閉、ページ切り替え、値の表示を行う</li><li><code>getDefaultCommandPaletteCss()</code>: default CSSを取得し、部分的なstyle変更後に標準styleへ戻す</li><li><code>setStyle()</code>: paletteへ適用するCSS全体を差し替える</li><li><code>setTheme()</code>: 色などのCSS custom propertiesだけを変更する</li><li><code>attachToCanvas()</code>: double click、double tap、<code>/</code> keyをpaletteの開閉へ接続する</li></ul>
 <h2>実装の流れ</h2>

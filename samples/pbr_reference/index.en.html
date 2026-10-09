@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>PBR Reference</title>
+  <link rel="icon" href="data:," />
+  <!-- 2026/06/19 -->
+  <style>
+
+:root {
+  color-scheme: light;
+  --bg: #eef3f8;
+  --paper: rgba(255, 255, 255, 0.94);
+  --line: #c8d5e4;
+  --ink: #17324a;
+  --muted: #5c748b;
+  --accent: #1566ab;
+  --accent-soft: #dfeefe;
+  --code-bg: #f3f7fb;
+  --shadow: rgba(29, 52, 79, 0.10);
+}
+* { box-sizing: border-box; }
+html, body {
+  margin: 0;
+  min-height: 100%;
+}
+body {
+  background:
+    radial-gradient(circle at top left, rgba(21, 102, 171, 0.12), transparent 24%),
+    radial-gradient(circle at top right, rgba(255, 191, 118, 0.10), transparent 22%),
+    linear-gradient(180deg, #f8fbfd 0%, var(--bg) 100%);
+  color: var(--ink);
+  font: 16px/1.78 "Avenir Next", "Hiragino Sans", "Yu Gothic", sans-serif;
+}
+.page {
+  width: min(1080px, calc(100% - 28px));
+  margin: 0 auto;
+  padding: 24px 0 56px;
+}
+.hero,
+.doc {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  box-shadow: 0 22px 52px var(--shadow);
+}
+.hero {
+  padding: 22px 24px;
+  margin-bottom: 18px;
+}
+.hero h1 {
+  margin: 0 0 8px;
+  font-size: clamp(2rem, 4vw, 3rem);
+  line-height: 1.08;
+}
+.hero p {
+  margin: 0;
+  color: var(--muted);
+}
+.doc {
+  padding: 28px;
+}
+.doc > :first-child {
+  margin-top: 0;
+}
+h1, h2, h3, h4, h5, h6 {
+  line-height: 1.25;
+  margin: 1.45em 0 0.55em;
+}
+h1 {
+  font-size: 2.2rem;
+}
+h2 {
+  padding-bottom: 0.28em;
+  border-bottom: 1px solid var(--line);
+  font-size: 1.48rem;
+}
+h3 {
+  font-size: 1.14rem;
+}
+p, ul, ol, table, pre, blockquote {
+  margin: 0 0 1em;
+}
+ul, ol {
+  padding-left: 1.4em;
+}
+li + li {
+  margin-top: 0.26em;
+}
+a {
+  color: var(--accent);
+  text-decoration: none;
+}
+a:hover {
+  text-decoration: underline;
+}
+img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  border-radius: 16px;
+  border: 1px solid var(--line);
+  box-shadow: 0 12px 32px rgba(29, 52, 79, 0.08);
+  margin: 1.1em 0 1.4em;
+}
+code {
+  padding: 0.12em 0.38em;
+  border-radius: 0.45em;
+  background: var(--code-bg);
+  border: 1px solid #dbe6f1;
+  font: 0.92em/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+pre {
+  padding: 14px 16px;
+  overflow-x: auto;
+  border-radius: 14px;
+  background: #0f1720;
+  color: #ecf5ff;
+}
+pre code {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #ffffff;
+}
+th, td {
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  text-align: left;
+  vertical-align: top;
+}
+th {
+  background: #f5f9fc;
+}
+hr {
+  border: 0;
+  border-top: 1px solid var(--line);
+  margin: 1.5em 0;
+}
+blockquote {
+  padding: 0.3em 0 0.3em 1em;
+  border-left: 4px solid #c9dbef;
+  color: var(--muted);
+}
+@media (max-width: 720px) {
+  .page {
+    width: min(100% - 18px, 1080px);
+    padding-top: 16px;
+  }
+  .hero,
+  .doc {
+    border-radius: 18px;
+  }
+  .doc {
+    padding: 20px;
+  }
+}
+
+  </style>
+</head>
+<body>
+  <main class="page">
+    <section class="hero">
+      <h1>PBR Reference</h1>
+    </section>
+    <article class="doc">
+<h1>PBR Reference</h1>
+<p><code>pbr_reference</code> is a public sample that compares webg's PBR forward and deferred paths with the same materials, lighting, and environment. Core code and <code>headless_tests</code> own the numerical PBR contracts; this sample owns visual, interactive, real-HDR, and diagnostic verification.</p>
+<p>The screen contains 15 spheres. The columns use roughness values 0.08, 0.20, 0.40, 0.65, and 0.90. The rows use metallic values 0.0, 0.5, and 1.0. Every sphere uses the same base color, dielectric F0 of 0.04, and white direct light.</p>
+<p>Use the <code>Switch to Deferred</code> button or the Space key to switch between <code>PbrForwardShader</code> and <code>DeferredLightingPass</code> in <code>ComputeEffectPipeline</code>. Shapes, camera state, and material values remain unchanged. Both paths use Reinhard Tone Mapping and the standard sRGB transfer function. SSAO, Shadows, SSR, Fog, Toon, DoF, Bloom, Edge, and Vignette are disabled.</p>
+<p>The <code>Enable IBL</code> button switches to Deferred and adds a minimal image-based-lighting evaluation. Startup uses a small procedural environment. <code>Switch to Diagnostic HDR IBL</code> selects an environment produced from Radiance HDR by Compute Shaders and accepted against the CPU reference. Both contain a linear-HDR equirectangular image, diffuse irradiance, roughness-prefiltered specular levels, and a BRDF integration LUT. Disable IBL to return to the direct-light-only forward/deferred comparison.</p>
+<p><code>Show HDR Background</code> displays the original equirectangular HDR—the input to lighting—in pixels not covered by geometry. The spheres are illuminated by the irradiance, roughness-prefiltered specular levels, and BRDF LUT derived from that same HDR. The background is the source image while the spheres show material-dependent integration results; each view uses the HDR according to its role. <code>Inspect IBL Only</code> disables directional, point, cone, and shadow contributions. <code>Rotate Environment by 45°</code> rotates the background and both opaque and transparent IBL together around the world-space Y axis, making it possible to compare motion of bright background regions with motion of sphere reflections.</p>
+<p>The background and IBL remain in one linear-HDR flow and receive the same final Reinhard Tone Map and sRGB conversion. Requesting a background without original radiance, or requesting a nonzero rotation without an environment, throws an error. Reference captures are stored as <code>hdr_background_ibl_only_0deg.jpg</code> and <code>hdr_background_ibl_only_45deg.jpg</code>.</p>
+<p>The <code>HDR Input</code> status reports the Radiance RGBE decoder check. At startup, the application decodes a deterministic 8×4, 2:1 equirectangular HDR byte stream and verifies standard <code>-Y +X</code> orientation, <code>EXPOSURE</code> correction, and preservation of values above 1. The diagnostic image uses blue at the top, warm color at the bottom, distinct colors around the four horizontal directions, and a small high-radiance source. These markers expose vertical or horizontal reversal, roughness-mip errors, and HDR clipping.</p>
+<p><code>PbrEnvironmentReference.js</code> and <code>PbrEnvironmentCompute.js</code> use the same Hammersley sequence, direction mapping, cosine-weighted diffuse integration, GGX importance sampling, and roughness rule to generate five specular levels and a 32×32 BRDF LUT. <code>HDR Prefilter</code> reports CPU time, Compute time including GPU completion, and the maximum absolute error after half-float readback. After cache validation, resources reconstructed from those Compute-generated values illuminate the 15 spheres. <code>Return to Procedural IBL</code> selects the procedural environment.</p>
+<p>The application stores the CPU-accepted Compute output and original HDR in a versioned binary cache. Metadata records source ID, source dimensions, color space, orientation, all output dimensions, specular mip count, the three sample counts, and the generator version. Radiance, irradiance, specular levels, and the BRDF LUT use little-endian binary16 payloads. The application fetches an in-memory Blob URL asynchronously, acquires the same key twice, verifies reuse of one GPU environment, and then uses that reconstructed environment for actual lighting.</p>
+<p><code>HDR Cache = v1 / 6.9 KiB / reused</code> means the 7,054-byte diagnostic cache was decoded as version 1 and both acquisitions shared the same GPU resource. Source-ID, preprocessing-condition, version, mip-size, or payload-length mismatches throw errors. Network or corruption failures do not silently select the procedural environment. An active handle must be released before eviction; active GPU resources are never forcibly destroyed.</p>
+<p>The <code>Environment View</code> button cycles through the final spheres, original HDR radiance, diffuse irradiance, GGX-prefiltered specular, and the BRDF LUT as fullscreen diagnostic views. Exposure controls change radiance, irradiance, and specular display by one EV without changing lighting intensity or cached values. <code>Next Specular Mip</code> advances the mip and corresponding roughness; <code>View Detail</code> reports resolution, mip, roughness, and diagnostic exposure. The BRDF LUT is displayed linearly with Fresnel scale in R and bias in G, not as an ordinary color image.</p>
+<p>Clicking a diagnostic image moves a black-and-white crosshair and reports UV, texel coordinates, and binary16-restored cache values under <code>Selected Pixel</code>. The image is aspect-fitted, and clicks in its black bars are not treated as pixel selections. Reference captures are <code>environment_debug_radiance.jpg</code>, <code>environment_debug_irradiance.jpg</code>, <code>environment_debug_specular_mip.jpg</code>, and <code>environment_debug_brdf_lut.jpg</code>.</p>
+<p><code>White Furnace</code>, <code>GPU Interval</code>, and <code>Env Memory</code> provide diagnostics. The furnace evaluates 40 points across dielectric and metal materials, five roughness values, and four <code>NdotV</code> values under a uniform white environment. Its energy upper limit is 1.02. This test evaluates energy amplification in single-scattering GGX; evaluating multiple-scattering conservation requires separate conditions for that model.</p>
+<p>On devices with <code>timestamp-query</code>, <code>GPU Interval</code> measures from the first Compute preprocessing dispatch through the last. <code>HDR Prefilter</code> GPU wall time measures CPU submit through completion and may include preparation or waiting. <code>Env Memory</code> reports logical texture data derived from formats and dimensions. Driver padding and internal allocation overhead require additional space.</p>
+<p>Forward and Deferred use the same IBL composition, BRDF-LUT edge handling, and diagnostic HDR. For an IBL-only comparison, Forward sets the shader-default radiance to zero. Confirm that both views report no error, then compare reflections and lighting while allowing for raster edges and G-buffer quantization.</p>
+<p>The CPU implementation provides a reference for Compute Shader output. The diagnostic application sets a maximum-error limit of 0.25 and rejects non-finite output, size or mip-count mismatches, and errors above that limit. The 8×4 diagnostic input is used for output validation. Use the same HDR image and generation settings in both paths to compare real-asset performance.</p>
+<p>Press the environment-switch control again after diagnostic HDR to select the real-HDR environment. <code>Studio Small 01</code> is a CC0 asset from Poly Haven. The application includes its 1024×512 source HDR and an approximately 4.41 MiB <code>.webgpbr</code> cache generated by the offline CPU tool. <code>Real HDR Asset</code> reports fetch, decode, and GPU-upload time. The original HDR appears as the background while IBL from the same environment illuminates the 15 spheres.</p>
+<p>The <code>standard</code> preset uses 64×32 irradiance, nine specular mips from 256×128, a 128×128 BRDF LUT, and 512 samples per integral. <code>webg-split-sum-ggx-environment-mis-linear-srgb-v3</code> converts Radiance standard primaries to linear sRGB and combines a linear-sRGB-luminance environment proposal with cosine diffuse and GGX specular proposals through MIS.</p>
+<p>The diagnostic Compute implementation uses the same alias table and PDFs as the CPU path. The alias table uses eight bytes per source pixel during generation. Runtime lighting samples the cached IBL textures.</p>
+<p>Core <code>RadianceHdr.js</code> accepts <code>FORMAT=32-bit_rle_rgbe</code>, standard <code>-Y height +X width</code> orientation, and linear <code>GAMMA=1</code>, and decodes flat, old-RLE, and new-RLE scanlines. Cumulative <code>EXPOSURE</code> and <code>COLORCORR</code> values are divided out because they have already been applied to file pixels. Unknown formats, other orientations, truncated RLE, trailing payload, and non-finite metadata throw errors. Decoded values remain <code>linear-radiance-rgb</code>; a separate function converts Radiance standard primaries from white point E to sRGB D65 with Bradford adaptation and returns <code>linear-srgb</code>. Callers must explicitly choose <code>reject</code> or <code>clip</code> for negative out-of-gamut components, and non-standard <code>PRIMARIES</code> remain unsupported at the IBL boundary.</p>
+<p>The <code>Enable PBR Textures</code> button switches to Deferred and applies procedural metallic-roughness, occlusion, and emissive textures to all 15 spheres. Matching glTF, the metallic-roughness texture stores roughness in G and metallic in B; these samples multiply the uniform material factors. The occlusion texture uses R and attenuates only indirect ambient and IBL, never direct lighting. The emissive texture is decoded from sRGB and multiplied by an independent linear-HDR <code>emissive_factor</code>, so emitted radiance may exceed 1.0. Enable IBL as well when comparing the occlusion pattern.</p>
+<p>The <code>Show Alpha Three-Plane Comparison</code> button loads <code>pbr_fixture.gltf</code>, which embeds five 2×2 textures as data URIs, through the normal <code>WebgApp.loadModel()</code> path. It applies the decoded base-color texture to three open planes: <code>OPAQUE</code>, <code>MASK</code>, and <code>BLEND</code> from left to right. All three use the same camera, lighting, material factors, and texture. The comparison enables Deferred and IBL automatically.</p>
+<p>The four base-color texels contain alpha 1.0, about 0.19, about 0.86, and about 0.38. Explicit nearest sampling prevents interpolation between those alpha values. <code>OPAQUE</code> ignores all four alpha values, <code>MASK</code> omits the two regions below <code>alphaCutoff=0.5</code> from the G-buffer, and <code>BLEND</code> composites every region over the background using texture alpha even though the material alpha factor is 1.0. A high-contrast checker behind the planes makes MASK appear as hard holes and BLEND as varying checker visibility.</p>
+<p>The planes are single-sided and have no back surfaces. A closed mesh therefore cannot fill MASK holes with its back face or accumulate front and back layers under BLEND. Double-sided pipeline selection and back-face normal reversal remain separate tests and are intentionally excluded from this alpha-only comparison.</p>
+<p>The <code>Show Transparent PBR Fixture</code> button is separate from the alpha-only comparison. It displays the original glTF cube as a <code>BLEND</code> material and connects all five textures—base color, normal, metallic-roughness, occlusion, and independent HDR emissive—to the shared forward GGX shader. It also enables a directional shadow, a blue point light, and an orange cone light so that shadow reception and local-light evaluation can be checked at the transparent fragment position.</p>
+<p>The <code>Switch to Photometric Lights</code> button switches to Deferred and uses photometric units with inverse-square attenuation instead of relative intensity with finite-radius attenuation. Directional-light intensity is illuminance in lux. Point- and cone-light intensity is luminous intensity in candela. Every local light must specify <code>minimumDistance</code>, which defines the finite near-source limit used instead of allowing the inverse-square expression to diverge at the light center. The radius applies a smooth cutoff only near the range boundary.</p>
+<p>Photometric mode uses <code>exposureEv100=9.0</code>. The procedural environment uses an explicit comparison scale of 500. Comparing measured cd/m² requires a calibrated HDR image and its measurement conditions. This view checks that units, distance attenuation, and exposure switch together and that transparent objects use the same local-light attenuation.</p>
+<p>In the core, <code>PbrBrdf.js</code> provides the shared direct-light BRDF, <code>PbrEnvironmentReference.js</code> generates CPU reference data, and <code>PbrEnvironmentCompute.js</code> generates GPU resources. Compute outputs use storage-writable and sampleable <code>rgba16float</code>; the BRDF LUT uses only R and G. Enabling IBL requires uniform ambient to be zero and requires the complete irradiance, prefiltered-specular, BRDF-LUT, sampler, and mip-count set; incomplete input throws an exception.</p>
+<p>Run an HTTP server at the repository root and open <code>/samples/pbr_reference/pbr_reference.html</code> in a WebGPU-capable browser.</p>
+<pre><code class="language-sh">python3 -m http.server 8000</code></pre>
+<p>Run the sample-specific HDR-input, wiring, display-forward-shader, and core numerical contracts with:</p>
+<pre><code class="language-sh">node --experimental-default-type=module samples/pbr_reference/pbr_reference_test.mjs
+node --experimental-default-type=module samples/pbr_reference/pbr_forward_shader_test.mjs
+node headless_tests/core/radiance_hdr/headless_probe.js
+node headless_tests/core/pbr_environment_reference/headless_probe.js
+node headless_tests/core/pbr_environment_compute/headless_probe.js
+node headless_tests/core/pbr_environment_cache/headless_probe.js
+node headless_tests/core/pbr_environment_debug_pass/headless_probe.js
+node headless_tests/core/pbr_environment_evaluation/headless_probe.js
+node user/pbr_environment_asset/generate_pbr_environment_test.mjs</code></pre>
+<p>The transparent forward shader covers GGX direct lighting, base color and normal mapping, metallic-roughness, occlusion, independent HDR emissive, texture alpha, IBL, directional and spot shadows, and point and cone lights. Local lights use the same relative or inverse-square attenuation as Deferred. Occlusion attenuates only indirect IBL, never direct lighting or emission. The forward path does not reuse screen-space visibility resolved at the opaque G-buffer depth; it performs the same PCF shadow-map test from each transparent fragment's view-space position. <code>SmoothShader</code> provides hooks through which a derived shader can extend material textures and additional bind groups, while the standard SmoothShader layout and output remain unchanged.</p>
+    </article>
+  </main>
+</body>
+</html>

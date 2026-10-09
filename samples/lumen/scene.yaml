@@ -1,0 +1,65 @@
+# LUMEN 2026/09/25 — 共通材質と表示条件。繰り返し配置はexhibition.jsで生成する
+format: webg-scene
+version: 1
+name: lumen-observatory
+materials:
+  - { id: floor, color: [0.06, 0.09, 0.12, 1], metallic: 0.55, roughness: 0.25, specular: 1 }
+  - { id: shell, color: [0.16, 0.23, 0.28, 1], metallic: 0.68, roughness: 0.3, specular: 1 }
+  - { id: gold, color: [0.92, 0.66, 0.29, 1], metallic: 1, roughness: 0.2, specular: 1 }
+  - { id: silver, color: [0.72, 0.83, 0.88, 1], metallic: 1, roughness: 0.15, specular: 1 }
+  - { id: cyan, color: [0.12, 0.8, 0.85, 1], metallic: 0.15, roughness: 0.25, emissiveFactor: [0.05, 3, 3.8] }
+  - { id: amber, color: [1, 0.5, 0.16, 1], metallic: 0.1, roughness: 0.25, emissiveFactor: [4, 1.2, 0.12] }
+  - { id: core, color: [0.75, 0.95, 1, 1], metallic: 0.2, roughness: 0.2, emissiveFactor: [1.5, 3.8, 4.5] }
+objects:
+  - id: floor
+    shape: { type: box, size: [26, 0.3, 24] }
+    transform: { position: [0, -0.18, 0] }
+    material: floor
+  - id: pedestal
+    shape: { type: box, size: [5.8, 0.6, 5] }
+    transform: { position: [0, 0.3, -0.5] }
+    material: shell
+  - id: heart
+    shape: { type: sphere, radius: 0.48 }
+    transform: { position: [0, 4.76, -0.5] }
+    material: core
+particleEmitters:
+  - id: pulse
+    preset: spark
+    capacity: 4096
+    seed: 925
+    overflow: replace-oldest
+    simulation: { gravity: [0, -0.6, 0], drag: 0.35 }
+    appearance: { colors: [[1, 0.035, 0.015], [1, 0.28, 0.035]], size: [0.03, 0.07], intensity: 8 }
+  - id: dust
+    preset: light
+    capacity: 2048
+    seed: 39
+    overflow: replace-oldest
+    simulation: { gravity: [0, 0.08, 0], drag: 0.1 }
+    appearance: { colors: [[0.08, 0.55, 0.7], [0.7, 0.9, 1]], size: [0.018, 0.038], intensity: 4 }
+    emission: { rate: 100, position: [-5, 1.85, -1], direction: [0, 1, 0], spreadAngle: 78, speed: [0.4, 1.4], lifetime: [3, 7] }
+physics:
+  space:
+    gravity: [0, -9.8, 0]
+    fixedTimeStepMs: 4.1666666667
+    maxSubSteps: 8
+    solverIterations: 12
+    maxBodies: 17
+    defaultRestitution: 0.48
+    defaultFriction: 0.45
+    persistentSleep: true
+renderer:
+  profile: studio
+  width: 1200
+  height: 800
+  clearColor: [0.015, 0.028, 0.04, 1]
+  environment:
+    preset: dark-studio
+    resolution: { width: 256, height: 128 }
+  dof: { enabled: false }
+  pipeline:
+    shadow: { pcfRadius: 1 }
+    lighting: { ambient: 0, directionalIntensity: 0.35, environmentIntensity: 0.5 }
+    ssr: { intensity: 0.35, distance: 40, thickness: 0.25, steps: 64, resolutionScale: 1 }
+    toneMap: { exposure: 1.05 }

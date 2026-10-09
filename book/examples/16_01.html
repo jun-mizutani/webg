@@ -1,96 +1,55 @@
 <!doctype html>
-<!-- webg/book/examples/16_01.html 2026/05/15 -->
+<!-- book/examples/16_01.html 2026/10/04 -->
 <html lang="ja">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>16_01 TouchSurface gesture</title>
-  <link rel="stylesheet" href="./example.css" />
-  <style>
-    .gesture-surface {
-      height: 460px;
-      display: grid;
-      place-items: center;
-      border: 1px solid #b9c5e0;
-      border-radius: 12px;
-      background:
-        linear-gradient(rgba(255, 255, 255, 0.06) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(255, 255, 255, 0.06) 1px, transparent 1px),
-        radial-gradient(circle at 50% 40%, rgba(69, 155, 238, 0.24), transparent 46%),
-        #10151f;
-      background-size: 32px 32px, 32px 32px, auto, auto;
-      color: #e9efff;
-      user-select: none;
-      touch-action: none;
-    }
+  <title>16_01 Web Audio API で単音を鳴らす</title>
+  <link rel="stylesheet" href="./examples_common.css" />
 
-    .gesture-status {
-      width: min(86%, 520px);
-      padding: 22px 24px;
-      border: 1px solid rgba(255, 255, 255, 0.16);
-      border-radius: 12px;
-      background: rgba(16, 21, 31, 0.74);
-      box-shadow: 0 18px 36px rgba(0, 0, 0, 0.26);
-    }
-
-    .gesture-status strong {
-      display: block;
-      margin-bottom: 12px;
-      font-size: 22px;
-      color: #fff2b7;
-    }
-
-    .gesture-status p {
-      margin: 6px 0;
-      color: #cddcff;
-    }
-  </style>
 </head>
-<body>
+<body class="example-audio">
   <div class="page">
     <h1>book/examples</h1>
-    <h2>16_01 TouchSurface gesture</h2>
+    <h2>16_01 Web Audio API で単音を鳴らす</h2>
     <div class="section-card">
-      <p>`book/16_タッチ機能と入力.md` の `Touch.attachSurface()` を試す例です</p>
-      <p class="note">surface 上で tap、double tap、long press、flick を行うと、検出結果が表示されます。desktop でも試しやすいよう `touchOnly: false` にしています</p>
-    </div>
-
-    <div class="gesture-surface" id="surface">
-      <div class="gesture-status">
-        <strong id="gestureTitle">waiting gesture</strong>
-        <p id="gestureDetail">tap / double tap / long press / flick</p>
-        <p id="gestureHint">flick は上下左右の方向を判定します</p>
-      </div>
+      <p>`book/16_サウンドの設計.md` 冒頭の、ブラウザ標準の Web Audio API だけで単音を鳴らす例です</p>
+      <p class="note">このページは `ToneSynth` を使わず、章の導入部にある素の `AudioContext` / `OscillatorNode` の流れを確認します</p>
+      <button id="playButton">単音を鳴らす</button>
+      <p id="status">status: waiting</p>
     </div>
 
     <pre id="code"></pre>
 
-    <script type="module" id="example-source">
-import Touch from "../../webg/Touch.js";
+    <script id="example-source">
+const playButton = document.getElementById("playButton");
+const status = document.getElementById("status");
 
-const surface = document.getElementById("surface");
-const title = document.getElementById("gestureTitle");
-const detail = document.getElementById("gestureDetail");
-const hint = document.getElementById("gestureHint");
+let audioContext = null;
+let osc = null;
 
-const touch = new Touch(document, {
-  touchDeviceOnly: false
-});
+// 利用者の操作で音声コンテキストを作り、正弦波の音源を音量調整経由で出力へ接続する
+const startAudio = () => {
+  audioContext = new AudioContext();           // AudioContext を作成
+  osc = audioContext.createOscillator();       // 音源 OscillatorNode を作成
+  const gainNode = audioContext.createGain();  // 音量調整用 GainNode を作成
+  osc.type = "sine";                           // 正弦波を指定
+  osc.frequency.value = 220;                   // 周波数を220Hz（A3）へ設定する
+  gainNode.gain.value = 0.2;                   // 音量を指定
+  osc.connect(gainNode);                       // 接続する
+  gainNode.connect(audioContext.destination);
+};
 
-touch.attachSurface(surface, {
-  touchDeviceOnly: false,
-  touchOnly: false,
-  minDistance: 50,
-  longPressTime: 500,
-  longPressMoveTolerance: 10,
-  doubleTapTime: 320,
-  onGesture: (gesture) => {
-    title.textContent = gesture.direction
-      ? `${gesture.type}: ${gesture.direction}`
-      : gesture.type;
-    detail.textContent = `dx=${gesture.dx.toFixed(1)} dy=${gesture.dy.toFixed(1)} distance=${gesture.distance.toFixed(1)} elapsed=${gesture.elapsedMs.toFixed(0)}ms`;
-    hint.textContent = `x=${gesture.x.toFixed(1)} y=${gesture.y.toFixed(1)} pointer=${gesture.pointerType || "unknown"}`;
-  }
+// 準備した音源を開始し、音声コンテキストの時刻を基準に1秒後の終了を予約する
+const playTone = () => {
+  osc.start();                                 // 音を鳴らす
+  osc.stop(audioContext.currentTime + 1);      // 1秒後に止める
+};
+
+playButton.addEventListener("click", () => {
+  startAudio();
+  playTone();
+  status.textContent = "status: sine 220Hz played for 1 sec";
 });
     </script>
     <script>

@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>aquarium</title>
+  <link rel="icon" href="data:," />
+  <!-- 2026/10/03: READMEから生成 -->
+  <style>
+
+:root {
+  color-scheme: light;
+  --bg: #eef3f8;
+  --paper: rgba(255, 255, 255, 0.94);
+  --line: #c8d5e4;
+  --ink: #17324a;
+  --muted: #5c748b;
+  --accent: #1566ab;
+  --accent-soft: #dfeefe;
+  --code-bg: #f3f7fb;
+  --shadow: rgba(29, 52, 79, 0.10);
+}
+* { box-sizing: border-box; }
+html, body {
+  margin: 0;
+  min-height: 100%;
+}
+body {
+  background:
+    radial-gradient(circle at top left, rgba(21, 102, 171, 0.12), transparent 24%),
+    radial-gradient(circle at top right, rgba(255, 191, 118, 0.10), transparent 22%),
+    linear-gradient(180deg, #f8fbfd 0%, var(--bg) 100%);
+  color: var(--ink);
+  font: 16px/1.78 "Avenir Next", "Hiragino Sans", "Yu Gothic", sans-serif;
+}
+.page {
+  width: min(1080px, calc(100% - 28px));
+  margin: 0 auto;
+  padding: 24px 0 56px;
+}
+.hero,
+.doc {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  box-shadow: 0 22px 52px var(--shadow);
+}
+.hero {
+  padding: 22px 24px;
+  margin-bottom: 18px;
+}
+.hero h1 {
+  margin: 0 0 8px;
+  font-size: clamp(2rem, 4vw, 3rem);
+  line-height: 1.08;
+}
+.hero p {
+  margin: 0;
+  color: var(--muted);
+}
+.doc {
+  padding: 28px;
+}
+.doc > :first-child {
+  margin-top: 0;
+}
+h1, h2, h3, h4, h5, h6 {
+  line-height: 1.25;
+  margin: 1.45em 0 0.55em;
+}
+h1 {
+  font-size: 2.2rem;
+}
+h2 {
+  padding-bottom: 0.28em;
+  border-bottom: 1px solid var(--line);
+  font-size: 1.48rem;
+}
+h3 {
+  font-size: 1.14rem;
+}
+p, ul, ol, table, pre, blockquote {
+  margin: 0 0 1em;
+}
+ul, ol {
+  padding-left: 1.4em;
+}
+li + li {
+  margin-top: 0.26em;
+}
+a {
+  color: var(--accent);
+  text-decoration: none;
+}
+a:hover {
+  text-decoration: underline;
+}
+img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  border-radius: 16px;
+  border: 1px solid var(--line);
+  box-shadow: 0 12px 32px rgba(29, 52, 79, 0.08);
+  margin: 1.1em 0 1.4em;
+}
+code {
+  padding: 0.12em 0.38em;
+  border-radius: 0.45em;
+  background: var(--code-bg);
+  border: 1px solid #dbe6f1;
+  font: 0.92em/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+pre {
+  padding: 14px 16px;
+  overflow-x: auto;
+  border-radius: 14px;
+  background: #0f1720;
+  color: #ecf5ff;
+}
+pre code {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #ffffff;
+}
+th, td {
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  text-align: left;
+  vertical-align: top;
+}
+th {
+  background: #f5f9fc;
+}
+hr {
+  border: 0;
+  border-top: 1px solid var(--line);
+  margin: 1.5em 0;
+}
+blockquote {
+  padding: 0.3em 0 0.3em 1em;
+  border-left: 4px solid #c9dbef;
+  color: var(--muted);
+}
+@media (max-width: 720px) {
+  .page {
+    width: min(100% - 18px, 1080px);
+    padding-top: 16px;
+  }
+  .hero,
+  .doc {
+    border-radius: 18px;
+  }
+  .doc {
+    padding: 20px;
+  }
+}
+
+  </style>
+</head>
+<body>
+  <main class="page">
+    <section class="hero">
+      <h1>aquarium</h1>
+    </section>
+    <article class="doc">
+<h1>aquarium — Light beneath the water</h1>
+<p>English | <a href="README.md">日本語</a></p>
+<p><img src="aquarium.jpg" alt="Swimming dolphin and underwater caustics"></p>
+<h2>Overview</h2>
+<p>A compact underwater exhibit with five instances of the supplied dolphin GLB, its embedded texture and skeletal animation.
+PBR environment lighting, caustics, fog, subtle floating particles and rising bubbles surround the swimming dolphins.
+Caustics illuminate the dolphin, floor, rocks and sea grass. A rippling surface is visible overhead.</p>
+<h2>Run and controls</h2>
+<p>Serve <a href="aquarium.html">aquarium.html</a> over HTTP and open it in a WebGPU browser.</p>
+<ul>
+<li>Drag to orbit; use the wheel to zoom.</li>
+<li>Use the view button to compare above-water refraction with the thin surface seen from underwater.</li>
+<li>Pause freezes skeletal animation, the swimming path, waves and particles. Camera controls remain active.</li>
+<li>Caustics toggles the entire effect.</li>
+<li>The dolphin light checkbox independently selects the dolphin as a receiver.</li>
+</ul>
+<p>The floor and surface measure 18m × 12m. Rocks, sea grass and lamps retain
+their positions; surface height remains 6m. Floor UVs retain their physical scale.</p>
+<h2>Reading order</h2>
+<ol>
+<li><code>scene.js</code> creates the procedural gravel floor, flat-shaded icosphere rocks and sea grass. Rocks use dark gray with roughness 0.28 to reflect underwater lighting.</li>
+<li><code>start()</code> in <code>main.js</code> initializes <code>WebgApp</code>, <code>PbrRenderer</code> and the GLB model.</li>
+<li><code>model.instantiate()</code> creates four additional dolphins from the same asset. Each instance has its own skeleton, animation state and swimming parent Node, while sharing geometry and textures.</li>
+<li><code>updateSwimming()</code> and <code>swimmingPath.js</code> move each parent along its own 3D path at 0.8–0.95m/s. Centers, horizontal rotations, contour bends, vertical cycles and phases vary by dolphin; two swim in the opposite direction. A distance table maintains speed through turns, and the 3D tangent aligns the model&#39;s head (+Z) with its actual movement, including ascent and descent. The skeletal clip loops independently. Each dolphin moves vertically by ±0.45m; the parent Nodes span 2.55–3.45m, 2.7–3.6m, 2.4–3.3m, 3.0–3.9m and 2.1–3.0m, keeping clearance above the floor when tilted.</li>
+<li><code>WaterBody.addReceiver()</code> registers scenery with strength 0.65 and the dolphin with strength 1. Parent registration includes descendant Shapes.</li>
+<li><code>setCaustics()</code> stops rendering while asynchronous GPU resource changes complete, then resumes it.</li>
+<li><code>waterSurface.js</code> uses the core <code>WATER_WAVE_WGSL</code> to update mesh positions and normals on the GPU. Wavelength is 0.6 with amplitude 0.05.</li>
+<li>The <code>pagehide</code> handler releases the renderer, model runtime, generated materials and manually created Shapes.</li>
+</ol>
+<h2>webg features</h2>
+<p><code>WebgApp.loadModel()</code>, <code>Node.attach()</code>, animation playback and pause helpers,
+<code>PbrRenderer</code> with environment lighting, shadows and fog, <code>WaterBody</code>,
+<code>ProceduralMaterials</code>, and <code>ComputeParticleEmitter</code>.</p>
+<p>Bubbles are approximated by small blue-white particles emitted from three floor locations.
+Their radii vary from 0.04 to 0.095m, with upward speeds of 0.65, 0.8 and 0.95m/s
+and slight horizontal spread. Lifetime is calculated from the distance to the surface
+and the constant vertical speed, so bubbles fade just before reaching it.
+Additive intensity is reduced to 0.25 for faint bubbles that let the background show through.
+Pause also freezes bubble emission and ascent.</p>
+<p>Dolphins also roll around their forward axis. One large and one small dolphin roll
+by up to ±90 degrees; the remaining three roll by up to ±10 degrees.
+Each has a different phase and period, while its head remains aligned with movement.</p>
+<p>Red and yellow lamps on the floor combine framed emissive bulbs, colored point lights illuminating nearby objects,
+and subtle Bloom around the bulb.</p>
+<h2>Checkpoints</h2>
+<p>Check that the eyes follow the body, the tail keeps animating, caustics follow moving receivers,
+and pause/resume does not jump ahead after waiting. The dolphin receiver can be toggled independently.
+When caustics are off, the ordinary PBR image and water surface remain. Surface resources stay allocated,
+and caustic generation stops.</p>
+<h2>Scope and assets</h2>
+<p>The core above-water composite uses <code>surfaceEnabled: true</code> for reflection, refraction and RGB absorption.
+Above the highest wave point, the underwater mesh is hidden to prevent it from entering the refracted background.
+From underwater, a thin PBR mesh at 6m with alpha 0.08 and subdued blue emission
+has upward winding and normals, so its back face is visible from below. It is rendered using the same core waves and time as caustics. The underwater mesh color and reflection
+are an approximation, without underwater total internal reflection or refractive compositing.
+Lighting and fog create underwater color and haze. Linear fog starts 16m from the camera
+and increases toward 40m, with density 0.005 limiting the blend to 25% for a faint blue-green haze;
+camera-to-object underwater refraction and wavelength-dependent transmission are not simulated.
+Caustics use a vertical directional light. Floor normal maps affect lighting but leave geometry flat.
+Bubbles are represented by faint point particles.</p>
+<p>The supplied <code>dolphin1_20260719.glb</code> is included unchanged.
+The eye whites and pupils are separate meshes. After loading, their node receives the same
+origin translation baked into the body geometry, aligning the eyes with the head.
+Its original texture and clip are used;
+the three larger dolphins have parent scales 1.25, 1.1 and 1.05.
+The two smaller dolphins use 2/3 of the reference scale 1.25 (approximately 0.8333).
+The red lamp is at <code>[-3.2, 0.85, 2.2]</code>, and the yellow lamp is diagonally opposite at <code>[3.2, 0.85, -2.2]</code>.
+A <code>[0.52, 0.43, 0.48, 1]</code> body color factor darkens the textured skin and reduces its green tint while preserving eye materials.
+A white fill light below the dolphins approximates reflected light from the floor,
+and a lower initial camera angle makes their pale undersides visible.
+Rocks use the shared <code>buildIcosphere()</code> helper with one subdivision and flat normals (80 faces each).</p>
+<p>See <a href="../water/index.html">water</a> for surface rendering and resource checks,
+<a href="../gltf_loader/index.html">gltf_loader</a> for model import contracts, and book chapter 35 for the water API.</p>
+
+    </article>
+  </main>
+</body>
+</html>

@@ -91,7 +91,7 @@ export function createSpotLightMatrices(options = {}) {
   view.makeView(world);
   const projection = new Matrix();
   // spot lightは有限farへ限定した透視Shadow Mapとして、通常Z契約を明示する
-  // 通常カメラのReverse-Zへ暗黙に追従させず、biasとPCFの基準を第一実装期で維持する
+  // 通常カメラのReverse-Zとは独立した通常Zを使い、biasとPCFの基準を固定する
   projection.makeProjectionMatrix(near, far, fov, aspect, SHADOW_STANDARD_Z);
   const viewProjection = projection.clone();
   viewProjection.mul_(view);

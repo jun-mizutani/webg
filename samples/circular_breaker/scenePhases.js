@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// samples/circular_breaker/scenePhases.js  2026/07/25
+// samples/circular_breaker/scenePhases.js  2026/09/20
 //   circular_breaker sample
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -10,25 +10,25 @@ import GameStateManager from "../GameStateManager.js";
 // GameAudioSynth 内蔵の melody 名に sample 固有の tempo / envelope を重ねる
 const SCENE_BGM_PROFILES = {
   menu: {
-    melody: "night_drive",
+    melody: "music_evening",
     bpm: 100,
     rootHz: 196.0,
     envelope: { attack: 0.035, decay: 0.18, sustain: 0.62, release: 0.42 }
   },
   field: {
-    melody: "sunrise_step",
+    melody: "music_daylight",
     bpm: 116,
     rootHz: 220.0,
     envelope: { attack: 0.03, decay: 0.19, sustain: 0.60, release: 0.38 }
   },
   chase: {
-    melody: "hero_run",
+    melody: "run_sunrise",
     bpm: 136,
     rootHz: 220.0,
     envelope: { attack: 0.02, decay: 0.17, sustain: 0.58, release: 0.34 }
   },
   victory: {
-    melody: "bright_arp",
+    melody: "music_market",
     bpm: 132,
     rootHz: 220.0,
     envelope: { attack: 0.025, decay: 0.18, sustain: 0.62, release: 0.40 }

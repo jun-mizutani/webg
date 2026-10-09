@@ -1,0 +1,18 @@
+# PbrBrdf shared direct-light contracts
+
+## 目的
+
+前方描画と遅延描画がGGX直接光の数式を個別に複製せず、同じWGSL断片を参照することを確認します。
+
+## 実行
+
+```sh
+node headless_tests/core/pbr_brdf/headless_probe.js
+```
+
+## 期待結果
+
+```text
+pbr_brdf_api_contracts: shared direct-light BRDF contracts passed
+PASS headless_tests/core/pbr_brdf: 1 cases passed
+```

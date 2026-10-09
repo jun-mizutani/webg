@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// InputController.js  2026/07/25
+// InputController.js  2026/09/09
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // ---------------------------------------------
@@ -53,6 +53,7 @@ export default class InputController {
     this.actionPulse.clear();
   }
 
+  // 正規化したキーが現在押下中かを返し、操作状態の条件判定へ利用します
   has(key) {
     return this.keyState.has(this.normalizeKey(key));
   }
@@ -235,7 +236,7 @@ export default class InputController {
     return true;
   }
 
-  // 旧名称を残しつつ、意味としては pulseAction と同じにする
+  // pulseActionと同じ処理を別名から呼び出せるようにする
   triggerAction(name) {
     return this.pulseAction(name);
   }
@@ -272,7 +273,7 @@ export default class InputController {
   }
 
   // pointer event の既定抑止は「対象 element の内側だけ」に絞れる
-  // target が未設定なら従来どおり document 全体を抑止し、
+  // targetが未設定ならdocument全体を抑止し、
   // 明示指定がある場合だけ contains() で範囲を判定する
   shouldPreventDefaultForPointerEvent(event, preventDefault = true, element = this.pointerPreventDefaultElement) {
     if (preventDefault !== true) {

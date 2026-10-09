@@ -15,7 +15,7 @@ export default class AudioSynth extends ToneSynth {
     const opts = util.readPlainObject(options, "AudioSynth options", {});
     super({
       randomSeed: opts.randomSeed,
-      masterGain: 0.25,
+      masterGain: 0.7,
       toneBusGain: 0.90,
       toneDryGain: 0.88,
       toneWetGain: 0.22,

@@ -1,5 +1,5 @@
 // ---------------------------------------------------------
-// headless_tests/core/deferred_lighting_pass/headless_probe.js  2026/07/15
+// headless_tests/core/deferred_lighting_pass/headless_probe.js  2026/08/04
 //   Ambient-only SSAO application contracts for DeferredLightingPass
 // ---------------------------------------------------------
 import assert from "node:assert/strict";
@@ -72,6 +72,7 @@ function makeResources(width = 16, height = 8) {
     albedo: { getView: () => ({}), getWidth: () => width, getHeight: () => height },
     normal: { getView: () => ({}) },
     material: { getView: () => ({}), getWidth: () => width, getHeight: () => height },
+    emissive: { getView: () => ({}), getWidth: () => width, getHeight: () => height },
     depth: { depthConvention: CAMERA_REVERSE_Z, getDepthSampleView: () => ({}) },
     shadowVisibility: { ...visibility },
     spotShadowVisibility: { ...visibility },
@@ -107,7 +108,8 @@ function evaluateAmbientDiffuse({
   assert.match(wgsl, /fn evaluateAmbientDiffuse\(/);
   assert.match(wgsl, /let diffuseWeight = \(vec3f\(1\.0\) - fresnel\) \* \(1\.0 - metallic\)/);
   assert.match(wgsl, /return albedo \* ambient \* ambientOcclusion \* diffuseWeight/);
-  assert.match(wgsl, /var lighting = ambientDiffuse \+ albedo\.rgb \* material\.w/);
+  assert.match(wgsl, /var lighting = ambientDiffuse \+ environmentLighting \+ emissive/);
+  assert.match(wgsl, /let indirectOcclusion = ambientOcclusion \* material\.w/);
   const directionalBlock = wgsl.slice(
     wgsl.indexOf("if (params.control.z >= 0.5)"),
     wgsl.indexOf("if (params.control.w >= 0.5)")
@@ -162,6 +164,7 @@ function evaluateAmbientDiffuse({
     height: 8
   });
   await pass.ready;
+  assert.equal(pass.getSpecularIblTarget().getFormat(), "rgba16float");
   pass.encode(probe.commandEncoder, makeResources(), {
     cameraFrame: makeFrame(),
     directionalLight: null,
@@ -183,7 +186,14 @@ function evaluateAmbientDiffuse({
     "shadowVisibility",
     "spotShadowVisibility",
     "ambientOcclusion",
-    "output"
+    "output",
+    "irradiance",
+    "prefilteredSpecular",
+    "brdfLut",
+    "environmentSampler",
+    "emissive",
+    "radiance",
+    "specularIblOutput"
   ]);
   pass.destroy();
 }

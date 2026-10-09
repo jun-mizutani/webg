@@ -190,7 +190,7 @@ export async function runSimpleComputePostprocess(config) {
     let outputTarget = null;
     let computePass = null;
     // sample固有Passをコアclassとして差し込む経路です
-    // 未指定時は従来どおり単一dispatchのComputePassをこのruntime内で生成します
+    // createPassがない場合は単一dispatchのComputePassをこのruntime内で生成します
     if (typeof config.createPass === "function") {
       computePass = config.createPass(app.getGPU(), {
         label: config.id,

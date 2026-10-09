@@ -1,11 +1,16 @@
 // ---------------------------------------------
-//  PlaneCollider.js  2026/07/25
+//  PlaneCollider.js  2026/08/28
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // ---------------------------------------------
 
 import Collider from "./Collider.js";
 import BoxCollider from "./BoxCollider.js";
+import {
+  buildPlaneBoxSupportContact,
+  buildPlaneTangentBasis,
+  isPlaneSupportProjectionBalanced
+} from "./PlaneBoxContact.js";
 
 export default class PlaneCollider extends Collider {
 
@@ -38,6 +43,24 @@ export default class PlaneCollider extends Collider {
     };
   }
 
+  // plane法線に直交する2本の接線基底を作り、支持範囲の判定を2Dへ変換する
+  // 法線と平行にならないworld axisを選ぶため、床・壁・斜面で同じ判定を使える
+  _buildSupportTangentBasis(normal) {
+    return buildPlaneTangentBasis(normal);
+  }
+
+  // body重心の平面投影が支持点の線分または三角形の内側にあるか判定する
+  // 支持範囲の内側なら重心投影へ合力を集約し、接触点の偏りから余分な回転を作らない
+  _isSupportProjectionBalanced(activePoints, normal, position, tolerance) {
+    return isPlaneSupportProjectionBalanced(
+      activePoints,
+      normal,
+      position,
+      tolerance,
+      this._buildSupportTangentBasis(normal)
+    );
+  }
+
   // ray と plane の交点を返す
   intersectRay(position, origin, dir, maxDistance = Infinity) {
     const plane = this.getWorldInfo(position);
@@ -66,158 +89,33 @@ export default class PlaneCollider extends Collider {
     }
     const plane = this.getWorldInfo(position);
     const box = boxCollider.getWorldInfo(boxPosition, boxQuat);
-    const radius =
-      Math.abs(this._dotVec3(plane.normal, box.axes[0])) * box.half[0] +
-      Math.abs(this._dotVec3(plane.normal, box.axes[1])) * box.half[1] +
-      Math.abs(this._dotVec3(plane.normal, box.axes[2])) * box.half[2];
-    const centerToPlane = this._subVec3(box.center, plane.point);
-    const distance = this._dotVec3(centerToPlane, plane.normal);
-    const penetration = radius - distance;
-    if (penetration <= 0.0) {
+    // Compute版のposition slopと同じく、Boxの最大全長に対する比率で支持頂点を選ぶ
+    // 固定値の広い許容範囲を使わず、浅い接触を広い面接触へ膨らませない
+    const vertices = boxCollider.getVertices(boxPosition, boxQuat);
+    const positionSlop = Math.max(box.half[0], box.half[1], box.half[2]) * 0.0125;
+    const contact = buildPlaneBoxSupportContact(
+      plane,
+      box.center,
+      vertices,
+      positionSlop,
+      this._buildSupportTangentBasis(plane.normal)
+    );
+    if (contact === null) {
       return null;
     }
-    // 床に対して box が広い面で近づいている場合は、
-    // 頂点 1 個ではなく接触面に近い複数頂点を返す
-    // これにより角 1 点だけで支えられたような解を減らし、
-    // 面で寝る方向へ押し戻しやすくする
-    const vertices = boxCollider.getVertices(boxPosition, boxQuat);
-    let minVertexDistance = Infinity;
-    const vertexDistances = [];
-    for (let i = 0; i < vertices.length; i++) {
-      const vertexDistance = this._dotVec3(
-        this._subVec3(vertices[i], plane.point),
-        plane.normal
-      );
-      vertexDistances.push(vertexDistance);
-      if (vertexDistance < minVertexDistance) {
-        minVertexDistance = vertexDistance;
-      }
-    }
-    const contactTolerance = Math.max(
-      0.012,
-      Math.min(0.03, Math.max(box.half[0], box.half[1], box.half[2]) * 0.40)
-    );
-    const supportVertices = [];
-    for (let i = 0; i < vertices.length; i++) {
-      // 床 plane に対して「まだわずかに浮いている」頂点も、
-      // tolerance 内なら support patch の一部として扱う
-      // 細長い beam は傾き始めに 1 頂点だけが負距離になりやすく、
-      // 他の近傍頂点を捨てると pivot 1 点で立ち上がる挙動を作りやすい
-      if (vertexDistances[i] > contactTolerance) {
-        continue;
-      }
-      if (vertexDistances[i] > minVertexDistance + contactTolerance) {
-        continue;
-      }
-      const penetrationAtVertex = Math.max(0.0, -vertexDistances[i]);
-      supportVertices.push({
-        featureKey: `plane-box-vertex:${i}`,
-        point: this._subVec3(vertices[i], this._scaleVec3(plane.normal, vertexDistances[i])),
-        penetration: penetrationAtVertex
-      });
-    }
-    if (supportVertices.length > 0) {
-      if (supportVertices.length === 1) {
-        return {
-          bodyA: planeBody,
-          bodyB: boxBody,
-          normal: [...plane.normal],
-          contacts: [{
-            featureKey: supportVertices[0].featureKey,
-            penetration: supportVertices[0].penetration,
-            point: [...supportVertices[0].point]
-          }]
-        };
-      }
-      const fallbackAxis = Math.abs(plane.normal[1]) < 0.95
-        ? [0.0, 1.0, 0.0]
-        : [1.0, 0.0, 0.0];
-      let tangentA = [
-        fallbackAxis[1] * plane.normal[2] - fallbackAxis[2] * plane.normal[1],
-        fallbackAxis[2] * plane.normal[0] - fallbackAxis[0] * plane.normal[2],
-        fallbackAxis[0] * plane.normal[1] - fallbackAxis[1] * plane.normal[0]
-      ];
-      if (this._lengthVec3(tangentA) <= 1.0e-8) {
-        tangentA = [
-          -plane.normal[1],
-          plane.normal[0],
-          0.0
-        ];
-      }
-      tangentA = this._normalizeVec3(tangentA, "PlaneCollider tangentA");
-      const tangentB = this._normalizeVec3(
-        [
-          plane.normal[1] * tangentA[2] - plane.normal[2] * tangentA[1],
-          plane.normal[2] * tangentA[0] - plane.normal[0] * tangentA[2],
-          plane.normal[0] * tangentA[1] - plane.normal[1] * tangentA[0]
-        ],
-        "PlaneCollider tangentB"
-      );
-      const contacts = [];
-      // `pushUniqueContact`は重複や入力条件を確認し、対象を管理配列へ追加する
-      const pushUniqueContact = (vertex) => {
-        if (!vertex) {
-          return;
-        }
-        if (contacts.some((contact) => contact.featureKey === vertex.featureKey)) {
-          return;
-        }
-        contacts.push({
-          featureKey: vertex.featureKey,
-          penetration: vertex.penetration,
-          point: [...vertex.point]
-        });
-      };
-      // `pickExtremes`は現在状態から対象を選択し、結果を返すまたは選択を切り替える
-      const pickExtremes = (tangent) => {
-        let minVertex = supportVertices[0];
-        let maxVertex = supportVertices[0];
-        let minProjection = this._dotVec3(minVertex.point, tangent);
-        let maxProjection = minProjection;
-        for (let i = 1; i < supportVertices.length; i++) {
-          const projection = this._dotVec3(supportVertices[i].point, tangent);
-          if (projection < minProjection) {
-            minProjection = projection;
-            minVertex = supportVertices[i];
-          }
-          if (projection > maxProjection) {
-            maxProjection = projection;
-            maxVertex = supportVertices[i];
-          }
-        }
-        pushUniqueContact(minVertex);
-        pushUniqueContact(maxVertex);
-      };
-      pickExtremes(tangentA);
-      pickExtremes(tangentB);
-      if (contacts.length <= 0) {
-        return {
-          bodyA: planeBody,
-          bodyB: boxBody,
-          normal: [...plane.normal],
-          contacts: [{
-            featureKey: supportVertices[0].featureKey,
-            penetration: supportVertices[0].penetration,
-            point: [...supportVertices[0].point]
-          }]
-        };
-      }
-      return {
-        bodyA: planeBody,
-        bodyB: boxBody,
-        normal: [...plane.normal],
-        contacts
-      };
-    }
-    const point = this._subVec3(box.center, this._scaleVec3(plane.normal, radius));
     return {
       bodyA: planeBody,
       bodyB: boxBody,
       normal: [...plane.normal],
+      source: {
+        kind: "computePlaneBox",
+        supportCount: contact.activePoints.length,
+        balanced: contact.balanced
+      },
       contacts: [{
-        featureKey: "plane-box-center",
-        penetration,
-        point: this._addVec3(point, this._scaleVec3(plane.normal, penetration))
+        featureKey: "compute-plane-box-support",
+        penetration: contact.penetration,
+        point: contact.point
       }]
     };
   }
@@ -243,9 +141,9 @@ export default class PlaneCollider extends Collider {
   }
 
   // plane-capsule 接触を生成する
-  _buildContactWithCapsuleCollider(position, capsuleCollider, capsulePosition, planeBody, capsuleBody) {
+  _buildContactWithCapsuleCollider(position, capsuleCollider, capsulePosition, planeBody, capsuleBody, _planeQuat = null, capsuleQuat = null) {
     const plane = this.getWorldInfo(position);
-    const capsule = capsuleCollider.getWorldInfo(capsulePosition);
+    const capsule = capsuleCollider.getWorldInfo(capsulePosition, capsuleQuat);
     const distanceA = this._dotVec3(this._subVec3(capsule.pointA, plane.point), plane.normal);
     const distanceB = this._dotVec3(this._subVec3(capsule.pointB, plane.point), plane.normal);
     const distance = Math.min(distanceA, distanceB);

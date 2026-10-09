@@ -1,0 +1,655 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://webg.example/schema/webg-project-v1.json",
+  "title": "webg object project manifest version 1",
+  "description": "物体単位でprimitiveまたはBlender制作シーンとCompute physicsを記述するproject schema",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["name", "version", "renderer"],
+  "anyOf": [
+    { "required": ["objects"] },
+    { "required": ["objectSets"] },
+    { "required": ["modelAsset"] },
+    { "required": ["modelAssetUrl"] },
+    { "required": ["sceneAsset"] },
+    { "required": ["sceneAssetUrl"] },
+    { "required": ["scene"] },
+    { "required": ["sceneUrl"] }
+  ],
+  "allOf": [
+    {
+      "if": { "required": ["objectSets"] },
+      "then": {
+        "not": {
+          "anyOf": [
+            { "required": ["modelAsset"] },
+            { "required": ["modelAssetUrl"] },
+            { "required": ["sceneAsset"] },
+            { "required": ["sceneAssetUrl"] },
+            { "required": ["scene"] },
+            { "required": ["sceneUrl"] }
+          ]
+        }
+      }
+    },
+    {
+      "if": {
+        "allOf": [
+          {
+            "anyOf": [
+              { "required": ["sceneAsset"] },
+              { "required": ["sceneAssetUrl"] }
+            ]
+          },
+          { "required": ["objects"] }
+        ]
+      },
+      "then": {
+        "required": ["physics"],
+        "anyOf": [
+          { "required": ["materials"] },
+          { "required": ["materialsUrl"] }
+        ]
+      }
+    },
+    {
+      "if": {
+        "allOf": [
+          {
+            "anyOf": [
+              { "required": ["objects"] },
+              { "required": ["objectSets"] }
+            ]
+          },
+          {
+            "not": {
+              "anyOf": [
+              { "required": ["modelAsset"] },
+              { "required": ["modelAssetUrl"] },
+              { "required": ["sceneAsset"] },
+              { "required": ["sceneAssetUrl"] }
+              ]
+            }
+          }
+        ]
+      },
+      "then": {
+        "required": ["physics"],
+        "anyOf": [
+          { "required": ["materials"] },
+          { "required": ["materialsUrl"] }
+        ]
+      }
+    }
+  ],
+  "properties": {
+    "name": { "type": "string", "minLength": 1 },
+    "version": { "type": "integer", "minimum": 1 },
+    "modelAsset": { "type": "object" },
+    "modelAssetUrl": { "type": "string", "minLength": 1 },
+    "sceneAsset": { "type": "object" },
+    "sceneAssetUrl": { "type": "string", "minLength": 1 },
+    "materials": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "oneOf": [
+          { "$ref": "#/$defs/primitiveMaterial" },
+          { "$ref": "#/$defs/modelMaterial" }
+        ]
+      }
+    },
+    "materialsUrl": { "type": "string", "minLength": 1 },
+    "renderer": { "$ref": "webg-renderer.schema.json" },
+    "physics": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["space"],
+      "properties": {
+        "space": { "$ref": "webg-project-physics.schema.json#/$defs/space" },
+        "joints": {
+          "type": "array",
+          "items": { "$ref": "webg-project-physics.schema.json#/$defs/distanceJoint" }
+        }
+      }
+    },
+    "objects": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 4096,
+      "items": {
+        "oneOf": [
+          { "$ref": "#/$defs/primitiveObject" },
+          { "$ref": "#/$defs/modelObject" }
+        ]
+      }
+    }
+    ,
+    "objectSets": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 4096,
+      "items": { "$ref": "#/$defs/primitiveObjectSet" }
+    }
+  },
+  "$defs": {
+    "id": {
+      "type": "string",
+      "pattern": "^[A-Za-z][A-Za-z0-9_-]*$"
+    },
+    "vec3": {
+      "type": "array",
+      "prefixItems": [
+        { "type": "number" },
+        { "type": "number" },
+        { "type": "number" }
+      ],
+      "items": false,
+      "minItems": 3,
+      "maxItems": 3
+    },
+    "shape": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "size"],
+          "properties": {
+            "type": { "const": "box" },
+            "size": {
+              "type": "array",
+              "prefixItems": [
+                { "type": "number", "exclusiveMinimum": 0 },
+                { "type": "number", "exclusiveMinimum": 0 },
+                { "type": "number", "exclusiveMinimum": 0 }
+              ],
+              "items": false,
+              "minItems": 3,
+              "maxItems": 3
+            },
+            "offset": { "$ref": "#/$defs/vec3" }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "radius"],
+          "properties": {
+            "type": { "const": "sphere" },
+            "radius": { "type": "number", "exclusiveMinimum": 0 },
+            "offset": { "$ref": "#/$defs/vec3" }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "radius", "segmentLength"],
+          "properties": {
+            "type": { "const": "capsule" },
+            "radius": { "type": "number", "exclusiveMinimum": 0 },
+            "segmentLength": { "type": "number", "minimum": 0 },
+            "offset": { "$ref": "#/$defs/vec3" }
+          }
+        }
+      ]
+    },
+    "material": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "color": {
+          "type": "array",
+          "prefixItems": [
+            { "type": "number", "minimum": 0, "maximum": 1 },
+            { "type": "number", "minimum": 0, "maximum": 1 },
+            { "type": "number", "minimum": 0, "maximum": 1 },
+            { "type": "number", "minimum": 0, "maximum": 1 }
+          ],
+          "items": false,
+          "minItems": 4,
+          "maxItems": 4
+        },
+        "alpha": { "type": "number", "minimum": 0, "maximum": 1 },
+        "alphaMode": { "enum": ["OPAQUE", "MASK", "BLEND"] },
+        "alphaCutoff": { "type": "number", "minimum": 0, "maximum": 1 },
+        "metallic": { "type": "number", "minimum": 0, "maximum": 1 },
+        "roughness": { "type": "number", "minimum": 0, "maximum": 1 },
+        "specular": { "type": "number", "minimum": 0, "maximum": 1 },
+        "ambient": { "type": "number", "minimum": 0, "maximum": 1 },
+        "power": { "type": "number", "minimum": 0 },
+        "occlusion": { "type": "number", "minimum": 0, "maximum": 1 },
+        "emissive": { "type": "number", "minimum": 0 },
+        "emissiveFactor": {
+          "type": "array",
+          "prefixItems": [
+            { "type": "number", "minimum": 0 },
+            { "type": "number", "minimum": 0 },
+            { "type": "number", "minimum": 0 }
+          ],
+          "items": false,
+          "minItems": 3,
+          "maxItems": 3
+        },
+        "flatShading": { "type": "boolean" },
+        "doubleSided": { "type": "boolean" }
+      }
+    },
+    "primitiveMaterial": {
+      "allOf": [
+        { "$ref": "#/$defs/material" },
+        { "required": ["id"] }
+      ]
+    },
+    "modelMaterial": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["assetMaterialId"],
+      "properties": {
+        "assetMaterialId": { "$ref": "#/$defs/id" },
+        "materialId": { "$ref": "#/$defs/id" },
+        "pbr": { "type": "object" },
+        "preset": { "type": "string", "minLength": 1 },
+        "textures": { "$ref": "#/$defs/imageTextures" },
+        "tile": { "type": "object" },
+        "appearance": { "type": "object" },
+        "scale": { "type": "number", "exclusiveMinimum": 0 },
+        "uvMapping": { "enum": ["real-cuboid", "real-sphere", "real-capsule"] }
+      },
+      "oneOf": [
+        {
+          "required": ["pbr"],
+          "not": {
+            "anyOf": [
+              { "required": ["preset"] },
+              { "required": ["textures"] },
+              { "required": ["tile"] },
+              { "required": ["scale"] },
+              { "required": ["appearance"] }
+            ]
+          }
+        },
+        {
+          "required": ["preset"],
+          "not": { "anyOf": [{ "required": ["pbr"] }, { "required": ["textures"] }] }
+        },
+        {
+          "required": ["textures"],
+          "not": {
+            "anyOf": [
+              { "required": ["pbr"] },
+              { "required": ["preset"] },
+              { "required": ["tile"] },
+              { "required": ["scale"] }
+            ]
+          }
+        }
+      ]
+    },
+    "imageTextures": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "colorUrl": { "type": "string", "minLength": 1 },
+        "normalUrl": { "type": "string", "minLength": 1 },
+        "wrap": { "enum": ["repeat", "clamp"] }
+      },
+      "anyOf": [
+        { "required": ["colorUrl"] },
+        { "required": ["normalUrl"] }
+      ]
+    },
+    "surface": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "friction": { "type": "number", "minimum": 0 },
+        "restitution": { "type": "number", "minimum": 0, "maximum": 1 },
+        "linearDamping": { "type": "number", "minimum": 0 },
+        "angularDamping": { "type": "number", "minimum": 0 }
+      }
+    },
+    "body": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["bodyType"],
+      "properties": {
+        "bodyType": { "enum": ["static", "kinematic", "dynamic"] },
+        "mass": { "type": "number", "exclusiveMinimum": 0 },
+        "linearVelocity": { "$ref": "#/$defs/vec3" },
+        "angularVelocity": { "$ref": "#/$defs/vec3" },
+        "shape": { "$ref": "#/$defs/shape" },
+        "colliderRelation": { "enum": ["match", "proxy"] },
+        "transformSpace": { "enum": ["local", "world"] },
+        "initialState": { "enum": ["awake", "sleeping"] },
+        "anchors": {
+          "type": "object",
+          "propertyNames": { "$ref": "#/$defs/id" },
+          "additionalProperties": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["localPoint"],
+            "properties": { "localPoint": { "$ref": "#/$defs/vec3" } }
+          }
+        },
+        "linearDamping": { "type": "number", "minimum": 0 },
+        "angularDamping": { "type": "number", "minimum": 0 },
+        "gravityScale": { "type": "number" },
+        "allowSleep": { "type": "boolean" },
+        "isSleeping": { "type": "boolean" },
+        "isTrigger": { "type": "boolean" },
+        "fixedRotation": { "type": "boolean" },
+        "collisionLayer": { "type": "integer", "minimum": 0, "maximum": 4294967295 },
+        "collisionMask": { "type": "integer", "minimum": 0, "maximum": 4294967295 },
+        "material": { "$ref": "#/$defs/surface" }
+      },
+      "allOf": [{
+        "if": { "properties": { "bodyType": { "const": "dynamic" } } },
+        "then": { "required": ["mass"] }
+      }]
+    },
+    "primitiveObject": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "shape", "material"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "shape": { "$ref": "#/$defs/shape" },
+        "transform": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "position": { "$ref": "#/$defs/vec3" },
+            "orientation": {
+              "type": "array",
+              "prefixItems": [
+                { "type": "number" },
+                { "type": "number" },
+                { "type": "number" },
+                { "type": "number" }
+              ],
+              "items": false,
+              "minItems": 4,
+              "maxItems": 4
+            }
+          }
+        },
+        "material": { "$ref": "#/$defs/id" },
+        "physics": { "$ref": "#/$defs/body" }
+      }
+    },
+    "primitivePrototype": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["shape", "material"],
+      "properties": {
+        "shape": { "$ref": "#/$defs/shape" },
+        "transform": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "position": { "$ref": "#/$defs/vec3" },
+            "orientation": {
+              "type": "array",
+              "prefixItems": [
+                { "type": "number" },
+                { "type": "number" },
+                { "type": "number" },
+                { "type": "number" }
+              ],
+              "items": false,
+              "minItems": 4,
+              "maxItems": 4
+            }
+          }
+        },
+        "material": { "$ref": "#/$defs/id" },
+        "physics": { "$ref": "#/$defs/body" }
+      }
+    },
+    "primitiveObjectSetPlacement": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "count", "origin", "spacing"],
+      "properties": {
+        "type": { "const": "grid3d" },
+        "count": {
+          "type": "array",
+          "prefixItems": [
+            { "type": "integer", "minimum": 1 },
+            { "type": "integer", "minimum": 1 },
+            { "type": "integer", "minimum": 1 }
+          ],
+          "items": false,
+          "minItems": 3,
+          "maxItems": 3
+        },
+        "origin": { "$ref": "#/$defs/vec3" },
+        "spacing": { "$ref": "#/$defs/vec3" },
+        "seed": { "type": "integer", "minimum": 0 },
+        "jitter": {
+          "type": "array",
+          "prefixItems": [
+            { "type": "number", "minimum": 0 },
+            { "type": "number", "minimum": 0 },
+            { "type": "number", "minimum": 0 }
+          ],
+          "items": false,
+          "minItems": 3,
+          "maxItems": 3
+        }
+      }
+    },
+    "primitiveObjectSetOverride": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["index"],
+      "properties": {
+        "index": { "type": "integer", "minimum": 0 },
+        "shape": { "$ref": "#/$defs/shape" },
+        "transform": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "position": { "$ref": "#/$defs/vec3" },
+            "orientation": {
+              "type": "array",
+              "prefixItems": [
+                { "type": "number" },
+                { "type": "number" },
+                { "type": "number" },
+                { "type": "number" }
+              ],
+              "items": false,
+              "minItems": 4,
+              "maxItems": 4
+            }
+          }
+        },
+        "material": { "$ref": "#/$defs/id" },
+        "physics": { "$ref": "#/$defs/body" }
+      }
+    },
+    "primitiveObjectSetVariant": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "shape", "material"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "shape": { "$ref": "#/$defs/shape" },
+        "transform": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "position": { "$ref": "#/$defs/vec3" },
+            "orientation": {
+              "type": "array",
+              "prefixItems": [
+                { "type": "number" },
+                { "type": "number" },
+                { "type": "number" },
+                { "type": "number" }
+              ],
+              "items": false,
+              "minItems": 4,
+              "maxItems": 4
+            }
+          }
+        },
+        "material": { "$ref": "#/$defs/id" },
+        "physics": { "$ref": "#/$defs/body" }
+      }
+    },
+    "primitiveObjectSetVariantPattern": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "values"],
+      "properties": {
+        "type": { "const": "cycle" },
+        "values": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/id" }
+        }
+      }
+    },
+    "primitiveObjectSetScalarPattern": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "values"],
+          "properties": {
+            "type": { "const": "cycle" },
+            "values": {
+              "type": "array",
+              "minItems": 1,
+              "items": { "type": "number" }
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "start", "step"],
+          "properties": {
+            "type": { "const": "range" },
+            "start": { "type": "number" },
+            "step": { "type": "number" }
+          }
+        }
+      ]
+    },
+    "primitiveObjectSetVec3CyclePattern": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "values"],
+      "properties": {
+        "type": { "const": "cycle" },
+        "values": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/vec3" }
+        }
+      }
+    },
+    "primitiveObjectSetQuatCyclePattern": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "values"],
+      "properties": {
+        "type": { "const": "cycle" },
+        "values": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "array",
+            "prefixItems": [
+              { "type": "number" },
+              { "type": "number" },
+              { "type": "number" },
+              { "type": "number" }
+            ],
+            "items": false,
+            "minItems": 4,
+            "maxItems": 4
+          }
+        }
+      }
+    },
+    "primitiveObjectSetInstancePattern": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "transform": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "orientation": { "$ref": "#/$defs/primitiveObjectSetQuatCyclePattern" }
+          }
+        },
+        "physics": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "linearVelocity": { "$ref": "#/$defs/primitiveObjectSetVec3CyclePattern" },
+            "angularVelocity": { "$ref": "#/$defs/primitiveObjectSetVec3CyclePattern" },
+            "mass": { "$ref": "#/$defs/primitiveObjectSetScalarPattern" }
+          }
+        }
+      }
+    },
+    "primitiveObjectSet": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "placement"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "prototype": { "$ref": "#/$defs/primitivePrototype" },
+        "variants": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/primitiveObjectSetVariant" }
+        },
+        "variantPattern": { "$ref": "#/$defs/primitiveObjectSetVariantPattern" },
+        "placement": { "$ref": "#/$defs/primitiveObjectSetPlacement" },
+        "instancePattern": { "$ref": "#/$defs/primitiveObjectSetInstancePattern" },
+        "overrides": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/primitiveObjectSetOverride" }
+        }
+      },
+      "oneOf": [
+        {
+          "required": ["prototype"],
+          "not": {
+            "anyOf": [
+              { "required": ["variants"] },
+              { "required": ["variantPattern"] }
+            ]
+          }
+        },
+        {
+          "required": ["variants", "variantPattern"],
+          "not": { "required": ["prototype"] }
+        }
+      ]
+    },
+    "modelObject": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "node", "material", "physics"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "node": { "$ref": "#/$defs/id" },
+        "material": { "$ref": "#/$defs/id" },
+        "physics": {
+          "allOf": [
+            { "$ref": "#/$defs/body" },
+            { "required": ["shape"] }
+          ]
+        }
+      }
+    }
+  }
+}

@@ -1,25 +1,24 @@
 # maze2_spec
 
-この文書は、`samples/maze` を `samples/maze2` として発展させた、八角形断面のSF風通路の現行実装仕様である。迷路生成、first-person操作、衝突判定、レーダー、固定seed、部屋、入口と出口を維持し、形状生成、material、照明、描画経路、操作を拡張している。
+`samples/maze2`は、八角形断面のSF風通路を歩く迷路サンプルです。固定seedによる迷路生成、first-person操作、衝突判定、レーダー、部屋、入口と出口、PBR材質と照明の規則を説明します。
 
-寸法や初期値は、特記しない限り `samples/maze2/main.js` の現行値と一致させる。今後調整した場合も、コードだけを変更せず本書へ反映する。
+寸法や初期値は、特記しない限り `samples/maze2/main.js` の現行値と一致させる。
 
 ## 1. 目標
 
 - 通路の基本断面を、床、左右の下部斜面、左右の垂直壁、左右の上部斜面、天井からなる八角形にする。
-- 壁の上下端へ内向きの三角柱状レールを付け、単なる bevel ではなく、厚い構造フレームに囲まれたチューブとして見せる。
-- 暗かった天井を各セルの天井灯で照らし、光の反復で進行方向とセルのリズムが分かるようにする。
+- 壁の上下端へ内向きの三角柱状レールを付け、厚い構造フレームに囲まれたチューブとして見せる。
+- 天井を各セルの天井灯で照らし、光の反復で進行方向とセルのリズムが分かるようにする。
 - 床、壁、斜面へ明確に読める SSR を適用し、天井灯と周囲の白系内装が流れる高彩度の SF 内装にする。
 - Shadow Map と SSAO は使用しない。多数のpoint Local LightとSSRを使うため、追加負荷を抑える。
-- `samples/maze` は比較用として一切変更しない。
 
-## 2. 維持する機能
+## 2. 利用する機能
 
 - 15 x 15 cell、seed `20260707`、DFS backtracker、room overlay、start / goal の生成規則
 - `EyeRig` first-person、W/S 移動、A/D 旋回、Shift 走行、drag 視線、reset、screenshot
 - 円柱プレイヤーによる XZ 平面衝突、uniform grid、heading-up radar
 - help panel、diagnostics、CommandPalette、touch 操作
-- 床の corridor / room / start / goal の識別。ただし配色は新しい意匠へ変更する
+- 床の corridor / room / start / goal の識別。配色はSF風の内装に合わせる
 
 ## 3. 基準寸法
 
@@ -58,7 +57,7 @@
 - 主壁は壁心上の薄い直方体とし、通路側の面を断面の左右垂直辺とする。
 - 下部レールは、壁内面の `(0, 0)..(0, B)` と床側の `(B, 0)` を結ぶ直角三角形を、壁方向へ通した構造材として見せる。
 - 上部レールは、壁内面の `(0, H-B)..(0, H)` と天井側の `(B, H)` を結ぶ構造材として見せる。
-- 三角柱は壁を削る bevel ではなく、壁・床・天井の角を埋める独立構造材とする。
+- 三角柱は壁・床・天井の角を埋める独立構造材とする。
 - 床と天井の平面は維持する。斜面と重なる非表示領域があってもよいが、同一平面の z-fighting は作らない。
 - 通常区間は通路側に見える斜面 quad だけを custom mesh に追加する。壁、床、天井と同一平面になる三角柱の他面は追加しない。
 - 自由端だけに三角形 end cap を追加し、各面に正しい winding と法線を持たせる。`Shape.endShape()` を必ず呼ぶ。
@@ -73,7 +72,7 @@
 2. 各 wall segment に主壁、下部斜面、上部斜面を一組生成する。
 3. 床と天井は cell tile を基準に生成する。
 4. 上下斜面の端点は wall topology を見て、継続、外角、端部のいずれかに分類する。
-5. 分岐や部屋は「tube の交差」ではなく、複数の八角形通路が接続する少し広い node chamber として処理する。
+5. 分岐や部屋は複数の八角形通路が接続する少し広い node chamber として処理する。
 
 この方式では、壁が左右にある直線部分は常に正確な八角形断面になる。曲がり角や分岐では断面が一時的に広がるが、閉塞や重複壁を作らず、歩行可能性を優先する。
 
@@ -147,7 +146,7 @@
 - 3方向以上へ開いた分岐 cell の床は専用の鮮やかな青 material とし、通常 corridor と視覚的に区別する。
 - 天井灯 fixture は高さ0.025mの薄い長方形panelとする。直線cellでは上部斜面と直交する幅を1.48mにして左右各0.20mの余白を残し、通路の前後方向は3.60mにしてcell長4.00mの前後各0.20mの余白を残す。曲がり角、T字、十字、roomでは一方向へ伸ばさない1.48m角panelとする。
 - fixtureのdiffuserと側面は、同じcellのpoint Local Lightと必ず同じ色名を使う。Local Lightだけを色替えしてfixtureを別色のまま残さない。
-- texture asset の追加は初期実装の必須条件にしない。色、material、構造形状、照明だけで成立させる。
+- 色、material、構造形状、照明を組み合わせて内装を表現する。
 
 ### 8.1 現行material値
 
@@ -165,9 +164,9 @@
 - fixture materialは`ambient 0.18`、`specular 0.80`、`roughness 0.10`、`metallic 0.10`、`emissive 0.10`とする
 - end cap color `[0.08, 0.58, 0.62, 0.20]`
 
-配列の第4要素は透明度ではなく、G-buffer経由でSSRが読むreflectivityとして使う。描画自体はopaqueである。
+配列の第4要素はG-buffer経由でSSRが読むreflectivityとして使う。描画自体はopaqueである。
 
-照明fixture全体の`emissive`は0.10に抑える。BloomはPyramid方式を有効にし、full-resolution extractの`threshold`を0.60、`softKnee`を0.40、全体`strength`を1.10とする。1/2から1/16までのLevel Weightと`filterRadius`は`COMPUTE_BLOOM_DEFAULTS`を使用し、1/32のLevel Weightは広い発光を強めるため0.80とする。白系の壁や床全体、または照明fixture全面の自己発光ではなく、天井灯下面中央の直接反射を中心に滑らかな発光を加える。
+照明fixture全体の`emissive`は0.10に抑える。BloomはPyramid方式を有効にし、full-resolution extractの`threshold`を0.60、`softKnee`を0.40、全体`strength`を1.10とする。1/2から1/16までのLevel Weightと`filterRadius`は`COMPUTE_BLOOM_DEFAULTS`を使用し、1/32のLevel Weightは広い発光を強めるため0.80とする。天井灯下面中央の直接反射を中心に滑らかな発光を加える。
 
 ## 9. Deferred Local Light
 
@@ -219,9 +218,9 @@ SSR は screen-space のため、画面外、遮蔽物の裏、正面を向い�
 - 見た目の下部三角柱から自動抽出した斜辺を collision に使うと、足元の有効幅が意図せず変動し、重複線分も増える。このため collision は render mesh から分離する。
 - collision wall は各 wall boundary の通路側主壁面を表す単純線分から直接構築する。
 - player center が壁心から `WALL_THICKNESS / 2 + PLAYER_RADIUS` 未満へ近づかない現行相当の規則を維持する。
-- 下部レールは視覚上 player 側へ 0.62 m 張り出すが、初期実装では collision を主壁面に維持する。カメラがレールへ極端に食い込んで見える場合のみ、別定数 `COLLISION_INSET` を最大 0.20 m まで導入する。
+- 下部レールは視覚上 player 側へ 0.62 m 張り出す。collision は主壁面を基準にするため、歩行可能範囲と装飾レールの張り出しには差がある。
 - 上部レール、天井、fixture、lintel は player 高さと交差しないため歩行 collision 対象外とする。
-- radar は render mesh 由来ではなく、同じ論理 wall boundary の collision 線分を描画する。斜面の細かい辺を表示しない。
+- radar は同じ論理 wall boundary の collision 線分を描画する。斜面の細かい辺を表示しない。
 - radar は heading-up表示、表示半径 12.0 m とする。初期版の8.0 mに対して同じ画面寸法で1.5倍広い範囲を表示する。
 - radar grid stepは4.0 m、DOM canvasの表示寸法は168 pxとする。
 - door、entrance、junction の開口は collision segment も途切れ、見た目と通行可能領域を一致させる。
@@ -248,25 +247,9 @@ SSR は screen-space のため、画面外、遮蔽物の裏、正面を向い�
 - 透明 material は使わず、opaque pass のままにする。
 - triangle 数、Shape 数、active light 数を diagnostics に表示する。
 
-## 14. 実装履歴に対応する順序
 
-1. 複製版が `samples/maze` と同じ状態で起動することを確認する。
-2. cell pitch と天井高を 4.00 m に変更し、扉、初期位置、レーダー目盛り、help 表示を追従させる。
-3. wall boundary の一意な一覧を生成し、render geometry と collision の共通入力にする。
-4. 直線 wall の上下三角柱を実装し、断面寸法と法線を確認する。
-5. 継続、90 度miter bridge、自由端end cap を実装する。
-6. 扉、入口、出口、行き止まり、T 字路、十字路、room 境界を個別に確認する。
-7. material と fixture mesh を導入する。
-8. Geometry Buffer + Deferred Lighting の描画へ切り替え、近傍 64 灯選択を実装する。
-9. SSR、composer、tone map を追加し、負荷と反射強度を調整する。
-10. palette、help、diagnostics を新構成へ合わせ、旧 spot / shadow / SSAO 項目を整理する。
-11. desktop と mobile 相当 viewport で操作、表示、resize を確認する。
+## 14. 確認ポイント
 
-各段階で起動可能な状態を保ち、geometry と effect chain を同時に全面変更しない。
-
-## 15. 受入条件
-
-- `samples/maze` のファイルに差分がない。
 - 通常の直線通路で、床から天井まで八角形断面が連続して見える。
 - 曲がり角、T 字路、十字路、行き止まり、room door、外周入口と出口に、可視の穴、裏返った面、z-fighting、進路を塞ぐ filler がない。
 - すべての door を player が通過できる。
@@ -279,7 +262,7 @@ SSR は screen-space のため、画面外、遮蔽物の裏、正面を向い�
 - `node --check samples/maze2/main.js` が成功する。
 - diagnostics に Shape 数、triangle 数、active light 数、主要 GPU timing が表示される。
 
-## 16. 現行の主要初期値と調整範囲
+## 15. 主要初期値と調整範囲
 
 次の値は視認性と GPU timing を見て、仕様意図を保つ範囲で調整してよい。
 

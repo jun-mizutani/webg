@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// GltfShape.js   2026/07/25
+// GltfShape.js   2026/09/09
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // ---------------------------------------------
@@ -12,6 +12,9 @@ import Animation from "./Animation.js";
 import ModelAsset from "./ModelAsset.js";
 import ModelBuilder from "./ModelBuilder.js";
 import Texture from "./Texture.js";
+import util from "./util.js";
+import { linearChannelToSrgb } from "./ColorSpace.js";
+import { PBR_MIN_ROUGHNESS } from "./PbrBrdf.js";
 
 export default class GltfShape {
   // glTF→Shape変換器を初期化する
@@ -493,6 +496,7 @@ export default class GltfShape {
     throw new Error(`${path} must be a non-empty string`);
   }
 
+  // Rigifyの変形用DEFボーン名を判定し、skin計画へ含める対象を選びます
   isRigifyDeformBone(name) {
     return typeof name === "string" && name.startsWith("DEF-");
   }
@@ -503,6 +507,7 @@ export default class GltfShape {
     return name.startsWith("ORG-") || name.startsWith("MCH-");
   }
 
+  // Nodeとprimitiveの組を一意な文字列へ変換し、skin計画のcacheキーにします
   buildSkinPlanKey(nodeIndex, primitiveIndex) {
     return `${nodeIndex}:${primitiveIndex}`;
   }
@@ -679,18 +684,127 @@ export default class GltfShape {
   buildMaterials() {
     const materials = this.data.materials ?? [];
     return materials.map((material, index) => {
-      const pbr = material.pbrMetallicRoughness ?? {};
-      const color = pbr.baseColorFactor ?? [1, 1, 1, 1];
+      const label = `glTF material[${index}]`;
+      const checkedMaterial = util.readPlainObject(material, label);
+      const pbr = util.readPlainObject(
+        checkedMaterial.pbrMetallicRoughness,
+        `${label}.pbrMetallicRoughness`
+      );
+      const baseColorLinear = util.readColor(
+        pbr.baseColorFactor ?? [1, 1, 1, 1],
+        `${label}.pbrMetallicRoughness.baseColorFactor`,
+        undefined,
+        4
+      ).map((value, component) => util.readFiniteNumber(
+        value,
+        `${label}.pbrMetallicRoughness.baseColorFactor[${component}]`,
+        { min: 0.0, max: 1.0 }
+      ));
+      // GeometryBufferPassのShape colorは表示用sRGB入力なので、glTFの線形factorを一度符号化する
+      // shader側のsRGB復号後に元の線形factorへ戻り、textureとの線形乗算が成立する
+      const color = [
+        linearChannelToSrgb(baseColorLinear[0], `${label}.baseColorFactor[0]`),
+        linearChannelToSrgb(baseColorLinear[1], `${label}.baseColorFactor[1]`),
+        linearChannelToSrgb(baseColorLinear[2], `${label}.baseColorFactor[2]`),
+        baseColorLinear[3]
+      ];
+      const metallic = util.readFiniteNumber(
+        pbr.metallicFactor ?? 1.0,
+        `${label}.pbrMetallicRoughness.metallicFactor`,
+        { min: 0.0, max: 1.0 }
+      );
+      const roughness = util.readFiniteNumber(
+        pbr.roughnessFactor ?? 1.0,
+        `${label}.pbrMetallicRoughness.roughnessFactor`,
+        { min: PBR_MIN_ROUGHNESS, max: 1.0 }
+      );
+      const emissiveFactor = util.readColor(
+        checkedMaterial.emissiveFactor ?? [0.0, 0.0, 0.0],
+        `${label}.emissiveFactor`,
+        undefined,
+        3
+      ).map((value, component) => util.readFiniteNumber(
+        value,
+        `${label}.emissiveFactor[${component}]`,
+        { min: 0.0 }
+      ));
+      const alphaMode = util.readOptionalEnum(
+        checkedMaterial.alphaMode,
+        `${label}.alphaMode`,
+        "OPAQUE",
+        ["OPAQUE", "MASK", "BLEND"],
+        { trim: false }
+      );
+      const alphaCutoff = util.readFiniteNumber(
+        checkedMaterial.alphaCutoff ?? 0.5,
+        `${label}.alphaCutoff`,
+        { min: 0.0, max: 1.0 }
+      );
+      const normalStrength = util.readFiniteNumber(
+        checkedMaterial.normalTexture?.scale ?? 1.0,
+        `${label}.normalTexture.scale`,
+        { min: 0.0, max: 2.0 }
+      );
+      const occlusion = util.readFiniteNumber(
+        checkedMaterial.occlusionTexture?.strength ?? 1.0,
+        `${label}.occlusionTexture.strength`,
+        { min: 0.0, max: 1.0 }
+      );
       return {
         id: `material_${index}`,
         shaderParams: {
           color,
+          alpha: alphaMode === "BLEND" ? baseColorLinear[3] : 1.0,
+          // SmoothShader向けの既定材質値を設定する
+          // DeferredLightingPassは材質ambientとpowerを読まず、下のPBR値だけを使う
           ambient: 0.3,
-          specular: 0.5,
-          power: 30.0
+          specular: 1.0,
+          power: 30.0,
+          metallic,
+          roughness,
+          occlusion,
+          emissive: 0.0,
+          emissive_factor: emissiveFactor,
+          normal_strength: normalStrength,
+          alpha_mode: alphaMode,
+          alpha_cutoff: alphaCutoff,
+          double_sided: util.readOptionalBoolean(
+            checkedMaterial.doubleSided,
+            `${label}.doubleSided`,
+            false
+          ) ? 1 : 0,
+          use_texture: 0,
+          use_normal_map: 0,
+          use_metallic_roughness_texture: 0,
+          use_occlusion_texture: 0,
+          use_emissive_texture: 0
         }
       };
     });
+  }
+
+  // glTF textureInfoをTEXCOORD_0用の有効なruntime参照へ変換する
+  validateTextureInfo(textureInfo, label) {
+    if (textureInfo === undefined || textureInfo === null) return null;
+    const checked = util.readPlainObject(textureInfo, label);
+    const index = util.readFiniteNumber(checked.index, `${label}.index`, {
+      integer: true,
+      min: 0
+    });
+    if (index >= (this.data?.textures?.length ?? 0)) {
+      throw new Error(`${label}.index ${index} is outside glTF textures`);
+    }
+    const texCoord = util.readFiniteNumber(checked.texCoord ?? 0, `${label}.texCoord`, {
+      integer: true,
+      min: 0
+    });
+    if (texCoord !== 0) {
+      throw new Error(`${label}.texCoord ${texCoord} is unsupported; webg currently reads TEXCOORD_0`);
+    }
+    if (checked.extensions?.KHR_texture_transform) {
+      throw new Error(`${label}.extensions.KHR_texture_transform is not implemented`);
+    }
+    return { index };
   }
 
   // glTF sampler を webg Texture の address mode へ反映する
@@ -712,7 +826,7 @@ export default class GltfShape {
     }
     const texDef = this.data?.textures?.[textureIndex];
     if (!texDef || texDef.source === undefined) {
-      return null;
+      throw new Error(`glTF texture[${textureIndex}] requires a valid image source`);
     }
 
     this.emitStage(onStage, `load-texture ${textureIndex + 1}/${this.data.textures.length}`);
@@ -748,7 +862,7 @@ export default class GltfShape {
     return texture;
   }
 
-  // build 済み runtime Shape へ baseColorTexture を適用する
+  // build済みruntime ShapeへglTF core PBRの5種類のtexture入力を適用する
   async applyRuntimeMaterials(runtime, onStage = null) {
     const materials = this.data?.materials ?? [];
     if (!runtime || materials.length === 0) {
@@ -762,15 +876,45 @@ export default class GltfShape {
       const materialIndex = meshDef?._gltfMaterialIndex;
       if (materialIndex === undefined || materialIndex === null) continue;
       const material = materials[materialIndex];
-      const textureIndex = material?.pbrMetallicRoughness?.baseColorTexture?.index;
-      if (textureIndex === undefined || textureIndex === null) continue;
-      const texture = await this.getRuntimeTexture(textureIndex, onStage);
-      if (!texture || !nodeInfo.shape) continue;
-      nodeInfo.shape.setTexture(texture);
-      nodeInfo.shape.updateMaterial({
-        use_texture: 1,
-        texture
-      });
+      if (!material || !nodeInfo.shape) continue;
+      const pbr = material.pbrMetallicRoughness ?? {};
+      const inputs = [
+        ["baseColor", pbr.baseColorTexture],
+        ["metallicRoughness", pbr.metallicRoughnessTexture],
+        ["normal", material.normalTexture],
+        ["occlusion", material.occlusionTexture],
+        ["emissive", material.emissiveTexture]
+      ];
+      const updates = {};
+      let hasTexture = false;
+      for (const [kind, sourceInfo] of inputs) {
+        const info = this.validateTextureInfo(
+          sourceInfo,
+          `glTF material[${materialIndex}].${kind}Texture`
+        );
+        if (!info) continue;
+        const texture = await this.getRuntimeTexture(info.index, onStage);
+        hasTexture = true;
+        if (kind === "baseColor") {
+          nodeInfo.shape.setTexture(texture);
+          updates.use_texture = 1;
+          updates.texture = texture;
+        } else if (kind === "metallicRoughness") {
+          updates.use_metallic_roughness_texture = 1;
+          updates.metallic_roughness_texture = texture;
+        } else if (kind === "normal") {
+          updates.use_normal_map = 1;
+          updates.normal_texture = texture;
+        } else if (kind === "occlusion") {
+          updates.use_occlusion_texture = 1;
+          updates.occlusion_texture = texture;
+        } else if (kind === "emissive") {
+          updates.use_emissive_texture = 1;
+          updates.emissive_texture = texture;
+        }
+      }
+      if (!hasTexture) continue;
+      nodeInfo.shape.updateMaterial(updates);
       applied++;
     }
     return applied;
@@ -941,8 +1085,6 @@ export default class GltfShape {
   // animation を考えない静的な default pose で、
   // dropped helper ancestor を child localMatrix へ焼き込んだ結果を返す
   // `buildSkeletonDefs()` で subset skeleton の rest/local pose を作るときに使う
-  // 利用者視点では「prune 後 skeleton の初期姿勢が崩れないようにする helper」
-  // と理解すればよい
   getCollapsedDefaultLocalMatrix(plan, localIndex) {
     const nodes = this.data.nodes ?? [];
     const skins = this.data.skins ?? [];
@@ -955,13 +1097,11 @@ export default class GltfShape {
     return this.composeLocalMatrices(localMatrices);
   }
 
-  // 1 animation の channels から、今回の subset skeleton に関係する node だけを抜き出す
+  // 1 animation の channels から、subset skeleton に関係する node だけを抜き出す
   // collapse 済み skeleton では helper ancestor 自体は骨として残らないが、
   // その helper の animation は child 側へ焼き込む必要がある
   // そのため「kept joint だけ」ではなく、
   // `collapsedSegments` に含まれる dropped helper も含めて track を収集する
-  // AI / 利用者から見ると、
-  // 「subset skeleton 用に animation 入力を前処理する helper」である
   buildAnimationNodeTrackMap(animDef, plan) {
     const samplers = animDef.samplers ?? [];
     const nodeTracks = new Map();

@@ -1,0 +1,229 @@
+# Domino 36_03の作品全体を記述するSceneYAML projectです。
+# 部屋、機械、可動板、発射用の球、ゴール、16個のドミノ列をまとめています。
+name: domino-36-03-high-level-project
+version: 1
+
+# それぞれの部品が画面でどのように見えるかを決めるPBRマテリアルです。
+materials:
+  # 部屋の床に使う、明るい灰色のマテリアルです。
+  - { id: room-floor, color: [0.52, 0.54, 0.56, 1], metallic: 0, roughness: 0.4, specular: 0.32 }
+  # 左右の壁に使う、床より少し明るい灰色のマテリアルです。
+  - { id: room-wall, color: [0.55, 0.57, 0.59, 1], metallic: 0, roughness: 0.4, specular: 0.48 }
+  # 背面の壁に使う、緑色を含む灰色のマテリアルです。
+  - { id: room-back-wall, color: [0.52, 0.72, 0.58, 1], metallic: 0, roughness: 0.4, specular: 0.48 }
+  # テーブル天板に使う、木材を思わせる茶色のマテリアルです。
+  - { id: table-top, color: [0.55, 0.32, 0.16, 1], metallic: 0, roughness: 0.4, specular: 0.36 }
+  # テーブル脚に使う、天板より暗い茶色のマテリアルです。
+  - { id: table-leg, color: [0.48, 0.27, 0.13, 1], metallic: 0, roughness: 0.58, specular: 0.42 }
+  # 機械の土台とレールに使う、金属のマテリアルです。
+  - { id: stainless-steel, color: [0.62, 0.64, 0.66, 1], metallic: 0.92, roughness: 0.4, specular: 0.9 }
+  # 台と可動板に使う、白い表面のマテリアルです。
+  - { id: white-board, color: [0.94, 0.95, 0.97, 1], metallic: 0, roughness: 0.4, specular: 0.68 }
+  # 発射用の球を目立たせる、金色のマテリアルです。
+  - { id: display-ball, color: [0.95, 0.68, 0.12, 1], metallic: 1, roughness: 0.1, specular: 0.9 }
+  # 球を受け止めるゴール部品に使う、赤いマテリアルです。
+  - { id: goal, color: [0.84, 0.28, 0.24, 1], metallic: 0.05, roughness: 0.4, specular: 0.64 }
+  # ドミノ列の1番目の色です。
+  - { id: domino-red, color: [0.98, 0.34, 0.38, 1], metallic: 0, roughness: 0.4, specular: 0.44 }
+  # ドミノ列の2番目の色です。
+  - { id: domino-orange, color: [1, 0.66, 0.24, 1], metallic: 0, roughness: 0.4, specular: 0.44 }
+  # ドミノ列の3番目の色です。
+  - { id: domino-yellow, color: [0.98, 0.86, 0.3, 1], metallic: 0, roughness: 0.4, specular: 0.44 }
+  # ドミノ列の4番目の色です。
+  - { id: domino-blue, color: [0.34, 0.78, 0.88, 1], metallic: 0, roughness: 0.4, specular: 0.44 }
+
+# 作品全体のCompute physics設定です。重力、計算容量、床の衝突面を指定します。
+physics:
+  space:
+    gravity: [0, -9.8, 0]
+    fixedTimeStepMs: 4.166666666666667
+    maxSubSteps: 8
+    solverIterations: 14
+    maxBodies: 25
+    defaultRestitution: 0.08
+    defaultFriction: 0.58
+    persistentSleep: true
+    # 表示される床の上面と同じ高さ0mに、無限に続く衝突平面を置きます。
+    planes:
+      - { normal: [0, 1, 0], planeDistance: 0 }
+
+# 部屋と機械を構成する表示用のprimitive objectです。
+objects:
+  # 部屋全体の床です。表示用の大きなBoxとして置きます。
+  - id: room-floor
+    shape: { type: box, size: [18, 0.8, 14] }
+    transform: { position: [0, -0.4, 0] }
+    material: room-floor
+  # 部屋の奥側を閉じる背面の壁です。静的bodyとして球や部品を受け止めます。
+  - id: room-back-wall
+    shape: { type: box, size: [18, 12, 0.3] }
+    transform: { position: [0, 6, -6.8] }
+    material: room-back-wall
+    physics:
+      bodyType: static
+      material: { friction: 0.65, restitution: 0 }
+  # 部屋の左側の壁です。動かない静的bodyとして配置します。
+  - id: room-left-wall
+    shape: { type: box, size: [0.3, 12, 14] }
+    transform: { position: [-8.8, 6, 0] }
+    material: room-wall
+    physics:
+      bodyType: static
+      material: { friction: 0.65, restitution: 0 }
+  # 部屋の右側の壁です。左側の壁と対になって空間を囲みます。
+  - id: room-right-wall
+    shape: { type: box, size: [0.3, 12, 14] }
+    transform: { position: [8.8, 6, 0] }
+    material: room-wall
+    physics:
+      bodyType: static
+      material: { friction: 0.65, restitution: 0 }
+  # 機械を載せるテーブルの天板です。
+  - id: table-top
+    shape: { type: box, size: [10, 0.3, 5.8] }
+    transform: { position: [-1.89398813, 4, 0] }
+    material: table-top
+  # テーブル天板を支える機械側の土台です。
+  - id: machine-base
+    shape: { type: box, size: [4.394, 0.192, 4.4] }
+    transform: { position: [-4.445943835, 4.262902495, 0] }
+    material: stainless-steel
+  # 球を高い位置まで運ぶ主レールです。傾きと静的衝突bodyを持ちます。
+  - id: rail-main
+    shape: { type: box, size: [4.8, 0.36, 0.72] }
+    transform:
+      position: [-4.5023980725, 7.060276625, -0.25]
+      # レールの傾きをZ軸まわりのrollで指定します。角度の単位は度です。
+      orientation: { yaw: 0, pitch: 0, roll: -27.410442298 }
+    material: stainless-steel
+    physics:
+      bodyType: static
+      material: { friction: 0.56, restitution: 0.04 }
+  # 主レールの左側を支える短い柱です。
+  - id: rail-support-left
+    shape: { type: box, size: [0.2, 3.593, 0.2] }
+    transform: { position: [-6.240849015, 6.06371665, -0.25] }
+    material: stainless-steel
+  # 主レールの右側を支える柱です。高さを変えてレールの傾きを作ります。
+  - id: rail-support-right
+    shape: { type: box, size: [0.2, 2, 0.2] }
+    transform: { position: [-2.79084909, 5.26083779, -0.25] }
+    material: stainless-steel
+  # 球が最初に接触する固定の白い跳ね返り板です。
+  - id: bounce-board-01
+    shape: { type: box, size: [1.55, 0.32, 0.78] }
+    transform:
+      position: [-1.370425015, 4.6942741875, -0.25]
+      # 球を受ける跳ね返り板を少し傾け、次の部品へ進む向きを整えます。
+      orientation: { yaw: 0, pitch: 0, roll: 5.5757844781 }
+    material: white-board
+    physics:
+      bodyType: static
+      material: { friction: 0.52, restitution: 0.32 }
+  # JavaScriptの矢印キーとボタンで動かす板です。kinematic bodyとして扱います。
+  - id: movable-board
+    shape: { type: box, size: [1.7, 0.36, 0.84] }
+    transform:
+      position: [0.691613745, 4.6260957725, -0.25]
+      # 操作で動かす板の初期角度をrollで指定し、球をゴール側へ送り出します。
+      orientation: { yaw: 0, pitch: 0, roll: 9.1739704079 }
+    material: white-board
+    physics:
+      bodyType: kinematic
+      material: { friction: 0.52, restitution: 0.32 }
+  # レールの先から落ち、装置とドミノ列へ動きを伝える発射用の球です。
+  - id: display-ball
+    shape: { type: sphere, radius: 0.3 }
+    transform: { position: [-6.141115425, 8.45003271, -0.25] }
+    material: display-ball
+    physics:
+      bodyType: dynamic
+      mass: 1
+      linearDamping: 0.08
+      angularDamping: 0.08
+      material: { friction: 0.48, restitution: 0.12 }
+  # ゴールの背面側を作る赤い静的部品です。
+  - id: goal-back
+    shape: { type: box, size: [0.25, 2.9, 1.7] }
+    transform:
+      position: [3.408243655, 4.453142764, -0.25]
+      # ゴール背面の部品を大きく回転させ、球を受け止める壁の向きを作ります。
+      orientation: { yaw: 0, pitch: 0, roll: -105.6744901764 }
+    material: goal
+    physics:
+      bodyType: static
+      material: { friction: 0.52, restitution: 0.32 }
+  # ゴールの上側を作る赤い静的部品です。
+  - id: goal-top
+    shape: { type: box, size: [1.624, 0.21, 1.7] }
+    transform:
+      position: [6, 2.415395645, -0.25]
+      # ゴール上部の部品をrollで傾け、球の到達位置に合わせます。
+      # 配列の順序は[X軸まわり, Y軸まわり, Z軸まわり]です。
+      orientation: [0, 0, 38.194072696]
+    material: goal
+    physics:
+      bodyType: static
+      material: { friction: 0.52, restitution: 0.32 }
+
+# 同じ形を規則的に増やすobjectSetです。ここではテーブル脚4本とドミノ16個を生成します。
+objectSets:
+  # テーブル脚をX方向とZ方向へ2本ずつ配置します。
+  - id: table-legs
+    prototype:
+      shape: { type: box, size: [0.42, 4, 0.42] }
+      material: table-leg
+    placement: { type: grid3d, count: [2, 1, 2], origin: [-6.09398818, 2, -2.2], spacing: [8.4, 0, 4.4] }
+  # 赤、オレンジ、黄色、青を繰り返す16個のドミノ列です。
+  - id: domino-chain
+    variants:
+      - id: red
+        shape: { type: box, size: [0.12, 0.6, 0.34] }
+        material: domino-red
+        physics:
+          bodyType: dynamic
+          mass: 0.32
+          material: { friction: 0.3008333333, restitution: 0.11, linearDamping: 0.0916666667, angularDamping: 0.1333333333 }
+      - id: orange
+        shape: { type: box, size: [0.12, 0.6, 0.34] }
+        material: domino-orange
+        physics:
+          bodyType: dynamic
+          mass: 0.32
+          material: { friction: 0.3008333333, restitution: 0.11, linearDamping: 0.0916666667, angularDamping: 0.1333333333 }
+      - id: yellow
+        shape: { type: box, size: [0.12, 0.6, 0.34] }
+        material: domino-yellow
+        physics:
+          bodyType: dynamic
+          mass: 0.32
+          material: { friction: 0.3008333333, restitution: 0.11, linearDamping: 0.0916666667, angularDamping: 0.1333333333 }
+      - id: blue
+        shape: { type: box, size: [0.12, 0.6, 0.34] }
+        material: domino-blue
+        physics:
+          bodyType: dynamic
+          mass: 0.32
+          material: { friction: 0.3008333333, restitution: 0.11, linearDamping: 0.0916666667, angularDamping: 0.1333333333 }
+    variantPattern: { type: cycle, values: [red, orange, yellow, blue] }
+    placement: { type: grid3d, count: [16, 1, 1], origin: [-1.45, 0.3, -0.25], spacing: [0.42, 0, 0] }
+
+# PBRのprofile、環境光、被写界深度、画面空間効果の設定です。
+renderer:
+  profile: studio
+  width: 960
+  height: 720
+  clearColor: [0.08, 0.08, 0.08, 1]
+  environment:
+    preset: dark-studio
+    resolution: { width: 256, height: 128 }
+  dof:
+    enabled: true
+    focus: { source: camera, rangeMeters: 5, transitionMeters: 0.8 }
+    blurRadius: 1
+  pipeline:
+    shadow: { type: directional, pcfRadius: 1 }
+    lighting: { ambient: 0, directionalIntensity: 1.15, environmentIntensity: 0.5 }
+    ssao: { radius: 28, strength: 1.7, samples: 12 }
+    ssr: { intensity: 0.7, distance: 42, steps: 48 }
+    toneMap: { exposure: 1.05 }

@@ -1,0 +1,84 @@
+# 16個のBoxをgrid3dで生成するSceneYAML projectです。
+# 床を表示し、objectSetのprototypeと配置規則で多数物体をまとめて定義します。
+name: object-set-project-app
+version: 1
+# 床と生成するBoxに使うPBRマテリアルです。
+materials:
+  # 生成物を載せる床のマテリアルです。
+  - id: floor-material
+    color: [0.16, 0.22, 0.32, 1.0]
+    metallic: 0.0
+    roughness: 0.44
+    specular: 0.72
+  # 16個のBoxを見やすくするオレンジ色のマテリアルです。
+  - id: box-material
+    color: [0.92, 0.34, 0.12, 1.0]
+    metallic: 0.08
+    roughness: 0.32
+    specular: 0.9
+# 物理空間と床の接触面を定義します。
+physics:
+  space:
+    gravity: [0.0, -9.8, 0.0]
+    fixedTimeStepMs: 8.3333333333
+    maxSubSteps: 8
+    solverIterations: 12
+    maxBodies: 16
+    defaultRestitution: 0.08
+    defaultFriction: 0.58
+    persistentSleep: true
+    # 高さ0mに床の無限平面を置きます。
+    planes:
+      - normal: [0.0, 1.0, 0.0]
+        planeDistance: 0.0
+# 生成物を載せる表示用の床です。
+objects:
+  - id: floor
+    shape:
+      type: box
+      size: [7.0, 0.3, 4.0]
+    transform:
+      position: [0.0, -0.15, 0.0]
+    material: floor-material
+# 一つのprototypeから4×4×1個のBoxを生成します。
+objectSets:
+  - id: boxes
+    prototype:
+      shape:
+        type: box
+        size: [0.55, 0.55, 0.55]
+      transform:
+        # 配列の順序は[X軸まわり, Y軸まわり, Z軸まわり]です。
+        orientation: [0.0, 0.0, 0.0]
+      material: box-material
+      physics:
+        bodyType: dynamic
+        mass: 1.0
+        linearDamping: 0.05
+        angularDamping: 0.08
+        material: { restitution: 0.08, friction: 0.62 }
+    placement:
+      type: grid3d
+      count: [4, 4, 1]
+      origin: [-1.2, 0.3, 0.0]
+      spacing: [0.72, 0.62, 0.0]
+    overrides:
+      # 最後のBoxだけZ軸まわりに20.815度回転させます。
+      - index: 15
+        transform:
+          orientation: [0.0, 0.0, 20.815422625]
+# PBR profileと画面効果の設定です。
+renderer:
+  profile: studio
+  width: 960
+  height: 640
+  clearColor: [0.015, 0.022, 0.035, 1.0]
+  environment:
+    preset: dark-studio
+    resolution: { width: 128, height: 64 }
+  dof: { enabled: false }
+  pipeline:
+    lighting: { ambient: 0.0, directionalIntensity: 1.0, environmentIntensity: 0.46 }
+    ssao: { radius: 10.0, strength: 1.1, samples: 8 }
+    ssr: { intensity: 0.5, distance: 18.0, steps: 24 }
+    toneMap: { exposure: 1.0 }

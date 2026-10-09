@@ -1,19 +1,18 @@
 <!doctype html>
-<!-- webg/book/examples/27_01.html 2026/07/13 -->
+<!-- book/examples/27_01.html 2026/10/04 -->
 <html lang="ja">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>27_01 画像Compute処理</title>
-  <link rel="stylesheet" href="./example.css" />
+  <title>27_01 CPU版物理エンジンの最小例</title>
+  <link rel="stylesheet" href="./examples_common.css" />
 </head>
 <body>
   <div class="page">
     <h1>book/examples</h1>
-    <h2>27_01 ComputePassによる画像処理</h2>
+    <h2>27_01 CPU版物理エンジンの最小例</h2>
     <div class="section-card">
-      <p>CPUで作った色模様を入力Textureとし、Compute Shaderで波、ビネット、色変換を適用してStorage Textureへ出力します</p>
-      <p id="status" class="note">入力Texture → ComputePass → StorageTarget → FullscreenPassという画像Compute処理を準備しています</p>
+      <p>`book/27_物理エンジンを使う.md` のCPU版「実装例：床に箱を落下させる」を、本文中へ埋め込みやすい固定canvasへ調整した実行ページです</p>
     </div>
 
     <div class="canvas-block">
@@ -23,185 +22,140 @@
     <pre id="code"></pre>
 
     <script type="module" id="example-source">
-import WebgApp from "../../webg/WebgApp.js";
-import ComputePass from "../../webg/ComputePass.js";
-import FullscreenPass from "../../webg/FullscreenPass.js";
-import StorageTargetFactory from "../../webg/StorageTargetFactory.js";
+import Screen from "../../webg/Screen.js";
+import Space from "../../webg/Space.js";
+import Primitive from "../../webg/Primitive.js";
+import Shape from "../../webg/Shape.js";
+import Matrix from "../../webg/Matrix.js";
+import SmoothShader from "../../webg/SmoothShader.js";
+import PhysicsSpace from "../../webg/PhysicsSpace.js";
+import BoxCollider from "../../webg/BoxCollider.js";
+import PlaneCollider from "../../webg/PlaneCollider.js";
 
 const CANVAS_W = 960;
 const CANVAS_H = 720;
 
-const imageComputeWgsl = `
-struct Params {
-  values : vec4f,
+// 1) Screen と shader を初期化する
+const screen = new Screen(document);
+await screen.ready;
+screen.setClearColor([0.1, 0.15, 0.1, 1.0]);
+
+const shader = new SmoothShader(screen.getGPU());
+await shader.init();
+Shape.prototype.shader = shader;
+
+// 2) 埋め込み用の固定 canvas へ合わせて projection を作る
+const projection = new Matrix();
+const applyViewportLayout = () => {
+  screen.resize(CANVAS_W, CANVAS_H);
+  projection.makeProjectionMatrix(
+    0.1,
+    1000.0,
+    screen.getRecommendedFov(55.0),
+    screen.getAspect()
+  );
+  shader.setProjectionMatrix(projection);
+};
+applyViewportLayout();
+window.addEventListener("resize", applyViewportLayout);
+window.addEventListener("orientationchange", applyViewportLayout);
+
+shader.setLightPosition([120.0, 180.0, 140.0, 1.0]);
+
+// 3) Space、eye、Shape を順に作る
+const space = new Space();
+const eye = space.addNode(null, "eye");
+eye.setPosition(0.0, 1.0, 28.0);
+eye.setAttitude(0.0, 15.0, 0.0);
+
+// 箱の形状の作成
+const shape = new Shape(screen.getGPU());
+shape.applyPrimitiveAsset(Primitive.cube(2.0, shape.getPrimitiveOptions()));
+shape.endShape();
+shape.setMaterial("smooth-shader", {
+  has_bone: 0,
+  use_texture: 0,
+  color: [1.0, 0.5, 0.3, 1.0]
+});
+
+// 床の見た目用 shape を作成する
+const floorShape = new Shape(screen.getGPU());
+floorShape.applyPrimitiveAsset(Primitive.cuboid(8.0, 0.1, 8.0, shape.getPrimitiveOptions()));
+floorShape.endShape();
+floorShape.setMaterial("smooth-shader", {
+  has_bone: 0,
+  use_texture: 0,
+  color: [0.0, 0.8, 0.6, 1.0]
+});
+
+// PlaneCollider は無限平面なので、見た目の床は別ノードで top 面を y=0 に合わせる
+const floorVisual = space.addNode(null, "floor_visual");
+floorVisual.setPosition(0.0, -0.05, 0.0);
+floorVisual.addShape(floorShape);
+
+// 物理空間の作成
+const physics = new PhysicsSpace({
+  gravity: [0.0, -9.8, 0.0],
+  fixedTimeStepMs: 1000.0 / 120.0,
+  solverIterations: 4
+});
+
+// 箱を配置 (space.addNode の代わり)
+const box = space.addPhysicsNode(null, "box", {
+  bodyType: "kinematic",
+  mass: 1.0,
+  linearDamping: 0.2
+});
+// 位置を設定
+box.setPosition(0.0, 25.0, 0.0);
+// 衝突形状の設定
+box.setCollider(new BoxCollider([2.0, 2.0, 2.0]));
+// 反発係数と摩擦係数の設定
+box.setPhysicsMaterial({
+  restitution: 0.0,
+  friction: 0.5
+});
+// 箱形状の設定
+box.addShape(shape);
+// 物理空間にも配置
+physics.addBody(box);
+
+// 床
+const floor = space.addPhysicsNode(null, "floor", {
+  bodyType: "static"
+});
+floor.setPosition(0.0, 0.0, 0.0);
+floor.setCollider(new PlaneCollider([0.0, 1.0, 0.0]));
+floor.setPhysicsMaterial({
+  restitution: 0.0,
+  friction: 0.7
+});
+physics.addBody(floor);
+
+// 運動開始
+box.setBodyType("dynamic", {
+  clearVelocity: false,
+  restoreVelocity: false
+});
+
+let previousTimeMs = null;
+
+// 描画時刻から経過時間を求め、シーンの更新と描画を行って次のフレームを予約する
+const loop = (timeMs) => {
+  if (previousTimeMs === null) {
+    previousTimeMs = timeMs;
+  }
+  const deltaMs = Math.min(timeMs - previousTimeMs, 80.0);
+  previousTimeMs = timeMs;
+  physics.step(deltaMs);
+  screen.clear();
+  space.draw(eye);
+  screen.present();
+  requestAnimationFrame(loop);
 };
 
-@group(0) @binding(0)
-var<uniform> params : Params;
+requestAnimationFrame(loop);
 
-@group(0) @binding(1)
-var sourceTexture : texture_2d<f32>;
-
-@group(0) @binding(2)
-var outputTexture : texture_storage_2d<rgba8unorm, write>;
-
-@compute @workgroup_size(8, 8, 1)
-fn main(@builtin(global_invocation_id) id : vec3<u32>) {
-  let dims = textureDimensions(sourceTexture);
-  if (id.x >= dims.x || id.y >= dims.y) {
-    return;
-  }
-
-  let coord = vec2<i32>(id.xy);
-  let uv = (vec2f(id.xy) + vec2f(0.5)) / vec2f(dims);
-  let source = textureLoad(sourceTexture, coord, 0);
-  let wave = sin(uv.x * 24.0 + params.values.z * 1.8) * 0.08;
-  let distanceFromCenter = distance(uv, vec2f(0.5));
-  let vignette = 1.0 - smoothstep(0.22, 0.72, distanceFromCenter);
-  let shifted = vec3f(
-    source.r + wave,
-    source.g + sin(params.values.z + uv.y * 16.0) * 0.06,
-    source.b - wave
-  );
-  let color = shifted * (0.42 + vignette * 0.78);
-  textureStore(outputTexture, coord, vec4f(color, 1.0));
-}`;
-
-// 入力Textureへ転送するRGBA色模様をCPU側で作ります
-// Compute Shaderの効果と元画像の違いが分かるよう、格子と連続的な色勾配を重ねます
-function createSourcePixels(width, height) {
-  const pixels = new Uint8Array(width * height * 4);
-  for (let y = 0; y < height; y += 1) {
-    for (let x = 0; x < width; x += 1) {
-      const offset = (y * width + x) * 4;
-      const u = x / (width - 1);
-      const v = y / (height - 1);
-      const checker = (Math.floor(x / 48) + Math.floor(y / 48)) % 2;
-      pixels[offset] = Math.round((0.18 + u * 0.68) * 255);
-      pixels[offset + 1] = Math.round((0.16 + v * 0.62) * 255);
-      pixels[offset + 2] = checker ? 225 : 72;
-      pixels[offset + 3] = 255;
-    }
-  }
-  return pixels;
-}
-
-// sampled textureとして読む入力Textureを作り、CPUで作った色模様を1回だけ転送します
-function createSourceTexture(gpu, width, height) {
-  const texture = gpu.device.createTexture({
-    label: "27_01 source texture",
-    size: [width, height, 1],
-    format: "rgba8unorm",
-    usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST
-  });
-  gpu.queue.writeTexture(
-    { texture },
-    createSourcePixels(width, height),
-    { bytesPerRow: width * 4 },
-    { width, height, depthOrArrayLayers: 1 }
-  );
-  return texture;
-}
-
-// WebgApp、ComputePass、表示用FullscreenPassを初期化して連続描画を開始します
-async function start() {
-  const app = new WebgApp({
-    document,
-    autoDrawScene: false,
-    renderMode: "ondemand",
-    layoutMode: "embedded",
-    fixedCanvasSize: {
-      width: CANVAS_W,
-      height: CANVAS_H
-    },
-    clearColor: [0.02, 0.03, 0.05, 1.0]
-  });
-  await app.init();
-
-  const gpu = app.getGPU();
-  const width = app.screen.getWidth();
-  const height = app.screen.getHeight();
-  const sourceTexture = createSourceTexture(gpu, width, height);
-  const storageFactory = new StorageTargetFactory(gpu, {
-    label: "27_01 output"
-  });
-  const outputTarget = storageFactory.create({ width, height });
-  await outputTarget.ready;
-
-  const computePass = new ComputePass(gpu, {
-    label: "27_01 image compute",
-    code: imageComputeWgsl,
-    workgroupSize: [8, 8, 1],
-    uniformFloats: 4,
-    bindings: [
-      { binding: 0, name: "params", type: "uniform-buffer" },
-      {
-        binding: 1,
-        name: "source",
-        type: "sampled-texture",
-        dispatchSize: true
-      },
-      {
-        binding: 2,
-        name: "output",
-        type: "storage-texture",
-        format: "rgba8unorm"
-      }
-    ]
-  });
-  const copyPass = new FullscreenPass(gpu, {
-    targetFormat: gpu.format
-  });
-  await copyPass.init();
-
-  app.start({
-    onUpdate: () => {
-      document.getElementById("status").textContent =
-        "RUNNING: input Texture → ComputePass → StorageTarget → FullscreenPass";
-    },
-    onAfterDraw3d: ({ timeSec }) => {
-      // WebgAppが開始したcanvas Render Passを閉じ、同じencoderへCompute Passを追加します
-      gpu.endPass();
-      computePass.setUniforms(new Float32Array([
-        width,
-        height,
-        timeSec,
-        0.0
-      ]));
-      computePass.encode(
-        gpu.commandEncoder,
-        {
-          source: sourceTexture.createView(),
-          output: outputTarget
-        },
-        {
-          dispatchSize: [width, height, 1]
-        }
-      );
-
-      // Compute Shaderの出力Textureをcanvas全面へ描いて同じframeで表示します
-      app.screen.beginPresentPass({
-        clearColor: app.clearColor,
-        colorLoadOp: "clear"
-      });
-      copyPass.draw(outputTarget);
-      app.screen.clearDepthBuffer();
-    }
-  });
-
-  window.addEventListener("pagehide", () => {
-    app.stop();
-    computePass.destroy();
-    outputTarget.destroy();
-    sourceTexture.destroy();
-  }, { once: true });
-}
-
-start().catch((error) => {
-  document.getElementById("status").textContent =
-    `Error: ${error.message}`;
-  console.error(error);
-});
     </script>
     <script>
       document.getElementById("code").textContent =

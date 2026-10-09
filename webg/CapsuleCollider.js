@@ -1,5 +1,5 @@
 // ---------------------------------------------
-//  CapsuleCollider.js  2026/07/25
+//  CapsuleCollider.js  2026/08/24
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // ---------------------------------------------
@@ -47,32 +47,35 @@ export default class CapsuleCollider extends Collider {
     return kind === "capsule" || kind === "sphere" || kind === "box" || kind === "plane";
   }
 
-  // physics space 上の center / segment endpoints / radius を返す
+  // local Y軸をbody quaternionでworld空間へ回転し、center / segment endpoints / radiusを返す
   getWorldInfo(position, quat = null) {
     const center = this.getWorldPosition(position, quat);
     const halfSegment = this.segmentLength * 0.5;
+    const axis = this._rotateVec3ByQuat([0.0, 1.0, 0.0], quat);
+    const segmentOffset = this._scaleVec3(axis, halfSegment);
     return {
       center,
-      pointA: [center[0], center[1] - halfSegment, center[2]],
-      pointB: [center[0], center[1] + halfSegment, center[2]],
+      axis,
+      pointA: this._subVec3(center, segmentOffset),
+      pointB: this._addVec3(center, segmentOffset),
       halfSegment,
       radius: this.radius
     };
   }
 
-  // physics space AABB を返す
+  // 回転後の芯線両端を半径で広げ、physics spaceの軸平行AABBを返す
   getAabb(position, quat = null) {
     const capsule = this.getWorldInfo(position, quat);
     return {
       min: [
-        capsule.center[0] - capsule.radius,
-        capsule.center[1] - capsule.halfSegment - capsule.radius,
-        capsule.center[2] - capsule.radius
+        Math.min(capsule.pointA[0], capsule.pointB[0]) - capsule.radius,
+        Math.min(capsule.pointA[1], capsule.pointB[1]) - capsule.radius,
+        Math.min(capsule.pointA[2], capsule.pointB[2]) - capsule.radius
       ],
       max: [
-        capsule.center[0] + capsule.radius,
-        capsule.center[1] + capsule.halfSegment + capsule.radius,
-        capsule.center[2] + capsule.radius
+        Math.max(capsule.pointA[0], capsule.pointB[0]) + capsule.radius,
+        Math.max(capsule.pointA[1], capsule.pointB[1]) + capsule.radius,
+        Math.max(capsule.pointA[2], capsule.pointB[2]) + capsule.radius
       ]
     };
   }
@@ -235,9 +238,9 @@ export default class CapsuleCollider extends Collider {
     };
   }
 
-  // ray と capsule の交点を返す
-  intersectRay(position, origin, dir, maxDistance = Infinity) {
-    const capsule = this.getWorldInfo(position);
+  // rayをCapsule localへ逆回転し、local Y軸の円筒部と端球からworld空間の交点を返す
+  intersectRay(position, origin, dir, maxDistance = Infinity, quat = null) {
+    const capsule = this.getWorldInfo(position, quat);
     const rayOrigin = this._readVec3(origin, "CapsuleCollider ray origin");
     const rayDir = this._readVec3(dir, "CapsuleCollider ray dir");
     const rayMaxDistance = maxDistance === Infinity
@@ -247,13 +250,17 @@ export default class CapsuleCollider extends Collider {
         "CapsuleCollider ray maxDistance",
         { min: 0.0 }
       );
-    const localOrigin = this._subVec3(rayOrigin, capsule.center);
+    const localOrigin = this._inverseRotateVec3ByQuat(
+      this._subVec3(rayOrigin, capsule.center),
+      quat
+    );
+    const localDir = this._inverseRotateVec3ByQuat(rayDir, quat);
     const candidates = [];
 
-    // `sphere`の交差結果を対象へ追加し、後続処理から参照できるようにする
-    const addSphereHit = (sphereCenter) => {
-      const originToCenter = this._subVec3(rayOrigin, sphereCenter);
-      const b = this._dotVec3(originToCenter, rayDir);
+    // local端球との交差距離を求め、位置と法線だけworld空間へ戻します
+    const addSphereHit = (localSphereCenter) => {
+      const originToCenter = this._subVec3(localOrigin, localSphereCenter);
+      const b = this._dotVec3(originToCenter, localDir);
       const c = this._dotVec3(originToCenter, originToCenter) - capsule.radius * capsule.radius;
       const discriminant = b * b - c;
       if (discriminant < 0.0) return;
@@ -263,21 +270,21 @@ export default class CapsuleCollider extends Collider {
         distance = -b + sqrtDiscriminant;
       }
       if (distance < 0.0 || distance > rayMaxDistance) return;
-      const hitPosition = this._addVec3(rayOrigin, this._scaleVec3(rayDir, distance));
-      const normalDelta = this._subVec3(hitPosition, sphereCenter);
+      const localHitPosition = this._addVec3(localOrigin, this._scaleVec3(localDir, distance));
+      const normalDelta = this._subVec3(localHitPosition, localSphereCenter);
       const normalLength = this._lengthVec3(normalDelta);
       candidates.push({
         distance,
-        position: hitPosition,
+        position: this._addVec3(rayOrigin, this._scaleVec3(rayDir, distance)),
         normal: normalLength > 1.0e-8
-          ? this._scaleVec3(normalDelta, 1.0 / normalLength)
+          ? this._rotateVec3ByQuat(this._scaleVec3(normalDelta, 1.0 / normalLength), quat)
           : this._scaleVec3(rayDir, -1.0)
       });
     };
 
-    const a = rayDir[0] * rayDir[0] + rayDir[2] * rayDir[2];
+    const a = localDir[0] * localDir[0] + localDir[2] * localDir[2];
     if (a > 1.0e-12) {
-      const b = localOrigin[0] * rayDir[0] + localOrigin[2] * rayDir[2];
+      const b = localOrigin[0] * localDir[0] + localOrigin[2] * localDir[2];
       const c = localOrigin[0] * localOrigin[0] + localOrigin[2] * localOrigin[2] - capsule.radius * capsule.radius;
       const discriminant = b * b - a * c;
       if (discriminant >= 0.0) {
@@ -288,38 +295,41 @@ export default class CapsuleCollider extends Collider {
         ];
         for (let i = 0; i < distances.length; i++) {
           const distance = distances[i];
-          const y = localOrigin[1] + rayDir[1] * distance;
+          const y = localOrigin[1] + localDir[1] * distance;
           if (distance >= 0.0 && distance <= rayMaxDistance && y >= -capsule.halfSegment && y <= capsule.halfSegment) {
-            const hitPosition = this._addVec3(rayOrigin, this._scaleVec3(rayDir, distance));
-            const normalDelta = [hitPosition[0] - capsule.center[0], 0.0, hitPosition[2] - capsule.center[2]];
+            const localHitPosition = this._addVec3(localOrigin, this._scaleVec3(localDir, distance));
+            const normalDelta = [localHitPosition[0], 0.0, localHitPosition[2]];
             const normalLength = this._lengthVec3(normalDelta);
             candidates.push({
               distance,
-              position: hitPosition,
-              normal: normalLength > 1.0e-8 ? this._scaleVec3(normalDelta, 1.0 / normalLength) : [1.0, 0.0, 0.0]
+              position: this._addVec3(rayOrigin, this._scaleVec3(rayDir, distance)),
+              normal: this._rotateVec3ByQuat(
+                normalLength > 1.0e-8 ? this._scaleVec3(normalDelta, 1.0 / normalLength) : [1.0, 0.0, 0.0],
+                quat
+              )
             });
           }
         }
       }
     }
-    addSphereHit(capsule.pointA);
-    addSphereHit(capsule.pointB);
+    addSphereHit([0.0, -capsule.halfSegment, 0.0]);
+    addSphereHit([0.0, capsule.halfSegment, 0.0]);
     candidates.sort((left, right) => left.distance - right.distance);
     return candidates.length > 0 ? candidates[0] : null;
   }
 
   // world AABB と重なるかを返す
-  overlapsAabb(position, queryMin, queryMax) {
+  overlapsAabb(position, queryMin, queryMax, quat = null) {
     const min = this._readVec3(queryMin, "CapsuleCollider query min");
     const max = this._readVec3(queryMax, "CapsuleCollider query max");
-    const capsule = this.getWorldInfo(position);
+    const capsule = this.getWorldInfo(position, quat);
     const closest = this._closestSegmentAabbPoints(capsule.pointA, capsule.pointB, { min, max });
     return closest.distanceSq <= capsule.radius * capsule.radius;
   }
 
   // sphere と重なるとき最近傍点と距離を返す
-  overlapSphere(position, center, radius) {
-    const capsule = this.getWorldInfo(position);
+  overlapSphere(position, center, radius, quat = null) {
+    const capsule = this.getWorldInfo(position, quat);
     const queryCenter = this._readVec3(center, "CapsuleCollider sphere center");
     const queryRadius = this._readFiniteNumber(
       radius,
@@ -346,12 +356,12 @@ export default class CapsuleCollider extends Collider {
   }
 
   // capsule-capsule 接触を生成する
-  _buildContactWithCapsuleCollider(position, otherCollider, otherPosition, bodyA, bodyB) {
+  _buildContactWithCapsuleCollider(position, otherCollider, otherPosition, bodyA, bodyB, quat = null, otherQuat = null) {
     if (!(otherCollider instanceof CapsuleCollider)) {
       throw new Error("CapsuleCollider capsule contact requires another CapsuleCollider");
     }
-    const capsuleA = this.getWorldInfo(position);
-    const capsuleB = otherCollider.getWorldInfo(otherPosition);
+    const capsuleA = this.getWorldInfo(position, quat);
+    const capsuleB = otherCollider.getWorldInfo(otherPosition, otherQuat);
     const closest = this._closestSegmentSegmentPoints(
       capsuleA.pointA,
       capsuleA.pointB,
@@ -368,12 +378,12 @@ export default class CapsuleCollider extends Collider {
   }
 
   // capsule-sphere 接触を生成する
-  _buildContactWithSphereCollider(position, sphereCollider, spherePosition, bodyA, bodyB) {
+  _buildContactWithSphereCollider(position, sphereCollider, spherePosition, bodyA, bodyB, quat = null, sphereQuat = null) {
     if (!(sphereCollider instanceof SphereCollider)) {
       throw new Error("CapsuleCollider sphere contact requires a SphereCollider");
     }
-    const capsule = this.getWorldInfo(position);
-    const sphere = sphereCollider.getWorldInfo(spherePosition);
+    const capsule = this.getWorldInfo(position, quat);
+    const sphere = sphereCollider.getWorldInfo(spherePosition, sphereQuat);
     const closestPoint = this._closestPointOnSegment(capsule.pointA, capsule.pointB, sphere.center);
     return this._buildContactFromClosestPoints(
       closestPoint,

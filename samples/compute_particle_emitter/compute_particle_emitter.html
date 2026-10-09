@@ -1,0 +1,29 @@
+<!doctype html>
+<!-- 2026/09/22: 標準Compute粒子のSceneYAML起動と操作 -->
+<html lang="ja"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ComputeParticleEmitter — webg</title><link rel="icon" href="data:,">
+<style>
+body { margin: 0; background: #0a1220; color: #e0e8f8; font: 16px/1.6 sans-serif; }
+main { max-width: 940px; margin: auto; padding: 16px; } h1 { font-size: 1.3rem; }
+canvas { width: 100% !important; height: auto !important; display: block; }
+.webg-embedded-canvas-host { height: auto !important; }
+.controls { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0; }
+button { padding: 6px 12px; font: inherit; } a { color: #80d6ff; }
+pre { white-space: pre-wrap; } #error { color: #ff9a90; }
+</style></head><body><main>
+<h1>ComputeParticleEmitter</h1>
+<canvas id="canvas" width="900" height="540"></canvas>
+<div class="controls">
+<button id="burst" disabled>火花を64粒</button>
+<button id="continuous" disabled>連続発生を停止</button>
+<button id="pause" disabled>一時停止</button>
+<button id="clear" disabled>全粒子を消去</button>
+<button id="bloom" disabled>Bloom OFF</button>
+<button id="light" disabled>光点を64粒</button>
+</div>
+<p>ドラッグで視点回転、ホイールで拡大縮小。中央のBoxで深度による遮蔽を確認できます。</p>
+<pre id="status" role="status">SceneYAMLを読み込み中…</pre>
+<pre id="error" role="alert" hidden></pre>
+<p><a href="index.html">使い方</a> / <a href="index.en.html">English</a></p>
+</main><script type="module" src="main.js"></script></body></html>

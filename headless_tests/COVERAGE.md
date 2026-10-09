@@ -1,20 +1,19 @@
 # headless_tests coverage
 
-更新日: 2026-07-28
+更新日: 2026-10-04
 
 ## 数え方
 
 この文書のcoverageは、行数や分岐の百分率ではなく「どのコアを個別suiteで検証するか」を示します。
 import の直接参照数だけでは、間接的に通る処理や実ブラウザでしか成立しない処理を評価できないためです。
 
-現在は83 suite、111 caseです。Contact Shadowの実験用contractは
-`user/contact_shadow`へ移したため、この集計には含めません。
+現在は107 suite、146 caseです。集計対象は`headless_tests/`のsuiteと契約ケースです。
 
 | 分類 | suite | case | 役割 |
 |---|---:|---:|---|
-| core | 67 | 93 | webg コアが持つ決定論的な必須条件 |
-| integration | 4 | 5 | 複数コアをまたぐ境界 |
-| samples | 11 | 12 | sample source と API 利用方法 |
+| core | 88 | 127 | webg コアが持つ決定論的な必須条件 |
+| integration | 5 | 6 | 複数コアをまたぐ境界 |
+| samples | 13 | 12 | sample source と API 利用方法 |
 | diagnostics | 1 | 1 | 数値調査 |
 
 ## 明示的な core suite
@@ -22,6 +21,7 @@ import の直接参照数だけでは、間接的に通る処理や実ブラウ�
 - action
 - animation
 - animation_state
+- audio_synth
 - billboard
 - camera_frame
 - color_space
@@ -36,6 +36,8 @@ import の直接参照数だけでは、間接的に通る処理や実ブラウ�
 - compute_fog_pass
 - compute_image_pyramid
 - compute_pass
+- compute_perlin_noise_2d
+- compute_procedural_tile
 - compute_pyramid_blur_pass
 - compute_shadow_pass
 - compute_ssr_pass
@@ -49,7 +51,9 @@ import の直接参照数だけでは、間接的に通る処理や実ブラウ�
 - frame
 - frame_timer
 - geometry_buffer_pass
+- gltf_shape
 - gpu_particle_emitter
+- gpu_pass_profiler
 - input_controller
 - json_format
 - matrix
@@ -58,12 +62,25 @@ import の直接参照数だけでは、間接的に通る処理や実ブラウ�
 - model_builder
 - model_loader
 - model_validator
+- module_url
 - node
+- overlay_panel
+- particle_emitter
+- pbr_brdf
+- pbr_environment
+- pbr_environment_cache
+- pbr_environment_compute
+- pbr_environment_debug_pass
+- pbr_environment_evaluation
+- pbr_environment_reference
+- pbr_forward_shader
 - physics_node
 - physics_space
 - ping_pong_resources
 - primitive
+- procedural_materials
 - quat
+- radiance_hdr
 - render_target
 - scene_asset
 - scene_loader
@@ -85,17 +102,19 @@ import の直接参照数だけでは、間接的に通る処理や実ブラウ�
 - transparency_pass
 - tween
 - util
+- water
 - webg_app
+- webg_scene_app
 
 複数クラスを一つの資源概念として扱うものがあります。
 `ping_pong_resources` は `PingPongBuffer`、`PingPongTarget`、`PingPongTexture`、
 `physics_node` と `physics_space` は collider 群との連携も確認します。
-したがって63 suiteという数を、そのまま機能coverage率とは扱いません。
+suite数は検証する契約の所有先を示します。機能coverageは各ケースの条件と実行結果から確認します。
 
 ## 統合・sample・diagnostics
 
-- integration: presentation、rendering_conventions、rendering_depth_pipelines、tween
-- samples: bloom、bloom_api_usage、compute_bloom、compute_dof、compute_effect、custom_depth、low_level、materials、maze2、mmodeler、startup
+- integration: presentation、random_sources、rendering_conventions、rendering_depth_pipelines、tween
+- samples: bloom、bloom_api_usage、compute_bloom、compute_dof、compute_effect、custom_depth、karakuri、low_level、materials、maze2、mmodeler、startup、transmission
 - diagnostics: physics_collider
 
 sample suite は sample source の import、初期化、pipeline 接続などを静的に確認します。
@@ -187,3 +206,9 @@ destroy、CPU側dataとの対応など、ブラウザを必要としない所有
 `unittest/ai_contracts`の純粋な契約は所有コアへ分割済みです。
 `OverlayPanelPresets`はoption組み立てだけをheadlessで所有し、実際のoverlay表示は所有しません。
 実deviceでのframe成立はheadless成功だけでは保証せず、ブラウザPOCとsampleで確認します。
+
+## OverlayPanelの入力と更新
+
+`core/overlay_panel`は本文の同時指定の検証、textとlinesの形式切替、
+現在値の維持を確認します。正規化と実際のupdate/applyOptionsを検査し、
+DOMの生成・配置・描画は`unittest/overlay_panel`で確認します。

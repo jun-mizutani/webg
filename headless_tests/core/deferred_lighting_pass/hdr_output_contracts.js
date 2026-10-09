@@ -1,5 +1,5 @@
 // ---------------------------------------------------------
-// headless_tests/core/deferred_lighting_pass/headless_probe.js  2026/07/12
+// headless_tests/core/deferred_lighting_pass/headless_probe.js  2026/08/03
 //   Linear High Dynamic Range output contract for DeferredLightingPass
 // ---------------------------------------------------------
 import assert from "node:assert/strict";
@@ -66,6 +66,7 @@ function makeResources(width, height) {
     albedo: { ...sampled },
     normal: { getView: () => ({}) },
     material: { ...sampled },
+    emissive: { ...sampled },
     depth: { depthConvention: CAMERA_REVERSE_Z, getDepthSampleView: () => ({}) },
     shadowVisibility: { ...sampled },
     spotShadowVisibility: { ...sampled },

@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// unittest/primitive_modelasset/main.js  2026/07/25
+// unittest/primitive_modelasset/main.js  2026/10/04
 //   primitive_modelasset sample
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -32,10 +32,11 @@ const PALETTE = [
   [0.40, 0.62, 0.95, 1.0],
   [0.64, 0.52, 0.94, 1.0],
   [0.85, 0.46, 0.78, 1.0],
-  [0.92, 0.56, 0.66, 1.0]
+  [0.92, 0.56, 0.66, 1.0],
+  [0.96, 0.42, 0.28, 1.0]
 ];
 
-// 基本形状のアセット群を生成し、後続処理で利用できる状態にする
+// 基本形状のModelAsset群を生成し、検証から実体化までの共通入力を用意する
 const buildPrimitiveAssets = () => {
   // `ModelAsset.fromData()` を 1 件含め、Primitive が返す asset と
   // 中間 JSON を通した asset の両方を同じ builder 経路へ載せる
@@ -46,6 +47,7 @@ const buildPrimitiveAssets = () => {
     { label: "double", asset: Primitive.double_cone(10, 8, 18, { txAxis: 1 }) },
     { label: "prism", asset: Primitive.prism(12, 4, 18, { txAxis: 1 }) },
     { label: "donut", asset: Primitive.donut(8, 3, 18, 18, { txAxis: 1 }) },
+    { label: "capsule", asset: Primitive.capsule(8, 8, 12, 18, { txAxis: 1 }) },
     {
       label: "cube",
       asset: Primitive.cube(8, {
@@ -71,7 +73,7 @@ const buildPrimitiveAssets = () => {
   ];
 };
 
-// 投影を受け取り、現在の設定と後続処理へ反映する
+// 現在の画面の縦横比と推奨視野角から透視投影を作り、比較用シェーダーへ設定する
 const setProjection = (screen, shader, angle = 50) => {
   // 3x3 配置の build 結果を見渡しやすい固定投影へそろえる
   const proj = new Matrix();
@@ -80,7 +82,7 @@ const setProjection = (screen, shader, angle = 50) => {
   shader.setProjectionMatrix(proj);
 };
 
-// 材質を対象の状態または描画設定へ反映する
+// 実体化した形状へ比較用の材質を設定し、構築後の描画条件を揃える
 const applyMaterial = (shape, color) => {
   // validator / builder の確認が主目的なので、material 条件は色付き SmoothShader に絞る
   shape.shaderParameter("has_bone", 0);
@@ -90,7 +92,7 @@ const applyMaterial = (shape, color) => {
   shape.shaderParameter("power", 42.0);
 };
 
-// このインスタンスの初期化段階で、必要な状態と資源を準備して処理を開始する
+// 生成assetを検証・構築してシーンへ実体化し、各形状の回転と検証結果を表示する
 const start = async ({ screen, gpu, setStatus, setViewportLayout, startLoop, document }) => {
   const shader = new SmoothShader(gpu);
   await shader.init();
@@ -136,9 +138,15 @@ const start = async ({ screen, gpu, setStatus, setViewportLayout, startLoop, doc
     const instantiated = buildEntries[i].built.instantiate(space);
     const rootInfo = buildEntries[i].built.nodes.find((nodeInfo) => nodeInfo.parent === null) ?? buildEntries[i].built.nodes[0];
     const rootNode = instantiated.nodeMap.get(rootInfo.id);
-    const col = i % 3;
-    const row = Math.floor(i / 3);
-    rootNode.setPosition((col - 1) * 22.0, (1 - row) * 22.0, -18.0);
+    const columns = 5;
+    const rows = Math.ceil(buildEntries.length / columns);
+    const col = i % columns;
+    const row = Math.floor(i / columns);
+    rootNode.setPosition(
+      (col - (columns - 1) * 0.5) * 18.0,
+      ((rows - 1) * 0.5 - row) * 22.0,
+      -18.0
+    );
     roots.push(rootNode);
     rotations.push((0.55 + i * 0.12) * SPEED);
   }

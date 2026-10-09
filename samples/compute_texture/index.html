@@ -186,7 +186,7 @@ blockquote {
 <h2>操作方法</h2>
 <ul><li>ドラッグ: texture へ色を描く</li><li>1 本指ドラッグ: texture へ色を描く</li><li>ホイール: brush 半径の変更</li><li>- / +: brush 半径の変更</li><li>1: Aurora mode</li><li>2: Ink mode</li><li>3: Cells mode</li><li>B / Space: center burst</li><li>C: clear texture</li><li>P: pause / resume</li><li>H: hide / show help</li></ul>
 <h2>実装の詳細</h2>
-<ul><li>main.js の compute shader は sampled texture を read、storage texture を write として分け、前フレームの内容を壊さず次フレームを作っています</li><li>同じ 2 枚の texture を毎フレーム入れ替える ping-pong 構成にしているため、動的なテクスチャフィードバックを GPU 内だけで継続できます</li><li>pointer 入力は CPU 側で座標、半径、残像用の注入エネルギー、click pulse の進行度と中心座標を uniform へ渡し、実際の注入範囲、色反転、色の加算は compute shader 側で pixel ごとに判定しています</li><li>render 側の球体は <code>Primitive.sphere()</code> の geometry.positions / uvs / indices を raw render pipeline 用 buffer へ詰めて描画し、seam が目立ちにくい既存の UV 展開をそのまま使っています</li><li>球体はその UV で texture を sample し、directional light、specular、rim light を使って面の向きと貼り込み状態を見やすくしています</li><li>ポストプロセス、反応する HUD、手続き模様、ペイント可能な effect map など、動的 texture 生成の入口として確認できます</li></ul>
+<ul><li>main.js の compute shader は sampled texture を read、storage texture を write として分け、前フレームの内容を壊さず次フレームを作っています</li><li>同じ 2 枚の texture を毎フレーム入れ替える ping-pong 構成にしているため、動的なテクスチャフィードバックを GPU 内だけで継続できます</li><li>pointer 入力は CPU 側で座標、半径、残像用の注入エネルギー、click pulse の進行度と中心座標を uniform へ渡し、実際の注入範囲、色反転、色の加算は compute shader 側で pixel ごとに判定しています</li><li>render 側の球体は <code>Primitive.sphere()</code> の geometry.positions / uvs / indices を raw render pipeline 用 buffer へ詰めて描画し、seam が目立ちにくい UV 展開を使っています</li><li>球体はその UV で texture を sample し、directional light、specular、rim light を使って面の向きと貼り込み状態を見やすくしています</li><li>ポストプロセス、反応する HUD、手続き模様、ペイント可能な effect map など、動的 texture 生成の入口として確認できます</li></ul>
     </article>
   </main>
 </body>

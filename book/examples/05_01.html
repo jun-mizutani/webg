@@ -1,18 +1,18 @@
 <!doctype html>
-<!-- webg/book/examples/05_01.html 2026/04/18 -->
+<!-- book/examples/05_01.html 2026/10/04 -->
 <html lang="ja">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>05_01 ローレベルで立方体を 1 個表示する例</title>
-  <link rel="stylesheet" href="./example.css" />
+  <link rel="stylesheet" href="./examples_common.css" />
 </head>
 <body>
   <div class="page">
     <h1>book/examples</h1>
     <h2>05_01 ローレベルで立方体を 1 個表示する例</h2>
     <div class="section-card">
-      <p>`book/05_WebgAppによるアプリ構成.md` の「5.6 ローレベルで立方体を 1 個表示する例」を、そのまま確認できる実行ページです</p>
+      <p>`book/05_WebgAppによるアプリ構成.md` の低水準構成の比較例を、そのまま確認できる実行ページです</p>
       <p class="note">`CoordinateSystem` で作った pose を `Node` へ流し込み、`Shape` が単独では表示されないことも追いやすくしています</p>
     </div>
 
@@ -42,6 +42,7 @@ const shader = new SmoothShader(screen.getGPU());
 await shader.init();
 
 const projection = new Matrix();
+// 表示領域の初期化とリサイズ時に固定キャンバスの寸法を反映する
 const applyViewportLayout = () => {
   screen.resize(CANVAS_W, CANVAS_H);
   projection.makeProjectionMatrix(
@@ -64,7 +65,7 @@ const eye = space.addNode(null, "eye");
 eye.setPosition(0.0, 0.0, 10.0);
 space.setEye(eye);
 
-// CoordinateSystem は見えない変換の基盤なので、
+// CoordinateSystem は位置と姿勢を保持する変換の基盤なので、
 // ここでは pose を作ってから Node へ値を写している
 const pose = new CoordinateSystem(null, "boxPose");
 pose.setPosition(0.0, 0.0, 0.0);
@@ -88,9 +89,15 @@ box.setPosition(...pose.getPosition());
 box.setAttitude(...pose.getLocalAttitude());
 box.addShape(shape);
 
-const loop = () => {
-  box.rotateY(0.8);
-  box.rotateX(0.3);
+// 前回の描画時刻を保持し、requestAnimationFrameの時刻から経過秒数を求める
+let previousTimeMs = null;
+
+// 経過秒数でNodeを回転させ、描画と次のフレームの予約を行う
+const loop = (timeMs = performance.now()) => {
+  const deltaSec = previousTimeMs === null ? 0 : (timeMs - previousTimeMs) / 1000;
+  previousTimeMs = timeMs;
+  box.rotateY(0.8 * deltaSec);
+  box.rotateX(0.3 * deltaSec);
   screen.clear();
   space.draw();
   screen.present();

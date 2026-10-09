@@ -29,7 +29,7 @@
 - scene.json の validator が通り、camera, hud, primitives, models, input をまとめて読み込めることを確認します。
 - scene.json の hud.guideLines / hud.statusLines は、各行を x / y / text / color を持つ object で明示する形式になっていることを確認します。
 - floor primitive と marker primitive が表示され、primitive 定義が SceneLoader 経由で配置できることを確認します。
-- ../json_loader/modelasset.json を読み込んだモデルが同じ scene 内に表示され、scene 側からも ModelAsset の既存経路を再利用できることを確認します。
+- ../json_loader/modelasset.json を読み込んだモデルが同じ scene 内に表示され、scene 側からも ModelAsset の読み込み経路を利用できることを確認します。
 - 左側 OverlayPanel の actionボタンから pause / replay / floor wire / reset / download を実行でき、キーボードと同じ処理フローが呼ばれることを確認します。
 - p, 1, 2, r, d の action が sceneRuntime.createInputHandler() 経由で JavaScript 側 handler へ届き、Scene JSON の input mapping が metadata として使えることを確認します。
 - p で scene 内 model の animation 一括 pause / resume が切り替わることを確認します。

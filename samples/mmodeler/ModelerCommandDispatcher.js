@@ -152,7 +152,7 @@ export default class ModelerCommandDispatcher {
   }
 
   // action id を実行する
-  // option command は palette を閉じず、それ以外の command は従来通り実行前に palette を閉じる
+  // option command は palette を閉じず、それ以外の command は実行前に palette を閉じる
   dispatch(action) {
     if (this.shouldSuppressRepeatedAction(action)) {
       return;

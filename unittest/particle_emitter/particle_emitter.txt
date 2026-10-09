@@ -1,9 +1,9 @@
 particle_emitter
 
-このページは、`ParticleEmitter` を「動作確認」と「そのまま使い方が分かるサンプル」の両方として扱うためのものです。
+このページは、CPUで更新する`ParticleEmitter`の生成・更新・描画・消去を確認します。
 最初に fake renderer を使った自動テストで `preset / emit / update / draw / clear` の流れを確かめ、そのあと WebgApp の実画面へ切り替えて、本当に particle が画面で動くことを確認します。
 
-このページで見たいのは、particle が増えることだけではありません。
+粒子の生成から消去までを、次の条件で確認します。
 `setPreset()` で procedural billboard texture が作り直されること、`emit()` で source 位置と shadowY を指定して burst を出せること、`update()` で life と位置が進むこと、`draw()` で billboard と shadow billboard の両方へ流れることを見ます。
 さらに、実画面側では keyboard と touch ボタンの両方を同じ action 名へ流し込み、ゲームで使うときの入力の組み方まで読めるようにしています。
 
@@ -16,7 +16,7 @@ particle_emitter
 - `C` または `Clear` で現在の particle を消す
 - `R` または `Reset` で source を中央へ戻す
 - `[` / `]` または `-` / `+` ボタンで 1 回の burst 数を調整する
-- touch の action ボタンは押した瞬間に反応し、次 frame の edge と重ならないようにしてある
+- touch の action ボタンは押した瞬間に一回のactionを通知する
 
 確認ポイント:
 - `ParticleEmitter.getPreset()` が preset 名を返すか
@@ -27,6 +27,7 @@ particle_emitter
 - `clear()` が active particle を消せるか
 - 実画面で keyboard と touch が同じ action 名へ集約されるか
 
-このページは、`ParticleEmitter` を使ったサンプルを新しく作るときの最小の実例にもなっています。
-source の位置、preset の切り替え、burst 数の調整、shadow billboard の見え方を 1 本にまとめてあるので、別のゲームや演出サンプルへ流用しやすい構成です。
-あわせて、`ParticleEmitter.emit()` では `position`、`velocity`、`gravity`、`color` とそれぞれの spread を省略せず明示する使い方を、manual phase でそのまま示しています。
+
+実行条件
+- CPU側のParticleEmitterを確認します。GPU粒子の利用例はsamples/compute_particle_emitter、samples/compute_particlesを参照できます。
+- emitにはposition、velocity、gravity、colorと各spreadを明示し、同じburst条件で動きを比較します。

@@ -1,225 +1,58 @@
 <!doctype html>
-<!-- webg/book/examples/14_01.html 2026/04/24 -->
+<!-- book/examples/14_01.html 2026/10/04 -->
 <html lang="ja">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>14_01 HUD と overlay</title>
-  <link rel="stylesheet" href="./example.css" />
+  <title>14_01 TouchSurface gesture</title>
+  <link rel="stylesheet" href="./examples_common.css" />
+
 </head>
 <body>
   <div class="page">
     <h1>book/examples</h1>
-    <h2>14_01 HUD と overlay</h2>
+    <h2>14_01 TouchSurface gesture</h2>
     <div class="section-card">
-      <p>`book/14_UI表示の設計.md` の `app.message.setLines()` と `OverlayPanel` を 1 つの埋め込み page に集めた例です</p>
-      <p class="note">短い HUD は canvas 上、日本語の説明や長文は DOM overlay へ分ける構成を、そのまま見比べられます。`D` で dialogue 風 panel を出し直し、`F` で pre panel を開閉できます</p>
+      <p>`book/14_タッチ機能と入力.md` の `Touch.attachSurface()` を試す例です</p>
+      <p class="note">surface 上で tap、double tap、long press、flick を行うと、検出結果が表示されます。desktop でも試しやすいよう `touchOnly: false` にしています</p>
     </div>
 
-    <div class="canvas-block">
-      <canvas id="canvas" width="960" height="720"></canvas>
+    <div class="gesture-surface" id="surface">
+      <div class="gesture-status">
+        <strong id="gestureTitle">waiting gesture</strong>
+        <p id="gestureDetail">tap / double tap / long press / flick</p>
+        <p id="gestureHint">flick は上下左右の方向を判定します</p>
+      </div>
     </div>
 
     <pre id="code"></pre>
 
     <script type="module" id="example-source">
-import WebgApp from "../../webg/WebgApp.js";
-import { buildHelpPanelOptions } from "../../webg/OverlayPanelPresets.js";
-import Shape from "../../webg/Shape.js";
-import Primitive from "../../webg/Primitive.js";
+import Touch from "../../webg/Touch.js";
 
-const app = new WebgApp({
-  document,
-  messageFontTexture: "../../webg/font512.png",
-  clearColor: [0.05, 0.07, 0.11, 1.0],
-  layoutMode: "embedded",
-  fixedCanvasSize: {
-    width: 960,
-    height: 720,
-    useDevicePixelRatio: false
-  },
-  camera: {
-    target: [0.0, 0.8, 0.0],
-    distance: 9.0,
-    yaw: 20.0,
-    pitch: -10.0
-  }
-});
-await app.init();
+const surface = document.getElementById("surface");
+const title = document.getElementById("gestureTitle");
+const detail = document.getElementById("gestureDetail");
+const hint = document.getElementById("gestureHint");
 
-const orbit = app.createOrbitEyeRig({
-    target: [0.0, 0.8, 0.0],
-    distance: 9.0,
-    yaw: 20.0,
-    pitch: -10.0,
-    minDistance: 5.0,
-    maxDistance: 18.0
+const touch = new Touch(document, {
+  touchDeviceOnly: false
 });
 
-const shape = new Shape(app.getGPU());
-shape.applyPrimitiveAsset(Primitive.cube(2.0, shape.getPrimitiveOptions()));
-shape.endShape();
-shape.setMaterial("smooth-shader", {
-  has_bone: 0,
-  use_texture: 0,
-  color: [1.0, 0.5, 0.3, 1.0],
-  ambient: 0.26,
-  specular: 0.86,
-  power: 40.0
-});
-
-const node = app.space.addNode(null, "ui-box");
-node.addShape(shape);
-
-const dialogueEntries = [
-  {
-    speaker: "guide",
-    title: "UI design example",
-    lines: [
-      "短い status は canvas HUD へ出します",
-      "長い説明文は DOM overlay へ分けます"
-    ]
-  },
-  {
-    speaker: "guide",
-    lines: [
-      "この分離を先に決めておくと",
-      "役割が混ざりにくくなります"
-    ]
-  }
-];
-
-let dialogueIndex = 0;
-let dialogueActive = false;
-
-const openDialogue = () => {
-  dialogueIndex = 0;
-  dialogueActive = true;
-  syncDialoguePanel();
-};
-
-const syncDialoguePanel = () => {
-  const entry = dialogueEntries[dialogueIndex] ?? null;
-  if (!dialogueActive || !entry) {
-    app.hideOverlayPanel("ui-dialogue");
-    return;
-  }
-  app.showOverlayPanel({
-    id: "ui-dialogue",
-    title: entry.title ?? "Dialogue style panel",
-    lines: [
-      `[${entry.speaker ?? "guide"}]`,
-      ...entry.lines,
-      "",
-      "Enter / Space: next  D: restart dialogue"
-    ],
-    anchor: "bottom-left",
-    width: 360,
-    buttons: [
-      { id: "next", label: "Next", kind: "primary" }
-    ],
-    onAction: ({ actionId }) => {
-      if (actionId === "next") {
-        nextDialogue();
-      }
-    }
-  });
-};
-
-const nextDialogue = () => {
-  if (!dialogueActive) {
-    openDialogue();
-    return;
-  }
-  dialogueIndex += 1;
-  if (dialogueIndex >= dialogueEntries.length) {
-    dialogueActive = false;
-  }
-  syncDialoguePanel();
-};
-
-const panelText = [
-  "OverlayPanel pre format",
-  "",
-  "showOverlayPanel({ format: \"pre\" }) は",
-  "長い説明や診断結果を",
-  "落ち着いて読むための場所です",
-  "",
-  "Message と同じ canvas HUD へ",
-  "長文を詰め込まないことを",
-  "この章では勧めています"
-].join("\n");
-
-const toggleFixedPanel = () => {
-  if (app.hasOverlayPanel("ui-design-note")) {
-    app.removeOverlayPanel("ui-design-note");
-    return;
-  }
-  app.showOverlayPanel({
-    id: "ui-design-note",
-    title: "Preformatted note",
-    text: panelText,
-    format: "pre",
-    scrollY: true,
-    anchor: "top-right",
-    maxHeight: "38vh"
-  });
-};
-
-app.showOverlayPanel(buildHelpPanelOptions({
-  id: "example1401Help",
-  anchor: "bottom-left",
-  lines: [
-    "Drag: orbit camera",
-    "D: restart dialogue",
-    "F: toggle pre panel"
-  ]
-}));
-
-app.attachInput({
-  onKeyDown: (key, ev) => {
-    if (ev.repeat) return;
-    if (key === "d") {
-      openDialogue();
-    } else if (key === "enter" || key === "space") {
-      nextDialogue();
-    } else if (key === "f") {
-      toggleFixedPanel();
-    }
-  }
-});
-
-openDialogue();
-
-let elapsedSec = 0.0;
-
-app.start({
-  onUpdate: ({ deltaSec }) => {
-    elapsedSec += deltaSec;
-    node.rotateY(0.8);
-    node.rotateX(0.3);
-
-    app.message.setLines("guide", [
-      "guide lines -> short hints",
-      "status lines -> current state",
-      "overlay panel -> Japanese and long text"
-    ], {
-      anchor: "bottom-left",
-      x: 0,
-      y: -2,
-      width: 38,
-      wrap: true
-    });
-
-    app.message.setLines("status", [
-      `dialogue=${dialogueActive ? "active" : "idle"}`,
-      `pre-panel=${app.hasOverlayPanel("ui-design-note") ? "open" : "closed"}`,
-      `time=${elapsedSec.toFixed(1)} sec`
-    ], {
-      anchor: "top-left",
-      x: 0,
-      y: 0
-    });
+touch.attachSurface(surface, {
+  touchDeviceOnly: false,
+  touchOnly: false,
+  minDistance: 50,
+  longPressTime: 500,
+  longPressMoveTolerance: 10,
+  doubleTapTime: 320,
+  // 認識されたジェスチャーの種類、方向、座標を操作領域内の状態表示へ反映する
+  onGesture: (gesture) => {
+    title.textContent = gesture.direction
+      ? `${gesture.type}: ${gesture.direction}`
+      : gesture.type;
+    detail.textContent = `dx=${gesture.dx.toFixed(1)} dy=${gesture.dy.toFixed(1)} distance=${gesture.distance.toFixed(1)} elapsed=${gesture.elapsedMs.toFixed(0)}ms`;
+    hint.textContent = `x=${gesture.x.toFixed(1)} y=${gesture.y.toFixed(1)} pointer=${gesture.pointerType || "unknown"}`;
   }
 });
     </script>

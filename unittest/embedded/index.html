@@ -209,13 +209,13 @@
         1. ページ全体をスクロールしても canvas が本文中の位置に残り、本文だけでなく HelpPanel や touch controls も一緒に移動すること
       </p>
       <p>
-        2. `Hide Help` で閉じたあとに、HelpPanel の枠が host 全幅へ広がらず `Show Help` ボタンに近い幅へ保たれること
+        2. `Hide Help` で閉じたあとに、HelpPanelの枠が`Show Help`ボタンに近い幅へ保たれること
       </p>
       <p>
-        3. `D` で dialogue、`F` で fixed panel を出したまま上下へスクロールしても、overlay が viewport 固定にならず canvas に付いてくること
+        3. `D` で dialogue、`F` で fixed panel を出したまま上下へスクロールしても、overlayがcanvasと一緒に移動すること
       </p>
       <p>
-        4. `S` でスクリーンショット、`F9` → `M` で debug mode 切替を行っても、embedded の基本配置が崩れないこと
+        4. `S` でスクリーンショット、`F9` → `M` で debug mode 切替を行っても、embeddedの基本配置がhostに揃うこと
       </p>
     </section>
 
@@ -256,7 +256,7 @@
     <section class="paper">
       <h2>本文の中に canvas を置くときの確認メモ</h2>
       <p>
-        HTML 側で `overflow: hidden` を指定したままだと、`layoutMode: "embedded"` を使ってもページ自体はスクロールしません。
+        文書全体をスクロールするページでは、HTML側のoverflowをautoなどのスクロール可能な設定にします。
         この unittest では意図的に長い本文を前後へ置き、文書フローと canvas host の関係を追いやすくしています
       </p>
       <p>

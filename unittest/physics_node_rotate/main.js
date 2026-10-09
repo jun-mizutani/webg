@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// unittest/physics_node_rotate/main.js  2026/07/25
+// unittest/physics_node_rotate/main.js  2026/10/04
 //   physics_node_rotate unittest
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -104,9 +104,10 @@ const BODY_SPECS = [
   }
 ];
 
+// 値を上下限の範囲へ収め、更新量や操作パラメータを定めた範囲に保つ
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
 
-// 投影を受け取り、現在の設定と後続処理へ反映する
+// 現在の画面の縦横比と推奨視野角から透視投影を作り、比較用シェーダーへ設定する
 const setProjection = (screen, shader, angle = 48.0) => {
   const proj = new Matrix();
   const fov = screen.getRecommendedFov(angle);
@@ -114,7 +115,7 @@ const setProjection = (screen, shader, angle = 48.0) => {
   shader.setProjectionMatrix(proj);
 };
 
-// `beam`の形状を生成し、後続処理で利用できる状態にする
+// 長い直方体を単色で構築し、回転姿勢を読み取りやすい物体にする
 const createBeamShape = (gpu, size, color) => {
   const shape = new Shape(gpu);
   shape.applyPrimitiveAsset(Primitive.cuboid(size[0], size[1], size[2]));
@@ -130,7 +131,7 @@ const createBeamShape = (gpu, size, color) => {
   return shape;
 };
 
-// 床の形状を生成し、後続処理で利用できる状態にする
+// 比較用の床メッシュと単色材質を準備し、物体の位置を読む基準面にする
 const createFloorShape = (gpu) => {
   const shape = new Shape(gpu);
   shape.applyPrimitiveAsset(Primitive.cuboid(96.0, FLOOR_HEIGHT, 68.0));
@@ -146,7 +147,7 @@ const createFloorShape = (gpu) => {
   return shape;
 };
 
-// `backdrop`の形状を生成し、後続処理で利用できる状態にする
+// 比較対象の背面に配置する形状を作り、落下や回転の輪郭を読みやすくする
 const createBackdropShape = (gpu) => {
   const shape = new Shape(gpu);
   shape.applyPrimitiveAsset(Primitive.cuboid(112.0, 58.0, 2.0));
@@ -162,7 +163,7 @@ const createBackdropShape = (gpu) => {
   return shape;
 };
 
-// 物体の`entry`を初期状態へ戻し、前回の状態を残さない
+// 物体を初期位置・初期姿勢へ戻し、速度とsleepの状態を比較開始時の値へ揃える
 const resetBodyEntry = (entry) => {
   const body = entry.body;
   body.wakeUp();
@@ -198,7 +199,7 @@ const resetBodyEntry = (entry) => {
   });
 };
 
-// `torque`の`pulse`を対象の状態または描画設定へ反映する
+// 1回分のtorqueを物体へ加え、角速度と姿勢の変化を比較する
 const applyTorquePulse = (entry) => {
   if (!Array.isArray(entry.torquePulse)) {
     return;
@@ -206,7 +207,7 @@ const applyTorquePulse = (entry) => {
   entry.body.applyTorque(entry.torquePulse);
 };
 
-// `continuous`の`torque`を対象の状態または描画設定へ反映する
+// 有効なtorque設定を各更新で物体へ加え、継続入力の回転を確認する
 const applyContinuousTorque = (entry) => {
   if (!Array.isArray(entry.continuousTorque)) {
     return;
@@ -217,6 +218,7 @@ const applyContinuousTorque = (entry) => {
   entry.body.applyTorque(entry.continuousTorque);
 };
 
+// 初期材質の色を複製し、動作状態に応じた色表示の復元に使う
 const cloneRestColor = (color, scale = FEATURED_COLOR_DIM_SCALE) => ([
   clamp(color[0] * scale, 0.0, 1.0),
   clamp(color[1] * scale, 0.0, 1.0),
@@ -224,7 +226,7 @@ const cloneRestColor = (color, scale = FEATURED_COLOR_DIM_SCALE) => ([
   1.0
 ]);
 
-// `entry`の進行段階を現在の入力と状態から求め、呼び出し元へ返す
+// 物体のsleep・動作状態を読み、画面へ表示する進行状態を返す
 const getEntryPhase = (entry) => {
   if (entry.name === "torque_beam") {
     return entry.elapsedSec < entry.torqueDurationSec ? "torque on" : "torque off";
@@ -245,7 +247,7 @@ const getEntryPhase = (entry) => {
   return "";
 };
 
-// 状態表示を現在の入力と状態から求め、呼び出し元へ返す
+// 比較bodyの角速度・姿勢・sleepと操作設定を状態表示へまとめる
 const formatStatus = (entries, paused) => {
   const lines = [
     "unittest/physics_node_rotate",
@@ -275,7 +277,7 @@ const formatStatus = (entries, paused) => {
   return lines.join("\n");
 };
 
-// このインスタンスの初期化段階で、必要な状態と資源を準備して処理を開始する
+// 角速度・torque・回転固定の比較用bodyを準備し、姿勢と角速度を表示する
 const start = async ({ screen, gpu, setStatus, setViewportLayout, startLoop, document }) => {
   const shader = new SmoothShader(gpu);
   await shader.init();
@@ -402,7 +404,7 @@ const start = async ({ screen, gpu, setStatus, setViewportLayout, startLoop, doc
   let paused = false;
   let previousTimeMs = null;
 
-  // すべての物体を初期状態へ戻し、前回の状態を残さない
+  // 比較する全bodyを初期状態へ戻し、同じ条件の落下・回転を再開する
   const resetAllBodies = () => {
     previousTimeMs = null;
     world.accumulatorMs = 0.0;

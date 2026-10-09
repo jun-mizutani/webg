@@ -66,27 +66,27 @@ export default class PingPongBuffer {
   }
 
   // 管理中の2本を生成時のindex順で複製して返します
-  // 内部配列を直接公開せず、呼び出し側から要素順を変更できないようにします
+  // 内部配列を複製して返し、呼び出し側から要素順を保護します
   getResources() {
     return [...this.buffers];
   }
 
   // 最新状態を持つGPUBufferのindexを明示的に保存し、保存後のindexを返します
-  // 複数substep後の最終indexを計算済みの場合でも0/1の検証を省略しません
+  // 複数substep後の最終indexを計算済みの場合も0/1を検証します
   setCurrentIndex(index) {
     this.currentIndex = this.validateIndex(index);
     return this.currentIndex;
   }
 
   // 現在indexを反対側へ切り替え、直前の書き込み先を新しい読み取り元にします
-  // GPUBufferの内容は移動せず、2本の役割を示すindexだけを一定時間で交換します
+  // GPUBufferの内容を保持し、2本の役割を示すindexだけを一定時間で交換します
   swap() {
     this.currentIndex = 1 - this.currentIndex;
     return this.currentIndex;
   }
 
   // 再初期化後に読み取り元とするindexを明示し、そのindexを返します
-  // GPUBufferの内容は変更しないため、必要なclearや初期データ転送は呼び出し側が先に行います
+  // GPUBufferの内容を保持するため、必要なclearや初期データ転送は呼び出し側が先に行います
   reset(index = 0) {
     return this.setCurrentIndex(index);
   }

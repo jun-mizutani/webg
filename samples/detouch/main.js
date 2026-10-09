@@ -176,7 +176,7 @@ const updateFps = (deltaSec) => {
 };
 
 // detouch 専用の touch button は PC でも見えるようにし、
-// 旧 sample の入力確認を desktop 上でもすぐ再現できるようにする
+// desktop でも touch 入力を確認できるようにする
 const ensureTouchDebugStyle = () => {
   if (document.getElementById(TOUCH_DEBUG_STYLE_ID)) return;
   const style = document.createElement("style");
@@ -212,14 +212,13 @@ const handleKey = (key) => {
   if (key === "x") animationPaused = false;
 };
 
-// detouch の Node 構成は旧 sample と同じまま保ち、
-// 表示系と入力系だけを WebgApp 標準経路へ寄せる
+// detouch の Node 構成を作り、表示系と入力系を WebgApp 標準経路へ接続する
 const buildScene = async () => {
   const gpu = app.getGPU();
   const tex = await loadTextureFlipY(gpu, TEXTURE_FILE);
 
   // WebgApp の camera rig を detouch 向け位置へ寄せ、
-  // 旧 sample と同じく少し上からアーム全体を見下ろす構図にする
+  // 少し上からアーム全体を見下ろす構図にする
   app.cameraRod.setPosition(0.0, 50.0, 0.0);
 
   lBase = app.space.addNode(null, "lBase");

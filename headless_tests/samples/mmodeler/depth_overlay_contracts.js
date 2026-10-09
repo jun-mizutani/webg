@@ -1,5 +1,5 @@
 // ---------------------------------------------------------
-// headless_tests/samples/mmodeler/headless_probe.js  2026/07/13
+// headless_tests/samples/mmodeler/headless_probe.js  2026/08/11
 //   mmodeler overlay attachment and Reverse-Z bias contracts
 // ---------------------------------------------------------
 import assert from "node:assert/strict";
@@ -88,7 +88,7 @@ const html = read("../../../samples/mmodeler/mmodeler.html");
   for (const source of [main, edgeSource, markerSource]) {
     assert.doesNotMatch(source, /depth24plus|less-equal/);
   }
-  assert.match(html, /main\.js\?v=20260713_reverse_z_overlay1/);
+  assert.match(html, /main\.js/);
 }
 
 console.log("sample_mmodeler_depth_overlay_contracts: all Reverse-Z overlay contracts passed");

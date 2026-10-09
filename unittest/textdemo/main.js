@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// unittest/textdemo/main.js  2026/07/25
+// unittest/textdemo/main.js  2026/10/04
 //   textdemo sample
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -7,10 +7,8 @@
 import Screen from "../../webg/Screen.js";
 import Text from "../../webg/Text.js";
 
-// AI向け注意:
-// この unittest は、Text の 80x25 文字バッファを最小構成で確認するため、
-// 意図的に WebgApp / Message を使わず Screen + Text だけで書いている。
-// 通常の HUD や status 表示では Message または WebgApp の helper を優先する。
+// Text の 80x25 文字バッファを確認するため、Screen と Text だけで構成する
+// ScreenとTextを直接準備し、文字バッファとフォント描画を確認する
 
 // webgクラスの役割:
 // Screen : WebGPU初期化、フレーム clear/present を担当
@@ -30,7 +28,7 @@ const start = async () => {
   text.shader.setScale(1.5);
   screen.setClearColor([0.05, 0.06, 0.07, 1.0]);
 
-  // このインスタンスの描画段階で、必要な描画命令と表示内容を記録する
+  // 文字バッファを連番のASCIIコードで埋め、clear・描画・presentの順で文字を表示する
   const draw = () => {
     // 80x25領域へ連番ASCIIを埋め、毎フレーム再描画する
     screen.clear();

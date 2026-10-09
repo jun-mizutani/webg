@@ -15,7 +15,7 @@ English | [日本語](README.md)
 - In addition to the red X, green Y, and blue Z axes, small vividly colored pyramids are placed across a wide range in the positive and negative Z directions, with denser spacing horizontally, so depth and perspective are easier to read on planes near the axes
 - Pressing `F` toggles fog and pressing `D` toggles DOF, making it easier to compare how depth cues change in the same scene
 - `V` switches between `composite / scene / depth / focusMask / stage / smallBlur / mediumBlur / largeBlur`, so the focus mask and staged blur steps can be compared visually
-- `focusRange` is treated as the distance width of one blur stage rather than the full distance to maximum blur, making the out-of-focus bleed easier to inspect step by step
+- `focusRange` is treated as the distance width of one blur stage, making the out-of-focus bleed easier to inspect step by step
 - `maxBlurMix` is kept high so the difference between in-focus and out-of-focus areas is easier to notice
 - `5 / 6` changes the focus range itself, making the focused distance band easier to adjust
 - `1 / 2` changes sharpness width and `3 / 4` changes sharpness power, making it easier to compare the curve shape relative to `focusRange`

@@ -32,7 +32,7 @@ English | [日本語](README.md)
 - `ModelLoader` reads the DAE text and hands parsing and normalization to `ColladaShape`
 - `ColladaShape` gathers mesh / skeleton / animation / node data into `ModelAsset` format
 - After that, `ModelBuilder` assembles `Shape / Skeleton / Animation / Node`, and the sample uses the build result as the runtime
-- Unlike glTF, the Collada loader side does not have a static-bake plan, but the final runtime helpers still go through the shared `ModelBuilder`
+- The Collada runtime helpers use the shared `ModelBuilder`
 
 ## How to Read the Downloaded JSON
 - `meta.source` is expected to be `Collada`, and `meta.upAxis` is expected to be `Y`
@@ -44,7 +44,7 @@ English | [日本語](README.md)
 ## Checkpoints
 - Confirm that the DAE specified by `COLLADA_FILE` is converted correctly into shapes, skeletons, and animations
 - Confirm that the Help Panel shows `file / model / orbit / target / anim / clip0 / wireframe` state so the necessary viewer state can be followed on screen
-- Confirm that the sample uses the runtime returned by the facade and checks connections through `getAnimation()` / `getAnimationNames()` instead of direct `animationMap` access
+- Confirm that the sample uses the runtime returned by the facade and checks connections through `getAnimation()` / `getAnimationNames()` through the public animation API
 - Confirm that the first clip can be restarted by name with `restartAnimation(clipId)` using the `1` key
 - Confirm that `2 / 3` can pause and resume the first clip individually with `pauseAnimation(clipId)` / `resumeAnimation(clipId)`
 - Confirm that the camera distance is set automatically from the model bounding box so the whole model is not clipped out in the initial framing
@@ -55,7 +55,7 @@ English | [日本語](README.md)
 - Confirm that the Help Panel is used for current values and operation hints, while the CommandPalette is used for changing settings and running commands
 - Treat DAE files exported from Blender with an up-axis other than `Y-up` as outside the loader's assumptions; in that case, orientation mismatch is handled as an asset-side issue
 
-## Reading Points for AI / Users
+## Reading Points
 - If "loading succeeds but the clip is not visible", first inspect `animations[]` and `nodes[].animationBindings`
 - If "a skeleton exists but does not move", inspect the correspondence between `skeletons[].jointOrder` and `animations[].tracks[].joint`
 - If "you cannot tell which node corresponds to which mesh in the original DAE", use `nodes[].colladaMeshIndex`

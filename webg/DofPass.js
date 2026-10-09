@@ -1,5 +1,5 @@
 // ---------------------------------------------
-//  DofPass.js      2026/07/25
+//  DofPass.js      2026/09/15
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // ---------------------------------------------
@@ -25,7 +25,7 @@ fn linearizeDofDepth(depth : f32, near : f32, far : f32) -> f32 {
 }
 `;
 
-// CameraFrameからshaderへ渡す投影値を作り、旧near/farの独立状態を持たせません
+// CameraFrameからshaderへ渡す投影値を作り、near/farをCameraFrameと共通化します
 export function createDofProjectionParams(cameraFrame) {
   if (!cameraFrame || cameraFrame.depthConvention !== CAMERA_REVERSE_Z) {
     throw new Error("DofPass requires a Reverse-Z CameraFrame");
@@ -40,33 +40,33 @@ export function createDofProjectionParams(cameraFrame) {
   return new Float32Array([near, far === Infinity ? 0.0 : far]);
 }
 
-const DOF_STAGE_RADIUS_SCALES = Object.freeze({
+const DOF_STAGE_RADIUS_SCALES = {
   small: 0.16,
   medium: 0.55,
   large: 1.0
-});
-const DOF_STAGE_DEFAULT_ITERATIONS = Object.freeze({
+};
+const DOF_STAGE_DEFAULT_ITERATIONS = {
   // small は焦点近傍の軽いblurを作る段階なので、反復を増やしても品質差が出にくい
   small: 1,
   // medium は中間段階の滑らかさに効くが、実測では 2 回で十分な見え方になった
   medium: 2,
   // large は低解像度targetで大きなblurを受け持つため、広いkernelを保つために 4 回使う
   large: 4
-});
-const DOF_STAGE_TARGET_SCALE_MULTIPLIERS = Object.freeze({
+};
+const DOF_STAGE_TARGET_SCALE_MULTIPLIERS = {
   // 小さいblurは輪郭付近の遷移にそのまま見えやすいため、基準の blurScale を維持する
   small: 1.0,
   // 中程度以上のblurは細部が見えにくくなるため、段階ごとに target を縮めて
   // 生成コストを下げても見た目の破綻が起きにくい
   medium: 0.7,
   large: 0.5
-});
+};
 const DOF_STAGE_COUNT_MIN = 1;
 const DOF_STAGE_COUNT_MAX = 3;
 
 // ステージの`blur`の`iterations`を読み込み、検証済みのデータとして後続処理へ渡す
 function readStageBlurIterations(options = {}) {
-  // 旧来の blurIterations 指定がある場合は、3 stage すべてへ同じ値を明示適用する
+  // blurIterationsを指定した場合は、3 stageすべてへ同じ値を適用する
   // 未指定なら実測結果に基づく stage 別の軽量な既定値を使う
   const sharedIterations = options.blurIterations === undefined
     ? null
@@ -111,6 +111,14 @@ export default class DofPass {
       "DofPass dofMode",
       "staged",
       ["staged"]
+    );
+    // `explicit`は既存の数値設定、`camera`はWebgAppが作るCameraFrameの値を使う
+    // CameraFrameが合焦距離を持たない場合に固定値へ戻さず、描画時点で明示的に停止する
+    this.focusSource = util.readOptionalEnum(
+      options.focusSource,
+      "DofPass focusSource",
+      "explicit",
+      ["explicit", "camera"]
     );
     this.focusDistance = util.readOptionalFiniteNumber(options.focusDistance, "DofPass focusDistance", 34.0, { min: 0 });
     // focusRange は最大blur到達距離ではなく、scene -> small など 1 stage 分の距離幅として扱う
@@ -164,7 +172,7 @@ export default class DofPass {
       targetScale: this.getStageTargetScale("large"),
       iterations: this.stageBlurIterations.large
     });
-    // 既存コードが blurPass を参照している場合は、最大blur側を代表として扱う
+    // blurPass参照には最大blur stageを割り当てる
     this.blurPass = this.blurPassLarge;
     this.vertexBuffer = null;
     this.sampler = null;
@@ -230,17 +238,10 @@ export default class DofPass {
     return info;
   }
 
-  // `with`の`validation`を生成し、後続処理で利用できる状態にする
-  async createWithValidation(label, createFn) {
-    if (typeof this.device?.pushErrorScope === "function" && typeof this.device?.popErrorScope === "function") {
-      this.device.pushErrorScope("validation");
-      const result = createFn();
-      const error = await this.device.popErrorScope();
-      if (error) {
-        console.error(`${label} validation error:`, error);
-        throw error;
-      }
-      return result;
+  // pipelineを直接生成し、アプリ側のvalidation scopeによる起動待ちを発生させない
+  createWithValidation(label, createFn) {
+    if (typeof createFn !== "function") {
+      throw new Error(`${label} create function is required`);
     }
     return createFn();
   }
@@ -883,6 +884,25 @@ fn fsMain(input : VSOut) -> @location(0) vec4f {
     this.queue.writeBuffer(this.uniformBuffer, 0, this.uniformData);
   }
 
+  // CameraFrameから合焦距離を取得し、DoFのuniformへ反映する
+  // `focusSource: "camera"`かつDoF有効時だけ呼び出し、合焦距離のないframeを受け入れない
+  resolveFrameFocusDistance(cameraFrame) {
+    if (this.focusSource !== "camera" || !this.enabled) {
+      return false;
+    }
+    if (!Number.isFinite(cameraFrame?.focusDistance)) {
+      throw new Error(
+        "DofPass focusSource \"camera\" requires CameraFrame focusDistance"
+      );
+    }
+    this.focusDistance = util.readFiniteNumber(
+      cameraFrame.focusDistance,
+      "DofPass CameraFrame focusDistance",
+      { minExclusive: 0.0 }
+    );
+    return true;
+  }
+
   // scene color、3段階blur color、sampleable depth を 1 つの bind group に束ねる
   // depth は sceneTarget 自身から読むので、最後の引数も通常は sceneTarget を渡す
   createBindGroup(sceneSource, blurSmallSource, blurMediumSource, blurLargeSource, depthSource) {
@@ -945,6 +965,9 @@ fn fsMain(input : VSOut) -> @location(0) vec4f {
       throw new Error("DofPass enabled must be boolean");
     }
     this.enabled = !!flag;
+    if (this.enabled && this.focusSource === "camera" && this.cameraFrame) {
+      this.resolveFrameFocusDistance(this.cameraFrame);
+    }
     this.updateUniforms();
   }
 
@@ -952,6 +975,22 @@ fn fsMain(input : VSOut) -> @location(0) vec4f {
   setFocusDistance(value) {
     this.focusDistance = util.readOptionalFiniteNumber(value, "DofPass focusDistance", this.focusDistance, { min: 0 });
     this.updateUniforms();
+  }
+
+  // 合焦距離を明示値からCameraFrame連動へ切り替える設定を受け取る
+  // 連動を選んだ場合の実際の距離はbeginScene/render時に同じframeから解決する
+  setFocusSource(value) {
+    this.focusSource = util.readOptionalEnum(
+      value,
+      "DofPass focusSource",
+      this.focusSource,
+      ["explicit", "camera"]
+    );
+    if (this.enabled && this.focusSource === "camera" && this.cameraFrame) {
+      this.resolveFrameFocusDistance(this.cameraFrame);
+      this.updateUniforms();
+    }
+    return this.focusSource;
   }
 
   // `focus`の`range`を受け取り、現在の設定と後続処理へ反映する
@@ -1018,6 +1057,7 @@ fn fsMain(input : VSOut) -> @location(0) vec4f {
     this.blurPassLarge?.setIterations(next.large);
   }
 
+  // 近景・中景・遠景のblur反復回数をsnapshotとして返します
   getStageBlurIterations() {
     return { ...this.stageBlurIterations };
   }
@@ -1040,6 +1080,7 @@ fn fsMain(input : VSOut) -> @location(0) vec4f {
     );
   }
 
+  // 現在有効な段階blur数を返し、後段の実行計画確認へ渡します
   getStagedStageCount() {
     return this.stagedStageCount;
   }
@@ -1079,42 +1120,52 @@ fn fsMain(input : VSOut) -> @location(0) vec4f {
     return this;
   }
 
+  // 3D sceneを最初に描くoffscreen color/depth targetを取得します
   getSceneTarget() {
     return this.sceneTarget;
   }
 
+  // 大きなblur passの往路targetを取得し、追加処理の入力へ渡します
   getBlurTargetA() {
     return this.blurPassLarge?.getTargetA?.() ?? null;
   }
 
+  // 大きなblur passの復路targetを取得し、追加処理の入力へ渡します
   getBlurTargetB() {
     return this.blurPassLarge?.getTargetB?.() ?? null;
   }
 
+  // 近距離用の小blur出力targetを取得します
   getSmallBlurTarget() {
     return this.blurPassSmall?.getOutputTarget?.() ?? null;
   }
 
+  // 中距離用の中blur出力targetを取得します
   getMediumBlurTarget() {
     return this.blurPassMedium?.getOutputTarget?.() ?? null;
   }
 
+  // 遠距離用の大blur出力targetを取得します
   getLargeBlurTarget() {
     return this.blurPassLarge?.getOutputTarget?.() ?? null;
   }
 
+  // blur targetの解像度倍率を取得し、外部passの寸法計算へ渡します
   getBlurScale() {
     return this.blurScale;
   }
 
+  // 深度デバッグ表示用targetを取得します
   getDepthDebugTarget() {
     return this.depthDebugTarget;
   }
 
+  // 合焦距離デバッグ表示用targetを取得します
   getFocusDebugTarget() {
     return this.focusDebugTarget;
   }
 
+  // 段階blurデバッグ表示用targetを取得します
   getStageDebugTarget() {
     return this.stageDebugTarget;
   }
@@ -1138,6 +1189,7 @@ fn fsMain(input : VSOut) -> @location(0) vec4f {
     this.renderFrameToken = renderFrameToken;
     this.cameraFrame = cameraFrame;
     this.sceneTarget.cameraFrame = cameraFrame;
+    this.resolveFrameFocusDistance(cameraFrame);
     this.updateUniforms();
     this.resizeToScreen(screen);
     screen.beginPass({
@@ -1265,6 +1317,9 @@ fn fsMain(input : VSOut) -> @location(0) vec4f {
       || cameraFrame !== this.sceneTarget?.cameraFrame
     ) {
       throw new Error("DofPass render requires the same renderFrameToken used by beginScene");
+    }
+    if (this.resolveFrameFocusDistance(cameraFrame)) {
+      this.updateUniforms();
     }
     const destination = options.destination;
     const clearColor = options.clearColor;

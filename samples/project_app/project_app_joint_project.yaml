@@ -1,0 +1,103 @@
+# 二つの球をDistance JointでつなぐSceneYAML projectです。
+# 床、球、物理設定、Joint、PBR rendererを一つのmanifestで確認できます。
+name: joint-project-app
+version: 1
+# 床と左右の球に使うPBRマテリアルです。
+materials:
+  # 画面全体を支える床のマテリアルです。
+  - id: floor-material
+    color: [0.2, 0.28, 0.4, 1.0]
+    metallic: 0.0
+    roughness: 0.42
+    specular: 0.72
+  # 左側の球を見分けやすくするオレンジ色のマテリアルです。
+  - id: left-ball-material
+    color: [0.92, 0.3, 0.08, 1.0]
+    metallic: 0.15
+    roughness: 0.2
+    specular: 1.0
+  # 右側の球を見分けやすくする青色のマテリアルです。
+  - id: right-ball-material
+    color: [0.18, 0.58, 0.92, 1.0]
+    metallic: 0.1
+    roughness: 0.24
+    specular: 1.0
+# 重力、床の接触面、Distance Jointの設定です。
+physics:
+  space:
+    gravity: [0.0, -9.8, 0.0]
+    fixedTimeStepMs: 8.3333333333
+    maxSubSteps: 8
+    solverIterations: 10
+    maxBodies: 2
+    maxJoints: 1
+    maxJointsPerBody: 1
+    defaultRestitution: 0.12
+    defaultFriction: 0.48
+    persistentSleep: true
+    # 高さ0mに床の無限平面を置きます。
+    planes:
+      - normal: [0.0, 1.0, 0.0]
+        planeDistance: 0.0
+    # 左右の球の中心を2mの距離へ保つJointです。
+  joints:
+    - id: ball-connection
+      type: distance
+      a:
+        body: left-ball
+        localPoint: [0.0, 0.0, 0.0]
+      b:
+        body: right-ball
+        localPoint: [0.0, 0.0, 0.0]
+      lengthMeters: 2.0
+      compliance: 0.0
+      collideConnected: false
+# 床と、Jointで接続する左右の球を配置します。
+objects:
+  # 球を受け止める表示用の床です。
+  - id: floor
+    shape:
+      type: box
+      size: [10.0, 0.3, 6.0]
+    transform:
+      position: [0.0, -0.15, 0.0]
+    material: floor-material
+  # 左側から落下するdynamic bodyです。
+  - id: left-ball
+    shape: { type: sphere, radius: 0.38 }
+    transform:
+      position: [-1.0, 3.0, 0.0]
+    material: left-ball-material
+    physics:
+      bodyType: dynamic
+      mass: 1.0
+      linearDamping: 0.04
+      angularDamping: 0.06
+      material: { friction: 0.36, restitution: 0.18 }
+  # 右側から落下するdynamic bodyです。
+  - id: right-ball
+    shape: { type: sphere, radius: 0.38 }
+    transform:
+      position: [1.0, 3.0, 0.0]
+    material: right-ball-material
+    physics:
+      bodyType: dynamic
+      mass: 1.0
+      linearDamping: 0.04
+      angularDamping: 0.06
+      material: { friction: 0.36, restitution: 0.18 }
+# PBR profileと画面効果の設定です。
+renderer:
+  profile: studio
+  width: 960
+  height: 640
+  clearColor: [0.012, 0.018, 0.028, 1.0]
+  environment:
+    preset: dark-studio
+    resolution: { width: 128, height: 64 }
+  dof: { enabled: false }
+  pipeline:
+    lighting: { ambient: 0.0, directionalIntensity: 1.05, environmentIntensity: 0.42 }
+    ssao: { radius: 12.0, strength: 1.15, samples: 8 }
+    ssr: { intensity: 0.65, distance: 24.0, steps: 28 }
+    toneMap: { exposure: 1.0 }

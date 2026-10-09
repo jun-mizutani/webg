@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// unittest/flick/main.js  2026/07/25
+// unittest/flick/main.js  2026/10/04
 //   flick / long press / double tap gesture POC
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -30,9 +30,10 @@ const state = {
 };
 
 const tools = ["select", "add", "face", "move"];
+// 値を上下限の範囲へ収め、更新量や操作パラメータを定めた範囲に保つ
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
 
-// メッセージを受け取り、現在の設定と後続処理へ反映する
+// gestureの結果と操作状態を画面の案内欄へ表示する
 const setMessage = (message) => {
   state.message = message;
   logEl.textContent = message;
@@ -48,7 +49,7 @@ const resize = () => {
   draw();
 };
 
-// キャンバスの`point`を現在の入力と状態から求め、呼び出し元へ返す
+// CSS上のpointer座標をcanvas内の編集座標へ変換する
 const getCanvasPoint = (clientX, clientY) => {
   const rect = canvas.getBoundingClientRect();
   return {
@@ -57,7 +58,7 @@ const getCanvasPoint = (clientX, clientY) => {
   };
 };
 
-// `toScreen`は座標または数値を計算し、後続処理で使う結果を返す
+// 正規化した編集座標をcanvasのCSSピクセル座標へ変換し、点と面の表示に使う
 const toScreen = (point) => {
   const rect = canvas.getBoundingClientRect();
   return {
@@ -76,7 +77,7 @@ const pushUndo = () => {
   if (state.undo.length > 20) state.undo.shift();
 };
 
-// `restoreUndo`は受け取った値を処理し、後続処理で利用する状態または結果を生成する
+// 保存した編集状態を取り出し、点と選択状態を直前の状態へ復元する
 const restoreUndo = () => {
   const prev = state.undo.pop();
   if (!prev) {
@@ -91,7 +92,7 @@ const restoreUndo = () => {
   draw();
 };
 
-// `nearest`の`point`を現在の入力と状態から求め、呼び出し元へ返す
+// 指定位置に最も近い点を許容距離内から探し、gestureの選択対象を決める
 const findNearestPoint = (x, y, maxPx = 34) => {
   const rect = canvas.getBoundingClientRect();
   let best = -1;
@@ -117,7 +118,7 @@ const cycleTool = (step) => {
   updateUi();
 };
 
-// `point`を現在の入力と状態から求め、呼び出し元へ返す
+// 選択する点を切り替え、編集操作が作用する対象を更新する
 const selectPoint = (index) => {
   if (index < 0 || index >= state.points.length) {
     setMessage("no vertex at tap");
@@ -128,7 +129,7 @@ const selectPoint = (index) => {
   updateUi();
 };
 
-// `point`を対象へ追加し、後続処理から参照できるようにする
+// 指定した編集座標へ点を追加し、選択対象をその点へ移す
 const addPoint = (x, y) => {
   pushUndo();
   state.points.push({ x: clamp(x, 0.04, 0.96), y: clamp(y, 0.04, 0.96) });
@@ -137,7 +138,7 @@ const addPoint = (x, y) => {
   updateUi();
 };
 
-// `nudgeSelected`は受け取った値を処理し、後続処理で利用する状態または結果を生成する
+// 選択した点へ移動量を加え、flickの方向に対応する編集結果を作る
 const nudgeSelected = (dx, dy) => {
   if (state.selected < 0 || state.selected >= state.points.length) return;
   pushUndo();
@@ -190,18 +191,19 @@ const openPalette = (x, y) => {
   setMessage("long press: command palette");
 };
 
+// 操作パレットを閉じ、通常のcanvas編集へ戻す
 const closePalette = () => {
   palette.classList.remove("open");
 };
 
-// 操作画面を現在の入力と実行状態に合わせて更新する
+// 現在のtoolと選択状態を操作案内へ反映する
 const updateUi = () => {
   modeEl.textContent = state.mode === "edit" ? "Edit" : "Object";
   toolEl.textContent = state.tool[0].toUpperCase() + state.tool.slice(1);
   selectionEl.textContent = `selected: ${state.selected}`;
 };
 
-// このインスタンスの描画段階で、必要な描画命令と表示内容を記録する
+// 編集中の面・辺・点を2D canvasへ描き、選択対象とgestureによる移動結果を表示する
 const draw = () => {
   const rect = canvas.getBoundingClientRect();
   ctx.clearRect(0, 0, rect.width, rect.height);
@@ -248,7 +250,7 @@ const draw = () => {
   ctx.restore();
 };
 
-// `gesture`を受け取った段階で、対応する状態更新と処理を実行する
+// 通知されたgestureを編集操作へ割り当て、点・選択・toolの状態を更新する
 const handleGesture = (gesture) => {
   closePalette();
   if (gesture.type === "tap") {

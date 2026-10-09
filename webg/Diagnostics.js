@@ -44,7 +44,7 @@ export default class Diagnostics {
     return frame;
   }
 
-  // summary text は人と AI が最初に読む既定出口として使う
+  // diagnostics reportを確認項目ごとのsummary textへ変換する
   // 低レベルな key=value dump は toText() に残しつつ、
   // まず何を見ればよいかが伝わる section 形式を別に持つ
   static toSummaryText(report, options = {}) {
@@ -182,7 +182,7 @@ export default class Diagnostics {
     return [...ordered, ...rest];
   }
 
-  // 旧 loader 指定も受けつつ、内部では system 主軸へ正規化する
+  // loader指定を受け取り、内部ではsystemを主軸に正規化する
   static resolveSystem(init = {}) {
     const system = init.system ?? init.loader ?? "unknown";
     return String(system);

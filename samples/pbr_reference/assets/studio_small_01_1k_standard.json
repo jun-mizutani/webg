@@ -1,0 +1,99 @@
+{
+  "tool": "webg-pbr-environment-asset-tool-v3",
+  "source": {
+    "id": "polyhaven-studio-small-01-1k",
+    "file": "studio_small_01_1k.hdr",
+    "url": "https://polyhaven.com/a/studio_small_01",
+    "author": "Greg Zaal / Poly Haven",
+    "license": "CC0",
+    "sha256": "a2d308672f077b0872686a439d76dc3ace91274380ae2e5f02c653c3ccbc8407",
+    "byteLength": 1701440,
+    "width": 1024,
+    "height": 512,
+    "colorSpace": "linear-srgb",
+    "orientation": "-Y +X",
+    "colorConversion": {
+      "method": "Bradford chromatic adaptation and RGB primary conversion",
+      "outOfGamut": "clip",
+      "clippedComponentCount": 585,
+      "matrix": [
+        1.1637051611808236,
+        -0.1559000551266787,
+        -0.007805115470066404,
+        0.00754775763875719,
+        0.9930065849925376,
+        -0.0005542955368780869,
+        0.003448610472280629,
+        0.017897977741762966,
+        0.9786533521154953
+      ]
+    },
+    "minimumRadiance": 0,
+    "maximumRadiance": 604.809814453125,
+    "meanRadiance": [
+      0.4531818661908615,
+      0.5555333500562312,
+      0.6211671375703517
+    ]
+  },
+  "preprocess": {
+    "algorithm": "webg-split-sum-ggx-environment-mis-linear-srgb-v3",
+    "preset": "standard",
+    "settings": {
+      "irradianceWidth": 64,
+      "irradianceHeight": 32,
+      "specularWidth": 256,
+      "specularHeight": 128,
+      "specularMipCount": 9,
+      "brdfLutWidth": 128,
+      "brdfLutHeight": 128,
+      "diffuseSampleCount": 512,
+      "specularSampleCount": 512,
+      "brdfSampleCount": 512
+    },
+    "whiteFurnace": {
+      "samples": 40,
+      "minimum": 0.9383344377148637,
+      "maximum": 1.0081784617422764,
+      "maximumAccepted": 1.02,
+      "passed": true
+    },
+    "logicalMemory": {
+      "radianceBytes": 4194304,
+      "irradianceBytes": 16384,
+      "specularBytes": 349528,
+      "brdfRuntimeBytes": 65536,
+      "runtimeTextureBytes": 4625752,
+      "cachePayloadBytes": 4625752,
+      "computeSourceBytes": 8388608,
+      "brdfComputeBytes": 131072,
+      "computeTextureBytes": 8885592,
+      "computeImportanceBytes": 4194304,
+      "computeWorkingBytes": 13079896,
+      "settings": {
+        "irradianceWidth": 64,
+        "irradianceHeight": 32,
+        "specularWidth": 256,
+        "specularHeight": 128,
+        "specularMipCount": 9,
+        "brdfLutWidth": 128,
+        "brdfLutHeight": 128,
+        "diffuseSampleCount": 512,
+        "specularSampleCount": 512,
+        "brdfSampleCount": 512
+      }
+    },
+    "timingMilliseconds": {
+      "decodeMilliseconds": 118.44128394126892,
+      "colorConversionMilliseconds": 63.468061208724976,
+      "preprocessMilliseconds": 28955.945991039276,
+      "encodeMilliseconds": 2089.7349061965942,
+      "totalMilliseconds": 31479.250057935715
+    }
+  },
+  "output": {
+    "file": "studio_small_01_1k_standard.webgpbr",
+    "sha256": "7a5b67be27efcf768b5e5b027c0395d9eed0a23e3184b5d89c2e48c948213f2d",
+    "byteLength": 4627199
+  }
+}

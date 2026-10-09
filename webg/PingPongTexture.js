@@ -35,7 +35,7 @@ export default class PingPongTexture {
   }
 
   // sampled sourceまたはstorage destinationを示すindexが0か1であることを確認します
-  // Texture更新履歴を壊す値を自動補正せず、呼び出し側の処理フローの誤りとして例外にします
+  // 無効なindexは自動補正せず、呼び出し側の誤りとして例外にします
   validateIndex(index) {
     if (index !== 0 && index !== 1) {
       throw new Error(`${this.label} index must be 0 or 1: ${index}`);

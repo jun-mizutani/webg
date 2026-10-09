@@ -1,5 +1,5 @@
 // ---------------------------------------------------------
-// headless_tests/core/geometry_buffer_pass/headless_probe.js  2026/07/20
+// headless_tests/core/geometry_buffer_pass/headless_probe.js  2026/08/03
 //   Explicit specular, roughness, metallic, emissive G-buffer contracts
 // ---------------------------------------------------------
 import assert from "node:assert/strict";
@@ -8,6 +8,7 @@ import { srgbColorToLinear } from "../../../webg/ColorSpace.js";
 import { CAMERA_REVERSE_Z } from "../../../webg/DepthConvention.js";
 import GeometryBufferPass, {
   GBUFFER_COLOR_FORMAT,
+  GBUFFER_EMISSIVE_FORMAT,
   GBUFFER_MATERIAL_FORMAT
 } from "../../../webg/GeometryBufferPass.js";
 import Matrix from "../../../webg/Matrix.js";
@@ -100,10 +101,11 @@ const material = {
   specular: 0.6,
   roughness: 0.35,
   metallic: 0.8,
+  occlusion: 0.7,
   emissive: 0.1
 };
 
-// v2 G-bufferはalbedo、normal、materialの3 MRTを持ち、lit colorを生成しません
+// v2 G-bufferはalbedo、normal、material、HDR emissiveの4 MRTを持ちます
 {
   const probe = createGpuProbe();
   const pass = new GeometryBufferPass(probe.gpu, {
@@ -115,16 +117,22 @@ const material = {
   await pass.ready;
   assert.equal(GBUFFER_COLOR_FORMAT, "rgba8unorm-srgb");
   assert.equal(GBUFFER_MATERIAL_FORMAT, "rgba8unorm");
+  assert.equal(GBUFFER_EMISSIVE_FORMAT, "rgba16float");
   assert.equal(pass.materialFormat, "rgba8unorm");
-  assert.equal(probe.pipelines[0].fragment.targets.length, 3);
+  assert.equal(probe.pipelines[0].fragment.targets.length, 4);
   assert.deepEqual(
     probe.pipelines[0].fragment.targets.map(({ format }) => format),
-    ["rgba8unorm-srgb", "rgba8unorm", "rgba8unorm"]
+    ["rgba8unorm-srgb", "rgba8unorm", "rgba8unorm", "rgba16float"]
   );
   assert.match(probe.shaderCodes[0], /@location\(2\) material : vec4f/);
-  assert.match(probe.shaderCodes[0], /output\.material = uniforms\.surface/);
+  assert.match(probe.shaderCodes[0], /@location\(3\) emissive : vec4f/);
+  assert.match(probe.shaderCodes[0], /metallicRoughness\.g/);
+  assert.match(probe.shaderCodes[0], /metallicRoughness\.b/);
+  assert.match(probe.shaderCodes[0], /occlusionTexture/);
+  assert.match(probe.shaderCodes[0], /output\.emissive = vec4f/);
   assert.match(probe.shaderCodes[0], /srgbToLinear\(uniforms\.albedo\.rgb\)/);
-  assert.match(probe.shaderCodes[0], /linearAlbedo \*= srgbToLinear\(textureSrgb\)/);
+  assert.match(probe.shaderCodes[0], /linearAlbedo \*= srgbToLinear\(baseTextureSample\.rgb\)/);
+  assert.match(probe.shaderCodes[0], /discard/);
   assert.match(probe.shaderCodes[0], /output\.albedo = vec4f\(linearAlbedo, 1\.0\)/);
   assert.doesNotMatch(
     probe.shaderCodes[0],
@@ -134,11 +142,12 @@ const material = {
   assert.doesNotMatch(probe.shaderCodes[0], /litColor/);
   const resources = pass.getBindingResources();
   assert.equal(resources.material, pass.materialTarget);
+  assert.equal(resources.emissive, pass.emissiveTarget);
   assert.equal(resources.albedo, pass.colorTarget);
   pass.destroy();
 }
 
-// materialはalbedo RGB + 1、specular、roughness、metallic、emissiveの8 floatへ詰めます
+// materialはalbedo RGB + 1、specular、roughness、metallic、occlusionの8 floatへ詰めます
 {
   const probe = createGpuProbe();
   const pass = new GeometryBufferPass(probe.gpu);
@@ -151,7 +160,7 @@ const material = {
     Math.fround(0.6),
     Math.fround(0.35),
     Math.fround(0.8),
-    Math.fround(0.1)
+    Math.fround(0.7)
   ]);
   assert.throws(() => pass.packMaterial({
     albedo: [1.0, 1.0, 1.0],
@@ -183,10 +192,13 @@ const material = {
   const clearColor = [0.04045, 0.5, 1.0, 1.0];
   pass.renderEntries([entry], makeFrame(), clearColor);
   const uniform = probe.writes.at(-1).data;
-  assert.equal(uniform.length, 60);
+  assert.equal(uniform.length, 72);
   assert.deepEqual(uniform.slice(48, 56), Array.from(pass.packMaterial(material)));
   assert.deepEqual(uniform.slice(56, 60), [0.0, 0.0, 1.0, 0.0]);
-  assert.equal(probe.renderPasses[0].colorAttachments.length, 3);
+  assert.deepEqual(uniform.slice(60, 64), [0.0, 0.0, 0.0, Math.fround(0.1)]);
+  assert.deepEqual(uniform.slice(64, 68), [0.0, 0.0, 0.0, 1.0]);
+  assert.deepEqual(uniform.slice(68, 72), [0.0, 0.5, 1.0, 0.0]);
+  assert.equal(probe.renderPasses[0].colorAttachments.length, 4);
   assert.deepEqual(
     probe.renderPasses[0].colorAttachments[0].clearValue,
     srgbColorToLinear(clearColor)
@@ -195,7 +207,13 @@ const material = {
     r: 0.0,
     g: 1.0,
     b: 0.0,
-    a: 0.0
+    a: 1.0
+  });
+  assert.deepEqual(probe.renderPasses[0].colorAttachments[3].clearValue, {
+    r: 0.0,
+    g: 0.0,
+    b: 0.0,
+    a: 1.0
   });
   pass.destroy();
 }
@@ -224,12 +242,65 @@ const material = {
   const slot0Surface = pass.resolveShapeSurface(shape, null, 0);
   const entry = pass.createDrawEntry(node, shape, slot0Surface.material, slot0Surface);
   pass.renderEntries([entry], makeFrame(), [0, 0, 0, 1]);
-  const materialWrites = probe.writes.filter(({ data }) => data.length === 60);
+  const materialWrites = probe.writes.filter(({ data }) => data.length === 72);
   assert.equal(materialWrites.length, 2);
   assert.notEqual(materialWrites[0].buffer, materialWrites[1].buffer);
   assert.deepEqual(materialWrites[0].data.slice(48, 51), [1, Math.fround(0.2), Math.fround(0.1)]);
   assert.deepEqual(materialWrites[1].data.slice(48, 51), [Math.fround(0.1), Math.fround(0.7), 1]);
   pass.destroyDrawEntry(entry);
+  pass.destroy();
+}
+
+// PBR textureはglTF channel規則と独立HDR emissive factorを明示parameterから解決します
+{
+  const probe = createGpuProbe();
+  const pass = new GeometryBufferPass(probe.gpu);
+  await pass.ready;
+  const makeTexture = (name) => ({
+    name,
+    getView: () => ({ name: `${name}-view` }),
+    getSampler: () => ({ name: `${name}-sampler` })
+  });
+  const metallicRoughnessTexture = makeTexture("metallic-roughness");
+  const occlusionTexture = makeTexture("occlusion");
+  const emissiveTexture = makeTexture("emissive");
+  const shape = {
+    shaderParam: {
+      color: [0.8, 0.6, 0.4, 1.0],
+      specular: 1.0,
+      roughness: 0.8,
+      metallic: 0.75,
+      occlusion: 0.9,
+      emissive: 0.0,
+      emissive_factor: [3.0, 1.0, 0.5],
+      use_metallic_roughness_texture: 1,
+      metallic_roughness_texture: metallicRoughnessTexture,
+      use_occlusion_texture: 1,
+      occlusion_texture: occlusionTexture,
+      use_emissive_texture: 1,
+      emissive_texture: emissiveTexture
+    },
+    hasSkeleton: false
+  };
+  const surface = pass.resolveShapeSurface(shape);
+  assert.equal(surface.useMetallicRoughnessTexture, true);
+  assert.equal(surface.useOcclusionTexture, true);
+  assert.equal(surface.useEmissiveTexture, true);
+  assert.deepEqual(surface.emissiveFactor, [3.0, 1.0, 0.5]);
+  const bindGroup = pass.getTextureBindGroup(surface);
+  assert.equal(bindGroup.descriptor.entries.length, 10);
+  assert.throws(() => pass.resolveShapeSurface({
+    ...shape,
+    shaderParam: { ...shape.shaderParam, metallic_roughness_texture: null }
+  }), /requires metallic_roughness_texture/);
+  assert.throws(() => pass.resolveShapeSurface({
+    ...shape,
+    shaderParam: { ...shape.shaderParam, emissive: 0.2 }
+  }), /emissive_factor cannot be combined with legacy emissive/);
+  assert.throws(() => pass.resolveShapeSurface({
+    ...shape,
+    shaderParam: { ...shape.shaderParam, emissive_factor: [1.0, -0.1, 0.0] }
+  }), /emissive_factor\[1\] must be >= 0/);
   pass.destroy();
 }
 

@@ -1,0 +1,51 @@
+@startuml
+title Primitive / ModelAsset / Shape の二つの利用経路
+
+top to bottom direction
+skinparam backgroundColor white
+skinparam shadowing true
+skinparam dpi 150
+skinparam defaultFontName Yu Gothic UI
+skinparam defaultFontSize 18
+skinparam rectangle {
+  RoundCorner 24
+  BorderColor black
+  BackgroundColor #f7fbff
+  FontColor black
+}
+skinparam ArrowColor black
+skinparam ranksep 24
+skinparam nodesep 24
+
+rectangle "ファイル\nglTF / GLB / Collada / JSON" as File
+rectangle "ModelLoader\n読込形式の判定と一括処理" as Loader #fff5df
+rectangle "Primitive.cube() など\nCPUで形状を生成" as Primitive #eaf7e8
+rectangle "ModelAsset\n共通のCPUモデルデータ" as Asset
+rectangle "ModelValidator\n形式・配列・参照を検証" as Validator #fff5df
+rectangle "ModelBuilder.build()\n検証・Shape template作成・GPU転送" as Builder #fff5df
+rectangle "model runtime\nnode定義・Shape template・共有resource" as Runtime
+rectangle "runtime.instantiate(space)\nNodeとShape instanceを作成" as Instantiate
+rectangle "Space内のNode / Shape instance\n描画可能・GPU resourceは共有" as Scene #eaf7e8
+
+rectangle "Shape.applyPrimitiveAsset(asset)\n先頭meshのgeometryだけをCPU配列へ転写" as Apply #fdeaea
+rectangle "ProceduralMaterial.applyTo(shape)\n実寸UV換算とPBR material設定" as Material #f4edff
+rectangle "Shape.endShape()\nCPU配列をGPU bufferへ確定" as EndShape #fdeaea
+rectangle "Node.addShape(shape)\n手作業でsceneへ配置" as AddShape #eaf7e8
+
+File --> Loader
+Loader --> Asset : importerで共通形式へ変換
+Primitive --> Asset : 1 mesh / 1 node
+
+Asset --> Validator
+Validator --> Builder : 妥当ならbuildを継続
+Asset --> Builder
+Builder --> Runtime
+Runtime --> Instantiate
+Instantiate --> Scene
+
+Asset -down-> Apply : 小さなPrimitive向けの近道
+Apply --> Material : scale指定時はこの順序
+Material --> EndShape
+EndShape --> AddShape
+
+@enduml

@@ -1,6 +1,6 @@
 // ---------------------------------------------
-// samples/compute_benchmark/main.js  2026/07/25
-//   GPU benchmark for standard compute effect APIs
+// samples/compute_benchmark/main.js  2026/09/03
+//   Runtime PBR full-pass GPU baseline benchmark
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // ---------------------------------------------
@@ -8,25 +8,24 @@ import WebgApp from "../../webg/WebgApp.js";
 import Primitive from "../../webg/Primitive.js";
 import Shape from "../../webg/Shape.js";
 import FullscreenPass from "../../webg/FullscreenPass.js";
-import ComputeEffectPipeline from "../../webg/ComputeEffectPipeline.js?v=20260723_dof_coverage";
-import {
-  COMPUTE_BLOOM_DEFAULTS
-} from "../../webg/ComputeBloomPass.js?v=20260723_image_pyramid";
-import ComputePyramidBlurPass, {
-  COMPUTE_PYRAMID_BLUR_LEVELS
-} from "../../webg/ComputePyramidBlurPass.js?v=20260724_pyramid_blur";
+import ComputeEffectPipeline from "../../webg/ComputeEffectPipeline.js";
+import PbrEnvironment from "../../webg/PbrEnvironment.js";
+import util from "../../webg/util.js";
+import { createProceduralEnvironmentData } from "../../webg/ProceduralEnvironment.js";
 
 let app = null;
 let pipeline = null;
 let copyPass = null;
-let pyramidBlurPass = null;
+let pbrEnvironment = null;
+let benchmarkLights = [];
 let lastResult = null;
 let running = false;
 
 const dom = {
   samples: document.getElementById("samples"),
   warmup: document.getElementById("warmup"),
-  pyramidFilterRadius: document.getElementById("pyramidFilterRadius"),
+  localLights: document.getElementById("localLights"),
+  pbrSsrFusion: document.getElementById("pbrSsrFusion"),
   run: document.getElementById("run"),
   downloadJson: document.getElementById("downloadJson"),
   downloadCsv: document.getElementById("downloadCsv"),
@@ -35,69 +34,65 @@ const dom = {
   result: document.getElementById("result")
 };
 
-const clearColor = [0.035, 0.055, 0.075, 1.0];
-
-// benchmarkの照明入力は変えず、Tone Map後の確認画像だけが暗く沈まない露出を全経路で共有します
-// preview、単体tone-map計測、full-pipeline、入力準備で別の露出を使うと測定条件の意味がずれるため一つに固定します
-const BENCHMARK_TONE_MAP_EXPOSURE = 2.0;
-
-// 個別pass、preview、full-pipelineで同じFogとVignette設定を使い、
-// 設定差ではなく実行範囲の違いを比較できるようにする
-const BENCHMARK_FOG_OPTIONS = Object.freeze({
-  mode: "linear",
-  color: Object.freeze([0.07, 0.11, 0.16]),
-  near: 14.0,
-  far: 58.0,
-  density: 0.022
+const CLEAR_COLOR = Object.freeze([0.018, 0.026, 0.038, 1.0]);
+const BENCHMARK_TONE_MAP_EXPOSURE = 1.0;
+const BENCHMARK_SHADOW_MAP_SIZE = 1024;
+const BENCHMARK_SSAO_OPTIONS = Object.freeze({
+  radius: 2.8,
+  strength: 1.28,
+  bias: 0.045,
+  samples: 12,
+  resolutionScale: 1.0
 });
-const BENCHMARK_VIGNETTE_OPTIONS = Object.freeze({
-  center: Object.freeze([0.5, 0.5]),
-  radius: 0.84,
-  softness: 0.32,
-  strength: 0.52,
-  tint: Object.freeze([0.16, 0.20, 0.28])
+const BENCHMARK_SSR_OPTIONS = Object.freeze({
+  intensity: 0.82,
+  steps: 48,
+  distance: 24.0,
+  thickness: 0.34,
+  resolutionScale: 1.0,
+  reflectivityThreshold: 0.02
 });
+const BENCHMARK_TRANSMISSION_OPTIONS = Object.freeze({
+  transmissionEnabled: true,
+  transmissionStrength: 1.0,
+  transmissionDistance: 42.0,
+  transmissionHitThickness: 0.1,
+  transmissionSteps: 64
+});
+const TRANSPARENCY_PROFILE_NAMES = Object.freeze([
+  "transmissionMask",
+  "transmissionVolume",
+  "transmissionExit",
+  "transmissionComposite",
+  "frostPyramid",
+  "roughnessMask",
+  "frostComposite",
+  "forward"
+]);
 
-// BloomはPyramid Bloomの既定値をそのまま使い、DoF用のblur設定とは分離します
-// PyramidのLevel構成を測定ごとに変えず、同じ画質条件でGPU時間を比較します
-function createBenchmarkBloomOptions() {
-  return {
-    ...COMPUTE_BLOOM_DEFAULTS
-  };
-}
-
-// 測定条件は結果の意味そのものなので、自動補正せず不正値は即時例外にする
+// 測定条件は結果の意味そのものなので、自動補正せず範囲外入力を例外として通知する
 function readIntegerInput(element, label, { min, max }) {
-  const value = Number(element.value);
-  if (!Number.isInteger(value) || value < min || value > max) {
-    throw new Error(`${label} must be an integer from ${min} to ${max}: ${element.value}`);
-  }
-  return value;
+  return util.readFiniteNumber(Number(element.value), label, {
+    integer: true,
+    min,
+    max
+  });
 }
 
-// `finite`の入力を読み込み、検証済みのデータとして後続処理へ渡す
-function readFiniteInput(element, label, { min, max }) {
-  const value = Number(element.value);
-  if (!Number.isFinite(value) || value < min || value > max) {
-    throw new Error(`${label} must be a finite number from ${min} to ${max}: ${element.value}`);
-  }
-  return value;
-}
-
-// 測定の進行状況はこの関数だけが更新し、複数箇所で表記がずれないようにする
+// 進行状態を一つの表示要素へ集約し、測定中のcase名と完了状態を追跡可能にする
 function setStatus(message) {
   dom.status.textContent = message;
 }
 
-// 測定中は同じ GPU resource へ別の操作が重ならないよう UI の入口を止める
+// 同じGPU resourceへpreviewとbenchmarkが同時にcommandを記録しないよう操作を止める
 function setRunning(nextRunning) {
   running = nextRunning;
   dom.run.disabled = nextRunning;
   dom.preview.disabled = nextRunning;
+  dom.pbrSsrFusion.disabled = nextRunning;
 }
 
-// timestamp-query 1回分の最小構成をまとめた timer
-// 単一 pass の timestamp が不安定な項目は queue 完了待ち時間へ切り替える
+// 一つの計測区間をtimestamp-queryで囲み、外側queryを渡せない複合区間はqueue完了時間で読む
 class GpuPassTimer {
   constructor(device, queue) {
     this.device = device;
@@ -105,7 +100,7 @@ class GpuPassTimer {
     this.supported = device.features?.has?.("timestamp-query") === true;
   }
 
-  // query set と readback buffer は測定ごとに作り、前回の map 状態を持ち越さない
+  // QuerySet、resolve Buffer、readback Bufferを一つのsampleだけに割り当てる
   createSlot(label) {
     return {
       querySet: this.device.createQuerySet({
@@ -126,14 +121,13 @@ class GpuPassTimer {
     };
   }
 
-  // encodeCallback は 1 項目分の command だけを記録する
-  // 複数 pass を内包する effect は queue-wall に切り替え、安定した比較値を取る
+  // callbackが記録したrender/compute列の直前と直後へtimestampを書き、GPU経過時間を返す
   async measure(label, encodeCallback, options = {}) {
     if (!this.supported) {
       throw new Error("GPU timestamp-query is not supported on this device");
     }
     if (options.timerMode === "queue-wall") {
-      return this.measureQueueWall(label, encodeCallback);
+      return this.measureQueueWall(label, encodeCallback, options);
     }
     const gpu = app.getGPU();
     const slot = this.createSlot(label);
@@ -142,11 +136,8 @@ class GpuPassTimer {
       beginningOfPassWriteIndex: 0,
       endOfPassWriteIndex: 1
     };
-
     gpu.endPass?.();
-    gpu.commandEncoder = this.device.createCommandEncoder({
-      label: `${label}:encoder`
-    });
+    gpu.commandEncoder = this.device.createCommandEncoder({ label: `${label}:encoder` });
     if (typeof gpu.commandEncoder.writeTimestamp === "function") {
       gpu.commandEncoder.writeTimestamp(slot.querySet, 0);
       encodeCallback(gpu.commandEncoder, undefined);
@@ -161,7 +152,7 @@ class GpuPassTimer {
     const commandBuffer = gpu.commandEncoder.finish();
     gpu.commandEncoder = null;
     this.queue.submit([commandBuffer]);
-
+    options.afterSubmit?.();
     await slot.readBuffer.mapAsync(GPUMapMode.READ);
     const values = new BigUint64Array(slot.readBuffer.getMappedRange());
     const start = values[0];
@@ -170,56 +161,58 @@ class GpuPassTimer {
     slot.resolveBuffer.destroy();
     slot.readBuffer.destroy();
     slot.querySet.destroy?.();
-    if (end < start) {
-      throw new Error(`${label} timestamp end is smaller than start`);
+    if (end < start) throw new Error(`${label} timestamp end is smaller than start`);
+    const milliseconds = Number(end - start) / 1_000_000.0;
+    if (!Number.isFinite(milliseconds) || milliseconds < 0.0) {
+      throw new Error(`${label} timestamp result is invalid: ${milliseconds}`);
     }
-    const ms = Number(end - start) / 1_000_000.0;
-    if (!Number.isFinite(ms) || ms < 0.0) {
-      throw new Error(`${label} timestamp result is invalid: ${ms}`);
-    }
-    return ms;
+    return milliseconds;
   }
 
-  // pass 数が多い処理は queue 完了待ちで一括計測し、driver 差で止まることを避ける
-  async measureQueueWall(label, encodeCallback) {
+  // 外側timestampをdescriptorへ渡せない複合区間はsubmit直前からqueue完了までを測る
+  // command encode時間は開始前に終え、GPU待機を含むwall時間で0表示を避ける
+  async measureQueueWall(label, encodeCallback, options = {}) {
     const gpu = app.getGPU();
     gpu.endPass?.();
-    gpu.commandEncoder = this.device.createCommandEncoder({
-      label: `${label}:queue-wall-encoder`
-    });
-    const startedAt = performance.now();
+    gpu.commandEncoder = this.device.createCommandEncoder({ label: `${label}:queue-wall-encoder` });
     encodeCallback(gpu.commandEncoder, undefined);
     gpu.endPass?.();
     const commandBuffer = gpu.commandEncoder.finish();
     gpu.commandEncoder = null;
+    const startedAt = performance.now();
     this.queue.submit([commandBuffer]);
-    await this.queue.onSubmittedWorkDone?.();
-    const elapsed = performance.now() - startedAt;
-    if (!Number.isFinite(elapsed) || elapsed < 0.0) {
-      throw new Error(`${label} queue-wall result is invalid: ${elapsed}`);
+    options.afterSubmit?.();
+    await this.queue.onSubmittedWorkDone();
+    const milliseconds = performance.now() - startedAt;
+    if (!Number.isFinite(milliseconds) || milliseconds < 0.0) {
+      throw new Error(`${label} queue-wall result is invalid: ${milliseconds}`);
     }
-    return elapsed;
+    return milliseconds;
   }
 }
 
-// 不透明材質と透明材質を同じ入口で作り、alphaをTransparencyPassの分類へ渡す
+// SmoothShaderとPBR Forward Shaderが共有する公開material fieldを一箇所で設定する
 function setMaterial(shape, color, options = {}) {
   shape.setMaterial("smooth-shader", {
     has_bone: 0,
     use_texture: 0,
-    color: [color[0], color[1], color[2], options.alpha ?? 1.0],
+    color: [color[0], color[1], color[2], 1.0],
     alpha: options.alpha ?? 1.0,
-    ambient: options.ambient ?? 0.03,
+    ambient: 0.0,
     specular: options.specular ?? 0.55,
-    power: options.power ?? 32.0,
+    power: 0.0,
     roughness: options.roughness ?? 0.42,
     metallic: options.metallic ?? 0.0,
     emissive: options.emissive ?? 0.0,
-    flat_shading: options.flat_shading ?? 0
+    flat_shading: options.flatShading ?? 0,
+    transmission: options.transmission ?? 0.0,
+    ior: options.ior ?? 1.5,
+    attenuation_color: options.attenuationColor ?? [1.0, 1.0, 1.0],
+    attenuation_distance: options.attenuationDistance ?? 1.0
   });
 }
 
-// Shape を作る手順を共通化し、すべての測定 object が同じ材質設定規約で揃うようにする
+// Primitive asset生成、Shape確定、material登録を共通化しscene定義の差だけを読みやすくする
 function createShape(gpu, primitiveFactory, color, options = {}) {
   const shape = new Shape(gpu);
   shape.applyPrimitiveAsset(primitiveFactory(shape.getPrimitiveOptions()));
@@ -228,7 +221,7 @@ function createShape(gpu, primitiveFactory, color, options = {}) {
   return shape;
 }
 
-// scene graph への登録を 1 箇所へまとめ、測定 scene の構成を追いやすくする
+// Shapeを固定sceneへ登録し、位置と姿勢をbenchmark条件として明示する
 function addShapeNode(name, shape, position, attitude = [0, 0, 0]) {
   const node = app.space.addNode(null, name);
   node.setPosition(...position);
@@ -237,53 +230,39 @@ function addShapeNode(name, shape, position, attitude = [0, 0, 0]) {
   return node;
 }
 
-// G-buffer, shadow, SSR, Bloom などが十分な入力を持てるよう、
-// 床、壁、反射率の異なる複数物体を固定 scene として用意する
+// 金属度、粗さ、Transmissionが異なる固定物体を配置し、全PBR段階へ有効な入力を作る
 function createBenchmarkScene() {
   const gpu = app.getGPU();
   addShapeNode(
     "bench_floor",
-    createShape(gpu, (options) => Primitive.cuboid(34, 0.8, 28, options), [0.28, 0.32, 0.36, 0.70], {
-      ambient: 0.04,
-      specular: 0.82,
-      power: 64
+    createShape(gpu, (options) => Primitive.cuboid(34, 0.8, 28, options), [0.32, 0.36, 0.40], {
+      roughness: 0.58,
+      metallic: 0.0
     }),
     [0, -4.4, -3]
   );
   addShapeNode(
     "bench_back_wall",
-    createShape(gpu, (options) => Primitive.cuboid(34, 13, 0.8, options), [0.42, 0.47, 0.54, 0.18], {
-      ambient: 0.03,
-      specular: 0.24,
-      power: 18
+    createShape(gpu, (options) => Primitive.cuboid(34, 13, 0.8, options), [0.44, 0.49, 0.56], {
+      roughness: 0.72
     }),
     [0, 1.6, -16.5]
   );
   addShapeNode(
     "bench_left_wall",
-    createShape(gpu, (options) => Primitive.cuboid(0.8, 13, 26, options), [0.35, 0.29, 0.25, 0.12], {
-      ambient: 0.02,
-      specular: 0.18,
-      power: 12
+    createShape(gpu, (options) => Primitive.cuboid(0.8, 13, 26, options), [0.38, 0.30, 0.25], {
+      roughness: 0.66
     }),
     [-16.8, 1.6, -4.0]
   );
 
-  const colors = [
-    [0.92, 0.26, 0.16, 0.34],
-    [0.12, 0.58, 0.90, 0.62],
-    [0.22, 0.76, 0.36, 0.42],
-    [0.90, 0.72, 0.18, 0.48],
-    [0.66, 0.24, 0.88, 0.52],
-    [0.88, 0.42, 0.62, 0.38]
-  ];
-  const factories = [
-    (options) => Primitive.cube(3.2, options),
-    (options) => Primitive.sphere(1.9, 36, 24, options),
-    (options) => Primitive.cuboid(2.4, 5.8, 2.4, options),
-    (options) => Primitive.donut(1.4, 0.36, 36, 18, options),
-    (options) => Primitive.cube(2.5, options),
-    (options) => Primitive.sphere(1.55, 32, 20, options)
+  const definitions = [
+    { color: [0.92, 0.26, 0.16], roughness: 0.10, metallic: 1.0, factory: (o) => Primitive.cube(3.2, o) },
+    { color: [0.12, 0.58, 0.90], roughness: 0.24, metallic: 0.0, factory: (o) => Primitive.sphere(1.9, 36, 24, o) },
+    { color: [0.22, 0.76, 0.36], roughness: 0.42, metallic: 0.65, factory: (o) => Primitive.cuboid(2.4, 5.8, 2.4, o) },
+    { color: [0.90, 0.72, 0.18], roughness: 0.62, metallic: 1.0, factory: (o) => Primitive.donut(1.4, 0.36, 36, 18, o) },
+    { color: [0.66, 0.24, 0.88], roughness: 0.82, metallic: 0.0, factory: (o) => Primitive.cube(2.5, o) },
+    { color: [0.88, 0.42, 0.62], roughness: 0.34, metallic: 0.3, factory: (o) => Primitive.sphere(1.55, 32, 20, o) }
   ];
   const transforms = [
     [[-7.8, -1.6, -7.8], [0, 24, 0]],
@@ -293,570 +272,521 @@ function createBenchmarkScene() {
     [[-5.2, -0.8, -1.8], [0, 42, 0]],
     [[4.6, -1.4, -1.2], [0, 0, 0]]
   ];
-  for (let index = 0; index < factories.length; index += 1) {
+  definitions.forEach((definition, index) => {
     addShapeNode(
       `bench_object_${index}`,
-      createShape(gpu, factories[index], colors[index], {
-        ambient: 0.0,
-        specular: 0.72,
-        power: 36
-      }),
+      createShape(gpu, definition.factory, definition.color, definition),
       transforms[index][0],
       transforms[index][1]
     );
-  }
+  });
 
-  // 現行pipelineの自動透明合成をfull-pipelineと個別caseの両方で実行させる
+  // 閉じた透明球へTransmission、IOR、吸収を明示し、屈折4段階を必ず実行させる
   addShapeNode(
-    "bench_glass",
+    "bench_transmission",
     createShape(gpu, (options) => Primitive.sphere(2.15, 36, 24, options), [0.28, 0.66, 0.92], {
-      alpha: 0.42,
-      ambient: 0.04,
-      specular: 0.84,
-      power: 64,
-      roughness: 0.38
+      alpha: 0.28,
+      roughness: 0.18,
+      metallic: 0.0,
+      transmission: 0.92,
+      ior: 1.52,
+      attenuationColor: [0.78, 0.92, 1.0],
+      attenuationDistance: 2.0
     }),
     [0.4, -1.0, -4.0]
   );
 }
 
-// 色消去値は render pass ごとに object 形式で渡すため、配列から変換する
-function getClearColorObject() {
-  return {
-    r: clearColor[0],
-    g: clearColor[1],
-    b: clearColor[2],
-    a: clearColor[3]
-  };
-}
-
-// canvas の大きさが変わっても、pipeline とPyramid blurの内部targetを現在サイズへ揃える
-function resizeBenchmarkTargets() {
-  const width = app.screen.getWidth();
-  const height = app.screen.getHeight();
-  pipeline.resize(width, height);
-  pyramidBlurPass.resize(width, height);
-}
-
-// WebgAppと同じ更新入口から一つのCamera Frameを確定し、全passへ同じsnapshotを渡す
-function getEffectInputs() {
-  return { cameraFrame: app.updateCameraFrame() };
-}
-
-// GeometryBufferPass の cost を単独で測るため、通常描画と別 case に分ける
-function renderGBuffer(timestampWrites = undefined) {
-  const { cameraFrame } = getEffectInputs();
-  pipeline.gbuffer.renderSpace(
-    app.space,
-    cameraFrame,
-    clearColor,
-    { timestampWrites }
-  );
-}
-
-// ShadowMapPass は lighting 合成前の独立コストとして別計測する
-function renderShadowMap(timestampWrites = undefined) {
-  pipeline.directionalShadowMap.renderSpace(
-    app.space,
-    pipeline.light.viewProjection,
-    { timestampWrites }
-  );
-}
-
-// compute shadow lighting は G-buffer と shadow map を入力にするので、
-// prepareInputs 済みの resource を前提に単体 encode する
-function encodeShadowLighting(encoder, timestampWrites = undefined) {
-  const { cameraFrame } = getEffectInputs();
-  const resources = pipeline.gbuffer.getBindingResources();
-  return pipeline.directionalShadowPass.encode(
-    encoder,
-    {
-      ...resources,
-      ...pipeline.directionalShadowMap.getBindingResources()
-    },
-    {
-      cameraFrame,
-      lightViewProjection: pipeline.light.viewProjection,
-      lightDirection: pipeline.light.direction,
-      enabled: true,
-      bias: 0.0015,
-      normalBias: 0.012,
-      pcfRadius: 1,
-      timestampWrites
-    }
-  );
-}
-
-// TransparencyPassのSmoothShaderへ、統合pipelineと同じview-space入射方向を渡す
-function createTransparencyLightOverride(cameraFrame) {
-  const direction = cameraFrame.viewRotationMatrix.mul3x3Vector(pipeline.light.direction);
-  return [-direction[0], -direction[1], -direction[2], 0.0];
-}
-
-// 個別 pass の測定前に共通入力を準備する
-// ここは本体の比較対象ではないため timestamp を付けず、毎回同条件を作る
-async function prepareInputs() {
-  const gpu = app.getGPU();
-  resizeBenchmarkTargets();
-  gpu.endPass?.();
-  gpu.commandEncoder = gpu.device.createCommandEncoder({
-    label: "compute-effect-benchmark:prepare"
+// 最大128灯から選べる固定point light列を作り、灯数以外の入力条件をrun間で変えない
+function createBenchmarkLights() {
+  const palette = [
+    [1.0, 0.18, 0.08], [0.08, 0.42, 1.0], [0.10, 1.0, 0.38],
+    [1.0, 0.55, 0.08], [0.72, 0.12, 1.0], [0.08, 0.95, 1.0]
+  ];
+  return Array.from({ length: 128 }, (_, index) => {
+    const ring = 4.0 + (index % 6) * 2.2;
+    const angle = index * 2.39996;
+    return Object.freeze({
+      type: "point",
+      position: [
+        Math.cos(angle) * ring,
+        -2.4 + (index % 8) * 1.15,
+        -5.0 + Math.sin(angle) * (7.0 + (index % 5) * 1.5)
+      ],
+      color: palette[index % palette.length],
+      radius: 7.5 + (index % 5) * 0.8,
+      intensity: 2.8 + (index % 4) * 0.35
+    });
   });
-  const { cameraFrame } = getEffectInputs();
-  pipeline.renderScene(app.space, cameraFrame, clearColor, { shadowEnabled: true });
-  const finalColor = pipeline.encode(gpu.commandEncoder, {
+}
+
+// PBR全caseへ同じIBL、直接光、Local Light、SSR、Transmission、Tone Map条件を渡す
+function createPbrPipelineOptions(cameraFrame, localLights, pbrSsrFusionEnabled) {
+  return {
     cameraFrame,
     shadowEnabled: true,
     ssaoEnabled: true,
     ssrEnabled: true,
-    fogEnabled: true,
+    pbrSsrFusionEnabled,
+    fogEnabled: false,
     toonEnabled: false,
     dofEnabled: false,
     bloomEnabled: false,
-    edgeEnabled: true,
-    edgeGeometryEnabled: true,
-    vignetteEnabled: true,
-    fog: BENCHMARK_FOG_OPTIONS,
-    edge: {
-      colorEnabled: false,
-      blendMode: "black-multiply",
-      thickness: 2
+    edgeEnabled: false,
+    vignetteEnabled: false,
+    ssao: BENCHMARK_SSAO_OPTIONS,
+    ssr: BENCHMARK_SSR_OPTIONS,
+    composer: { mode: "pbr-ssr" },
+    transparency: BENCHMARK_TRANSMISSION_OPTIONS,
+    lighting: {
+      unitSystem: "relative",
+      ambient: 0.0,
+      environment: pbrEnvironment.getResources(),
+      environmentIntensity: 1.0,
+      environmentBackground: true,
+      environmentRotationDegrees: 0.0,
+      directionalColor: [1.0, 0.96, 0.90],
+      directionalIntensity: 1.0
     },
-    vignette: BENCHMARK_VIGNETTE_OPTIONS
-  });
+    lights: localLights,
+    toneMap: {
+      mode: "reinhard",
+      exposure: BENCHMARK_TONE_MAP_EXPOSURE,
+      saturation: 1.0,
+      gamma: 2.2,
+      blackBackground: false
+    }
+  };
+}
+
+// canvas変更時だけ全画面targetを現在の物理解像度へ揃える
+function resizeBenchmarkTargets() {
+  pipeline.resize(app.screen.getWidth(), app.screen.getHeight());
+}
+
+// WebgAppの共通更新入口から一つのCamera Frameを確定し全passで再利用する
+function getCameraFrame() {
+  return app.updateCameraFrame();
+}
+
+// 個別caseの前にPBR全体を一度実行し、各段階の実在する出力targetを同じ条件で準備する
+async function prepareInputs(localLights, pbrSsrFusionEnabled) {
+  const gpu = app.getGPU();
+  resizeBenchmarkTargets();
+  gpu.endPass?.();
+  gpu.commandEncoder = gpu.device.createCommandEncoder({ label: "pbr-benchmark:prepare" });
+  const cameraFrame = getCameraFrame();
+  pipeline.renderScene(app.space, cameraFrame, CLEAR_COLOR, { shadowEnabled: true });
+  const options = createPbrPipelineOptions(cameraFrame, localLights, pbrSsrFusionEnabled);
+  const finalColor = pipeline.encode(gpu.commandEncoder, options);
+  // Two-pass reference caseが使うSSR出力とComposer出力を計測外で準備する
+  // full-pbr-pipelineは融合経路を使い、この準備commandの時間は各caseのtimestampへ含めない
   const resources = pipeline.gbuffer.getBindingResources();
-  const shadowed = pipeline.deferredLightingPass.getOutputTarget();
-  const reflection = pipeline.ssrPass.getOutputTarget();
-  const composed = pipeline.composer.getOutputTarget();
-  const transparent = pipeline.transparencyPass.outputTarget;
-  const fogged = pipeline.fogPass.getOutputTarget();
-  const toneMapped = pipeline.toneMapPass.getOutputTarget();
-  const edged = pipeline.edgePass.getOutputTarget();
+  const lighting = pipeline.deferredLightingPass.getOutputTarget();
+  const ambientOcclusion = pipeline.ssaoPass.getOutputTarget();
+  const reflection = pipeline.ssrPass.encode(gpu.commandEncoder, {
+    scene: lighting,
+    normal: resources.normal,
+    material: resources.material,
+    depth: resources.depth
+  }, {
+    ...BENCHMARK_SSR_OPTIONS,
+    cameraFrame,
+    enabled: true,
+    view: "reflection",
+    integrationMode: "pbr"
+  });
+  const composed = pipeline.composer.encode(gpu.commandEncoder, {
+    base: lighting,
+    reflection,
+    depth: resources.depth,
+    specularIbl: pipeline.deferredLightingPass.getSpecularIblTarget(),
+    albedo: resources.albedo ?? resources.color,
+    normal: resources.normal,
+    material: resources.material,
+    ambientOcclusion,
+    brdfLut: pbrEnvironment.getResources().brdfLut,
+    brdfSampler: pbrEnvironment.getResources().sampler
+  }, {
+    mode: "pbr-ssr",
+    intensity: BENCHMARK_SSR_OPTIONS.intensity,
+    cameraFrame
+  });
   gpu.endPass?.();
   const commandBuffer = gpu.commandEncoder.finish();
   gpu.commandEncoder = null;
   gpu.queue.submit([commandBuffer]);
-  await gpu.queue.onSubmittedWorkDone?.();
+  pipeline.afterGpuSubmit();
+  await gpu.queue.onSubmittedWorkDone();
   return {
-    resources,
     cameraFrame,
-    shadowed,
+    options,
+    resources,
+    directionalVisibility: pipeline.directionalShadowPass.getOutputTarget(),
+    spotVisibility: pipeline.spotShadowPass.outputTarget,
+    ambientOcclusion,
+    lighting,
     reflection,
     composed,
-    transparent,
-    fogged,
-    toneMapped,
-    edged,
+    transparent: pipeline.transparencyPass.outputTarget,
     finalColor
   };
 }
 
-// 現在の benchmark scene を効果付きで画面に出し、測定条件そのものを目視確認できるようにする
+// PBR全体の最終色をpresentし、IBL、SSR、Transmissionが入力sceneで働くことを目視確認する
 async function renderPreview() {
   const gpu = app.getGPU();
-  const { cameraFrame } = getEffectInputs();
-  gpu.commandEncoder = gpu.device.createCommandEncoder({
-    label: "compute-effect-benchmark:preview"
-  });
-  pipeline.renderScene(app.space, cameraFrame, clearColor, {
-    shadowEnabled: true,
-    ssaoEnabled: true,
-    ssrEnabled: true,
-    toonEnabled: false,
-    edgeEnabled: true,
-    edgeGeometryEnabled: true
-  });
-  const finalColor = pipeline.encode(gpu.commandEncoder, {
-    cameraFrame,
-    ssaoEnabled: true,
-    shadowEnabled: true,
-    ssrEnabled: true,
-    fogEnabled: true,
-    toonEnabled: false,
-    dofEnabled: false,
-    bloomEnabled: true,
-    edgeEnabled: true,
-    edgeGeometryEnabled: true,
-    vignetteEnabled: true,
-    composer: { mode: "mix" },
-    fog: BENCHMARK_FOG_OPTIONS,
-    toneMap: {
-      mode: "reinhard",
-      exposure: BENCHMARK_TONE_MAP_EXPOSURE,
-      saturation: 1.06,
-      gamma: 2.2,
-      blackBackground: false
-    },
-    edge: {
-      colorEnabled: false,
-      blendMode: "black-multiply",
-      thickness: 2
-    },
-    vignette: BENCHMARK_VIGNETTE_OPTIONS
-  });
-  app.screen.beginPresentPass({
-    clearColor,
-    colorLoadOp: "clear"
-  });
+  resizeBenchmarkTargets();
+  gpu.commandEncoder = gpu.device.createCommandEncoder({ label: "pbr-benchmark:preview" });
+  const cameraFrame = getCameraFrame();
+  const localLights = benchmarkLights.slice(0, readIntegerInput(dom.localLights, "Local Lights", {
+    min: 0,
+    max: 128
+  }));
+  const pbrSsrFusionEnabled = dom.pbrSsrFusion.value === "fused";
+  pipeline.renderScene(app.space, cameraFrame, CLEAR_COLOR, { shadowEnabled: true });
+  const finalColor = pipeline.encode(
+    gpu.commandEncoder,
+    createPbrPipelineOptions(cameraFrame, localLights, pbrSsrFusionEnabled)
+  );
+  app.screen.beginPresentPass({ clearColor: CLEAR_COLOR, colorLoadOp: "clear" });
   copyPass.draw(finalColor);
   app.screen.clearDepthBuffer();
   app.screen.present();
+  pipeline.afterGpuSubmit();
 }
 
-// 基本統計量は JSON と table の両方で使うため共通化する
+// 配列の算術平均を統計値計算で共用する
 function average(values) {
   return values.reduce((sum, value) => sum + value, 0.0) / values.length;
 }
 
-// 観測された時間分布から、比較に使う平均、最小、最大、分散を求める
+// 平均だけでなく中央値と95 percentileを残し、外れ値で最適化判断を誤りにくくする
 function summarizeSamples(samples) {
   const sorted = [...samples].sort((a, b) => a - b);
-  const avg = average(sorted);
-  const variance = average(sorted.map((value) => (value - avg) ** 2));
+  const averageMs = average(sorted);
+  const variance = average(sorted.map((value) => (value - averageMs) ** 2));
+  const middle = Math.floor(sorted.length / 2);
+  const medianMs = sorted.length % 2 === 0
+    ? (sorted[middle - 1] + sorted[middle]) * 0.5
+    : sorted[middle];
   return {
     samples: sorted.length,
-    averageMs: avg,
+    averageMs,
+    medianMs,
+    percentile95Ms: sorted[Math.ceil(sorted.length * 0.95) - 1],
     minMs: sorted[0],
     maxMs: sorted[sorted.length - 1],
     stddevMs: Math.sqrt(variance)
   };
 }
 
-// 表示用の数値桁数を統一し、欠損時は明示的に -- と出す
+// 欠損したプロファイル統計は0にせず明示的な未計測記号で表示する
 function formatMs(value) {
   return Number.isFinite(value) ? value.toFixed(3) : "--";
 }
 
-// UI の timer 表示は短くし、詳細な意味は README 側へ残す
-function formatTimerLabel(timerMode) {
-  if (timerMode === "queue-wall") return "queue";
-  if (timerMode === "gpu-timestamp") return "gpu";
-  return String(timerMode ?? "--");
-}
-
-// HTML table は 1 case 1 行に固定し、標準解像度の結果だけを素直に読める構成にする
+// HTML tableをcaseごとの中央値、P95、範囲、sample数が同時に読める形へ更新する
 function renderResultTable(result) {
   const rows = result.cases.map((entry) => `
     <tr>
       <td>${entry.name}</td>
       <td>${entry.group}</td>
       <td>${formatMs(entry.averageMs)}</td>
-      <td>${formatMs(entry.stddevMs)}</td>
+      <td>${formatMs(entry.medianMs)}</td>
+      <td>${formatMs(entry.percentile95Ms)}</td>
       <td>${formatMs(entry.minMs)} / ${formatMs(entry.maxMs)}</td>
-      <td>${formatTimerLabel(entry.timerMode)}</td>
+      <td>${entry.timerMode === "gpu-profiler" ? "profile" : entry.timerMode === "queue-wall" ? "queue" : "gpu"}</td>
       <td>${entry.samples}</td>
     </tr>
   `).join("");
   dom.result.innerHTML = `
     <table>
-      <thead>
-        <tr>
-          <th>case</th>
-          <th>group</th>
-          <th>avg ms</th>
-          <th>stddev</th>
-          <th>min/max</th>
-          <th>timer</th>
-          <th>n</th>
-        </tr>
-      </thead>
+      <thead><tr>
+        <th>case</th><th>group</th><th>avg ms</th><th>median</th>
+        <th>P95</th><th>min/max</th><th>timer</th><th>n</th>
+      </tr></thead>
       <tbody>${rows}</tbody>
     </table>
   `;
 }
 
-// 利用者が比較したい標準 API の effect を 1 つずつ独立 case として並べる
-// G-buffer や shadow map も前段コストとして一緒に測り、後段 effect だけを過大評価しないようにする
-function getBenchmarkCases(options) {
+// Top-level PBR passを現在の公開class境界で個別実行し、前処理時間を測定値へ混ぜない
+function getBenchmarkCases(localLights, pbrSsrFusionEnabled) {
   return [
     {
       name: "gbuffer-render",
-      group: "render",
-      run: (_prepared, _encoder, timestampWrites) => renderGBuffer(timestampWrites)
+      group: "geometry",
+      run: (prepared, _encoder, timestampWrites) => pipeline.gbuffer.renderSpace(
+        app.space,
+        prepared.cameraFrame,
+        CLEAR_COLOR,
+        { timestampWrites }
+      )
     },
     {
       name: "shadow-map",
-      group: "render",
-      run: (_prepared, _encoder, timestampWrites) => renderShadowMap(timestampWrites)
+      group: "shadow",
+      run: (_prepared, _encoder, timestampWrites) => pipeline.directionalShadowMap.renderSpace(
+        app.space,
+        pipeline.light.viewProjection,
+        { timestampWrites }
+      )
     },
     {
       name: "shadow-visibility",
-      group: "compute",
-      run: (_prepared, encoder, timestampWrites) => encodeShadowLighting(encoder, timestampWrites)
-    },
-    {
-      name: "blur",
-      group: "compute",
-      timerMode: "queue-wall",
-      run: (prepared, encoder, timestampWrites) => pyramidBlurPass.encode(
+      group: "shadow",
+      run: (prepared, encoder, timestampWrites) => pipeline.directionalShadowPass.encode(
         encoder,
-        prepared.shadowed,
-        {
-          filterRadius: options.pyramidFilterRadius,
-          timestampWrites
-        }
-      )
-    },
-    {
-      name: "toon",
-      group: "compute",
-      run: (prepared, encoder, timestampWrites) => pipeline.toonPass.encode(
-        encoder,
-        prepared.shadowed,
-        {
-          levels: 4,
-          strength: 1.0,
-          floor: 0.12,
-          timestampWrites
-        }
-      )
-    },
-    {
-      name: "dof",
-      group: "compute",
-      timerMode: "queue-wall",
-      run: (prepared, encoder, timestampWrites) => pipeline.dofPass.encode(
-        encoder,
-        {
-          scene: prepared.shadowed,
-          depth: prepared.resources.depth
-        },
+        { ...prepared.resources, ...pipeline.directionalShadowMap.getBindingResources() },
         {
           cameraFrame: prepared.cameraFrame,
-          focusDistance: 14.0,
-          focusRange: 5.5,
-          timestampWrites
-        }
-      )
-    },
-    {
-      name: "bloom",
-      group: "compute",
-      timerMode: "queue-wall",
-      run: (prepared, encoder, timestampWrites) => pipeline.bloomPass.encode(
-        encoder,
-        prepared.shadowed,
-        {
-          ...createBenchmarkBloomOptions(options),
+          lightViewProjection: pipeline.light.viewProjection,
+          lightDirection: pipeline.light.direction,
+          enabled: true,
+          bias: 0.0015,
+          normalBias: 0.003,
+          pcfRadius: 1,
           timestampWrites
         }
       )
     },
     {
       name: "ssao",
-      group: "compute",
-      timerMode: "queue-wall",
-      run: (prepared, encoder, timestampWrites) => pipeline.ssaoPass.encode(encoder, {
-          normal: prepared.resources.normal,
-          depth: prepared.resources.depth
-        }, {
-          cameraFrame: prepared.cameraFrame,
-          enabled: true,
-          radius: 2.8,
-          strength: 1.28,
-          samples: 12,
-          timestampWrites
-        })
+      group: "ambient-occlusion",
+      run: (prepared, encoder, timestampWrites) => pipeline.ssaoPass.encode(
+        encoder,
+        { normal: prepared.resources.normal, depth: prepared.resources.depth },
+        { ...BENCHMARK_SSAO_OPTIONS, cameraFrame: prepared.cameraFrame, enabled: true, timestampWrites }
+      )
     },
     {
-      name: "ssr-ray",
-      group: "compute",
-      run: (prepared, encoder, timestampWrites) => pipeline.ssrPass.encode(encoder, {
-          scene: prepared.shadowed,
-          normal: prepared.resources.normal,
-          material: prepared.resources.material,
-          depth: prepared.resources.depth
-        }, {
-          cameraFrame: prepared.cameraFrame,
-          enabled: true,
-          view: "reflection",
-          intensity: 0.82,
-          steps: 48,
-          distance: 24.0,
-          thickness: 0.34,
-          timestampWrites
-        })
-    },
-    {
-      name: "ssr-composer",
-      group: "compute",
-      run: (prepared, encoder, timestampWrites) => pipeline.composer.encode(
+      name: "deferred-lighting-pbr",
+      group: "lighting",
+      run: (prepared, encoder, timestampWrites) => pipeline.deferredLightingPass.encode(
         encoder,
         {
-          // composerのbaseは線形HDRシーンであり、rgba8unormのSSAO可視率ではありません
-          // 遅延照明済みのshadowed色を使い、SSR反射との合成だけを単独測定します
-          base: prepared.shadowed,
-          reflection: prepared.reflection,
-          depth: prepared.resources.depth
+          ...prepared.resources,
+          shadowVisibility: prepared.directionalVisibility,
+          spotShadowVisibility: prepared.spotVisibility,
+          ambientOcclusion: prepared.ambientOcclusion
         },
         {
-          mode: "mix",
+          cameraFrame: prepared.cameraFrame,
+          directionalLight: {
+            direction: pipeline.light.direction,
+            color: [1.0, 0.96, 0.90],
+            intensity: 1.0
+          },
+          spotLight: null,
+          unitSystem: "relative",
+          ambient: 0.0,
+          environment: pbrEnvironment.getResources(),
+          environmentIntensity: 1.0,
+          environmentBackground: true,
+          environmentRotationDegrees: 0.0,
+          lights: localLights,
+          view: "lighting",
           timestampWrites
         }
       )
     },
     {
-      name: "transparency",
-      group: "render+compute",
+      name: "ssr-pbr",
+      group: "reflection",
+      run: (prepared, encoder, timestampWrites) => pipeline.ssrPass.encode(
+        encoder,
+        {
+          scene: prepared.lighting,
+          normal: prepared.resources.normal,
+          material: prepared.resources.material,
+          depth: prepared.resources.depth
+        },
+        {
+          ...BENCHMARK_SSR_OPTIONS,
+          cameraFrame: prepared.cameraFrame,
+          enabled: true,
+          view: "reflection",
+          integrationMode: "pbr",
+          timestampWrites
+        }
+      )
+    },
+    {
+      name: "pbr-ssr-composer",
+      group: "reflection",
+      run: (prepared, encoder, timestampWrites) => pipeline.composer.encode(
+        encoder,
+        {
+          base: prepared.lighting,
+          reflection: prepared.reflection,
+          depth: prepared.resources.depth,
+          specularIbl: pipeline.deferredLightingPass.getSpecularIblTarget(),
+          albedo: prepared.resources.albedo ?? prepared.resources.color,
+          normal: prepared.resources.normal,
+          material: prepared.resources.material,
+          ambientOcclusion: prepared.ambientOcclusion,
+          brdfLut: pbrEnvironment.getResources().brdfLut,
+          brdfSampler: pbrEnvironment.getResources().sampler
+        },
+        {
+          mode: "pbr-ssr",
+          intensity: BENCHMARK_SSR_OPTIONS.intensity,
+          cameraFrame: prepared.cameraFrame,
+          timestampWrites
+        }
+      )
+    },
+    {
+      name: "ssr-pbr-fused",
+      group: "reflection",
+      run: (prepared, encoder, timestampWrites) => pipeline.ssrPass.encode(
+        encoder,
+        {
+          scene: prepared.lighting,
+          normal: prepared.resources.normal,
+          material: prepared.resources.material,
+          depth: prepared.resources.depth
+        },
+        {
+          ...BENCHMARK_SSR_OPTIONS,
+          cameraFrame: prepared.cameraFrame,
+          enabled: true,
+          view: "reflection",
+          integrationMode: "pbr",
+          pbrComposite: {
+            base: prepared.lighting,
+            depth: prepared.resources.depth,
+            specularIbl: pipeline.deferredLightingPass.getSpecularIblTarget(),
+            albedo: prepared.resources.albedo ?? prepared.resources.color,
+            normal: prepared.resources.normal,
+            material: prepared.resources.material,
+            ambientOcclusion: prepared.ambientOcclusion,
+            brdfLut: pbrEnvironment.getResources().brdfLut,
+            brdfSampler: pbrEnvironment.getResources().sampler,
+            output: pipeline.composer.getOutputTarget()
+          },
+          timestampWrites
+        }
+      )
+    },
+    {
+      name: "transparency-pbr",
+      group: "transparency",
       timerMode: "queue-wall",
+      afterSubmit: () => pipeline.afterGpuSubmit(),
       run: (prepared, encoder) => pipeline.transparencyPass.encode(encoder, {
         scene: prepared.composed,
         depth: prepared.resources.depth,
         space: app.space,
         cameraFrame: prepared.cameraFrame,
-        ambient: 0.10,
-        lightOverride: createTransparencyLightOverride(prepared.cameraFrame)
+        clearColor: app.clearColor,
+        maxFrostRoughness: 0.18,
+        radiance: [1.0, 0.96, 0.90],
+        environment: pbrEnvironment.getResources(),
+        environmentIntensity: 1.0,
+        environmentRotationDegrees: 0.0,
+        transmission: {
+          enabled: true,
+          strength: 1.0,
+          distance: 42.0,
+          hitThickness: 0.1,
+          steps: 64
+        },
+        shadow: {
+          type: "directional",
+          depth: pipeline.directionalShadowMap,
+          cameraFrame: prepared.cameraFrame,
+          lightViewProjection: pipeline.light.viewProjection,
+          bias: 0.0015,
+          normalBias: 0.003,
+          pcfRadius: 1
+        },
+        localLights: pipeline.deferredLightingPass.getLocalLightBindingResources(),
+        lightOverride: (() => {
+          const direction = prepared.cameraFrame.viewRotationMatrix.mul3x3Vector(pipeline.light.direction);
+          return [-direction[0], -direction[1], -direction[2], 0.0];
+        })()
       })
     },
     {
-      name: "fog",
-      group: "compute",
-      run: (prepared, encoder, timestampWrites) => pipeline.fogPass.encode(
-        encoder,
-        {
-          scene: prepared.transparent,
-          depth: prepared.resources.depth
-        },
-        {
-          ...BENCHMARK_FOG_OPTIONS,
-          enabled: true,
-          cameraFrame: prepared.cameraFrame,
-          timestampWrites
-        }
-      )
-    },
-    {
       name: "tone-map",
-      group: "compute",
+      group: "output",
       run: (prepared, encoder, timestampWrites) => pipeline.toneMapPass.encode(
         encoder,
-        {
-          scene: prepared.fogged,
-          depth: prepared.resources.depth
-        },
+        { scene: prepared.transparent, depth: prepared.resources.depth },
         {
           mode: "reinhard",
           exposure: BENCHMARK_TONE_MAP_EXPOSURE,
-          saturation: 1.06,
+          saturation: 1.0,
           gamma: 2.2,
+          blackBackground: false,
           timestampWrites
         }
       )
     },
     {
-      name: "edge",
-      group: "compute",
-      timerMode: "queue-wall",
-      run: (prepared, encoder, timestampWrites) => pipeline.edgePass.encode(
-        encoder,
-        prepared.toneMapped,
-        {
-          colorEnabled: false,
-          geometryEnabled: true,
-          normal: prepared.resources.normal,
-          depth: prepared.resources.depth,
-          cameraFrame: prepared.cameraFrame,
-          thickness: 2,
-          blendMode: "black-multiply",
-          timestampWrites
-        }
-      )
-    },
-    {
-      name: "vignette",
-      group: "compute",
-      run: (prepared, encoder, timestampWrites) => pipeline.vignettePass.encode(
-        encoder,
-        prepared.edged,
-        {
-          ...BENCHMARK_VIGNETTE_OPTIONS,
-          enabled: true,
-          timestampWrites
-        }
-      )
-    },
-    {
-      name: "full-pipeline",
+      name: "full-pbr-pipeline",
       group: "combined",
-      timerMode: "queue-wall",
+      afterSubmit: () => pipeline.afterGpuSubmit(),
       run: (_prepared, encoder, timestampWrites) => {
-        const { cameraFrame } = getEffectInputs();
-        pipeline.renderScene(app.space, cameraFrame, clearColor, {
+        const cameraFrame = getCameraFrame();
+        const firstTimestampWrites = timestampWrites?.beginningOfPassWriteIndex === undefined
+          ? undefined
+          : {
+              querySet: timestampWrites.querySet,
+              beginningOfPassWriteIndex: timestampWrites.beginningOfPassWriteIndex
+            };
+        const lastTimestampWrites = timestampWrites?.endOfPassWriteIndex === undefined
+          ? undefined
+          : {
+              querySet: timestampWrites.querySet,
+              endOfPassWriteIndex: timestampWrites.endOfPassWriteIndex
+            };
+        pipeline.renderScene(app.space, cameraFrame, CLEAR_COLOR, {
           shadowEnabled: true,
-          ssaoEnabled: true,
-          ssrEnabled: true,
-          toonEnabled: true,
-          edgeEnabled: true,
-          edgeGeometryEnabled: true
+          shadowTimestampWrites: firstTimestampWrites
         });
-        return pipeline.encode(encoder, {
-          cameraFrame,
-          ssaoEnabled: true,
-          shadowEnabled: true,
-          ssrEnabled: true,
-          fogEnabled: true,
-          toonEnabled: true,
-          dofEnabled: true,
-          bloomEnabled: true,
-          edgeEnabled: true,
-          edgeGeometryEnabled: true,
-          vignetteEnabled: true,
-          toon: { levels: 4 },
-          fog: BENCHMARK_FOG_OPTIONS,
-          dof: {
-            focusDistance: 14.0,
-            focusRange: 5.5
-          },
-          bloom: {
-            ...createBenchmarkBloomOptions(options)
-          },
-          edge: {
-            colorEnabled: false,
-            blendMode: "black-multiply",
-            thickness: 2
-          },
-          vignette: BENCHMARK_VIGNETTE_OPTIONS,
-          composer: { mode: "mix" },
-          toneMap: {
-            mode: "reinhard",
-            exposure: BENCHMARK_TONE_MAP_EXPOSURE,
-            saturation: 1.06,
-            gamma: 2.2
-          },
-          timestampWrites
-        });
+        return pipeline.encode(
+          encoder,
+          {
+            ...createPbrPipelineOptions(cameraFrame, localLights, pbrSsrFusionEnabled),
+            timestampWrites: lastTimestampWrites
+          }
+        );
       }
     }
   ];
 }
 
-// JSON だけ見ても、測定条件と端末条件が追跡できるよう metadata を残す
-function createMetadata(options) {
-  return {
-    app: "compute_benchmark",
-    createdAt: new Date().toISOString(),
-    canvasWidth: app.screen.getWidth(),
-    canvasHeight: app.screen.getHeight(),
-    displayWidth: app.screen.displayWidth,
-    displayHeight: app.screen.displayHeight,
-    canvasElementWidth: app.screen.canvas.width,
-    canvasElementHeight: app.screen.canvas.height,
-    devicePixelRatio: window.devicePixelRatio ?? 1,
-    samples: options.samples,
-    warmup: options.warmup,
-    pyramidFilterRadius: options.pyramidFilterRadius,
-    pyramidLevels: [...COMPUTE_PYRAMID_BLUR_LEVELS],
-    toneMapExposure: BENCHMARK_TONE_MAP_EXPOSURE,
-    fog: BENCHMARK_FOG_OPTIONS,
-    vignette: BENCHMARK_VIGNETTE_OPTIONS,
-    timestampSupported: app.getGPU().device.features?.has?.("timestamp-query") === true,
-    userAgent: navigator.userAgent
-  };
+// TransparencyPassの非同期プロファイラが保持する内部8区間をbenchmark行へ変換する
+function createTransparencyProfileCases() {
+  const snapshot = pipeline.getTransparencyPerformanceSnapshot();
+  return TRANSPARENCY_PROFILE_NAMES.map((name) => {
+    const statistics = snapshot.gpu[name];
+    if (!statistics || statistics.sampleCount === 0) {
+      throw new Error(`Transparency GPU profile did not produce samples for ${name}`);
+    }
+    return {
+      name: `transparency:${name}`,
+      group: "transparency-detail",
+      timerMode: "gpu-profiler",
+      samples: statistics.sampleCount,
+      averageMs: statistics.averageMs,
+      medianMs: statistics.medianMs,
+      percentile95Ms: null,
+      minMs: statistics.minimumMs,
+      maxMs: statistics.maximumMs,
+      stddevMs: null,
+      rawSamplesMs: null
+    };
+  });
 }
 
-// 1 case を warmup 後に複数回測り、逐次 table へ反映して途中経過も読めるようにする
+// 一つのcaseをwarmup後に反復し、進行中でも完了caseをtableへ追加する
 async function measureCaseSet(options, timer) {
-  const cases = getBenchmarkCases(options);
+  const localLights = benchmarkLights.slice(0, options.localLightCount);
+  const cases = getBenchmarkCases(localLights, options.pbrSsrFusionEnabled);
   const results = [];
   const totalPerCase = options.samples + options.warmup;
   const total = cases.length * totalPerCase;
@@ -866,18 +796,16 @@ async function measureCaseSet(options, timer) {
     for (let index = 0; index < totalPerCase; index += 1) {
       finished += 1;
       setStatus(
-        `Running ${testCase.name} ${index + 1}/${totalPerCase}\n` +
-        `${finished}/${total} samples encoded`
+        `Running ${testCase.name} ${index + 1}/${totalPerCase}\n`
+        + `${finished}/${total} measurements encoded`
       );
-      const prepared = await prepareInputs();
-      const ms = await timer.measure(testCase.name, (encoder, timestampWrites) => {
-        testCase.run(prepared, encoder, timestampWrites);
-      }, {
-        timerMode: testCase.timerMode
-      });
-      if (index >= options.warmup) {
-        samples.push(ms);
-      }
+      const prepared = await prepareInputs(localLights, options.pbrSsrFusionEnabled);
+      const milliseconds = await timer.measure(
+        testCase.name,
+        (encoder, timestampWrites) => testCase.run(prepared, encoder, timestampWrites),
+        { afterSubmit: testCase.afterSubmit, timerMode: testCase.timerMode }
+      );
+      if (index >= options.warmup) samples.push(milliseconds);
     }
     results.push({
       name: testCase.name,
@@ -888,44 +816,84 @@ async function measureCaseSet(options, timer) {
     });
     renderResultTable({ cases: results });
   }
+  await app.getGPU().queue.onSubmittedWorkDone();
+  await Promise.resolve();
+  results.push(...createTransparencyProfileCases());
+  renderResultTable({ cases: results });
   return results;
 }
 
-// UI から標準条件を読み取り、1 回の benchmark を最後まで走らせる
+// JSON単体から同じ条件を再現できるよう解像度、scene規模、光源、PBR固定値を記録する
+function createMetadata(options) {
+  return {
+    app: "compute_benchmark",
+    benchmarkVersion: "pbr-runtime-baseline-1",
+    createdAt: new Date().toISOString(),
+    canvasWidth: app.screen.getWidth(),
+    canvasHeight: app.screen.getHeight(),
+    displayWidth: app.screen.displayWidth,
+    displayHeight: app.screen.displayHeight,
+    canvasElementWidth: app.screen.canvas.width,
+    canvasElementHeight: app.screen.canvas.height,
+    devicePixelRatio: window.devicePixelRatio ?? 1,
+    samples: options.samples,
+    warmup: options.warmup,
+    localLightCount: options.localLightCount,
+    pbrSsrFusionEnabled: options.pbrSsrFusionEnabled,
+    shadowMapSize: BENCHMARK_SHADOW_MAP_SIZE,
+    ssao: BENCHMARK_SSAO_OPTIONS,
+    ssr: BENCHMARK_SSR_OPTIONS,
+    transmission: BENCHMARK_TRANSMISSION_OPTIONS,
+    environment: {
+      type: "procedural-linear-hdr",
+      radianceSize: [64, 32],
+      irradianceSize: [32, 16],
+      specularMipCount: 6,
+      brdfLutSize: [64, 64],
+      intensity: 1.0,
+      background: true
+    },
+    toneMapExposure: BENCHMARK_TONE_MAP_EXPOSURE,
+    excludedStages: ["environment-preprocess", "fog", "toon", "dof", "bloom", "edge", "vignette"],
+    timestampSupported: app.getGPU().device.features?.has?.("timestamp-query") === true,
+    userAgent: navigator.userAgent
+  };
+}
+
+// UI入力を検証してPBR基準測定を最後まで実行し、結果保存を有効にする
 async function runBenchmark() {
   if (running) return;
   const options = {
     samples: readIntegerInput(dom.samples, "Samples", { min: 1, max: 200 }),
     warmup: readIntegerInput(dom.warmup, "Warmup", { min: 0, max: 50 }),
-    pyramidFilterRadius: readFiniteInput(
-      dom.pyramidFilterRadius,
-      "Pyramid Radius",
-      { min: 0.25, max: 3.0 }
-    )
+    localLightCount: readIntegerInput(dom.localLights, "Local Lights", { min: 0, max: 128 }),
+    pbrSsrFusionEnabled: dom.pbrSsrFusion.value === "fused"
   };
   const gpu = app.getGPU();
   const timer = new GpuPassTimer(gpu.device, gpu.queue);
-  if (!timer.supported) {
-    throw new Error("This browser / GPU does not expose timestamp-query");
-  }
-
+  if (!timer.supported) throw new Error("This browser / GPU does not expose timestamp-query");
   setRunning(true);
   dom.downloadJson.disabled = true;
   dom.downloadCsv.disabled = true;
-  const cases = await measureCaseSet(options, timer);
-  lastResult = {
-    metadata: createMetadata(options),
-    cases
-  };
-  renderResultTable(lastResult);
-  setStatus(`Done. ${cases.length} cases measured at ${lastResult.metadata.canvasWidth}x${lastResult.metadata.canvasHeight}`);
-  dom.downloadJson.disabled = false;
-  dom.downloadCsv.disabled = false;
-  await renderPreview();
-  setRunning(false);
+  try {
+    const cases = await measureCaseSet(options, timer);
+    lastResult = { metadata: createMetadata(options), cases };
+    renderResultTable(lastResult);
+    setStatus(
+      `Done. ${cases.length} cases measured at `
+      + `${lastResult.metadata.canvasWidth}x${lastResult.metadata.canvasHeight}`
+    );
+    dom.downloadJson.disabled = false;
+    dom.downloadCsv.disabled = false;
+    window.pbrBenchmarkResult = lastResult;
+    document.body.dataset.benchmarkStatus = "ready";
+    await renderPreview();
+  } finally {
+    setRunning(false);
+  }
 }
 
-// 保存処理は JSON / CSV で共通なので、download 部分だけを小関数へ分ける
+// Blob URLを一時作成し、benchmark結果を利用者の端末へ保存する
 function downloadText(filename, mimeType, text) {
   const blob = new Blob([text], { type: mimeType });
   const url = URL.createObjectURL(blob);
@@ -938,64 +906,57 @@ function downloadText(filename, mimeType, text) {
   URL.revokeObjectURL(url);
 }
 
-// JSON は後から集計しやすいよう、raw sample と metadata を含めてそのまま保存する
+// raw sampleと全metadataを保持するJSONを保存する
 function downloadJson() {
   if (!lastResult) return;
   downloadText(
-    `compute_benchmark_${Date.now()}.json`,
+    `compute_benchmark_pbr_${Date.now()}.json`,
     "application/json",
     JSON.stringify(lastResult, null, 2)
   );
 }
 
-// CSV は表計算へ直接入れやすいよう、1 case 1 行の要約値だけにする
+// 表計算で比較しやすい1 case 1行のCSVへ要約統計と主要条件を書き出す
 function downloadCsv() {
   if (!lastResult) return;
   const header = [
-    "name",
-    "group",
-    "averageMs",
-    "stddevMs",
-    "minMs",
-    "maxMs",
-    "samples",
-    "timer",
-    "canvasWidth",
-    "canvasHeight",
-    "devicePixelRatio",
-    "pyramidFilterRadius",
-    "pyramidLevels"
+    "name", "group", "averageMs", "medianMs", "percentile95Ms", "stddevMs",
+    "minMs", "maxMs", "samples", "timer", "canvasWidth", "canvasHeight",
+    "devicePixelRatio", "localLightCount", "pbrSsrFusionEnabled", "shadowMapSize"
   ];
   const rows = lastResult.cases.map((entry) => [
     entry.name,
     entry.group,
     entry.averageMs,
+    entry.medianMs,
+    entry.percentile95Ms,
     entry.stddevMs,
     entry.minMs,
     entry.maxMs,
     entry.samples,
-    formatTimerLabel(entry.timerMode),
+    entry.timerMode,
     lastResult.metadata.canvasWidth,
     lastResult.metadata.canvasHeight,
     lastResult.metadata.devicePixelRatio,
-    lastResult.metadata.pyramidFilterRadius,
-    lastResult.metadata.pyramidLevels.join("|")
+    lastResult.metadata.localLightCount,
+    lastResult.metadata.pbrSsrFusionEnabled,
+    lastResult.metadata.shadowMapSize
   ]);
   downloadText(
-    `compute_benchmark_${Date.now()}.csv`,
+    `compute_benchmark_pbr_${Date.now()}.csv`,
     "text/csv",
     [header, ...rows].map((row) => row.join(",")).join("\n")
   );
 }
 
-// 起動時に benchmark scene と各 pass を初期化し、preview と測定の両方を使える状態へする
+// WebgApp、固定scene、IBL、PBR pipelineを順に準備し、preview後に操作を受け付ける
 async function start() {
   app = new WebgApp({
     document,
     autoDrawScene: false,
     renderMode: "ondemand",
     frameTiming: true,
-    clearColor,
+    clearColor: CLEAR_COLOR,
     viewAngle: 54,
     projectionFar: 140,
     messageFontTexture: "../../webg/font512.png",
@@ -1021,49 +982,40 @@ async function start() {
     maxDistance: 54
   });
   createBenchmarkScene();
+  benchmarkLights = createBenchmarkLights();
   const gpu = app.getGPU();
+  pbrEnvironment = new PbrEnvironment(gpu, {
+    label: "pbr-benchmark-environment",
+    ...createProceduralEnvironmentData()
+  });
   pipeline = new ComputeEffectPipeline(gpu, {
-    label: "compute-effect-benchmark",
+    label: "pbr-benchmark",
     width: app.screen.getWidth(),
     height: app.screen.getHeight(),
-    shadowMapSize: 1024,
+    shadowMapSize: BENCHMARK_SHADOW_MAP_SIZE,
+    maxLights: 128,
+    ssao: BENCHMARK_SSAO_OPTIONS,
+    ssr: BENCHMARK_SSR_OPTIONS,
+    composer: { mode: "pbr-ssr" },
+    transparency: BENCHMARK_TRANSMISSION_OPTIONS,
     lighting: {
-      ambient: 0.10,
+      ambient: 0.0,
       directionalIntensity: 1.0
-    },
-    ssr: {
-      steps: 48,
-      distance: 24.0,
-      thickness: 0.34
-    },
-    composer: {
-      mode: "mix"
     },
     toneMap: {
       mode: "reinhard",
       exposure: BENCHMARK_TONE_MAP_EXPOSURE,
-      saturation: 1.06,
+      saturation: 1.0,
       gamma: 2.2
     }
   });
-  pyramidBlurPass = new ComputePyramidBlurPass(gpu, {
-    label: "compute-effect-benchmark:pyramid-blur",
-    width: app.screen.getWidth(),
-    height: app.screen.getHeight(),
-    levels: COMPUTE_PYRAMID_BLUR_LEVELS
-  });
-  copyPass = new FullscreenPass(gpu, {
-    targetFormat: gpu.format
-  });
-  await Promise.all([
-    pipeline.ready,
-    pyramidBlurPass.ready,
-    copyPass.init()
-  ]);
+  copyPass = new FullscreenPass(gpu, { targetFormat: gpu.format });
+  await Promise.all([pipeline.ready, copyPass.init()]);
 
   dom.run.addEventListener("click", () => {
     runBenchmark().catch((error) => {
       console.error(error);
+      document.body.dataset.benchmarkStatus = "error";
       setStatus(`Error: ${error.message}`);
       setRunning(false);
     });
@@ -1078,19 +1030,21 @@ async function start() {
   dom.downloadCsv.addEventListener("click", downloadCsv);
   window.addEventListener("pagehide", () => {
     copyPass?.destroy?.();
-    pyramidBlurPass?.destroy?.();
     pipeline?.destroy?.();
+    pbrEnvironment?.destroy?.();
     app?.stop?.();
   }, { once: true });
 
   const timestampSupported = gpu.device.features?.has?.("timestamp-query") === true;
+  document.body.dataset.benchmarkStatus = timestampSupported ? "idle" : "unsupported";
   setStatus(timestampSupported
-    ? "Ready. Press Run Benchmark."
+    ? "Ready. Press Run PBR Baseline."
     : "GPU timestamp-query is unavailable on this browser / GPU.");
   await renderPreview();
 }
 
 start().catch((error) => {
   console.error(error);
+  document.body.dataset.benchmarkStatus = "error";
   setStatus(`Startup error: ${error.message}`);
 });

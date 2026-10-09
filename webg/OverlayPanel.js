@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// OverlayPanel.js 2026/07/25
+// OverlayPanel.js 2026/10/04
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // ---------------------------------------------
@@ -52,10 +52,15 @@ const normalizeTextLines = (options = {}, path = "OverlayPanel options") => {
   return util.readOptionalString(options.text, `${path}.text`, "", { allowEmpty: true });
 };
 
-// `text`の入力を現在の入力と状態から求め、呼び出し元へ返す
+// 明示した本文の形式を検証し、形式の切替か現在の本文の維持かを決める
 const resolveTextInput = (safeOptions = {}, base = {}) => {
-  // lines で更新する場合は、以前の text を持ち越すと
-  // 「text と lines の同時指定」になってしまうため、明示的に切り替える
+  // 呼び出し元が明示した本文は text / lines のいずれか一方として受け付ける
+  // 現在の本文を引き継ぐ前に検証し、新規作成と更新で同じ入力規約を適用する
+  if (safeOptions.text !== undefined && safeOptions.lines !== undefined) {
+    throw new Error("OverlayPanel options must not specify both text and lines");
+  }
+
+  // lines による更新では、現在の本文を行配列から組み立てる形式へ切り替える
   if (safeOptions.lines !== undefined) {
     return {
       text: undefined,
@@ -112,7 +117,7 @@ const normalizeActionItems = (items = undefined, name = "OverlayPanel items") =>
 export default class OverlayPanel {
   // OverlayPanel:
   // - scene 上に重ねる DOM 文字表示を 1 つの基盤へ統合する
-  // - help / report / error / log の違いは class 名ではなく option で表す
+  // - help / report / error / log の違いは option で表す
   // - button, choice, collapse, close, scroll, anchor 配置を同じ部品で扱う
   constructor(options = {}) {
     const safeOptions = util.readPlainObject(options, "OverlayPanel options");
@@ -248,7 +253,7 @@ export default class OverlayPanel {
     return this;
   }
 
-  // 設定値を検証し、後続処理が扱える共通形式へ整える
+  // 作成時は既定値、更新時は現在値を補い、本文・配置・操作設定を検証済みの形へ揃える
   normalizeOptions(options = {}, previous = null) {
     const path = "OverlayPanel options";
     const safeOptions = util.readPlainObject(options, path);
@@ -727,12 +732,10 @@ export default class OverlayPanel {
     return this.options.collapsed;
   }
 
-  // このインスタンスを現在の入力と実行状態に合わせて更新する
+  // 明示された変更だけを正規化へ渡し、現在の本文・配置は各項目の既定値として引き継ぐ
+  // textからlinesへの切替は、呼び出し元が指定した入力形式に従って処理する
   update(patch = {}) {
-    return this.applyOptions({
-      ...this.options,
-      ...patch
-    });
+    return this.applyOptions(patch);
   }
 
   // このインスタンスを対象から切り離し、関連する参照を整理する

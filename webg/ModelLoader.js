@@ -1,5 +1,5 @@
 // ---------------------------------------------
-//  ModelLoader.js   2026/07/25
+//  ModelLoader.js   2026/09/09
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // ---------------------------------------------
@@ -181,9 +181,11 @@ export default class ModelLoader {
       asset,
       runtime,
       instantiated,
+      // 読み込んだassetが持つanimation clip名を返します
       getClipNames() {
         return asset.getClipNames();
       },
+      // 指定clipの長さやkey情報を返し、再生UIや診断へ渡します
       getClipInfo(id) {
         return asset.getClipInfo(id);
       },
@@ -194,9 +196,12 @@ export default class ModelLoader {
         instantiated = runtime.instantiate(space, instantiateOptions);
         return instantiated;
       },
+      // assetの現在内容をJSON文字列として保存し、BlenderやSceneYAML編集へ渡します
+      // 出力はModelAssetの公開形式を保ち、読み込み時のgeometryとanimationを再利用できます
       downloadJSON(filename = "modelasset.json", indent = 2) {
         return asset.downloadJSON(filename, indent);
       },
+      // assetのJSONをgzip圧縮して保存し、配布用ファイルへ変換します
       async downloadJSONGz(filename = "modelasset.json.gz", indent = 2) {
         return await asset.downloadJSONGz(filename, indent);
       }

@@ -8,7 +8,7 @@
 
 ## 実行方法
 
-`./compute_json.html` をWebGPU対応ブラウザで開きます。ローカルファイルを直接開くのではなく、このリポジトリをHTTPサーバーで公開してアクセスしてください。
+`./compute_json.html` をWebGPU対応ブラウザで開きます。このリポジトリをHTTPサーバーで公開してアクセスしてください。
 
 別のモデルを表示するときは、ModelAsset JSONまたはgzip圧縮したModelAsset JSONをこのフォルダへ置き、`main.js` の `MODEL_ASSET_FILE` を変更します。カメラの注視点、距離、移動量、ライト範囲はロードしたshape全体のbounding boxから決めるため、サンプルモデルと大きさが異なるモデルにも追従します。
 

@@ -619,7 +619,7 @@ const start = async () => {
     return activateBurstEntries(bodyEntries, addCount);
   };
 
-  // すべての物体を初期状態へ戻し、前回の状態を残さない
+  // すべての物体を初期状態へ戻す
   const resetAllBodies = () => {
     for (let i = 0; i < bodyEntries.length; i++) {
       resetBodyEntry(bodyEntries[i]);

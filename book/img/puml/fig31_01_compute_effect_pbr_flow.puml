@@ -1,0 +1,31 @@
+@startuml
+title ComputeEffectPipelineのPBR描画順序
+top to bottom direction
+skinparam backgroundColor white
+skinparam shadowing true
+skinparam dpi 150
+skinparam defaultFontName Yu Gothic UI
+skinparam defaultFontSize 18
+skinparam rectangle {
+  RoundCorner 24
+  BorderColor black
+  BackgroundColor #f7fbff
+}
+rectangle "renderScene(): Shadow Map + PBR G-buffer" as Render #eaf7e8
+rectangle "可視率: Shadow + SSAO" as Visibility
+rectangle "PBR Deferred Lighting: 直接光 + diffuse IBL + specular IBL + emissive" as Lighting #f4edff
+rectangle "PBR SSR: 鏡面IBLをhit radianceへ置換" as SSR
+rectangle "TransparencyPass: Transmission + Frost + PBR Forward" as Transparency #fdeaea
+rectangle "線形HDR効果: Fog + Toon + DoF + Bloom" as HDR
+rectangle "Tone Mapping: 露出 + HDR圧縮 + sRGB" as Tone #fff5df
+rectangle "表示色効果: Edge + Vignette" as Display
+rectangle "Canvas + HUD" as Canvas #eaf7e8
+Render --> Visibility
+Visibility --> Lighting
+Lighting --> SSR
+SSR --> Transparency
+Transparency --> HDR
+HDR --> Tone
+Tone --> Display
+Display -> Canvas
+@enduml

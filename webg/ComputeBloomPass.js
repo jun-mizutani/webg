@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// ComputeBloomPass.js  2026/07/25
+// ComputeBloomPass.js  2026/09/09
 //   Continuous image-pyramid High Dynamic Range bloom pass
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -7,7 +7,7 @@
 import ComputePass from "./ComputePass.js";
 import ComputeImagePyramid, {
   computePyramidDimension
-} from "./ComputeImagePyramid.js?v=20260723_image_pyramid";
+} from "./ComputeImagePyramid.js";
 import StorageTargetFactory, {
   resizeTarget
 } from "./StorageTargetFactory.js";
@@ -125,7 +125,7 @@ fn main(@builtin(global_invocation_id) id : vec3<u32>) {
 }`;
 
 // full-resolutionで再構成したBloomを線形HDR sceneへ加算します
-// Tone MapはComputeEffectPipeline後段に残し、Bloom内で表示色へ変換しません
+// Tone MapはComputeEffectPipeline後段に残し、BloomはHDR光量を次段へ渡します
 export const COMPUTE_BLOOM_COMPOSITE_WGSL = `
 struct Params {
   values : vec4f,
@@ -325,7 +325,7 @@ export default class ComputeBloomPass {
     }
   }
 
-  // 旧staged方式の値は意味が異なるため無視や暗黙変換を行わず明示的に拒否します
+  // staged方式の値は現在の設定形式と意味が異なるため、暗黙変換せず明示的に拒否します
   rejectDeprecatedOptions(options = {}) {
     const deprecated = [
       "smallScale",
@@ -542,7 +542,7 @@ export default class ComputeBloomPass {
       1.0,
       params.filterRadius
     );
-    // scene内の発光面を二重に強調しないようfull-resolution extractは再加算しません
+    // scene内の発光面を一度だけ強調するため、full-resolution extractは一回の入力として使います
     this.encodeUpsample(
       this.fullUpsamplePass,
       commandEncoder,
@@ -610,22 +610,27 @@ export default class ComputeBloomPass {
     return this.extractTarget;
   }
 
+  // bloom pyramidの1/2解像度levelを取得し、中間blurの入力へ渡します
   getHalfTarget() {
     return this.pyramid.getLevel(2);
   }
 
+  // bloom pyramidの1/4解像度levelを取得し、中間blurの入力へ渡します
   getQuarterTarget() {
     return this.pyramid.getLevel(4);
   }
 
+  // bloom pyramidの1/8解像度levelを取得し、中間blurの入力へ渡します
   getEighthTarget() {
     return this.pyramid.getLevel(8);
   }
 
+  // bloom pyramidの1/16解像度levelを取得し、中間blurの入力へ渡します
   getSixteenthTarget() {
     return this.pyramid.getLevel(16);
   }
 
+  // bloom pyramidの1/32解像度levelを取得し、広いぼけの入力へ渡します
   getThirtySecondTarget() {
     return this.pyramid.getLevel(32);
   }

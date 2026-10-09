@@ -122,7 +122,7 @@ const SCULPT_COMMAND_PAGES = [
 ];
 
 // action id から表示 label と補助 detail を返す
-// 未登録 action は開発中の command でも画面に出せるよう、action id をそのまま label にする
+// 未登録 action は action id を label にして、定義済み action と同じ形式で表示する
 export function getCommandActionLabel(action, context = {}) {
   if (context?.sculptPalette === true) {
     if (action === "sculpt-plus") {

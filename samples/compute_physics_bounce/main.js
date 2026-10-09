@@ -1,10 +1,10 @@
 // ---------------------------------------------
-// samples/compute_physics_bounce/main.js  2026/07/25
+// samples/compute_physics_bounce/main.js  2026/08/11
 //   Compute Shader sphere rigid-body simulation sample
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // ---------------------------------------------
-import WebgApp from "../../webg/WebgApp.js?v=20260614_compute_frame1";
+import WebgApp from "../../webg/WebgApp.js";
 import PingPongBuffer from "../../webg/PingPongBuffer.js";
 import { buildErrorPanelOptions, buildHelpPanelOptions } from "../../webg/OverlayPanelPresets.js";
 import Primitive from "../../webg/Primitive.js";
@@ -285,7 +285,7 @@ fn rotateTiltVector(value : vec3f) -> vec3f {
   );
 }
 
-// 位置には回転中心からの相対座標を使い、法線などの方向ベクトルには平行移動を適用しません
+// 位置には回転中心からの相対座標を使い、法線などの方向ベクトルは回転だけで変換します
 fn rotateTiltPoint(value : vec3f) -> vec3f {
   let pivot = vec3f(0.0, params.control.z, params.control.w);
   return pivot + rotateTiltVector(value - pivot);
@@ -493,7 +493,7 @@ function createArenaData() {
 // `pipelines`を生成し、後続処理で利用できる状態にする
 function createPipelines() {
   // 2本のstate bufferへ同じ初期状態を書きます
-  // substepごとにread/writeの役割を交換し、同じbufferの同一要素を同時に読み書きしません
+  // substepごとにread/writeの役割を交換し、同じbufferの同一要素を一方向から処理します
   const initial = createInitialBallData();
   stateBuffers = [0, 1].map((index) => {
     const buffer = device.createBuffer({
@@ -778,7 +778,7 @@ function renderFrame(elapsedSec) {
       // 球1個につきinvocation 1つを起動し、端数はWGSL側のindex判定で除外します
       pass.dispatchWorkgroups(Math.ceil(ballCount / WORKGROUP_SIZE));
       pass.end();
-      // 今回のdstを次substepのsrcにするため、buffer indexを反転します
+      // このsubstepのdstを次substepのsrcにするため、buffer indexを反転します
       renderBufferIndex = statePair.getNextIndex(renderBufferIndex);
     }
   }
@@ -813,7 +813,7 @@ function renderFrame(elapsedSec) {
   app.endGpuTiming(encoder);
   queue.submit([encoder.finish()]);
   app.afterGpuSubmit();
-  // 次frameは今回描画した最新bufferからsimulationを開始します
+  // 次frameは描画に使った最新bufferからsimulationを開始します
   statePair.setCurrentIndex(renderBufferIndex);
   updateHelpPanel();
 }

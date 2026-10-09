@@ -2,7 +2,7 @@
 
 ## このサンプルの目的
 
-`maze2` は、固定seedで生成する15 x 15 cellの迷路を、床、下部斜面、垂直壁、上部斜面、天井からなる八角形断面のSF通路として歩くサンプルです。単に迷路を表示するのではなく、論理wall boundaryをrender geometry、player collision、heading-up radarで共有し、描画上の見た目と移動可能な領域が食い違わない構成を示します。
+`maze2` は、固定seedで生成する15 x 15 cellの迷路を、床、下部斜面、垂直壁、上部斜面、天井からなる八角形断面のSF通路として歩くサンプルです。論理wall boundaryをrender geometry、player collision、heading-up radarで共有し、描画上の見た目と移動可能な領域が食い違わない構成を示します。
 
 通常の直線cellでは、上部と下部の斜面が通路断面を絞り込みます。L字では直交するrail終端辺をmiter bridgeで接続し、T字・十字は無理に一本のtubeへせず、開いたjunction chamberとして扱います。これにより、角の隙間や開口側を塞ぐ装飾面を作らず、歩ける迷路を維持します。
 

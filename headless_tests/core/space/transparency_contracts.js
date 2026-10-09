@@ -1,5 +1,5 @@
 // ---------------------------------------------------------
-// headless_tests/core/space/transparency_contracts.js  2026/07/21
+// headless_tests/core/space/transparency_contracts.js  2026/08/04
 //   Global translucent triangle collection and sort contracts
 // ---------------------------------------------------------
 import assert from "node:assert/strict";
@@ -131,7 +131,7 @@ const cameraFrame = new CameraFrame({
   const mock = createMockGpu();
   const space = new Space();
   assert.throws(
-    () => space.drawSortedTranslucentBatches([{
+    () => space.translucentRenderQueue.drawSortedBatches([{
       shape: { gpu: mock.gpu },
       materialIndex: 0,
       triangleIndex: 0,
@@ -146,22 +146,102 @@ const cameraFrame = new CameraFrame({
   assert.equal(mock.bufferWrites.length, 0);
 }
 
+// 同じframeの別Render Passへprepare済みqueueを渡すと、収集・sort・Buffer転送を繰り返さない
+{
+  const mock = createMockGpu();
+  const calls = [];
+  let collectionCount = 0;
+  const firstShader = { name: "transmission-mask" };
+  const secondShader = { name: "pbr-forward" };
+  const forwardLight = [0.2, 0.8, -0.4, 0.0];
+  const shape = {
+    gpu: mock.gpu,
+    isHidden: false,
+    skeleton: null,
+    shaderParameter(name, value) {
+      if (name === "light") {
+        calls.push(value);
+      }
+    },
+    drawOpaqueMaterials() {},
+    collectTranslucentTriangles(modelview, normal, queue, options) {
+      collectionCount += 1;
+      queue.push({
+        shape: this,
+        materialIndex: 0,
+        triangleIndex: 0,
+        modelview,
+        normal,
+        viewDepth: -4,
+        traversalOrder: options.traversalOrder,
+        index0: 0,
+        index1: 1,
+        index2: 2
+      });
+    },
+    drawMaterial(_modelview, _normal, _materialIndex, options) {
+      calls.push(options.shaderOverride);
+    }
+  };
+  const space = new Space();
+  space.addNode(null, "reused-transparent-shape").addShape(shape);
+  const preparedQueue = space.draw(cameraFrame, {
+    onlyTranslucent: true,
+    shaderOverride: firstShader
+  });
+  space.draw(cameraFrame, {
+    onlyTranslucent: true,
+    shaderOverride: secondShader,
+    lightOverride: forwardLight,
+    preparedTranslucentQueue: preparedQueue
+  });
+  assert.equal(collectionCount, 1);
+  assert.equal(mock.bufferWrites.length, 1);
+  assert.equal(calls.filter((value) => value === firstShader).length, 1);
+  assert.equal(calls.filter((value) => value === secondShader).length, 1);
+  assert.deepEqual(calls.find((value) => Array.isArray(value)), forwardLight);
+  assert.equal(preparedQueue.triangleCount, 1);
+  assert.equal(preparedQueue.batches.length, 1);
+}
+
 // material groupが存在してもcount 0なら透明passを必要とせず、実triangleがあればtrueにする
 {
   const space = new Space();
   const node = space.addNode(null, "classification");
   const shape = {
     isHidden: false,
+    materials: [
+      { id: null, params: { alpha: 1.0, roughness: 0.12 } },
+      { id: null, params: { alpha: 0.4, roughness: 0.76 } }
+    ],
     getMaterialCount: () => 2,
-    getMaterialAlpha: (index) => index === 0 ? 1.0 : 0.4,
     getMaterialDrawInfo: (index) => ({ count: index === 0 ? 3 : 0 })
   };
   node.shapes.push(shape);
-  assert.equal(space.hasTranslucentTriangles(), false);
+  assert.equal(space.translucentRenderQueue.summarize(space.nodes).hasTriangles, false);
   shape.getMaterialDrawInfo = (index) => ({ count: index === 0 ? 3 : 6 });
-  assert.equal(space.hasTranslucentTriangles(), true);
+  assert.deepEqual(space.translucentRenderQueue.summarize(space.nodes), {
+    hasTriangles: true,
+    maxFrostRoughness: 0.76
+  });
   shape.isHidden = true;
-  assert.equal(space.hasTranslucentTriangles(), false);
+  assert.equal(space.translucentRenderQueue.summarize(space.nodes).hasTriangles, false);
+}
+
+// roughness取得APIを持たない互換Shapeは全Level生成が必要な安全側の1.0として集計します
+{
+  const space = new Space();
+  const node = space.addNode(null, "legacy-translucent-summary");
+  node.shapes.push({
+    isHidden: false,
+    shaderParam: { alpha: 0.5 },
+    getMaterialCount: () => 1,
+    getMaterialDrawInfo: () => ({ count: 3 })
+  });
+  assert.deepEqual(space.translucentRenderQueue.summarize(space.nodes), {
+    hasTriangles: true,
+    maxFrostRoughness: 1.0
+  });
 }
 
 // 順序非依存の透明passはtriangle queueを作らず、各Shapeのmaterial一括描画を呼ぶ
@@ -201,11 +281,11 @@ const cameraFrame = new CameraFrame({
   node.shapes.push({
     isHidden: false,
     isWireframe: () => true,
+    materials: [{ id: null, params: { alpha: 0.4 } }],
     getMaterialCount: () => 1,
-    getMaterialAlpha: () => 0.4,
     getMaterialDrawInfo: () => ({ count: 6 })
   });
-  assert.equal(space.hasTranslucentTriangles(), false);
+  assert.equal(space.translucentRenderQueue.summarize(space.nodes).hasTriangles, false);
 }
 
 console.log("PASS Space transparency contracts");

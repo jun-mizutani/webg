@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// EyeRig.js      2026/07/25
+// EyeRig.js      2026/09/09
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // ---------------------------------------------
@@ -10,9 +10,18 @@
 // - `setAngles()` は base/rod 側の向き、`setLookAngles()` は eye の独立視線を表す
 // - pointer 入力は mouse / pen / touch を同じ入口で扱う
 // - Follow は camera の基準位置を target から独立させ、eye の姿勢だけで滑らかに注視追跡する
+// - `focus` はDoFへ渡す合焦対象を表し、ぼかし処理やDoFの有効状態は保持しない
 import Matrix from "./Matrix.js";
 import Quat from "./Quat.js";
 import util from "./util.js";
+
+const EYE_RIG_FOCUS_MODES = Object.freeze([
+  "camera-target",
+  "node",
+  "world-point",
+  "camera-forward",
+  "view-distance"
+]);
 
 export default class EyeRig {
   // インスタンス生成時に、受け取った設定を検証して初期状態を準備する
@@ -133,6 +142,12 @@ export default class EyeRig {
         72.0,
         { min: 0.0 }
       ),
+      keyRollSpeed: util.readFiniteOption(
+        [{ value: options.orbit?.keyRollSpeed, label: "options.orbit.keyRollSpeed" }],
+        "orbit.keyRollSpeed",
+        72.0,
+        { min: 0.0 }
+      ),
       keyZoomSpeed: util.readFiniteOption(
         [{ value: options.orbit?.keyZoomSpeed, label: "options.orbit.keyZoomSpeed" }],
         "orbit.keyZoomSpeed",
@@ -142,6 +157,12 @@ export default class EyeRig {
       dragRotateSpeed: util.readFiniteOption(
         [{ value: options.orbit?.dragRotateSpeed, label: "options.orbit.dragRotateSpeed" }],
         "orbit.dragRotateSpeed",
+        0.28,
+        { min: 0.0 }
+      ),
+      dragRollSpeed: util.readFiniteOption(
+        [{ value: options.orbit?.dragRollSpeed, label: "options.orbit.dragRollSpeed" }],
+        "orbit.dragRollSpeed",
         0.28,
         { min: 0.0 }
       ),
@@ -167,6 +188,11 @@ export default class EyeRig {
         [{ value: options.orbit?.panModifierKey, label: "options.orbit.panModifierKey" }],
         "orbit.panModifierKey",
         "shift"
+      ),
+      rollModifierKey: util.readKeyOption(
+        [{ value: options.orbit?.rollModifierKey, label: "options.orbit.rollModifierKey" }],
+        "orbit.rollModifierKey",
+        "alt"
       ),
       dragZoomModifierKey: util.readKeyOption(
         [{
@@ -231,6 +257,17 @@ export default class EyeRig {
         )
       }
     };
+    // 同じ modifier に PAN、drag zoom、roll を重ねると、同じ入力が複数の意味を持つ
+    // 既存設定の誤りを優先順位で隠さず、EyeRig生成時点で明示的に停止する
+    if (this.orbit.rollModifierKey === this.orbit.panModifierKey) {
+      throw new Error("EyeRig orbit rollModifierKey must differ from panModifierKey");
+    }
+    if (
+      this.orbit.dragZoomModifierKey !== null
+      && this.orbit.rollModifierKey === this.orbit.dragZoomModifierKey
+    ) {
+      throw new Error("EyeRig orbit rollModifierKey must differ from dragZoomModifierKey");
+    }
     this.setupOrbitQuaternionState();
 
     this.firstPerson = {
@@ -535,6 +572,53 @@ export default class EyeRig {
       throw new Error("EyeRig follow targetNode must provide getWorldMatrix()");
     }
 
+    // focusはカメラが合焦対象を表す設定であり、DoFのGPU実装や有効状態そのものは保持しない
+    // first-personだけはカメラ正面1.0を既定値にし、orbit / followはカメラの注視対象を既定値にする
+    const focusOptions = util.readPlainObject(options.focus, "focus");
+    const defaultFocusMode = this.type === "first-person"
+      ? "camera-forward"
+      : "camera-target";
+    const focusTargetNode = focusOptions.targetNode ?? null;
+    if (
+      focusTargetNode !== null
+      && typeof focusTargetNode?.getWorldMatrix !== "function"
+    ) {
+      throw new Error("EyeRig focus.targetNode must provide getWorldMatrix()");
+    }
+    this.focus = {
+      enabled: util.readOptionalBoolean(
+        focusOptions.enabled,
+        "focus.enabled",
+        false
+      ),
+      mode: util.readOptionalEnum(
+        focusOptions.mode,
+        "focus.mode",
+        defaultFocusMode,
+        EYE_RIG_FOCUS_MODES
+      ),
+      targetNode: focusTargetNode,
+      targetPoint: util.readVec3Option(
+        [{ value: focusOptions.targetPoint, label: "focus.targetPoint" }],
+        "focus.targetPoint",
+        [0.0, 0.0, 0.0]
+      ),
+      targetPointSpecified: focusOptions.targetPoint !== undefined,
+      targetOffset: util.readVec3Option(
+        [{ value: focusOptions.targetOffset, label: "focus.targetOffset" }],
+        "focus.targetOffset",
+        [0.0, 0.0, 0.0]
+      ),
+      distance: util.readFiniteOption(
+        [{ value: focusOptions.distance, label: "focus.distance" }],
+        "focus.distance",
+        1.0,
+        { minExclusive: 0.0 }
+      ),
+      distanceSpecified: focusOptions.distance !== undefined
+    };
+    this.validateFocusConfiguration();
+
     if (this.orbit.minDistance > this.orbit.maxDistance) {
       throw new Error("EyeRig orbit.minDistance must be <= orbit.maxDistance");
     }
@@ -615,6 +699,7 @@ export default class EyeRig {
       Object.defineProperty(state, key, {
         configurable: true,
         enumerable: true,
+        // 読み出し時は内部値を返し、外部からは通常の角度プロパティとして扱えるようにします
         get() {
           return this[hiddenKey];
         },
@@ -727,10 +812,12 @@ export default class EyeRig {
     return new EyeRig(baseNode, rodNode ?? eyeNode, eyeNode, options);
   }
 
+  // 数値を指定範囲へ収め、orbit距離や視点角度の入力境界を共通化します
   clamp(value, min, max) {
     return Math.max(min, Math.min(max, value));
   }
 
+  // 2つの数値を補間し、follow視点の滑らかな姿勢更新へ利用します
   lerp(from, to, t) {
     return from + (to - from) * t;
   }
@@ -780,18 +867,22 @@ export default class EyeRig {
     return inverseWorld.mul3x3Vector(worldDirection);
   }
 
+  // 視点回転の基準Nodeを返し、外部のカメラ診断やconstraintへ渡します
   getBaseNode() {
     return this.baseNode;
   }
 
+  // orbit/followの距離を表すrod Nodeを返します
   getRodNode() {
     return this.rodNode;
   }
 
+  // 実際の視点位置を持つeye Nodeを返し、world座標の読み取りへ渡します
   getEyeNode() {
     return this.eyeNode;
   }
 
+  // 現在のcamera mode名を返し、orbit、first-person、followの処理選択へ利用します
   getType() {
     return this.type;
   }
@@ -804,12 +895,110 @@ export default class EyeRig {
     return null;
   }
 
+  // focus設定を読み取り用の単純な値へ変換し、対象Nodeの現在位置を必要時に解決する
+  // カメラの種類に応じた注視点と、明示されたNode / World座標 / 正面距離を同じ形式で返す
+  getFocusReference() {
+    if (!this.focus.enabled) {
+      return null;
+    }
+    if (this.focus.mode === "camera-target") {
+      if (this.type === "orbit") {
+        if (!this.baseNode?.getWorldMatrix) {
+          throw new Error("EyeRig orbit camera-target focus requires baseNode");
+        }
+        return {
+          mode: this.focus.mode,
+          // orbit.targetはbaseのlocal座標なので、親階層を含む現在のworld位置へ変換する
+          worldPoint: this.baseNode.getWorldMatrix().mulVector([0.0, 0.0, 0.0])
+        };
+      }
+      if (this.type === "follow") {
+        return {
+          mode: this.focus.mode,
+          worldPoint: this.getFollowTargetWorldPosition()
+        };
+      }
+      throw new Error("EyeRig first-person camera-target focus is not available");
+    }
+    if (this.focus.mode === "node") {
+      const targetNode = this.focus.targetNode;
+      if (!targetNode?.getWorldMatrix) {
+        throw new Error("EyeRig node focus requires focus.targetNode");
+      }
+      return {
+        mode: this.focus.mode,
+        worldPoint: targetNode.getWorldMatrix().mulVector(this.focus.targetOffset)
+      };
+    }
+    if (this.focus.mode === "world-point") {
+      return {
+        mode: this.focus.mode,
+        worldPoint: [...this.focus.targetPoint]
+      };
+    }
+    return {
+      mode: this.focus.mode,
+      distance: this.focus.distance
+    };
+  }
+
+  // 現在のCameraFrameからDoFが比較する正の視点空間深度を求める
+  // World座標の対象はzoomやOrbit回転後のCameraFrameで再計算し、正面距離は指定値をそのまま使う
+  getFocusDistance(cameraFrame) {
+    const reference = this.getFocusReference();
+    if (reference === null) {
+      return null;
+    }
+    if (reference.mode === "camera-forward" || reference.mode === "view-distance") {
+      return reference.distance;
+    }
+    if (!cameraFrame || typeof cameraFrame.worldPointToView !== "function") {
+      throw new Error("EyeRig focus distance requires CameraFrame.worldPointToView");
+    }
+    const viewPoint = cameraFrame.worldPointToView(reference.worldPoint);
+    if (!Array.isArray(viewPoint) || viewPoint.length < 3) {
+      throw new Error("EyeRig focus target view position is incomplete");
+    }
+    const focusDistance = -Number(viewPoint[2]);
+    if (!Number.isFinite(focusDistance) || focusDistance <= 0.0) {
+      throw new Error(`EyeRig focus distance must be positive, got ${focusDistance}`);
+    }
+    return focusDistance;
+  }
+
+  // focus設定の組み合わせを生成時に検査し、対象不足を毎フレームの処理まで持ち越さない
+  validateFocusConfiguration() {
+    if (!this.focus.enabled) {
+      return;
+    }
+    if (this.focus.mode === "camera-target") {
+      if (this.type === "first-person") {
+        throw new Error("EyeRig first-person focus.mode camera-target is not available");
+      }
+      if (this.type === "follow" && !this.follow.targetNode) {
+        throw new Error("EyeRig follow camera-target focus requires follow.targetNode");
+      }
+      return;
+    }
+    if (this.focus.mode === "node" && !this.focus.targetNode) {
+      throw new Error("EyeRig node focus requires focus.targetNode");
+    }
+    if (this.focus.mode === "world-point" && !this.focus.targetPointSpecified) {
+      throw new Error("EyeRig world-point focus requires focus.targetPoint");
+    }
+    if (this.focus.mode === "view-distance" && !this.focus.distanceSpecified) {
+      throw new Error("EyeRig view-distance focus requires focus.distance");
+    }
+  }
+
   // `type`を受け取り、現在の設定と後続処理へ反映する
   setType(type) {
     if (type !== "orbit" && type !== "first-person" && type !== "follow") {
       throw new Error(`Unknown EyeRig type: ${type}`);
     }
     this.type = type;
+    // モード切り替えでfocus.modeの意味が変わるため、切り替え直後に再検証する
+    this.validateFocusConfiguration();
     if (type === "follow") {
       this.resetFollowTracking();
     }
@@ -1160,9 +1349,17 @@ export default class EyeRig {
     if (!this.input) return;
     const state = this.orbit;
     const dt = Number.isFinite(deltaSec) ? deltaSec : 0.0;
+    const rollModifier = this.isModifierKeyActive(state.rollModifierKey);
     const shiftPan = this.isModifierKeyActive(state.panModifierKey);
     let changed = false;
-    if (shiftPan) {
+    // Alt / Option + 左右矢印は、現在の視点前方軸まわりのrollだけを更新する
+    // 上下矢印はこの組み合わせでは反応させず、rollの方向を左右へ限定する
+    if (rollModifier) {
+      let rollDelta = 0.0;
+      if (this.input.has(state.keyMap.left)) rollDelta -= state.keyRollSpeed * dt;
+      if (this.input.has(state.keyMap.right)) rollDelta += state.keyRollSpeed * dt;
+      changed = this.applyOrbitRotationByViewAxes(0.0, 0.0, rollDelta) || changed;
+    } else if (shiftPan) {
       let panX = 0.0;
       let panY = 0.0;
       if (this.input.has(state.keyMap.left)) panX -= 1.0;
@@ -1482,6 +1679,7 @@ export default class EyeRig {
     });
   }
 
+  // pointer終了時に記録を削除し、次のgestureが過去の座標を参照しない状態へ戻します
   forgetPointer(pointerId) {
     this.pointerRecords.delete(pointerId);
   }
@@ -1725,6 +1923,20 @@ export default class EyeRig {
     this.lastClientX = ev.clientX;
     this.lastClientY = ev.clientY;
 
+    // Orbitではmodifierごとにpointer操作の意味を確定させ、rollをPANより先に判定する
+    // 同時押しを暗黙の複合操作にせず、rollを指定した入力ではrollだけを実行する
+    if (
+      !this.isTouchPointerEvent(ev)
+      && this.type === "orbit"
+      && this.isModifierKeyActive(this.orbit.rollModifierKey, ev)
+    ) {
+      // Alt / Option + 横ドラッグは、pointerの横移動量だけを視点rollへ変換する
+      // 縦移動を無視することで、同じgesture中にyawやpitchが混ざることを防ぐ
+      this.rotateOrbitByViewRoll(dx * this.orbit.dragRollSpeed);
+      ev.preventDefault();
+      return;
+    }
+
     // Orbitではpan modifierを押しながらdragしたときにscreen平面PANとして扱う
     // Followはcamera anchorとtargetを独立させるためpointer PANを行わない
     if (
@@ -1850,6 +2062,7 @@ export default class EyeRig {
     ev.preventDefault();
   }
 
+  // pointer listenerを解除し、EyeRigが保持する入力経路を解放します
   destroy() {
     this.detachPointer();
   }

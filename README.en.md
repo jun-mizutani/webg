@@ -1,478 +1,170 @@
-# webg 2
+# webg 3.0
 
-English | [日本語](README.md)
+[日本語](README.md) · [GitHub](https://github.com/jun-mizutani/webg) · [Sample gallery](samples/index.html) · [Guide to examples and samples](book/examples/guide.html)
 
-`webg` is a self-contained library for building 3D applications with JavaScript and WebGPU.
+Build 3D applications with light, materials, and motion using JavaScript and WebGPU.
 
-In addition to the rendering, 3D mathematics, scene graph, model asset, animation, UI, input, collision detection, physics, sound, and diagnostics features inherited from version 1, version 2 fully integrates GPU computation and deferred rendering using Compute Shaders.
-Simple 3D displays can continue to use the short forward-rendering path, while applications that need advanced lighting or screen effects sharing a G-buffer can select `ComputeEffectPipeline`.
-For applications such as GPU particles, cloth, physics simulation, and procedural textures that update state on the GPU before rendering, version 2 also provides a compute-first frame mode.
+`webg` is a self-contained library that combines PBR, environment lighting, water surfaces and caustics, CPU/GPU physics simulation, animation, particles, and sound.
+You can move from high-level application development to direct control of Render Passes, Compute Passes, and WGSL while using the same scenes and models.
 
-`webg` is not a library that merely wraps WebGPU and hides its internal structure.
-It is designed so that you can start with the high-level `WebgApp` API and, when necessary, trace the processing down to `Screen`, `Shape`, Render Passes, Compute Passes, WGSL, and GPU resources.
+[![Dolphins swimming in a PBR aquarium with a water surface, underwater caustics, red and yellow lamps, and bubbles](samples/aquarium/aquarium.jpg)](samples/aquarium/aquarium.html)
 
-[All sample applications can be run from here.](https://jun-mizutani.github.io/webg/samples/index.html)
+**Aquarium — Light beneath the water** — A scene combining glTF model animation, caustics, a water surface, particles, and lighting.
+[Run the sample](samples/aquarium/aquarium.html) · [Explanation and code](samples/aquarium/index.en.html)
 
-![samples](./samples/samples1.jpg)
+## Explore webg through samples
 
-## About version 2.0
+Click an image to run the sample in a WebGPU-enabled browser. Each sample's explanation page guides you through its implementation and the APIs it uses.
 
-When migrating an application from version 1, first refer to [Appendix B, “Migrating from webg 1.0 to 2.0”](book/付録B_webg_1.0から2.0への移行.md).
-A simple application that does not use custom shaders, post-processing, G-buffers, translucent materials, or assumptions about the normal-camera depth convention can retain its existing `WebgApp`, `Space`, `Node`, and `Shape` structure.
-You do not need to rebuild every application exclusively around Compute Shaders.
+<table>
+  <tr>
+    <td width="50%">
+      <a href="samples/pbr_reference/pbr_reference.html"><img src="samples/pbr_reference/preview.jpg" width="100%" alt="Fifteen spheres with different roughness and metallic values, showing reflections from environment lighting" /></a><br />
+      <strong>PBR and environment lighting</strong><br />
+      See how metallic and roughness change a material's appearance. <a href="samples/pbr_reference/index.en.html">Explanation and code</a>
+    </td>
+    <td width="50%">
+      <a href="samples/transmission/transmission.html"><img src="samples/transmission/preview.jpg" width="100%" alt="Background refraction through transparent objects and light absorption determined by material thickness" /></a><br />
+      <strong>Transparency, refraction, and absorption</strong><br />
+      Glass refraction and background blur controlled by roughness. <a href="samples/transmission/index.en.html">Explanation and code</a>
+    </td>
+  </tr>
+  <tr>
+    <td width="50%">
+      <a href="samples/water/water.html"><img src="samples/water/readme.jpg" width="100%" alt="Caustics projected onto a sphere, box, slope, and a stone-and-gravel waterbed" /></a><br />
+      <strong>Water surfaces and caustics</strong><br />
+      Wave-driven reflection and refraction, with caustics applied to selected objects. <a href="samples/water/index.en.html">Explanation and code</a>
+    </td>
+    <td width="50%">
+      <a href="samples/texture_catalog/texture_catalog.html"><img src="samples/texture_catalog/preview.jpg" width="100%" alt="A cube with a procedural material at physical scale, alongside generated color, height, and normal maps" /></a><br />
+      <strong>Procedural materials</strong><br />
+      Generate wood, brick, stone, and gravel patterns at physical scale. <a href="samples/texture_catalog/index.en.html">Explanation and code</a>
+    </td>
+  </tr>
+  <tr>
+    <td width="50%">
+      <a href="samples/compute_physics/compute_physics.html"><img src="samples/compute_physics/preview.jpg" width="100%" alt="A GPU physics sample with boxes, spheres, and capsules falling and contacting the floor and one another" /></a><br />
+      <strong>CPU/GPU physics simulation</strong><br />
+      Compare rigid-body motion and contact with the same initial conditions. <a href="samples/compute_physics/index.en.html">Explanation and code</a>
+    </td>
+    <td width="50%">
+      <a href="samples/fantasy/fantasy.html"><img src="samples/fantasy/fantasy.jpg" width="100%" alt="A fantasy tactics game with allies and enemies on an underwater map with elevation changes" /></a><br />
+      <strong>A small 3D game</strong><br />
+      Combine selection, movement, combat, animation, and particles. <a href="samples/fantasy/index.en.html">Explanation and code</a>
+    </td>
+  </tr>
+</table>
 
-## Design Principles
+[Browse all samples](samples/index.html)
 
-`webg` is designed around the following principles:
+## Main features
 
-- Do not depend on an external 3D engine
-- Do not hide the relationships among WebGPU Render Passes, Compute Passes, and GPU resources
-- Make high-level and low-level APIs available within the same library
-- Connect geometry, scenes, cameras, input, UI, physics, sound, and diagnostics within one application structure
-- Allow applications to choose whether the CPU or GPU updates state according to the task
-- Make it easy to trace among samples, the book, automated tests, and core implementations
-- Do not hide errors through implicit numeric correction or silent fallback; report mismatched input conditions as exceptions
-- Provide explanations and validation environments that are easy for both humans and coding AIs to reference
+### PBR, environment lighting, and transparency
 
-The direct goal is not to replace large general-purpose 3D engines such as Three.js or Babylon.js.
-The emphasis is on a library of a manageable scale that helps users understand the processing flow of a WebGPU 3D application and control the portions they need.
+Physically based rendering (PBR) uses base color, metallic, roughness, specular reflection, and emission to represent materials under direct light and image-based lighting (IBL).
+High dynamic range (HDR) environment maps, glTF 2.0 core materials, and procedural environments are available.
+Deferred rendering for opaque objects and forward rendering for translucent objects share a GGX reflection model and linear-HDR color processing.
 
-## Application Structure
+Transparent materials support refractive index, thickness, color absorption, and roughness-dependent background blur.
+`ComputeEffectPipeline` connects shadows, screen-space ambient occlusion (SSAO), screen-space reflections (SSR), fog, depth of field (DoF), bloom, tone mapping, and other effects.
+The high-level `PbrRenderer` can also configure lighting, environments, and screen effects together.
 
-### WebgApp is the common foundation
+### Water surfaces and caustics
 
-`WebgApp` brings together GPU initialization, `Screen`, standard shaders, `Space`, cameras, input, the HUD, Overlay Panel, CommandPalette, diagnostics, the update loop, and rendering timing.
-It can be used as the common application entry point whether you choose standard forward rendering, deferred rendering, or compute-first execution.
+`WaterBody` configures the water region, wave mixing, wavelength, speed, refractive index, and color absorption.
+Water-surface reflection and refraction, and caustics—the light concentrated by waves onto the waterbed and objects—are calculated from the same wave field.
+Register opaque `Shape` or `Node` receivers and adjust the intensity for each object.
 
-A 3D scene is constructed with `Space`, `Node`, `Shape`, and `ModelAsset`.
-Changing the lighting path does not require rebuilding models, Node hierarchies, animation, input, or UI in a different system.
+The surface and caustics can be switched independently. Turning both off releases water-specific GPU resources and returns to the regular PBR pipeline.
+The core water surface supports finite horizontal water regions viewed from above. Caustics use an approximation that projects vertically directed light from a reference plane onto 3D objects.
+The aquarium sample also includes its own water-surface rendering for underwater viewpoints. The scope of each effect is described in the [water sample documentation](samples/water/index.en.html).
 
-```text
-WebgApp
-  ├─ initialization, update loop, camera, input, UI, diagnostics
-  ├─ Space, Node, Shape, ModelAsset
-  └─ frame-processing choice
-       ├─ standard frame
-       │    ├─ standard forward rendering
-       │    │    └─ direct lighting with SmoothShader
-       │    └─ deferred rendering
-       │         └─ G-buffer + ComputeEffectPipeline
-       └─ compute-first mode
-            └─ computeFrame + ComputePass / GpuParticleEmitter
-```
+### Procedural materials and models
 
-### Standard forward rendering
+Generate wood, brick, tile, stone, and other materials from dimensions in meters.
+Color, height, and normals are handled separately, with presets for rounded stones, mixed stones and gravel, and gravel alone.
+Combining `ProceduralMaterials` with physical-scale UVs produces patterns suited to the size of each object.
 
-In standard forward rendering, `SmoothShader` calculates lighting while drawing each Shape and outputs the result to the Canvas.
-This path is suitable when a small number of lights is enough, when no screen effect requires a G-buffer, and when you want to keep the number of GPU resources and processing stages small.
+Build meshes with `Shape`, create basic geometry with `Primitive`, load external models such as glTF/GLB, and instantiate models multiple times.
+Node hierarchies, multiple materials, skinning, and keyframe animation connect to the same scene.
 
-The standard `WebgApp` frame internally handles Reverse-Z for the normal camera, camera-relative rendering, and camera state shared within the same frame.
-There is no need to add a `CameraFrame` or custom Render Pass to a simple application.
+### CPU/GPU physics engines
 
-### Deferred rendering and ComputeEffectPipeline
+The CPU-based `PhysicsSpace` and the GPU-based `ComputePhysicsSpace`, which updates rigid bodies with Compute Shaders, are available.
+They support contact between boxes, spheres, capsules, and fixed planes, along with gravity, friction, rotation, sleeping, and joint constraints.
 
-Deferred rendering first stores the surface information of opaque Shapes in a G-buffer, then calculates lighting and screen effects in later stages.
-`ComputeEffectPipeline` connects shadows, SSAO, deferred lighting, SSR, translucency, fog, toon shading, DoF, Bloom, tone mapping, edge extraction, and vignette in an order whose inputs and outputs have consistent meanings.
-
-Intermediate colors from deferred lighting through Bloom remain linear HDR.
-Exposure, tone mapping, and sRGB conversion are applied only once at the final display boundary.
-Applying individual gamma conversions or clamping to the range from 0 to 1 in each stage would discard lighting and Bloom luminance information.
-
-Translucent triangles are not written to the G-buffer.
-After opaque lighting and SSR, `TransparencyPass` composites them into the linear HDR scene, and later screen effects process the result.
-The application does not need to add a separate Render Pass for translucent geometry.
-
-### Compute-first mode
-
-Use `computeFrame: true` when GPU particles, cloth, physics simulation, procedural textures, or another application needs to update GPU state and render that updated state in the same frame.
-Inside `onComputeFrame`, the application creates a command encoder, records Compute Passes and Render Passes in the required order, and submits them together once at the end.
-
-This mode is not a setting for enabling deferred lighting.
-Choosing where lighting is calculated and choosing whether GPU state is updated before rendering are separate decisions.
-
-## Major Features of version 2
-
-### Camera Reverse-Z and camera-relative rendering
-
-The normal camera consistently uses `CAMERA_REVERSE_Z` with `depth32float`, a clear value of 0, and the `greater` comparison function.
-Shadow maps use `SHADOW_STANDARD_Z`; although they also use `depth32float`, they use a clear value of 1 and the `less` comparison function.
-Do not treat the normal-camera depth convention and the shadow depth convention as the same convention.
-
-In a large world, JavaScript `Number` values are used to calculate the difference between an object position and the camera position before passing a small coordinate near the camera to the GPU.
-Because two large world coordinates are not canceled in a GPU `float32` matrix, fine positional information is easier to preserve even far from the world origin.
-
-### CameraFrame and depth-dependent processing
-
-`CameraFrame` is a finalized camera state shared by one rendering operation.
-The same `cameraFrame` is passed to G-buffer rendering and to later stages that reconstruct positions or distances from that depth.
-Individual Passes do not independently guess `near`, `far`, FOV, or camera matrices.
-
-For a normal single-pass rendering operation, `WebgApp` manages this internally, so the application does not need to assemble a `CameraFrame`.
-When connecting `ComputeEffectPipeline.renderScene()` and `encode()`, share the value received from the same callback.
-
-### Multiple materials and automatic translucency composition
-
-One `Shape` can have multiple material slots, and each triangle can retain the slot number it uses.
-The existing `setMaterial()`, `getMaterial()`, and `updateMaterial()` methods operate on slot 0, so version 1 code using a single material can be retained.
-
-Rendering opacity is specified by the material’s independent `alpha` value.
-`color[3]` keeps its previous meaning as the texture-mixing ratio and is not reinterpreted as opacity.
-Triangles with `alpha === 1.0` are classified as opaque, while triangles with `0.0 <= alpha < 1.0` are classified as translucent, and translucent triangles from all Shapes are sorted from back to front.
-
-```js
-const shape = new Shape(gpu);
-
-shape.setMaterial("smooth-shader", {
-  color: [0.84, 0.28, 0.10, 1.0],
-  alpha: 1.0,
-  specular: 0.6,
-  roughness: 0.32
-});
-
-shape.setMaterialAt(1, "smooth-shader", {
-  color: [0.15, 0.65, 1.0, 1.0],
-  alpha: 0.42,
-  specular: 1.0,
-  roughness: 0.18,
-  power: 128
-});
-
-shape.addTriangle(a, b, c, 0);
-shape.addTriangle(a, c, d, 1);
-shape.endShape();
-```
-
-Ordinary alpha composition based on representative depth cannot uniquely resolve intersecting translucent surfaces or surfaces with cyclic front-to-back relationships.
-If this limitation matters in a scene, consider splitting the geometry or using another transparency technique.
-
-### G-buffer, lighting, and screen effects
-
-The G-buffer stores pre-lighting albedo, normals, specular reflection, roughness, metallic, emissive, and related surface data.
-For a material passed to deferred rendering, explicitly specify `specular`, `roughness`, `metallic`, and `emissive` according to the meaning of the surface instead of asking the G-buffer stage to infer missing values.
-
-SSAO and shadows return visibility rather than finished color, and `DeferredLightingPass` applies that visibility to materials and lights.
-Each local light explicitly uses `type: "point"` or `type: "cone"`.
-SSR is not stored in the albedo alpha channel; it is composited as an independent HDR reflection.
-
-### Wide blur using image pyramids
-
-Bloom, DoF, frosted glass, and general wide-blur processing use successive low-pass filtering and image pyramids instead of sparsely sampling distant texels with a large sample step.
-`ComputeImagePyramid` shares the successive downsampling process, while `ComputePyramidBlurPass` expands the smallest level back to the original resolution one level at a time.
-
-Bloom combines weighted levels from 1/2 through 1/32 to create a wide glow.
-DoF separates near- and far-field geometry coverage from the CoC, treating the proportion of geometry included in the filter region separately from the pyramid level selected by focal distance.
-
-### GPU computation and reusable helpers
-
-`ComputePass` records a Compute Pass into the command encoder supplied by the application.
-`StorageTargetFactory` standardizes the creation requirements for storage textures written by compute processing and read by later stages.
-`PingPongBuffer`, `PingPongTexture`, and `PingPongTarget` share the operation of swapping the previous output and the next input during iterative calculation.
-
-`GpuParticleEmitter` combines the particle-state storage buffer, update Compute Pipeline, and instanced rendering.
-Its coordinate space and render-target depth convention are explicitly specified with `coordinateSpace` and `depthConvention`.
-
-### UI, input, diagnostics, and performance measurement
-
-Canvas HUD, DOM overlays, `OverlayPanel`, `CommandPalette`, and `DebugDock` can display runtime state, settings, and controls inside the same application.
-Pointer Events are the common input entry point, allowing touch, mouse, and pen input to use the same gesture specification.
-
-`Diagnostics` and `DebugProbe` inspect internal state and errors, while `FrameTimer` helps measure GPU timestamps and JavaScript execution time.
-Depending on the purpose, you can combine visual inspection with `headless_tests`, `unittest`, feature-specific samples, and `compute_benchmark`.
-
-## API Layers
-
-| Layer | Main Classes | Purpose |
+| Selection criterion | CPU engine | GPU engine |
 |---|---|---|
-| Application | `WebgApp` | Integrates initialization, update loop, camera, input, UI, diagnostics, and frame processing |
-| Scene | `Space`, `Node`, `SceneAsset`, `SceneLoader` | Handles scene hierarchy, placement, and JSON-based scene loading |
-| Model | `Shape`, `Primitive`, `ModelAsset`, `ModelBuilder`, `ModelLoader` | Handles meshes, multiple materials, external models, and runtime instances |
-| Math and camera | `Matrix`, `Quat`, `EyeRig`, `CameraFrame` | Handles coordinate transformations, orientation, viewpoints, and camera state shared in one frame |
-| Render API | `Screen`, `Shader`, `RenderTarget`, `FullscreenPass` | Directly handles Render Passes, WGSL, render targets, and final presentation |
-| Deferred rendering | `GeometryBufferPass`, `DeferredLightingPass`, `ComputeEffectPipeline` | Integrates the G-buffer, lighting, translucency, and screen effects |
-| Compute API | `ComputePass`, `ComputeImagePyramid`, `ComputePyramidBlurPass` | Handles Compute Pipelines, image pyramids, and wide blur |
-| GPU simulation | `GpuParticleEmitter`, `StorageTargetFactory`, `PingPongBuffer`, `PingPongTexture`, `PingPongTarget` | Handles GPU state updates, storage resources, and iterative calculation |
-| Animation | `Tween`, `Animation`, `Action`, `AnimationState` | Handles interpolation, key-range playback, actions, and state transitions |
-| Input and UI | `InputController`, `Touch`, `OverlayPanel`, `CommandPalette` | Handles keyboard input, Pointer Events, gestures, and control interfaces |
-| Physics | `PhysicsSpace`, `PhysicsNode`, Collider classes | Handles gravity, collision detection, and physical behavior |
-| Sound | `AudioSynth`, `ToneSynth`, `GameAudioSynth` | Handles sound processing using the Web Audio API |
-| Diagnostics and measurement | `Diagnostics`, `DebugDock`, `DebugProbe`, `FrameTimer` | Performs state inspection, error display, and CPU/GPU time measurement |
+| Application structure | Integrate with Node operations and JavaScript game logic | Update and render many rigid bodies on the GPU |
+| Access to state | Use CPU state for queries and contact events | Explicitly read back GPU state when needed |
+| Rendering integration | Use the position and orientation of `PhysicsNode` | Render directly from GPU state or synchronize it to Nodes |
 
-Ordinary applications begin with `WebgApp` and select only the required features from lower-level APIs.
-The availability of Compute Shaders alone is not a reason to replace standard forward rendering with `ComputeEffectPipeline`.
+Choose based on object count, shape, update frequency, and the information your CPU-side logic needs.
+[samples/compute_physics](samples/compute_physics/index.en.html) compares the CPU and GPU engines with the same initial conditions. [samples/karakuri](samples/karakuri/index.en.html) demonstrates an application combining editing and simulation.
 
-## Repository Structure
+### Animation, particles, sound, and input
 
-```text
-webg/
-  book/            Technical explanations for version 2
-    examples/      Single-file executable examples for each chapter
-  headless_tests/  Automated tests that do not require screen interaction
-  samples/         Feature-specific sample applications
-  tools/           Utility tools
-  unittest/        Small browser-based validation applications
-  webg/            Library source code
-```
+Connect keyframes, interpolation, animation state transitions, GPU particles, and cloth updates to rendering.
+Mouse, touch, pen input, camera controls, click selection, HUDs, and control panels use a common application foundation.
+Sound synthesis, background music, and sound effects are available through the Web Audio API.
 
-## Getting Started
+## Start building an application
 
-### 1. Clone the Repository
+If you are new to webg, use the [guide to examples and samples](book/examples/guide.html) to find an example close to what you want to build.
+`book/examples/` contains small runnable examples for individual chapters; `samples/` contains reference applications combining multiple features.
+
+- **Describe geometry and motion in JavaScript:** Start with `WebgApp`, `Space`, `Node`, and `Shape`. See [high_level](samples/high_level/index.en.html).
+- **Define placement, materials, and physics in SceneYAML:** Use `createWebgSceneApp()` and `SceneDefinition`. See [project_app](samples/project_app/index.en.html).
+- **Combine PBR lighting and screen effects:** Use `PbrRenderer` and `ComputeEffectPipeline`. See the [PBR integration example](book/examples/32_01.html).
+- **Render GPU-updated state in the same frame:** Use `ComputePass` and run GPU computation before rendering. See [compute_particles](samples/compute_particles/index.en.html).
+
+`WebgApp` brings together GPU initialization, scenes, cameras, input, UI, and the update/render loop.
+`WebgSceneApp` builds models, materials, PBR, and physics from SceneYAML/JSON application definitions.
+You can follow the lower-level Render API, Compute API, and WGSL as needed to control execution order and GPU resources directly.
+
+### Run locally
 
 ```bash
 git clone https://github.com/jun-mizutani/webg.git
 cd webg
-```
-
-`webg` does not depend on an npm package and is used while preserving the repository’s directory structure.
-Because it uses relative ES Module imports and asset loading through `fetch()`, do not move only selected files to unrelated locations.
-
-### 2. Start a Local HTTP Server
-
-To use WebGPU, ES Modules, and asset loading correctly, open the files through an HTTP server instead of `file://`.
-
-Using Python 3:
-
-```bash
 python3 -m http.server 8000
 ```
 
-Using Node.js:
+Open `http://localhost:8000/samples/index.html` in your browser.
+Serve the repository over HTTP and retain its directory structure for ES Modules and asset loading.
+The library itself can be used through relative JavaScript imports.
 
-```bash
-npx http-server . -p 8000
-```
+## Learn with the book
 
-### 3. Open the Sample Index
+The English book is available in [`book.en/`](book.en/README.md). Its [entry guide](book.en/ExampleGuide.md) maps application goals to runnable examples, code to read, and checks to make. The companion [browser guide](book/examples/guide.html) provides the same navigation in the browser.
 
-```text
-http://localhost:8000/samples/index.html
-```
+The chapters progress from minimal rendering through application structure, models, interaction, physics, PBR, and GPU processing. Each chapter links its explanation to runnable examples in `book/examples/` and larger applications in `samples/`.
 
-## Basic Usage
+- [Introduction](book.en/01_Introduction.md): Overview of webg and reading order
+- [Runtime environment](book.en/02_Runtime.md): WebGPU requirements and local execution
+- [Click selection and collision queries](book.en/15_Collision.md): Ray and shape queries
+- [Physics engines](book.en/27_Physics.md): CPU/GPU engines and joints
+- [Procedural textures and physical-scale mapping](book.en/29_ProceduralTextures.md): Generation settings and material application
+- [PBR and environment lighting](book.en/30_PBR.md): Materials, lights, HDR environments, and IBL
+- [Basic PBR integration](book.en/32_PBRSetup.md): Connecting rendering stages
+- [Lighting, reflections, and fog](book.en/35_LightingEffects.md): Effects including water surfaces and caustics
+- [API reference](book.en/Appendix_D_API.md): Public classes and principal methods
 
-### Start with standard forward rendering
+The documentation helps both people and coding AI agents find relevant examples and APIs. When asking an AI to implement an application, provide [Appendix A for coding AI agents](book.en/Appendix_A_ForAI.md) and an example close to the goal. For migration from webg 1.0/2.0, see [Appendix B](book.en/Appendix_B_Migration.md).
 
-When using `webg` for the first time, begin with the standard `WebgApp` frame.
-After GPU initialization is complete, create a Shape and Node, then update application state in `onUpdate`.
+## Requirements and validation
 
-```js
-import WebgApp from "./webg/WebgApp.js";
-import Shape from "./webg/Shape.js";
-import Primitive from "./webg/Primitive.js";
+Use a WebGPU-enabled browser and GPU, and run applications on localhost or HTTPS.
+Available features and performance depend on the browser, OS, GPU, and driver.
+GPU timing measurements require `timestamp-query` support.
 
-const app = new WebgApp({
-  document,
-  clearColor: [0.1, 0.15, 0.1, 1.0]
-});
-
-await app.init();
-
-const shape = new Shape(app.getGPU());
-shape.applyPrimitiveAsset(
-  Primitive.cube(2.0, shape.getPrimitiveOptions())
-);
-shape.endShape();
-shape.setMaterial("smooth-shader", {
-  color: [1.0, 0.5, 0.3, 1.0]
-});
-
-const node = app.space.addNode(null, "cube");
-node.addShape(shape);
-
-app.createOrbitEyeRig({
-  target: [0.0, 0.0, 0.0],
-  distance: 8.0
-});
-
-app.start({
-  onUpdate: () => {
-    node.rotateY(0.8);
-  }
-});
-```
-
-See `samples/high_level` for a complete implementation including its HTML and error display.
-
-### Use ComputeEffectPipeline
-
-When a G-buffer and multiple screen effects are needed, initialize `ComputeEffectPipeline` and pass the same `cameraFrame` to scene rendering and later processing.
-Present the final texture to the Canvas with `beginPresentPass()`, then return to the depth-enabled pass used by the HUD.
-
-```js
-const pipeline = new ComputeEffectPipeline(gpu, {
-  width: app.screen.getWidth(),
-  height: app.screen.getHeight()
-});
-
-const copyPass = new FullscreenPass(gpu);
-await Promise.all([pipeline.ready, copyPass.init()]);
-
-app.start({
-  onUpdate: ({ screen }) => {
-    pipeline.resize(screen.getWidth(), screen.getHeight());
-  },
-
-  onBeforeDraw: ({ cameraFrame }) => {
-    pipeline.renderScene(
-      app.space,
-      cameraFrame,
-      app.clearColor
-    );
-  },
-
-  onAfterDraw3d: ({ cameraFrame }) => {
-    gpu.endPass();
-
-    const finalColor = pipeline.encode(gpu.commandEncoder, {
-      cameraFrame,
-      ssaoEnabled: true,
-      bloomEnabled: true
-    });
-
-    app.screen.beginPresentPass({
-      clearColor: app.clearColor,
-      colorLoadOp: "clear"
-    });
-    copyPass.draw(finalColor);
-    app.screen.clearDepthBuffer();
-  }
-});
-```
-
-This example shows only the connection order.
-See `samples/compute_effect` for an implementation that also includes materials, lights, effect settings, diagnostics, GPU measurement, and resource destruction.
-
-### Use compute-first mode
-
-When GPU state must be updated before rendering, specify `computeFrame: true` and gather the recording and submission of one frame in `onComputeFrame`.
-
-```js
-const app = new WebgApp({
-  document,
-  computeFrame: true
-});
-
-await app.init();
-
-app.start({
-  onComputeFrame: ({ cameraFrame, deltaSec }) => {
-    const gpu = app.getGPU();
-    const encoder = gpu.device.createCommandEncoder();
-
-    simulation.encode(encoder, resources, { deltaSec });
-    renderer.encode(encoder, cameraFrame);
-
-    gpu.queue.submit([encoder.finish()]);
-  }
-});
-```
-
-For concrete GPU particle, cloth, physics, and texture-generation examples, see `samples/compute_particles`, `samples/compute_cloth`, `samples/compute_physics_bounce`, and `samples/compute_texture`.
-
-## Recommended Validation Order
-
-You do not need to read every Compute feature first.
-Begin with the path closest to the application you want to build.
-
-1. `samples/low_level`
-   Check the minimal WebGPU Render Pipeline, buffers, WGSL, and command submission.
-
-2. `samples/high_level`
-   Check standard forward rendering using `WebgApp`, `Space`, `Shape`, and EyeRig.
-
-3. `samples/materials` and `samples/opacity`
-   Check material values, multiple materials, per-triangle material indices, and automatic translucency composition.
-
-4. `samples/compute_deferred_lighting`
-   Check the basic connection between the G-buffer and deferred lighting.
-
-5. `samples/compute_effect`
-   Check the integrated order of SSAO, shadows, SSR, translucency, fog, toon shading, DoF, Bloom, tone mapping, edges, and vignette.
-
-6. `samples/compute_bloom` and `samples/compute_dof`
-   Check image-pyramid Bloom and DoF that separates geometry coverage from the CoC.
-
-7. `samples/compute_particles`, `samples/compute_cloth`, and `samples/compute_texture`
-   Check how compute-first mode records Compute Passes and Render Passes into the same frame.
-
-8. `samples/compute_benchmark`
-   Compare GPU time, settings, resolution, and image-pyramid stages for each Compute process.
-
-9. `samples/maze2`
-   Check deferred lighting, multiple local lights, SSR, Bloom, and related features at practical application scale.
-
-## Documentation
-
-The `book/` directory explains the design and usage of version 2 in chapters.
-When reading it for the first time, begin with the runtime environment, minimal WebGPU rendering, `WebgApp`, cameras, Shape, and materials, then continue to the Compute Shader and advanced-rendering chapters as needed.
-
-The following documents are particularly useful entry points for version 2:
-
-- [`book/付録A_コーディングAIの皆さまへ.md`](book/付録A_コーディングAIの皆さまへ.md)
-  Explains how humans and AIs can select the appropriate book chapters, samples, tests, and core implementations for a task.
-- [`book/付録B_webg_1.0から2.0への移行.md`](book/付録B_webg_1.0から2.0への移行.md)
-  Explains differences, precautions, and the recommended validation order when migrating a version 1 application.
-- [`book/付録C_API一覧.md`](book/付録C_API一覧.md)
-  Lists the public classes and major methods in version 2 by feature.
-- [`book/27_コンピュートシェーダーの基礎.md`](book/27_コンピュートシェーダーの基礎.md)
-  Explains Compute Pipelines, storage resources, depth conventions, CameraFrame, and compute-first mode.
-- [`book/28_コンピュートパスによる高度な表現.md`](book/28_コンピュートパスによる高度な表現.md)
-  Explains SSAO, shadows, deferred lighting, SSR, GPU particles, DoF, Bloom, and other individual processes.
-- [`book/29_リアルタイム3D表現の統合.md`](book/29_リアルタイム3D表現の統合.md)
-  Explains the order in which processes are connected to `ComputeEffectPipeline`, along with color formats, resizing, and destruction.
-
-For current API settings, defaults, and exception conditions, treat the book chapters, Appendix C, the relevant samples, and the current implementation as authoritative rather than the short examples in this README.
-
-## Samples and Tests
-
-The `samples/` directory contains reference implementations showing how features are used in actual applications.
-Read each sample’s README, explanation page, `.txt` file, and executable HTML together with its implementation.
-
-`headless_tests/` automatically checks argument validation, depth conventions, color formats, GPU resource creation and destruction, and other conditions that do not require screen interaction.
-Run the following command to execute the complete set:
+[compute_benchmark](samples/compute_benchmark/index.en.html) measures PBR rendering, lighting, reflections, transparency composition, and other stages under the same scene conditions.
+`headless_tests/` contains automated tests for API and data contracts; `unittest/` contains browser applications for visual checks.
 
 ```bash
 node headless_tests/run_all.js
 ```
 
-`unittest/` contains small validation applications for checking display and interaction in a browser.
-Final validation should include not only headless tests but also the relevant unittest and sample on an actual screen.
+## License and author
 
-## AI-Assisted Development
-
-When asking a coding AI to implement or investigate an application using webg version 2, first provide `book/付録A_コーディングAIの皆さまへ.md`.
-Then identify the book chapters, samples, headless tests, unittests, and current `webg/*.js` files related to the task so that general assumptions about WebGPU engines are not confused with webg-specific APIs.
-
-**Note on Language:** While the documentation and internal code comments are predominantly written in Japanese, the source code itself is written in English. Since modern LLMs are proficient in both languages, non-Japanese speakers can seamlessly use AI to bridge the language gap and obtain accurate technical guidance by providing the relevant chapters from `book/` or implementation examples from `samples/` as context.
-
-## Supported Environment
-
-`webg` assumes a modern browser that supports WebGPU and the WebGPU APIs required by the features being used.
-
-- Google Chrome
-- Microsoft Edge
-- Firefox
-- Safari
-
-Available features, performance, and Canvas presentation behavior may differ depending on the WebGPU implementation, operating system, GPU, and driver.
-For samples using Compute Shaders, inspect the in-application Diagnostics, DebugDock, and GPU measurement results in addition to the browser developer tools.
-
-If a problem occurs, check the following in order:
-
-- Whether the page is opened through an HTTP server rather than `file://`
-- Whether the browser and GPU driver support WebGPU
-- Whether the developer tools report a WebGPU validation error or initialization error
-- Whether the color format, depth format, and depth convention of the Render Pipeline match the render target
-- Whether the same `cameraFrame` is passed to depth-dependent processing
-- Whether `resize()` is called on classes that retain processing resources when the Canvas physical pixel dimensions change
-- Whether `destroy()` is called exactly once on classes that retain GPU resources when the application ends
-
-For detailed instructions on browsers, HTTP servers, and caches, refer to [Chapter 2, “Installation and Runtime Environment”](book/02_インストールと実行環境.md).
-
-## License
-
-MIT License
-
-## Author
-
-- Author: Jun Mizutani
-- Website: https://www.mztn.org/
+[MIT License](LICENSE) · Jun Mizutani · [Author's website](https://www.mztn.org/)

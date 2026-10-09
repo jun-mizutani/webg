@@ -1,0 +1,200 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://webg.example/schema/webg-renderer-v1.json",
+  "title": "webg high-level renderer manifest version 1",
+  "description": "Compute PBR renderer profile and public effect settings used by WebgSceneApp.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["profile", "width", "height", "environment"],
+  "properties": {
+    "profile": { "const": "studio" },
+    "width": { "type": "integer", "minimum": 1 },
+    "height": { "type": "integer", "minimum": 1 },
+    "clearColor": { "$ref": "#/$defs/rgba" },
+    "environment": { "$ref": "#/$defs/environment" },
+    "dof": { "$ref": "#/$defs/dof" },
+    "pipeline": { "$ref": "#/$defs/pipeline" }
+  },
+  "$defs": {
+    "finiteNumber": { "type": "number" },
+    "nonNegative": { "type": "number", "minimum": 0 },
+    "positive": { "type": "number", "exclusiveMinimum": 0 },
+    "unitInterval": { "type": "number", "minimum": 0, "maximum": 1 },
+    "rgb": {
+      "type": "array",
+      "prefixItems": [
+        { "$ref": "#/$defs/finiteNumber" },
+        { "$ref": "#/$defs/finiteNumber" },
+        { "$ref": "#/$defs/finiteNumber" }
+      ],
+      "items": false,
+      "minItems": 3,
+      "maxItems": 3
+    },
+    "rgba": {
+      "type": "array",
+      "prefixItems": [
+        { "$ref": "#/$defs/finiteNumber" },
+        { "$ref": "#/$defs/finiteNumber" },
+        { "$ref": "#/$defs/finiteNumber" },
+        { "$ref": "#/$defs/finiteNumber" }
+      ],
+      "items": false,
+      "minItems": 4,
+      "maxItems": 4
+    },
+    "vec3": { "$ref": "#/$defs/rgb" },
+    "environment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["preset", "resolution"],
+      "properties": {
+        "preset": {
+          "enum": [
+            "blue-sky",
+            "dark-studio",
+            "bright-forest",
+            "sunset-ocean",
+            "bright-summer-ocean",
+            "woody-room-two-windows"
+          ]
+        },
+        "resolution": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["width", "height"],
+          "properties": {
+            "width": { "type": "integer", "minimum": 2, "maximum": 4096 },
+            "height": { "type": "integer", "minimum": 1, "maximum": 2048 }
+          }
+        }
+      }
+    },
+    "dof": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "focus": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "source": { "const": "camera" },
+            "rangeMeters": { "$ref": "#/$defs/positive" },
+            "transitionMeters": { "$ref": "#/$defs/nonNegative" }
+          }
+        },
+        "blurRadius": { "type": "number", "minimum": 0.25, "maximum": 3.0 }
+      }
+    },
+    "shadow": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "type": { "enum": ["directional", "spot"] },
+        "bias": { "$ref": "#/$defs/nonNegative" },
+        "normalBias": { "$ref": "#/$defs/nonNegative" },
+        "pcfRadius": { "type": "integer", "minimum": 0, "maximum": 2 },
+        "directional": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "fitMode": { "enum": ["fixed", "frustum-fit"] },
+            "fitFar": { "$ref": "#/$defs/positive" },
+            "xyPadding": { "$ref": "#/$defs/nonNegative" },
+            "depthPadding": { "$ref": "#/$defs/nonNegative" },
+            "minHalfExtent": { "$ref": "#/$defs/positive" },
+            "minNear": { "$ref": "#/$defs/positive" },
+            "texelSnap": { "type": "boolean" },
+            "up": { "$ref": "#/$defs/vec3" }
+          }
+        },
+        "spot": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "position": { "$ref": "#/$defs/vec3" },
+            "direction": { "$ref": "#/$defs/vec3" },
+            "fov": { "type": "number", "exclusiveMinimum": 0, "exclusiveMaximum": 180 },
+            "innerAngle": { "type": "number", "exclusiveMinimum": 0, "exclusiveMaximum": 180 },
+            "outerAngle": { "type": "number", "exclusiveMinimum": 0, "exclusiveMaximum": 180 },
+            "near": { "$ref": "#/$defs/positive" },
+            "far": { "$ref": "#/$defs/positive" },
+            "aspect": { "$ref": "#/$defs/positive" },
+            "up": { "$ref": "#/$defs/vec3" }
+          }
+        }
+      }
+    },
+    "ssao": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "radius": { "type": "number", "minimum": 1 },
+        "strength": { "$ref": "#/$defs/nonNegative" },
+        "bias": { "$ref": "#/$defs/unitInterval" },
+        "samples": { "type": "integer", "minimum": 4, "maximum": 16 },
+        "resolutionScale": { "type": "number", "minimum": 0.5, "maximum": 1.0 }
+      }
+    },
+    "ssr": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "intensity": { "type": "number", "minimum": 0, "maximum": 1.5 },
+        "distance": { "type": "number", "minimum": 1 },
+        "thickness": { "$ref": "#/$defs/positive" },
+        "steps": { "type": "integer", "minimum": 12, "maximum": 64 },
+        "resolutionScale": { "type": "number", "minimum": 0.5, "maximum": 1.0 },
+        "reflectivityThreshold": { "$ref": "#/$defs/unitInterval" }
+      }
+    },
+    "lighting": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "unitSystem": { "enum": ["relative", "photometric"] },
+        "ambient": { "$ref": "#/$defs/unitInterval" },
+        "directionalColor": { "$ref": "#/$defs/rgb" },
+        "directionalIntensity": { "$ref": "#/$defs/nonNegative" },
+        "spotColor": { "$ref": "#/$defs/rgb" },
+        "spotIntensity": { "$ref": "#/$defs/nonNegative" },
+        "spotMinimumDistance": { "$ref": "#/$defs/positive" },
+        "environmentIntensity": { "$ref": "#/$defs/nonNegative" },
+        "environmentBackground": { "type": "boolean" },
+        "environmentRotationDegrees": { "$ref": "#/$defs/finiteNumber" }
+      }
+    },
+    "composer": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "mode": { "enum": ["add", "mix", "pbr-ssr"] }
+      }
+    },
+    "toneMap": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "mode": { "enum": ["reinhard", "linear"] },
+        "exposure": { "type": "number", "minimum": 0, "maximum": 4 },
+        "exposureEv100": { "type": "number", "minimum": -24, "maximum": 24 },
+        "saturation": { "type": "number", "minimum": 0, "maximum": 3 },
+        "gamma": { "type": "number", "minimum": 0.1, "maximum": 4 },
+        "blackBackground": { "type": "boolean" }
+      }
+    },
+    "pipeline": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "shadow": { "$ref": "#/$defs/shadow" },
+        "ssao": { "$ref": "#/$defs/ssao" },
+        "ssr": { "$ref": "#/$defs/ssr" },
+        "lighting": { "$ref": "#/$defs/lighting" },
+        "composer": { "$ref": "#/$defs/composer" },
+        "toneMap": { "$ref": "#/$defs/toneMap" }
+      }
+    }
+  }
+}

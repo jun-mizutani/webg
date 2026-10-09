@@ -1,0 +1,19 @@
+<!doctype html>
+<!-- 2026/09/25: VOID STRIKE sample guide -->
+<html lang="ja"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>VOID STRIKE — 使い方</title><style>body{max-width:860px;margin:54px auto;padding:0 24px;background:#06101b;color:#c9dce4;font:16px/1.9 system-ui}h1,h2{color:#effaff}h2{margin-top:2em}a{color:#60d9ff}nav{display:flex;gap:24px;flex-wrap:wrap}li{margin:.35em 0}</style><nav><a href="void_strike.html">VOID STRIKE ↗</a><a href="index.html">日本語</a><a href="index.en.html">English</a></nav><main>
+<h1>VOID STRIKE — 星間リフト防衛線</h1>
+<p>VOID STRIKEは、星間リフトから現れる敵編隊を迎撃する3Dシューティングです。プレイヤー機は画面の奥行きへ進みながら、敵機の編隊、赤い追尾弾、環状ゲートの間を飛び抜けます。青白い二門レーザーで敵を撃破し、連続撃破で得点倍率を伸ばし、ブーストで弾幕を抜けます。PBR金属機体、色付き照明、発光ゲート、Bloom、Compute火花をまとめ、操作と攻撃の反応が画面いっぱいに伝わる構成にしました。</p>
+<h2>実行と操作</h2>
+<p><a href="void_strike.html">void_strike.html</a> をWebGPU対応ブラウザで開き、<code>START RUN</code>を選ぶと出撃します。ウェーブが進むほど敵の移動速度と耐久値が上がり、赤い敵弾も飛んできます。機体の耐久がなくなるまで戦闘が続き、撃破スコアと到達ウェーブが終了画面へ表示されます。</p>
+<ul><li><code>W</code> / <code>A</code> / <code>S</code> / <code>D</code> または矢印キー: 機体を上下左右へ移動</li><li><code>Space</code>: 左右二門からレーザーを連射</li><li><code>Shift</code>: エネルギーを消費して高速移動し、使用中は敵弾を防ぐ</li><li><code>P</code> / <code>Esc</code>: 一時停止と再開</li><li>画面上の方向キー、FIRE、BOOST: タッチまたはポインター操作</li><li><code>SOUND</code>: 175 BPMのBGMとゲーム効果音を開始・停止</li></ul>
+<p>Canvasはウィンドウ全体へ広がります。画面上部にはスコア、ウェーブ、機体耐久、連続撃破を表示し、左下のゲージにブーストエネルギーを示します。</p>
+<h2>利用するwebgの機能</h2>
+<p><code>ShooterApp</code>は<code>WebgSceneApp</code>を継承し、PBR描画へシアン、紫、琥珀、赤の点光源を接続します。カメラは宇宙戦場を見渡す固定の遠景に置き、Canvasの大きさをウィンドウ変更へ追従させます。方向光のシャドウマップ、SSR、Bloomで金属機体と発光部を描き、SSAOと被写界深度は止めています。</p>
+<p>SceneYAMLは暗い環境光、トーンマッピング、SSR、2系統の<code>ComputeParticleEmitter</code>を記述します。撃破と被弾では位置に応じたシアン・赤・琥珀色の火花をGPU上で発生させます。機体、敵、レーザーは共有Shapeの表示instanceとしてpoolへ準備し、ゲーム中は位置、姿勢、表示状態だけを更新します。星空は300個の小さな八面体を一つのmeshへまとめ、環状ゲートと星間グリッドで速度と奥行きを見せます。</p>
+<p>衝突・得点・ウェーブ進行はサンプル内の軽量なゲーム更新で扱います。プレイヤー弾と敵機、敵弾とプレイヤー機を3D位置で照合し、敵機の耐久値を減らします。<code>GameAudioSynth</code>は<code>run_neon</code>の175 BPM譜面と短い合成効果音を再生します。音声はSOUND操作後に開始し、マスター音量42%、BGM音量28%です。</p>
+<h2>確認ポイント</h2>
+<p>開始後、青いプレイヤー機と赤い敵機が異なる方向へ移動し、Spaceで二本のレーザーを連射できることを確認します。敵への命中では火花が散り、撃破でスコアと連続撃破が増えます。ウェーブを進めると大型の敵が混ざり、複数発の命中が必要になります。</p>
+<p>敵弾への接触で機体耐久が減り、短いシールド点滅の間は連続して耐久が減りません。Shiftのブーストではゲージが減り、敵弾を抜けた後に徐々に回復します。PAUSE後は戦闘を止めたまま再開でき、画面上の方向キーとFIRE・BOOSTでも同じ操作を確認できます。</p>
+<h2>実装を読む</h2>
+<p><code>scene.yaml</code>がPBR、SSR、粒子設定、<code>space_scene.js</code>が星空・ゲート・機体・弾の生成と再利用pool、<code>ShooterApp.js</code>が照明・カメラ・Canvasサイズ、<code>main.js</code>が操作・衝突・ウェーブ・得点・HUD・音声を担当します。シーン固有のコードはこのフォルダ内にまとめています。</p>
+</main></html>

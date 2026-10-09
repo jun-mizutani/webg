@@ -1,10 +1,10 @@
-サンプル: destroy_lifecycle
+確認ページ: destroy_lifecycle
 
 概要
 - `Shape.destroy()`、`ShapeResource.destroy()`、`instantiated.destroy()`、`runtime.destroy()` の効果を、自動チェックと実画面の両方で確認する unittest です
 - 左レーンは `Shape` / `ShapeResource`、右レーンは `runtime` / `instantiation` の寿命管理に分け、どの層を destroy したかを見分けやすくしています
 
-このサンプルで使うwebg機能
+使用するwebg機能
 - `Shape`: `createInstance()` と `destroy()` による instance 側の寿命管理
 - `ShapeResource`: shared GPUBuffer の保持と `destroy()` による明示破棄
 - `Space`: `instantiate()` 後の node を描画し、destroy 後に scene から外れたかを確認する場

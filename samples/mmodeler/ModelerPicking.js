@@ -237,7 +237,7 @@ export default class ModelerPicking {
   }
 
   // makeRayBuildContext() で共有した逆行列から client 座標 ray を作る
-  // makeRayFromClient() と同じ戻り値形状を保ち、visible pick の既存処理へそのまま渡せるようにする
+  // makeRayFromClient() と同じ戻り値形状を保ち、visible pick の処理へそのまま渡せるようにする
   makeRayFromClientWithContext(clientX, clientY, context = null) {
     if (!context) {
       return this.makeRayFromClient(clientX, clientY);

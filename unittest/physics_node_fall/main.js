@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// unittest/physics_node_fall/main.js  2026/07/25
+// unittest/physics_node_fall/main.js  2026/10/04
 //   physics_node_fall unittest
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -56,11 +56,11 @@ const BODY_SPECS = [
 
 // 値を範囲に収める
 // fixed timestep の一時停止明けで deltaMs が大きく跳ねても
-// accumulator が過剰に膨らまないように使う
+// 1回の経過時間を制限し、accumulatorへ渡す時間を一定範囲に保つ
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
 
 // 透視投影行列を shader へ流す
-// resize のたびに呼び、画面縦横比が変わっても箱の見え方が崩れないようにする
+// resizeのたびに呼び、画面の縦横比に合う投影で箱を描く
 const setProjection = (screen, shader, angle = 48.0) => {
   const proj = new Matrix();
   const fov = screen.getRecommendedFov(angle);
@@ -69,7 +69,7 @@ const setProjection = (screen, shader, angle = 48.0) => {
 };
 
 // 立方体用 Shape を生成する
-// 形の違いではなく落下と停止を見たい test なので、単色の cube だけに絞る
+// 単色のcubeを共通形状に使い、落下と停止の違いを読みやすくする
 const createCubeShape = (gpu, size, color) => {
   const shape = new Shape(gpu);
   shape.applyPrimitiveAsset(Primitive.cube(size));
@@ -120,7 +120,7 @@ const createBackdropShape = (gpu) => {
 };
 
 // 1 個の立方体を初期状態へ戻す
-// dynamic 中は直接位置変更できないため、reset では一度 kinematic に戻してから再投入する
+// resetではkinematicに切り替えて位置を設定し、その後dynamicへ戻して落下を再開する
 const resetBodyEntry = (entry) => {
   const body = entry.body;
   body.wakeUp();
@@ -210,7 +210,7 @@ const start = async ({ screen, gpu, setStatus, setViewportLayout, startLoop, doc
   });
   floorNode.setPosition(0.0, FLOOR_CENTER_Y + FLOOR_HEIGHT * 0.5, -28.0);
   // 床の見た目は薄い箱だが、物理判定は無限平面 collider にする
-  // 落下停止の確認では床端の形状ではなく、plane contact と sleep の安定性を見たい
+  // 床はplane contactとsleepの比較に使い、安定した落下先を用意する
   floorNode.setCollider(new PlaneCollider([0.0, 1.0, 0.0]));
   floorNode.setPhysicsMaterial({
     restitution: 0.0,
@@ -234,7 +234,7 @@ const start = async ({ screen, gpu, setStatus, setViewportLayout, startLoop, doc
     const shape = createCubeShape(gpu, spec.size, spec.color);
     body.addShape(shape);
     // 見た目の cube と同じ大きさの BoxCollider を設定し、床との接触で止まることを確認する
-    // この visual test は数値 assert ではなく、contact による押し戻しと sleep の見え方を担当する
+    // このvisual testは、contactによる位置補正とsleep移行を画面と数値で確認する
     body.setCollider(new BoxCollider([spec.size, spec.size, spec.size]));
     body.setPhysicsMaterial({
       restitution: 0.0,
@@ -262,7 +262,7 @@ const start = async ({ screen, gpu, setStatus, setViewportLayout, startLoop, doc
   let previousTimeMs = null;
   let settledThisRun = 0;
 
-  // すべての物体を初期状態へ戻し、前回の状態を残さない
+  // 比較する全bodyを初期状態へ戻し、同じ条件の落下・回転を再開する
   const resetAllBodies = () => {
     settledThisRun = 0;
     previousTimeMs = null;

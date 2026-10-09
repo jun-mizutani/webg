@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>transmission</title>
+  <link rel="icon" href="data:," />
+  <!-- 2026/06/19 -->
+  <style>
+
+:root {
+  color-scheme: light;
+  --bg: #eef3f8;
+  --paper: rgba(255, 255, 255, 0.94);
+  --line: #c8d5e4;
+  --ink: #17324a;
+  --muted: #5c748b;
+  --accent: #1566ab;
+  --accent-soft: #dfeefe;
+  --code-bg: #f3f7fb;
+  --shadow: rgba(29, 52, 79, 0.10);
+}
+* { box-sizing: border-box; }
+html, body {
+  margin: 0;
+  min-height: 100%;
+}
+body {
+  background:
+    radial-gradient(circle at top left, rgba(21, 102, 171, 0.12), transparent 24%),
+    radial-gradient(circle at top right, rgba(255, 191, 118, 0.10), transparent 22%),
+    linear-gradient(180deg, #f8fbfd 0%, var(--bg) 100%);
+  color: var(--ink);
+  font: 16px/1.78 "Avenir Next", "Hiragino Sans", "Yu Gothic", sans-serif;
+}
+.page {
+  width: min(1080px, calc(100% - 28px));
+  margin: 0 auto;
+  padding: 24px 0 56px;
+}
+.hero,
+.doc {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  box-shadow: 0 22px 52px var(--shadow);
+}
+.hero {
+  padding: 22px 24px;
+  margin-bottom: 18px;
+}
+.hero h1 {
+  margin: 0 0 8px;
+  font-size: clamp(2rem, 4vw, 3rem);
+  line-height: 1.08;
+}
+.hero p {
+  margin: 0;
+  color: var(--muted);
+}
+.doc {
+  padding: 28px;
+}
+.doc > :first-child {
+  margin-top: 0;
+}
+h1, h2, h3, h4, h5, h6 {
+  line-height: 1.25;
+  margin: 1.45em 0 0.55em;
+}
+h1 {
+  font-size: 2.2rem;
+}
+h2 {
+  padding-bottom: 0.28em;
+  border-bottom: 1px solid var(--line);
+  font-size: 1.48rem;
+}
+h3 {
+  font-size: 1.14rem;
+}
+p, ul, ol, table, pre, blockquote {
+  margin: 0 0 1em;
+}
+ul, ol {
+  padding-left: 1.4em;
+}
+li + li {
+  margin-top: 0.26em;
+}
+a {
+  color: var(--accent);
+  text-decoration: none;
+}
+a:hover {
+  text-decoration: underline;
+}
+img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  border-radius: 16px;
+  border: 1px solid var(--line);
+  box-shadow: 0 12px 32px rgba(29, 52, 79, 0.08);
+  margin: 1.1em 0 1.4em;
+}
+code {
+  padding: 0.12em 0.38em;
+  border-radius: 0.45em;
+  background: var(--code-bg);
+  border: 1px solid #dbe6f1;
+  font: 0.92em/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+pre {
+  padding: 14px 16px;
+  overflow-x: auto;
+  border-radius: 14px;
+  background: #0f1720;
+  color: #ecf5ff;
+}
+pre code {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #ffffff;
+}
+th, td {
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  text-align: left;
+  vertical-align: top;
+}
+th {
+  background: #f5f9fc;
+}
+hr {
+  border: 0;
+  border-top: 1px solid var(--line);
+  margin: 1.5em 0;
+}
+blockquote {
+  padding: 0.3em 0 0.3em 1em;
+  border-left: 4px solid #c9dbef;
+  color: var(--muted);
+}
+@media (max-width: 720px) {
+  .page {
+    width: min(100% - 18px, 1080px);
+    padding-top: 16px;
+  }
+  .hero,
+  .doc {
+    border-radius: 18px;
+  }
+  .doc {
+    padding: 20px;
+  }
+}
+
+  </style>
+</head>
+<body>
+  <main class="page">
+    <section class="hero">
+      <h1>transmission</h1>
+    </section>
+    <article class="doc">
+<h1>transmission</h1>
+<p><a href="index.en.html">English</a> | 日本語</p>
+<h2>概要</h2>
+<p><code>transmission</code>は、透明PBR surface越しの背景透過と画面空間屈折を比較するテスト用アプリです。球、厚い板、トーラスへ独立したmaterial値を設定し、法線勾配、silhouette、Transmission、IORによって、物体へ入ってから出る光線とレンガ目地やOak木目の見え方が変わることを確認します。</p>
+<p>透明体の背後にあった色付き立方体群は置かず、幅16、高さ9の壁全体へ<code>brick.running.red</code>のレンガtextureを貼っています。床には柾目と板目を板単位で混ぜた<code>wood.oak.mixed-sawn</code>のOak textureを貼り、板の長軸が画面の奥行き方向へ向くようにしています。どちらもコアの<code>ProceduralMaterials.createPreset()</code>で生成し、<code>applyTo()</code>でShapeへ登録します。presetが持つ物理寸法からUVの反復回数を求めるため、模様を壁や床の全面へ1回だけ引き伸ばさず、レンガの目地、表面の凹凸、床板の継ぎ目、木目を一貫した大きさで表示できます。</p>
+<p>レンガの規則的な目地は、透明体を通った背景位置がどちらへどれだけ移動したかを確認する基準になります。Oak床は斜めに見える面で屈折と吸収を確認しやすくし、Color textureだけでなくNormal textureも使うことで、不透明背景自体がPBR照明へどう反応するかも同じ画面で観察できます。texture生成またはShader検証に失敗した場合は単色材質へ切り替えず、起動エラーとして報告します。</p>
+<p>処理順序は次のとおりです。</p>
+<pre><code class="language-text">不透明G-buffer
+  → Deferred PBR照明
+  → 透明前面のoct法線、Transmission、entry距離mask
+  → 透明前面materialの吸収色と吸収距離target
+  → 透明裏面のexit距離、oct法線、IOR target
+  → entryで空気から媒質への第1屈折
+  → SSR方式の内部ray marchとbinary searchによるexit探索
+  → exitで媒質から空気への第2屈折
+  → 不透明G-buffer depthに対する背景ray march
+  → 背景未到達時は明示したclearColor／固定色、またはHDR環境radiance
+  → 内部光路長によるBeer-Lambert吸収
+  → roughnessによるFrost
+  → 透明PBR surfaceのForward合成
+  → Tone Mapping</code></pre>
+<h2>操作</h2>
+<ul><li>Canvasのdouble clickまたは<code>/</code>でCommandPaletteを開きます</li><li><code>Transmission</code>で屈折を有効／無効にします</li><li><code>Sphere</code>、<code>Slab</code>、<code>Torus</code>ボタンで編集するmaterialを直接選びます</li><li><code>Transmission</code>値は吸収後の屈折光へ配分する割合です。残りはPBR surface側へ配分します</li><li><code>IOR</code>は1.0から2.5で、entryとexitにおけるSnellの法則の屈折率として使います</li><li><code>Absorption R/G/B</code>は吸収距離を通過した後に残る線形RGBの割合です</li><li><code>Absorption Dist</code>は上記RGB割合まで減衰する距離で、小さいほど吸収が強くなります</li><li><code>Roughness</code>は屈折後の背景をFrost pyramidでぼかします</li><li><code>Surface Alpha</code>はTransmission 1.0で屈折背景の上へ重ねるPBR surfaceの基準Alphaです。Transmissionを下げると非透過分がsurface側へ加わります</li><li><code>T</code>でTransmission、SpaceでPause、<code>R</code>で初期値へ戻せます</li><li>このサンプルはHDR環境を使わず、背景未到達rayに<code>transmissionRayMissFallback: &quot;clear&quot;</code>を明示しているため、アプリの<code>clearColor</code>を使います</li><li>CommandPaletteの<code>Ray Debug</code>を有効にすると、屈折rayがfallbackを使った理由を色分けします。赤は同一pixelのvolume不成立、橙はentry屈折不能、紫は初回または内部reflection後の境界未発見、黄は1回reflectionした後も残る全反射、水色は外部探索距離なし、緑は背景未発見です</li><li>Helpの<code>FPS</code>は0.2秒間のframe数を実経過時間で割った平均値で、0.2秒ごとに更新します。同じ表示には平均frame間隔に対するComputeEffectPipeline、G-buffer Render、両者のGPU合計、JavaScript処理時間の割合も表示します。画面への最終copyはGPU合計に含みません。GPU timestampを取得できない環境では0%に置き換えず、<code>unavailable</code>と表示します</li></ul>
+<p>周期的な停止を解析するため、このサンプルは20 ms以上の長いframe、透明batch分断数16以上への到達、batch数の16以上の増加、queue CPU時間4 ms以上への到達、global sort状態の変化だけを最大64件のring bufferへ記録します。通常frameでは詳細objectやJSONを生成しません。ブラウザconsoleで<code>getTransmissionAnomalyLog()</code>を実行すると、時系列順の記録を取得できます。各記録には透明Nodeのlocal／world角度（degree、yaw／pitch／roll）と位置、投影境界、干渉pair、triangle数、instance別batch run数、queue CPU時間、各passの最新CPU／GPU時間が含まれます。GPU timestampは非同期readbackの最新値であり、停止frameと完全に同じframeとは限りません。</p>
+<p>透明instanceの干渉判定は、まずlocal AABBの8 cornerで安価な候補判定を行い、候補となったinstanceだけ実際の透明triangle頂点からtightな投影boundsを求めます。これによりSphereやTorusの表面上に存在しないAABB cornerが作る過剰なscreen overlapを除きます。tight boundsで残った重なりも、重なり矩形の短辺がrender target上で8 pixel以下なら、細い境界部分の描画順よりframe時間を優先して独立instanceとして扱います。除外pair数と最大除外幅はDiagnosticsと異常ログへ記録します。</p>
+<p>ray探索はコア既定値の最大距離42、交差許容厚み0.10、基準48 stepを使います。透明物内部と透明物を出た後の背景探索は、どちらも画面上のray主軸で約8 pixel間隔を目標にstep数を増やし、既定条件では48から最大96 stepの範囲になります。交差候補を見つけた後は5回の二分探索で区間を1/32まで狭めます。交差許容厚みは、離散的に進むrayをdepth surfaceへ到達したと判定する範囲です。</p>
+<h2>実装の意味</h2>
+<p><code>TransparencyPass</code>は透明物をG-bufferへ追加せず、既存の不透明depthを使って最前面のentry maskを作ります。entry targetはRGへoctahedral encodeした完全なview-space法線、BへTransmission、Aへlinear view depthを保存します。別のReverse-Z depth付きtargetへback faceだけを描き、Rへexit depth、GBへexit法線のoct encode、AへIORを保存します。octahedral encodeは単位法線のXYZを二成分へ畳み込み、Compute Shader側で前後方向を含む法線へ復元できる形式です。</p>
+<p>Compute Shaderは次の順で二つの境界面と背景までの光線を追跡します。</p>
+<pre><code class="language-text">entryPosition = reconstructViewPosition(entryUV, entryDepth)
+insideDirection = refract(cameraRay, entryNormal, 1 / IOR)
+exitPosition = rayMarchTransparentFrontAndBack(entryPosition, insideDirection)
+outsideDirection = refract(insideDirection, -exitNormal, IOR)
+if totalInternalReflection:
+    reflectedDirection = reflect(insideDirection, exitNormal)
+    exitPosition = rayMarchTransparentFrontAndBack(exitPosition, reflectedDirection)
+    outsideDirection = refract(reflectedDirection, -exitNormal, IOR)
+backgroundPosition = rayMarchOpaqueDepth(exitPosition, outsideDirection)
+opticalDistance = sumOfInternalRaySegments
+transmittance.rgb = attenuationColor.rgb ^ (opticalDistance / attenuationDistance)
+absorbedRefraction.rgb = refractedBackground.rgb × transmittance.rgb
+effectiveTransmission = materialTransmission × passTransmissionStrength
+surfaceAlpha = 1 - effectiveTransmission × (1 - materialSurfaceAlpha)</code></pre>
+<p>entryではcameraから表面へ向かう入射rayとentry法線から、空気から媒質へ進む方向をWGSLの<code>refract()</code>で求めます。内部rayはentry targetのfront surfaceとexit targetのback surfaceを同時に調べ、先に横切った境界区間を5回のbinary searchで絞ります。cameraから見たfront／back分類だけに出口を限定しないため、凹形状の内側や内部reflection後にfront surfaceへ到達する経路も候補になります。</p>
+<p>最初の境界で媒質から空気への<code>refract()</code>が全反射を返した場合は、<code>reflect()</code>で媒質内を進む方向を求め、同じfront／back境界探索をもう一度行います。2つ目の境界で空気へ出られた場合は、その位置から不透明G-buffer depthへ進めて最初の背景surfaceを探します。Beer-Lambert吸収の光路長にはreflection前後の両区間を加えます。背景surfaceがなくrayが画面内の遠方へ向く場合は、その方向をscreen UVへ投影してHDR sceneを読みます。</p>
+<p>画面外や未観測領域へ進み、screen-space情報だけでは背景を決められないrayには、<code>transmissionRayMissFallback</code>を使います。<code>&quot;auto&quot;</code>はHDR環境に元の<code>radiance</code>があればray方向の環境色、なければ<code>renderScene()</code>へ渡した<code>clearColor</code>を選びます。<code>&quot;environment&quot;</code>はHDR radianceを必須にし、不足時はclearColorへ自動変更せず例外にします。<code>&quot;clear&quot;</code>は常にclearColor、<code>&quot;constant&quot;</code>は<code>transmissionRayMissColor</code>で指定した固定色を使います。固定色とclearColorは表示用sRGBで指定し、TransparencyPassがTone Mapping前の線形色へ一度だけ変換します。</p>
+<pre><code class="language-js">pipeline.encode(gpu.commandEncoder, {
+  // ...ほかのeffect設定
+  transparency: {
+    transmissionEnabled: true,
+    transmissionRayMissFallback: &quot;constant&quot;,
+    transmissionRayMissColor: [0.04, 0.06, 0.10, 1.0]
+  }
+});</code></pre>
+<p><code>transmissionRayMissColor</code>は<code>&quot;constant&quot;</code>でだけ受け付けます。色を指定しない<code>&quot;constant&quot;</code>や、ほかのmodeと同時に指定した色は入力の誤りとして停止します。内部境界未発見や2回目の境界でも全反射する場合は外向き方向自体を決められないため、environment modeでも方向を推測せずclearColorを使います。constant modeでは、この場合にも指定固定色を使います。</p>
+<p>正常にhitしたpixelでは、吸収後の屈折色をそのまま背景として使い、同一pixelの未屈折scene色は混ぜません。Transmissionの非透過分は後段PBR Forwardのsurface Alphaへ配分します。Transmission 1.0では指定したSurface Alphaを使い、Transmissionを下げるほどsurface側が不透明へ近づきます。これによりsurface radianceと屈折光の二成分を合成し、正位置の背景がghost像として残ることを防ぎます。</p>
+<p>吸収色は白、吸収距離は無限大が既定値で、この組合せでは透過率が1となり既存材質の色は変わりません。Transmission全体が無効、または個々のmaterialでTransmissionが0なら屈折処理を適用せず、Alpha surfaceとして描画します。処理はTone Mapping前の<code>rgba16float</code>線形HDRで行います。</p>
+<h2>現在の制限</h2>
+<p>これはscreen-spaceの境界面近似です。normal textureはentry屈折法線へ反映されますが、画面外や他の物体に隠れてtargetへ記録されない面の正確な交点、重なった複数体積の正確な対応、多層屈折、色分散は扱いません。背景交点を観測できないrayは選択したenvironment、clearColor、constantで置き換えますが、対応範囲はtargetへ記録された幾何形状です。内部reflectionは1回まで追跡し、2つ目の境界でも全反射する経路には追加bounceを行いません。Beer-Lambert吸収にはreflectionを含むview-space内部光路長を使います。</p>
+<p><code>Ray Debug</code>は通常表示で選択したfallbackとは別の分類表示です。Debugを有効にした場合はfallback色より診断色を優先します。Debugを無効にしてもfront／back両surface探索と1回の内部reflectionは実行されます。紫は初回またはreflection後に次の境界を発見できなかった領域、黄はreflection後の2つ目の境界でも全反射した領域として、追加改善が必要な経路を残します。</p>
+<p>このサンプルではwebgの材質パラメーターでTransmission、IOR、Volume吸収を直接設定します。glTFの<code>KHR_materials_transmission</code>、<code>KHR_materials_ior</code>、<code>KHR_materials_volume</code>の読み込みとAlpha 1の物理Transmission材質は、ここで説明する対応範囲の外です。</p>
+    </article>
+  </main>
+</body>
+</html>

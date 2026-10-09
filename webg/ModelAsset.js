@@ -1,41 +1,58 @@
 // ---------------------------------------------
-//  ModelAsset.js    2026/04/27
+//  ModelAsset.js    2026/09/19
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // ---------------------------------------------
 
+import DocumentAsset from "./DocumentAsset.js";
 import ModelValidator from "./ModelValidator.js";
 import ModelBuilder from "./ModelBuilder.js";
-import formatJSON from "./JsonFormat.js";
 
-export default class ModelAsset {
+export default class ModelAsset extends DocumentAsset {
 
-  // JSON と helper を束ねる高レベル入口を初期化する
-  constructor(data = null) {
-    // 生データ保持、validation、build の窓口を 1 クラスにまとめる
-    this.data = data;
-    this.validator = new ModelValidator();
+  // ModelAsset固有のValidatorを生成し、共通document処理をDocumentAssetへ渡す
+  constructor(data = null, options = {}) {
+    super(data, { ...options, validator: new ModelValidator() });
   }
 
-  // 既存 object から生成する
-  static fromData(data) {
-    return new ModelAsset(data);
+  // 共通DocumentAssetが使うasset名と既存ModelAssetのエラーメッセージを定義する
+  static get assetTypeName() {
+    return "ModelAsset";
   }
 
-  // JSON 文字列から生成する
-  static fromJSON(text) {
-    try {
-      return new ModelAsset(JSON.parse(text));
-    } catch (err) {
-      throw new Error(`Failed to parse ModelAsset JSON: ${err?.message ?? err}`);
-    }
+  // JSON parse失敗時の既存表示を維持する
+  static get jsonParseLabel() {
+    return "ModelAsset JSON";
   }
 
-  // ファイル名や URL から gzip 圧縮された ModelAsset JSON か判定する
-  // Content-Type ではなく拡張子で判定することで、静的 file server ごとの MIME 差を避ける
-  static isGzipSource(source) {
-    const path = String(source ?? "").trim().toLowerCase().split(/[?#]/, 1)[0];
-    return path.endsWith(".json.gz");
+  // YAML parse失敗時の既存表示を維持する
+  static get yamlParseLabel() {
+    return "ModelAsset YAML";
+  }
+
+  // URL取得失敗時の既存表示を維持する
+  static get loadDocumentLabel() {
+    return "ModelAsset";
+  }
+
+  // URL読込後のparse失敗時に、従来の「ModelAsset YAML/JSON」表記を維持する
+  static getLoadParseLabel(url) {
+    return this.isYAMLSource(url) ? "ModelAsset YAML" : "ModelAsset JSON";
+  }
+
+  // 共通DocumentAssetのダウンロード既定値を従来のModelAsset名へ合わせる
+  static get defaultJSONFilename() {
+    return "modelasset.json";
+  }
+
+  // ModelYAMLを保存するときの既定ファイル名を返す
+  static get defaultYAMLFilename() {
+    return "modelasset.yaml";
+  }
+
+  // ModelYAML gzipを保存するときの既定ファイル名を返す
+  static get defaultYAMLGzFilename() {
+    return "modelasset.yaml.gz";
   }
 
   // Compression Streams API の対応状況を、処理の入口で明示的に検査する
@@ -69,54 +86,13 @@ export default class ModelAsset {
     return await new Response(stream).text();
   }
 
-  // gzip 圧縮された ModelAsset JSON Blob から生成する
-  static async fromGzipBlob(blob) {
+  // gzip圧縮されたModelAsset JSON Blobから生成する
+  static async fromGzipBlob(blob, options = {}) {
     try {
-      return ModelAsset.fromJSON(await ModelAsset.decompressGzipBlobToText(blob));
+      return this.fromJSON(await this.decompressGzipBlobToText(blob), options);
     } catch (err) {
       throw new Error(`Failed to parse gzip ModelAsset JSON: ${err?.message ?? err}`);
     }
-  }
-
-  // URL から JSON または .json.gz をロードする
-  static async load(url) {
-    let response;
-    try {
-      response = await fetch(url);
-    } catch (err) {
-      throw new Error(`Failed to load ModelAsset: ${url} (${err?.message ?? err})`);
-    }
-    if (!response.ok) {
-      throw new Error(`Failed to load ModelAsset: ${url} (${response.status} ${response.statusText})`);
-    }
-    if (ModelAsset.isGzipSource(url)) {
-      try {
-        return await ModelAsset.fromGzipBlob(await response.blob());
-      } catch (err) {
-        throw new Error(`Failed to parse gzip ModelAsset JSON: ${url} (${err?.message ?? err})`);
-      }
-    }
-    try {
-      return new ModelAsset(await response.json());
-    } catch (err) {
-      throw new Error(`Failed to parse ModelAsset JSON: ${url} (${err?.message ?? err})`);
-    }
-  }
-
-  // 保持データを差し替える
-  setData(data) {
-    this.data = data;
-    return this;
-  }
-
-  // 保持データを返す
-  getData() {
-    return this.data;
-  }
-
-  // JSON 互換データなので stringify/parse で copy する
-  cloneJSONValue(value) {
-    return JSON.parse(JSON.stringify(value));
   }
 
   // vec3 が連続する配列へ uniform scale を掛ける
@@ -254,43 +230,16 @@ export default class ModelAsset {
     return this;
   }
 
-  // 整形済み JSON 文字列へ変換する
-  toJSONText(indent = 2) {
-    return formatJSON(this.data, indent);
-  }
-
   // 現在の ModelAsset を gzip Blob へ変換する
   // download を伴わない経路でも使えるよう、Blob 生成と保存開始を分離しておく
   async toJSONGzBlob(indent = 2) {
     return await ModelAsset.compressTextToGzipBlob(this.toJSONText(indent));
   }
 
-  // Blob を一時 URL にして browser download を開始する
-  static downloadBlob(blob, filename) {
-    const url = URL.createObjectURL(blob);
-    const anchor = document.createElement("a");
-
-    anchor.href = url;
-    anchor.download = filename;
-    anchor.style.display = "none";
-    document.body.appendChild(anchor);
-    anchor.click();
-    document.body.removeChild(anchor);
-    setTimeout(() => URL.revokeObjectURL(url), 0);
-  }
-
-  // 現在の ModelAsset を JSON ファイルとしてダウンロードする
-  downloadJSON(filename = "modelasset.json", indent = 2) {
-    const text = this.toJSONText(indent);
-    const blob = new Blob([text], { type: "application/json" });
-    ModelAsset.downloadBlob(blob, filename);
-    return text;
-  }
-
   // 現在の ModelAsset を gzip 圧縮済み JSON としてダウンロードする
   // 非同期 API なので、呼び出し側は await し、未対応環境の例外を UI に表示する
-  async downloadJSONGz(filename = "modelasset.json.gz", indent = 2) {
-    const text = this.toJSONText(indent);
+  async downloadJSONGz(filename = "modelasset.json.gz", indent = 2, options = {}) {
+    const text = this.toJSONText(indent, options);
     const blob = await ModelAsset.compressTextToGzipBlob(text);
     ModelAsset.downloadBlob(blob, filename);
     return {

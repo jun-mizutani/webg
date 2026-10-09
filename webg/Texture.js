@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// Texture.js      2026/08/01
+// Texture.js      2026/09/09
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // ---------------------------------------------
@@ -140,6 +140,20 @@ export default class Texture {
     // 既にDCCツール等で生成済みの法線マップを、そのままGPUテクスチャ化する
     // 処理経路は通常テクスチャと同じで、呼び出し側で「用途」を明示するためのAPI
     return this.readImageFromFile(textureFile);
+  }
+
+  // GPUTextureと画像参照を解放し、SceneDefinitionなどの所有者が画像材質の寿命を終えられるようにする
+  destroy() {
+    if (this.texture?.destroy) this.texture.destroy();
+    this.texture = null;
+    this.view = null;
+    this.image = null;
+    this.width = 0;
+    this.height = 0;
+    this.ncol = 0;
+    this.filename = null;
+    this.ready = false;
+    return true;
   }
 
   // `luma/r/g/b/a` 指定を内部チャンネル番号へ解決する

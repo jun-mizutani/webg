@@ -1,5 +1,5 @@
 // ---------------------------------------------------------
-// headless_tests/core/geometry_buffer_pass/headless_probe.js  2026/07/14
+// headless_tests/core/geometry_buffer_pass/headless_probe.js  2026/08/03
 //   headless contracts for GeometryBufferPass
 // ---------------------------------------------------------
 import assert from "node:assert/strict";
@@ -137,10 +137,10 @@ function createGpuProbe() {
     normalSpace: "view"
   });
   await pass.ready;
-  assert.equal(probe.textureDescriptors.length, 6);
+  assert.equal(probe.textureDescriptors.length, 10);
   assert.deepEqual(
-    probe.textureDescriptors.slice(0, 4).map((descriptor) => descriptor.format),
-    ["rgba8unorm-srgb", "depth32float", "rgba8unorm", "rgba8unorm"]
+    probe.textureDescriptors.slice(0, 5).map((descriptor) => descriptor.format),
+    ["rgba8unorm-srgb", "depth32float", "rgba8unorm", "rgba8unorm", "rgba16float"]
   );
   assert.equal(
     probe.textureDescriptors[1].usage,
@@ -151,12 +151,17 @@ function createGpuProbe() {
   assert.equal(resources.depth, resources.color);
   assert.notEqual(resources.normal, resources.color);
   assert.notEqual(resources.material, resources.color);
-  assert.equal(probe.pipelineDescriptors[0].fragment.targets.length, 3);
+  assert.notEqual(resources.emissive, resources.color);
+  assert.equal(probe.pipelineDescriptors[0].fragment.targets.length, 4);
   assert.equal(probe.pipelineDescriptors[0].vertex.buffers.length, 2);
   assert.match(probe.shaderCodes[0], /var linearAlbedo = srgbToLinear\(uniforms\.albedo\.rgb\)/);
-  assert.match(probe.shaderCodes[0], /output\.material = uniforms\.surface/);
+  assert.match(probe.shaderCodes[0], /output\.material = vec4f/);
+  assert.match(probe.shaderCodes[0], /output\.emissive = vec4f/);
   assert.match(probe.shaderCodes[0], /textureSample\(colorTexture/);
-  assert.match(probe.shaderCodes[0], /linearAlbedo \*= srgbToLinear\(textureSrgb\)/);
+  assert.match(probe.shaderCodes[0], /linearAlbedo \*= srgbToLinear\(baseTextureSample\.rgb\)/);
+  assert.match(probe.shaderCodes[0], /uniforms\.alphaParams\.z \* baseTextureSample\.a/);
+  assert.equal(probe.pipelineDescriptors[0].primitive.cullMode, "back");
+  assert.equal(probe.pipelineDescriptors[1].primitive.cullMode, "none");
   assert.match(probe.shaderCodes[0], /skin\.bones/);
   pass.destroy();
 }
@@ -241,7 +246,8 @@ function createGpuProbe() {
   assert.equal(entry.material[4], 0.75);
   assert.equal(entry.material[5], 0.5);
   assert.equal(entry.material[6], 0.25);
-  assert.ok(Math.abs(entry.material[7] - 0.1) < 1e-6);
+  assert.equal(entry.material[7], 1.0);
+  assert.ok(Math.abs(entry.surface.legacyEmissive - 0.1) < 1e-6);
   pass.setMaterial(entry, {
     albedo: [0.8, 0.3, 0.1],
     specular: 0.25,
@@ -304,10 +310,11 @@ function createGpuProbe() {
   assert.ok(Math.abs(first[0].material[0] - 0.3) < 1e-6);
   assert.equal(first[0].material[3], 1.0);
   const surfaceMaterial = Array.from(first[0].surface.material);
-  const expectedSurfaceMaterial = [0.3, 0.5, 0.7, 1.0, 0.85, 0.35, 0.2, 0.1];
+  const expectedSurfaceMaterial = [0.3, 0.5, 0.7, 1.0, 0.85, 0.35, 0.2, 1.0];
   for (let index = 0; index < expectedSurfaceMaterial.length; index++) {
     assert.ok(Math.abs(surfaceMaterial[index] - expectedSurfaceMaterial[index]) < 1e-6);
   }
+  assert.ok(Math.abs(first[0].surface.legacyEmissive - 0.1) < 1e-6);
 
   const cachedBuffer = first[0].uniformBuffer;
   space.nodes = [];
@@ -383,7 +390,7 @@ function createGpuProbe() {
   assert.equal(textured[0].surface.useNormalMap, true);
   assert.equal(textured[0].surface.normalStrength, 0.75);
   const texturedMaterial = Array.from(textured[0].surface.material);
-  const expectedTexturedMaterial = [1, 1, 1, 1, 0.6, 0.4, 0.2, 0];
+  const expectedTexturedMaterial = [1, 1, 1, 1, 0.6, 0.4, 0.2, 1];
   for (let index = 0; index < expectedTexturedMaterial.length; index++) {
     assert.ok(Math.abs(texturedMaterial[index] - expectedTexturedMaterial[index]) < 1e-6);
   }

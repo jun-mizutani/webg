@@ -1,0 +1,357 @@
+{
+  "passed": true,
+  "count": 51,
+  "date": "2026-10-03T09:04:39.720Z",
+  "checks": [
+    {
+      "name": "両方OFFは全HDR画素が一致",
+      "passed": true
+    },
+    {
+      "name": "OFFの専用buffer/textureは0",
+      "passed": true,
+      "value": {
+        "buffers": 0,
+        "textures": 0,
+        "querySets": 0,
+        "logicalBytes": 0,
+        "created": {}
+      }
+    },
+    {
+      "name": "OFF frameは追加GPU資源を生成しない",
+      "passed": true
+    },
+    {
+      "name": "通常照明は17binding",
+      "passed": true
+    },
+    {
+      "name": "floor: 登録面の拡散反射が変わる",
+      "passed": true,
+      "value": {
+        "maximum": 3.617919921875,
+        "pixels": 176492
+      }
+    },
+    {
+      "name": "floor: 対象外に漏れない",
+      "passed": true,
+      "value": {
+        "maximum": 0,
+        "pixels": 514708
+      }
+    },
+    {
+      "name": "sphere: 登録面の拡散反射が変わる",
+      "passed": true,
+      "value": {
+        "maximum": 4.03369140625,
+        "pixels": 9910
+      }
+    },
+    {
+      "name": "sphere: 対象外に漏れない",
+      "passed": true,
+      "value": {
+        "maximum": 0,
+        "pixels": 681290
+      }
+    },
+    {
+      "name": "box: 登録面の拡散反射が変わる",
+      "passed": true,
+      "value": {
+        "maximum": 3.23828125,
+        "pixels": 14384
+      }
+    },
+    {
+      "name": "box: 対象外に漏れない",
+      "passed": true,
+      "value": {
+        "maximum": 0,
+        "pixels": 676816
+      }
+    },
+    {
+      "name": "slope: 登録面の拡散反射が変わる",
+      "passed": true,
+      "value": {
+        "maximum": 3.37255859375,
+        "pixels": 3958
+      }
+    },
+    {
+      "name": "slope: 対象外に漏れない",
+      "passed": true,
+      "value": {
+        "maximum": 0,
+        "pixels": 687242
+      }
+    },
+    {
+      "name": "対象0件は通常PBR",
+      "passed": true
+    },
+    {
+      "name": "Shapeのstrength=0がNode指定より優先",
+      "passed": true
+    },
+    {
+      "name": "停止中の照度画像は再利用",
+      "passed": true
+    },
+    {
+      "name": "通常ComputePassを差し替えない",
+      "passed": true
+    },
+    {
+      "name": "水面だけでもHDRが変わる",
+      "passed": true
+    },
+    {
+      "name": "水面は不透明PBR画像を変更しない",
+      "passed": true
+    },
+    {
+      "name": "水面のHDRは有限",
+      "passed": true
+    },
+    {
+      "name": "後段用の深度に水面が入る",
+      "passed": true,
+      "value": {
+        "changed": 239744
+      }
+    },
+    {
+      "name": "水面深度は不透明面より奥へ後退しない",
+      "passed": true
+    },
+    {
+      "name": "Tone Mapの関数を差し替えない",
+      "passed": true
+    },
+    {
+      "name": "IOR=1・吸収0は元HDRと一致",
+      "passed": true
+    },
+    {
+      "name": "水面反射がPBR環境の強度に応答",
+      "passed": true
+    },
+    {
+      "name": "水面反射がPBR環境の回転に応答",
+      "passed": true
+    },
+    {
+      "name": "水面鏡面が現在の光源色に応答",
+      "passed": true
+    },
+    {
+      "name": "水面鏡面が現在の光源強度に応答",
+      "passed": true
+    },
+    {
+      "name": "RGB吸収係数で水の色を変更できる",
+      "passed": true
+    },
+    {
+      "name": "fog: 水面合成後の画面効果が有効な画像を出力",
+      "passed": true
+    },
+    {
+      "name": "dof: 水面合成後の画面効果が有効な画像を出力",
+      "passed": true
+    },
+    {
+      "name": "bloom: 水面合成後の画面効果が有効な画像を出力",
+      "passed": true
+    },
+    {
+      "name": "edge: 水面合成後の画面効果が有効な画像を出力",
+      "passed": true
+    },
+    {
+      "name": "水面と集光を同時に使える",
+      "passed": true
+    },
+    {
+      "name": "後段用の法線を同じ寸法で生成",
+      "passed": true
+    },
+    {
+      "name": "リサイズに追従",
+      "passed": true
+    },
+    {
+      "name": "OFFで全専用buffer/textureを解放",
+      "passed": true,
+      "value": {
+        "buffers": 0,
+        "textures": 0,
+        "querySets": 0,
+        "logicalBytes": 0,
+        "created": {
+          "createBuffer": 66,
+          "createTexture": 59,
+          "createBindGroupLayout": 18,
+          "createShaderModule": 20,
+          "createComputePipeline": 12,
+          "createBindGroup": 52,
+          "createRenderPipeline": 8,
+          "createQuerySet": 9
+        }
+      }
+    },
+    {
+      "name": "OFFで専用QuerySetも解放",
+      "passed": true
+    },
+    {
+      "name": "OFFで追加variantも解放",
+      "passed": true
+    },
+    {
+      "name": "OFFへ戻ると全HDR画素が一致",
+      "passed": true
+    },
+    {
+      "name": "OFFへ戻ると最終LDR画素も一致",
+      "passed": true
+    },
+    {
+      "name": "手前の透明面は屈折用背景に混ざらない",
+      "passed": true
+    },
+    {
+      "name": "手前の透明面は水面の後に合成する",
+      "passed": true
+    },
+    {
+      "name": "水中の透明面を屈折用背景へ入れる",
+      "passed": true
+    },
+    {
+      "name": "手前の粒子は屈折用背景に混ざらない",
+      "passed": true
+    },
+    {
+      "name": "手前の粒子は水面の後に合成する",
+      "passed": true
+    },
+    {
+      "name": "水中の粒子を屈折用背景へ入れる",
+      "passed": true
+    },
+    {
+      "name": "高品質へ切替",
+      "passed": true
+    },
+    {
+      "name": "切替でreceiver登録が保持される",
+      "passed": true
+    },
+    {
+      "name": "GPU計測値を取得",
+      "passed": true,
+      "value": {
+        "timestampSupported": true,
+        "sampleWindow": 60,
+        "gpu": {
+          "clear": {
+            "latestMs": 0,
+            "averageMs": 0.016384,
+            "medianMs": 0,
+            "minimumMs": 0,
+            "maximumMs": 0.065536,
+            "sampleCount": 8
+          },
+          "trace": {
+            "latestMs": 0.131072,
+            "averageMs": 0.30310400000000004,
+            "medianMs": 0.131072,
+            "minimumMs": 0.131072,
+            "maximumMs": 0.65536,
+            "sampleCount": 8
+          },
+          "resolve": {
+            "latestMs": 0.065536,
+            "averageMs": 0.09830400000000002,
+            "medianMs": 0.065536,
+            "minimumMs": 0,
+            "maximumMs": 0.196608,
+            "sampleCount": 8
+          },
+          "geometry": {
+            "latestMs": null,
+            "averageMs": null,
+            "medianMs": null,
+            "minimumMs": null,
+            "maximumMs": null,
+            "sampleCount": 0
+          },
+          "geometryDepth": {
+            "latestMs": null,
+            "averageMs": null,
+            "medianMs": null,
+            "minimumMs": null,
+            "maximumMs": null,
+            "sampleCount": 0
+          },
+          "surface": {
+            "latestMs": 0.524288,
+            "averageMs": 1.3689742222222223,
+            "medianMs": 0.524288,
+            "minimumMs": 0.524288,
+            "maximumMs": 2.424832,
+            "sampleCount": 9
+          },
+          "depth": {
+            "latestMs": 0.720896,
+            "averageMs": 1.958798222222222,
+            "medianMs": 0.917504,
+            "minimumMs": 0.720896,
+            "maximumMs": 3.866624,
+            "sampleCount": 9
+          }
+        },
+        "cpu": {},
+        "activeGpuNames": [
+          "clear",
+          "trace",
+          "resolve",
+          "surface",
+          "depth"
+        ],
+        "gpuTotalAverageMs": 3.7455644444444447
+      }
+    },
+    {
+      "name": "透明面・粒子の使用後もOFFで全専用資源を解放",
+      "passed": true,
+      "value": {
+        "buffers": 0,
+        "textures": 0,
+        "querySets": 0,
+        "logicalBytes": 0,
+        "created": {
+          "createBuffer": 111,
+          "createTexture": 98,
+          "createBindGroupLayout": 29,
+          "createShaderModule": 34,
+          "createComputePipeline": 20,
+          "createBindGroup": 116,
+          "createRenderPipeline": 14,
+          "createQuerySet": 15
+        }
+      }
+    },
+    {
+      "name": "GPU validation errorなし",
+      "passed": true,
+      "value": null
+    }
+  ]
+}

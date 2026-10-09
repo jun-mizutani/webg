@@ -1,11 +1,11 @@
-サンプル: overlay_panel
+確認ページ: overlay_panel
 
 概要
 - DOM 文字表示 UI を `OverlayPanel` へ集約し、複数の表示形式を同じ基盤で扱えることを確認する unittest です
 - 3D scene の上に複数の panel を重ね、anchor、collapse、pre 表示、scroll、modal、buttons、choices、debug dock 回避の組み合わせを 1 つの app で見比べます
 - 用途ごとに別々の UI class を増やさず、`WebgApp.showOverlayPanel()` と `OverlayPanelPresets` を中心に確認します
 
-このサンプルで使うwebg機能
+使用するwebg機能
 - `WebgApp`: Screen、Input、Message、debug dock、汎用 `OverlayPanel` 管理をまとめて初期化
 - `OverlayPanelPresets`: help などの代表的な option object を `WebgApp` の外で組み立てる
 - `OverlayPanel`: DOM 上の説明、ログ、modal panel、choice button を 1 つの基盤で表示
@@ -31,5 +31,5 @@
 - `[ / ]` または wheel: zoom
 
 補足
-- modal panel 自体は scene を自動停止しません。この unittest では `panel.getState().pauseScene` を読んで、回転を止める側の実装例を示しています
+- scene の一時停止はアプリの更新処理が担当します。このページでは `panel.getState().pauseScene` を読み、回転の更新を切り替えます
 - `Enter` は modal panel の defaultAction に割り当ててあり、panel が focus を持っている間は既定 button が発火します

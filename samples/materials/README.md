@@ -6,9 +6,9 @@
 
 ## 概要
 
-このサンプルは、同じ16個のイコスフィアを標準の`SmoothShader`とDeferred Lightingで切り替えて描き、材質パラメーターの意味と見え方を比較します。同じシーングラフ、カメラ、頂点法線、光源位置を使うため、形状や視点の差ではなく、Phong型とGGX型の照明モデルの差を観察できます。
+このサンプルは、同じ16個のイコスフィアを標準の`SmoothShader`とDeferred Lightingで切り替えて描き、材質パラメーターの意味と見え方を比較します。同じシーングラフ、カメラ、頂点法線、光源位置を使うため、Phong型とGGX型の照明モデルの差を観察できます。
 
-`SmoothShader`は`ambient`、`specular`、`power`を主に使用します。Deferred LightingはG-bufferへ保存した`specular`、`roughness`、`metallic`、`emissive`をGGX反射モデルで評価します。同じ`specular`という名前でも、標準側では白いハイライトの加算強度、Deferred側では非金属F0の0から4%を指定する倍率であり、同じ数値が同じ反射率を意味するわけではありません。
+`SmoothShader`は`ambient`、`specular`、`power`を主に使用します。Deferred LightingはG-bufferへ保存した`specular`、`roughness`、`metallic`、`emissive`をGGX反射モデルで評価します。同じ`specular`という名前でも、標準側では白いハイライトの加算強度、Deferred側では非金属F0の0から4%を指定する倍率であり、指定値は、それぞれの照明モデルの定義に沿って解釈されます。
 
 ## 表示の読み方
 

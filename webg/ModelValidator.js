@@ -389,12 +389,21 @@ export default class ModelValidator {
   }
 
   // node 定義を検証する
-  validateNode(node, path, meshIds, skeletonIds, animationIds) {
+  validateNode(node, path, meshIds, skeletonIds, animationIds, nodeIds) {
     // node は mesh / skeleton / animationBindings と transform を束ね、
     // ModelAsset 内の配置単位として扱う
     if (!node || typeof node !== "object") {
       this.addError(path, "node must be an object");
       return;
+    }
+    // parent は同じ ModelAsset の Node IDを解決し、自己参照を生じない階層として検証する
+    // 親IDの解決結果を編集箇所へ返し、意図したrootと参照ミスを区別する
+    if (node.parent !== undefined && node.parent !== null) {
+      if (typeof node.parent !== "string" || !nodeIds.has(node.parent)) {
+        this.addError(`${path}.parent`, `unknown parent node "${node.parent}"`);
+      } else if (node.parent === node.id) {
+        this.addError(`${path}.parent`, "node parent must not reference itself");
+      }
     }
     // node には中間親ノードのような「mesh を持たない配置ノード」も許可する
     // mesh を持つ場合だけ既知 id であることを確認する
@@ -499,6 +508,7 @@ export default class ModelValidator {
     const meshIds = this.buildIdSet(meshes, "meshes", "mesh");
     const skeletonIds = this.buildIdSet(skeletons, "skeletons", "skeleton");
     const animationIds = this.buildIdSet(animations, "animations", "animation");
+    const nodeIds = this.buildIdSet(nodes, "nodes", "node");
     const skeletonMap = new Map();
 
     // skeleton は animation 検証の前提になるので先に処理する
@@ -531,8 +541,27 @@ export default class ModelValidator {
 
     // 最後に node の参照関係と transform を確認する
     for (let i = 0; i < nodes.length; i++) {
-      this.validateNode(nodes[i], `nodes[${i}]`, meshIds, skeletonIds, animationIds);
+      this.validateNode(nodes[i], `nodes[${i}]`, meshIds, skeletonIds, animationIds, nodeIds);
     }
+
+    // 親をたどる深さ優先探索で循環を検出し、ModelBuilderの親解決を一意にする
+    const nodeById = new Map(nodes.map((node) => [node?.id, node]));
+    const visitState = new Map();
+    const visit = (node, path, stack = []) => {
+      if (!node?.id || !nodeIds.has(node.id)) return;
+      const state = visitState.get(node.id);
+      if (state === "visiting") {
+        this.addError(`${path}.parent`, `node parent cycle: ${[...stack, node.id].join(" -> ")}`);
+        return;
+      }
+      if (state === "visited") return;
+      visitState.set(node.id, "visiting");
+      if (typeof node.parent === "string") {
+        visit(nodeById.get(node.parent), `${path}.parent`, [...stack, node.id]);
+      }
+      visitState.set(node.id, "visited");
+    }
+    for (let i = 0; i < nodes.length; i++) visit(nodes[i], `nodes[${i}]`);
 
     return this.result();
   }

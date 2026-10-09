@@ -1,0 +1,16 @@
+# falling_box
+
+## 目的
+
+200体のBox落下シナリオをCPU版とCompute版で確認します。CPU版は通常の`PhysicsSpace`を使い、Box/Plane接触にはCPUのBox接触処理を適用します。Compute版はコアの`ComputePhysicsSpace`を使います。
+
+## 実行ページ
+
+- `falling_box_cpu.html`: `PhysicsNode`と`PhysicsSpace`によるCPU版
+- `falling_box_compute.html`: GPU BodyStateとWGSL solverによるCompute版
+
+両方とも同じseed、初期配置、姿勢、角速度、重力、床と四壁のPlane、fixed step、solver反復数、sleep条件を使います。Help Panelは起動時に畳まれ、`H`で展開できます。
+
+## 確認内容
+
+200体のBoxが落下し、五つのPlane境界と接触し、衝突後に停止へ向かうことを確認します。同じ初期条件から落下、接触、sleepへ向かう処理全体をCPUコア版とComputeコア版で比較します。

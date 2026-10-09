@@ -675,7 +675,7 @@ function applyExplicitTextureFlagsToRuntimeShapes(modelRuntime) {
     shape.updateMaterial({
       color,
       use_texture: hasTexture ? 1 : 0,
-      // 旧ModelAssetにDeferred Shading用surface値はないため、このviewerの表示材質として明示する
+      // ModelAssetに含まれないDeferred Shading用surface値をviewerの表示材質として明示する
       specular: 0.35,
       roughness: 0.55,
       metallic: 0.0,

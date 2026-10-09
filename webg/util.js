@@ -262,13 +262,12 @@ util.writeFile = function (filename, data) {
   return null;
 };
 
-// 既存コード互換の空行出力ヘルパ
+// 空行を出力するヘルパ
 util.print = function () {
   console.log();
 };
 
-// 既存互換の同期HTTP読み込み
-// 非同期処理へ移行できない古い呼び出しを残すために維持している
+// 同期HTTP読み込みを提供する
 util.readUrlSync = function (filename) {
   const request = new XMLHttpRequest();
   request.open("GET", filename, false);

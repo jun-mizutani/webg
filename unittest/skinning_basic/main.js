@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// unittest/skinning_basic/main.js  2026/07/25
+// unittest/skinning_basic/main.js  2026/10/04
 //   skinning_basic sample
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -27,7 +27,7 @@ const OBJECT_HEAD_DEG = 45.0;
 const ROOT_YAW_DEG = 8.0;
 const CHILD_BEND_DEG = 60.0;
 
-// このインスタンスの初期化段階で、必要な状態と資源を準備して処理を開始する
+// 2ボーンのメッシュと骨の目印を準備し、面と線が同じ変形に追従する様子を表示する
 const start = async ({ screen, gpu, setStatus, setViewportLayout, startLoop, document }) => {
   const shader = new SmoothShader(gpu);
   await shader.init();
@@ -60,7 +60,7 @@ const start = async ({ screen, gpu, setStatus, setViewportLayout, startLoop, doc
   skeleton.showBone(true);
 
   let wireframe = false;
-  // ワイヤーフレームの状態を受け取り、現在の設定と後続処理へ反映する
+  // 対象メッシュの面表示と線表示を切り替え、同じボーン姿勢で比較する
   const setWireframeState = (enabled) => {
     // skinned mesh のまま Shape.setWireframe() を切り替え、
     // Wireframe shader が SmoothShader と同じ bone palette を受け取れることを確認する
@@ -88,10 +88,8 @@ const start = async ({ screen, gpu, setStatus, setViewportLayout, startLoop, doc
   space.scanSkeletons();
 
   startLoop((timeMs) => {
-    // 最小 unittest として「左右へ同量だけ曲がる」ことを見やすくするため、
-    // root / child ともに 0 度中心の正弦波で姿勢を与える
-    // 以前のように片側へ寄った初期角度や一方向の累積回転を使わず、
-    // 正負の曲がり量が対称かどうかをそのまま観察できるようにする
+    // root / child ともに 0 度中心の正弦波で姿勢を与え、
+    // 左右へ同量だけ曲がる動きを確認できるようにする
     const phase = timeMs * BEND_SPEED;
     j0.setAttitude(0.0, Math.sin(phase * 0.7) * ROOT_YAW_DEG, 0.0);
     j1.setAttitude(0.0, 0.0, Math.sin(phase) * CHILD_BEND_DEG);

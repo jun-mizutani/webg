@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// unittest/message/main.js  2026/07/25
+// unittest/message/main.js  2026/10/04
 //   message sample
 //   Text.js and Message.js comparison sample.
 //   Copyright (c) 2026 Jun Mizutani,
@@ -18,7 +18,7 @@ const params = new URLSearchParams(window.location.search);
 const useExternal = params.get("font") !== "builtin";
 const fontFile = "../../webg/font512.png";
 
-// このインスタンスの初期化段階で、必要な状態と資源を準備して処理を開始する
+// TextとMessageを同じフォントで準備し、固定グリッドへの文字更新とHUD配置を比較する
 const start = async ({ screen, gpu, setStatus, startLoop }) => {
   // Text/Message はどちらも内部でフォントテクスチャを使うが、更新方式が異なる
   const text = new Text(gpu, { cols: 80, rows: 25 });
@@ -30,7 +30,7 @@ const start = async ({ screen, gpu, setStatus, startLoop }) => {
     text.charOffset = 0;
     msg.charOffset = 0;
   } else {
-    // 内蔵フォント（既存96字）
+    // 内蔵フォント（96字）
     await text.init();
     await msg.init();
   }

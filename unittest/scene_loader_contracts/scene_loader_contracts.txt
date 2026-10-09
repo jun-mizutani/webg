@@ -2,8 +2,8 @@ scene_loader_contracts
 
 概要
 - `SceneAsset` と `SceneLoader` が、Scene JSON の `physicsSpace` と各 entry の `physics` を読んで、`PhysicsSpace` と `PhysicsNode` を構築できるかを確認するページです。
-- ここでは `PhysicsSpace` 単体の接触式ではなく、「Scene JSON の宣言が validator を通り、runtime の `physicsSpace` と `stepPhysics()` に届くか」を見ることを目的にしています。
-- 画面上では、Scene JSON から作った gray floor と blue crate が表示され、blue crate は起動直後から見える位置で、横移動や回転なしに floor 上面へ向かって落下します。
+- Scene JSON の宣言が validator を通り、runtime の `physicsSpace` と `stepPhysics()` に届く流れを確認します。
+- 画面上では、Scene JSON から作った gray floor と blue crate が表示され、blue crate は起動直後から見える位置で、鉛直方向へ floor 上面へ向かって落下します。
 
 このテストで使う webg 機能
 - `SceneAsset`: Scene JSON の保持、検証、build の入口
@@ -28,5 +28,5 @@ scene_loader_contracts
 
 実装確認の見方
 - `SceneLoader.js`、`SceneValidator.js`、`SceneAsset.js`、`PhysicsSpace.js` の関係を見るときは、この確認ページで Scene JSON から runtime までの流れを追えます。
-- ここで見ているのは Scene JSON からの物理入口です。接触式や query の規約は `unittest/physics_space_contracts` を参照してください。
+- ここで見ているのは Scene JSON からの物理入口です。接触式や query の規約は `headless_tests/core/physics_space/` を参照してください。
 - runtime の `stepPhysics(deltaMs)` を明示的に呼び、Scene JSON から作られた body が物理更新へ届くことを確認します。

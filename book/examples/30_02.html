@@ -1,0 +1,144 @@
+<!doctype html>
+<!-- book/examples/30_02.html 2026/10/04 -->
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>30_02 HDR環境とIBL</title>
+  <link rel="stylesheet" href="./examples_common.css" />
+</head>
+<body>
+  <div class="page">
+    <h1>book/examples</h1>
+    <h2>30_02 HDR環境とIBL</h2>
+    <div class="section-card">
+      <p>高輝度環境から作ったradiance、irradiance、prefiltered specular、BRDF LUTを同じPBR照明へ渡します</p>
+      <p>金属は拡散色ではなく環境の鏡面反射で色と形が見えることを確認します</p>
+      <p id="status" class="note">IBL環境を準備しています</p>
+    </div>
+
+    <div class="canvas-block">
+      <canvas id="canvas" width="960" height="640"></canvas>
+    </div>
+
+    <pre id="code"></pre>
+
+    <script type="module" id="example-source">
+import WebgApp from "../../webg/WebgApp.js";
+import ComputeEffectPipeline from "../../webg/ComputeEffectPipeline.js";
+import FullscreenPass from "../../webg/FullscreenPass.js";
+import PbrEnvironment from "../../webg/PbrEnvironment.js";
+import Primitive from "../../webg/Primitive.js";
+import Shape from "../../webg/Shape.js";
+import { createProceduralEnvironmentData } from "../../webg/ProceduralEnvironment.js";
+
+// 固定キャンバスとカメラを準備し、PBRパイプラインへ描画を接続する
+const app = new WebgApp({
+  document,
+  canvas: document.getElementById("canvas"),
+  autoDrawScene: false,
+  fixedCanvasSize: {
+    width: 960,
+    height: 640,
+    useDevicePixelRatio: false
+  },
+  clearColor: [0.02, 0.025, 0.04, 1],
+  camera: { target: [0, 0, 0], distance: 13, yaw: 8, pitch: -5 }
+});
+let environment = null;
+let pipeline = null;
+let copyPass = null;
+
+// 比較用の球を作り、指定した位置と粗さで金属のPBR材質を設定する
+function addSphere(name, x, roughness) {
+  const shape = new Shape(app.getGPU());
+  shape.applyPrimitiveAsset(Primitive.sphere(1.7, 44, 30, shape.getPrimitiveOptions()));
+  shape.endShape();
+  shape.setMaterial("smooth-shader", {
+    color: [0.96, 0.71, 0.29, 1],
+    specular: 1,
+    roughness,
+    metallic: 1,
+    occlusion: 1,
+    emissive_factor: [0, 0, 0]
+  });
+  const node = app.space.addNode(null, name);
+  node.setPosition(x, 0, 0);
+  node.addShape(shape);
+}
+
+// 環境マップと粗さの異なる金属球を準備し、IBLを使う描画ループを開始する
+async function start() {
+  await app.init();
+  environment = new PbrEnvironment(app.getGPU(), {
+    label: "29-02-environment",
+    ...createProceduralEnvironmentData()
+  });
+  addSphere("smooth-gold", -2.2, 0.08);
+  addSphere("rough-gold", 2.2, 0.65);
+  pipeline = new ComputeEffectPipeline(app.getGPU(), {
+    // 端末のdevicePixelRatioを反映した描画バッファの幅と高さを使い、入力画像と出力先の寸法をそろえます
+    width: app.screen.getWidth(),
+    height: app.screen.getHeight(),
+    // PbrEnvironmentが照明入力として公開するresource集合を渡します
+    lighting: {
+      ambient: 0,
+      environment: environment.getResources(),
+      environmentIntensity: 1,
+      environmentBackground: true,
+      environmentRotationDegrees: 0
+    },
+    composer: { mode: "pbr-ssr" },
+    toneMap: { mode: "reinhard", exposure: 1.2 }
+  });
+  copyPass = new FullscreenPass(app.getGPU());
+  await Promise.all([pipeline.ready, copyPass.init()]);
+  document.getElementById("status").textContent = "左はsmooth、右はrough。どちらも同じ金色の金属です";
+  app.start({
+    // DPR変更やlayout更新後もoffscreen targetとcanvasの描画buffer寸法を一致させます
+    onUpdate: ({ screen }) => pipeline.resize(screen.getWidth(), screen.getHeight()),
+
+    // この例はHDR環境とIBLの比較へ集中するためShadow Map生成を省略します
+    // encode()側もfalseとし、同じframeの描画段階と照明段階で影の有効状態を一致させます
+    onBeforeDraw: ({ cameraFrame }) => pipeline.renderScene(
+      app.space,
+      cameraFrame,
+      app.clearColor,
+      { shadowEnabled: false }
+    ),
+    // 3D描画後に必要な画面効果を順番に記録し、最終カラー画像をキャンバスへ表示する
+    onAfterDraw3d: ({ cameraFrame }) => {
+      const gpu = app.getGPU();
+      gpu.endPass();
+      const output = pipeline.encode(gpu.commandEncoder, {
+        cameraFrame,
+        ssaoEnabled: false,
+        shadowEnabled: false,
+        ssrEnabled: false,
+        bloomEnabled: false
+      });
+      app.screen.beginPresentPass({
+        clearColor: app.clearColor,
+        colorLoadOp: "clear"
+      });
+      copyPass.draw(output);
+      app.screen.clearDepthBuffer();
+    }
+  });
+}
+
+// ページの終了時に、この例が確保したGPUリソースを解放する
+window.addEventListener("pagehide", () => {
+  copyPass?.destroy();
+  pipeline?.destroy();
+  environment?.destroy();
+}, { once: true });
+start();
+    </script>
+    <script>
+      document.getElementById("code").textContent =
+        document.getElementById("example-source").textContent.trim();
+    </script>
+  </div>
+</body>
+</html>

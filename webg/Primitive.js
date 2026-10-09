@@ -1,10 +1,11 @@
 // ---------------------------------------------
-//  Primitive.js     2026/04/16
+//  Primitive.js     2026/08/24
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // ---------------------------------------------
 
 import ModelAsset from "./ModelAsset.js";
+import util from "./util.js";
 
 class GeometryWriter {
   // Primitive 生成用の CPU 側 geometry writer を初期化する
@@ -301,6 +302,72 @@ export default class Primitive {
     );
   }
 
+  // local Y軸上の芯線と、その両端を結ぶ半球からCapsuleを生成する
+  // segmentLengthは球面を含まない芯線の全長で、0の場合は球へ退化する
+  // hemisphereSegmentsは片側の半球を分割する緯度数、longitudeは周方向の分割数
+  static capsule(radius, segmentLength, hemisphereSegments, longitude, options = {}) {
+    const checkedRadius = util.readFiniteNumber(radius, "Primitive.capsule radius", {
+      minExclusive: 0.0
+    });
+    const checkedSegmentLength = util.readFiniteNumber(
+      segmentLength,
+      "Primitive.capsule segmentLength",
+      { min: 0.0 }
+    );
+    const checkedHemisphereSegments = util.readFiniteNumber(
+      hemisphereSegments,
+      "Primitive.capsule hemisphereSegments",
+      { integer: true, min: 1 }
+    );
+    const checkedLongitude = util.readFiniteNumber(
+      longitude,
+      "Primitive.capsule longitude",
+      { integer: true, min: 3 }
+    );
+    if (checkedSegmentLength === 0.0) {
+      // 芯線長0ではprofileに同一点の赤道列を二重生成せず、数学的な球のmeshへ明示的に退化させる
+      return this.sphere(
+        checkedRadius,
+        checkedHemisphereSegments * 2,
+        checkedLongitude,
+        options
+      );
+    }
+
+    const halfSegment = checkedSegmentLength * 0.5;
+    const profile = [];
+    // 上側の極から赤道までを作り、local Y正方向の半球を芯線の上端へ接続する
+    for (let index = 0; index <= checkedHemisphereSegments; index++) {
+      const theta = index * Math.PI * 0.5 / checkedHemisphereSegments;
+      profile.push(
+        index === 0 ? checkedRadius / 10000.0 : checkedRadius * Math.sin(theta),
+        halfSegment + checkedRadius * Math.cos(theta)
+      );
+    }
+    // 赤道の二つのringを結ぶ円筒部を追加する
+    profile.push(checkedRadius, -halfSegment);
+    // 下側の赤道から極までを作り、上側と同じ分割数で滑らかに接続する
+    for (let index = 1; index <= checkedHemisphereSegments; index++) {
+      const theta = Math.PI * 0.5 + index * Math.PI * 0.5 / checkedHemisphereSegments;
+      profile.push(
+        index === checkedHemisphereSegments
+          ? checkedRadius / 10000.0
+          : checkedRadius * Math.sin(theta),
+        -halfSegment + checkedRadius * Math.cos(theta)
+      );
+    }
+    return this.makeAsset(
+      "capsule",
+      this.makeRevolutionGeometry(
+        checkedHemisphereSegments * 2 + 1,
+        checkedLongitude,
+        profile,
+        false,
+        options
+      )
+    );
+  }
+
   // トーラスを生成する
   static donut(radius, radiusTube, latitude, longitude, options = {}) {
     const vertices = [];
@@ -457,6 +524,53 @@ export default class Primitive {
     writer.addPlane([15, 14, 13, 12]);
     writer.addPlane([19, 18, 17, 16]);
     writer.addPlane([23, 22, 21, 20]);
+
+    return this.makeAsset("map_cuboid", writer.toGeometry());
+  }
+
+  // 実寸UV展開付き直方体を生成する
+  static mapRealCuboid(size_x, size_y, size_z) {
+    const writer = new GeometryWriter({ txMode: -1 });
+    const sx = size_x / 2.0;
+    const sy = size_y / 2.0;
+    const sz = size_z / 2.0;
+    // top
+    writer.addVertexUV(-sx,  sy,  sz, 0.0,    0.0    ); // 0
+    writer.addVertexUV( sx,  sy,  sz, size_x, 0.0    ); // 1
+    writer.addVertexUV( sx,  sy, -sz, size_x, size_z ); // 2
+    writer.addVertexUV(-sx,  sy, -sz, 0.0,    size_z ); // 3
+    // bottom
+    writer.addVertexUV(-sx, -sy, -sz, 0.0,    0.0    ); // 4
+    writer.addVertexUV( sx, -sy, -sz, size_x, 0.0    ); // 5
+    writer.addVertexUV( sx, -sy,  sz, size_x, size_z ); // 6
+    writer.addVertexUV(-sx, -sy,  sz, 0.0,    size_z ); // 7
+    // front
+    writer.addVertexUV(-sx, -sy,  sz, 0.0,    0.0    ); // 8
+    writer.addVertexUV( sx, -sy,  sz, size_x, 0.0    ); // 9
+    writer.addVertexUV( sx,  sy,  sz, size_x, size_y ); // 10
+    writer.addVertexUV(-sx,  sy,  sz, 0.0,    size_y ); // 11
+    // right
+    writer.addVertexUV( sx, -sy,  sz, 0.0,    0.0    ); // 12
+    writer.addVertexUV( sx, -sy, -sz, size_z, 0.0    ); // 13
+    writer.addVertexUV( sx,  sy, -sz, size_z, size_y ); // 14
+    writer.addVertexUV( sx,  sy,  sz, 0.0,    size_y ); // 15
+    // back
+    writer.addVertexUV( sx, -sy, -sz, 0.0,    0.0    ); // 16
+    writer.addVertexUV(-sx, -sy, -sz, size_x, 0.0    ); // 17
+    writer.addVertexUV(-sx,  sy, -sz, size_x, size_y ); // 18
+    writer.addVertexUV( sx,  sy, -sz, 0.0,    size_y ); // 19
+    // left
+    writer.addVertexUV(-sx, -sy, -sz, 0.0,    0.0    ); // 20
+    writer.addVertexUV(-sx, -sy,  sz, size_z, 0.0    ); // 21
+    writer.addVertexUV(-sx,  sy,  sz, size_z, size_y ); // 22
+    writer.addVertexUV(-sx,  sy, -sz, 0.0,    size_y ); // 23
+
+    writer.addPlane([0, 1, 2, 3]);
+    writer.addPlane([4, 5, 6, 7]);
+    writer.addPlane([8, 9, 10, 11]);
+    writer.addPlane([12, 13, 14, 15]);
+    writer.addPlane([16, 17, 18, 19]);
+    writer.addPlane([20, 21, 22, 23]);
 
     return this.makeAsset("map_cuboid", writer.toGeometry());
   }

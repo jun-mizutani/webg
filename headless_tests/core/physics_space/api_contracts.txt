@@ -26,7 +26,7 @@
 - 中心から外れた contact が contact point と inertia を使って角速度を生み、`fixedRotation` では角 impulse が入らないことを確認します。
 - plane contact で摩擦により接線方向速度が減ることを確認します。
 - `SphereCollider` が broadphase / narrowphase / query / raycast の既存 dispatch に参加できることを確認します。
-- `CapsuleCollider` が broadphase / narrowphase / query / raycast の既存 dispatch に参加できることを確認します。
+- `CapsuleCollider` が broadphase / narrowphase / query / raycast の既存 dispatch に参加し、local Y軸をquaternionでworld空間へ回転できることを確認します。
 - `getLastContacts()` が直近解決 contact の body、normal、penetration を返すことを確認します。
 - `raycast()` と `raycastAll()` が plane / box / sphere / capsule collider に対して hit を返し、`includeTriggers`、`filter`、`maxDistance`、距離順整列を扱えることを確認します。
 - `queryAabb()` が AABB 対応 collider に対する重なり問い合わせを返し、`includeTriggers`、`filter`、境界一致を扱えることを確認します。

@@ -1,0 +1,1 @@
+Validates the versioned PBR environment cache format, deterministic half-float payload, source and preprocessing metadata, strict corruption rejection, asynchronous loading, shared acquisition, explicit release, eviction, and destruction.

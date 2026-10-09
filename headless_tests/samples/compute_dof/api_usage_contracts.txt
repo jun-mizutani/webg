@@ -8,8 +8,8 @@ CoC metadataを現行API名で接続していることを確認します。
 `samples/opacity`については、DoFを有効にしたときの`blurRadius`が
 `ComputeDofPass`の上限3.0以内であり、旧名`maxBlurMix`ではなく
 現行名`cocScale`を使うことを確認します。
-実行HTMLの`main.js`キャッシュ識別子も検査し、修正前の設定を持つ
-JavaScriptがブラウザキャッシュから再利用される状態を防ぎます。
+実行HTMLが`main.js`本来のURLを使用し、ES Moduleのclassやmodule内状態を
+分断する手動queryを持たないことも確認します。
 
 ## 期待する結果
 

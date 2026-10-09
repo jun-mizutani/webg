@@ -1,18 +1,18 @@
 <!doctype html>
-<!-- webg/book/examples/04_01.html 2026/04/18 -->
+<!-- book/examples/04_01.html 2026/10/04 -->
 <html lang="ja">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>04_01 ローレベルの最小例</title>
-  <link rel="stylesheet" href="./example.css" />
+  <link rel="stylesheet" href="./examples_common.css" />
 </head>
 <body>
   <div class="page">
     <h1>book/examples</h1>
     <h2>04_01 ローレベルの最小例</h2>
     <div class="section-card">
-      <p>`book/04_WebGPUとwebgの最小描画.md` の「4.10 ローレベルの最小例」を、本文中へ埋め込みやすい固定 canvas へ調整した実行ページです</p>
+      <p>`book/04_最小描画.md` の低水準構成を、本文中へ埋め込みやすい固定 canvas へ調整した実行ページです</p>
       <p class="note">`Screen`、`Space`、`Shape`、`SmoothShader`、projection、描画ループの関係をそのまま追えるようにしてあります</p>
     </div>
 
@@ -78,9 +78,15 @@ const node = space.addNode(null, "obj");
 node.addShape(shape);
 
 // 4) clear -> draw -> present の最小ループで表示する
-const loop = () => {
-  node.rotateY(0.8);
-  node.rotateX(0.4);
+// 前回の描画時刻を保持し、requestAnimationFrameの時刻から経過秒数を求める
+let previousTimeMs = null;
+
+// 経過秒数でNodeを回転させ、描画と次のフレームの予約を行う
+const loop = (timeMs = performance.now()) => {
+  const deltaSec = previousTimeMs === null ? 0 : (timeMs - previousTimeMs) / 1000;
+  previousTimeMs = timeMs;
+  node.rotateY(0.8 * deltaSec);
+  node.rotateX(0.4 * deltaSec);
   screen.clear();
   space.draw(eye);
   screen.present();

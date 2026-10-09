@@ -32,7 +32,7 @@
 - ModelLoader は DAE text を読み込み、ColladaShape に parse と正規化を委ねます。
 - ColladaShape は mesh / skeleton / animation / node を ModelAsset 形式へまとめます。
 - その後 ModelBuilder が Shape / Skeleton / Animation / Node を組み立て、サンプルはその build 結果を runtime として扱います。
-- glTF と違って Collada loader 側には static bake 計画はありませんが、最終的な runtime helper は共通の ModelBuilder を通ります。
+- Colladaのruntime helperは共通のModelBuilderを通ります。
 
 ダウンロードした JSON の見方
 - meta.source は Collada、meta.upAxis は Y になっている前提です。
@@ -44,7 +44,7 @@
 ## 確認ポイント
 - COLLADA_FILE で指定した DAE が shape / skeleton / animation へ正しく変換されるかを確認します
 - Help Panel に file / model / orbit / target / anim / clip0 / wireframe 状態が表示され、viewer として必要な状態を画面上で追えることを確認します
-- サンプル内では facade の戻り値 runtime を使い、animationMap 直参照ではなく getAnimation() / getAnimationNames() を使って接続確認できることを確認します
+- サンプル内では facade の戻り値 runtime を使い、getAnimation() / getAnimationNames() を使って接続確認できることを確認します
 - 1 キーで先頭 clip を restartAnimation(clipId) により名前指定で再始動できることを確認します
 - 2 / 3 キーで先頭 clip を pauseAnimation(clipId) / resumeAnimation(clipId) により個別停止・再開できることを確認します
 - カメラ距離がモデルのバウンディングボックスから自動設定され、モデル全体が初期表示で見切れないことを確認します
@@ -55,7 +55,7 @@
 - Help Panel は現在値と操作説明、CommandPalette は設定変更と実行操作という役割で読めることを確認します
 - Blender export 時の up-axis 設定が Y-up でない DAE は loader の想定外とし、その場合の向きずれは asset 側の問題として扱います
 
-AI / 利用者向けの読み取りポイント
+読み取りポイント
 - 「読み込みは成功したが clip が見えない」ときは、animations[] と nodes[].animationBindings を先に見ます。
 - 「skeleton はあるのに動かない」ときは、skeletons[].jointOrder と animations[].tracks[].joint の対応を見ます。
 - 「どの node が元 DAE のどの mesh か分からない」ときは、nodes[].colladaMeshIndex を使います。

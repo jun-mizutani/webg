@@ -1,18 +1,18 @@
 <!doctype html>
-<!-- webg/book/examples/04_02.html 2026/04/24 -->
+<!-- book/examples/04_02.html 2026/10/04 -->
 <html lang="ja">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>04_02 WebgApp の標準例</title>
-  <link rel="stylesheet" href="./example.css" />
+  <link rel="stylesheet" href="./examples_common.css" />
 </head>
 <body>
   <div class="page">
     <h1>book/examples</h1>
     <h2>04_02 WebgApp の標準例</h2>
     <div class="section-card">
-      <p>`book/04_WebGPUとwebgの最小描画.md` の「4.11 `WebgApp` の標準例」を、埋め込み教材ページ向けに固定 canvas 化した実行ページです</p>
+      <p>04章「最小描画」のWebgAppによる立方体表示を、固定サイズのキャンバスで確認する実行ページです</p>
       <p class="note">ドラッグで orbit、ホイールで zoom、左上の help panel と status lines も一緒に確認できます</p>
     </div>
 
@@ -93,9 +93,12 @@ app.message.setLines("status", [
 });
 
 app.start({
+  // 描画の前に立方体の姿勢を更新する
+  // deltaSecを毎秒の回転角度へ掛け、画面の更新頻度に合わせて進める
+  // 本文の最小例と同じ速度でY軸とX軸の回転を加える
   onUpdate: ({ deltaSec }) => {
-    obj.rotateY(0.8);
-    obj.rotateX(0.4);
+    obj.rotateY(0.8 * deltaSec);
+    obj.rotateX(0.4 * deltaSec);
   }
 });
     </script>

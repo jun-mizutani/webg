@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>webg Texture Catalog</title>
+  <link rel="icon" href="data:," />
+  <!-- 2026/08/15 -->
+  <style>
+    [hidden] { display: none !important; }
+    .map-caption { position: absolute; bottom: 8px; left: 18px; margin: 0; font-size: 11px; color: #b9deef; pointer-events: none; }
+    :root { color-scheme: dark; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Hiragino Sans", sans-serif; background: #081018; color: #edf4f8; }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; min-height: 100%; background: radial-gradient(circle at 24% 8%, #17354a 0, #081018 38%); }
+    body { padding: 16px; }
+    .layout { display: grid; grid-template-columns: minmax(720px, 1fr) 390px; gap: 16px; max-width: 1440px; margin: 0 auto; }
+    .stage { position: sticky; top: 16px; height: min(760px, calc(100vh - 32px)); min-height: 620px; overflow: hidden; border: 1px solid #31536a; border-radius: 12px; background: #101b24; }
+    #canvas { display: block; width: 100%; height: 100%; }
+    .panel { border: 1px solid #31536a; border-radius: 12px; background: rgba(13, 25, 34, 0.96); padding: 16px; }
+    h1 { margin: 0 0 4px; font-size: 21px; }
+    .lead, .status { color: #a9bbc8; font-size: 12px; line-height: 1.55; }
+    .group { margin-top: 15px; padding-top: 14px; border-top: 1px solid #294352; }
+    .group h2 { margin: 0 0 9px; font-size: 13px; color: #b9deef; }
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    label { display: grid; gap: 4px; font-size: 10px; color: #91a9b8; }
+    label.wide { grid-column: 1 / -1; }
+    input, select, textarea, button { width: 100%; border: 1px solid #3b5c70; border-radius: 6px; background: #0b151d; color: #eef7fb; font: inherit; }
+    input, select, button { height: 32px; padding: 0 8px; }
+    input[type="color"] { padding: 3px; }
+    textarea { min-height: 250px; padding: 9px; resize: vertical; font: 10px/1.45 ui-monospace, SFMono-Regular, Menlo, monospace; }
+    .buttons { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+    button { cursor: pointer; background: #173448; }
+    button.primary { background: #1d6686; border-color: #3aa1c8; font-weight: 700; }
+    button:hover { filter: brightness(1.14); }
+    .status strong { color: #edf7fb; }
+    .info { color: #bfe8c4; white-space: pre-wrap; }
+    .error { color: #ff9f9f; white-space: pre-wrap; }
+    @media (max-width: 1100px) { .layout { grid-template-columns: 1fr; } .stage { position: relative; top: 0; height: 680px; } }
+  </style>
+</head>
+<body>
+  <main class="layout">
+    <section class="stage" aria-label="Procedural texture preview">
+      <canvas id="canvas" width="960" height="720"></canvas>
+      <p class="map-caption">左から Color ／ Height（低い→高い）／ Normal</p>
+    </section>
+    <aside class="panel">
+      <h1>Texture Catalog</h1>
+      <p class="lead">コアpresetを選択・編集し、変更を自動でShape previewへ反映します。Generate: Gで再生成</p>
+
+      <section class="group grid">
+        <label>Category<select id="category"></select></label>
+        <label>Preset<select id="preset"></select></label>
+        <div class="status wide"><strong id="presetLabel">—</strong><br><span id="presetId">—</span></div>
+      </section>
+
+      <section class="group grid">
+        <h2 class="wide">Definition metadata</h2>
+        <label class="wide">Material ID<input id="definitionId" type="text" autocomplete="off" /></label>
+        <label>Category<input id="definitionCategory" type="text" autocomplete="off" /></label>
+        <label>Tile preset ID<input id="tilePresetId" type="text" autocomplete="off" /></label>
+        <label>Label (ja)<input id="labelJa" type="text" autocomplete="off" /></label>
+        <label>Label (en)<input id="labelEn" type="text" autocomplete="off" /></label>
+      </section>
+
+      <section class="group grid">
+        <h2 class="wide">Color and joint</h2>
+        <label>Pixels per meter<input id="pixelsPerMeter" type="number" step="1" min="1" max="2048" /></label>
+        <label>Base color<input id="baseColor" type="color" /></label>
+        <label>Tile color variation<input id="unitVariation" type="number" step="0.005" min="0" max="0.25" /></label>
+        <label>Dirt color<input id="dirtColor" type="color" /></label>
+        <label>Dirt amount<input id="dirtAmount" type="number" step="0.005" min="0" max="1" /></label>
+        <label>Joint color<input id="jointColor" type="color" /></label>
+        <label>Long size m<input id="longSize" type="number" step="0.005" min="0.005" /></label>
+        <label>Short size m<input id="shortSize" type="number" step="0.005" min="0.005" /></label>
+        <label>Thickness mode<select id="thicknessMode"><option value="null">not specified</option><option value="value">specified</option></select></label>
+        <label>Thickness m<input id="thicknessSize" type="number" step="0.005" min="0.005" /></label>
+        <label>Joint width m<input id="jointWidth" type="number" step="0.005" min="0" /></label>
+        <label>Joint depth m<input id="jointDepth" type="number" step="0.0001" min="0" /></label>
+        <label>Joint edge round m<input id="edgeRound" type="number" step="0.0001" min="0" /></label>
+      </section>
+
+      <section class="group grid">
+        <h2 class="wide">Layout and pattern</h2>
+        <label>Long axis<select id="longAxis"><option value="u">u</option><option value="v">v</option></select></label>
+        <label>Layout<select id="layoutMode"><option value="stack">stack</option><option value="running-bond">running-bond</option></select></label>
+        <label>Row offset<select id="rowOffset"><option value="0">0</option><option value="0.5">1/2</option><option value="0.3333333333333333">1/3</option><option value="0.25">1/4</option></select></label>
+        <label>Variation columns<input id="longUnitCount" type="number" step="1" min="1" max="64" /></label>
+        <label>Variation rows<input id="rowCount" type="number" step="1" min="1" max="64" /></label>
+        <label class="wide">Pattern<select id="patternMode"></select></label>
+        <label>Pattern scale m<input id="patternScale" type="number" step="0.0025" min="0.0025" /></label>
+        <label>Color amount<input id="patternColor" type="number" step="0.005" min="0" max="0.25" /></label>
+        <label>Pattern height m<input id="patternHeight" type="number" step="0.00001" min="0" /></label>
+        <label>Surface detail scale m<input id="surfaceScale" type="number" step="0.0025" min="0.0025" /></label>
+        <label>Surface noise height m<input id="surfaceHeight" type="number" step="0.00001" min="0" /></label>
+        <label class="wide">Random seed<input id="randomSeed" type="number" step="1" min="0" max="2147483647" /></label>
+      </section>
+
+      <section class="group grid" id="pebbleControls" hidden>
+        <h2 class="wide">石粒の形と隙間の砂利</h2>
+        <label>粒の密度<input id="pebbleDensity" type="number" step="0.05" min="0" max="1" /></label>
+        <label>敷き詰め（0: 疎、1: 密）<input id="pebblePacking" type="number" step="0.05" min="0" max="1" /></label>
+        <label>配置の乱雑さ<input id="pebbleIrregularity" type="number" step="0.05" min="0" max="1" /></label>
+        <label>丸み（0: 平頂、1: 丸い上面）<input id="pebbleRoundness" type="number" step="0.05" min="0" max="1" /></label>
+        <label>隙間の砂利の量<input id="gravelAmount" type="number" step="0.05" min="0" max="1" /></label>
+        <label>砂利の配置尺度 m<input id="gravelScale" type="number" step="0.0025" min="0.0025" /></label>
+        <label>砂利の高さ m<input id="gravelHeight" type="number" step="0.00001" min="0" /></label>
+        <label>砂利の色の濃淡<input id="gravelColor" type="number" step="0.005" min="0" max="0.25" /></label>
+        <p class="status wide">Color amountは色の濃淡、Pattern heightは粒の高さ。暗い石も上向きに盛り上がります。Height／Normalによる表現で、立方体の輪郭は変位しません。</p>
+      </section>
+
+      <section class="group grid">
+        <h2 class="wide">PBR appearance</h2>
+        <label>Roughness<input id="roughness" type="number" step="0.01" min="0" max="1" /></label>
+        <label>Specular<input id="specular" type="number" step="0.01" min="0" max="1" /></label>
+        <label>Metallic<input id="metallic" type="number" step="0.01" min="0" max="1" /></label>
+        <label>Normal strength<input id="normalStrength" type="number" step="0.05" min="0" max="8" /></label>
+      </section>
+
+      <section class="group buttons">
+        <button id="apply" class="primary">Generate</button>
+        <button id="reset">Reset preset</button>
+        <button id="importJson">Import JSON</button>
+        <input id="importJsonFile" type="file" accept="application/json,.json" hidden />
+        <button id="copy">Copy Code</button>
+        <button id="downloadJs">Download JS</button>
+        <button id="downloadJson">Download JSON</button>
+      </section>
+
+      <section class="group grid">
+        <h2 class="wide">Texture images</h2>
+        <label class="wide">Format<select id="imageFormat"><option value="png">PNG (lossless)</option><option value="jpeg">JPEG (quality 92%)</option></select></label>
+        <button id="downloadColorImage">Download Color</button>
+        <button id="downloadHeightImage">Download Height</button>
+        <button id="downloadNormalImage">Download Normal</button>
+        <p class="status wide">Height／Normal mapを材質へ再利用する場合はPNGを選択してください</p>
+      </section>
+
+      <section class="group">
+        <h2>Complete definition</h2>
+        <textarea id="code" readonly spellcheck="false"></textarea>
+        <p class="status">Map: <span id="mapSize">—</span> · Tile: <span id="tileSize">—</span></p>
+        <p class="status">Height range: <span id="heightRange">—</span></p>
+        <p id="info" class="status info"></p>
+        <p id="error" class="status error"></p>
+      </section>
+    </aside>
+  </main>
+  <script type="module" src="./main.js"></script>
+</body>
+</html>

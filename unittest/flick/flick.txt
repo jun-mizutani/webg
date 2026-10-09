@@ -1,8 +1,8 @@
-サンプル: flick
+確認ページ: flick
 
 概要
 - `Touch.attachSurface()` の flick / long press / double tap を、モバイル向け編集操作へ変換する unittest です。
-- `samples/webgmodeler` の UI を移植するのではなく、スマホやタブレットで使う入力プロファイルを検証するための小さな 2D 編集 canvas として作っています。
+- 小さな2D編集canvasで、スマホやタブレット向けのgesture入力を確認します。
 - tap は頂点選択または追加、double tap は Object / Edit mode 切り替え、long press は command palette、flick は tool 切り替えや duplicate / delete に割り当てています。
 
 この unittest で使うwebg機能
@@ -26,4 +26,4 @@
 
 補足
 - desktop でも確認しやすいように `touchOnly: false` で mouse pointer も受け付けます。
-- 本格的なモデラー UI ではなく、webg core の gesture 入力を確認するための POC です。
+- 編集操作を通して、webgのgesture通知と画面更新の対応を確認します。利用例は`samples/mmodeler`を参照してください。

@@ -1,0 +1,119 @@
+<!doctype html>
+<!-- samples/karakuri/karakuri_maker.html 2026/09/23 -->
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Karakuri Maker</title>
+  <link rel="icon" href="data:," />
+  <link rel="stylesheet" href="./karakuri.css?v=20260911r27" />
+</head>
+<body>
+  <main class="page kk-maker-page">
+    <section class="kk-workbench" aria-label="からくり工作台">
+      <div class="kk-workbench-head kk-controls">
+        <div class="kk-header-actions">
+          <button class="button" id="undo" type="button" data-i18n="undo">ひとつ もどす</button>
+          <button class="button green kk-play-button" id="try" type="button" data-i18n="try">ためす</button>
+        </div>
+        <div class="kk-run-actions">
+          <button class="button" id="pause" type="button" data-i18n="pause" hidden>とめる</button>
+          <button class="button" id="restart" type="button" data-i18n="restart" hidden>はじめから</button>
+          <button class="button" id="back-edit" type="button" data-i18n="backEdit" hidden>なおす</button>
+        </div>
+      </div>
+
+      <div class="kk-stage-wrap">
+        <div class="canvas-host maker-3d-host kk-stage" id="preview-3d-host" data-webg-embedded-canvas-host="1">
+          <canvas id="canvas" width="960" height="640" aria-label="からくり工作台の3D表示"></canvas>
+          <div class="speed-overlay" id="speed-controls" aria-label="再生速度"></div>
+          <div class="placement-marker placement-marker-3d" id="placement-marker-3d" data-i18n="marker" aria-hidden="true" hidden></div>
+          <div class="kk-ramp-guide" id="ramp-guide" aria-live="polite" hidden><span aria-hidden="true">↥</span> <span data-i18n="rampGuide">つみきの上に置こう</span></div>
+          <div class="kk-stage-message" id="stage-message" aria-live="polite" data-i18n="stageHint">下のぶひんをえらんで、画面の おきたい場所をおしてね。</div>
+        </div>
+        <!-- 互換用の2D編集面。通常の子ども向け画面では表示しません。 -->
+        <div class="mini-preview" id="mini-preview" hidden>
+          <div class="placement-marker" id="placement-marker" data-i18n="marker" hidden>ここに置く</div>
+        </div>
+      </div>
+
+      <div class="kk-selection" id="selection-panel" hidden>
+        <span class="kk-selection-name" id="selected-name"></span>
+        <span class="kk-selection-help" data-i18n="selectionHint">つかんでうごかせるよ</span>
+        <button class="button" id="turn-left" type="button" data-i18n="tiltLeft">↶ ひだり</button>
+        <button class="button" id="turn-right" type="button" data-i18n="tiltRight">↷ みぎ</button>
+        <button class="button" id="duplicate-selected" type="button" data-i18n="duplicate">もうひとつ</button>
+        <button class="button danger" id="delete-selected" type="button" data-i18n="remove">はずす</button>
+      </div>
+      <p class="kk-empty" id="selection-empty" data-i18n="noSelection" hidden>部品をおすと、えらべるよ。</p>
+
+      <div class="kk-shelf" aria-label="ぶひん棚">
+        <button class="kk-part" id="add-sphere" type="button" data-part="sphere">
+          <span class="kk-part-icon kk-ball-icon" aria-hidden="true">●</span><span data-i18n="partBall">ボール</span>
+        </button>
+        <button class="kk-part" id="add-ramp" type="button" data-part="ramp">
+          <span class="kk-part-icon kk-ramp-icon" aria-hidden="true">╱</span><span data-i18n="partRamp">さか</span>
+        </button>
+        <button class="kk-part" id="add-box" type="button" data-part="box">
+          <span class="kk-part-icon kk-box-icon" aria-hidden="true">■</span><span data-i18n="partBlock">つみき</span>
+        </button>
+        <button class="kk-part" id="add-domino" type="button" data-part="domino">
+          <span class="kk-part-icon kk-domino-icon" aria-hidden="true">▮</span><span data-i18n="partDomino">ドミノ 6こ</span>
+        </button>
+        <button class="kk-part" id="add-goal" type="button" data-part="goal">
+          <span class="kk-part-icon kk-goal-icon" aria-hidden="true">◎</span><span data-i18n="partGoal">ゴール</span>
+        </button>
+      </div>
+      <p class="kk-hint" id="work-hint" data-i18n="stageHint">下のぶひんをえらんで、画面の おきたい場所をおしてね。</p>
+      <p class="kk-result" id="play-result" aria-live="polite"></p>
+    </section>
+
+    <details class="kk-adult-settings" id="adult-settings">
+      <summary data-i18n="adultSettings">おとなの設定</summary>
+      <div class="kk-adult-body">
+        <nav class="top-links kk-file-actions">
+          <a class="button" data-i18n="home" href="./">からくりホーム</a>
+          <button class="button" id="language" type="button" data-i18n="language">English</button>
+          <label class="button" for="scene-file" data-i18n="upload">作品をひらく</label>
+          <input class="file-input" id="scene-file" type="file" accept=".yaml,.yml,.gz" />
+          <button class="button primary" id="download" type="button" data-i18n="download">作品を保存</button>
+          <button class="button" id="download-gzip" type="button" data-i18n="downloadGzip">小さく保存</button>
+          <button class="button" id="reset-scene" type="button" data-i18n="resetScene">初期配置に戻す</button>
+        </nav>
+        <button class="button" id="add-emitter" type="button" data-i18n="partLauncher">ボールをだす設定を追加</button>
+        <button class="button details-button" id="toggle-details" type="button" data-i18n="details" hidden>くわしく設定</button>
+        <section class="kk-technical-editor" id="editor" hidden>
+          <h2 data-i18n="technicalEditor">部品の詳しい設定</h2>
+          <div class="form-grid">
+            <label class="field wide"><span data-i18n="idLabel">名前</span><input id="object-id" type="text" /></label>
+            <label class="field"><span data-i18n="shapeLabel">かたち</span><select id="object-shape"><option value="box" data-i18n="shapeBox">つみき</option><option value="sphere" data-i18n="shapeSphere">ボール</option><option value="capsule" data-i18n="shapeCapsule">カプセル</option></select></label>
+            <label class="field"><span data-i18n="material">見た目</span><select id="object-material"></select></label>
+            <label class="field"><span data-i18n="physics">動き方</span><select id="object-body"><option value="display" data-i18n="displayOnly">見た目だけ</option><option value="static" data-i18n="static">固定</option><option value="kinematic" data-i18n="kinematic">操作で動く</option><option value="dynamic" data-i18n="dynamic">落ちて動く</option></select></label>
+            <label class="field wide" data-i18n="position">場所 X / Y / Z</label>
+            <label class="field">X<input id="position-x" type="number" step="0.01" /></label>
+            <label class="field">Y<input id="position-y" type="number" step="0.01" /></label>
+            <label class="field">Z<input id="position-z" type="number" step="0.01" /></label>
+            <label class="field"><span data-i18n="color">色</span><input id="material-color" type="color" /></label>
+            <label class="field"><span data-i18n="roughness">つや</span><input id="material-roughness" type="number" min="0" max="1" step="0.01" /></label>
+            <label class="field"><span data-i18n="mass">重さ</span><input id="body-mass" type="number" min="0.01" step="0.01" /></label>
+          </div>
+        </section>
+        <section id="emitter-editor" hidden>
+          <h2 data-i18n="emitter">ボールをだす設定</h2>
+          <div class="form-grid">
+            <label class="field wide" data-i18n="emitterPosition">出す場所 X / Y / Z</label>
+            <label class="field">X<input id="emitter-position-x" type="number" step="0.01" /></label>
+            <label class="field">Y<input id="emitter-position-y" type="number" step="0.01" /></label>
+            <label class="field">Z<input id="emitter-position-z" type="number" step="0.01" /></label>
+            <label class="field"><span data-i18n="emitterInterval">出る間隔（秒）</span><input id="emitter-interval" type="number" min="0.1" step="0.1" /></label>
+            <label class="field"><span data-i18n="emitterMax">画面に出す数</span><input id="emitter-max" type="number" min="1" step="1" /></label>
+          </div>
+          <button class="button" id="close-emitter-details" type="button" data-i18n="closeDetails">設定を閉じる</button>
+        </section>
+      </div>
+    </details>
+    <pre class="status kk-status" id="status" aria-live="polite">読み込み中です…</pre>
+  </main>
+<script type="module" src="./karakuri_maker.js"></script>
+</body>
+</html>

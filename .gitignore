@@ -4,7 +4,7 @@ __MACOSX/
 .AppleDouble
 .LSOverride
 Icon[]
-user/
+# user/
 tools/
 inside_*.txt
 inside_*.md

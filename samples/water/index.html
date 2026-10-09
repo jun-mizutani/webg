@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>water</title>
+  <link rel="icon" href="data:," />
+  <!-- 2026/10/03: READMEから生成 -->
+  <style>
+
+:root {
+  color-scheme: light;
+  --bg: #eef3f8;
+  --paper: rgba(255, 255, 255, 0.94);
+  --line: #c8d5e4;
+  --ink: #17324a;
+  --muted: #5c748b;
+  --accent: #1566ab;
+  --accent-soft: #dfeefe;
+  --code-bg: #f3f7fb;
+  --shadow: rgba(29, 52, 79, 0.10);
+}
+* { box-sizing: border-box; }
+html, body {
+  margin: 0;
+  min-height: 100%;
+}
+body {
+  background:
+    radial-gradient(circle at top left, rgba(21, 102, 171, 0.12), transparent 24%),
+    radial-gradient(circle at top right, rgba(255, 191, 118, 0.10), transparent 22%),
+    linear-gradient(180deg, #f8fbfd 0%, var(--bg) 100%);
+  color: var(--ink);
+  font: 16px/1.78 "Avenir Next", "Hiragino Sans", "Yu Gothic", sans-serif;
+}
+.page {
+  width: min(1080px, calc(100% - 28px));
+  margin: 0 auto;
+  padding: 24px 0 56px;
+}
+.hero,
+.doc {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  box-shadow: 0 22px 52px var(--shadow);
+}
+.hero {
+  padding: 22px 24px;
+  margin-bottom: 18px;
+}
+.hero h1 {
+  margin: 0 0 8px;
+  font-size: clamp(2rem, 4vw, 3rem);
+  line-height: 1.08;
+}
+.hero p {
+  margin: 0;
+  color: var(--muted);
+}
+.doc {
+  padding: 28px;
+}
+.doc > :first-child {
+  margin-top: 0;
+}
+h1, h2, h3, h4, h5, h6 {
+  line-height: 1.25;
+  margin: 1.45em 0 0.55em;
+}
+h1 {
+  font-size: 2.2rem;
+}
+h2 {
+  padding-bottom: 0.28em;
+  border-bottom: 1px solid var(--line);
+  font-size: 1.48rem;
+}
+h3 {
+  font-size: 1.14rem;
+}
+p, ul, ol, table, pre, blockquote {
+  margin: 0 0 1em;
+}
+ul, ol {
+  padding-left: 1.4em;
+}
+li + li {
+  margin-top: 0.26em;
+}
+a {
+  color: var(--accent);
+  text-decoration: none;
+}
+a:hover {
+  text-decoration: underline;
+}
+img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  border-radius: 16px;
+  border: 1px solid var(--line);
+  box-shadow: 0 12px 32px rgba(29, 52, 79, 0.08);
+  margin: 1.1em 0 1.4em;
+}
+code {
+  padding: 0.12em 0.38em;
+  border-radius: 0.45em;
+  background: var(--code-bg);
+  border: 1px solid #dbe6f1;
+  font: 0.92em/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+pre {
+  padding: 14px 16px;
+  overflow-x: auto;
+  border-radius: 14px;
+  background: #0f1720;
+  color: #ecf5ff;
+}
+pre code {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #ffffff;
+}
+th, td {
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  text-align: left;
+  vertical-align: top;
+}
+th {
+  background: #f5f9fc;
+}
+hr {
+  border: 0;
+  border-top: 1px solid var(--line);
+  margin: 1.5em 0;
+}
+blockquote {
+  padding: 0.3em 0 0.3em 1em;
+  border-left: 4px solid #c9dbef;
+  color: var(--muted);
+}
+@media (max-width: 720px) {
+  .page {
+    width: min(100% - 18px, 1080px);
+    padding-top: 16px;
+  }
+  .hero,
+  .doc {
+    border-radius: 18px;
+  }
+  .doc {
+    padding: 20px;
+  }
+}
+
+  </style>
+</head>
+<body>
+  <main class="page">
+    <section class="hero">
+      <h1>water</h1>
+    </section>
+    <article class="doc">
+<h1>water — PBRの水面とコースティクス</h1>
+<p><a href="index.en.html">English</a> | 日本語</p>
+<p><img src="preview.jpg" alt="PBRの水面と集光"></p>
+<h2>概要</h2>
+<p>球・箱・斜面と石砂利の底へコースティクスを設定し、同じ波の水面を表示する小さな統合例です。<code>WaterBody</code>は水域・波・吸収・受光対象を保持し、<code>ComputeEffectPipeline.setWater()</code>がGPU資源と描画順を管理します。シェーダーの置換や描画関数の差し替えは不要です。</p>
+<h2>実行と操作</h2>
+<p>WebGPU対応ブラウザで<a href="water.html">water.html</a>を開きます。リポジトリ全体をHTTPで配信し、localhostまたはHTTPSを使います。</p>
+<ol>
+<li>「コースティクスを使う」と「水面を表示する」を個別にONにします。</li>
+<li>受光対象のチェックを外し、その物体の集光だけが消えることを確認します。</li>
+<li>「波を動かす」、球の高さ、品質を変更します。ドラッグで視点を回し、ホイールで拡大できます。</li>
+<li>検証ボタンでGPU画像を比較します。描画中の自動readbackはありません。</li>
+</ol>
+<p>初期状態は両方OFF、時刻1.5秒で停止です。水面を表示しなくても集光を使えます。青空は既存の<code>ProceduralEnvironment</code>で生成し、PBRの環境光と水面反射へ同じ前処理済み環境を渡しています。</p>
+<h2>最小の接続</h2>
+<p>通常のPBRシーンを先に用意します。集光は垂直なdirectional lightを使用します。低水準pipelineなら、生成時に<code>lightDirection: [0, -1, 0]</code>と<code>shadow: { directional: { up: [0, 0, 1] } }</code>を指定します。<code>PbrRenderer</code>では同じ設定を<code>pipeline</code>オプションに入れます。</p>
+<pre><code class="language-js">import WaterBody from &quot;../../webg/WaterBody.js&quot;;
+
+const water = new WaterBody({
+  origin: [0, 0, 0],   // 照度を投影する基準面の中心。ワールド座標、m
+  width: 8, depth: 8,  // 表示・受光する水域のXZ寸法、m
+  extent: 20,          // 光線計算の正方形領域。水域より広く取る
+  surfaceHeight: 2,    // 平均水面のワールドY、m
+  amplitude: 0.15,     // 全成分を合成した波高の上界、m
+  waveMix: [1, 0.4, 0.2], // 交差波・うねり・さざ波の相対強度
+  absorption: [0.09, 0.035, 0.025] // RGBの吸収係数、1/m
+});
+water.addReceiver(floorShape);
+water.addReceiver(objectNode, { children: true, strength: 0.7 });
+
+// 切替中はframe生成を止める。必要なGPU資源・shaderの準備完了を待つ。
+await pipeline.setWater(water, {
+  surfaceEnabled: true,
+  causticsEnabled: true,
+  quality: &quot;low&quot;
+});
+
+// frameごとに時刻だけ更新し、通常のrenderScene → encodeを使う。
+water.setTime(timeMs / 1000);
+</code></pre>
+<p><code>PbrRenderer</code>にも同じ<code>setWater(water, options)</code>と<code>getWaterStats()</code>があります。<code>webg/app/index.js</code>から<code>WaterBody</code>をimportすることもできます。水域は現在一つです。</p>
+<h2>変更、対象の解除、OFF</h2>
+<pre><code class="language-js">// 高さ・波・色を変更する場合は再接続不要。次のframeで反映する。
+water.setOptions({ waveMix: [0.4, 1, 0.3], speed: 0.8 });
+water.setOptions({ absorption: [0.07, 0.015, 0.07] }); // 緑系
+
+// Shapeの指定はNodeより優先。強度0でそのShapeだけ除外する。
+water.addReceiver(objectShape, { strength: 0 });
+water.removeReceiver(objectNode);
+
+await pipeline.setWater(water, {
+  surfaceEnabled: false,
+  causticsEnabled: true,
+  quality: &quot;high&quot;
+});
+
+await pipeline.setWater(null); // 全専用GPU資源と追加照明variantを解放
+</code></pre>
+<p><code>setOptions()</code>は不正な値を拒否し、それまでの設定を保持します。平均水深は<code>amplitude</code>より大きくし、<code>extent</code>は水域の幅・奥行き以上にします。<code>waterlineFade</code>は水際で集光を混ぜる幅、<code>wavelength</code>は波長倍率、<code>variation</code>は時間と空間に連続な位相・振幅変調の量、<code>roughness</code>は水面のGGX鏡面と環境反射の粗さです。</p>
+<p>受光は不透明なShapeとNodeへ設定します。Nodeの<code>children: false</code>はそのNode自身に限定します。複数の登録Nodeがある場合は最も近い祖先が優先します。解除やOFFでも対象の形状・材質を保持します。</p>
+<h2>描画への接続</h2>
+<p>集光は受光面のPBR直接光の拡散成分へ接続します。直接光の鏡面、IBL、局所光、emissiveは既存の経路を保ちます。実際の波の高さで水中を判定するため、球の頂部で固定高さによる輪状の切れ目を作りません。</p>
+<p>水面は画面内の深度を使う屈折、IORによるFresnel、RGBのBeer–Lambert吸収、現在のdirectional lightによるGGX鏡面、PBR環境の反射を線形HDRで合成します。水面の手前にある不透明物は、元の表示を保ちます。</p>
+<p>Alpha Blendの面とCompute粒子がある場合は水面深度を先に求め、水中のfragmentだけを屈折用背景へ描き、手前のfragmentを水面の後に描きます。粒子のCompute更新は一frameに一度です。Fog、DoF、Bloom、Tone Map、Edgeはその後に適用し、深度・法線を使う効果には水面を含む値を渡します。不透明G-bufferは保持します。</p>
+<h2>品質、負荷、制約</h2>
+<p><code>low</code>は512²光線・256²照度画像、<code>high</code>は1024²光線・512²照度画像です。水面の屈折探索は両品質で48ステップです。停止中の照度画像は再利用し、動く受光物体のmaskだけを更新します。照度生成とmask描画は受光対象を登録した場合に実行します。</p>
+<p>両方OFFでは水用のbuffer・texture・QuerySet・描画パスを保持せず、通常の17bindingの照明経路を使います。水面のみONでは水面資源を、集光のみONでは集光資源を用意します。ON時の画面寸法に比例する資源は、リサイズ時に更新します。</p>
+<p><code>PbrRenderer.createFrameCallbacks()</code>では計測結果を次のframeで回収します。独自loopでは<code>queue.submit()</code>の直後に<code>pipeline.afterGpuSubmit()</code>または<code>renderer.afterGpuSubmit()</code>を呼びます。</p>
+<p><code>getWaterStats()</code>は実行したdispatch/pass数とGPU timestampの非同期測定値を返します。timestamp非対応時は<code>timing.timestampSupported: false</code>です。計測区間は照度生成、水面compute、深度転写であり、受光mask・照明variant・透明物の描画を含む全体の追加時間ではありません。<code>ResourceLedger.js</code>はQuerySetの個数も追跡します。容量はtexture/bufferの論理容量で、ドライバのcacheや配置まで測る値ではありません。</p>
+<p>有限の水平水域を上から見る用途に対応します。水中カメラ、水の側面、複数水域、画面外・物体の裏側の屈折、周囲の物体の鏡像は扱いません。水面交差を得られない画素や、屈折先を探せない画素には元の背景を使います。集光は垂直入射で基準面へ集めた照度を立体へ投影する近似であり、物体の各面へ厳密に光線を追跡する処理ではありません。水中の透明物のFrost・Transmission・Volume吸収を水と重ねた物理的な屈折は、このサンプルの対応範囲外です。</p>
+<h2>読む順序と確認箇所</h2>
+<ul>
+<li><code>main.js</code>：通常PBRの準備、<code>WaterBody</code>の接続と個別ON/OFF。</li>
+<li><code>scene.js</code>／<code>floor.js</code>：受光対象の登録単位と既存Procedural Textureの材質。</li>
+<li><code>validation.js</code>：対象外への漏れ、OFF一致、深度、環境反射、透明面・粒子、リサイズのGPU検証。</li>
+<li><code>../../webg/WaterBody.js</code>：公開設定と受光対象の契約。</li>
+<li><code>../../webg/WaterSystem.js</code>：遅延生成、照度画像の再利用、破棄。</li>
+</ul>
+<p>PBRの基本はbook 30〜33章、水面の使い分けは35章です。材質や環境の比較は<code>pbr_reference</code>、通常の透明屈折は<code>transmission</code>を参照してください。</p>
+
+    </article>
+  </main>
+</body>
+</html>

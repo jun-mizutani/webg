@@ -1,0 +1,9 @@
+{
+  "name": "webg-library-tools",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "acorn": "8.18.0",
+    "parse5": "8.0.1"
+  }
+}

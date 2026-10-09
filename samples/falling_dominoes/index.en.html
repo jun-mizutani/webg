@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>falling_dominoes</title>
+  <link rel="icon" href="data:," />
+  <!-- 2026/06/19 -->
+  <style>
+
+:root {
+  color-scheme: light;
+  --bg: #eef3f8;
+  --paper: rgba(255, 255, 255, 0.94);
+  --line: #c8d5e4;
+  --ink: #17324a;
+  --muted: #5c748b;
+  --accent: #1566ab;
+  --accent-soft: #dfeefe;
+  --code-bg: #f3f7fb;
+  --shadow: rgba(29, 52, 79, 0.10);
+}
+* { box-sizing: border-box; }
+html, body {
+  margin: 0;
+  min-height: 100%;
+}
+body {
+  background:
+    radial-gradient(circle at top left, rgba(21, 102, 171, 0.12), transparent 24%),
+    radial-gradient(circle at top right, rgba(255, 191, 118, 0.10), transparent 22%),
+    linear-gradient(180deg, #f8fbfd 0%, var(--bg) 100%);
+  color: var(--ink);
+  font: 16px/1.78 "Avenir Next", "Hiragino Sans", "Yu Gothic", sans-serif;
+}
+.page {
+  width: min(1080px, calc(100% - 28px));
+  margin: 0 auto;
+  padding: 24px 0 56px;
+}
+.hero,
+.doc {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  box-shadow: 0 22px 52px var(--shadow);
+}
+.hero {
+  padding: 22px 24px;
+  margin-bottom: 18px;
+}
+.hero h1 {
+  margin: 0 0 8px;
+  font-size: clamp(2rem, 4vw, 3rem);
+  line-height: 1.08;
+}
+.hero p {
+  margin: 0;
+  color: var(--muted);
+}
+.doc {
+  padding: 28px;
+}
+.doc > :first-child {
+  margin-top: 0;
+}
+h1, h2, h3, h4, h5, h6 {
+  line-height: 1.25;
+  margin: 1.45em 0 0.55em;
+}
+h1 {
+  font-size: 2.2rem;
+}
+h2 {
+  padding-bottom: 0.28em;
+  border-bottom: 1px solid var(--line);
+  font-size: 1.48rem;
+}
+h3 {
+  font-size: 1.14rem;
+}
+p, ul, ol, table, pre, blockquote {
+  margin: 0 0 1em;
+}
+ul, ol {
+  padding-left: 1.4em;
+}
+li + li {
+  margin-top: 0.26em;
+}
+a {
+  color: var(--accent);
+  text-decoration: none;
+}
+a:hover {
+  text-decoration: underline;
+}
+img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  border-radius: 16px;
+  border: 1px solid var(--line);
+  box-shadow: 0 12px 32px rgba(29, 52, 79, 0.08);
+  margin: 1.1em 0 1.4em;
+}
+code {
+  padding: 0.12em 0.38em;
+  border-radius: 0.45em;
+  background: var(--code-bg);
+  border: 1px solid #dbe6f1;
+  font: 0.92em/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+pre {
+  padding: 14px 16px;
+  overflow-x: auto;
+  border-radius: 14px;
+  background: #0f1720;
+  color: #ecf5ff;
+}
+pre code {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #ffffff;
+}
+th, td {
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  text-align: left;
+  vertical-align: top;
+}
+th {
+  background: #f5f9fc;
+}
+hr {
+  border: 0;
+  border-top: 1px solid var(--line);
+  margin: 1.5em 0;
+}
+blockquote {
+  padding: 0.3em 0 0.3em 1em;
+  border-left: 4px solid #c9dbef;
+  color: var(--muted);
+}
+@media (max-width: 720px) {
+  .page {
+    width: min(100% - 18px, 1080px);
+    padding-top: 16px;
+  }
+  .hero,
+  .doc {
+    border-radius: 18px;
+  }
+  .doc {
+    padding: 20px;
+  }
+}
+
+  </style>
+</head>
+<body>
+  <main class="page">
+    <section class="hero">
+      <h1>falling_dominoes</h1>
+    </section>
+    <article class="doc">
+<h1>falling_dominoes</h1>
+<p>English | <a href="index.html">日本語</a></p>
+<h2>Overview</h2>
+<p>This sample uses <code>ComputePhysicsSpace</code> and <code>ComputeBoxCollider</code> to simulate 32 dominoes in a straight line on the GPU: one starter and 31 followers. Only the leftmost body receives an initial angular velocity; the later bodies start still and fall through Box contacts. Box-Box contacts, floor Plane contacts, rotation, friction, and persistent sleep are processed by one Compute Physics flow.</p>
+<p>The renderer reads the latest <code>BodyState</code> storage buffer returned by <code>getRenderState()</code> directly from the vertex shader. It does not read every position and orientation back to the CPU or synchronize them into Nodes every frame. Sleeping bodies are rendered at 75% of their configured color brightness so the stopped state remains visible without making the color too dark, and the sleeping-body count is shown in the diagnostic panel.</p>
+<h2>How to Run</h2>
+<p>Open <a href="./falling_dominoes.html">./falling_dominoes.html</a> in a WebGPU-capable browser. A row of dominoes appears in the center and falls from left to right. Normal startup issues no additional readback; append <code>?diagnostics=1</code> to the URL when the detailed diagnostic panel is needed. The external <code>FallingDominoSleepDiagnostic.js</code> module assembles those diagnostics from explicit <code>BodyState</code> and contact readbacks. The Help Panel is visible but starts collapsed; press <code>H</code> to expand it and inspect the frame interval, GPU Compute time and load, GPU Render time and load, JavaScript time and load, and physics state. The initial camera is approximately <code>eye=(-0.35, 0.06, 0.02)</code>, <code>eyeYaw=-67.19</code>, <code>eyePitch=-43.59</code>, <code>eyeRoll=-29.93</code>, <code>cameraTarget=(-0.16, -0.13, -0.06)</code>, <code>eyeDistance=0.28</code>, and <code>fovX=70.00</code>. Wheel, drag, keyboard, and pinch zoom use a speed of 10%.</p>
+<h2>webg Features Used</h2>
+<ul><li><code>WebgApp</code>: initializes WebGPU, the canvas, depth texture, camera, input, and panel display</li><li><code>ComputePhysicsSpace</code>: manages fixed steps, GPU BodyState ping-pong, predicted AABBs, the XZ Grid, candidate bitsets, the combined solver, and persistent sleep</li><li><code>ComputeBoxCollider</code>: provides domino dimensions, inverse inertia, and Box-Box / Plane contact shapes</li><li><code>Primitive</code> and <code>Shape</code>: create a unit cube mesh and instance it from GPU body state</li><li><code>getRenderState()</code>: exposes the current GPU state buffer to the render bind group</li><li><code>buildHelpPanelOptions()</code>: displays frame interval, GPU Compute/Render time, JavaScript time, active bodies, sleeping bodies, and fixed-step count in the Help Panel</li><li><code>getWakeLinearThreshold()</code>, <code>createStateReadbackBuffer()</code>, <code>getContactsFromReadback()</code>, and <code>getPlaneContactsFromReadback()</code>: provide the wake threshold, explicit state readback, and contact reconstruction. Detailed diagnostics are enabled with <code>?diagnostics=1</code> by the external <code>FallingDominoSleepDiagnostic.js</code> module. B29-B32 pair impulses and B31 solver stages are assembled from the CPU-emulator trace</li></ul>
+<h2>Checkpoints</h2>
+<ul><li>Confirm that the red starter domino falls and transfers contact to its neighbor</li><li>Confirm that dominoes do not pass through the floor and remain on it after falling</li><li>Confirm that the chain reaches the later dominoes and that settled bodies are eventually counted as sleeping in the panel</li><li>Confirm that the Help Panel is visible and collapsed at startup, then press <code>H</code> to inspect the frame interval, GPU Compute/Render time, JavaScript time, active bodies, sleeping bodies, and fixed-step count</li><li>Press <code>space</code> to apply an angular impulse to the starter and restart the chain</li><li>Press <code>P</code> to stop Compute updates while continuing to render the current GPU state</li><li>Press <code>R</code> to restore the same initial pose and angular velocity</li></ul>
+<h2>Controls</h2>
+<ul><li>Drag: orbit the camera</li><li>Mouse wheel: zoom (10% speed)</li><li><code>space</code>: kick the starter domino and start the chain</li><li><code>P</code>: pause / resume</li><li><code>R</code>: reset</li><li><code>H</code>: expand / collapse the Help Panel</li></ul>
+<h2>Implementation Flow</h2>
+<p><code>createBodies()</code> creates 32 Box bodies with the same dimensions, keeps all of them upright, and gives only the leftmost body an initial z-axis angular velocity of <code>-7.683333 rad/s</code>. The later bodies start with identity orientation and zero velocity, and <code>ComputePhysicsSpace</code> updates their state after contacts. The Space creates floor and four wall <code>ComputePlaneCollider</code> instances from the bounds and records gravity in fixed time steps for the GPU.</p>
+<p>This sample uses meters, kilograms, and seconds as its physical units. The domino dimensions are thickness <code>0.006 m</code> along the row direction x, height <code>0.050 m</code>, and the bottom long side <code>0.025 m</code> along z. When the domino falls along x, it rotates around the long bottom edge along z, matching the physical domino orientation. A wood-like density of <code>700 kg/m³</code> gives a base mass of about <code>0.00525 kg</code>; the mass multiplier is <code>6.183333</code>, so each body is about <code>0.0324625 kg</code> without changing its dimensions or gravity. The spacing is <code>0.0225 m</code>, gravity is <code>-9.80665 m/s²</code>, restitution is <code>0.11</code>, body <code>friction</code> is <code>0.300833</code>, <code>linearDamping</code> is <code>0.091667</code>, and <code>angularDamping</code> is <code>0.133333</code>. The sleep linear-speed threshold is <code>0.0133167 m/s</code>, the wake linear-speed threshold is <code>0.02665 m/s</code>, the sleep angular-speed threshold is <code>0.469167 rad/s</code>, the wake angular-speed threshold is <code>0.7175 rad/s</code>, the contact-speed threshold is <code>0.007075 m/s</code>, and the normal-speed threshold is <code>0.011675 m/s</code>. The fixed step is 120 Hz, the solver uses 10 iterations, and the maximum substep count is 4. Additional position-correction passes are disabled in the normal path and enabled only for explicit comparisons. <code>ComputePlaneCollider</code> does not have a per-Plane friction coefficient, so floor friction also uses the body-side value. Domino-to-domino friction is calculated from both body coefficients; separating floor friction from domino friction therefore requires a core Plane-material extension.</p>
+<p>The sample also computes a simple theoretical target from the known size, mass, gravity, and 16.5 mm gap. It assumes that the starter pivots around its lower edge, that its upper corner reaches the vertical face of the next body, that the floor impact reduces the initial <code>7.683333 rad/s</code> angular speed to one quarter by angular-momentum conservation, and that friction is ignored. With the thickness set to 6 mm, the resulting contact angle is <code>19.695 deg</code>, the center-of-mass drop is <code>2.474 mm</code>, the gravitational energy is <code>0.787 mJ</code>, and the energy including the post-floor-pivot rotational energy is <code>0.838 mJ</code>. The estimated contact-point normal speed is about <code>0.3521 m/s</code>, and the estimated normal contact impulse including restitution <code>0.11</code> is about <code>2.013e-3 N s</code>. This is a theoretical comparison reference based on the dimensions, mass, and assumptions above. The panel shows the same values on its <code>theory</code> lines so the measured simulation values can be compared against them.</p>
+<p>During each fixed step, the core builds predicted AABBs, filters candidates with the XZ Grid and swept Y ranges, and creates one per-body candidate bitset. The combined local solver then reuses those candidates while iterating normal and friction impulses for Box-Box and Plane contacts. Bodies with sufficiently quiet motion enter persistent sleep; the panel reports the count and the darker render color shows the sleeping state.</p>
+<p>When a sleeping body meets the wake condition, the core first predicts the other body’s state at the next fixed step and tests the contact there. That predicted contact is also passed into the body-body solver for the body being woken, instead of stopping at the wake decision. This prevents a wake event from losing its contact impulse before the motion can reach the following domino. The panel can compare <code>solverInVn</code> and <code>solverJ</code> recorded for the moving side and for the body returning from sleep.</p>
+<p>The Render Pass selects the bind group for the <code>bufferIndex</code> returned by <code>physics.getRenderState()</code>. The Box instance vertex shader reads position, quaternion, half extents, and color from BodyState, so the CPU does not update a Node array every frame. The active/sleeping counters use explicit asynchronous readback separate from rendering even during normal startup. When <code>?diagnostics=1</code> is present, the external <code>FallingDominoSleepDiagnostic.js</code> module assembles wake diagnostics from state and contact readbacks. Core does not embed fixed body numbers or pair names, so the B29-B32 pair solver inputs, impulses, and B31 stage values come from the CPU-emulator trace. <code>vN</code> is the post-solver speed, <code>wakePeakVn</code> is found by the sleeping body’s wake scan, and <code>preFrameVn</code> is measured at the start of the readback frame rather than at the exact collision instant. <code>closePeak</code> is the x-direction closing speed of the body centers, so it is a reference value rather than the theoretical contact-point normal speed. The core contact-wake condition is <code>vN &lt;= -wakeLinearSpeed</code>.</p>
+<h2>Sample Scope</h2>
+<p>This sample is intentionally limited to Box bodies and fixed Planes so the Compute Physics flow remains easy to inspect. It does not include Spheres, Capsules, Node synchronization, CPU contact-event access, or an editor for changing the domino row. It does not silently convert unsupported shapes or hide GPU-to-CPU readback behind a fallback.</p>
+    </article>
+  </main>
+</body>
+</html>

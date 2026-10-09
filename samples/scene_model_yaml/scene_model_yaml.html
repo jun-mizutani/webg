@@ -1,0 +1,37 @@
+<!doctype html>
+<!-- 2026/09/19: SceneYAMLとModelYAMLを組み合わせるサンプル -->
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SceneYAML + ModelYAML — webg</title>
+<link rel="icon" href="data:,">
+<style>
+body { margin: 0; background: #111c2b; color: #e4edf8; font: 16px/1.7 sans-serif; }
+main { max-width: 960px; padding: 20px; margin: auto; }
+h1 { margin: 0; font-size: 1.6rem; } a { color: #8dd7ff; }
+.webg-embedded-canvas-host { max-width: 100%; height: auto !important; }
+canvas { display: block; width: 100% !important; height: auto !important; }
+.controls { display: flex; flex-wrap: wrap; gap: 10px; margin: 14px 0; }
+button { font: inherit; padding: 6px 14px; cursor: pointer; }
+pre { white-space: pre-wrap; overflow-wrap: anywhere; }
+details pre { max-height: 360px; overflow: auto; padding: 16px; background: #091322; }
+#error { color: #ffb5b5; }
+</style>
+</head>
+<body><main>
+<h1>SceneYAML + ModelYAML</h1>
+<p>ModelYAMLの3個のBoxへ、SceneYAMLのPBR外観と物理設定を適用します。開始すると高さの異なるBoxが床へ落ちます。ドラッグで視点回転、ホイールでズーム。</p>
+<canvas id="canvas" width="900" height="560"></canvas>
+<div class="controls">
+<button id="play" disabled>開始</button><button id="pause" disabled>停止</button><button id="reset" disabled>初期位置へ</button>
+<button id="save-scene" disabled>SceneYAML保存</button><button id="save-model" disabled>ModelYAML保存</button>
+</div>
+<pre id="status" role="status">2つのYAMLから初期化中…</pre>
+<pre id="error" role="alert" hidden></pre>
+<p>保存するのは初期定義です。再利用時はscene.yamlとmodel.yamlを同じフォルダへ置きます。</p>
+<details><summary>SceneYAML：モデル参照・PBR・物理</summary><pre id="scene-source"></pre></details>
+<details><summary>ModelYAML：形状・Node・初期位置</summary><pre id="model-source"></pre></details>
+<p><a href="index.html">使い方</a> / <a href="index.en.html">English guide</a> / <a href="../model_yaml/model_yaml.html">ModelYAML単体の例</a></p>
+</main><script type="module" src="main.js"></script></body>
+</html>

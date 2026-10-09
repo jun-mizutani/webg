@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// unittest/raycast/main.js  2026/07/28
+// unittest/raycast/main.js  2026/10/04
 //   raycast unittest
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -12,10 +12,8 @@ import Matrix from "../../webg/Matrix.js";
 import SmoothShader from "../../webg/SmoothShader.js";
 import { CAMERA_REVERSE_Z } from "../../webg/DepthConvention.js";
 
-// AI向け注意:
-// この unittest は、画面座標 -> NDC -> world ray -> Space.raycast の変換過程を
-// 低レイヤーで見せるため、意図的に WebgApp ではなく Screen を直接使う。
-// 通常のアプリ構成を作る場合は、まず WebgApp / UnitTestApp の利用を検討する。
+// 画面座標 -> NDC -> world ray -> Space.raycast の変換を確認するため、
+// WebgApp を介さず Screen と Space を直接使う
 
 // webgクラスの役割:
 // Screen : WebGPU初期化とフレーム提示
@@ -26,7 +24,7 @@ import { CAMERA_REVERSE_Z } from "../../webg/DepthConvention.js";
 
 const hud = document.getElementById("hud");
 
-// 投影を受け取り、現在の設定と後続処理へ反映する
+// 現在の画面の縦横比と推奨視野角から透視投影を作り、比較用シェーダーへ設定する
 const setProjection = (screen, shader, fov = 53) => {
   // 透視投影行列を作り、シェーダへ設定する
   const proj = new Matrix();
@@ -36,7 +34,7 @@ const setProjection = (screen, shader, fov = 53) => {
   return proj;
 };
 
-// `cssToNdc`は座標または数値を計算し、後続処理で使う結果を返す
+// canvasのCSS矩形からマウス位置を正規化し、逆投影に使うNDC座標を求める
 const cssToNdc = (canvas, clientX, clientY) => {
   // CSS座標のマウス位置をNDCへ変換する
   const rect = canvas.getBoundingClientRect();
@@ -50,13 +48,13 @@ const makeRayFromMouse = (canvas, clientX, clientY, eyeNode, proj, view) => {
   // クリック位置からワールド空間レイ（origin, dir）を生成する
   const [nx, ny] = cssToNdc(canvas, clientX, clientY);
   const invVp = proj.clone();
-  // projectionは透視成分を持つため、剛体変換専用のmul()ではなく
+  // projectionの透視成分を含む全16要素を合成するため、
   // 4×4の全要素を計算するmul_()でVP = P * Vを作る
   invVp.mul_(view);
   invVp.inverse_strict();  // world = inverse(VP) * clip
 
   // WebGPUのNDC depthは0..1で、Camera Reverse-Zではnear=1、far=0になる
-  // OpenGL式のnear=-1、far=1を使わず、共通定義から両端のworld座標を逆投影する
+  // WebGPUのReverse-Zの共通定義からnearとfarを取り出し、両端をworld座標へ逆投影する
   const near = invVp.mulVector([nx, ny, CAMERA_REVERSE_Z.nearDepth]);
   const far = invVp.mulVector([nx, ny, CAMERA_REVERSE_Z.farDepth]);
   const eyePos = eyeNode.getWorldPosition();
@@ -76,7 +74,7 @@ const makeRayFromMouse = (canvas, clientX, clientY, eyeNode, proj, view) => {
   };
 };
 
-// 形状を生成し、後続処理で利用できる状態にする
+// 基本形状からGPU描画用のShapeを作り、比較条件に合わせた色と材質を設定する
 const createShape = (gpu, kind, color) => {
   // kindに応じて形状を生成し、単色SmoothShader材質を設定する
   const s = new Shape(gpu);
@@ -93,7 +91,7 @@ const createShape = (gpu, kind, color) => {
   return s;
 };
 
-// このインスタンスの初期化段階で、必要な状態と資源を準備して処理を開始する
+// カメラと選択対象を配置し、マウス座標からのrayと交差情報を表示する
 const start = async () => {
   // Screen/Shader/Spaceを初期化する
   const screen = new Screen(document);
@@ -104,7 +102,7 @@ const start = async () => {
   await shader.init();
   Shape.prototype.shader = shader;
   let proj = null;
-  // `viewport`の配置を対象の状態または描画設定へ反映する
+  // viewportの寸法をScreenへ反映し、その縦横比で投影と画面配置を更新する
   const applyViewportLayout = () => {
     screen.resize(Math.max(1, Math.floor(window.innerWidth)), Math.max(1, Math.floor(window.innerHeight)));
     proj = setProjection(screen, shader, 52);
@@ -139,7 +137,7 @@ const start = async () => {
   let selected = null;
   let lastRayInfo = "";
 
-  // 選択状態を対象の状態または描画設定へ反映する
+  // 選択された交差対象の色を更新し、交差位置と法線を確認できる表示へ揃える
   const applySelection = (hit) => {
     // ヒットしたshapeだけ赤で強調し、他は元色へ戻す
     selected = hit;
@@ -174,7 +172,7 @@ const start = async () => {
     lastRayInfo = `ndc=(${ray.ndc[0].toFixed(3)}, ${ray.ndc[1].toFixed(3)})`;
   });
 
-  // `loop`は処理周期の開始または終了に必要な状態を更新する
+  // 比較対象を回転させて描画し、交差情報をHUDへ表示して次のフレームを予約する
   const loop = () => {
     // オブジェクトを回転しながら描画し、HUDへ判定結果を表示する
     entries[0].node.rotateY(0.35);

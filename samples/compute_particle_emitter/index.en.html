@@ -1,0 +1,17 @@
+<!doctype html>
+<!-- 2026/09/22: READMEと同じ使用方法・実装説明 -->
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>compute_particle_emitter</title><style>body{max-width:900px;margin:40px auto;padding:0 20px;font:16px/1.8 sans-serif;background:#101b2b;color:#e2ebf5}a{color:#82d5ff}code{color:#ffc57b}</style></head><body>
+<h1>compute_particle_emitter</h1>
+<p>English | <a href="index.html">日本語</a></p>
+<h2>Purpose</h2>
+<p>This sample displays standard Compute particles in a PBR scene. SceneYAML defines the continuous fountain on the left and burst sparks at the center. A JavaScript-created light emitter appears on the right. The GPU generates initial positions, velocities, and lifetimes, then updates motion. Application code supplies emission conditions.</p>
+<h2>Running and controls</h2>
+<p>Open <a href="compute_particle_emitter.html">compute_particle_emitter.html</a> through an HTTP server. Drag to orbit and use the wheel to zoom.</p>
+<p>The spark and light buttons emit 64 particles. The continuous-emission button stops or resumes new fountain particles. Pause freezes movement and lifetime; bursts requested while paused remain queued until resume. Clear removes particles and queued requests while retaining emission settings, so continuous emission resumes on the next update.</p>
+<p>Bloom OFF/ON compares the glow while simulation and particle drawing continue. Opaque depth from the central box and floor provides occlusion. Particle collision with geometry is a separate extension.</p>
+<h2>Implementation and settings</h2>
+<p><code>scene.yaml</code> defines <code>fountain</code> and <code>sparks</code> in <code>particleEmitters</code>. <code>WebgSceneApp</code> creates them during initialization, and <code>getComputeParticleEmitter(id)</code> retrieves them. <code>main.js</code> also uses <code>createComputeParticleEmitter({ preset: "light", capacity: 256 }, "light")</code>.</p>
+<p><code>emit(64, { position, direction, spreadAngle, speed, lifetime })</code> supplies burst settings. Angles use degrees, speeds use world units per second, and lifetimes use seconds. <code>startEmission({ rate, ... })</code> specifies particles per second. <code>simulation</code> configures gravity and drag; <code>appearance</code> controls two linear HDR colors, intensity, and radius range. All emitters are released with the application.</p>
+<p>The displayed estimated count uses CPU reservations and maximum lifetime, including pending bursts. Capacity rejection is reported by <code>emit()</code> through <code>accepted</code>, <code>rejected</code>, and <code>reason</code>, and by the diagnostic rejection counter. This sample uses <code>overflow: "reject"</code>. Particle generation and motion remain on the GPU, with no per-frame GPU readback.</p>
+<p>Particles are added to HDR after transparency composition, sharing Bloom and tone mapping. SSR reads the scene before particles are drawn. See <a href="../compute_particles/index.html">compute_particles</a> for a custom-WGSL particle example.</p>
+</body></html>

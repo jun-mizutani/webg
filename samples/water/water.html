@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>物体へ設定するコースティクス | webg</title>
+  <link rel="stylesheet" href="style.css">
+  <script type="module" src="main.js"></script>
+</head>
+<body>
+  <header>
+    <p class="eyebrow">WEBG · WATER · PBR CORE</p>
+    <h1>物体を選び、集光を設定する。</h1>
+    <p>球・箱・斜面と水底へ、同じ照度画像を投影します。</p>
+    <nav><a href="README.md">APIと使用例</a> · <a href="index.html">サンプル解説</a></nav>
+  </header>
+  <main>
+    <section class="view">
+      <canvas id="canvas" aria-label="球、箱、斜面の集光照明"></canvas>
+      <div class="caption"><strong id="mode">準備中</strong><span>ドラッグ：回転 · ホイール：拡大</span></div>
+      <p id="status" role="status">WebGPUを準備しています…</p>
+      <pre id="errors" hidden></pre>
+    </section>
+    <aside>
+      <h2>受光する物体</h2>
+      <label class="switch"><input id="enabled" type="checkbox"> コースティクスを使う</label>
+      <label class="switch"><input id="water-visible" type="checkbox"> 水面を表示する</label>
+      <p class="note">水面は集光と別に切り替えられます。同じ波による屈折と、PBR環境光と照明の反射を表示します。</p>
+      <label><input id="floor" type="checkbox" checked> 石と砂利の水底（Shape）</label>
+      <label><input id="sphere" type="checkbox" checked> 左の球（Node）</label>
+      <label><input id="box" type="checkbox" checked> 右の箱（Shape）</label>
+      <label><input id="slope" type="checkbox" checked> 奥の斜面（Node）</label>
+      <p class="note">赤い箱と外枠は受光対象外。垂直面は真上からの光を受けません。</p>
+      <button id="pause">波を動かす</button>
+      <label>球の高さ <output id="height-value">0.88 m</output><input id="height" type="range" min="0.88" max="3.2" step="0.02" value="0.88"></label>
+      <p class="note">実際の波の高さで水中を判定し、水際では滑らかに混ぜます。立体の模様は水平面からの投影近似です。</p>
+      <label>計算品質<select id="quality"><option value="low" selected>軽量：512²光線 / 256²画像</option><option value="high">高：1024²光線 / 512²画像</option></select></label>
+      <p id="resources">専用GPU資源：0</p>
+      <button id="verify">水面・対象選択・OFFを検証</button>
+      <details id="report-details"><summary>検証結果</summary><pre id="report">未実行</pre></details>
+    </aside>
+  </main>
+</body>
+</html>

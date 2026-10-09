@@ -1,0 +1,7 @@
+# PbrEnvironment contracts
+
+前処理済みの線形HDR irradiance、roughness別specular mip、BRDF LUTをbinary16へ変換し、明示的なGPU textureへ転送する契約を検査します。
+
+```sh
+node headless_tests/core/pbr_environment/headless_probe.js
+```

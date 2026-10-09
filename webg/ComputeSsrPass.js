@@ -1,18 +1,19 @@
 // ---------------------------------------------
-// ComputeSsrPass.js  2026/07/23
+// ComputeSsrPass.js  2026/08/11
 //   G-buffer screen-space reflection compute pass with roughness pyramid
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // ---------------------------------------------
 // ComputePassはWGSLからcompute pipelineを構築し、uniformとtextureのbindingを管理するラッパー
 import ComputePass from "./ComputePass.js";
-import ComputeImagePyramid from "./ComputeImagePyramid.js?v=20260723_image_pyramid";
+import ComputeImagePyramid from "./ComputeImagePyramid.js";
 import { CAMERA_REVERSE_Z } from "./DepthConvention.js";
 // GBUFFER_WGSL_COMMONにはdepthの線形化、view-space位置の復元、法線の復号処理が含まれる
 import {
   createGBufferProjectionParams,
   GBUFFER_WGSL_COMMON
 } from "./GeometryBufferPass.js";
+import { PBR_BRDF_WGSL, PBR_IBL_WGSL } from "./PbrBrdf.js";
 // StorageTargetFactoryはSSR結果を書き込むstorage textureを生成する
 // resizeTargetは画面サイズ変更時に出力textureを同じ形式のまま作り直す
 import StorageTargetFactory, {
@@ -55,6 +56,12 @@ export const COMPUTE_SSR_VIEW_MODES = Object.freeze([
   "reflection",
   "normal",
   "depth"
+]);
+
+// legacyは反射色と重み、pbrは鏡面IBL置換用のhit radianceとconfidenceを出力します
+export const COMPUTE_SSR_INTEGRATION_MODES = Object.freeze([
+  "legacy",
+  "pbr"
 ]);
 
 // WGSLで実行するSSR本体
@@ -255,10 +262,11 @@ fn main(@builtin(global_invocation_id) id : vec3<u32>) {
   var previousPosition = rayStart;
   var previousDelta = -1.0;
   var previousValid = false;
-  // hitするまでは環境色をreflectionの初期値として保持する
+  // PBR統合ではmissをRGB 0とconfidence 0で表し、Composer側の同一HDR鏡面IBLへ戻します
+  // legacy統合では固定の簡易環境色を初期値に使います
   // confidenceは画面端と探索距離から求めるhitの信頼度
   // hitFoundは受理できる最初のhitが決まったことを示す
-  var reflection = environment(rayDirection);
+  var reflection = select(vec3f(0.0), environment(rayDirection), params.control.z >= 0.0);
   var confidence = 0.0;
   var hitFound = false;
 
@@ -393,7 +401,17 @@ fn main(@builtin(global_invocation_id) id : vec3<u32>) {
     }
   }
 
-  // 段階12: 反射の見え方を決めるFresnel、material反射率、confidenceを適用する
+  // 段階12: PBR統合は材質重みをComposerの共有BRDF計算へ任せ、hit radianceとconfidenceだけを返す
+  if (params.control.z < 0.0) {
+    textureStore(
+      outputTexture,
+      outputCoord,
+      vec4f(reflection, clamp(confidence, 0.0, 1.0))
+    );
+    return;
+  }
+
+  // legacy統合ではFresnelとmaterial反射率を使って反射色を合成する
   // 視線方向は表面からカメラへ向かうnormalize(-position)
   // 正面視ではfresnelが小さく、斜め視では大きくなる
   let fresnel = pow(1.0 - max(dot(normal, normalize(-position)), 0.0), 5.0);
@@ -462,6 +480,147 @@ fn main(@builtin(global_invocation_id) id : vec3<u32>) {
   let roughness = clamp(textureLoad(materialTexture, materialCoord, 0).g, 0.0, 1.0);
   let filteredColor = selectReflection(rawReflection.rgb, uv, roughness * 3.0);
   textureStore(outputTexture, coord, vec4f(filteredColor, rawReflection.a));
+}`;
+
+// PBR SSRではroughness filterの出力を中間textureへ書かず、同じinvocationで鏡面IBL置換まで行う
+// 合成前にrgba16float相当へ丸め、filter結果の精度を中間texture経由の場合とそろえる
+export const COMPUTE_SSR_PBR_COMPOSITE_WGSL = `
+struct Params {
+  // control.xはSSR置換強度、projectionはReverse-Z G-bufferと同じCamera Frame値
+  control : vec4f,
+  projection : vec4f,
+};
+
+${GBUFFER_WGSL_COMMON}
+
+${PBR_BRDF_WGSL}
+
+${PBR_IBL_WGSL}
+
+const PBR_SSR_MIN_HIT_LUMINANCE : f32 = 0.00001;
+
+// 黒いSSR sampleをIBL置換へ渡さず、現在pixelのベース画を維持します
+fn pbrSsrHasUsableRadiance(radiance : vec3f) -> bool {
+  let nonNegative = max(radiance, vec3f(0.0));
+  let luminance = dot(nonNegative, vec3f(0.2126, 0.7152, 0.0722));
+  return luminance > PBR_SSR_MIN_HIT_LUMINANCE;
+}
+
+@group(0) @binding(0) var<uniform> params : Params;
+@group(0) @binding(1) var rawReflectionTexture : texture_2d<f32>;
+@group(0) @binding(2) var halfTexture : texture_2d<f32>;
+@group(0) @binding(3) var quarterTexture : texture_2d<f32>;
+@group(0) @binding(4) var eighthTexture : texture_2d<f32>;
+@group(0) @binding(5) var baseTexture : texture_2d<f32>;
+@group(0) @binding(6) var depthTexture : texture_depth_2d;
+@group(0) @binding(7) var specularIblTexture : texture_2d<f32>;
+@group(0) @binding(8) var albedoTexture : texture_2d<f32>;
+@group(0) @binding(9) var normalTexture : texture_2d<f32>;
+@group(0) @binding(10) var materialTexture : texture_2d<f32>;
+@group(0) @binding(11) var ambientOcclusionTexture : texture_2d<f32>;
+@group(0) @binding(12) var brdfLutTexture : texture_2d<f32>;
+@group(0) @binding(13) var levelSampler : sampler;
+@group(0) @binding(14) var brdfSampler : sampler;
+@group(0) @binding(15) var outputTexture : texture_storage_2d<${COMPUTE_SSR_OUTPUT_FORMAT}, write>;
+
+// 現在pixelのroughnessを三つの低周波Levelへ対応させ、Level間を線形補間する
+fn selectReflection(rawColor : vec3f, uv : vec2f, levelPosition : f32) -> vec3f {
+  let halfColor = textureSampleLevel(halfTexture, levelSampler, uv, 0.0).rgb;
+  let quarterColor = textureSampleLevel(quarterTexture, levelSampler, uv, 0.0).rgb;
+  let eighthColor = textureSampleLevel(eighthTexture, levelSampler, uv, 0.0).rgb;
+  if (levelPosition < 1.0) {
+    return mix(rawColor, halfColor, levelPosition);
+  }
+  if (levelPosition < 2.0) {
+    return mix(halfColor, quarterColor, levelPosition - 1.0);
+  }
+  return mix(quarterColor, eighthColor, levelPosition - 2.0);
+}
+
+@compute @workgroup_size(8, 8, 1)
+fn main(@builtin(global_invocation_id) id : vec3<u32>) {
+  let outputDimsU = textureDimensions(outputTexture);
+  if (id.x >= outputDimsU.x || id.y >= outputDimsU.y) {
+    return;
+  }
+  let coord = vec2<i32>(id.xy);
+  let outputDims = vec2<i32>(outputDimsU);
+  let uv = (vec2f(coord) + vec2f(0.5)) / vec2f(outputDims);
+  let reflectionDims = vec2<i32>(textureDimensions(rawReflectionTexture));
+  let reflectionCoord = clamp(
+    vec2<i32>(uv * vec2f(reflectionDims)),
+    vec2<i32>(0),
+    reflectionDims - vec2<i32>(1)
+  );
+  let rawReflection = textureLoad(rawReflectionTexture, reflectionCoord, 0);
+  // 低解像度SSRでは反射textureのpixel中心から材質とPyramidのUVを求める
+  // full解像度pixelとは別の座標を使い、roughnessとfilter位置を反射textureの解像度に合わせる
+  let reflectionCenterUv = (vec2f(reflectionCoord) + vec2f(0.5)) / vec2f(reflectionDims);
+  let roughnessMaterialCoord = clamp(
+    vec2<i32>(reflectionCenterUv * vec2f(outputDims)),
+    vec2<i32>(0),
+    outputDims - vec2<i32>(1)
+  );
+  let filterRoughness = clamp(
+    textureLoad(materialTexture, roughnessMaterialCoord, 0).g,
+    0.0,
+    1.0
+  );
+  let filteredColor = selectReflection(
+    rawReflection.rgb,
+    reflectionCenterUv,
+    filterRoughness * 3.0
+  );
+  // 合成前にbinary16精度へ丸め、filter結果の出力精度を一定にする
+  let filteredReflection = quantizeToF16(vec4f(filteredColor, rawReflection.a));
+  let base = textureLoad(baseTexture, coord, 0).rgb;
+  let depth = textureLoad(depthTexture, coord, 0);
+  var linearColor = base;
+  if (!isGBufferBackgroundDepth(depth)) {
+    let reflectionIsUsable = pbrSsrHasUsableRadiance(filteredReflection.rgb);
+    let confidence = select(
+      0.0,
+      clamp(filteredReflection.a * params.control.x, 0.0, 1.0),
+      reflectionIsUsable
+    );
+    let albedo = textureLoad(albedoTexture, coord, 0).rgb;
+    let normal = decodeGBufferNormal(textureLoad(normalTexture, coord, 0).rgb);
+    let material = textureLoad(materialTexture, coord, 0);
+    let surfaceRoughness = material.y;
+    let ambientOcclusion = textureLoad(ambientOcclusionTexture, coord, 0).r
+      * material.w;
+    let position = reconstructGBufferViewPosition(
+      coord,
+      depth,
+      outputDims,
+      params.projection
+    );
+    let viewDirection = normalize(-position);
+    let nDotV = max(dot(normal, viewDirection), 0.0);
+    let dielectricF0 = vec3f(0.04 * material.x);
+    let f0 = pbrEvaluateF0(albedo, material.z, dielectricF0);
+    let brdf = textureSampleLevel(
+      brdfLutTexture,
+      brdfSampler,
+      pbrClampBrdfLutUv(
+        vec2f(nDotV, surfaceRoughness),
+        textureDimensions(brdfLutTexture)
+      ),
+      0.0
+    ).rg;
+    let pbrSpecularWeight = pbrEvaluateSpecularIblWeight(
+      f0,
+      brdf,
+      ambientOcclusion
+    );
+    let specularIbl = textureLoad(specularIblTexture, coord, 0).rgb;
+    let ssrSpecular = filteredReflection.rgb * pbrSpecularWeight;
+    // IBLを一度分離してSSRへ置換し、置換不可のpixelは元のbaseを保ちます
+    let baseWithoutSpecularIbl = max(base - specularIbl, vec3f(0.0));
+    let replacedColor = baseWithoutSpecularIbl + ssrSpecular;
+    linearColor = mix(base, replacedColor, confidence);
+  }
+  textureStore(outputTexture, coord, vec4f(linearColor, 1.0));
 }`;
 
 // full解像度のG-buffer寸法から、SSR出力target用の低解像度寸法を求める
@@ -624,6 +783,36 @@ export default class ComputeSsrPass {
         }
       ]
     });
+    // PBR統合時だけ使う最終Passはroughness filterと鏡面IBL置換を同じdispatchで実行する
+    this.pbrCompositePass = new ComputePass(gpu, {
+      label: `${this.label}:pbr-roughness-composite`,
+      code: COMPUTE_SSR_PBR_COMPOSITE_WGSL,
+      uniformFloats: 8,
+      bindings: [
+        { binding: 0, name: "params", type: "uniform-buffer" },
+        { binding: 1, name: "rawReflection", type: "sampled-texture" },
+        { binding: 2, name: "half", type: "sampled-texture" },
+        { binding: 3, name: "quarter", type: "sampled-texture" },
+        { binding: 4, name: "eighth", type: "sampled-texture" },
+        { binding: 5, name: "base", type: "sampled-texture" },
+        { binding: 6, name: "depth", type: "depth-texture" },
+        { binding: 7, name: "specularIbl", type: "sampled-texture" },
+        { binding: 8, name: "albedo", type: "sampled-texture" },
+        { binding: 9, name: "normal", type: "sampled-texture" },
+        { binding: 10, name: "material", type: "sampled-texture" },
+        { binding: 11, name: "ambientOcclusion", type: "sampled-texture" },
+        { binding: 12, name: "brdfLut", type: "sampled-texture" },
+        { binding: 13, name: "sampler", type: "sampler" },
+        { binding: 14, name: "brdfSampler", type: "sampler" },
+        {
+          binding: 15,
+          name: "output",
+          type: "storage-texture",
+          format: this.format,
+          dispatchSize: true
+        }
+      ]
+    });
     // outputTargetの非同期初期化完了を利用者が待機できるPromiseとして公開する
     this.ready = Promise.all([
       this.rayTarget.ready,
@@ -772,6 +961,62 @@ export default class ComputeSsrPass {
     return { scene, normal, depth, material };
   }
 
+  // 融合PBR合成に必要なfull解像度resourceを検証し、不足時は明示的にエラーにする
+  validatePbrCompositeResources(resources) {
+    const checked = util.readPlainObject(
+      resources,
+      `${this.label} pbrComposite resources`
+    );
+    const result = {};
+    for (const name of [
+      "base",
+      "specularIbl",
+      "albedo",
+      "normal",
+      "material",
+      "ambientOcclusion",
+      "brdfLut",
+      "output"
+    ]) {
+      const target = checked[name];
+      if (!target || typeof target.getView !== "function") {
+        throw new Error(`${this.label} pbrComposite resources require ${name} target`);
+      }
+      result[name] = target;
+    }
+    const depth = checked.depth;
+    if (typeof depth?.getDepthSampleView !== "function"
+      || depth.depthConvention !== CAMERA_REVERSE_Z) {
+      throw new Error(`${this.label} pbrComposite resources require CAMERA_REVERSE_Z depth target`);
+    }
+    result.depth = depth;
+    if (!checked.brdfSampler) {
+      throw new Error(`${this.label} pbrComposite resources require brdfSampler`);
+    }
+    result.brdfSampler = checked.brdfSampler;
+    for (const name of [
+      "base",
+      "depth",
+      "specularIbl",
+      "albedo",
+      "normal",
+      "material",
+      "ambientOcclusion",
+      "output"
+    ]) {
+      const target = result[name];
+      if (target.getWidth?.() !== this.fullWidth || target.getHeight?.() !== this.fullHeight) {
+        throw new Error(`${this.label} pbrComposite ${name} size must match full scene size`);
+      }
+    }
+    if (result.output.getFormat?.() !== COMPUTE_SSR_OUTPUT_FORMAT) {
+      throw new Error(
+        `${this.label} pbrComposite output format must be ${COMPUTE_SSR_OUTPUT_FORMAT}`
+      );
+    }
+    return result;
+  }
+
   /**
    * SSR compute passをcommandEncoderへ記録し、結果を書き込むoutputTargetを返す
    * resourcesからG-bufferを受け取り、optionsでCamera Frame、SSR値、表示モードを指定する
@@ -810,6 +1055,22 @@ export default class ComputeSsrPass {
       COMPUTE_SSR_DEFAULTS.view,
       COMPUTE_SSR_VIEW_MODES
     );
+    // PBR統合ではalphaを純粋なhit confidenceとし、鏡面重みの二重適用を防ぎます
+    const integrationMode = util.readOptionalEnum(
+      options.integrationMode,
+      `${this.label} integrationMode`,
+      "legacy",
+      COMPUTE_SSR_INTEGRATION_MODES
+    );
+    const pbrCompositeResources = options.pbrComposite === undefined
+      ? null
+      : this.validatePbrCompositeResources(options.pbrComposite);
+    if (pbrCompositeResources !== null
+      && (integrationMode !== "pbr" || view !== "reflection")) {
+      throw new Error(
+        `${this.label} pbrComposite requires integrationMode 'pbr' and view 'reflection'`
+      );
+    }
     // shaderで比較しやすい数値へ表示モードを変換する
     // 0 reflection、1 normal、2 depth
     const viewMode = view === "normal" ? 1.0
@@ -828,7 +1089,10 @@ export default class ComputeSsrPass {
       // z/wにはデバッグ時に確認しやすいよう出力target寸法を入れる
       viewMode,
       performance.reflectivityThreshold,
-      this.rayTarget.getWidth(),
+      // control.zの絶対値は出力幅、符号はPBR統合flagに使い、uniform layoutを共通化します
+      integrationMode === "pbr"
+        ? -this.rayTarget.getWidth()
+        : this.rayTarget.getWidth(),
       this.rayTarget.getHeight()
     ]);
     const timestampWrites = options.timestampWrites;
@@ -858,6 +1122,35 @@ export default class ComputeSsrPass {
     const half = this.roughnessPyramid.getLevel(2);
     const quarter = this.roughnessPyramid.getLevel(4);
     const eighth = this.roughnessPyramid.getLevel(8);
+    if (pbrCompositeResources !== null) {
+      this.pbrCompositePass.setUniforms([
+        parameters.intensity,
+        0.0,
+        0.0,
+        0.0,
+        ...projection
+      ]);
+      this.pbrCompositePass.encode(commandEncoder, {
+        rawReflection: this.rayTarget,
+        half,
+        quarter,
+        eighth,
+        base: pbrCompositeResources.base,
+        depth: pbrCompositeResources.depth,
+        specularIbl: pbrCompositeResources.specularIbl,
+        albedo: pbrCompositeResources.albedo,
+        normal: pbrCompositeResources.normal,
+        material: pbrCompositeResources.material,
+        ambientOcclusion: pbrCompositeResources.ambientOcclusion,
+        brdfLut: pbrCompositeResources.brdfLut,
+        sampler: half.getSampler(),
+        brdfSampler: pbrCompositeResources.brdfSampler,
+        output: pbrCompositeResources.output
+      }, {
+        timestampWrites: lastTimestampWrites
+      });
+      return pbrCompositeResources.output;
+    }
     this.roughnessPass.setUniforms([
       view === "reflection" ? 1.0 : 0.0,
       0.0,
@@ -946,6 +1239,7 @@ export default class ComputeSsrPass {
     // pipeline関連資源と出力textureを順に破棄する
     this.computePass.destroy();
     this.roughnessPass.destroy();
+    this.pbrCompositePass.destroy();
     this.roughnessPyramid.destroy();
     this.rayTarget.destroy();
     this.outputTarget.destroy();

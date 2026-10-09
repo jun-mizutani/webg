@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// unittest/translucent/main.js  2026/05/04
+// unittest/translucent/main.js  2026/10/04
 //   frosted glass mask/composite test
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -29,7 +29,7 @@ const DEFAULT_STATE = {
 };
 
 // 値調整段階: key 操作で増減した値を指定範囲へ収める
-// blur や tint の設定が shader 側で扱えない範囲へ出ないようにする
+// blurやtintの値をshaderが扱う範囲へ収める
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
 
 // Shape 分類段階: この Shape が曇りガラス用 mask pass へ送る対象か判定する
@@ -41,7 +41,7 @@ const isGlassShape = (shape) => {
 };
 
 // camera 設定段階: 通常 shader と mask shader の projection matrix を同じ値へそろえる
-// scene pass と mask pass で投影がずれると合成位置が合わないため、resize 時にも呼ぶ
+// resize時にもsceneとmaskへ同じ投影を設定し、合成位置を揃える
 const setProjection = (screen, shaders, angle = 48) => {
   const proj = new Matrix();
   const fov = screen.getRecommendedFov(angle);

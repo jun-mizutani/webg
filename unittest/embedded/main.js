@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// unittest/embedded/main.js  2026/07/25
+// unittest/embedded/main.js  2026/10/04
 //   embedded unittest
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -36,9 +36,8 @@ const dialogueEntries = [
   }
 ];
 
-// embedded unittest では「会話専用 API が core にあるか」ではなく、
-// host 基準で panel が追従するかだけを見たい
-// そのため会話進行は sample 内 helper として閉じ、WebgApp には残さない
+// 会話進行はページ内のhelperで管理し、現在位置と本文をOverlayPanelへ渡す
+// 本文の更新やページのスクロール後も、panelがhost基準の配置を保つことを確認する
 const createDialogueOverlay = (app) => {
   const state = {
     active: false,
@@ -46,7 +45,7 @@ const createDialogueOverlay = (app) => {
     entries: []
   };
 
-  // 行を生成し、後続処理で利用できる状態にする
+  // 現在の会話位置に対応する本文と操作案内を表示用の行へまとめる
   const buildLines = () => {
     const entry = state.entries[state.currentIndex] ?? null;
     if (!entry) {
@@ -63,7 +62,7 @@ const createDialogueOverlay = (app) => {
     return lines;
   };
 
-  // このインスタンスを現在の入力と実行状態に合わせて更新する
+  // 会話の現在位置をOverlayPanelへ反映し、表示内容と進行状態を揃える
   const sync = () => {
     const entry = state.entries[state.currentIndex] ?? null;
     const options = {
@@ -285,7 +284,7 @@ const evaluateOverlayAlignment = (label, rect, hostRect, options = {}) => {
 };
 
 // touch controls は host 下端へ張り付くことが重要なので、
-// 上下左右を別判定にせず「下端が host 下端に近いか」を強めに見る
+// touchの配置はhost下端との距離を基準に判定する
 const evaluateTouchAlignment = (touchRect, hostRect) => {
   if (!touchRect || touchRect.width <= 0 || touchRect.height <= 0) {
     return "touch: WAIT hidden";
@@ -301,7 +300,7 @@ const evaluateTouchAlignment = (touchRect, hostRect) => {
 };
 
 // canvas host と canvas 自体の display size が一致しているかを見て、
-// embedded 用 host の幅高さ同期が崩れていないかを確認する
+// embedded用hostとcanvasの幅・高さが揃っていることを確認する
 const evaluateCanvasHost = (canvasRect, hostRect) => {
   const widthDelta = Math.round(hostRect.width - canvasRect.width);
   const heightDelta = Math.round(hostRect.height - canvasRect.height);
@@ -309,7 +308,7 @@ const evaluateCanvasHost = (canvasRect, hostRect) => {
   return `canvas-host: ${pass ? "PASS" : "FAIL"} dW=${widthDelta} dH=${heightDelta}`;
 };
 
-// 外側の status は page 固定ではなく本文の aside に置き、
+// 外側のstatusは本文のasideに配置し、
 // 現在の scroll 量と overlay の相対位置をまとめて読む用途に使う
 const updateExternalStatus = (app, helpPanel, state) => {
   const canvas = app.screen?.canvas ?? null;
@@ -467,7 +466,7 @@ const updateHud = (app, helpPanel, state) => {
   });
 };
 
-// このインスタンスの初期化段階で、必要な状態と資源を準備して処理を開始する
+// 本文中のhostへcanvasと各overlayを配置し、スクロール中の矩形差分を確認する
 const start = async () => {
   installScrollButtons();
 

@@ -1,5 +1,5 @@
 // ---------------------------------------------------------
-// headless_tests/core/compute_image_pyramid/filter_radius_contracts.js  2026/07/23
+// headless_tests/core/compute_image_pyramid/filter_radius_contracts.js  2026/08/04
 //   Shared Pyramid low-pass filter-radius contracts
 // ---------------------------------------------------------
 import assert from "node:assert/strict";
@@ -75,6 +75,24 @@ assert.match(
   const { probe, calls } = createProbe();
   probe.encode(commandEncoder, scene, { filterRadius: 2.25 });
   assert.deepEqual(calls[0], ["uniforms", 2.25, 0.0, 0.0, 0.0]);
+}
+
+// maxLevelは指定した最深Levelで停止し、後段が参照しない縮小passを記録しません
+{
+  const { probe, calls } = createProbe();
+  assert.equal(probe.encode(commandEncoder, scene, { maxLevel: 2 }).label, "level-2");
+  assert.deepEqual(calls.slice(1).map((call) => call.slice(0, 3)), [
+    ["downsample", "scene", "level-2"]
+  ]);
+}
+
+// 構築時に存在しないLevelは暗黙生成せず、呼び出し契約違反として拒否します
+{
+  const { probe } = createProbe();
+  assert.throws(
+    () => probe.encode(commandEncoder, scene, { maxLevel: 16 }),
+    /maxLevel 16 is not one of 2, 4, 8/
+  );
 }
 
 // 範囲外の値を自動補正せず、呼び出し時点で明示的に拒否します

@@ -1,0 +1,47 @@
+<!doctype html>
+<!-- samples/karakuri/karakuri_player.html 2026/09/23 -->
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Karakuri Player</title>
+  <link rel="icon" href="data:," />
+  <link rel="stylesheet" href="./karakuri.css?v=20260911r26" />
+</head>
+<body>
+  <main class="page">
+    <section class="hero">
+      <h1 data-i18n="player">からくりプレイヤー</h1>
+      <p data-i18n="playerIntro">SceneYAMLに書かれたからくりを動かします。球が発射され、レールと板に当たって進みます。</p>
+      <nav class="top-links">
+        <a class="button" data-i18n="home" href="./">からくりホーム</a>
+        <a class="button" data-i18n="makerLink" href="./karakuri_maker.html">メーカーで作る</a>
+        <button class="button" id="language" type="button" data-i18n="language">English</button>
+        <label class="button" for="scene-file" data-i18n="upload">シーンを開く</label>
+        <input class="file-input" id="scene-file" type="file" accept=".yaml,.yml,.gz" />
+      </nav>
+    </section>
+    <section class="workspace">
+      <section class="canvas-card">
+        <div class="canvas-host" id="canvas-host" data-webg-embedded-canvas-host="1">
+          <canvas id="canvas" width="960" height="640"></canvas>
+          <div class="speed-overlay" id="speed-controls" aria-label="再生速度"></div>
+          <div class="canvas-overlay">
+            <button class="button green" id="start" type="button" data-i18n="start">スタート</button>
+            <button class="button" id="stop" type="button" data-i18n="stop">ストップ</button>
+            <button class="button orange" id="reset" type="button" data-i18n="reset">リセット</button>
+          </div>
+        </div>
+      </section>
+      <aside class="panel">
+        <h2 data-i18n="player">からくりプレイヤー</h2>
+        <pre class="status" id="status" aria-live="polite">読み込み中です…</pre>
+        <p class="goal-message" id="goal-message" aria-live="assertive" hidden></p>
+        <p class="note" data-i18n="cameraNote">マウスドラッグで視点を動かし、ホイールで近づいたり遠ざかったりできます。</p>
+        <p class="note" data-i18n="sceneNote">Makerで保存したSceneYAMLは「シーンを開く」から試せます。</p>
+      </aside>
+    </section>
+  </main>
+<script type="module" src="./karakuri_player.js"></script>
+</body>
+</html>

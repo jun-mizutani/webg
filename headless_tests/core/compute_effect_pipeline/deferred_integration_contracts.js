@@ -1,6 +1,6 @@
 // ---------------------------------------------------------
-// headless_tests/core/compute_effect_pipeline/headless_probe.js  2026/07/20
-//   v2 deferred integration order for ComputeEffectPipeline
+// headless_tests/core/compute_effect_pipeline/headless_probe.js  2026/08/13
+//   Deferred integration order for ComputeEffectPipeline
 // ---------------------------------------------------------
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
@@ -111,11 +111,18 @@ function makePipeline(frame, calls, options = {}) {
   };
   const pipeline = Object.create(ComputeEffectPipeline.prototype);
   Object.assign(pipeline, {
-    label: "v2-pipeline",
+    label: "compute-effect-pipeline",
     destroyed: false,
     currentCameraFrame: frame,
+    currentClearColor: [0.1, 0.2, 0.3, 1.0],
     currentSpace: {
-      hasTranslucentTriangles: () => options.hasTranslucentTriangles === true
+      nodes: [],
+      translucentRenderQueue: {
+        summarize: () => ({
+          hasTriangles: options.hasTranslucentTriangles === true,
+          maxFrostRoughness: 0.28
+        })
+      }
     },
     currentShadowEnabled: false,
     lastShadowType: "directional",
@@ -125,7 +132,11 @@ function makePipeline(frame, calls, options = {}) {
     shadowOptions: makeShadowOptions(),
     ssaoOptions: {},
     ssrOptions: {},
-    composerOptions: { mode: "mix" },
+    transparencyOptions: {
+      transmissionRayMissFallback: "auto",
+      transmissionRayMissColor: null
+    },
+    composerOptions: { mode: options.composerMode ?? "mix" },
     lightingOptions: {
       ambient: 0.04,
       directionalColor: [1, 1, 1],
@@ -148,8 +159,16 @@ function makePipeline(frame, calls, options = {}) {
   pipeline.spotShadowPass = recordingPass("spot-shadow", calls);
   pipeline.ssaoPass = recordingPass("ssao", calls);
   pipeline.deferredLightingPass = recordingPass("deferred", calls, { name: "hdr-lighting" });
+  pipeline.deferredLightingPass.getLocalLightBindingResources = () => ({
+    buffer: { name: "packed-local-lights" },
+    count: 0,
+    maxLights: 128,
+    mainLight: null
+  });
+  pipeline.deferredLightingPass.getSpecularIblTarget = () => ({ name: "specular-ibl" });
   pipeline.ssrPass = recordingPass("ssr", calls, { name: "hdr-reflection" });
   pipeline.composer = recordingPass("composer", calls, { name: "hdr-composed" });
+  pipeline.composer.getOutputTarget = () => ({ name: "hdr-composed" });
   pipeline.transparencyPass = recordingPass("transparency", calls, { name: "hdr-transparent" });
   pipeline.fogPass = recordingPass("fog", calls, { name: "hdr-fog" });
   pipeline.toonPass = recordingPass("toon", calls, { name: "hdr-toon" });
@@ -159,6 +178,104 @@ function makePipeline(frame, calls, options = {}) {
   pipeline.edgePass = recordingPass("edge", calls, { name: "edge-color" });
   pipeline.vignettePass = recordingPass("vignette", calls, { name: "vignette-color" });
   return { pipeline, resources };
+}
+
+// 実環境と通常lighting viewが揃う場合は、SSR最終Passでroughness filterと鏡面IBL置換を統合します
+{
+  const frame = makeFrame();
+  const calls = [];
+  const { pipeline, resources } = makePipeline(frame, calls, { composerMode: "pbr-ssr" });
+  const environment = {
+    irradiance: { name: "irradiance" },
+    prefilteredSpecular: { name: "prefiltered-specular" },
+    brdfLut: { name: "brdf-lut" },
+    sampler: { name: "environment-sampler" },
+    specularMipCount: 5
+  };
+  pipeline.encode({ beginComputePass() {} }, {
+    cameraFrame: frame,
+    shadowEnabled: false,
+    ssaoEnabled: true,
+    ssrEnabled: true,
+    lighting: {
+      ambient: 0,
+      environment,
+      environmentIntensity: 1
+    }
+  });
+  const ssr = calls.find(({ name }) => name === "ssr");
+  const composer = calls.find(({ name }) => name === "composer");
+  assert.equal(ssr.options.integrationMode, "pbr");
+  assert.equal(composer, undefined);
+  assert.equal(ssr.options.pbrComposite.base.name, "hdr-lighting");
+  assert.equal(ssr.options.pbrComposite.specularIbl.name, "specular-ibl");
+  assert.equal(ssr.options.pbrComposite.albedo, resources.albedo);
+  assert.equal(ssr.options.pbrComposite.normal, resources.normal);
+  assert.equal(ssr.options.pbrComposite.material, resources.material);
+  assert.equal(ssr.options.pbrComposite.ambientOcclusion.name, "ssao");
+  assert.equal(ssr.options.pbrComposite.brdfLut, environment.brdfLut);
+  assert.equal(ssr.options.pbrComposite.brdfSampler, environment.sampler);
+  assert.equal(ssr.options.pbrComposite.output.name, "hdr-composed");
+}
+
+// 明示的な比較指定では旧二段PBR経路を残し、同じ入力で融合効果と画像差を検証できます
+{
+  const frame = makeFrame();
+  const calls = [];
+  const { pipeline } = makePipeline(frame, calls, { composerMode: "pbr-ssr" });
+  const environment = {
+    irradiance: { name: "irradiance" },
+    prefilteredSpecular: { name: "prefiltered-specular" },
+    brdfLut: { name: "brdf-lut" },
+    sampler: { name: "environment-sampler" },
+    specularMipCount: 5
+  };
+  pipeline.encode({ beginComputePass() {} }, {
+    cameraFrame: frame,
+    shadowEnabled: false,
+    ssrEnabled: true,
+    pbrSsrFusionEnabled: false,
+    lighting: {
+      ambient: 0,
+      environment,
+      environmentIntensity: 1
+    }
+  });
+  const ssr = calls.find(({ name }) => name === "ssr");
+  const composer = calls.find(({ name }) => name === "composer");
+  assert.equal(ssr.options.integrationMode, "pbr");
+  assert.equal(Object.hasOwn(ssr.options, "pbrComposite"), false);
+  assert.equal(composer.options.mode, "pbr-ssr");
+  assert.equal(composer.resources.brdfLut, environment.brdfLut);
+}
+
+// 環境がない場合はpbr-ssrを強行せず、従来mixとlegacy SSRへ明示的に戻します
+{
+  const frame = makeFrame();
+  const calls = [];
+  const { pipeline } = makePipeline(frame, calls, { composerMode: "pbr-ssr" });
+  pipeline.encode({ beginComputePass() {} }, {
+    cameraFrame: frame,
+    shadowEnabled: false,
+    ssrEnabled: true
+  });
+  const ssr = calls.find(({ name }) => name === "ssr");
+  const composer = calls.find(({ name }) => name === "composer");
+  assert.equal(ssr.options.integrationMode, "legacy");
+  assert.equal(composer.options.mode, "mix");
+  assert.equal(Object.prototype.hasOwnProperty.call(composer.resources, "specularIbl"), false);
+}
+
+// photometric lightは従来scalar exposureへ黙って接続せず、EV100を必須にします
+{
+  const frame = makeFrame();
+  const calls = [];
+  const { pipeline } = makePipeline(frame, calls);
+  assert.throws(() => pipeline.encode({ beginComputePass() {} }, {
+    cameraFrame: frame,
+    shadowEnabled: false,
+    lighting: { unitSystem: "photometric" }
+  }), /photometric lighting requires toneMap\.exposureEv100/);
 }
 
 // 透明triangleがある場合だけ、SSR合成後かつcolor effect前へ透明HDR合成を挿入します
@@ -171,6 +288,16 @@ function makePipeline(frame, calls, options = {}) {
     shadowEnabled: false,
     ssaoEnabled: false,
     ssrEnabled: true,
+    transparency: {
+      transmissionEnabled: true,
+      transmissionStrength: 0.75,
+      transmissionDistance: 48.0,
+      transmissionHitThickness: 0.08,
+      transmissionSteps: 56,
+      transmissionRayDebugEnabled: true,
+      transmissionRayMissFallback: "constant",
+      transmissionRayMissColor: [0.04, 0.06, 0.1, 1.0]
+    },
     fogEnabled: true,
     toonEnabled: true,
     dofEnabled: false,
@@ -192,6 +319,20 @@ function makePipeline(frame, calls, options = {}) {
     "tone-map",
     "vignette"
   ]);
+  const deferred = calls.find(({ name }) => name === "deferred");
+  const transparency = calls.find(({ name }) => name === "transparency");
+  assert.equal(Object.hasOwn(deferred.options, "transmission"), false);
+  assert.deepEqual(transparency.resources.clearColor, [0.1, 0.2, 0.3, 1.0]);
+  assert.deepEqual(transparency.resources.transmission, {
+    enabled: true,
+    strength: 0.75,
+    distance: 48.0,
+    hitThickness: 0.08,
+    steps: 56,
+    debugRayStatus: true,
+    rayMissFallback: "constant",
+    rayMissColor: [0.04, 0.06, 0.1, 1.0]
+  });
 }
 
 // visibility、Deferred Lighting、HDR effects、Tone Map、Edge、Vignetteの順序を固定します

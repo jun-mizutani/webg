@@ -6,7 +6,7 @@ English | [日本語](README.md)
 
 ## Overview
 - This sample validates the `ModelAsset` returned by `Primitive.js` with `ModelValidator`, converts it into `Shape` objects with `ModelBuilder`, and displays the result
-- Multiple shapes are arranged with normal maps, but the main characteristic is that the shape-generation path is unified as `Primitive -> ModelAsset -> validate -> build` rather than writing `Shape` data directly
+- Multiple shapes are arranged with normal maps, but the main characteristic is that the shape-generation path is unified as `Primitive -> ModelAsset -> validate -> build` using this sequence
 - `WebgApp.js` is used so initialization, message display, and the loop are collected through the high-level API
 
 ## How to Run
@@ -25,8 +25,8 @@ English | [日本語](README.md)
 ## Checkpoints
 - Confirm that the `ModelAsset` returned by `Primitive` can be passed directly to the validator
 - Confirm that normal-mapped rendering still works even for `Shape` objects created through `ModelBuilder`
-- Compared with `shapes`, confirm that this sample is meant to follow the processing flow `Primitive -> ModelAsset -> validate -> build` rather than to compare visual appearance
-- Confirm that toggling wireframe and toggling the normal map on or off does not break the display control even though the generation path changes
+- Compared with `shapes`, confirm that this sample is meant to follow the processing flow `Primitive -> ModelAsset -> validate -> build` with emphasis on the data flow
+- Confirm that wireframe and normal-map controls work consistently across the generation paths
 
 ## Controls
 - Drag / arrow keys: orbit camera rotation

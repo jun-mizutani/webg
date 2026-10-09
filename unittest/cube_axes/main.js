@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// unittest/cube_axes/main.js  2026/07/25
+// unittest/cube_axes/main.js  2026/10/04
 //   Cube demo: hardcoded by addVertex/addPlane
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -25,7 +25,7 @@ const setProjection = (screen, shader, angle = 45) => {
   shader.setProjectionMatrix(proj);
 };
 
-// `face`を生成し、後続処理で利用できる状態にする
+// 4頂点を指定された順序で1枚の面へ組み、面ごとの色を持つShapeを返す
 const createFace = (gpu, vertices, color) => {
   // Shapeを1面単位で作るaddVertex/addPlaneだけで立方体を構成する
   const s = new Shape(gpu);
@@ -46,7 +46,7 @@ const createFace = (gpu, vertices, color) => {
   return s;
 };
 
-// 立方体の各面を生成し、後続処理で利用できる状態にする
+// 立方体の6方向へ四角形を張り、表裏と回転方向を区別できる6色のShapeを返す
 const createCubeFaces = (gpu) => {
   // 1辺2の立方体を6面に分けて、それぞれ別色で作る
   const n = -1.0;
@@ -67,7 +67,7 @@ const createCubeFaces = (gpu) => {
   ];
 };
 
-// このインスタンスの初期化段階で、必要な状態と資源を準備して処理を開始する
+// 6面を独立した色付きShapeとして準備し、軸回転と表裏の描画を繰り返し確認する
 const start = async ({ screen, gpu, setStatus, setViewportLayout, startLoop }) => {
   // SmoothShaderをShape既定シェーダとして使い、全ての面に同じ照明モデルを適用する
   const shader = new SmoothShader(gpu);

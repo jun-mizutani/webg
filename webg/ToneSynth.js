@@ -39,7 +39,7 @@ export default class ToneSynth {
     this.masterGainValue = util.readOptionalFiniteNumber(
       opts.masterGain,
       "ToneSynth masterGain",
-      0.25,
+      0.7,
       { min: 0.0 }
     );
     this.toneBusGainValue = util.readOptionalFiniteNumber(

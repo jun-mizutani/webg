@@ -1,0 +1,29 @@
+@startuml
+title HDR環境からIBL用データを事前積分する
+top to bottom direction
+skinparam backgroundColor white
+skinparam shadowing true
+skinparam dpi 150
+skinparam defaultFontName Yu Gothic UI
+skinparam defaultFontSize 18
+skinparam rectangle {
+  RoundCorner 24
+  BorderColor black
+  BackgroundColor #f7fbff
+}
+rectangle "Radiance HDR\n全方向の線形radiance" as HDR #f4edff
+rectangle "座標とprimariesを変換\nlinear sRGBへそろえる" as Convert
+rectangle "拡散irradiance\n半球から低周波成分を積分" as Irr #eaf7e8
+rectangle "prefiltered specular\nroughnessごとにGGX積分" as Spec #eaf7e8
+rectangle "BRDF LUT\nNVとroughnessを事前積分" as LUT #eaf7e8
+rectangle "PbrEnvironment\nradiance・irradiance・specular・LUT" as Environment #fdeaea
+HDR -down-> Convert
+Convert -down-> Irr
+Convert -down-> Spec
+Convert -down-> Environment : 背景表示用radiance
+Irr -down-> Environment
+Spec -down-> Environment
+LUT -down-> Environment
+Irr -[hidden]down-> Spec
+Spec -[hidden]down-> LUT
+@enduml

@@ -1,13 +1,15 @@
 // ---------------------------------------------------------
-// headless_tests/core/compute_effect_composer/headless_probe.js  2026/07/12
+// headless_tests/core/compute_effect_composer/headless_probe.js  2026/09/23
 //   Linear High Dynamic Range reflection composition contract
 // ---------------------------------------------------------
 import assert from "node:assert/strict";
+import CameraFrame from "../../../webg/CameraFrame.js";
 import ComputeEffectComposer, {
   COMPUTE_EFFECT_COMPOSER_FORMAT,
   COMPUTE_EFFECT_COMPOSER_WGSL
 } from "../../../webg/ComputeEffectComposer.js";
 import { CAMERA_REVERSE_Z } from "../../../webg/DepthConvention.js";
+import Matrix from "../../../webg/Matrix.js";
 
 globalThis.GPUTextureUsage = { STORAGE_BINDING: 1, TEXTURE_BINDING: 2, COPY_SRC: 4 };
 globalThis.GPUShaderStage = { COMPUTE: 1 };
@@ -74,6 +76,38 @@ function makeResources(width = 16, height = 8, reflectionWidth = 8, reflectionHe
   };
 }
 
+// PBR SSR置換に必要な同解像度G-buffer、鏡面IBL、BRDF LUTをlegacy resourceへ追加します
+function makePbrResources() {
+  const resources = makeResources();
+  const fullSizeTarget = {
+    getView: () => ({}),
+    getWidth: () => 16,
+    getHeight: () => 8
+  };
+  return {
+    ...resources,
+    specularIbl: { ...fullSizeTarget, getFormat: () => "rgba16float" },
+    albedo: fullSizeTarget,
+    normal: fullSizeTarget,
+    material: fullSizeTarget,
+    ambientOcclusion: fullSizeTarget,
+    brdfLut: { getView: () => ({}) },
+    brdfSampler: {}
+  };
+}
+
+// ComposerとG-bufferで同じReverse-Z投影を使うための固定Camera Frameを作ります
+function makeFrame() {
+  return new CameraFrame({
+    cameraWorldMatrix: new Matrix(),
+    near: 0.1,
+    far: 1000.0,
+    vfov: 60.0,
+    aspect: 2.0,
+    depthConvention: CAMERA_REVERSE_Z
+  });
+}
+
 // shaderはReverse-Z geometry上だけ反射を合成し、High Dynamic Range値をclampしません
 {
   assert.equal(COMPUTE_EFFECT_COMPOSER_FORMAT, "rgba16float");
@@ -82,6 +116,11 @@ function makeResources(width = 16, height = 8, reflectionWidth = 8, reflectionHe
   assert.doesNotMatch(COMPUTE_EFFECT_COMPOSER_WGSL, /depth < 0\.999999/);
   assert.match(COMPUTE_EFFECT_COMPOSER_WGSL, /linearColor = base \+ reflection\.rgb \* reflectionWeight/);
   assert.match(COMPUTE_EFFECT_COMPOSER_WGSL, /linearColor = mix\(base, reflection\.rgb, reflectionWeight\)/);
+  assert.match(COMPUTE_EFFECT_COMPOSER_WGSL, /let baseWithoutSpecularIbl = max\(base - specularIbl, vec3f\(0\.0\)\)/);
+  assert.match(COMPUTE_EFFECT_COMPOSER_WGSL, /let replacedColor = baseWithoutSpecularIbl \+ ssrSpecular/);
+  assert.match(COMPUTE_EFFECT_COMPOSER_WGSL, /linearColor = mix\(base, replacedColor, confidence\)/);
+  assert.match(COMPUTE_EFFECT_COMPOSER_WGSL, /pbrEvaluateSpecularIblWeight/);
+  assert.match(COMPUTE_EFFECT_COMPOSER_WGSL, /reflectionWeight \* params\.control\.y/);
   assert.match(COMPUTE_EFFECT_COMPOSER_WGSL, /vec4f\(linearColor, 1\.0\)/);
   assert.doesNotMatch(COMPUTE_EFFECT_COMPOSER_WGSL, /clamp\(linearColor/);
 }
@@ -103,6 +142,20 @@ function makeResources(width = 16, height = 8, reflectionWidth = 8, reflectionHe
   assert.equal(probe.writes.at(-1).data[0], 0.0);
   pass.encode(probe.commandEncoder, makeResources(), { mode: "mix" });
   assert.equal(probe.writes.at(-1).data[0], 1.0);
+  pass.encode(probe.commandEncoder, makePbrResources(), {
+    mode: "pbr-ssr",
+    intensity: 1.25,
+    cameraFrame: makeFrame()
+  });
+  assert.equal(probe.writes.at(-1).data[0], 2.0);
+  assert.equal(probe.writes.at(-1).data[1], 1.25);
+  assert.throws(
+    () => pass.encode(probe.commandEncoder, makeResources(), {
+      mode: "pbr-ssr",
+      cameraFrame: makeFrame()
+    }),
+    /pbr-ssr resources require specularIbl target/
+  );
 
   const oldBase = makeResources();
   oldBase.base.getFormat = () => "rgba8unorm";

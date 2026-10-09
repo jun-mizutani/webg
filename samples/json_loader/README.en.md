@@ -29,7 +29,7 @@ English | [日本語](README.md)
 ## Checkpoints
 - Confirm that the JSON specified by `MODEL_ASSET_FILE` passes the validator and can be rendered directly
 - Confirm that the Help Panel displays `file / model / orbit / target / anim / clip / wireframe` state so the information needed for a viewer can be followed on screen
-- Confirm that inside the sample, the runtime returned by the facade is used to unify node restoration and animation binding, and that the connection can be checked through `getAnimation()` / `getAnimationNames()` instead of direct `animationMap` access
+- Confirm that inside the sample, the runtime returned by the facade is used to unify node restoration and animation binding, and that the connection can be checked through `getAnimation()` / `getAnimationNames()` through the public animation API
 - Confirm that `4 / 5` switches the target clip and that `1 / 2 / 3` act on the currently selected clip
 - Confirm that `4 / 5` can switch between `ArmatureAction_skeleton_0` and `ArmatureAction_skeleton_0_copy`
 - Confirm that `1` can restart the selected clip by name with `restartAnimation(clipId)`

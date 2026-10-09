@@ -1,0 +1,39 @@
+<!doctype html>
+<!-- neon_coaster.html 2026/09/26 -->
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>NEON COASTER — webg Follow camera demo</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main class="stage"><canvas id="canvas" width="1280" height="800"></canvas></main>
+  <header>
+    <a class="brand" href="index.html">Neon Coaster <span>by webg 3.0</span></a>
+    <div class="telemetry">
+      <span><b id="speed">183</b> km/h</span>
+      <span>HEIGHT <b id="height">7.0</b> m</span>
+      <span>BANK <b id="bank">0</b>°</span>
+    </div>
+  </header>
+  <section class="caption">
+    <p>RUN 01 — AFTER DARK</p>
+    <span>Follow EyeRigが車両の先を見続ける</span>
+  </section>
+  <nav aria-label="走行操作">
+    <button id="turbo" disabled aria-pressed="true">TURBO ON</button>
+    <button id="pause" disabled aria-pressed="false">PAUSE</button>
+    <button id="music" disabled aria-pressed="false">MUSIC OFF</button>
+  </nav>
+  <footer>
+    <span>DRAG: LOOK / WHEEL: DISTANCE</span>
+    <span>CATMULL-ROM CLOSED COURSE</span>
+    <a href="index.html">ABOUT ↗</a>
+  </footer>
+  <div id="loading" role="status"><div class="loader"></div><strong>NEON COASTER</strong><p>軌道と光を構築しています</p></div>
+  <pre id="error" role="alert" hidden></pre>
+  <script type="module" src="main.js"></script>
+</body>
+</html>

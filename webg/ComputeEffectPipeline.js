@@ -1,17 +1,21 @@
 // ---------------------------------------------
-// ComputeEffectPipeline.js  2026/07/25
-//   Integrated v2 deferred compute effect pipeline
+// ComputeEffectPipeline.js  2026/10/04
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // ---------------------------------------------
+
+// Integrated v2 deferred compute effect pipeline
+
+import WaterBody from "./WaterBody.js";
 import ComputeShadowPass from "./ComputeShadowPass.js";
+import ComputeParticlePass from "./ComputeParticlePass.js";
 import ComputeSpotShadowPass from "./ComputeSpotShadowPass.js";
 import ComputeBloomPass, {
   COMPUTE_BLOOM_DEFAULTS
-} from "./ComputeBloomPass.js?v=20260723_image_pyramid";
+} from "./ComputeBloomPass.js";
 import ComputeDofPass, {
   COMPUTE_DOF_DEFAULTS
-} from "./ComputeDofPass.js?v=20260723_dof_coverage";
+} from "./ComputeDofPass.js";
 import ComputeEdgePass, {
   COMPUTE_EDGE_DEFAULTS
 } from "./ComputeEdgePass.js";
@@ -26,14 +30,14 @@ import ComputeVignettePass, {
 } from "./ComputeVignettePass.js";
 import ComputeSsrPass, {
   COMPUTE_SSR_DEFAULTS
-} from "./ComputeSsrPass.js?v=20260723_image_pyramid";
+} from "./ComputeSsrPass.js";
 import {
   GeometryBufferPass
 } from "./GeometryBufferPass.js";
 import ShadowMapPass, {
   createDirectionalLightMatrices,
   createFrustumFitDirectionalLightMatrices
-} from "./ShadowMapPass.js?v=20260713_camera_frame_fit";
+} from "./ShadowMapPass.js";
 import SpotShadowMapPass, {
   createSpotLightMatrices
 } from "./SpotShadowMapPass.js";
@@ -43,11 +47,14 @@ import SsaoPass, {
 import ComputeEffectComposer from "./ComputeEffectComposer.js";
 import ComputeEffectToneMapPass from "./ComputeEffectToneMapPass.js";
 import DeferredLightingPass from "./DeferredLightingPass.js";
-import TransparencyPass from "./TransparencyPass.js?v=20260723_image_pyramid";
+import TransparencyPass, {
+  TRANSMISSION_DEFAULTS
+} from "./TransparencyPass.js";
 import { CAMERA_REVERSE_Z } from "./DepthConvention.js";
+import { readPerformanceTime } from "./GpuPassProfiler.js";
 import util from "./util.js";
 
-const DEFAULTS = Object.freeze({
+const DEFAULTS = {
   label: "compute-effect",
   shadowMapSize: 1536,
   lightDirection: [0.46, -0.82, 0.34],
@@ -99,18 +106,29 @@ const DEFAULTS = Object.freeze({
     reflectivityThreshold: COMPUTE_SSR_DEFAULTS.reflectivityThreshold
   },
   composer: {
-    mode: "mix"
+    mode: "pbr-ssr"
   },
-  transparency: {},
+  transparency: {
+    transmissionEnabled: false,
+    transmissionStrength: 1.0,
+    transmissionDistance: TRANSMISSION_DEFAULTS.distance,
+    transmissionHitThickness: TRANSMISSION_DEFAULTS.hitThickness,
+    transmissionSteps: TRANSMISSION_DEFAULTS.steps,
+    transmissionRayDebugEnabled: false,
+    transmissionRayMissFallback: TRANSMISSION_DEFAULTS.rayMissFallback,
+    transmissionRayMissColor: null
+  },
   fog: {
     ...COMPUTE_FOG_DEFAULTS
   },
   lighting: {
+    unitSystem: "relative",
     ambient: 0.035,
     directionalColor: [1.0, 1.0, 1.0],
     directionalIntensity: 1.0,
     spotColor: [1.0, 1.0, 1.0],
-    spotIntensity: 1.0
+    spotIntensity: 1.0,
+    spotMinimumDistance: null
   },
   toneMap: {
     mode: "reinhard",
@@ -121,6 +139,8 @@ const DEFAULTS = Object.freeze({
   },
   dof: {
     ...COMPUTE_DOF_DEFAULTS,
+    // DoFは従来どおり数値のfocusDistanceを使い、必要な場合だけCameraFrameへ接続する
+    focusSource: "explicit",
     enabled: false
   },
   toon: {
@@ -140,17 +160,15 @@ const DEFAULTS = Object.freeze({
   vignette: {
     ...COMPUTE_VIGNETTE_DEFAULTS
   }
-});
+};
 
 // Keep option merging shallow so each effect can be overridden independently.
 function mergeOptions(base, override = {}) {
   return { ...base, ...override };
 }
 
-// DoFの正式名cocScaleと旧名maxBlurMixを通常の既定値mergeで同時に残すと、
-// 利用者が旧名だけを指定した場合にも「両方を指定した」ように見えてしまいます
-// override側で明示した名前を優先して反対側の継承値を除き、両方を同じ階層で
-// 明示した場合だけComputeDofPassの一致検証へ渡します
+// DoFのcocScaleとmaxBlurMixはoverride側で明示した名前を優先して既定値を統合する
+// 両方を明示した場合だけComputeDofPassの一致検証へ渡す
 function mergeDofOptions(base, override = {}) {
   const merged = { ...base, ...override };
   const hasCocScale = Object.prototype.hasOwnProperty.call(override, "cocScale");
@@ -159,6 +177,45 @@ function mergeDofOptions(base, override = {}) {
     delete merged.maxBlurMix;
   } else if (hasLegacyMaxBlurMix && !hasCocScale) {
     delete merged.cocScale;
+  }
+  return merged;
+}
+
+// DoFの合焦距離の入力元を検証し、CameraFrame連動時だけ現在frameの値へ解決する
+// camera選択時はEyeRigの合焦距離を必須とし、取得失敗をその場でエラーとして報告する
+function resolveDofOptions(dof, cameraFrame, enabled, label) {
+  const focusSource = util.readOptionalEnum(
+    dof.focusSource,
+    `${label} dof.focusSource`,
+    "explicit",
+    ["explicit", "camera"]
+  );
+  const resolved = { ...dof };
+  delete resolved.focusSource;
+  if (enabled && focusSource === "camera") {
+    if (!Number.isFinite(cameraFrame?.focusDistance)) {
+      throw new Error(
+        `${label} dof.focusSource "camera" requires CameraFrame focusDistance`
+      );
+    }
+    resolved.focusDistance = util.readFiniteNumber(
+      cameraFrame.focusDistance,
+      `${label} CameraFrame focusDistance`,
+      { minExclusive: 0.0 }
+    );
+  }
+  return resolved;
+}
+
+// exposureとexposureEv100は明示された側を選んで既定値を統合する
+function mergeToneMapOptions(base, override = {}) {
+  const merged = { ...base, ...override };
+  const hasExposure = Object.prototype.hasOwnProperty.call(override, "exposure");
+  const hasExposureEv100 = Object.prototype.hasOwnProperty.call(override, "exposureEv100");
+  if (hasExposure && !hasExposureEv100) {
+    delete merged.exposureEv100;
+  } else if (hasExposureEv100 && !hasExposure) {
+    delete merged.exposure;
   }
   return merged;
 }
@@ -198,6 +255,7 @@ function degreesToCos(value, label) {
   return Math.cos(degrees * Math.PI / 180.0);
 }
 
+// spot light設定から指定角度を読み、未指定時は共有既定値を返します
 function spotAngleValue(shadow, key) {
   return shadow?.spot?.[key] ?? DEFAULTS.shadow.spot[key];
 }
@@ -234,7 +292,7 @@ export default class ComputeEffectPipeline {
     this.transparencyOptions = mergeOptions(DEFAULTS.transparency, options.transparency);
     this.fogOptions = mergeOptions(DEFAULTS.fog, options.fog);
     this.lightingOptions = mergeOptions(DEFAULTS.lighting, options.lighting);
-    this.toneMapOptions = mergeOptions(DEFAULTS.toneMap, options.toneMap);
+    this.toneMapOptions = mergeToneMapOptions(DEFAULTS.toneMap, options.toneMap);
     this.dofOptions = mergeDofOptions(DEFAULTS.dof, options.dof);
     this.toonOptions = mergeOptions(DEFAULTS.toon, options.toon);
     this.bloomOptions = mergeOptions(DEFAULTS.bloom, options.bloom);
@@ -247,6 +305,7 @@ export default class ComputeEffectPipeline {
       halfWidth: options.lightHalfWidth ?? DEFAULTS.lightHalfWidth,
       halfHeight: options.lightHalfHeight ?? DEFAULTS.lightHalfHeight,
       near: options.lightNear ?? DEFAULTS.lightNear,
+      up: this.shadowOptions.directional.up,
       far: options.lightFar ?? DEFAULTS.lightFar
     };
     this.light = createDirectionalLightMatrices(this.lightOptions);
@@ -299,6 +358,7 @@ export default class ComputeEffectPipeline {
       label: `${this.label}:transparency`,
       width: this.width,
       height: this.height,
+      maxLights: options.maxLights ?? 128,
       ...this.transparencyOptions
     });
     this.fogPass = new ComputeFogPass(gpu, {
@@ -363,11 +423,13 @@ export default class ComputeEffectPipeline {
     this.lastShadowType = normalizeShadowType(this.shadowOptions.type);
     this.currentShadowLight = this.light;
     this.currentCameraFrame = null;
+    this.currentClearColor = null;
     this.currentSpace = null;
     this.currentShadowEnabled = null;
     this.destroyed = false;
   }
 
+  // 現在のshadow設定からdirectionalまたはspotの種類を確定します
   resolveShadowType(shadow = this.shadowOptions) {
     return normalizeShadowType(shadow.type);
   }
@@ -437,7 +499,7 @@ export default class ComputeEffectPipeline {
   }
 
   // v2 Pipelineは常にCamera Frame共有のG-bufferとDeferred Shadingを使用します
-  // forward互換経路を残さず、Shadow Map生成とGeometry Buffer生成を同じframe状態で記録します
+  // Shadow Map生成とGeometry Buffer生成を同じframe状態で記録する
   renderScene(space, cameraFrame, clearColor, options = {}) {
     this.requireAlive();
     if (!cameraFrame || cameraFrame.depthConvention !== CAMERA_REVERSE_Z) {
@@ -453,6 +515,12 @@ export default class ComputeEffectPipeline {
     this.currentShadowPass = shadowState.shadowPass;
     this.currentShadowPassOptions = shadowState.passOptions;
     this.currentCameraFrame = cameraFrame;
+    this.currentClearColor = util.readColor(
+      clearColor,
+      `${this.label} clearColor`,
+      undefined,
+      4
+    );
     this.currentSpace = space;
     const shadowEnabled = util.readOptionalBoolean(
       options.shadowEnabled,
@@ -465,7 +533,7 @@ export default class ComputeEffectPipeline {
         timestampWrites: options.shadowTimestampWrites
       });
     }
-    return this.gbuffer.renderSpace(space, cameraFrame, clearColor, {
+    return this.gbuffer.renderSpace(space, cameraFrame, this.currentClearColor, {
       materialResolver: options.materialResolver,
       timestampWrites: options.timestampWrites
     });
@@ -474,6 +542,7 @@ export default class ComputeEffectPipeline {
   // Encode the compute effect chain and return the final color texture.
   encode(commandEncoder, options = {}) {
     this.requireAlive();
+    if (this.waterPending) throw new Error("await setWater before rendering");
     if (!commandEncoder || typeof commandEncoder.beginComputePass !== "function") {
       throw new Error(`${this.label} encode requires a GPUCommandEncoder`);
     }
@@ -486,7 +555,8 @@ export default class ComputeEffectPipeline {
         `${this.label} encode CameraFrame must be the same snapshot used by renderScene`
       );
     }
-    if (!this.currentSpace || typeof this.currentSpace.hasTranslucentTriangles !== "function") {
+    if (!this.currentSpace?.translucentRenderQueue
+        || typeof this.currentSpace.translucentRenderQueue.summarize !== "function") {
       throw new Error(`${this.label} encode requires the Space used by renderScene`);
     }
     const ssao = mergeOptions(this.ssaoOptions, options.ssao);
@@ -508,8 +578,20 @@ export default class ComputeEffectPipeline {
     const shadow = mergeShadowOptions(this.shadowOptions, options.shadow);
     const ssr = mergeOptions(this.ssrOptions, options.ssr);
     const composer = mergeOptions(this.composerOptions, options.composer);
+    const transparency = mergeOptions(this.transparencyOptions, options.transparency);
     const lighting = mergeOptions(this.lightingOptions, options.lighting);
-    const toneMap = mergeOptions(this.toneMapOptions, options.toneMap);
+    const toneMap = mergeToneMapOptions(this.toneMapOptions, options.toneMap);
+    const unitSystem = util.readOptionalEnum(
+      lighting.unitSystem,
+      `${this.label} lighting.unitSystem`,
+      "relative",
+      ["relative", "photometric"]
+    );
+    if (unitSystem === "photometric" && toneMap.exposureEv100 === undefined) {
+      throw new Error(
+        `${this.label} photometric lighting requires toneMap.exposureEv100`
+      );
+    }
     const fog = mergeOptions(this.fogOptions, options.fog);
     const dof = mergeDofOptions(this.dofOptions, options.dof);
     const toon = mergeOptions(this.toonOptions, options.toon);
@@ -521,6 +603,7 @@ export default class ComputeEffectPipeline {
       `${this.label} dofEnabled`,
       false
     );
+    const dofForPass = resolveDofOptions(dof, cameraFrame, dofEnabled, this.label);
     const fogEnabled = util.readOptionalBoolean(
       options.fogEnabled ?? fog.enabled,
       `${this.label} fogEnabled`,
@@ -578,7 +661,7 @@ export default class ComputeEffectPipeline {
       );
     }
 
-    const resources = this.gbuffer.getBindingResources();
+    let resources = this.gbuffer.getBindingResources();
     const directionalLight = shadowType === "directional"
       ? (this.currentShadowLight ?? this.light)
       : this.light;
@@ -628,6 +711,8 @@ export default class ComputeEffectPipeline {
         enabled: ssaoEnabled
       }
     );
+    const caustics = this.waterSystem?.prepare(commandEncoder, cameraFrame,
+      directionalLight, shadowType === "directional") ?? null;
     let output = this.deferredLightingPass.encode(
       commandEncoder,
       {
@@ -638,6 +723,7 @@ export default class ComputeEffectPipeline {
       },
       {
         cameraFrame,
+        caustics,
         directionalLight: shadowType === "directional" ? {
           direction: directionalLight.direction,
           color: lighting.directionalColor,
@@ -650,17 +736,52 @@ export default class ComputeEffectPipeline {
           radius: spotLight.far,
           intensity: lighting.spotIntensity,
           innerCos: this.currentShadowPassOptions.innerCos,
-          outerCos: this.currentShadowPassOptions.outerCos
+          outerCos: this.currentShadowPassOptions.outerCos,
+          ...(lighting.spotMinimumDistance === null
+            || lighting.spotMinimumDistance === undefined
+            ? {}
+            : { minimumDistance: lighting.spotMinimumDistance })
         } : null,
+        unitSystem,
         ambient: lighting.ambient,
+        environment: lighting.environment,
+        environmentIntensity: lighting.environmentIntensity,
+        environmentBackground: lighting.environmentBackground,
+        environmentRotationDegrees: lighting.environmentRotationDegrees,
         // Local Lightの公開type、World位置、World方向はDeferredLightingPassが一括検証・変換します
-        // 統合pipelineは配列を書き換えず、利用者が指定したpoint / cone契約をそのまま渡します
+        // 利用者が指定したpoint / coneの配列をそのまま渡し、入力の契約を維持する
         lights: options.lights ?? [],
         lightCount: options.lightCount,
         view: options.lightingView ?? "lighting"
       }
     );
     if (ssrEnabled) {
+      // PBR SSR置換は実環境の鏡面IBLと通常lighting viewが揃う場合だけ有効にします
+      // 環境なしやSSR debug viewではComposer経路を使い、PBR resourceの状態をそのまま検証します
+      const ssrView = options.ssrView ?? "reflection";
+      const pbrSsrIntegration = composer.mode === "pbr-ssr"
+        && ssrView === "reflection"
+        && (options.lightingView ?? "lighting") === "lighting"
+        && lighting.environment !== null
+        && lighting.environment !== undefined;
+      const pbrSsrFusionEnabled = util.readOptionalBoolean(
+        options.pbrSsrFusionEnabled,
+        `${this.label} pbrSsrFusionEnabled`,
+        true
+      );
+      const useFusedPbrSsr = pbrSsrIntegration && pbrSsrFusionEnabled;
+      const pbrCompositeResources = useFusedPbrSsr ? {
+        base: output,
+        depth: resources.depth,
+        specularIbl: this.deferredLightingPass.getSpecularIblTarget(),
+        albedo: resources.albedo ?? resources.color,
+        normal: resources.normal,
+        material: resources.material,
+        ambientOcclusion,
+        brdfLut: lighting.environment.brdfLut,
+        brdfSampler: lighting.environment.sampler,
+        output: this.composer.getOutputTarget()
+      } : null;
       const reflection = this.ssrPass.encode(commandEncoder, {
         scene: output,
         normal: resources.normal,
@@ -670,20 +791,78 @@ export default class ComputeEffectPipeline {
         ...ssr,
         cameraFrame,
         enabled: true,
-        view: options.ssrView ?? "reflection"
+        view: ssrView,
+        integrationMode: pbrSsrIntegration ? "pbr" : "legacy",
+        // PBR通常表示はroughness filterと鏡面IBL置換をSSR最終dispatchへ統合する
+        // 必須resourceが揃う経路を選び、それ以外はComposer経路へ明示的に渡す
+        ...(pbrCompositeResources === null
+          ? {}
+          : { pbrComposite: pbrCompositeResources })
       });
-      output = this.composer.encode(commandEncoder, {
-        base: output,
-        reflection,
-        depth: resources.depth
-      }, {
-        ...composer,
-        timestampWrites: undefined
-      });
+      output = useFusedPbrSsr
+        ? reflection
+        : this.composer.encode(commandEncoder, {
+            base: output,
+            reflection,
+            depth: resources.depth,
+            ...(pbrSsrIntegration ? {
+              specularIbl: this.deferredLightingPass.getSpecularIblTarget(),
+              albedo: resources.albedo ?? resources.color,
+              normal: resources.normal,
+              material: resources.material,
+              ambientOcclusion,
+              brdfLut: lighting.environment.brdfLut,
+              brdfSampler: lighting.environment.sampler
+            } : {})
+          }, {
+            ...composer,
+            mode: pbrSsrIntegration
+              ? "pbr-ssr"
+              : composer.mode === "pbr-ssr" ? "mix" : composer.mode,
+            intensity: pbrSsrIntegration ? ssr.intensity : undefined,
+            cameraFrame,
+            timestampWrites: undefined
+          });
     }
     // G-bufferへ書かなかった透明triangleをopaque scene colorへ合成してから、
     // Fog、Toon、DoF、Bloom、Tone Map、Edgeを適用し、透明部分も同じcolor effectの対象にする
-    if (this.currentSpace.hasTranslucentTriangles()) {
+    // 透明pass要否と最大Frost roughnessを一回の走査で取得し、必要なPyramid Levelだけを生成する
+    const translucentSummaryStartedAt = readPerformanceTime();
+    const translucentSummary = this.currentSpace.translucentRenderQueue.summarize(
+      this.currentSpace.nodes
+    );
+    const translucentSummaryMs = readPerformanceTime() - translucentSummaryStartedAt;
+    let waterParticles = null;
+    if (this.waterSystem?.surface) {
+      const system = this.waterSystem;
+      // 水中layerの背景を先に作り、手前のlayerには合成済み水面深度を渡す
+      const frame = { cameraFrame, environment: this.deferredLightingPass.currentEnvironment,
+        light: shadowType === "directional" ? directionalLight : null, lighting };
+      waterParticles = system.layers.prepareParticles(commandEncoder, this.particlePass, cameraFrame, options.deltaSec);
+      if (translucentSummary.hasTriangles || waterParticles.length) {
+        const geometry = system.prepareGeometry(commandEncoder, output, resources, frame);
+        const direction = cameraFrame.viewRotationMatrix.mul3x3Vector(directionalLight.direction);
+        const lightOverride = shadowType === "spot"
+          ? [...cameraFrame.worldPointToView(spotLight.position), 1]
+          : [-direction[0], -direction[1], -direction[2], 0];
+        output = system.layers.encode(commandEncoder, output, resources.depth, geometry.depth, {
+          cameraFrame, space: this.currentSpace, hasTriangles: translucentSummary.hasTriangles,
+          activeParticles: waterParticles, lighting: shadowType === "spot" ? {
+            ...lighting, directionalColor: lighting.spotColor, directionalIntensity: lighting.spotIntensity
+          } : lighting, lightOverride,
+          localLights: this.deferredLightingPass.getLocalLightBindingResources(),
+          shadow: shadowEnabled ? {
+            type: shadowType, depth: shadowType === "spot" ? this.spotShadowMap : this.directionalShadowMap,
+            cameraFrame, lightViewProjection: shadowType === "spot" ? spotLight.viewProjection : directionalLight.viewProjection,
+            bias: shadow.bias, normalBias: shadow.normalBias, pcfRadius: shadow.pcfRadius
+          } : null
+        });
+      }
+      const water = system.composite(commandEncoder, output, resources, frame);
+      output = water.scene;
+      resources = { ...resources, depth: water.depth, normal: water.normal };
+    }
+    if (translucentSummary.hasTriangles) {
       const transparencyLight = shadowType === "spot"
         ? [...cameraFrame.worldPointToView(spotLight.position), 1.0]
         : (() => {
@@ -696,12 +875,54 @@ export default class ComputeEffectPipeline {
         depth: resources.depth,
         space: this.currentSpace,
         cameraFrame,
-        ambient: lighting.ambient,
+        clearColor: this.currentClearColor,
+        cpuSummaryMs: translucentSummaryMs,
+        maxFrostRoughness: translucentSummary.maxFrostRoughness,
+        radiance: (shadowType === "spot" ? lighting.spotColor : lighting.directionalColor)
+          .map((channel) => channel * (
+            shadowType === "spot" ? lighting.spotIntensity : lighting.directionalIntensity
+          )),
+        environment: lighting.environment,
+        environmentIntensity: lighting.environmentIntensity,
+        environmentRotationDegrees: lighting.environmentRotationDegrees,
+        // Transmissionは透明面のmaskと背景屈折を所有するTransparencyPassへ渡す
+        // 実際に処理するresource境界へ設定を置き、該当するpassへ渡す
+        transmission: {
+          enabled: transparency.transmissionEnabled,
+          strength: transparency.transmissionStrength,
+          distance: transparency.transmissionDistance,
+          hitThickness: transparency.transmissionHitThickness,
+          steps: transparency.transmissionSteps,
+          debugRayStatus: transparency.transmissionRayDebugEnabled,
+          rayMissFallback: transparency.transmissionRayMissFallback,
+          rayMissColor: transparency.transmissionRayMissColor
+        },
+        // screen-space visibilityではなく透明fragment自身の位置から同じShadow Mapを評価します
+        shadow: shadowEnabled ? {
+          type: shadowType,
+          depth: shadowType === "spot" ? this.spotShadowMap : this.directionalShadowMap,
+          cameraFrame,
+          lightViewProjection: shadowType === "spot"
+            ? spotLight.viewProjection
+            : directionalLight.viewProjection,
+          bias: shadow.bias,
+          normalBias: shadow.normalBias,
+          pcfRadius: shadow.pcfRadius
+        } : null,
+        // Deferredが同じframeで検証・view-space変換・packingしたstorage bufferを共有します
+        localLights: this.deferredLightingPass.getLocalLightBindingResources(),
         lightOverride: transparencyLight
       });
     }
+    // 粒子を透明合成後のHDRへ加え、Bloomの有効・無効によらず更新する
+    if (this.particlePass) {
+      output = this.particlePass.encode(commandEncoder, output, {
+        depth: resources.depth, cameraFrame, deltaSec: options.deltaSec, activeParticles: waterParticles
+      });
+    }
+    this.waterSystem?.finish(commandEncoder);
     // Fogは透明合成済みHDR sceneへ一度だけ適用する。距離はG-bufferの不透明深度を使うため、
-    // 透明surface自身の距離ではなく、そのpixelの背後にある不透明surfaceの距離で近似する。
+    // 透明surface自身の距離ではなく、そのpixelの背後にある不透明surfaceの距離で近似する
     if (fogEnabled) {
       output = this.fogPass.encode(commandEncoder, {
         scene: output,
@@ -725,7 +946,7 @@ export default class ComputeEffectPipeline {
         scene: output,
         depth: resources.depth
       }, {
-        ...dof,
+        ...dofForPass,
         enabled: true,
         cameraFrame: options.cameraFrame,
         timestampWrites: undefined
@@ -761,7 +982,7 @@ export default class ComputeEffectPipeline {
       });
     }
     // VignetteはTone MapとEdgeを終えた表示色全体へ適用し、PresentationとHUDより前の
-    // ComputeEffectPipeline最終出力として返す。
+    // ComputeEffectPipeline最終出力として返す
     if (vignetteEnabled) {
       output = this.vignettePass.encode(commandEncoder, output, {
         ...vignette,
@@ -770,6 +991,43 @@ export default class ComputeEffectPipeline {
       });
     }
     return output;
+  }
+
+  // WebgAppがqueue.submit()した直後にTransparencyの非同期timestamp readbackを開始する
+  // FrameTimerとは独立したQuerySetを使うため、全体時間とパス別時間を同じframeで取得できる
+  afterGpuSubmit() {
+    this.requireAlive();
+    this.transparencyPass.afterGpuSubmit();
+    this.waterSystem?.afterGpuSubmit();
+  }
+
+  // Transmission sampleや診断出力へ、透明処理のGPU/CPUパス別移動平均を公開する
+  getTransparencyPerformanceSnapshot() {
+    this.requireAlive();
+    return this.transparencyPass.getPerformanceSnapshot();
+  }
+
+  // Transmission sampleの毎frame異常判定へ、直前queueのprimitive統計を参照で公開する
+  getTransparencyQueueFrameSummary() {
+    this.requireAlive();
+    return this.transparencyPass.getQueueFrameSummary();
+  }
+
+  // 閾値を超えたframeだけ、透明instance姿勢と分断構造を含む詳細snapshotを生成する
+  getTransparencyQueueDebugSnapshot() {
+    this.requireAlive();
+    return this.transparencyPass.getQueueDebugSnapshot();
+  }
+
+  // 初回の粒子登録でHDR画像を準備し、以後は同じ画像を共用する
+  async addParticleEmitter(emitter) {
+    this.requireAlive();
+    if (!this.particlePass) this.particlePass = new ComputeParticlePass(this.gpu,
+      { width: this.width, height: this.height });
+    await this.particlePass.ready;
+    this.requireAlive();
+    this.particlePass.add(emitter);
+    return emitter;
   }
 
   // Resize screen-sized intermediate targets after canvas size changes.
@@ -795,6 +1053,7 @@ export default class ComputeEffectPipeline {
     this.deferredLightingPass.resize(this.width, this.height);
     this.ssrPass.resize(this.width, this.height);
     this.transparencyPass.resize(this.width, this.height);
+    this.particlePass?.resize(this.width, this.height);
     this.fogPass.resize(this.width, this.height);
     this.composer.resize(this.width, this.height);
     this.toneMapPass.resize(this.width, this.height);
@@ -812,6 +1071,42 @@ export default class ComputeEffectPipeline {
     return this.gbuffer.getBindingResources();
   }
 
+  // 一つの水平水域を接続する。await中はframe生成を止め、完了後に再開する
+  // null、または両機能OFFなら、通常描画のshader/layout/GPU資源へ戻る
+  async setWater(body, { surfaceEnabled = false, causticsEnabled = false, quality = "high" } = {}) {
+    this.requireAlive();
+    if (body !== null && !(body instanceof WaterBody)) throw new TypeError("setWater requires WaterBody or null");
+    if (typeof surfaceEnabled !== "boolean" || typeof causticsEnabled !== "boolean") {
+      throw new TypeError("water enabled flags must be boolean");
+    }
+    if (!["low", "high"].includes(quality)) throw new RangeError("water quality must be low or high");
+    if (this.waterPending) throw new Error("await the previous setWater operation");
+    const current = this.waterSystem;
+    if (current?.body === body && current.options.surfaceEnabled === surfaceEnabled
+      && current.options.causticsEnabled === causticsEnabled && current.options.quality === quality) return;
+    this.waterPending = true;
+    try {
+      this.waterSystem?.destroy();
+      this.waterSystem = null;
+      if (body && (surfaceEnabled || causticsEnabled)) {
+        const { default: WaterSystem } = await import("./WaterSystem.js");
+        this.requireAlive();
+        const system = await WaterSystem.create(this.gpu, this, body, { surfaceEnabled, causticsEnabled, quality });
+        if (this.destroyed) { system.destroy(); this.requireAlive(); }
+        this.waterSystem = system;
+      }
+    } finally { this.waterPending = false; }
+  }
+
+  // 水面・集光の有効状態と仕事量を取得し、OFF時は専用処理が零の統計を返す
+  getWaterStats() {
+    this.requireAlive();
+    return this.waterSystem?.getStats() ?? {
+      surfaceEnabled: false, causticsEnabled: false,
+      causticDispatches: 0, receiverPasses: 0, surfaceDispatches: 0, geometryDispatches: 0, depthPasses: 0, timing: null
+    };
+  }
+
   // Prevent commands from touching destroyed GPU resources.
   requireAlive() {
     if (this.destroyed) {
@@ -822,9 +1117,12 @@ export default class ComputeEffectPipeline {
   // Release owned GPU resources in dependency order.
   destroy() {
     if (this.destroyed) return false;
+    this.waterSystem?.destroy();
+    this.waterSystem = null;
     this.vignettePass.destroy();
     this.edgePass.destroy();
     this.bloomPass.destroy();
+    this.particlePass?.destroy();
     this.toonPass.destroy();
     this.dofPass.destroy();
     this.toneMapPass.destroy();

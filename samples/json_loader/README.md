@@ -29,7 +29,7 @@
 ## 確認ポイント
 - MODEL_ASSET_FILE で指定した JSON が validator を通過し、そのまま描画できることを確認します
 - Help Panel に file / model / orbit / target / anim / clip / wireframe 状態が表示され、viewer として必要な状態を画面上で追えることを確認します
-- サンプル内では facade の戻り値 runtime を使って node 復元と animation binding を共通化し、animationMap 直参照ではなく getAnimation() / getAnimationNames() を使って接続確認できることを確認します
+- サンプル内では facade の戻り値 runtime を使って node 復元と animation binding を共通化し、getAnimation() / getAnimationNames() を使って接続確認できることを確認します
 - 4 / 5 キーで対象 clip を切り替え、1 / 2 / 3 が現在選択中 clip に対して動作することを確認します
 - 4 / 5 キーで ArmatureAction_skeleton_0 と ArmatureAction_skeleton_0_copy を切り替えられることを確認します
 - 1 キーで選択中 clip を restartAnimation(clipId) により名前指定で再始動できることを確認します

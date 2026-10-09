@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// unittest/shared/SkinningTestUtils.js  2026/07/25
+// unittest/shared/SkinningTestUtils.js  2026/10/04
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // ---------------------------------------------
@@ -10,9 +10,10 @@ import Skeleton from "../../webg/Skeleton.js";
 import Texture from "../../webg/Texture.js";
 
 // unittest 用の最小 helper:
-// - BonePhong / BoneNormPhong の shader 経路確認で共通になる処理だけを切り出す
+// - SmoothShader のボーン変形と画像法線の比較に使う形状・テクスチャを準備する
 // - geometry 自体や描画条件は簡素に保ち、shader 切替による差を見やすくする
 
+// 比較用の画面寸法から透視投影を作り、スキニングの各表示に同じ視野を設定する
 export const setProjection = (screen, shader, angle = 53) => {
   const proj = new Matrix();
   const fov = screen.getRecommendedFov(angle);
@@ -20,9 +21,9 @@ export const setProjection = (screen, shader, angle = 53) => {
   shader.setProjectionMatrix(proj);
 };
 
-// テクスチャのX方向の反転を読み込み、検証済みのデータとして後続処理へ渡す
+// 画像を左右反転してRGBAへ変換し、GPUテクスチャとCPU側の参照画素を返す
 export const loadTextureFlipX = async (gpu, url) => {
-  // 既存 sample と同じ向きで比較できるよう、`num256.png` は左右反転して取り込む
+  // テクスチャの表示向きを基準画像に合わせるため、`num256.png` は左右反転して取り込む
   const response = await fetch(url);
   const blob = await response.blob();
   const bitmap = await createImageBitmap(blob);
@@ -48,10 +49,10 @@ export const loadTextureFlipX = async (gpu, url) => {
   };
 };
 
-// テクスチャを読み込み、検証済みのデータとして後続処理へ渡す
+// 元画像の向きを保ったRGBAを読み込み、GPUテクスチャと法線生成用の参照画素を返す
 export const loadTexture = async (gpu, url) => {
   // 元画像の向きをそのまま使って比較したい場合はこちらを使う
-  // webg の UV は左下原点なので、読み込んだ画像の上下をここで勝手に触らない
+  // webgのUVは左下原点であり、比較画像は元の上下の向きを保って読み込む
   const response = await fetch(url);
   const blob = await response.blob();
   const bitmap = await createImageBitmap(blob);
@@ -78,10 +79,10 @@ export const loadTexture = async (gpu, url) => {
   };
 };
 
-// 画像の法線のマップを生成し、後続処理で利用できる状態にする
+// ベース画像の輝度から法線テクスチャを生成し、元画像と同じUVで陰影を比較する
 export const buildImageNormalMap = async (gpu, rgba, width, height, options = {}) => {
-  // BoneNormPhong 側では、ベース画像そのものから normal map を作り、
-  // 「法線マップ付き skinning shader が崩れないか」だけを素直に確認する
+  // ベース画像の輝度からnormal mapを作り、
+  // SmoothShaderのボーン変形に画像法線の陰影が追従することを確認する
   const texture = new Texture(gpu);
   await texture.initPromise;
   await texture.buildNormalMapFromHeightMap({
@@ -98,7 +99,7 @@ export const buildImageNormalMap = async (gpu, rgba, width, height, options = {}
   return texture;
 };
 
-// `two`のボーンの`skinned`の`prism`を生成し、後続処理で利用できる状態にする
+// 2ボーンと頂点の重みを持つ筒状メッシュを作り、面と線の変形を比較する
 export const createTwoBoneSkinnedPrism = (gpu, options = {}) => {
   // 少数ボーン + 単純な円柱側面メッシュに絞り、
   // shader の skinning 経路が正常かどうかを観察しやすい形へ固定する
@@ -132,7 +133,7 @@ export const createTwoBoneSkinnedPrism = (gpu, options = {}) => {
       // revolution 系と同じ回転方向にそろえ、法線の向きを筒の外側へ合わせる
       const z = -Math.sin(angle) * radius;
       // `loadTextureFlipX()` で画像を左右反転して取り込む unittest では、
-      // geometry 側の U を反転して「見た目の画像向き」は従来と同じにそろえる
+      // geometry 側の U も反転し、画像の表示向きを基準画像に揃える
       const uCoord = flipU ? (1.0 - u) : u;
       const v = shape.addVertexUV(x, y, z, uCoord, 1.0 - (i / rings)) - 1;
       shape.addVertexWeight(v, 0, 1.0 - t);
@@ -146,7 +147,7 @@ export const createTwoBoneSkinnedPrism = (gpu, options = {}) => {
     for (let j = 0; j < segments; j++) {
       const j1i = (j + 1) % segments;
       // 側面の外向き法線を維持するため、ring の進行方向に対して
-      // triangle の winding を反転せず一定にそろえる
+      // triangleの頂点順序を揃え、表面の向きを一定に保つ
       // ここが逆だと auto normal が内向きになり、skinning + normal map の
       // 凹凸が static mesh と逆に見えやすくなる
       shape.addTriangle(r0 + j, r0 + j1i, r1 + j);
@@ -158,10 +159,10 @@ export const createTwoBoneSkinnedPrism = (gpu, options = {}) => {
   return { shape, skeleton, j0, j1 };
 };
 
-// `two`のボーンの`skinned`の`tube`を生成し、後続処理で利用できる状態にする
+// 端を開いた2ボーンの筒を作り、内外の表示と法線の追従を確認する
 export const createTwoBoneSkinnedTube = (gpu, options = {}) => {
   // revolution 系の筒を skinned mesh として扱う最小構成を作る
-  // 側面だけを残し、上下面は閉じないことで裏面と normal map の両方を追いやすくする
+  // 上下を開いた側面メッシュで、内外の表示とnormal mapを比較する
   const shape = new Shape(gpu);
   shape.setAutoCalcNormals(true);
   const skeleton = new Skeleton();
@@ -223,7 +224,7 @@ export const createTwoBoneSkinnedTube = (gpu, options = {}) => {
   return { shape, skeleton, j0, j1 };
 };
 
-// デバッグのボーンの形状を生成し、後続処理で利用できる状態にする
+// 骨の位置と方向を示す小さな目印を作り、メッシュの曲がりと比較する
 export const createDebugBoneShape = (gpu, shader, size = 0.6) => {
   // メッシュ変形とボーン向きの一致を見やすくするため、最小の debugBone 表示を共通化する
   const boneShape = new Shape(gpu);

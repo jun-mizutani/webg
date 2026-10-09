@@ -159,7 +159,7 @@ export default class ViewController {
   }
 
   // visible pick command を実行する
-  // pick 判定そのものは main.js 側の既存関数がこの state を読む
+  // pick 判定は main.js 側の関数がこの state を読む
   runToggleVisiblePickOnlyCommand() {
     this.toggleVisiblePickOnly();
     this.requireEffect("setMessage")(`visible pick ${this.visiblePickOnly ? "only" : "through"}`);

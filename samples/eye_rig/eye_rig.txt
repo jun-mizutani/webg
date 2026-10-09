@@ -2,9 +2,9 @@
 
 ## このサンプルの目的
 
-`eye_rig` は、`webg/EyeRig.js` が扱う `base -> rod -> eye` の3段構成を、Orbit、First Person、Followの三つの用途で比較するサンプルです。特定のゲーム向けカメラを完成品として提示するのではなく、EyeRigが設定するローカル変換と、アプリケーションが構成する親子階層を組み合わせることで、カメラの動きをどのように選べるかを確認します。
+`eye_rig` は、`webg/EyeRig.js` が扱う `base -> rod -> eye` の3段構成を、Orbit、First Person、Followの三つの用途で比較するサンプルです。EyeRigが設定するローカル変換と、アプリケーションが構成する親子階層を組み合わせることで、カメラの動きをどのように選べるかを確認します。
 
-このサンプルで先行確認した仕様は、2026年6月12日に `webg/EyeRig.js` へ取り込まれました。Followはcamera baseを移動させず、独立して動くtargetをeyeの姿勢で滑らかに追跡します。回転した親の下でOrbitのPANと視点基準回転を正しいローカル座標へ変換する処理、およびFirst Personの水平dragをbodyYawではなくlookYawへ反映する処理もコア実装を直接使用します。
+Followはcamera baseを移動させず、独立して動くtargetをeyeの姿勢で滑らかに追跡します。回転した親の下でOrbitのPANと視点基準回転を正しいローカル座標へ変換し、First Personの水平dragをlookYawへ反映します。
 
 ## シーンの構成
 
@@ -29,7 +29,7 @@ Orbitでは、baseが注視中心、rodが周回角度、eyeが距離を担当�
 
 `H`を押すとcamera rigの親をindependent camera anchorへ変更します。このanchorはcamera vehicleのworld位置だけを受け取り、姿勢はidentityを保ちます。そのためcamera vehicleと同じ場所を移動しても、vehicleの回転はcameraへ継承されません。
 
-この切り替えはEyeRigのOrbit stateを変更するものではありません。同じOrbitを、アプリケーション側の異なる親子階層で使用しています。
+Orbit stateを保持し、同じOrbitをアプリケーション側の異なる親子階層で使用しています。
 
 PANではeyeのworld right/upから画面平面上の移動量を求めた後、baseの親world matrixの逆変換を使ってlocal移動量へ戻します。視点基準回転も同様に、eyeのworld軸をbase local軸へ変換してからrodのlocal quaternionへ加えます。これにより、camera vehicleが回転している場合でも画面上の操作方向とlocal stateが一致します。
 
@@ -61,7 +61,7 @@ t = 1 - exp(-response * deltaSec)
 
 ## 上方向が追跡方向と平行になる場合
 
-rightは `cross(forward, up)` で求めます。forwardとupが平行なら外積がゼロになり、対象を見る方向は決まっていてもロールを決められません。これはオイラー角のジンバルロックではなく、Look-at基底を作る段階の特異条件です。
+rightは `cross(forward, up)` で求めます。forwardとupが平行なら外積がゼロになり、対象を見る方向は決まっていてもロールを決められません。これはLook-at基底を作る段階の特異条件です。
 
 初期化時にこの条件が発生した場合、サンプルは例外として検出します。初期化後の連続追跡中に発生した場合は、直前のtracking quaternionからright軸を取り出し、新しいforwardへ直交投影します。これにより直前のロールを維持し、補助upを急に切り替えて90度回転する不連続を避けます。
 
@@ -73,4 +73,4 @@ Followの `follow dot` はeyeのworld前方と、eyeからtargetへの方向の�
 
 ## コア実装とテスト
 
-`webg/EyeRig.js`、第6章「カメラ制御とEyeRig」、書籍検証用 `book/examples/06_02.html`、API一覧は、このサンプルで確認した仕様へ揃えています。GPUを使わない数値契約は `unittest/eye_rig/headless_probe.js` で確認できます。
+カメラの設定方法は、第6章「カメラ制御とEyeRig」と実行例 `book/examples/06_02.html`で確認できます。GPUを使わない数値契約は `unittest/eye_rig/headless_probe.js` で確認できます。

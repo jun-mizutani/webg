@@ -395,7 +395,7 @@ export default class SsaoPass {
     return createGBufferProjectionParams(cameraFrame);
   }
 
-  // AOはG-bufferのnormalとcamera Reverse-Z depthだけを読み、完成colorを入力に要求しません
+  // AOはG-bufferのnormalとcamera Reverse-Z depthを読み、完成colorとは独立して計算します
   validateResources(resources) {
     const checked = util.readPlainObject(resources, `${this.label} resources`);
     if (!checked.normal || typeof checked.normal.getView !== "function") {

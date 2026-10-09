@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// unittest/vignette/main.js  2026/07/25
+// unittest/vignette/main.js  2026/10/04
 //   vignette sample
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -46,11 +46,12 @@ const DEFAULT_STATE = {
   tintIndex: 0
 };
 
+// 値を上下限の範囲へ収め、更新量や操作パラメータを定めた範囲に保つ
 const clamp = (value, min, max) => {
   return Math.max(min, Math.min(max, value));
 };
 
-// 投影を受け取り、現在の設定と後続処理へ反映する
+// 現在の画面の縦横比と推奨視野角から透視投影を作り、比較用シェーダーへ設定する
 const setProjection = (screen, shader, angle = 52) => {
   // 周辺へ置いた object も一度に見渡せるよう、少し広めの固定投影へそろえる
   const proj = new Matrix();
@@ -59,7 +60,7 @@ const setProjection = (screen, shader, angle = 52) => {
   shader.setProjectionMatrix(proj);
 };
 
-// 形状を生成し、後続処理で利用できる状態にする
+// 基本形状からGPU描画用のShapeを作り、比較条件に合わせた色と材質を設定する
 const createShape = (gpu, asset, color, material = {}) => {
   // unittest では shape ごとの差よりも vignette の掛かり方を見たいので、
   // 材質は見やすい固定値へ寄せる
@@ -77,9 +78,9 @@ const createShape = (gpu, asset, color, material = {}) => {
   return shape;
 };
 
-// ビネットの状態を対象の状態または描画設定へ反映する
+// 操作パネルの値をVignettePassへまとめて設定し、表示中の条件を揃える
 const applyVignetteState = (pass, state) => {
-  // status 表示と pass 実体がずれないよう、変更後は必ずここへ集約して反映する
+  // 操作後はここでpassと状態表示へ同じ設定値を反映する
   pass.setEnabled(state.enabled);
   pass.setStrength(state.strength);
   pass.setRadius(state.radius);
@@ -88,7 +89,7 @@ const applyVignetteState = (pass, state) => {
   pass.setTint(...TINTS[state.tintIndex].value);
 };
 
-// このインスタンスの初期化段階で、必要な状態と資源を準備して処理を開始する
+// 比較用シーンと描画先を初期化し、画面周辺の減衰を操作できる状態にする
 const start = async ({ screen, gpu, setStatus, setViewportLayout, startLoop, document }) => {
   const shader = new SmoothShader(gpu, {
     colorFormat: FULLSCREEN_SOURCE_FORMAT

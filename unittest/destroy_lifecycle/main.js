@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// unittest/destroy_lifecycle/main.js  2026/07/25
+// unittest/destroy_lifecycle/main.js  2026/10/04
 //   destroy_lifecycle unittest
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -25,11 +25,13 @@ const SHAPE_LANE_X = -34.0;
 const RUNTIME_LANE_X = 34.0;
 const ROTATE_SPEED = 0.42;
 
+// 破棄状態をyes / noへ変換し、参照と資源の状態を読み比べやすくする
 const formatBool = (value) => value ? "yes" : "no";
 
+// 参照数や要素数を文字列へ変換し、空の値は0として表示する
 const formatCount = (value) => Number(value ?? 0).toString();
 
-// nullでない要素を現在の入力と状態から求め、呼び出し元へ返す
+// 配列内に残る有効な参照を数え、破棄後の保持状態を確認する
 const countNonNull = (list) => {
   if (!Array.isArray(list)) {
     return 0;
@@ -43,7 +45,7 @@ const countNonNull = (list) => {
   return count;
 };
 
-// 投影を受け取り、現在の設定と後続処理へ反映する
+// 現在の画面の縦横比と推奨視野角から透視投影を作り、比較用シェーダーへ設定する
 const setProjection = (screen, shader, angle = 48) => {
   // 2 レーンを横に並べて見せるため、やや引いた固定視点向けの投影を使う
   const proj = new Matrix();
@@ -52,7 +54,7 @@ const setProjection = (screen, shader, angle = 48) => {
   shader.setProjectionMatrix(proj);
 };
 
-// 材質の形状を生成し、後続処理で利用できる状態にする
+// 指定した基本形状と材質から、共有資源の寿命を検査するShapeを作る
 const createMaterialShape = (gpu, primitiveAsset, color, options = {}) => {
   // Primitive 由来 asset を Shape へ流し込み、
   // destroy 確認に必要な shared resource を必ず GPU 上へ確定させる
@@ -70,7 +72,7 @@ const createMaterialShape = (gpu, primitiveAsset, color, options = {}) => {
   return shape;
 };
 
-// 基本形状から作る実行状態を生成し、後続処理で利用できる状態にする
+// 基本形状のModelAssetを構築し、runtimeと複製実体の寿命を比較できる状態にする
 const createRuntimeFromPrimitive = (gpu, color) => {
   // runtime.destroy() を確認するには、ModelBuilder 経路を通した build 結果が必要になる
   // Primitive.cuboid() は ModelAsset を返すため、この unittest では最小の runtime source として扱う
@@ -93,7 +95,7 @@ const createRuntimeFromPrimitive = (gpu, color) => {
   return runtime;
 };
 
-// 複製したルートノードを対象へ追加し、後続処理から参照できるようにする
+// 複製した階層のルートを指定の親へ接続し、シーン上に比較用の実体を配置する
 const attachInstantiatedRoots = (runtime, instantiated, mountNode) => {
   // instantiate() が作る root node を mount node 配下へ集めておくと、
   // destroy 前後のレーン位置を固定しやすい
@@ -106,7 +108,7 @@ const attachInstantiatedRoots = (runtime, instantiated, mountNode) => {
   }
 };
 
-// 床の形状を生成し、後続処理で利用できる状態にする
+// 比較用の床メッシュと単色材質を準備し、物体の位置を読む基準面にする
 const createFloorShape = (gpu) => {
   // レーン位置の比較がしやすいよう、薄い床を置いて消え方を見やすくする
   return createMaterialShape(
@@ -124,9 +126,9 @@ const createFloorShape = (gpu) => {
   );
 };
 
-// `axis`の`marker`の形状を生成し、後続処理で利用できる状態にする
+// 破棄後も残る固定目印を作り、消えた実体と残る背景を区別する
 const createAxisMarkerShape = (gpu, color) => {
-  // destroy の対象ではない固定 marker を置き、
+  // 破棄操作の後も残る固定markerを配置し、
   // 「消えたのは対象 shape だけか」を見分けやすくする
   return createMaterialShape(
     gpu,
@@ -147,11 +149,12 @@ const runAutoChecks = (gpu) => {
   let passCount = 0;
   let failCount = 0;
 
+  // 検証結果の1行を記録し、画面に表示するログへ追加する
   const log = (line) => {
     lines.push(line);
   };
 
-  // このインスタンスを検証し、後続処理が扱える共通形式へ整える
+  // 条件の合否を記録し、失敗時は比較値を添えて原因を確認できる表示を作る
   const check = (label, condition, detail = "") => {
     if (condition) {
       passCount += 1;
@@ -213,7 +216,7 @@ const runAutoChecks = (gpu) => {
   };
 };
 
-// 形状の`lane`を生成し、後続処理で利用できる状態にする
+// 共有Shapeを持つ元実体と複製を並べ、個別破棄と資源破棄を比較するレーンを作る
 const createShapeLane = (space, gpu) => {
   // 左レーンは Shape / ShapeResource の destroy を見る専用の場にする
   const mount = space.addNode(null, "shapeLaneMount");
@@ -252,7 +255,7 @@ const createShapeLane = (space, gpu) => {
   };
 };
 
-// 実行状態の`lane`を生成し、後続処理で利用できる状態にする
+// runtimeとその複製を並べ、実体と共有資源の寿命を比較するレーンを作る
 const createRuntimeLane = (space, gpu) => {
   // 右レーンは runtime / instantiation destroy の確認に集中する
   const mount = space.addNode(null, "runtimeLaneMount");
@@ -269,7 +272,7 @@ const createRuntimeLane = (space, gpu) => {
   };
 };
 
-// このインスタンスの初期化段階で、必要な状態と資源を準備して処理を開始する
+// Shapeとruntimeの比較レーンを構築し、個別破棄と共有資源の寿命を表示する
 const start = async ({ screen, gpu, setStatus, setViewportLayout, startLoop, document }) => {
   const shader = new SmoothShader(gpu);
   await shader.init();
@@ -305,7 +308,7 @@ const start = async ({ screen, gpu, setStatus, setViewportLayout, startLoop, doc
     lastAction: "idle"
   };
 
-  // 形状の`lane`を現在の入力と実行状態に合わせて更新する
+  // 比較レーンのShapeを作り直し、破棄操作を同じ構成で繰り返せる状態へ戻す
   const rebuildShapeLane = () => {
     // destroy 後も同じ手順で何度でも確認できるよう、
     // レーンごと作り直せる入口を用意する
@@ -318,9 +321,9 @@ const start = async ({ screen, gpu, setStatus, setViewportLayout, startLoop, doc
     state.lastAction = "rebuild-shape-lane";
   };
 
-  // 実行状態の`lane`を現在の入力と実行状態に合わせて更新する
+  // 比較レーンのruntimeと実体を作り直し、参照数と描画の開始条件を揃える
   const rebuildRuntimeLane = () => {
-    // runtime.destroy() 後は再利用できないので、新しい runtime source を作り直す
+    // runtime.destroy()後の再試行では、runtimeと共有資源を生成して開始条件を揃える
     if (state.runtimeLane?.runtime && !state.runtimeLane.runtime.isDestroyed) {
       state.runtimeLane.runtime.destroy();
     }

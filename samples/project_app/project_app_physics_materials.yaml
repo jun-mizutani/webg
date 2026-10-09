@@ -1,0 +1,145 @@
+# Blender scene assetの各materialへ対応するSceneYAML PBR manifestです。
+# pbrは一様な材質、presetは手続き生成する材質を表します。
+# 床、壁、テーブル、レール、板、球、ゴールの順に並べています。
+# 床に使う暗い色のPBRマテリアルです。
+- assetMaterialId: mat_0
+  materialId: model-project-floor
+  pbr:
+    color: [0.24, 0.28, 0.34, 1.0]
+    metallic: 0.0
+    roughness: 0.38
+    specular: 0.72
+# 背面壁の明るいPBRマテリアルです。
+- assetMaterialId: mat_1
+  materialId: model-project-back-wall
+  pbr:
+    color: [0.86, 0.93, 0.97, 1.0]
+    metallic: 0.0
+    roughness: 0.72
+    specular: 0.72
+# 左壁の明るいPBRマテリアルです。
+- assetMaterialId: mat_2
+  materialId: model-project-left-wall
+  pbr:
+    color: [0.86, 0.93, 0.97, 1.0]
+    metallic: 0.0
+    roughness: 0.72
+    specular: 0.72
+# 右壁の明るいPBRマテリアルです。
+- assetMaterialId: mat_3
+  materialId: model-project-right-wall
+  pbr:
+    color: [0.86, 0.93, 0.97, 1.0]
+    metallic: 0.0
+    roughness: 0.72
+    specular: 0.72
+# テーブル天板へ適用する白いセラミックの手続きマテリアルです。
+- assetMaterialId: mat_4
+  materialId: model-project-table-procedural
+  preset: ceramic.white.square
+  uvMapping: real-cuboid
+  scale: 1.0
+  appearance: { metallic: 0.0, roughness: 0.42, specular: 0.64 }
+# テーブル脚1のPBRマテリアルです。
+- assetMaterialId: mat_5
+  materialId: model-project-table-leg-1
+  pbr:
+    color: [0.93, 0.76, 0.6, 1.0]
+    metallic: 0.0
+    roughness: 0.72
+    specular: 0.72
+# テーブル脚2のPBRマテリアルです。
+- assetMaterialId: mat_6
+  materialId: model-project-table-leg-2
+  pbr:
+    color: [0.93, 0.76, 0.6, 1.0]
+    metallic: 0.0
+    roughness: 0.72
+    specular: 0.72
+# テーブル脚3のPBRマテリアルです。
+- assetMaterialId: mat_7
+  materialId: model-project-table-leg-3
+  pbr:
+    color: [0.93, 0.76, 0.6, 1.0]
+    metallic: 0.0
+    roughness: 0.72
+    specular: 0.72
+# テーブル脚4のPBRマテリアルです。
+- assetMaterialId: mat_8
+  materialId: model-project-table-leg-4
+  pbr:
+    color: [0.93, 0.76, 0.6, 1.0]
+    metallic: 0.0
+    roughness: 0.72
+    specular: 0.72
+# 機械土台のPBRマテリアルです。
+- assetMaterialId: mat_9
+  materialId: model-project-machine-base
+  pbr:
+    color: [0.68, 0.75, 0.92, 1.0]
+    metallic: 0.0
+    roughness: 0.72
+    specular: 0.72
+# レールのPBRマテリアルです。
+- assetMaterialId: mat_10
+  materialId: model-project-rail
+  pbr:
+    color: [0.45, 0.81, 0.87, 1.0]
+    metallic: 0.0
+    roughness: 0.72
+    specular: 0.72
+# レール支持部1のPBRマテリアルです。
+- assetMaterialId: mat_11
+  materialId: model-project-rail-support-1
+  pbr:
+    color: [0.68, 0.75, 0.92, 1.0]
+    metallic: 0.0
+    roughness: 0.72
+    specular: 0.72
+# レール支持部2のPBRマテリアルです。
+- assetMaterialId: mat_12
+  materialId: model-project-rail-support-2
+  pbr:
+    color: [0.68, 0.75, 0.92, 1.0]
+    metallic: 0.0
+    roughness: 0.72
+    specular: 0.72
+# 跳ね返り板1のPBRマテリアルです。
+- assetMaterialId: mat_13
+  materialId: model-project-board-1
+  pbr:
+    color: [0.96, 0.56, 0.53, 1.0]
+    metallic: 0.0
+    roughness: 0.72
+    specular: 0.72
+# 跳ね返り板2のPBRマテリアルです。
+- assetMaterialId: mat_14
+  materialId: model-project-board-2
+  pbr:
+    color: [0.96, 0.56, 0.53, 1.0]
+    metallic: 0.0
+    roughness: 0.72
+    specular: 0.72
+# 球へ適用する青いビニールの手続きマテリアルです。
+- assetMaterialId: mat_15
+  materialId: model-project-ball-procedural
+  preset: vinyl.cloudy.blue
+  uvMapping: real-sphere
+  scale: 1.0
+  appearance: { metallic: 1.0, roughness: 0.16, specular: 1.0 }
+# ゴール部品1のPBRマテリアルです。
+- assetMaterialId: mat_16
+  materialId: model-project-goal-1
+  pbr:
+    color: [0.5, 0.85, 0.67, 1.0]
+    metallic: 0.0
+    roughness: 0.72
+    specular: 0.72
+# ゴール部品2のPBRマテリアルです。
+- assetMaterialId: mat_17
+  materialId: model-project-goal-2
+  pbr:
+    color: [0.5, 0.85, 0.67, 1.0]
+    metallic: 0.0
+    roughness: 0.72
+    specular: 0.72

@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// unittest/game_api/main.js  2026/07/25
+// unittest/game_api/main.js  2026/10/04
 //   game_api unittest
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -11,14 +11,17 @@ import GameStateManager from "../../samples/GameStateManager.js";
 
 // webgクラスの役割:
 // WebgApp          : screen / camera / input / message をまとめて初期化する
-// GameStateManager : title / play / pause / result の場面遷移を扱う
+// GameStateManager : play / pause / result の場面遷移を扱う
 // Shape            : 描画メッシュと collision shape を同時に保持する
 // Primitive         : デモ用 cube mesh を簡単に生成する
 
+// 更新量を上下限へ収め、操作と物理表示を一定の範囲に保つ
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
+
+// 指定した範囲から乱数を選び、targetの配置候補を作る
 const randRange = (min, max) => min + Math.random() * (max - min);
 
-// `cube`の形状を生成し、後続処理で利用できる状態にする
+// 立方体メッシュと単色材質を作り、移動や接触を追いやすい比較対象にする
 const createCubeShape = (gpu, size, color, collisionShape) => {
   const shape = new Shape(gpu);
   shape.applyPrimitiveAsset(Primitive.cube(size, shape.getPrimitiveOptions()));
@@ -35,7 +38,7 @@ const createCubeShape = (gpu, size, color, collisionShape) => {
   return shape;
 };
 
-// 床の形状を生成し、後続処理で利用できる状態にする
+// 比較用の床メッシュと単色材質を準備し、物体の位置を読む基準面にする
 const createFloorShape = (gpu, color) => {
   const shape = new Shape(gpu);
   shape.addVertex(-12.0, 0.0, -8.0);
@@ -66,7 +69,7 @@ const createFloorShape = (gpu, color) => {
   return shape;
 };
 
-// このインスタンスの初期化段階で、必要な状態と資源を準備して処理を開始する
+// 入力と衝突形状を持つ小さなゲームを準備し、停止・復帰・新規ラウンドの状態を確認する
 const start = async () => {
   const app = new WebgApp({
     document,
@@ -93,7 +96,7 @@ const start = async () => {
   const gpu = app.screen.getGPU();
   const space = app.space;
   const statusEl = document.getElementById("status");
-  // 状態表示を指定された形式または保存先へ出力する
+  // 数値と状態を行ごとにまとめ、検証用のDOM結果欄へ表示する
   const writeStatus = (lines) => {
     if (statusEl) {
       statusEl.textContent = lines.join("\n");
@@ -113,7 +116,7 @@ const start = async () => {
     initialState: "play"
   });
 
-  // シーンの進行段階を現在の入力と実行状態に合わせて更新する
+  // 状態機械の現在状態をWebgAppのscene phaseへ反映し、更新状態の表示を揃える
   const syncScenePhase = (phase = gsm.currentStateId ?? gsm.initialState ?? state.phaseHint) => {
     app.setScenePhase(phase, {
       force: true
@@ -121,7 +124,7 @@ const start = async () => {
     return phase;
   };
 
-  // ゲームの進行段階を受け取り、現在の設定と後続処理へ反映する
+  // 状態機械を指定の状態へ遷移させ、WebgAppのscene phaseも同期する
   const setGamePhase = (phase, options = {}) => {
     const result = gsm.setState(phase, options);
     syncScenePhase();
@@ -159,7 +162,7 @@ const start = async () => {
     enabled: false
   });
 
-  // `placeTarget`は現在の進行状態に必要な要素を生成または配置する
+  // playerとの距離が4以上になる候補を選び、次の接触開始を確認するtarget位置にする
   const placeTarget = (avoidX = 0.0) => {
     let nextX = randRange(-9.0, 9.0);
     while (Math.abs(nextX - avoidX) < 4.0) {
@@ -169,7 +172,7 @@ const start = async () => {
     targetNode.setPosition(state.targetX, 0.0, 0.0);
   };
 
-  // `round`を初期状態へ戻し、前回の状態を残さない
+  // 得点・combo・時間・位置を初期化し、新しいラウンドの開始条件を揃える
   const resetRound = () => {
     state.playerX = -8.0;
     state.timeLeft = 30.0;
@@ -230,7 +233,7 @@ const start = async () => {
     "game_api unittest",
     "Enter / Start: resume from pause/result",
     "P / Pause: toggle pause",
-    "R / Reset: return to title"
+    "R / Reset: start a new round"
   ], {
     x: 0,
     y: 0,
@@ -255,7 +258,7 @@ const start = async () => {
         { key: "P / Esc", action: "pause" },
         { key: "R", action: "reset" }
       ],
-      note: "title / play / pause / result"
+      note: "play / pause / result"
     },
     {
       label: "collision",
@@ -276,7 +279,7 @@ const start = async () => {
     minScale: 0.76
   });
 
-  // HUDの`numbers`の描画段階で、必要な描画命令と表示内容を記録する
+  // 現在の得点とcomboを左側、残り時間を右側のHUDへ反映する
   const renderHudNumbers = () => {
     app.message.setLines("gamehud-left", [
       `score: ${state.score}`,
@@ -300,15 +303,10 @@ const start = async () => {
   gsm.addState({
     id: "play",
     onEnter: () => {
+      // play への復帰では、停止直前の得点・残り時間・配置を引き継ぐ
       state.phaseHint = "play";
-      resetRound();
       renderHudNumbers();
       app.pushToast("Use arrows or touch to move");
-    },
-    onUpdate: ({ context }) => {
-      const nowMs = Number.isFinite(context?.nowMs) ? context.nowMs : performance.now();
-      targetNode.rotateY(18.0 * Math.max(0.0, Number(context?.deltaSec ?? 0)));
-      targetNode.setPosition(state.targetX, 0.0, Math.sin(nowMs * 0.0024) * 0.25);
     },
     transitions: [
       {
@@ -364,6 +362,8 @@ const start = async () => {
     ]
   });
 
+  // 初回の開始ではラウンドを準備し、その後に状態とHUDを同期する
+  resetRound();
   setGamePhase("play", { force: true });
   app.message.setLines("status", [
     `phase: ${state.phaseHint}`,
@@ -375,7 +375,7 @@ const start = async () => {
     color: [1.0, 0.88, 0.72]
   });
 
-  // 状態表示を現在の入力と実行状態に合わせて更新する
+  // 現在のゲーム状態と数値を結果欄へ反映し、停止・復帰時の値を確認できるようにする
   const updateStatus = () => {
     const phase = gsm.currentStateId ?? state.phaseHint;
     writeStatus([
@@ -388,15 +388,20 @@ const start = async () => {
     ]);
   };
 
+  // actionの押下開始を読み取り、状態遷移を1回の入力として扱う
   const phaseKey = (name) => app.wasActionPressed(name) === true;
+
+  // keyboardとtouchの左方向のhold状態をまとめて取得する
   const isMoveLeft = () => app.input?.has?.("left") || app.input?.has?.("arrowleft") || app.input?.has?.("a");
+
+  // keyboardとtouchの右方向のhold状態をまとめて取得する
   const isMoveRight = () => app.input?.has?.("right") || app.input?.has?.("arrowright") || app.input?.has?.("d");
 
   app.start({
     onUpdate: () => {
       const nowMs = performance.now();
       const deltaSec = clamp(app.elapsedSec, 0.0, 0.033);
-      const currentPhase = gsm.currentStateId ?? "title";
+      const currentPhase = gsm.currentStateId ?? "play";
 
       const context = {
         nowMs,
@@ -407,15 +412,14 @@ const start = async () => {
         score: state.score,
         timeLeft: state.timeLeft
       };
-      gsm.update(context);
-      syncScenePhase();
-
-      const phase = gsm.currentStateId ?? currentPhase;
-      if (phase !== "play" && phaseKey("start")) {
+      // Resetと結果画面のStartは新しいラウンドを開始する
+      // pauseからの復帰は状態機械の遷移だけで扱い、ゲーム状態を保持する
+      if (context.resetPressed || (currentPhase === "result" && context.startPressed)) {
+        resetRound();
         setGamePhase("play", { force: true });
-      }
-      if (phaseKey("reset")) {
-        setGamePhase("play", { force: true });
+      } else {
+        gsm.update(context);
+        syncScenePhase();
       }
       const livePhase = gsm.currentStateId ?? currentPhase;
       if (livePhase === "play") {
@@ -438,7 +442,7 @@ const start = async () => {
         targetNode.setPosition(state.targetX, 0.0, Math.sin(nowMs * 0.0024) * 0.35);
 
         // stepCollisions は描画用 Space に置いた collision shape 同士の重なりを調べる
-        // ここでは player を含む collision だけに絞り、背景や target 以外の形状を score 判定へ混ぜない
+        // playerを含むcollisionを抽出し、playerとtargetの接触開始を得点へ接続する
         const collisions = space.stepCollisions(deltaSec * 1000.0, {
           filter: (entry) => entry.idA === "player" || entry.idB === "player"
         });
@@ -447,7 +451,7 @@ const start = async () => {
         for (let i = 0; i < collisions.enter.length; i++) {
           const collision = collisions.enter[i];
           const ids = [collision.idA, collision.idB];
-          // idA と idB の順序には意味を持たせず、player と target の組だけを hit として扱う
+          // idAとidBの両方を調べ、playerとtargetの組をhitとして扱う
           // collision pair の左右が入れ替わっても同じ判定になるようにする
           if (ids.includes("player") && ids.includes("target")) {
             state.score += 100;

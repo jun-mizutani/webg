@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// samples/dof/main.js  2026/07/25
+// samples/dof/main.js  2026/08/11
 //   dof sample
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -11,7 +11,7 @@ import CommandPalette, {
 } from "../../webg/CommandPalette.js";
 import Primitive from "../../webg/Primitive.js";
 import Shape from "../../webg/Shape.js";
-import DofPass from "../../webg/DofPass.js?v=20260702_stage_width";
+import DofPass from "../../webg/DofPass.js";
 import FullscreenPass from "../../webg/FullscreenPass.js";
 import Diagnostics from "../../webg/Diagnostics.js";
 
@@ -117,7 +117,7 @@ function formatStageBlurIterations(dof) {
 
 // 被写界深度の`blur`の倍率を読み込み、検証済みのデータとして後続処理へ渡す
 function readDofBlurScale(dof) {
-  // 現行DofPassの公開methodだけを使用し、古いcache向けproperty fallbackでAPI不一致を隠さない
+  // DofPassの公開methodだけを使用し、未公開propertyへのfallbackでAPI不一致を隠さない
   return dof.getBlurScale();
 }
 
@@ -800,7 +800,7 @@ async function start() {
     applyBenchmarkCase(runner);
   }
 
-  // 被写界深度を初期状態へ戻し、前回の状態を残さない
+  // 被写界深度を初期状態へ戻す
   const resetDof = () => {
     dof.setEnabled(true);
     dof.setDofMode(DOF_DEFAULT.dofMode);

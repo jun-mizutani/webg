@@ -1,5 +1,5 @@
 // ---------------------------------------------------------
-// headless_tests/core/deferred_lighting_pass/headless_probe.js  2026/07/15
+// headless_tests/core/deferred_lighting_pass/headless_probe.js  2026/08/04
 //   Directional light and shadow visibility contracts for DeferredLightingPass
 // ---------------------------------------------------------
 import assert from "node:assert/strict";
@@ -77,6 +77,7 @@ function makeResources(width = 16, height = 8, depthConvention = CAMERA_REVERSE_
     albedo: { getView: () => ({}), getWidth: () => width, getHeight: () => height },
     normal: { getView: () => ({}) },
     material: { getView: () => ({}), getWidth: () => width, getHeight: () => height },
+    emissive: { getView: () => ({}), getWidth: () => width, getHeight: () => height },
     depth: { depthConvention, getDepthSampleView: () => ({}) },
     shadowVisibility: {
       getView: () => ({}),
@@ -114,7 +115,8 @@ function makeResources(width = 16, height = 8, depthConvention = CAMERA_REVERSE_
     "specular",
     "roughness",
     "metallic",
-    "emissive"
+    "emissive",
+    "occlusion"
   ]);
 }
 
@@ -123,7 +125,7 @@ function makeResources(width = 16, height = 8, depthConvention = CAMERA_REVERSE_
   const wgsl = buildDeferredLightingWgsl(8);
   assert.match(wgsl, /shadowVisibilityTexture/);
   assert.match(wgsl, /let ambientDiffuse = evaluateAmbientDiffuse\(/);
-  assert.match(wgsl, /var lighting = ambientDiffuse \+ albedo\.rgb \* material\.w/);
+  assert.match(wgsl, /var lighting = ambientDiffuse \+ environmentLighting \+ emissive/);
   assert.match(wgsl, /evaluateDirectBrdf\([\s\S]*?radiance\s*\n\s*\) \* shadowVisibility/);
   const ambientBlock = wgsl.slice(
     wgsl.indexOf("let ambientDiffuse = evaluateAmbientDiffuse("),
@@ -158,7 +160,7 @@ function makeResources(width = 16, height = 8, depthConvention = CAMERA_REVERSE_
     view: "shadow"
   });
   const uniforms = probe.writes.at(-1).data;
-  assert.equal(uniforms.length, 32);
+  assert.equal(uniforms.length, 52);
   assert.deepEqual(uniforms.slice(4, 8), [0.0, 4.0, 1.0, 0.0]);
   const length = Math.hypot(...direction);
   const expectedDirection = frame.viewRotationMatrix.mul3x3Vector(
@@ -180,7 +182,14 @@ function makeResources(width = 16, height = 8, depthConvention = CAMERA_REVERSE_
     "shadowVisibility",
     "spotShadowVisibility",
     "ambientOcclusion",
-    "output"
+    "output",
+    "irradiance",
+    "prefilteredSpecular",
+    "brdfLut",
+    "environmentSampler",
+    "emissive",
+    "radiance",
+    "specularIblOutput"
   ]);
   pass.destroy();
 }

@@ -1,6 +1,6 @@
 // ---------------------------------------------------------
-// headless_tests/core/gpu_particle_emitter/headless_probe.js  2026/07/13
-//   GpuParticleEmitter Reverse-Z and coordinate contracts
+// headless_tests/core/gpu_particle_emitter/depth_contracts.js  2026/09/23
+//   ComputeParticleEmitter Reverse-Z and coordinate contracts
 // ---------------------------------------------------------
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
@@ -9,6 +9,10 @@ import GpuParticleEmitter from "../../../webg/GpuParticleEmitter.js";
 
 const sampleSource = readFileSync(
   new URL("../../../samples/compute_particles/main.js", import.meta.url),
+  "utf8"
+);
+const computeEmitterSource = readFileSync(
+  new URL("../../../webg/ComputeParticleEmitter.js", import.meta.url),
   "utf8"
 );
 
@@ -84,12 +88,12 @@ function createEmitterOptions() {
   assert.equal(descriptor.depthStencilAttachment.depthClearValue, 0.0);
 }
 
-// 公開sampleも必須optionとReverse-Zの近大・遠小depthを明示し、コアだけ先行した起動不能を防ぎます
-assert.match(sampleSource, /import\s*\{\s*CAMERA_REVERSE_Z\s*\}/);
-assert.match(sampleSource, /depthConvention:\s*CAMERA_REVERSE_Z/);
-assert.match(sampleSource, /coordinateSpace:\s*["']camera-relative["']/);
-assert.match(sampleSource, /reverseDepth\s*=\s*1\.0\s*-\s*clamp/);
-assert.match(sampleSource, /reverseDepth\s*\*\s*viewW/);
-assert.doesNotMatch(sampleSource, /\blet\s+depth\s*=\s*clamp/);
+// 公開sampleは標準ComputeParticleEmitterを使い、target formatを画面から明示します
+// 座標空間とReverse-Z規則はEmitter共通実装に集約し、sample shaderとの二重管理を避けます
+assert.match(sampleSource, /import ComputeParticleEmitter from "\.\.\/\.\.\/webg\/ComputeParticleEmitter\.js"/);
+assert.match(sampleSource, /new ComputeParticleEmitter\(/);
+assert.match(sampleSource, /targetFormat:\s*screen\.getGPU\(\)\.format/);
+assert.match(computeEmitterSource, /coordinateSpace:\s*["']camera-relative["']/);
+assert.match(computeEmitterSource, /depthConvention:\s*CAMERA_REVERSE_Z/);
 
 console.log("gpu_particle_emitter_depth_contracts: all particle contracts passed");

@@ -1,5 +1,5 @@
 // -----------------------------------------------------------------------------
-// headless_tests/integration/rendering_conventions/raycast_unprojection_contracts.js  2026/07/28
+// headless_tests/integration/rendering_conventions/raycast_unprojection_contracts.js  2026/10/04
 //   Reverse-Z screen-point ray unprojection contracts
 // -----------------------------------------------------------------------------
 import assert from "node:assert/strict";
@@ -10,13 +10,14 @@ import { CAMERA_REVERSE_Z } from "../../../webg/DepthConvention.js";
 
 const raycastMainPath = new URL("../../../unittest/raycast/main.js", import.meta.url);
 const raycastMain = readFileSync(raycastMainPath, "utf8");
-const collisionChapterPath = new URL("../../../book/17_衝突判定.md", import.meta.url);
+const collisionChapterPath = new URL("../../../book/15_衝突判定とクエリ.md", import.meta.url);
 const collisionChapter = readFileSync(collisionChapterPath, "utf8");
-const graphicsChapterPath = new URL("../../../book/03_3Dグラフィックスの基礎.md", import.meta.url);
+// 行列合成の詳しい規則は、描画内部を扱う41章の説明と照合する
+const graphicsChapterPath = new URL("../../../book/41_描画内部の共通規則.md", import.meta.url);
 const graphicsChapter = readFileSync(graphicsChapterPath, "utf8");
 
-// unittestが透視成分を失う剛体変換用mul()へ戻らないことをソース上でも固定する
-// Reverse-Zの両端は数値リテラルではなく共通定義を参照し、near/farの意味を一致させる
+// unittestが透視成分を含む4×4行列全体を合成することをソース上でも確認する
+// Reverse-Zの両端は共通定義を参照し、near/farの意味を一致させる
 assert.match(raycastMain, /import\s*\{\s*CAMERA_REVERSE_Z\s*\}/);
 assert.match(raycastMain, /invVp\.mul_\(view\)/);
 assert.doesNotMatch(raycastMain, /invVp\.mul\(view\)/);
@@ -24,7 +25,7 @@ assert.match(raycastMain, /CAMERA_REVERSE_Z\.nearDepth/);
 assert.match(raycastMain, /CAMERA_REVERSE_Z\.farDepth/);
 
 // 書籍の実装例も実行コードと同じ行列合成とReverse-Z depthを説明する
-// Space.raycastに存在しない最大距離optionや、mul()を使う旧コードを公開文書へ残さない
+// Space.raycastの現行optionと、透視成分を保つ行列合成の説明を確認する
 assert.match(collisionChapter, /import\s*\{\s*CAMERA_REVERSE_Z\s*\}/);
 assert.match(collisionChapter, /invVp\.mul_\(view\)/);
 assert.doesNotMatch(collisionChapter, /invVp\.mul\(view\)/);

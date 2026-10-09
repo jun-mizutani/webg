@@ -15,7 +15,7 @@ English | [日本語](README.md)
 - One frame is divided into 3 substeps, and velocity is recalculated from the actual movement after position constraints, preventing downward velocity from remaining after correction
 - Bend springs are added between vertices two steps apart to suppress sharp folding and self-crossing near the lower area
 - The wind reverses periodically in the same front-back direction across the whole curtain, while only the amplitude varies by position, preventing both a central fold-back and one-way flow escape
-- The fixed top edge is shaped as a gentle arc with the center lowered by 0.18, so the cloth looks suspended rather than like a perfectly straight board
+- The fixed top edge is shaped as a gentle arc with the center lowered by 0.18, so the cloth looks suspended
 - The render pass reads the post-compute storage buffer in the vertex shader and draws it as either a `line-list` or `triangle-list` depending on `Wire / Flat / Smooth` mode
 
 ## How to Run

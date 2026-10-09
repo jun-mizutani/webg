@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// Touch.js       2026/07/25
+// Touch.js       2026/09/09
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // ---------------------------------------------
@@ -640,6 +640,7 @@ export default class Touch {
     return true;
   }
 
+  // gesture用surfaceを解除し、pointer listenerとtouch-action設定を元へ戻します
   detachGesture() {
     return this.detachSurface();
   }

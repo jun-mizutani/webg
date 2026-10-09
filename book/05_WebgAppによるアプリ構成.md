@@ -1,7 +1,26 @@
 # WebgAppによるアプリ構成
 
-本章では、`WebgApp`に初期化、入力、シーン更新、カメラ確定、描画、HUD（Head-Up Display：画面上へ重ねる情報表示）表示、終了処理をまとめ、アプリ固有の処理を安定したフレーム順序へ配置します。
-共通の土台を再実装せずに済むため、利用者はシーンの内容と操作へ集中でき、独自の描画処理が必要な場合だけ明示的なコールバックへ進めます。
+本章では、`WebgApp`を使って、初期化、入力、シーン更新、カメラ確定、3D描画、HUD表示、終了処理を一つのフレーム処理へまとめます。
+通常のアプリケーションでは標準の処理順を利用し、独自の描画やコンピュート処理が必要な場合だけコールバックと自動処理の設定を変更します。
+アプリケーション固有の処理を、どの段階へ記述すればよいか判断できるようになることが本章の目標です。
+
+## この章の読み方
+
+### この章を読む前に必要な知識
+
+04章の最小描画と、JavaScriptのクラス・関数・イベント処理を知っていると読みやすくなります。
+
+### 初回に読む範囲
+
+WebgAppの生成、init、start、onUpdate、ctx、標準描画の順に読んでください。
+
+### 必要になったときに読む範囲
+
+入力、カメラ、HUD（Head-Up Display：画面へ重ねる情報表示）、物理、ポストプロセスを追加するときは第II部と第IV部の該当章を参照してください。
+
+### この章を終えた時点でできること
+
+初期化、更新、入力、描画、表示情報を組み合わせたWebgAppの基本構造を作れます。
 
 ## WebgAppがアプリケーションの共通処理をまとめる
 
@@ -9,29 +28,35 @@
 利用者は、起動時に必要な要素を設定し、毎フレーム変化する状態を`onUpdate`で更新することで、標準的な3Dアプリケーションを構成できます。
 
 本章では、最小構成から始め、初期化、ライフサイクル、フレームコンテキスト、入力、カメラ、ライト、HUDの順に役割を確認します。
-標準機能だけを使う場合は、内部の描画順序やカメラ状態を利用者が個別に管理する必要はありません。
+標準機能だけを使う場合、内部の描画順序とカメラ状態は`WebgApp`が一つのframe処理として管理します。
 
 > **この章の読み方:** 最初に「最小のWebgAppアプリ」と「基本ライフサイクル」を読めば、標準アプリを開始できます。フレームコンテキスト、物理時間、詳細な描画順は、入力・物理・独自レンダーパスが必要になった時点で参照してください。
 
 ## WebgAppで何が簡単になるのか
 
-第4章では、`Screen`、`SmoothShader`、`Space`、`Shape`、`eye` を順番に用意し、最後に `clear -> draw -> present` を呼び出すことで、WebGPU画面へ3Dオブジェクトを描画しました。
+04章では、`Screen`、`SmoothShader`、`Space`、`Shape`、`eye` を順番に用意し、最後に `clear -> draw -> present` を呼び出すことで、WebGPU画面へ3Dオブジェクトを描画しました。
 
 この流れは `webg` の土台を理解するうえで重要です。
 一方で、実際のアプリケーションでは、画面の初期化、標準シェーダー、シーン、カメラ、入力、HUD、診断情報、リサイズ対応、フレームループといった周辺処理を毎回組み立てることになります。
 
 `WebgApp` は、この共通部分をまとめた高水準の入口です。
 `WebgApp` を使うと、開発者は「何を置くか」「毎フレームどう動かすか」に集中しやすくなります。
-ただし、`WebgApp` は何でも持った巨大な便利APIではありません。
+`WebgApp` は、初期化、入力、カメラ、更新、描画、表示情報を一つの処理フローへまとめるための便利API（Application Programming Interface：プログラムから機能を呼び出す接続方法）です。
 アプリケーションの土台を作ることが主な役割です。
 ヘルプ、エラー表示、チュートリアル、ゲームルール、メニュー構造などは、`OverlayPanel` やサンプル側のcontroller / 補助機能と組み合わせて作ります。
+
+## webg 3.0の高水準SceneApp
+
+webg 3.0では、`WebgApp`を基盤として`WebgSceneApp`を利用できます。`WebgSceneApp`は、SceneYAMLまたは同じ構造のJSONの検証、PBR renderer、Compute Shader物理、Node同期、Resetを一つの入口へまとめます。PBRやCompute physicsを使う作品の定義は、`09_シーン構成とSceneJSON.md`で確認できます。
+
+`WebgApp`はShape・Node・frame処理を自分で組み立てる基盤、`WebgSceneApp`は作品データを中心にPBRと物理を構成する入口です。目的に応じて層を選ぶことで、同じwebg内で低水準の制御と高水準のscene制作を使い分けられます。
 
 ## 最小のWebgAppアプリ
 
 `WebgApp` を使う最小の流れは、次の4段階です。
 
 1. `new WebgApp(...)` で設定を渡す。
-2. `await app.init()` でGPU、シーン、カメラ、入力、HUDを準備する。
+2. `await app.init()` でGPU（Graphics Processing Unit：画像処理装置）、シーン、カメラ、入力、HUDを準備する。
 3. `app.space` にオブジェクトを置く。
 4. `app.start({ onUpdate })` でフレームループを開始する。
 
@@ -97,7 +122,7 @@ app.start({
 
 ### constructorは設定を保持する
 
-`new WebgApp(options)` の時点では、GPUデバイス、`Screen`、`Space`、標準シェーダー、`eye` はまだ利用できません。
+`new WebgApp(options)` は設定と内部状態を準備する段階です。GPUデバイス、`Screen`、`Space`、標準シェーダー、`eye` は、後続の`app.init()`が完了すると利用できます。
 constructorは、後続の `init()` で使う設定と内部状態を用意する段階です。
 
 代表的なオプションは次の通りです。
@@ -332,7 +357,7 @@ app.start({
 
 ### 物理エンジンに渡す時間
 
-`PhysicsSpace.step(deltaMs)` やScene JSONランタイムの `sceneRuntime.stepPhysics(deltaMs)` は、名前の通りミリ秒単位の `deltaMs` を受け取ります。
+`PhysicsSpace.step(deltaMs)`はミリ秒単位の経過時間を受け取ります。SceneYAMLを`WebgSceneApp`で起動する場合は、内部の更新処理が経過時間を物理計算へ渡します。
 一方、`WebgApp` の `ctx` には秒単位の `deltaSec` が入っています。
 
 そのため、`onUpdate` から物理を進める場合は、`deltaSec` を1000倍して渡します。
@@ -371,7 +396,7 @@ app.start({
 ```
 
 通常の移動や回転は `deltaSec`、`PhysicsSpace.step()` は `deltaMs`、`stepFixed(dtSec)` の内部処理は秒単位、という単位の違いに注意してください。
-物理の詳細は第26章で扱います。
+物理の詳細は27〜28章で扱います。
 
 ## 入力を扱う
 
@@ -477,7 +502,23 @@ app.createOrbitEyeRig({
 ```
 
 このメソッドは標準リグの上に `EyeRig` を構築し、ポインター操作も接続します。
-`WebgApp` が毎フレーム `EyeRig` を更新するため、サンプル側で個別に `update()` を呼ぶ必要はありません。
+`WebgApp` が毎フレーム `EyeRig` を更新するため、サンプル側はカメラの設定と入力の接続に集中できます。
+
+orbitモードには、次のカメラ操作が既定で用意されています。
+
+| 操作 | 内容 |
+| :--- | :--- |
+| ドラッグ | 注視点の周囲を回転する |
+| `Shift` + ドラッグ | 画面平面に沿ってPANする |
+| `Alt` / `Option` + 横方向ドラッグ | 視点の前方軸を中心にロールする |
+| ホイール | カメラとの距離を変更する |
+| `ArrowLeft` / `ArrowRight` / `ArrowUp` / `ArrowDown` | 視点を回転する |
+| `Alt` / `Option` + `ArrowLeft` / `ArrowRight` | 視点のロール角を変更する |
+| `[` / `]` | カメラとの距離を変更する |
+
+Alt / Optionを押したロール操作では、ロールだけを変更し、通常のドラッグによるヨー角とピッチ角を保持します。
+横方向のドラッグ量と左右矢印の押下時間だけがロール角へ反映されるため、水平線や画面の傾きを修正できます。
+この操作は`WebgApp.createOrbitEyeRig()`が作るすべてのorbit EyeRigで共通に利用できます。
 
 位置追従、即時位置合わせ、シェイクには次の補助機能があります。
 ここでの `followNode()` は `cameraRig` の基準位置を対象へ近づける機能です。
@@ -488,7 +529,7 @@ app.createOrbitEyeRig({
 - `clearCameraTarget()`: 追従やロックオンを解除する。
 - `shakeCamera()`: 短い衝撃演出を発生させる。
 
-カメラ制御の詳細は第6章で扱います。
+カメラ制御の詳細は06章で扱います。
 
 ## ライトとフォグ
 
@@ -575,14 +616,13 @@ app.showOverlayPanel(buildHelpPanelOptions({
 }));
 ```
 
-`WebgApp` はヘルプ専用API、エラー専用API、会話専用APIを持ちません。
+`WebgApp` はヘルプ、エラー、会話を共通のOverlay/UI管理へまとめ、用途ごとのパネル構成で表示します。
 表示の枠は `OverlayPanel`、文章のキューや分岐はアプリ側controller、という分担にします。
 
 ## 必要になったら使う機能
 
 `WebgApp` には、最小アプリを越えた機能も統合されています。
-最初からすべてを覚える必要はありません。
-必要になったところから使います。
+まず最小アプリの構成を覚え、必要になった段階で追加機能を使います。
 
 - **layoutMode: "viewport"**
   - キャンバスとオーバーレイを画面全体基準で配置する
@@ -594,11 +634,11 @@ app.showOverlayPanel(buildHelpPanelOptions({
   - 診断情報を開発用UIとして表示する
   - UIは利用者との操作・表示の接点
 - **loadModel()**
-  - glTF、Collada、ModelAsset JSONを読み込む
-- **loadScene()**
-  - Scene JSONを読み込む
-- **validateScene()**
-  - Scene JSONの妥当性を確認する
+  - glTF、Collada、Model JSONを読み込む。ModelYAMLは08章の`ModelAsset.load()`から構築する
+- **createWebgSceneApp()**
+  - SceneYAMLから配置、PBR、物理、アニメーションをまとめて起動する
+- **SceneAsset.load()とassertValid()**
+  - SceneYAMLの値・原文・コメントを保持し、参照と設定値を検証する
 - **createTween()**
   - 値を時間で補間する
 - **createParticleEmitter()**
@@ -619,7 +659,7 @@ const runtime = await app.loadModel("./assets/robot.glb", {
 ```
 
 `format` には `"gltf"`、`"collada"`、`"json"` を指定できます。
-シーン全体を宣言的に読み込む場合は `loadScene()` を使います。
+SceneYAMLからシーン全体を起動する場合は、09章の`createWebgSceneApp({ project: "./scene.yaml" })`を使います。
 
 ## フレーム処理の詳しい順序
 
@@ -649,6 +689,11 @@ const runtime = await app.loadModel("./assets/robot.glb", {
 19. `screen.present()` を呼び出す。
 20. 入力のワンショット状態を次フレームへ進める。
 21. 継続中なら次フレームを予約する。
+
+この21段階は`computeFrame: false`の通常フレームで実行されます。
+`computeFrame: true`では通常の3D描画とHUD描画をこの順序で自動実行せず、`onComputeFrame`へフレーム処理を渡します。
+利用側は`onComputeFrame`で必要なCompute PassとRender Passを同じ`GPUCommandEncoder`へ記録し、コマンドを提出します。
+したがって、`computeFrame`は通常フレームの後へCompute処理を追加する設定ではなく、フレーム全体の処理方法を切り替える設定です。
 
 ポストプロセスやオフスクリーンレンダーターゲットを使用する場合は、`autoDrawScene: false` を指定し、描画順を自前で管理します。
 
@@ -699,7 +744,7 @@ const app = new WebgApp({
   debugTools: {
     mode: "release",
     system: "sample",
-    source: "samples/sample/main.js"
+    source: "samples/high_level/main.js"
   },
   camera: {
     target: [0.0, 0.0, 0.0],
@@ -790,4 +835,4 @@ app.start({
 移動や回転には `ctx.deltaSec` を使い、必要な場合は `onUpdate({ deltaSec, input, app })` のように分割代入で取り出します。
 物理エンジンへ渡す場合は、`deltaSec` をミリ秒へ変換して `physics.step(deltaSec * 1000.0)` とします。
 
-次章では、この `WebgApp` が作る `cameraRig -> cameraRod -> eye` を土台として、`EyeRig` による軌道、追従、1人称などのカメラ制御を詳しく扱います。
+続く06章では、この `WebgApp` が作る `cameraRig -> cameraRod -> eye` を土台として、`EyeRig` による軌道、追従、1人称などのカメラ制御を詳しく扱います。

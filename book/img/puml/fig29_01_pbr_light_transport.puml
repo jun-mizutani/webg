@@ -1,0 +1,31 @@
+@startuml
+title PBRで表面へ届く光とカメラへ戻る光
+left to right direction
+skinparam backgroundColor white
+skinparam shadowing true
+skinparam dpi 150
+skinparam defaultFontName Yu Gothic UI
+skinparam defaultFontSize 18
+skinparam rectangle {
+  RoundCorner 24
+  BorderColor black
+  BackgroundColor #f7fbff
+}
+rectangle "直接光源\n方向・色・強度・距離" as Direct #fff5df
+rectangle "HDR環境\n全方向のradiance" as Env #f4edff
+rectangle "表面\n法線・base color\nmetallic・roughness" as Surface #eaf7e8
+rectangle "拡散反射\nLambertとenergy配分" as Diffuse
+rectangle "鏡面反射\nGGX・Smith・Fresnel" as Specular
+rectangle "カメラ\n視線方向" as Camera #fdeaea
+Direct --> Surface
+Env --> Surface
+Surface --> Diffuse
+Surface --> Specular
+Diffuse --> Camera
+Specular --> Camera
+Camera --> Surface : 視線方向をBRDFへ渡す
+note bottom of Direct
+点や方向として近似した光源
+形と大きさは影とhighlightへ影響
+end note
+@enduml

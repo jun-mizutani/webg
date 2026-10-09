@@ -16,6 +16,8 @@
 
 以前「調査中」だった `CoordinateSystem` と `EyeRig` はJavaScript NumberのMatrix・配列だけを扱い、Float32Array、GPU buffer、depth pipelineを所有しないため「変更不要」としました。`ParticleEmitter` はparticle World位置をJavaScript Numberで更新し、GPU転送を `Billboard` へ委譲します。Billboardをcamera-relative化したため、ParticleEmitter自身は「変更不要」です。
 
+`ComputePerlinNoise2D`と`ComputeProceduralTile`はGPU bufferとtextureを生成し、`ProceduralTileSpec`は両generatorの入力検証と二次元寸法計算、`ProceduralMaterials`はpresetとShape material登録を担当します。いずれもcamera座標、camera depth、Shadow depth、Deferred Shadingの変換規則を扱わないため「変更不要」に分類します。
+
 ## 実行方法
 
 ```sh

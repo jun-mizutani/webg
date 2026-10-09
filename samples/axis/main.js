@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// samples/axis/main.js  2026/07/25
+// samples/axis/main.js  2026/08/11
 //   axis sample
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -13,7 +13,7 @@ import Primitive from "../../webg/Primitive.js";
 import Shape from "../../webg/Shape.js";
 import FullscreenPass from "../../webg/FullscreenPass.js";
 import Diagnostics from "../../webg/Diagnostics.js";
-import DofPass from "../../webg/DofPass.js?v=20260702_stage_width";
+import DofPass from "../../webg/DofPass.js";
 
 // webgクラスの役割:
 // WebgApp   : Screen / Shader / Space / Input / Message / debug dock の初期化をまとめる

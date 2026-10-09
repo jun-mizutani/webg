@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// CameraFrame.js  2026/07/13
+// CameraFrame.js  2026/09/04
 //   Immutable per-frame camera-relative coordinate snapshot
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -9,7 +9,7 @@ import { CAMERA_REVERSE_Z, readDepthRange, requireDepthConvention } from "./Dept
 import util from "./util.js";
 
 // renderFrameTokenはCameraFrameを公開APIへ直接露出しない描画フレーム識別子です。
-// WeakMapだけが対応するframeを保持し、利用者側からnear/far、projection、depth方式を読めません。
+// WeakMapだけが対応するframeを保持し、near/far、projection、depth方式を内部値として管理します
 const renderFrameTokenCameraFrames = new WeakMap();
 
 class RenderFrameToken {}
@@ -32,7 +32,7 @@ class CameraTransformFrame {
   constructor(cameraWorldMatrix, label = "Camera transform worldMatrix") {
     const sourceWorld = readMatrix(cameraWorldMatrix, label);
     this.cameraWorldMatrix = sourceWorld.clone();
-    this.cameraWorldPosition = Object.freeze(this.cameraWorldMatrix.getPosition());
+    this.cameraWorldPosition = this.cameraWorldMatrix.getPosition();
 
     // inverse camera matrixの3x3だけをview回転として保持します
     // 大きなcamera平行移動はこの行列へ含めず、World位置との差を先に明示計算します
@@ -69,7 +69,7 @@ class CameraTransformFrame {
   }
 
   // object World matrixの平行移動だけをcamera-relativeへ置換し、view-space model matrixを作ります
-  // 回転とscaleは元行列から維持し、大きな平行移動を含むview×modelの相殺をGPUへ持ち込みません
+  // 回転とscaleは元行列から維持し、GPUへは精度を保った相対変換を渡します
   createModelViewMatrix(objectWorldMatrix) {
     const world = readMatrix(objectWorldMatrix, "CameraFrame objectWorldMatrix");
     const relativeWorld = world.clone();
@@ -82,7 +82,16 @@ class CameraTransformFrame {
 // 一つのframeで複数の描画passが共有する完全なカメラ状態を確定します
 // CameraTransformFrameの相対座標変換に、Reverse-Z投影情報を追加します
 export default class CameraFrame extends CameraTransformFrame {
-  constructor({ cameraWorldMatrix, near, far, vfov, aspect, depthConvention }) {
+  constructor({
+    cameraWorldMatrix,
+    near,
+    far,
+    vfov,
+    aspect,
+    depthConvention,
+    focusDistance,
+    focusDistanceResolver
+  }) {
     const convention = requireDepthConvention(depthConvention, "CameraFrame depthConvention");
     if (convention !== CAMERA_REVERSE_Z) {
       throw new Error("CameraFrame requires CAMERA_REVERSE_Z");
@@ -98,6 +107,26 @@ export default class CameraFrame extends CameraTransformFrame {
     });
     this.aspect = util.readFiniteNumber(aspect, "CameraFrame aspect", { minExclusive: 0.0 });
     this.depthConvention = convention;
+    if (
+      focusDistanceResolver !== undefined
+      && typeof focusDistanceResolver !== "function"
+    ) {
+      throw new Error("CameraFrame focusDistanceResolver must be a function");
+    }
+    // focusDistanceは現在frameのCameraFrameを使って解決したDoF用の視点空間深度です
+    // 対象が設定されていないCameraFrameではnullを保持し、Compute系が明示的に設定不足を報告します
+    const resolvedFocusDistance = focusDistanceResolver
+      ? focusDistanceResolver(this)
+      : focusDistance;
+    if (resolvedFocusDistance === undefined || resolvedFocusDistance === null) {
+      this.focusDistance = null;
+    } else {
+      this.focusDistance = util.readFiniteNumber(
+        resolvedFocusDistance,
+        "CameraFrame focusDistance",
+        { minExclusive: 0.0 }
+      );
+    }
     this.projectionMatrix = new Matrix().makeProjectionMatrix(
       this.near,
       this.far,
@@ -108,7 +137,7 @@ export default class CameraFrame extends CameraTransformFrame {
 }
 
 // 低レベル公開APIのSpace.draw(eye)用に、投影情報を要求せず変換snapshotだけを作ります
-// eye更新と内部class生成はSpace側へ隠し、利用者へCameraFrame構築を要求しません
+// eye更新と内部class生成はSpace側へ隠し、利用者はSpaceのカメラAPIからframeを取得します
 export function createCameraTransformFrameFromEye(eye, label = "camera transform") {
   if (!eye || typeof eye.setWorldMatrix !== "function" || !eye.worldMatrix) {
     throw new Error(`${label} requires an eye Node or render frame`);
@@ -139,7 +168,7 @@ export function createRenderFrameToken(cameraFrame) {
 }
 
 // Spaceなどのコア所有者が、例外を使わずにeye NodeとrenderFrameTokenを区別する判定です。
-// property形状ではなくWeakMap登録identityだけを確認するため、利用側の偽装objectを受理しません。
+// property形状ではなくWeakMap登録identityだけを確認するため、登録済みframeだけを受理します
 export function isRenderFrameToken(value) {
   return renderFrameTokenCameraFrames.has(value);
 }

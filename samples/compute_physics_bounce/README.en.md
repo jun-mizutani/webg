@@ -21,7 +21,7 @@ English | [日本語](README.md)
 - Use a browser with WebGPU support, and check the help panel and HUD together with the sample when needed
 
 ## Checkpoints
-- This sample is meant as a compute-shader comparison target for the CPU rigid-body version in `samples/physics_bounce`
+- This sample compares the GPU compute-shader simulation with the CPU rigid-body simulation in `samples/physics_bounce`
 - Press `P` to pause, `R` to reset, and `C` to toggle sphere-sphere collisions on or off
 - The touch buttons `T / C / P / R` can also control tilt, collisions, pause, and reset
 - You can specify the sphere count with the URL parameter `?count=`. The default is `96`, and the maximum is `512`

@@ -1,0 +1,39 @@
+# VOID STRIKE 2026/09/25 — 宇宙戦のPBR描画と撃破時Compute火花
+format: webg-scene
+version: 1
+name: void-strike
+particleEmitters:
+  - id: cyan-sparks
+    preset: spark
+    capacity: 4096
+    seed: 9252507
+    overflow: replace-oldest
+    simulation: { gravity: [0, 0, 0], drag: 0.55 }
+    appearance:
+      colors: [[0.03, 0.68, 1], [0.18, 0.92, 1]]
+      size: [0.035, 0.11]
+      intensity: 11
+  - id: hot-sparks
+    preset: spark
+    capacity: 4096
+    seed: 9252508
+    overflow: replace-oldest
+    simulation: { gravity: [0, 0, 0], drag: 0.55 }
+    appearance:
+      colors: [[1, 0.08, 0.28], [1, 0.58, 0.08]]
+      size: [0.035, 0.11]
+      intensity: 11
+renderer:
+  profile: studio
+  width: 1280
+  height: 800
+  clearColor: [0.002, 0.004, 0.014, 1]
+  environment:
+    preset: dark-studio
+    resolution: { width: 256, height: 128 }
+  dof: { enabled: false }
+  pipeline:
+    shadow: { pcfRadius: 1 }
+    lighting: { ambient: 0, directionalIntensity: 0.12, environmentIntensity: 0.48 }
+    ssr: { intensity: 0.34, distance: 64, thickness: 0.3, steps: 64, resolutionScale: 0.8 }
+    toneMap: { exposure: 1.12, saturation: 1.18 }

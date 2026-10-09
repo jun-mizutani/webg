@@ -40,6 +40,6 @@ English | [日本語](README.md)
 - Add a URL parameter such as `?count=60` to change the initial body count
 
 ## Implementation Details
-- If you want to inspect solver values rather than visible behavior, run `unittest/physics_collider/headless_probe.js` with Node
+- To inspect solver values, run `unittest/physics_collider/headless_probe.js` with Node
 - `headless_probe.js` is used for numeric investigation of cases such as the standing beam and cube-corner balance. This sample is responsible for on-screen interaction checks, while the headless probe handles numeric diagnostics
 - Contract verification for `PhysicsSpace` is handled by `unittest/physics_space_contracts`, while this sample focuses on the appearance of rotating box contacts

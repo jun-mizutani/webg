@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// Shader.js       2026/07/25
+// Shader.js       2026/09/09
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // ---------------------------------------------
@@ -57,10 +57,12 @@ export default class Shader {
     });
   }
 
+  // WGSL sourceからshader moduleを生成し、派生shaderのpipeline構築へ渡します
   createShaderModule(code) {
     return this.device.createShaderModule({ code });
   }
 
+  // bind group layoutの順序をpipeline layoutへ固定し、draw時のresource対応をそろえます
   createPipelineLayout(bindGroupLayouts) {
     return this.device.createPipelineLayout({ bindGroupLayouts });
   }

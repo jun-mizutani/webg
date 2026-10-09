@@ -1,10 +1,10 @@
 // ---------------------------------------------
-// samples/compute_cloth/main.js  2026/07/21
+// samples/compute_cloth/main.js  2026/08/11
 //   Compute Shader cloth simulation sample
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // ---------------------------------------------
-import WebgApp from "../../webg/WebgApp.js?v=20260614_compute_frame1";
+import WebgApp from "../../webg/WebgApp.js";
 import PingPongBuffer from "../../webg/PingPongBuffer.js";
 import { buildErrorPanelOptions, buildHelpPanelOptions } from "../../webg/OverlayPanelPresets.js";
 import { CAMERA_REVERSE_Z } from "../../webg/DepthConvention.js";
@@ -113,7 +113,7 @@ const showHelpPanel = () => {
   lastHelpText = lines.join("\n");
 };
 
-// simulation や camera の状態が変わった場合だけ既存 help panel の本文を更新する
+// simulation や camera の状態が変わった場合だけ help panel の本文を更新する
 // 連続 GPU simulation 中に同じ文字列で DOM を毎 frame 再構築しないよう、前回文字列と比較する
 // panel が未作成または app 初期化前なら、表示先がないため処理を行わない
 const updateHelpPanel = () => {
@@ -1041,7 +1041,7 @@ const handlePointerMove = (event) => {
 
 // pointerup または pointercancel で mouse drag / touch gesture を終了し、pointer capture を解放する
 // touch は終了した指だけを削除し、残った指を新しい基準へ置き直して gesture の跳びを防ぐ
-// mouse は従来どおり orbit / PAN mode を終了し、次の pointerdown を新しい操作として扱う
+// mouse は orbit / PAN mode を終了し、次の pointerdown を新しい操作として扱う
 const handlePointerUp = (event) => {
   if (event.pointerType === "touch") {
     activeTouchPointers.delete(event.pointerId);

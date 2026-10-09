@@ -8,7 +8,7 @@ English | [日本語](README.md)
 
 This sample renders the same sixteen icospheres with either the standard `SmoothShader` or Deferred Lighting. Both paths share the scene graph, camera, vertex normals, and light position, so the display isolates the difference between the Phong-style and GGX-style lighting models instead of mixing in geometry or viewpoint changes.
 
-`SmoothShader` primarily uses `ambient`, `specular`, and `power`. Deferred Lighting evaluates the G-buffer values `specular`, `roughness`, `metallic`, and `emissive` with a GGX reflection model. Although both paths use the name `specular`, the standard path treats it as the additive intensity of a white highlight, while the deferred path uses it to scale the nonmetallic F0 range from zero to four percent. Equal numbers therefore do not describe equal reflectance.
+`SmoothShader` primarily uses `ambient`, `specular`, and `power`. Deferred Lighting evaluates the G-buffer values `specular`, `roughness`, `metallic`, and `emissive` with a GGX reflection model. Although both paths use the name `specular`, the standard path treats it as the additive intensity of a white highlight, while the deferred path uses it to scale the nonmetallic F0 range from zero to four percent. Each lighting model interprets the value according to its own definition.
 
 ## Reading the Display
 

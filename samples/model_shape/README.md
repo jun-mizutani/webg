@@ -6,7 +6,7 @@
 
 ## 概要
 - Primitive.js が返す ModelAsset を ModelValidator で検証し、ModelBuilder で Shape に変換して表示するサンプルです。
-- 法線マップ付きで複数形状を並べますが、形状生成経路を Shape 直書きではなく Primitive -> ModelAsset -> validate -> build に揃えている点が主な特徴です。
+- 法線マップ付きで複数形状を並べますが、形状生成経路を Primitive -> ModelAsset -> validate -> build に揃えている点が主な特徴です。
 - WebgApp.js を使って、初期化、メッセージ表示、ループを高レベル API でまとめています。
 
 ## 実行方法
@@ -26,7 +26,7 @@
 - Primitive が返した ModelAsset をそのまま validator に通せることを確認します
 - ModelBuilder を経由して生成した Shape でも、法線マップ付き描画が成立することを確認します
 - shapes と比べて、見え方の差より Primitive -> ModelAsset -> validate -> build の処理フローを追うサンプルであることを確認します
-- ワイヤーフレーム切り替えや法線マップON / OFFで、生成経路が変わっても表示制御が破綻しないことを確認します
+- ワイヤーフレーム切り替えや法線マップON / OFFで、各生成経路で同じ表示制御が働くことを確認します
 
 ## 操作方法
 - ドラッグ / 矢印キー: オービットカメラ回転

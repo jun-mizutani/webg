@@ -1,5 +1,5 @@
 // ---------------------------------------------
-//  SeparableBlurPass.js  2026/07/25
+//  SeparableBlurPass.js  2026/09/09
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // ---------------------------------------------
@@ -265,6 +265,7 @@ fn fsMain(input : VSOut) -> @location(0) vec4f {
     }
   }
 
+  // 横方向と縦方向のblur反復回数を検証し、次回encodeの実行回数へ反映します
   setIterations(value) {
     this.iterations = util.readOptionalInteger(value, "SeparableBlurPass iterations", this.iterations, { min: 1 });
   }
@@ -306,18 +307,22 @@ fn fsMain(input : VSOut) -> @location(0) vec4f {
     return this;
   }
 
+  // 横方向または縦方向の中間処理に使うtarget Aを返します
   getTargetA() {
     return this.targetA;
   }
 
+  // もう一方の中間処理に使うtarget Bを返します
   getTargetB() {
     return this.targetB;
   }
 
+  // 最後に書き込んだblur targetを返し、後段passの入力へ渡します
   getOutputTarget() {
     return this.lastOutputTarget;
   }
 
+  // blur targetの解像度倍率を返し、外部passの寸法確認へ利用します
   getTargetScale() {
     return this.targetScale;
   }

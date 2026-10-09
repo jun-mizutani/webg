@@ -17,7 +17,7 @@ physics_node_rotate
 - 左の赤 beam が `angularVelocity` によって一定方向へ回り続けることを確認します。
 - torque 用 beam が、最初の数秒は torque によって時間とともに回転が速くなり、その後は torque を止めても同じ角速度で慣性回転を続けることを確認します。
 - 落下 body が灰色 block 群へ落ちつつ回転し、block を押しながら最終的に落ち着いていくことを確認します。
-- `fixedRotation` を有効にした beam は、他の body と違って回転しないことを確認します。
+- `fixedRotation` を有効にした beam は、一定の姿勢を保つことを確認します。
 - status で各 body の姿勢と角速度が変化し、blue の `torque on / off`、green の `falling / impacting blocks / settling / sleep` が読み取れることを確認します。
 
 操作
@@ -27,5 +27,5 @@ physics_node_rotate
 
 実装確認の見方
 - `PhysicsSpace.js` の `angularVelocity`、`torque`、`angularDamping`、`fixedRotation`、sleep 条件を見るときは、このページで画面上の回転と status を確認できます。
-- `BoxCollider` の OBB dispatch は `unittest/physics_space_contracts` が自動確認します。ここでは画面上の姿勢更新を中心に見ており、inertia tensor や本格的な回転 contact solver の確認ではありません。
-- 自動確認の規約は `unittest/physics_space_contracts` が担当し、このページは画面上の見え方確認を担当します。
+- `BoxCollider` の OBB dispatch は `headless_tests/core/physics_space/` が自動確認します。このページは角速度・torqueと画面上の姿勢更新の対応を確認します。
+- 自動確認の規約は `headless_tests/core/physics_space/` が担当し、このページは画面上の見え方確認を担当します。

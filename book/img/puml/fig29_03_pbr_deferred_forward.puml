@@ -1,0 +1,32 @@
+@startuml
+title 不透明PBRと透明PBRが共有する照明計算
+top to bottom direction
+skinparam backgroundColor white
+skinparam shadowing true
+skinparam dpi 150
+skinparam defaultFontName Yu Gothic UI
+skinparam defaultFontSize 18
+skinparam rectangle {
+  RoundCorner 24
+  BorderColor black
+  BackgroundColor #f7fbff
+}
+rectangle "PbrBrdf.js\nGGX・Smith・Schlick・Lambert・IBL" as BRDF #f4edff
+rectangle "不透明Shape" as Opaque #eaf7e8
+rectangle "GeometryBufferPass\nPBR G-buffer" as GBuffer
+rectangle "DeferredLightingPass\n画素ごとにPBR照明" as Deferred #fdeaea
+rectangle "透明Shape" as Transparent #eaf7e8
+rectangle "PbrForwardShader\nfragmentごとにPBR照明" as Forward #fdeaea
+rectangle "線形HDRシーン\n不透明と透明を統合" as HDR
+Opaque --> GBuffer
+GBuffer --> Deferred
+BRDF --> Deferred
+Transparent --> Forward
+BRDF --> Forward
+Deferred --> HDR
+Forward --> HDR
+note right of GBuffer
+一画素に最前面の不透明surfaceを保存
+透明layerは後段Forwardへ送る
+end note
+@enduml

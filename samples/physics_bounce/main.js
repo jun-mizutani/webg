@@ -564,7 +564,7 @@ const start = async () => {
   let totalBallBallContacts = 0;
   let lastBallBallContacts = 0;
 
-  // すべての物体を初期状態へ戻し、前回の状態を残さない
+  // すべての物体を初期状態へ戻す
   const resetAllBodies = () => {
     totalBallBallContacts = 0;
     lastBallBallContacts = 0;

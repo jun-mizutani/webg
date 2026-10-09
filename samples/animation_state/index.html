@@ -184,7 +184,7 @@ blockquote {
 <h2>操作方法</h2>
 <ul><li>左上 help panel の Hide Help / Show Help: 操作説明本文の表示 / 非表示</li><li>W / S: モデルを X 軸回転</li><li>A / D: モデルを Y 軸回転</li><li>Z / X: モデルを Z 軸回転</li><li>J: ボーン一覧を console 出力</li><li>E / R: 選択中ボーンを X 軸回転</li><li>Y / U: 選択中ボーンを Y 軸回転</li><li>C / V: 選択中ボーンを Z 軸回転</li><li>N / M: メッシュ選択を前後切り替え</li><li>O / I: 選択メッシュの非表示 / 表示</li><li>9 / 0: ボーン表示 / 非表示</li><li>1 - 5: desired state を pose1 - pose5 に変更</li><li>6: desired state を pose0 に変更</li><li>/: 次の desired state へ進む</li><li>@: 現在 state を再始動</li><li>P: auto cycle の ON / OFF</li><li>7 / 8: 描画 ON / OFF</li><li>K: 遅延描画モード ON</li><li>Q:サンプル停止</li></ul>
 <p>補足</p>
-<ul><li>AnimationState は clip データを持たず、既存 Action を controller として受ける薄い制御層です</li><li>このサンプルでは state.action -&gt; Action.start(actionId) の接続だけを使い、cross-fade や blend は扱いません</li></ul>
+<ul><li>AnimationState は clip データを持たず、既存 Action を controller として受ける薄い制御層です</li><li>このサンプルでは state.action -&gt; Action.start(actionId) の接続によるactionの選択と再生を示します</li></ul>
     </article>
   </main>
 </body>

@@ -1,11 +1,11 @@
-サンプル: tilt_input
+確認ページ: tilt_input
 
 概要
 - スマホの deviceorientation と PC 上のエミュレーション入力を、同じ tiltX / tiltY ベクトルとして可視化する unittest です。
-- まだ webg コア API にはせず、この unittest 内のローカル実装として傾き入力の仕様を確認します。
-- 物理エンジンとの接続は行わず、入力値、キャリブレーション、スムージング、2D pad / 3D marker の見え方だけを確認します。
+- ページ内のローカル状態で、傾き入力の座標系と補正を確認します。
+- 入力値、キャリブレーション、スムージング、2D pad / 3D marker の対応を確認します。
 
-このサンプルで使うwebg機能
+使用するwebg機能
 - `UnitTestApp`: Screen 初期化、viewport 追従、status 表示
 - `Space`: 3D 可視化用の board / marker / cursor node
 - `Shape`: addVertex / addPlane による簡易 box 形状
@@ -28,7 +28,7 @@
 - Reset: エミュレーション入力をゼロへ戻します。
 - Emulate: 入力源を PC エミュレーションへ戻します。
 
-実装確認の見方
-- この unittest のローカル tilt state は、将来 `webg/TiltInput.js` へ移動する前の試作です。
-- コア化前に、座標系、dead zone、smoothing、permission、calibration の API 名と挙動をここで確認します。
-- 物理連携はこのページでは扱いません。まず入力ベクトルが安定して読めるかだけを確認します。
+
+確認条件
+- 実センサーの入力はdeviceorientationに対応する端末と、利用許可を得たブラウザで確認します。
+- PCではpadとkeyboardによる模擬入力で、同じ入力ベクトルの可視化を確認できます。

@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// Screen.js       2026/07/25
+// Screen.js       2026/08/27
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // ---------------------------------------------
@@ -109,7 +109,7 @@ class WebGPUContext {
     }
     this.requestedFeatures = [...requested];
 
-    // feature未指定時は従来と同じrequestDevice()呼び出しを維持する
+    // feature未指定時は追加featureなしでrequestDevice()を呼び出す
     this.device = this.requestedFeatures.length > 0
       ? await this.adapter.requestDevice({
         requiredFeatures: this.requestedFeatures
@@ -449,7 +449,8 @@ export default class Screen {
   }
 
   // カラー/深度をクリアしてレンダーパスを開始する
-  clear(target = null) {
+  // options.timestampWritesを指定した場合は、このframeの通常描画Render PassへGPU timestampを書き込みます
+  clear(target = null, options = {}) {
     // カラーバッファと深度をクリアして新しいフレームを開始する
     const [r, g, b, a] = this.clearColor;
     const colorView = target?.getColorView?.() ?? target?.colorView ?? null;
@@ -460,7 +461,8 @@ export default class Screen {
       depthClear: true,
       target,
       colorView,
-      depthView
+      depthView,
+      timestampWrites: options.timestampWrites
     });
     this.frames++;
   }

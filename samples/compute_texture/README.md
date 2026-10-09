@@ -63,6 +63,6 @@
 - main.js の compute shader は sampled texture を read、storage texture を write として分け、前フレームの内容を壊さず次フレームを作っています
 - 同じ 2 枚の texture を毎フレーム入れ替える ping-pong 構成にしているため、動的なテクスチャフィードバックを GPU 内だけで継続できます
 - pointer 入力は CPU 側で座標、半径、残像用の注入エネルギー、click pulse の進行度と中心座標を uniform へ渡し、実際の注入範囲、色反転、色の加算は compute shader 側で pixel ごとに判定しています
-- render 側の球体は `Primitive.sphere()` の geometry.positions / uvs / indices を raw render pipeline 用 buffer へ詰めて描画し、seam が目立ちにくい既存の UV 展開をそのまま使っています
+- render 側の球体は `Primitive.sphere()` の geometry.positions / uvs / indices を raw render pipeline 用 buffer へ詰めて描画し、seam が目立ちにくい UV 展開を使っています
 - 球体はその UV で texture を sample し、directional light、specular、rim light を使って面の向きと貼り込み状態を見やすくしています
 - ポストプロセス、反応する HUD、手続き模様、ペイント可能な effect map など、動的 texture 生成の入口として確認できます

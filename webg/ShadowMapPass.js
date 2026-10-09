@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// webg/ShadowMapPass.js  2026/07/20
+// webg/ShadowMapPass.js  2026/09/09
 //   Directional shadow map pass
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -7,6 +7,7 @@
 import Matrix from "./Matrix.js";
 import util from "./util.js";
 import { CAMERA_REVERSE_Z, SHADOW_STANDARD_Z } from "./DepthConvention.js";
+import MaterialParameters from "./MaterialParameters.js";
 import {
   DEFAULT_MAX_SKIN_BONES,
   SKIN_MATRIX_FLOATS_PER_BONE,
@@ -199,7 +200,7 @@ export function createDirectionalLightMatrices(options = {}) {
   const view = new Matrix();
   view.makeView(world);
   const projection = new Matrix();
-  // 方向光Shadow Mapは有限範囲の正射影であり、第一実装期は通常Zを明示して生成する
+  // 方向光Shadow Mapは有限範囲の正射影と通常Zで生成する
   projection.makeProjectionMatrixOrtho(
     near,
     far,
@@ -434,7 +435,7 @@ export default class ShadowMapPass {
       );
     }
     // Shadow Mapは通常カメラのReverse-Zとは別の変更不能な通常Z契約を使用する
-    // formatだけをoptionで差し替える部分移行を許さず、clearとcompareも同じobjectから取得する
+    // format、clear、compareは同じdepth conventionから取得する
     this.depthConvention = SHADOW_STANDARD_Z;
     this.depthFormat = this.depthConvention.format;
     this.entries = new Map();
@@ -781,9 +782,11 @@ fn vsMain(input : VertexInput) -> @builtin(position) vec4f {
         ? entry.shape.getMaterialCount()
         : 1;
       for (let materialIndex = 0; materialIndex < materialCount; materialIndex++) {
-        const alpha = typeof entry.shape.getMaterialAlpha === "function"
-          ? entry.shape.getMaterialAlpha(materialIndex)
-          : 1.0;
+        const materialRecord = MaterialParameters.resolveShapeMaterial(
+          entry.shape,
+          materialIndex
+        );
+        const alpha = MaterialParameters.getAlpha(materialRecord, materialIndex);
         // 透明triangleはopaque depthにもshadow mapにも書かず、後段forward合成だけで扱う
         if (alpha < 1.0) {
           continue;
@@ -837,18 +840,22 @@ fn vsMain(input : VertexInput) -> @builtin(position) vec4f {
     };
   }
 
+  // shadow mapのdepth attachment viewを返し、depth描画や検証へ渡します
   getDepthView() {
     return this.depthView;
   }
 
+  // shadow mapをshaderからsampleするviewを返し、照明passへ渡します
   getDepthSampleView() {
     return this.depthSampleView;
   }
 
+  // shadow mapの横解像度を返し、projectionとresource設定へ利用します
   getWidth() {
     return this.width;
   }
 
+  // shadow mapの縦解像度を返し、projectionとresource設定へ利用します
   getHeight() {
     return this.height;
   }

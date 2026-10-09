@@ -1,5 +1,5 @@
 // ---------------------------------------------------------
-// headless_tests/core/compute_ssr_pass/hdr_reflection_contracts.js  2026/07/23
+// headless_tests/core/compute_ssr_pass/hdr_reflection_contracts.js  2026/08/04
 //   Linear HDR ray and material-roughness filtering contracts for ComputeSsrPass
 // ---------------------------------------------------------
 import assert from "node:assert/strict";

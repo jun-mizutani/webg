@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// Matrix.js       2026/07/13
+// Matrix.js       2026/09/09
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // ---------------------------------------------
@@ -27,10 +27,12 @@ import {
   readDepthRange
 } from "./DepthConvention.js";
 
+// 度数法の角度を行列計算で使うラジアンへ変換します
 function RAD(degree) {
   return degree * Math.PI / 180.0;
 }
 
+// 行列計算のラジアンを利用者向けの度数法へ変換します
 function DEG(radian) {
   return radian * 180.0 / Math.PI;
 }

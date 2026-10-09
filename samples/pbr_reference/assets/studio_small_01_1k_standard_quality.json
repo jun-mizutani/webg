@@ -1,0 +1,200 @@
+{
+  "tool": "webg-pbr-environment-quality-tool-v3",
+  "source": {
+    "id": "polyhaven-studio-small-01-1k",
+    "file": "studio_small_01_1k.hdr",
+    "sha256": "a2d308672f077b0872686a439d76dc3ace91274380ae2e5f02c653c3ccbc8407"
+  },
+  "cache": {
+    "file": "studio_small_01_1k_standard.webgpbr",
+    "sha256": "7a5b67be27efcf768b5e5b027c0395d9eed0a23e3184b5d89c2e48c948213f2d",
+    "preset": "standard",
+    "settings": {
+      "irradianceWidth": 64,
+      "irradianceHeight": 32,
+      "specularWidth": 256,
+      "specularHeight": 128,
+      "specularMipCount": 9,
+      "brdfLutWidth": 128,
+      "brdfLutHeight": 128,
+      "diffuseSampleCount": 512,
+      "specularSampleCount": 512,
+      "brdfSampleCount": 512
+    }
+  },
+  "algorithm": "webg-split-sum-ggx-environment-mis-linear-srgb-v3",
+  "reference": {
+    "sampleCount": 2048,
+    "settings": {
+      "irradianceWidth": 64,
+      "irradianceHeight": 32,
+      "specularWidth": 256,
+      "specularHeight": 128,
+      "specularMipCount": 9,
+      "brdfLutWidth": 128,
+      "brdfLutHeight": 128,
+      "diffuseSampleCount": 2048,
+      "specularSampleCount": 2048,
+      "brdfSampleCount": 2048
+    },
+    "generationMilliseconds": 117854.10474586487
+  },
+  "comparison": {
+    "irradiance": {
+      "width": 64,
+      "height": 32,
+      "storageChannels": 4,
+      "comparedChannels": 3,
+      "valueCount": 6144,
+      "meanActual": 2.178118586540222,
+      "meanReference": 2.1722226053097984,
+      "meanAbsolute": 0.0383280685734159,
+      "rootMeanSquare": 0.05410920261124105,
+      "normalizedRootMeanSquare": 0.010504127956788838,
+      "maximumAbsolute": 0.3896305561065674,
+      "maximumReference": 5.1512322425842285
+    },
+    "prefilteredSpecular": [
+      {
+        "width": 256,
+        "height": 128,
+        "storageChannels": 4,
+        "comparedChannels": 3,
+        "valueCount": 98304,
+        "meanActual": 0.5484329651456695,
+        "meanReference": 0.5479027337340677,
+        "meanAbsolute": 0.000999532588482695,
+        "rootMeanSquare": 0.01961852593522557,
+        "normalizedRootMeanSquare": 0.000035173791916026695,
+        "maximumAbsolute": 1.08209228515625,
+        "maximumReference": 557.759765625
+      },
+      {
+        "width": 128,
+        "height": 64,
+        "storageChannels": 4,
+        "comparedChannels": 3,
+        "valueCount": 24576,
+        "meanActual": 0.5505505541999204,
+        "meanReference": 0.548028521317228,
+        "meanAbsolute": 0.004378851304885245,
+        "rootMeanSquare": 0.05771995876476651,
+        "normalizedRootMeanSquare": 0.00017435830764672719,
+        "maximumAbsolute": 2.5254364013671875,
+        "maximumReference": 331.0422058105469
+      },
+      {
+        "width": 64,
+        "height": 32,
+        "storageChannels": 4,
+        "comparedChannels": 3,
+        "valueCount": 6144,
+        "meanActual": 0.5662778060262402,
+        "meanReference": 0.562851365336769,
+        "meanAbsolute": 0.01008085439552057,
+        "rootMeanSquare": 0.06725087305857841,
+        "normalizedRootMeanSquare": 0.0011661678393714667,
+        "maximumAbsolute": 1.5164146423339844,
+        "maximumReference": 57.66826248168945
+      },
+      {
+        "width": 32,
+        "height": 16,
+        "storageChannels": 4,
+        "comparedChannels": 3,
+        "valueCount": 1536,
+        "meanActual": 0.5816851854324341,
+        "meanReference": 0.577699875578522,
+        "meanAbsolute": 0.01136331184716255,
+        "rootMeanSquare": 0.047658173530546334,
+        "normalizedRootMeanSquare": 0.002989241395760022,
+        "maximumAbsolute": 0.65216064453125,
+        "maximumReference": 15.943233489990234
+      },
+      {
+        "width": 16,
+        "height": 8,
+        "storageChannels": 4,
+        "comparedChannels": 3,
+        "valueCount": 384,
+        "meanActual": 0.6006115277608236,
+        "meanReference": 0.5997155188039566,
+        "meanAbsolute": 0.011871737990683565,
+        "rootMeanSquare": 0.02766775723231341,
+        "normalizedRootMeanSquare": 0.00468590326697797,
+        "maximumAbsolute": 0.2244400978088379,
+        "maximumReference": 5.904466152191162
+      },
+      {
+        "width": 8,
+        "height": 4,
+        "storageChannels": 4,
+        "comparedChannels": 3,
+        "valueCount": 96,
+        "meanActual": 0.6237742106119791,
+        "meanReference": 0.6221191262981544,
+        "meanAbsolute": 0.011392372272287806,
+        "rootMeanSquare": 0.0219455545840087,
+        "normalizedRootMeanSquare": 0.007119252144266324,
+        "maximumAbsolute": 0.1127479076385498,
+        "maximumReference": 3.08256459236145
+      },
+      {
+        "width": 4,
+        "height": 2,
+        "storageChannels": 4,
+        "comparedChannels": 3,
+        "valueCount": 24,
+        "meanActual": 0.6412150065104166,
+        "meanReference": 0.6381037955482801,
+        "meanAbsolute": 0.015602394938468933,
+        "rootMeanSquare": 0.019079675504607662,
+        "normalizedRootMeanSquare": 0.0156520610133941,
+        "maximumAbsolute": 0.04273068904876709,
+        "maximumReference": 1.218988060951233
+      },
+      {
+        "width": 2,
+        "height": 1,
+        "storageChannels": 4,
+        "comparedChannels": 3,
+        "valueCount": 6,
+        "meanActual": 1.4895833333333333,
+        "meanReference": 1.4818631807963054,
+        "meanAbsolute": 0.03798997402191162,
+        "rootMeanSquare": 0.0391201555752544,
+        "normalizedRootMeanSquare": 0.021624995281434738,
+        "maximumAbsolute": 0.052303194999694824,
+        "maximumReference": 1.8090249300003052
+      },
+      {
+        "width": 1,
+        "height": 1,
+        "storageChannels": 4,
+        "comparedChannels": 3,
+        "valueCount": 3,
+        "meanActual": 0.8229166666666666,
+        "meanReference": 0.8134788274765015,
+        "meanAbsolute": 0.009437839190165201,
+        "rootMeanSquare": 0.00945653826642082,
+        "normalizedRootMeanSquare": 0.01015991157042069,
+        "maximumAbsolute": 0.0100288987159729,
+        "maximumReference": 0.9307697415351868
+      }
+    ],
+    "brdfLut": {
+      "width": 128,
+      "height": 128,
+      "storageChannels": 2,
+      "comparedChannels": 2,
+      "valueCount": 32768,
+      "meanActual": 0.3734098345430539,
+      "meanReference": 0.3733384024149863,
+      "meanAbsolute": 0.0007721732173613949,
+      "rootMeanSquare": 0.0016142614294445427,
+      "normalizedRootMeanSquare": 0.0016142699928456078,
+      "maximumAbsolute": 0.010178029537200928,
+      "maximumReference": 0.999994695186615
+    }
+  }
+}

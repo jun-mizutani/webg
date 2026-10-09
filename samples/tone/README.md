@@ -60,6 +60,6 @@ Reverb Mix が大きい状態で Release を長くすると、原音と残響が
 関連文書
 
 - [18_サウンドの設計.md](../../book/18_サウンドの設計.md)
-- [付録C_API一覧.md](../../book/付録C_API一覧.md)
+- [付録D_API一覧.md](../../book/付録D_API一覧.md)
 - [samples/tone/main.js](./main.js)
 - [samples/tone/tone.html](./tone.html)

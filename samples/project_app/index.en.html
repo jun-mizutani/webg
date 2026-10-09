@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>WebgSceneApp samples</title>
+  <link rel="icon" href="data:," />
+  <!-- 2026/06/19 -->
+  <style>
+
+:root {
+  color-scheme: light;
+  --bg: #eef3f8;
+  --paper: rgba(255, 255, 255, 0.94);
+  --line: #c8d5e4;
+  --ink: #17324a;
+  --muted: #5c748b;
+  --accent: #1566ab;
+  --accent-soft: #dfeefe;
+  --code-bg: #f3f7fb;
+  --shadow: rgba(29, 52, 79, 0.10);
+}
+* { box-sizing: border-box; }
+html, body {
+  margin: 0;
+  min-height: 100%;
+}
+body {
+  background:
+    radial-gradient(circle at top left, rgba(21, 102, 171, 0.12), transparent 24%),
+    radial-gradient(circle at top right, rgba(255, 191, 118, 0.10), transparent 22%),
+    linear-gradient(180deg, #f8fbfd 0%, var(--bg) 100%);
+  color: var(--ink);
+  font: 16px/1.78 "Avenir Next", "Hiragino Sans", "Yu Gothic", sans-serif;
+}
+.page {
+  width: min(1080px, calc(100% - 28px));
+  margin: 0 auto;
+  padding: 24px 0 56px;
+}
+.hero,
+.doc {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  box-shadow: 0 22px 52px var(--shadow);
+}
+.hero {
+  padding: 22px 24px;
+  margin-bottom: 18px;
+}
+.hero h1 {
+  margin: 0 0 8px;
+  font-size: clamp(2rem, 4vw, 3rem);
+  line-height: 1.08;
+}
+.hero p {
+  margin: 0;
+  color: var(--muted);
+}
+.doc {
+  padding: 28px;
+}
+.doc > :first-child {
+  margin-top: 0;
+}
+h1, h2, h3, h4, h5, h6 {
+  line-height: 1.25;
+  margin: 1.45em 0 0.55em;
+}
+h1 {
+  font-size: 2.2rem;
+}
+h2 {
+  padding-bottom: 0.28em;
+  border-bottom: 1px solid var(--line);
+  font-size: 1.48rem;
+}
+h3 {
+  font-size: 1.14rem;
+}
+p, ul, ol, table, pre, blockquote {
+  margin: 0 0 1em;
+}
+ul, ol {
+  padding-left: 1.4em;
+}
+li + li {
+  margin-top: 0.26em;
+}
+a {
+  color: var(--accent);
+  text-decoration: none;
+}
+a:hover {
+  text-decoration: underline;
+}
+img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  border-radius: 16px;
+  border: 1px solid var(--line);
+  box-shadow: 0 12px 32px rgba(29, 52, 79, 0.08);
+  margin: 1.1em 0 1.4em;
+}
+code {
+  padding: 0.12em 0.38em;
+  border-radius: 0.45em;
+  background: var(--code-bg);
+  border: 1px solid #dbe6f1;
+  font: 0.92em/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+pre {
+  padding: 14px 16px;
+  overflow-x: auto;
+  border-radius: 14px;
+  background: #0f1720;
+  color: #ecf5ff;
+}
+pre code {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #ffffff;
+}
+th, td {
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  text-align: left;
+  vertical-align: top;
+}
+th {
+  background: #f5f9fc;
+}
+hr {
+  border: 0;
+  border-top: 1px solid var(--line);
+  margin: 1.5em 0;
+}
+blockquote {
+  padding: 0.3em 0 0.3em 1em;
+  border-left: 4px solid #c9dbef;
+  color: var(--muted);
+}
+@media (max-width: 720px) {
+  .page {
+    width: min(100% - 18px, 1080px);
+    padding-top: 16px;
+  }
+  .hero,
+  .doc {
+    border-radius: 18px;
+  }
+  .doc {
+    padding: 20px;
+  }
+}
+
+  </style>
+</head>
+<body>
+  <main class="page">
+    <section class="hero">
+      <h1>WebgSceneApp samples</h1>
+    </section>
+    <article class="doc">
+<h1>WebgSceneApp samples</h1>
+<p><code>project_app</code> is an independent sample set for webg 3.0's <code>WebgSceneApp</code>: it demonstrates PBR presentation, Compute physics, Joints, and repeated object placement from a scene definition.</p>
+<p>The HTML, JavaScript, SceneYAML projects, and scene assets in this folder are sufficient to run the samples. The high-level webg core is loaded from <code>../../webg/app/</code>. </p>
+<h2>Suggested order</h2>
+<ol><li>Open <a href="./project_app_sphere_plane.html">project_app_sphere_plane.html</a> to inspect the minimal <code>objects[]</code>, material, Sphere, Plane, and Compute body setup</li><li>Open <a href="./project_app_joint.html">project_app_joint.html</a> to specify Joint endpoints with object IDs</li><li>Open <a href="./project_app_joint_compute_node.html">project_app_joint_compute_node.html</a> to inspect multiple SceneYAML Joints, GPU Compute physics, and Node rendering after readback</li><li>Open <a href="./project_app_object_set.html">project_app_object_set.html</a> to generate 16 Boxes from a prototype and <code>grid3d</code></li><li>Open <a href="./project_app_object_set_variants.html">project_app_object_set_variants.html</a> to combine Sphere, Capsule, and Box variants</li><li>Open <a href="./project_app_physics.html">project_app_physics.html</a> to connect a Blender-authored scene asset, a PBR manifest, and Compute physics</li><li>Open <a href="./domino_36_03.html">domino_36_03.html</a> to inspect a project at artwork scale</li></ol>
+<p>Open each page in a WebGPU-enabled browser and try Start, Stop, and Reset. <code>project_app_physics.html</code> loads <code>assets/domino2_scene_asset.json.gz</code>.</p>
+<p><code>project_app_joint_compute_node.html</code> moves the rope, pendulum, and crossing Capsule from <code>joint_compute_node.html</code> into SceneYAML. The project YAML defines the physics bodies and 61 Distance Joints. The JavaScript entry only drives the kinematic Capsule, synchronizes the display-only pendulum connector, and provides Start, Stop, and Reset. Use <code>Q</code> for quasiStatic, <code>I</code> for impact, and <code>A</code> or <code>D</code> to change the Capsule direction.</p>
+<h2>SceneYAML object animation</h2>
+<p><a href="./scene_animation.html">scene_animation.html</a> displays an independent floor and fixed post alongside a moving, rotating gate with Sphere and Capsule children. <a href="./scene_animation.yaml">scene_animation.yaml</a> uses <code>format: webg-scene</code>, <code>version: 1</code>. The <a href="./scene_animation_demo.js">JavaScript entry</a> uses the public animation APIs with <code>renderMode: &quot;ondemand&quot;</code> and <code>physics: false</code>. Serve the repository over HTTP and open the page in a WebGPU browser.</p>
+<p>Play starts at the beginning with Loop off by default. Pause and Stop hold the current pose; Resume continues from paused. Seek moves to the requested time in seconds and pauses. Reset animations stops every clip and restores base transforms. Reset scene resets animations and physics (physics is disabled here). Start frames and Stop frames control only the frame loop; pose changes while frames are stopped appear after restarting frames.</p>
+<p>The gate's base Euler orientation is 15 degrees around Y, while the first key is zero degrees, making Reset visibly different from Seek(0). Key rotations use <code>[w, x, y, z]</code> and positions are absolute local values. The parent's positive uniform scale stays constant. The open pose holds from 2 to 3 seconds, and one-shot playback finishes at 5 seconds.</p>
+<p>Generate the compressed artifact with <code>gzip -n -9 -c samples/project_app/scene_animation.yaml &gt; samples/project_app/scene_animation.yaml.gz</code> and open the <a href="./scene_animation.html?gzip=1">gzip page</a>. Once the page is ready, optionally run <code>await (await import('/tools/scene_animation/browser_probe.js')).runSceneAnimationProbe()</code> in the browser console. This <a href="../../tools/scene_animation/browser_probe.js">probe</a> checks playback, holds, seek, looping, reset, and UI state, then restores base transforms. It does not verify pixels, parent/child world transforms, or physics.</p>
+<h2>Editing units</h2>
+<ul><li>Object shape, placement, and physics values: <code>objects[]</code> in the SceneYAML project</li><li>Shared definitions and repeated placement: <code>objectSets[]</code></li><li>Color, metallic, roughness, and specular: <code>materials</code></li><li>Object-to-material relationship: <code>objects[].material</code></li><li>Joint endpoints: <code>physics.joints[]</code></li><li>Blender mesh, UV, and Node data: <code>assets/*.scene.json.gz</code></li></ul>
+<p>Every runnable sample uses a SceneYAML project manifest. JSON projects and external JSON manifests use the same validation path in <code>SceneDefinition</code>.</p>
+<p>Each demo JavaScript file calls <code>createWebgSceneApp()</code>. WebgSceneApp handles scene-definition validation, Node and Shape creation, PBR preparation, Compute body registration, fixed steps, readback, and Reset. The application entry code describes the camera, buttons, artwork-specific input, and status display.</p>
+<p>Import <code>WebgSceneApp</code>, <code>SceneDefinition</code>, and <code>ScenePhysics</code> from <code>../../webg/app/index.js</code> to build scene applications.</p>
+    </article>
+  </main>
+</body>
+</html>

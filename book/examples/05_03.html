@@ -1,18 +1,18 @@
 <!doctype html>
-<!-- webg/book/examples/05_03.html 2026/04/24 -->
+<!-- book/examples/05_03.html 2026/10/04 -->
 <html lang="ja">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>05_03 fixedCanvasSize と embedded</title>
-  <link rel="stylesheet" href="./example.css" />
+  <link rel="stylesheet" href="./examples_common.css" />
 </head>
 <body>
   <div class="page">
     <h1>book/examples</h1>
     <h2>05_03 fixedCanvasSize と embedded</h2>
     <div class="section-card">
-      <p>`book/05_WebgAppによるアプリ構成.md` の `fixedCanvasSize`、`layoutMode: "embedded"`、`EyeRig`、`takeScreenshot()` を 1 ページでまとめて試せる埋め込み例です</p>
+      <p>`book/05_WebgAppによるアプリ構成.md` の `fixedCanvasSize`、`layoutMode: "embedded"`、`EyeRig`、`takeScreenshot()` を 1 ページでまとめて試せる埋め込み例です</p>
       <p>このページは本文スクロールを残したまま canvas と help panel を一緒に埋め込む形にしてあります。マウスドラッグでカメラを回し、`S` でスクリーンショット保存を試してください</p>
     </div>
 
@@ -27,7 +27,7 @@
 
     <div class="section-card">
       <p>canvas の下にも説明文を続けられます。`fixedCanvasSize` を使うと、比較用スクリーンショットや教材のレイアウト調整で、表示サイズを一定に保ちやすくなります</p>
-      <p class="note">この例は添付してもらった `user/WebgApp01.html` の構成を整理し直して、`book/examples` 用の相対 path へ合わせたものです</p>
+      <p class="note">固定サイズのキャンバス内でカメラ操作とスクリーンショットを使う構成を示しています</p>
     </div>
 
     <pre id="code"></pre>
@@ -89,6 +89,7 @@ app.showOverlayPanel(buildHelpPanelOptions({
 }));
 
 app.attachInput({
+  // 正規化されたキー名から操作を選び、停止状態、表示設定、カメラなどの対象を更新する
   onKeyDown: (key, ev) => {
     if (ev.repeat) return;
     if (key === "s") {
@@ -98,9 +99,10 @@ app.attachInput({
 });
 
 app.start({
+  // 経過秒数に応じてNodeの回転を進め、アプリの標準描画へ渡す
   onUpdate({ deltaSec }) {
-    node.rotateY(0.8);
-    node.rotateX(0.4);
+    node.rotateY(0.8 * deltaSec);
+    node.rotateX(0.3 * deltaSec);
   }
 });
     </script>

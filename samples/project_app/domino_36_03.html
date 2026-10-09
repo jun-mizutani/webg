@@ -1,0 +1,29 @@
+<!doctype html>
+<!-- samples/project_app/domino_36_03.html 2026/09/23 -->
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>webg WebgSceneApp — domino 36_03</title>
+  <link rel="icon" href="data:," />
+  <link rel="stylesheet" href="./domino_36_03.css?v=20260908r1" />
+</head>
+<body>
+  <main id="domino-stage">
+    <canvas id="canvas" width="960" height="720"></canvas>
+    <pre id="status" aria-live="polite">initializing...</pre>
+    <div id="board-controls" aria-label="可動板操作">
+      <button type="button" data-axis="y" data-direction="1" aria-label="板を上へ移動">↑</button>
+      <button type="button" data-axis="x" data-direction="-1" aria-label="板を左へ移動">←</button>
+      <button type="button" data-axis="y" data-direction="-1" aria-label="板を下へ移動">↓</button>
+      <button type="button" data-axis="x" data-direction="1" aria-label="板を右へ移動">→</button>
+    </div>
+    <div id="playback-controls" aria-label="再生操作">
+      <button id="start" type="button" disabled>Start</button>
+      <button id="stop" type="button" disabled>Stop</button>
+      <button id="reset" type="button" disabled>Reset</button>
+    </div>
+  </main>
+  <script type="module" src="./domino_36_03.js"></script>
+</body>
+</html>

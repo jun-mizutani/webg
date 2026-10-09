@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// Shape.js        2026/07/25
+// Shape.js        2026/09/09
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // ---------------------------------------------
@@ -9,6 +9,7 @@ import Matrix from "./Matrix.js";
 import Wireframe from "./Wireframe.js";
 import Tween from "./Tween.js";
 import ShapeResource from "./ShapeResource.js";
+import MaterialParameters from "./MaterialParameters.js";
 import { DEFAULT_MAX_SKIN_BONES } from "./SkinningConfig.js";
 
 const wireframeShaderCache = new WeakMap();
@@ -68,9 +69,11 @@ function bindSharedResourceFields(instance) {
     Object.defineProperty(instance, field, {
       configurable: true,
       enumerable: true,
+      // shared resource fieldへの読み書きをShape instanceから同じ名前で行えるようにします
       get() {
         return this.resource[field];
       },
+      // resource側の値を更新し、後段の描画準備で参照できる状態へ反映します
       set(value) {
         this.resource[field] = value;
       }
@@ -264,7 +267,7 @@ export default class Shape {
     } else {
       this.materials[materialIndex] = material;
     }
-    this.getMaterialAlpha(materialIndex);
+    MaterialParameters.validateTransparency(material, materialIndex);
     if (materialIndex !== 0) {
       return;
     }
@@ -299,7 +302,7 @@ export default class Shape {
         this.shaderParameter(key, checkedParams[key]);
       }
     }
-    this.getMaterialAlpha(materialIndex);
+    MaterialParameters.validateTransparency(material, materialIndex);
   }
 
   // material parameter を時間をかけて変更したいときに使う
@@ -399,37 +402,32 @@ export default class Shape {
     return materialIndex;
   }
 
-  // alpha未指定は既存materialをopaqueとして扱う公開既定値1.0とする
-  // 範囲外値は描画段階まで持ち越さず、設定またはShape確定時に例外として検出する
-  getMaterialAlpha(index = 0) {
-    const materialIndex = this.requireMaterialIndex(index, "Shape.getMaterialAlpha");
-    return util.readOptionalFiniteNumber(
-      this.materials[materialIndex].params.alpha,
-      `Shape material[${materialIndex}].alpha`,
-      1.0,
-      { min: 0.0, max: 1.0 }
-    );
-  }
-
   // slot 0へ展開済みのlegacy shaderParamからmaterial固有値を分離し、
   // slot 1以降へslot 0の色やsurface値が混入しないparameter辞書を作る
   getShaderParametersForMaterial(index = 0) {
     const materialIndex = this.requireMaterialIndex(index, "Shape.getShaderParametersForMaterial");
+    let params;
     if (materialIndex === 0) {
-      return {
+      params = {
         ...this.shaderParam,
-        alpha: this.getMaterialAlpha(0)
+        alpha: MaterialParameters.getAlpha(this.materials[0], 0)
       };
+    } else {
+      params = { ...this.shaderParam };
+      for (const key of Object.keys(this.materialParams)) {
+        delete params[key];
+      }
+      const material = this.materials[materialIndex];
+      Object.assign(params, material.params);
+      params.material_id = material.id;
+      params.alpha = MaterialParameters.getAlpha(this.materials[materialIndex], materialIndex);
     }
-    const params = { ...this.shaderParam };
-    for (const key of Object.keys(this.materialParams)) {
-      delete params[key];
-    }
-    const material = this.materials[materialIndex];
-    Object.assign(params, material.params);
-    params.material_id = material.id;
-    params.alpha = this.getMaterialAlpha(materialIndex);
-    return params;
+    // shader instanceはmaterial間で再利用されるため、省略値もdrawごとに明示して前materialの値を残さない
+    return MaterialParameters.applyTransmissionParameters(
+      params,
+      this.materials[materialIndex],
+      materialIndex
+    );
   }
 
   // material slotに属する確定済みindex buffer情報を返す
@@ -495,6 +493,7 @@ export default class Shape {
     return { ...this.collisionShape };
   }
 
+  // 登録済みcollision shapeを複製して返し、利用者側の診断変更から内部値を分離します
   getCollisionShape() {
     return this.collisionShape ? { ...this.collisionShape } : null;
   }
@@ -723,7 +722,7 @@ export default class Shape {
       );
     }
     for (let materialIndex = 0; materialIndex < this.materials.length; materialIndex++) {
-      this.getMaterialAlpha(materialIndex);
+      MaterialParameters.getAlpha(this.materials[materialIndex], materialIndex);
     }
     const centers = new Float32Array(triangleCount * 3);
     for (let triangleIndex = 0; triangleIndex < triangleCount; triangleIndex++) {
@@ -1009,7 +1008,10 @@ export default class Shape {
     }
 
     let pipeline = shd.getPipeline
-      ? shd.getPipeline(this.hasSkeleton, { translucent: options.translucent === true })
+      ? shd.getPipeline(this.hasSkeleton, {
+          translucent: options.translucent === true,
+          doubleSided: options.doubleSided === true
+        })
       : shd.pipeline;
     // GPUパイプラインを選択し、以降の drawIndexed で使用する
     pass.setPipeline(pipeline);
@@ -1129,6 +1131,13 @@ export default class Shape {
   // 指定material slotに属する全triangleを、そのslotのparameterで描画する
   drawMaterial(modelview, normal, materialIndex, options = {}) {
     const checkedMaterialIndex = this.requireMaterialIndex(materialIndex, "Shape.drawMaterial");
+    const materialOptions = {
+      ...options,
+      doubleSided: MaterialParameters.getDoubleSided(
+        this.materials[checkedMaterialIndex],
+        checkedMaterialIndex
+      )
+    };
     const drawInfo = this.getMaterialDrawInfo(checkedMaterialIndex);
     const triangleIndex = options.triangleIndex;
     if (triangleIndex !== undefined) {
@@ -1143,7 +1152,7 @@ export default class Shape {
         );
       }
       this.draw(modelview, normal, {
-        ...options,
+        ...materialOptions,
         materialIndex: checkedMaterialIndex,
         indexBuffer: this.indexBuffer,
         indexFormat: this.indexFormat,
@@ -1152,25 +1161,25 @@ export default class Shape {
       });
       return;
     }
-    if (options.indexBuffer !== undefined) {
-      if (!options.indexBuffer) {
+    if (materialOptions.indexBuffer !== undefined) {
+      if (!materialOptions.indexBuffer) {
         throw new Error("Shape.drawMaterial indexBuffer must be a GPUBuffer");
       }
       const indexCount = util.readFiniteNumber(
-        options.indexCount,
+        materialOptions.indexCount,
         "Shape.drawMaterial indexCount",
         { integer: true, min: 1 }
       );
       const firstIndex = util.readFiniteNumber(
-        options.firstIndex,
+        materialOptions.firstIndex,
         "Shape.drawMaterial firstIndex",
         { integer: true, min: 0 }
       );
-      if (options.indexFormat !== "uint16" && options.indexFormat !== "uint32") {
+      if (materialOptions.indexFormat !== "uint16" && materialOptions.indexFormat !== "uint32") {
         throw new Error("Shape.drawMaterial indexFormat must be uint16 or uint32");
       }
       this.draw(modelview, normal, {
-        ...options,
+        ...materialOptions,
         materialIndex: checkedMaterialIndex,
         indexCount,
         firstIndex
@@ -1181,7 +1190,7 @@ export default class Shape {
       return;
     }
     this.draw(modelview, normal, {
-      ...options,
+      ...materialOptions,
       materialIndex: checkedMaterialIndex,
       indexBuffer: drawInfo.buffer,
       indexFormat: drawInfo.format,
@@ -1193,9 +1202,9 @@ export default class Shape {
   // depthを書き込めるalpha 1.0のslotだけを先に描画する
   drawOpaqueMaterials(modelview, normal, options = {}) {
     // WireframeはShape全体のpolygon edgeを一度だけ描く経路であり、
-    // materialごとのtriangle index bufferへ分割してはいけない。
+    // materialごとのtriangle index bufferへ分割してはいけない
     // triangle indexをline-listへ渡すと、四角面の対角線が線として現れ、
-    // 本来の外周edgeも欠けるため、slot 0の表示設定で専用wire bufferを使う。
+    // 本来の外周edgeも欠けるため、slot 0の表示設定で専用wire bufferを使う
     if (this.isWireframe()) {
       this.draw(modelview, normal, {
         ...options,
@@ -1205,7 +1214,7 @@ export default class Shape {
       return;
     }
     for (let materialIndex = 0; materialIndex < this.materials.length; materialIndex++) {
-      if (this.getMaterialAlpha(materialIndex) === 1.0) {
+      if (MaterialParameters.getAlphaMode(this.materials[materialIndex], materialIndex) !== "BLEND") {
         this.drawMaterial(modelview, normal, materialIndex, {
           ...options,
           translucent: false
@@ -1222,7 +1231,7 @@ export default class Shape {
       return;
     }
     for (let materialIndex = 0; materialIndex < this.materials.length; materialIndex++) {
-      if (this.getMaterialAlpha(materialIndex) < 1.0) {
+      if (MaterialParameters.getAlphaMode(this.materials[materialIndex], materialIndex) === "BLEND") {
         this.drawMaterial(modelview, normal, materialIndex, {
           ...options,
           translucent: true
@@ -1236,37 +1245,75 @@ export default class Shape {
     if (!Array.isArray(queue)) {
       throw new Error("Shape.collectTranslucentTriangles requires an array queue");
     }
-    // Wireframeは上のopaque phaseでShape全体を描き終えている。
+    // Wireframeは上のopaque phaseでShape全体を描き終えている
     // material alphaに従ってtriangle単位の透明queueへ再登録すると、
-    // wire bufferではなくtriangle bufferがline-listとして再利用されてしまう。
+    // wire bufferではなくtriangle bufferがline-listとして再利用されてしまう
     if (this.isWireframe()) {
       return;
     }
-    const modelViewSnapshot = modelview.clone();
-    const normalSnapshot = normal.clone();
+    const acquireInstanceSnapshot = options.acquireInstanceSnapshot;
+    if (acquireInstanceSnapshot !== undefined && typeof acquireInstanceSnapshot !== "function") {
+      throw new Error("Shape translucent instance snapshot allocator must be a function");
+    }
+    const acquireEntry = options.acquireEntry;
+    if (acquireEntry !== undefined && typeof acquireEntry !== "function") {
+      throw new Error("Shape translucent triangle entry allocator must be a function");
+    }
+    // 通常描画ではqueueが保持するMatrix poolへ現在値をcopyし、直接呼出ではMatrixをcloneする
+    // 同じShapeを複数Nodeへ配置した場合も、collect呼出ごとに別snapshotを受け取ってidentityを分離する
+    const snapshot = acquireInstanceSnapshot
+      ? acquireInstanceSnapshot(modelview, normal)
+      : { modelview: modelview.clone(), normal: normal.clone() };
+    if (!snapshot?.modelview || !snapshot?.normal) {
+      throw new Error("Shape translucent instance snapshot requires modelview and normal matrices");
+    }
+    const modelViewSnapshot = snapshot.modelview;
+    const normalSnapshot = snapshot.normal;
+    const matrixValues = modelViewSnapshot.mat;
+    if (!Array.isArray(matrixValues) || matrixValues.length < 16) {
+      throw new Error("Shape translucent modelview snapshot requires a 4x4 matrix");
+    }
     for (let triangleIndex = 0; triangleIndex < this.triangleMaterialIndices.length; triangleIndex++) {
       const materialIndex = this.triangleMaterialIndices[triangleIndex];
-      if (this.getMaterialAlpha(materialIndex) === 1.0) {
+      if (MaterialParameters.getAlphaMode(this.materials[materialIndex], materialIndex) !== "BLEND") {
         continue;
       }
       const centerOffset = triangleIndex * 3;
-      const viewCenter = modelViewSnapshot.mulVector([
-        this.triangleCenters[centerOffset],
-        this.triangleCenters[centerOffset + 1],
-        this.triangleCenters[centerOffset + 2]
-      ]);
-      queue.push({
-        shape: this,
-        materialIndex,
-        triangleIndex,
-        index0: this.triangleVertexIndices[centerOffset],
-        index1: this.triangleVertexIndices[centerOffset + 1],
-        index2: this.triangleVertexIndices[centerOffset + 2],
-        modelview: modelViewSnapshot,
-        normal: normalSnapshot,
-        viewDepth: viewCenter[2],
-        traversalOrder: options.traversalOrder ?? queue.length
-      });
+      const centerX = this.triangleCenters[centerOffset];
+      const centerY = this.triangleCenters[centerOffset + 1];
+      const centerZ = this.triangleCenters[centerOffset + 2];
+      // sortにはview-space Zだけが必要なのでmulVector用の入力／戻り値Arrayをtriangleごとに作らない
+      // Matrix.mulVectorと同じ演算順とW除算条件を使い、既存のdepth順を変えずallocationだけを除く
+      let viewDepth = matrixValues[2] * centerX
+        + matrixValues[6] * centerY
+        + matrixValues[10] * centerZ
+        + matrixValues[14];
+      const viewW = matrixValues[3] * centerX
+        + matrixValues[7] * centerY
+        + matrixValues[11] * centerZ
+        + matrixValues[15];
+      if (Math.abs(viewW) > 1.0e-12) {
+        viewDepth /= viewW;
+      }
+      const entry = acquireEntry ? acquireEntry() : {};
+      if (!entry || typeof entry !== "object" || Array.isArray(entry)) {
+        throw new Error("Shape translucent triangle entry allocator must return an object");
+      }
+      // poolから受け取ったentryに前frameの値を残さないよう、利用fieldをすべて上書きする
+      entry.shape = this;
+      entry.materialIndex = materialIndex;
+      entry.triangleIndex = triangleIndex;
+      entry.index0 = this.triangleVertexIndices[centerOffset];
+      entry.index1 = this.triangleVertexIndices[centerOffset + 1];
+      entry.index2 = this.triangleVertexIndices[centerOffset + 2];
+      entry.modelview = modelViewSnapshot;
+      entry.normal = normalSnapshot;
+      entry.viewDepth = viewDepth;
+      entry.traversalOrder = options.traversalOrder ?? queue.length;
+      // 異常frameを後から解析するときだけNode名・姿勢へ到達できる参照を保持する
+      entry.node = options.node ?? null;
+      entry.shapeIndex = options.shapeIndex ?? null;
+      queue.push(entry);
     }
   }
 
@@ -1553,10 +1600,10 @@ export default class Shape {
       this.normalArray[pc + 1] += ny;
       this.normalArray[pc + 2] += nz;
     }
-    // 自動法線ではUV継ぎ目の両側へ蓄積した面法線を共有する。
-    // 手動法線は複製時に元法線をそのまま写すため、ここで再合算しない。
+    // 自動法線ではUV継ぎ目の両側へ蓄積した面法線を共有する
+    // 手動法線は複製時に元法線をそのまま写すため、ここで再合算しない
     // 三角形追加ごとの再合算は同じ法線を指数的に増幅し、float32 packing時に
-    // Infinityへ到達して継ぎ目の面から直接光を失わせる。
+    // Infinityへ到達して継ぎ目の面から直接光を失わせる
     if (this.autoCalcNormals && !this.deferAltVertexSync) {
       this.syncAltVertexNormals(this.normalArray);
     }
@@ -1710,6 +1757,7 @@ export default class Shape {
 
     this.vertexCount = geometry.vertexCount ?? Math.floor((geometry.positions?.length ?? 0) / 3);
     this.primitiveCount = geometry.polygonCount ?? Math.floor((geometry.indices?.length ?? 0) / 3);
+    // 内容を新しい配列にコピー、null / undefined なら空配列
     this.positionArray = [...(geometry.positions ?? [])];
     this.indicesArray = [...(geometry.indices ?? [])];
     this.triangleMaterialIndices = new Array(this.primitiveCount).fill(0);
@@ -1746,9 +1794,7 @@ export default class Shape {
       );
     }
 
-    // 旧 Shape 実装では addTriangle() が面法線を各頂点へ加算していた
-    // Primitive 経由では positions / indices を一括ロードするため、
-    // 法線未指定時はここで同等の加算処理を行ってから endShape() に渡す
+    // Primitive経由で法線が指定されない場合は、面法線を各頂点へ加算してからendShape()へ渡す
     if (!geometry.normals && this.autoCalcNormals) {
       this.accumulatePrimitiveNormals();
     }

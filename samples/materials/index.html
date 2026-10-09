@@ -174,8 +174,8 @@ blockquote {
 <p><a href="index.en.html">English</a> | 日本語</p>
 <p><img src="./materials.jpg" alt="materials" /></p>
 <h2>概要</h2>
-<p>このサンプルは、同じ16個のイコスフィアを標準の<code>SmoothShader</code>とDeferred Lightingで切り替えて描き、材質パラメーターの意味と見え方を比較します。同じシーングラフ、カメラ、頂点法線、光源位置を使うため、形状や視点の差ではなく、Phong型とGGX型の照明モデルの差を観察できます。</p>
-<p><code>SmoothShader</code>は<code>ambient</code>、<code>specular</code>、<code>power</code>を主に使用します。Deferred LightingはG-bufferへ保存した<code>specular</code>、<code>roughness</code>、<code>metallic</code>、<code>emissive</code>をGGX反射モデルで評価します。同じ<code>specular</code>という名前でも、標準側では白いハイライトの加算強度、Deferred側では非金属F0の0から4%を指定する倍率であり、同じ数値が同じ反射率を意味するわけではありません。</p>
+<p>このサンプルは、同じ16個のイコスフィアを標準の<code>SmoothShader</code>とDeferred Lightingで切り替えて描き、材質パラメーターの意味と見え方を比較します。同じシーングラフ、カメラ、頂点法線、光源位置を使うため、Phong型とGGX型の照明モデルの差を観察できます。</p>
+<p><code>SmoothShader</code>は<code>ambient</code>、<code>specular</code>、<code>power</code>を主に使用します。Deferred LightingはG-bufferへ保存した<code>specular</code>、<code>roughness</code>、<code>metallic</code>、<code>emissive</code>をGGX反射モデルで評価します。同じ<code>specular</code>という名前でも、標準側では白いハイライトの加算強度、Deferred側では非金属F0の0から4%を指定する倍率であり、指定値は、それぞれの照明モデルの定義に沿って解釈されます。</p>
 <h2>表示の読み方</h2>
 <p>初期状態は4×4の比較格子です。上から下へ<code>roughness / power</code>、左から右へ<code>specular / metallic</code>が変化します。標準表示では<code>roughness</code>と<code>metallic</code>を読みません。Deferred表示では<code>power</code>を読みません。片方だけが読む値を操作することで、各パラメーターの担当範囲を確認できます。</p>
 <p>Smooth用ambientは0.18、Deferred用の線形拡散環境強度は0.035として別々に管理します。両者は照明式での意味が異なるため、一つの数値を共有しません。Deferred側の最終表示は、照明モデルの比較へReinhard圧縮を混ぜないようlinear clampを使用し、その後に正確なsRGB表示変換を行います。</p>

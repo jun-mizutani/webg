@@ -51,4 +51,4 @@
 
 補足
 - AnimationState は clip データを持たず、既存 Action を controller として受ける薄い制御層です
-- このサンプルでは state.action -> Action.start(actionId) の接続だけを使い、cross-fade や blend は扱いません
+- このサンプルでは state.action -> Action.start(actionId) の接続によるactionの選択と再生を示します

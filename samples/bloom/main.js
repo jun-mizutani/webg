@@ -340,7 +340,7 @@ async function start() {
     return report;
   }
 
-  // ブルームを初期状態へ戻し、前回の状態を残さない
+  // ブルームを初期状態へ戻す
   const resetBloom = () => {
     bloom.setEnabled(true);
     bloom.setThreshold(BLOOM_DEFAULT.threshold);

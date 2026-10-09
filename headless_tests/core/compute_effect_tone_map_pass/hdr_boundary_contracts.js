@@ -1,12 +1,13 @@
 // ---------------------------------------------------------
-// headless_tests/core/compute_effect_tone_map_pass/headless_probe.js  2026/07/14
+// headless_tests/core/compute_effect_tone_map_pass/headless_probe.js  2026/08/03
 //   Final High Dynamic Range to display conversion contract
 // ---------------------------------------------------------
 import assert from "node:assert/strict";
 import ComputeEffectToneMapPass, {
   COMPUTE_EFFECT_TONEMAP_INPUT_FORMAT,
   COMPUTE_EFFECT_TONEMAP_OUTPUT_FORMAT,
-  COMPUTE_EFFECT_TONEMAP_WGSL
+  COMPUTE_EFFECT_TONEMAP_WGSL,
+  computeEv100Exposure
 } from "../../../webg/ComputeEffectToneMapPass.js";
 import {
   linearChannelToSrgb,
@@ -60,6 +61,14 @@ function createGpuProbe() {
     }
   };
   return { gpu: { device, queue }, commandEncoder, textures, writes };
+}
+
+// EV100は1 stopごとにexposureを半分にし、従来scalarとの曖昧な同時指定を拒否します
+{
+  assert.ok(Math.abs(computeEv100Exposure(0.0) - (1.0 / 1.2)) < 1.0e-12);
+  assert.ok(Math.abs(computeEv100Exposure(10.0) - (1.0 / (1024.0 * 1.2))) < 1.0e-12);
+  assert.ok(Math.abs(computeEv100Exposure(11.0) * 2.0 - computeEv100Exposure(10.0)) < 1.0e-15);
+  assert.throws(() => computeEv100Exposure(25.0), /must be <= 24/);
 }
 
 // 色形式を自己申告するHigh Dynamic Range targetとCamera Reverse-Z depthを作ります
@@ -129,6 +138,18 @@ function makeResources(width = 16, height = 8, sceneFormat = "rgba16float") {
   assert.equal(result, pass.getOutputTarget());
   assert.deepEqual(probe.writes.at(-1).data.slice(0, 5), [1.25, 1.1, 2.4, 0, 1]
     .map((value) => Math.fround(value)));
+  pass.encode(probe.commandEncoder, makeResources(), { exposureEv100: 10.0 });
+  assert.equal(
+    probe.writes.at(-1).data[0],
+    Math.fround(computeEv100Exposure(10.0))
+  );
+  assert.throws(
+    () => pass.encode(probe.commandEncoder, makeResources(), {
+      exposure: 1.0,
+      exposureEv100: 10.0
+    }),
+    /exposure and exposureEv100 cannot be specified together/
+  );
 
   assert.throws(
     () => pass.encode(probe.commandEncoder, makeResources(16, 8, "rgba8unorm")),

@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// GpuParticleEmitter.js  2026/07/12
+// GpuParticleEmitter.js  2026/09/22
 //   GPU particle simulation and instanced billboard renderer
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -105,6 +105,9 @@ export default class GpuParticleEmitter {
       options.quadVertices ?? DEFAULT_QUAD_VERTICES
     );
     this.paramData = new Float32Array(this.paramFloats);
+    // 発光粒子は加算合成を選び、標準の粒子はalpha合成を維持する
+    this.blendMode = util.readOptionalEnum(options.blendMode,
+      `${this.label} blendMode`, "alpha", ["alpha", "additive"]);
     this.destroyed = false;
     this.createResources();
   }
@@ -240,12 +243,12 @@ export default class GpuParticleEmitter {
           blend: {
             color: {
               srcFactor: "src-alpha",
-              dstFactor: "one-minus-src-alpha",
+              dstFactor: this.blendMode === "additive" ? "one" : "one-minus-src-alpha",
               operation: "add"
             },
             alpha: {
-              srcFactor: "one",
-              dstFactor: "one-minus-src-alpha",
+              srcFactor: this.blendMode === "additive" ? "zero" : "one",
+              dstFactor: this.blendMode === "additive" ? "one" : "one-minus-src-alpha",
               operation: "add"
             }
           }

@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// WebgApp.js     2026/07/25
+// WebgApp.js     2026/09/13
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // ---------------------------------------------
@@ -20,7 +20,7 @@ import ModelLoader from "./ModelLoader.js";
 import SceneValidator from "./SceneValidator.js";
 import SceneLoader from "./SceneLoader.js";
 import DebugDock from "./DebugDock.js";
-import OverlayPanel from "./OverlayPanel.js?v=20260430_overlaypanel2";
+import OverlayPanel from "./OverlayPanel.js";
 import EyeRig from "./EyeRig.js";
 import FrameTimer from "./FrameTimer.js";
 import util from "./util.js";
@@ -30,7 +30,6 @@ import { CAMERA_REVERSE_Z } from "./DepthConvention.js";
 
 // WebgApp:
 // - Screen / Shader / Space / Camera / Input / Message の初期化を1か所へ集約する
-// - 生成AIが毎回同じ初期化コードを再構築しなくて済むようにする
 // - diagnostics や panel を含む共通 app 基盤の入口になる
 export default class WebgApp {
   // app 全体で共有する設定値と runtime state の入れ物を初期化する
@@ -57,8 +56,7 @@ export default class WebgApp {
     this.projectionNear = util.readOptionalFiniteNumber(options.projectionNear, "WebgApp projectionNear", 0.1);
     this.projectionFar = util.readOptionalFiniteNumber(options.projectionFar, "WebgApp projectionFar", 1000.0);
     this.lightPosition = [...(options.lightPosition ?? [120.0, 180.0, 140.0, 1.0])];
-    // 既定では従来どおり eye space 固定 light を使うが、
-    // world node を光源として使いたい場合は light.mode = "world-node" を指定できる
+    // 既定では eye space 固定 light を使い、light.mode = "world-node" で world node を光源にできる
     this.light = {
       mode: options.light?.mode ?? "eye-fixed",
       nodeName: options.light?.nodeName ?? "light",
@@ -161,7 +159,7 @@ export default class WebgApp {
     this.overlayPanels = new Map();
     this.debugTools = {
       // 既定では初心者向けの実行画面を保ち、DebugDock は表示しない
-      // 開発中に常時表示したい sample だけ debugTools.mode: "debug" を明示する
+      // debugTools.mode: "debug" を指定した場合だけ DebugDock と probe を有効にする
       mode: options.debugTools?.mode ?? "release",
       system: options.debugTools?.system ?? "app",
       source: options.debugTools?.source ?? "",
@@ -206,8 +204,10 @@ export default class WebgApp {
     });
     this.projectionMatrix = null;
     this.cameraFrame = null;
-    // 通常sampleにはCameraFrame本体を要求せず、renderFrameTokenだけを描画callbackへ渡します。
-    // Compute系コアは従来どおり内部cameraFrameを使い、同一frame identityを厳密に検証します。
+    // EyeRigが解決した現在frameの合焦距離を、DoF統合とcallbackへ共有する
+    // focus設定のないカメラではnullを保持し、Compute系が明示的に設定不足を報告する
+    this.cameraFocusDistance = null;
+    // 通常の描画callbackへはrenderFrameTokenを渡し、Compute系コアでは内部cameraFrameとの同一性を検証します。
     this.renderFrameToken = null;
     this.running = false;
     this.lastFrameTime = 0.0;
@@ -343,7 +343,7 @@ export default class WebgApp {
   }
 
   // 描画ループの実行方針を正規化する
-  // continuous は従来どおり常時動作し、ondemand は page が active な間だけ動かす
+  // continuous は常時動作し、ondemand は page が active な間だけ動かす
   normalizeRenderMode(value) {
     const mode = String(value ?? "ondemand").trim().toLowerCase();
     if (mode === "" || mode === "ondemand") {
@@ -571,14 +571,17 @@ export default class WebgApp {
     }
   }
 
+  // 指定IDのoverlay panelを取得し、作品側の表示更新へ渡します
   getOverlayPanel(panelId) {
     return this.overlayPanels.get(panelId) ?? null;
   }
 
+  // 指定IDのoverlay panelが登録済みかを返します
   hasOverlayPanel(panelId) {
     return this.overlayPanels.has(panelId);
   }
 
+  // 登録済みoverlay panelを配列で返し、表示状態の一括確認へ利用します
   listOverlayPanels() {
     return [...this.overlayPanels.values()];
   }
@@ -1282,13 +1285,18 @@ export default class WebgApp {
       throw new Error("WebgApp.updateCameraFrame requires an eye Node");
     }
     const vfov = this.screen.getRecommendedFov(this.viewAngle);
+    const focusDistanceResolver = this.eyeRig?.getFocusDistance
+      ? (frame) => this.eyeRig.getFocusDistance(frame)
+      : undefined;
     this.cameraFrame = createCameraFrameFromEye(this.eye, {
       near: this.projectionNear,
       far: this.projectionFar,
       vfov,
       aspect: this.screen.getAspect(),
-      depthConvention: CAMERA_REVERSE_Z
+      depthConvention: CAMERA_REVERSE_Z,
+      focusDistanceResolver
     });
+    this.cameraFocusDistance = this.cameraFrame.focusDistance;
     this.renderFrameToken = createRenderFrameToken(this.cameraFrame);
     this.projectionMatrix = this.cameraFrame.projectionMatrix;
     if (this.shader?.setProjectionMatrix) {
@@ -1393,6 +1401,7 @@ export default class WebgApp {
         zoomOut: "]"
       },
       panModifierKey: "shift",
+      rollModifierKey: "alt",
       dragZoomModifierKey: null,
       alternateDragButton: null,
       alternateDragModifierKey: null
@@ -1402,6 +1411,7 @@ export default class WebgApp {
   // WebgApp 標準 cameraRig 上へ orbit 用 EyeRig を作成する
   // 返した EyeRig は WebgApp が frame ごとに update と camera state 同期を行うため、
   // sample 側で orbit.update(deltaSec) や app.camera.target への手動コピーを書く必要がない
+  // options.focus を指定した場合は、同じframeのCameraFrameへ合焦距離も同期する
   createOrbitEyeRig(options = {}) {
     if (!this.cameraRig || !this.cameraRod || !this.eye) {
       throw new Error("WebgApp.createOrbitEyeRig() requires app.init() to create camera nodes first");
@@ -1424,6 +1434,9 @@ export default class WebgApp {
     const panModifierKey = options.panModifierKey
       ?? options.orbit?.panModifierKey
       ?? defaultBindings.panModifierKey;
+    const rollModifierKey = options.rollModifierKey
+      ?? options.orbit?.rollModifierKey
+      ?? defaultBindings.rollModifierKey;
     const dragZoomModifierKey = options.dragZoomModifierKey
       ?? options.orbit?.dragZoomModifierKey
       ?? defaultBindings.dragZoomModifierKey;
@@ -1433,6 +1446,7 @@ export default class WebgApp {
     const alternateDragModifierKey = options.alternateDragModifierKey
       ?? options.orbit?.alternateDragModifierKey
       ?? defaultBindings.alternateDragModifierKey;
+    const focus = options.focus ?? options.orbit?.focus;
     const orbitOptions = {
       ...options,
       ...(options.orbit ?? {}),
@@ -1443,6 +1457,7 @@ export default class WebgApp {
       roll: options.roll ?? options.orbit?.roll ?? this.camera.roll,
       keyMap: orbitKeyMap,
       panModifierKey,
+      rollModifierKey,
       dragZoomModifierKey
     };
 
@@ -1454,6 +1469,7 @@ export default class WebgApp {
       element,
       input,
       type: "orbit",
+      focus,
       dragButton: options.dragButton ?? 0,
       alternateDragButton,
       alternateDragModifierKey,
@@ -1909,8 +1925,7 @@ export default class WebgApp {
     return entries;
   }
 
-  // 既存 sample の短い HUD 文字列を、新しい controls row へ最小変換する
-  // line 文字列は dock/HUD の両方でそのまま 1 行として表示し、旧い補助経路を挟まずに新しい表示系へ載せる
+  // 1行テキストをcontrols rowへ変換し、dockとHUDで同じ内容を表示できる形式にする
   makeTextControlRows(lines = []) {
     if (!Array.isArray(lines)) {
       throw new Error("WebgApp.makeTextControlRows requires an array");
@@ -2667,7 +2682,7 @@ export default class WebgApp {
 
   // progress を読み込む
   // report 形式で保存された場合は context.data を返し、
-  // 旧来の raw JSON が入っていてもできるだけそのまま返す
+  // report形式でないraw JSONは値をそのまま返す
   loadProgress(key, defaultValue = null) {
     const storage = this.getProgressStorage();
     const storageKey = this.getProgressStorageKey(key);
@@ -2728,7 +2743,7 @@ export default class WebgApp {
     return copied;
   }
 
-  // report JSON を clipboard へ送り、構造を保ったまま AI や外部 tool へ渡せるようにする
+  // report JSONを構造を保ったままclipboardへコピーする
   async copyDiagnosticsReportJSON(options = {}) {
     const report = options.report ?? this.getCurrentDiagnosticsReport({
       forceRefresh: true,
@@ -2742,7 +2757,7 @@ export default class WebgApp {
     return copied;
   }
 
-  // summary text は人と AI が最初に読む標準出口として使う
+  // diagnostics reportを確認項目ごとのsummary textへ変換する
   formatDiagnosticsSummary(report = null, options = {}) {
     return Diagnostics.toSummaryText(
       report ?? this.getCurrentDiagnosticsReport({ forceRefresh: true, detailLevel: "summary" }),
@@ -2984,8 +2999,7 @@ export default class WebgApp {
     return parts.join("  ");
   }
 
-  // HTML debug dock に現在表示している内容を、そのまま section 単位で text 化する
-  // 選択コピーを無効にしても、同じ情報を 1 回の copy で AI やメモへ渡せるようにする
+  // HTML debug dockの表示内容をsection単位のtextへ変換し、clipboardへコピーできる形式にする
   formatDebugDockText() {
     this.getCurrentDiagnosticsReport({ forceRefresh: true });
     return this.debugDock.formatText({
@@ -3210,10 +3224,11 @@ export default class WebgApp {
       cameraFollow: this.cameraFollow,
       input: this.input,
       projection: this.projectionMatrix,
-      // onUpdateはcamera確定前に呼ぶため、前frameのhandleをcurrentとして公開しません。
+      // onUpdateはcamera確定前に呼ぶため、current handleはcamera確定後に公開します
       // 通常描画とCompute描画の分岐でupdateCameraFrame()した後、同じctxへ当該frame値を設定します。
       cameraFrame: null,
-      renderFrameToken: null
+      renderFrameToken: null,
+      cameraFocusDistance: null
     };
   }
 
@@ -3386,6 +3401,7 @@ export default class WebgApp {
       ctx.cameraFrame = cameraFrame;
       ctx.renderFrameToken = this.renderFrameToken;
       ctx.projection = cameraFrame.projectionMatrix;
+      ctx.cameraFocusDistance = cameraFrame.focusDistance;
       this.renderComputeFrame(ctx);
       if (this.input?.beginFrame) {
         this.input.beginFrame();
@@ -3413,7 +3429,15 @@ export default class WebgApp {
     ctx.cameraFrame = cameraFrame;
     ctx.renderFrameToken = this.renderFrameToken;
     ctx.projection = cameraFrame.projectionMatrix;
-    this.screen.clear();
+    ctx.cameraFocusDistance = cameraFrame.focusDistance;
+    // frameTimingが有効な通常描画では、Screenが開始する最初のRender Passへtimestampを設定します
+    // Compute-firstのframeはsample側が同じcommand encoderへ明示的にtimestampを設定するため、ここでは一つの計測へまとめます
+    const gpuTimingStarted = this.beginGpuTiming();
+    this.screen.clear(null, {
+      timestampWrites: gpuTimingStarted
+        ? this.getGpuRenderTimestampWrites()
+        : undefined
+    });
     if (this.handlers.onBeforeDraw) {
       this.handlers.onBeforeDraw(ctx);
     }
@@ -3432,7 +3456,17 @@ export default class WebgApp {
     if (this.handlers.onAfterHud) {
       this.handlers.onAfterHud(ctx);
     }
+    // Render Passを閉じてからquery resolveとreadback copyを同じcommand encoderへ追加します
+    // WebGPUはRenderPassEncoderが開いている間のResolveQuerySetを許可しないため、順序を分けます
+    // present()がこのencoderをfinishしてsubmitするため、GPU readbackはsubmit後に開始します
+    if (gpuTimingStarted) {
+      this.screen.getGPU().endPass();
+      this.endGpuTiming(this.screen.getGPU().commandEncoder);
+    }
     this.screen.present();
+    if (gpuTimingStarted) {
+      this.afterGpuSubmit();
+    }
     if (this.input?.beginFrame) {
       this.input.beginFrame();
     }

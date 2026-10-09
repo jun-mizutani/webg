@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// samples/sound/main.js  2026/07/25
+// samples/sound/main.js  2026/09/23
 //   sound sample
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -24,6 +24,8 @@ const getUiRefs = () => ({
   masterVol: $("masterVol"),
   seVol: $("seVol"),
   bgmVol: $("bgmVol"),
+  bgmMelodyVol: $("bgmMelodyVol"),
+  bgmRhythmVol: $("bgmRhythmVol"),
   bpm: $("bpm"),
   melody: $("melody"),
   seDelay: $("seDelay"),
@@ -52,6 +54,8 @@ const getUiRefs = () => ({
   masterVal: $("masterVal"),
   seVal: $("seVal"),
   bgmVal: $("bgmVal"),
+  bgmMelodyVal: $("bgmMelodyVal"),
+  bgmRhythmVal: $("bgmRhythmVal"),
   bpmVal: $("bpmVal"),
   seDelayVal: $("seDelayVal"),
   bgmDelayVal: $("bgmDelayVal"),
@@ -255,7 +259,8 @@ const auditionAllSoundEffects = async () => {
       applySoundEffectInfo(name);
       synth.playSe(name);
       setStatus(`audition ${i + 1}/${soundEffectList.length}: ${name}`);
-      const waitMs = name === "tail_probe" ? 720 : 460;
+      // 長い達成音・終了音も、現在のReleaseを含む発音が終わってから次へ進む。
+      const waitMs = (synth.getSoundEffectInfo(name).durationSec + .15) * 1000;
       await sleep(waitMs);
     }
     if (token === seAuditionToken) {
@@ -304,20 +309,22 @@ const start = async () => {
 
   // メロディ候補をUIに展開する
   const melodies = synth.getMelodyList();
-  // GameAudioSynth 側でメロディ定義は basePresets に一本化されている
+  // GameAudioSynthに登録された24曲を英語ラベルで選択肢へ展開する
   for (let i = 0; i < melodies.length; i++) {
     const name = melodies[i];
     const opt = document.createElement("option");
     opt.value = name;
-    opt.textContent = name;
+    opt.textContent = synth.getMelodyLabel(name);
     ui.melody.appendChild(opt);
   }
-  ui.melody.value = melodies.includes("minor_drive") ? "minor_drive" : (melodies[0] ?? "");
+  ui.melody.value = synth.melodyName;
   ui.melody.disabled = melodies.length === 0;
   ui.melody.addEventListener("change", () => {
     // 現在BGMメロディを選択肢から切り替える
     if (!ui.melody.value) return;
     synth.setMelody(ui.melody.value);
+    ui.bpm.value = String(synth.bpm);
+    ui.bpmVal.textContent = String(synth.bpm);
     setStatus(`melody=${ui.melody.value}`);
   });
 
@@ -437,6 +444,10 @@ const start = async () => {
   bindRange(ui.masterVol, ui.masterVal, (v) => synth.setMasterVolume(v));
   bindRange(ui.seVol, ui.seVal, (v) => synth.setSeVolume(v));
   bindRange(ui.bgmVol, ui.bgmVal, (v) => synth.setBgmVolume(v));
+  bindRange(ui.bgmMelodyVol, ui.bgmMelodyVal, (v) => synth.setBgmMelodyVolume(v));
+  bindRange(ui.bgmRhythmVol, ui.bgmRhythmVal, (v) => synth.setBgmRhythmVolume(v));
+  // 初期選択曲の推奨テンポをスライダーの初回適用より前に反映する
+  ui.bpm.value = String(synth.bpm);
   bindRange(ui.bpm, ui.bpmVal, (v) => synth.setBpm(v));
   bindRange(ui.seDelay, ui.seDelayVal, (v) => synth.setSeDelay(v));
   bindRange(ui.bgmDelay, ui.bgmDelayVal, (v) => synth.setBgmDelay(v));
