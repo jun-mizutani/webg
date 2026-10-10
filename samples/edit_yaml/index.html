@@ -17,7 +17,7 @@
 <p>inline objects/materials/physicsに対応し、objectSetsの生成物体はYAMLから編集します。外部SceneAsset、ModelAsset、外部材質ファイルの参照は読込み時に説明付きで拒否します。renderer、animations、独自の追加項目は保存します。表示は編集専用のスタジオ照明を使い、物理・アニメーション・emitter・goalなどの作品固有処理は実行しません。したがって保存作品の実行時の照明や動作は、実行用アプリで確認します。</p>
 <p>bodyType、mass、摩擦、反発を編集できます。物理を有効にする作品にはphysics.spaceが必要です。新規作品には240Hz、maxBodies: 128の設定を明示しています。容量を超える場合はYAMLで変更してください。自動で容量や数値を補正しません。</p>
 <h2>実装メモ</h2>
-<p>main.jsは入力と履歴、scene_document.jsは原文と意味検証、mesh_edit.jsは頂点・面操作、scene_view.jsはPBR表示を担当します。GPU初期化は一度だけ行い、編集時はNodeとShapeを作り直します。メッシュ検証とShape生成はコアのSceneMesh.jsとPrimitiveScene.jsへ統一しています。node samples/edit_yaml/check_document.mjsでGPUを使わないデータ検証を実行できます。開発仕様はdocs/edit_yaml.mdに記載しています。</p>
+<p>main.jsは入力と履歴、scene_document.jsは原文と意味検証、mesh_edit.jsは頂点・面操作、scene_view.jsはPBR表示を担当します。GPU初期化は一度だけ行い、編集時はNodeとShapeを作り直します。メッシュ検証とShape生成はコアのSceneMesh.jsとPrimitiveScene.jsへ統一しています。node samples/edit_yaml/check_document.mjsでGPUを使わないデータ検証を実行できます。</p>
 <h2>衝突形状の確認と編集</h2>
 <p>右側の「衝突形状」でBox・Sphere・Capsuleを選び、寸法・半径・半球間の長さとoffset XYZを編集できます。物理なしの物体で形状を選ぶとstaticとして有効になります。種類を変更すると、メニューに表示した初期寸法へ切り替わります。表示メッシュの形状や位置は維持します。dynamicにする場合はbodyTypeを変更し、massを指定します。</p>
 <p>選択物体の衝突形状を黄色の透過線で表示します。奥側の辺も表示し、チェックボックスで表示を切り替えられます。offsetは物体local座標で、物体と親の回転に従います。円弧の線は確認用の近似表示です。物理計算には元の半径と長さを渡します。</p>

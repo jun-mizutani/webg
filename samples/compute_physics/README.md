@@ -131,7 +131,7 @@ const events = physics.getContactEventsFromReadback(stateData);
 
 `getLastContacts()`、`getLastManifolds()`、`getLastContactEvents()`は、最後に明示的なreadbackから生成した結果を返します。`onBeginContact()`、`onStayContact()`、`onEndContact()`のlistenerは、`dispatchContactEventsFromReadback()`を呼んだ時だけ通知されます。contact eventのCPUへの取得と通知は、上記の明示的なreadback操作で行います。
 
-sleep判定を調べる場合は、通常の`BodyState` readbackと`getContactsFromReadback()`、`getPlaneContactsFromReadback()`を明示的に取得し、コア外の`user/dev_core/ComputePhysicsDiagnostics.js`などで監査値を組み立てます。Compute solverへ診断buffer、診断binding、診断専用分岐は持ち込みません。GPU timestampが必要な計測では、少量のtimestamp queryをphysics passへ明示的に付けられます。
+sleep判定を調べる場合は、通常の`BodyState` readbackと`getContactsFromReadback()`、`getPlaneContactsFromReadback()`を明示的に取得し、アプリケーション側で監査値を組み立てます。Compute solverへ診断buffer、診断binding、診断専用分岐は持ち込みません。GPU timestampが必要な計測では、少量のtimestamp queryをphysics passへ明示的に付けられます。
 
 CPU版の`step()`と`stepFixed()`に対応するCompute版入口もあります。`step(commandEncoder, elapsedMs)`と`stepFixed(commandEncoder)`は`encode()`と`encodeFixedStep()`と同じくcommandを記録するだけで、submitは呼出側が行います。Broad Phaseは`getBroadphaseMode()`が返す`xzGrid`に固定され、CPU版の`bruteForce`と`sweepAabb`は選択できません。
 

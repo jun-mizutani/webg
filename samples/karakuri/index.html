@@ -182,7 +182,7 @@ blockquote {
 <h2>SceneYAMLの交換</h2>
 <p><code>karakuri_scene.yaml</code>はMakerとPlayerの間で交換するデータです。Procedural Textureはpreset名、必要な<code>tile</code>差分、appearanceを共有し、生成された画像ファイルは共有しません。例えば床は<code>wood.oak.mixed-sawn</code>を使い、<code>tile.joint.widthMeters: 0</code>で板境界の幅を指定します。壁は<code>ceramic.white.square</code>を使い、床と壁の両方へ<code>scale: 2</code>を指定します。<code>scale: 2</code>はテクスチャの一周期を2倍に広げ、同じ面上の反復を半分にします。Procedural Textureを使うBoxは<code>Primitive.mapRealCuboid()</code>で実寸UVを作り、MakerとPlayerは既存のProcedural Texture APIへ<code>scale</code>を渡してShape完成前に適用します。静的な床と壁はサンプル側で対象Shapeを作り直し、動的なBoxは生成時に同じ順序で適用するため、両方でテクスチャの大きさがそろいます。SceneYAMLを編集した場合は、Makerの<code>シーンを開く</code>で検証してからPlayerへ渡します。</p>
 <h2>このサンプルの対応範囲</h2>
-<p>3Dメッシュ選択、XY配置・移動、回転、複製、取り外し、Undo、同じ画面での物理付き試運転、発射器、接触音、ゴール到達時の別効果音、接触に基づくゴール表示、保存・読込みを実装しています。ゴール表示後も物理は継続します。試運転では、ゴール到達時の表示とドミノの連鎖を確認します。詳しい設計は<a href="../../docs/karakuri.md">`docs/karakuri.md`</a>を参照してください。</p>
+<p>3Dメッシュ選択、XY配置・移動、回転、複製、取り外し、Undo、同じ画面での物理付き試運転、発射器、接触音、ゴール到達時の別効果音、接触に基づくゴール表示、保存・読込みを実装しています。ゴール表示後も物理は継続します。試運転では、ゴール到達時の表示とドミノの連鎖を確認します。</p>
     </article>
   </main>
 </body>

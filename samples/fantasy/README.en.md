@@ -87,9 +87,9 @@ Lighting creates the underwater atmosphere: absorption attenuates the projected 
 
 Use the verification points after each change so that its effect has a clear cause.
 
-## Documents and rule checks
+## Camera reference and rule checks
 
-[fantasy_design.md](fantasy_design.md) describes the game and its scope in Japanese. `camera_reference.json` records the initial camera reference. The book's [From a PBR Scene to a Small Game](../../book.en/PBRSceneToGame.md) explains how the individual feature examples connect in this app.
+`camera_reference.json` records the initial camera reference. The book's [From a PBR Scene to a Small Game](../../book.en/PBRSceneToGame.md) explains how the individual feature examples connect in this app.
 
 Run from the repository root to check paths, occupancy, range, enemy planning, and outcomes without a GPU. Rendering and interaction require separate browser verification.
 

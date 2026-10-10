@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// samples/embedded_glb_viewer/main.js  2026/07/25
+// samples/embedded_glb_viewer/main.js  2026/10/10
 //   embedded_glb_viewer sample
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -109,7 +109,6 @@ const state = {
   clipCount: 0,
   paused: false,
   hasActiveModel: false,
-  screenshotName: "",
   modelSize: { ...PLACEHOLDER_SIZE },
   wireframe: false,
   animationRunning: false,
@@ -468,16 +467,14 @@ function makeScreenshotName() {
     || "embedded_glb_viewer";
 }
 
-// `takeViewerScreenshot`は現在のキャンバス画像を取得し、指定形式で保存する
+// Canvasを960×720 pixelで描画し、sample紹介用の標準寸法で保存する
 function takeViewerScreenshot() {
-  const file = app.takeScreenshot({
-    prefix: `${makeScreenshotName()}_view`
+  app.takeScreenshot({
+    prefix: `${makeScreenshotName()}_view`,
+    width: 960,
+    height: 720
   });
-  state.screenshotName = file;
   focusViewerCanvas();
-  app.pushToast(`saved ${file}`, {
-    durationMs: 1400
-  });
 }
 
   // エラーの状態を初期状態へ戻す
@@ -859,7 +856,6 @@ function buildViewerHelpLines() {
     `Orbit: yaw=${orbit.orbit.yaw.toFixed(1)} pitch=${orbit.orbit.pitch.toFixed(1)} dist=${orbit.orbit.distance.toFixed(1)}`,
     `Target: ${orbit.orbit.target[0].toFixed(2)}, ${orbit.orbit.target[1].toFixed(2)}, ${orbit.orbit.target[2].toFixed(2)}`,
     `Animation: ${state.clipCount > 0 ? (state.paused ? "paused" : "playing") : "none"}  wireframe=${state.wireframe ? "on" : "off"}`,
-    `Screenshot: ${state.screenshotName || "-"}`,
     state.lastError ? `Error: ${state.lastError}` : "Status: pick a .glb file or load the bundled sample"
   ];
 }

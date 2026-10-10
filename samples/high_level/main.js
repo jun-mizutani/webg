@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// samples/high_level/main.js  2026/07/25
+// samples/high_level/main.js  2026/10/10
 //   high_level sample
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -93,7 +93,7 @@ const setupOrbitCamera = () => {
   });
 };
 
-// `sample`の入力を対象へ追加し、後続処理から参照できるようにする
+// sample固有の入力操作を登録し、WebgAppの入力処理から実行できるようにする
 const attachSampleInput = () => {
   // WebgApp が初期化した InputController に sample 固有の one-shot action を足し、
   // orbit camera の連続入力と、保存系の単発入力を同じ app 入口で扱えるようにする
@@ -101,10 +101,11 @@ const attachSampleInput = () => {
     onKeyDown: (key, ev) => {
       if (ev.repeat) return;
       if (key === "s") {
-        const file = app.takeScreenshot({ prefix: "high_level" });
-        app.pushToast(`screenshot: ${file}`, {
-          durationMs: 1400
-        });
+        // Sは現在の描画寸法を使い、Shift+Sは指定pixel寸法で1 frame描画して保存する
+        const screenshotSize = ev.shiftKey
+          ? { width: 720, height: 540 }
+          : {};
+        app.takeScreenshot({ prefix: "high_level", ...screenshotSize });
       }
     }
   });

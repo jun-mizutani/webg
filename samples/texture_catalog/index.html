@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>texture_catalog</title>
   <link rel="icon" href="data:," />
-  <!-- 2026/06/19 -->
+  <!-- 2026/10/10 -->
   <style>
 
 :root {
@@ -202,8 +202,8 @@ oak.applyTo(shape);</code></pre>
 });
 stones.applyTo(shape);</code></pre>
 <p>左下にColor・Height・Normalを並べて表示します。Heightは低い面が暗く、高い面が明るい画像です。<br />グレースケールは各材質の<code>heightRangeMeters</code>に対する値で、物理高さそのものではありません。<br /><code>Height range</code>で復号に必要な範囲を確認でき、<code>Download Height</code>で画像も保存できます。<br />Height／Normalを再利用する場合はPNGを選んでください。</p>
-<p>立方体はNormalで起伏を照明へ反映するため、輪郭は変位しません。<br />実際の起伏へ光線を当てるアプリではHeightを復号し、高さ場の交差に使います。<br /><a href="../../docs/sample_development/procedural_pebbles.md">設定と実装の詳細</a>、<br /><a href="../../unittest/procedural_pebbles/index.html">GPU検証</a>も参照してください。</p>
-<p><img src="pebbles_preview.png" alt="中心が高い石を敷き詰めた表示" /></p>
+<p>立方体はNormalで起伏を照明へ反映するため、輪郭は変位しません。<br />実際の起伏へ光線を当てるアプリではHeightを復号し、高さ場の交差に使います。</p>
+<p><img src="pebbles_preview.jpg" alt="中心が高い石を敷き詰めた表示" /></p>
 <h2>編集と出力</h2>
 <p>解像度、Base／Dirt／Joint色、タイル間の色変化、部材寸法、長軸、variation cell、目地、配置、pattern、surface detail、random seed、roughness、specular、metallic、Normal strengthを編集できます。<code>Thickness m</code>は部材寸法の参考値としてdefinitionへ保存されますが、手続きテクスチャ生成には使われません。変更は入力と同時にコード表示とGPU textureへ反映されます。<code>Generate</code>または<code>G</code>キーは、同じdefinitionを手動で再生成する操作です。</p>
 <p><code>Definition metadata</code>では、出力する部材の<code>Material ID</code>、<code>Category</code>、日英の<code>Label</code>、<code>Tile preset ID</code>を編集できます。最初の<code>Category</code>は既存presetを絞り込む選択欄で、Definition metadata内の<code>Category</code>が出力definitionへ保存される分類です。既存presetを選択してからこれらの値を変更すると、同じtileとappearanceを元に別の部材definitionを作成できます。</p>

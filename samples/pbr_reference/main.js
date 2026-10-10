@@ -1,5 +1,5 @@
 // ---------------------------------------------------------
-// main.js  2026/09/03
+// main.js  2026/10/10
 //   Forward and deferred GGX comparison application
 // ---------------------------------------------------------
 import WebgApp from "../../webg/WebgApp.js";
@@ -20,7 +20,10 @@ import {
   estimatePbrEnvironmentMemory,
   evaluatePbrWhiteFurnace
 } from "../../webg/PbrEnvironmentEvaluation.js";
-import { createPbrEnvironmentReferenceData } from "../../webg/PbrEnvironmentReference.js";
+import {
+  createPbrEnvironmentReferenceData,
+  readPbrEnvironmentPreprocessOptions
+} from "../../webg/PbrEnvironmentReference.js";
 import { convertRadianceHdrToLinearSrgb } from "../../webg/RadianceHdr.js";
 import Primitive from "../../webg/Primitive.js";
 import Shape from "../../webg/Shape.js";
@@ -28,7 +31,6 @@ import Texture from "../../webg/Texture.js";
 import PbrForwardShader from "./PbrForwardShader.js";
 import { decodeDiagnosticRadianceHdr } from "./DiagnosticRadianceHdr.js";
 import { createProceduralEnvironmentData } from "../../webg/ProceduralEnvironment.js";
-import { readPbrEnvironmentAssetPreset } from "../../user/pbr_environment_asset/PbrEnvironmentAssetTool.js";
 
 // 比較するroughness列とmetallic行を固定し、描画経路を切り替えても同じShapeと値を使う
 const ROUGHNESS_VALUES = Object.freeze([0.08, 0.20, 0.40, 0.65, 0.90]);
@@ -80,7 +82,19 @@ const DIAGNOSTIC_GPU_MAX_ERROR = 0.25;
 const DIAGNOSTIC_CACHE_SOURCE_ID = "webg-diagnostic-linear-srgb-v2";
 const REAL_HDR_CACHE_SOURCE_ID = "polyhaven-studio-small-01-1k";
 const REAL_HDR_CACHE_URL = "./assets/studio_small_01_1k_standard.webgpbr";
-const REAL_HDR_PREPROCESS_OPTIONS = readPbrEnvironmentAssetPreset("standard").settings;
+// 同梱standard cacheのmanifestと同じ寸法・sample数をcoreの共通validatorで検証します
+const REAL_HDR_PREPROCESS_OPTIONS = readPbrEnvironmentPreprocessOptions({
+  irradianceWidth: 64,
+  irradianceHeight: 32,
+  specularWidth: 256,
+  specularHeight: 128,
+  specularMipCount: 9,
+  brdfLutWidth: 128,
+  brdfLutHeight: 128,
+  diffuseSampleCount: 512,
+  specularSampleCount: 512,
+  brdfSampleCount: 512
+});
 const ENVIRONMENT_MODES = Object.freeze(["procedural", "diagnostic", "real"]);
 const ENVIRONMENT_DEBUG_VIEWS = Object.freeze([
   "scene",

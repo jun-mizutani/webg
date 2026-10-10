@@ -1,5 +1,7 @@
 # headless_tests
 
+[English](README.en.md) | 日本語
+
 `headless_tests` は、ブラウザを起動せずに webg の決定論的な契約を確認する開発者向けテストです。
 Node.js で短時間に反復できることを優先し、コア変更時の回帰検出と API・resource・数値規約の固定に使います。
 

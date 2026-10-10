@@ -20,8 +20,6 @@ SSR is applied to the floor, walls, slopes, and ceiling.
 Bloom uses `threshold = 0.60`, `softKnee = 0.40`, `strength = 1.10`, and `1/32 Weight = 0.80`, producing a broad glow from the underside HDR reflection.
 The Shadow Map and SSAO effects remain disabled.
 
-Detailed geometry rules are documented in [maze2_spec.md](./maze2_spec.md).
-
 ## How to Run
 
 - Open [./maze2.html](./maze2.html)
@@ -76,5 +74,4 @@ For rendering, `ComputeEffectPipeline.renderScene()` uses the `cameraFrame` rece
 - `maze2.html`: demo page
 - `main.js`: maze generation, grouped meshes, first-person controls, deferred lighting, SSR, and geometry edges
 - `CollisionWorld.js`: cylindrical player collision against logical wall segments
-- `maze2_spec.md`: detailed geometry, maze-generation, collision, and lighting specification
 - `maze2.txt`: Japanese overview used by the sample index

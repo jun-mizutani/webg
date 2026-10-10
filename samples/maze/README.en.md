@@ -14,8 +14,6 @@ Floor colors are split into normal corridor, room, start area, and goal area. Af
 
 The radar uses the same heading-up method as `walk_around` and draws nearby collision segments on a 2D canvas in the top-right corner. The doorway lintel stays above the player collision cylinder, so it does not appear as a blocking segment and it does not show up on the radar. The side jambs remain collision targets.
 
-Detailed rules for maze generation, rooms, doors, collision handling, and radar display are documented in [maze_spec.md](./maze_spec.md).
-
 ## How to run
 
 - Open `./maze.html`
@@ -63,6 +61,5 @@ Detailed rules for maze generation, rooms, doors, collision handling, and radar 
 - `main.js`: maze generation, first-person movement, Compute Effects, and radar
 - `CollisionWorld.js`: XZ-plane collision world for the player cylinder
 - `WalkCollisionBuilder.js`: helper that extracts collision segments from wall shapes
-- `maze_spec.md`: detailed specification for maze generation, rooms, doors, collision handling, and radar
 - `README.md`: Japanese guide
 - `README.en.md`: English guide

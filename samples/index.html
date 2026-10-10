@@ -41,7 +41,7 @@ main { width: min(1180px, calc(100% - 32px)); margin: 0 auto; padding: 32px 0 64
 .language { margin: 0 0 10px; text-align: right; }
 .hero h1 { margin: 0 0 8px; font-size: clamp(2rem, 5vw, 3.1rem); line-height: 1.15; }
 .hero p { max-width: 900px; margin: 8px 0 0; color: var(--muted); }
-.hero img { width: 100%; max-height: 360px; object-fit: cover; margin-top: 20px; border: 1px solid var(--line); border-radius: 12px; }
+.hero img { width: 920px; max-height: 540px; object-fit: cover; margin-top: 20px; border: 1px solid var(--line); border-radius: 12px; }
 .guide { margin-top: 20px; padding: 22px 26px; }
 .guide h2 { margin: 0 0 8px; font-size: 1.25rem; }
 .guide p { margin: 7px 0; color: var(--muted); }
@@ -97,7 +97,7 @@ main { width: min(1180px, calc(100% - 32px)); margin: 0 auto; padding: 32px 0 64
     <h2 id="guide-title">一覧と詳細説明の使い分け</h2>
     <p>初めて開発する場合は、<a href="../book/examples/guide.html">実行例から始める開発案内</a>で、目的に合う出発点と、次に追加する機能の例を選べます。人とAIが同じコードと確認ポイントを使うための案内です。</p>
     <p><strong>実行</strong>はサンプルアプリケーションを開きます。<strong>詳細（日本語）</strong>は<code>README.md</code>と同内容をUTF-8のHTMLにしたページです。生のMarkdownをブラウザーへ直接表示しないため、Webサーバーの文字コード判定による文字化けを避けられます。原文が必要な場合は<strong>README.mdを保存</strong>を利用してください。</p>
-    <p>開発用の目視確認は<a href="../unittest/index.html">unittest一覧</a>、book本文の実行例は<a href="../book/examples/index.html">book examples一覧</a>、sample・unittest・headless testの違いは<a href="./README.md" download>samples/README.md</a>にあります。</p>
+    <p>開発用の目視確認は<a href="../unittest/index.html">unittest一覧</a>、book本文の実行例は<a href="../book/examples/index.html">book examples一覧</a>、sample・unittest・headless testの違いは<a href="./README.md" download>samples/README.md</a>にあります。<a href="./README.en.md" download>English guide</a></p>
     <p>YAMLによるモデルとシーンの扱いは、<a href="./model_yaml/model_yaml.html">ModelYAML単体の読込・配置</a>、<a href="./scene_model_yaml/scene_model_yaml.html">SceneYAML＋ModelYAMLによるPBR表示・物理</a>の順に試せます。画面で配置や材質を編集する場合は<a href="./edit_yaml/edit_yaml.html">SceneYAMLエディタ</a>を利用してください。</p>
     <p>開発時にコアmoduleを強制再importする場合は、<a href="./cache_clear_webg/cache_clear_webg.html"><code>cache_clear_webg</code>（webg core cache clear）</a>を使えます。全<code>webg</code> moduleを一意な<code>?v=...</code>付きURLでimportし、コア自身のimport文は変更しません。</p>
     <p><code>WebgApp</code>を使うサンプルは通常release modeで起動します。<code>F9</code>のあとに<code>M</code>でdebug / release mode、<code>C</code>で診断情報、<code>V</code>で診断JSONをコピーできます。</p>

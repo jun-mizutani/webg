@@ -9,7 +9,7 @@ English | [日本語](README.md)
 - It uses `WebgApp` as the entry point and initializes `Screen`, `shader`, `Space`, `camera rig`, `InputController`, and `Message` together
 - `EyeRig(type="orbit")` is added for camera control so the minimal example from the README is easier to inspect as-is
 - The object rotates automatically every frame, and the camera can be moved with mouse drag / wheel / arrow keys / `[ ]` and touch gestures such as one-finger drag / two-finger drag / pinch, so you can quickly feel what a minimal 3D app built with `WebgApp` is like
-- Pressing `S` calls `WebgApp.takeScreenshot()` and saves the canvas as `high_level_YYYYMMDD_HHMMSS.png`
+- Press `S` to save the canvas at its current size, or `Shift+S` to create a 720x540 pixel image
 
 ## How to Run
 - Open [./high_level.html](./high_level.html)
@@ -35,3 +35,4 @@ English | [日本語](README.md)
 - Arrow keys: orbit camera
 - `[ / ]`: zoom
 - `S`: save a screenshot
+- `Shift+S`: save a 720x540 pixel screenshot

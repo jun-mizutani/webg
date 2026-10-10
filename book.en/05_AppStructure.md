@@ -431,11 +431,20 @@ app.attachInput({
   onKeyDown: (key, ev) => {
     if (ev.repeat) return;
     if (key === "s") {
-      app.takeScreenshot({ prefix: "sample" });
+      app.takeScreenshot({
+        prefix: "sample",
+        width: 720,
+        height: 540
+      });
     }
   }
 });
 ```
+
+When both `width` and `height` are supplied, webg renders one frame at those exact pixel dimensions and saves it as a PNG.
+These values describe output pixels and are independent of device pixel ratio. After the browser starts capturing the image, the canvas and projection return to their regular layout.
+Canvas HUD content appears in the image, so review any messages shown during capture.
+When dimensions are omitted, the current canvas size is used.
 
 ## Camera basics
 
@@ -603,7 +612,7 @@ Use `OverlayPanel` for the display frame and an application-side controller for 
 * **`createParticleEmitter()`**: create lightweight particle effects
 * **`scenePhase`**: track a phase such as `"title"` or `"gameplay"`
 * **`saveProgress()` and `loadProgress()`**: save or load progress
-* **`takeScreenshot()`**: save the rendered canvas as an image
+* **`takeScreenshot()`**: save the rendered canvas as a PNG, with optional output pixel dimensions
 
 Example of `loadModel()`:
 

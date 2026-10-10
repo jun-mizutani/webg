@@ -25,7 +25,7 @@ English | [日本語](README.md)
 
 ## Controls
 - `Q`: quit
-- `P`: save a screenshot
+- `P`: save a 960×720 pixel screenshot
 - `W / S`: rotate the camera around the X axis
 - `A / D`: rotate the camera around the Y axis
 - `Z / X`: zoom in / out

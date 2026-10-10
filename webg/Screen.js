@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// Screen.js       2026/08/27
+// Screen.js       2026/10/10
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // ---------------------------------------------
@@ -266,6 +266,7 @@ export default class Screen {
     this.frames = 0;
     this.captureRequested = false;
     this.captureFilename = "screen.png";
+    this.captureOnSnapshot = null;
     // WebGPU初期化前に1度キャンバス実サイズを整える
     this._applyResize(this.requestedWidth, this.requestedHeight, false);
     const gpuOptions = options.gpu === undefined ? {} : options.gpu;
@@ -527,7 +528,11 @@ export default class Screen {
     this.gpu.submit();
     if (this.captureRequested) {
       this.captureRequested = false;
-      this._saveCanvasImage(this.captureFilename);
+      const filename = this.captureFilename;
+      const onSnapshot = this.captureOnSnapshot;
+      this.captureFilename = "screen.png";
+      this.captureOnSnapshot = null;
+      this._saveCanvasImage(filename, onSnapshot);
     }
   }
 
@@ -548,23 +553,53 @@ export default class Screen {
   // 現状 no-op
   swapInterval(interval) {}
 
-  // キャンバス内容を PNG として保存する
-  screenShot(filename) {
+  // 次のpresentで保存するcanvas画像と、画像取得開始後の処理を予約する
+  // onSnapshotはWebgAppが一時的なcanvas寸法を元へ戻す用途で利用する
+  screenShot(filename, options = {}) {
+    if (options?.onSnapshot !== undefined && typeof options.onSnapshot !== "function") {
+      throw new Error("Screen.screenShot onSnapshot must be a function");
+    }
     this.captureFilename = filename || "screen.png";
+    this.captureOnSnapshot = options?.onSnapshot !== undefined
+      ? options.onSnapshot
+      : (this.captureRequested ? this.captureOnSnapshot : null);
     this.captureRequested = true;
   }
 
-  // `_saveCanvasImage`は現在のキャンバス画像を取得し、指定形式で保存する
-  _saveCanvasImage(filename) {
-    this.canvas.toBlob((blob) => {
-      if (blob) {
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = filename;
-        a.click();
-        URL.revokeObjectURL(url);
+  // 予約中のcanvas保存を取り消し、一時設定の後処理を破棄する
+  cancelScreenshot() {
+    const hadCapture = this.captureRequested;
+    this.captureRequested = false;
+    this.captureFilename = "screen.png";
+    this.captureOnSnapshot = null;
+    return hadCapture;
+  }
+
+  // `_saveCanvasImage`はcanvas bitmapの取得を開始し、完成したPNGをブラウザへダウンロードさせる
+  // toBlob()の呼び出し直後にsnapshot通知を行い、非同期の画像圧縮中に画面設定を復元できる
+  _saveCanvasImage(filename, onSnapshot = null) {
+    let snapshotNotified = false;
+    const notifySnapshot = () => {
+      if (!snapshotNotified && typeof onSnapshot === "function") {
+        snapshotNotified = true;
+        onSnapshot();
       }
-    }, "image/png");
+    };
+    try {
+      this.canvas.toBlob((blob) => {
+        if (blob) {
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = filename;
+          a.click();
+          URL.revokeObjectURL(url);
+        }
+      }, "image/png");
+    } catch (error) {
+      notifySnapshot();
+      throw error;
+    }
+    notifySnapshot();
   }
 }

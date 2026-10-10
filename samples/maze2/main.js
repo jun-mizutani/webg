@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// samples/maze2/main.js  2026/08/11
+// samples/maze2/main.js  2026/10/10
 //   Octagonal sci-fi walk-through maze
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -146,7 +146,6 @@ let radarCanvas = null;
 let radarContext = null;
 let totalTriangles = 0;
 let visibleTriangles = 0;
-let screenshotName = "";
 let lastHelpText = "";
 let lastHelpUpdateMs = 0;
 let loadingStartedAtMs = 0;
@@ -1451,7 +1450,6 @@ function updateHudRows() {
       value: `SSR ${EFFECT_STATE.ssrEnabled ? `ON ${EFFECT_STATE.ssrIntensity.toFixed(2)}` : "OFF"} Bloom ${EFFECT_STATE.bloomEnabled ? "ON" : "OFF"} Edge ON`,
       note: `deferred lights=${activeLights.length}/${logicalLights.length}`
     },
-    { label: "Shot", value: screenshotName || "-", note: "K to save" },
     { label: "GPU Compute", value: load.compute },
     { label: "GPU Render", value: load.render },
     { label: "JS Load", value: load.js },
@@ -1482,7 +1480,7 @@ function buildHelpLines() {
     `Position=${firstPerson.position.map((value) => value.toFixed(2)).join(", ")}`,
     `Yaw=${getDisplayedYawDeg(firstPerson.bodyYaw).toFixed(1)} LookYaw=${firstPerson.lookYaw.toFixed(1)} LookPitch=${firstPerson.lookPitch.toFixed(1)}`,
     `Collision=${collisionStats?.segmentCount ?? 0} segments Candidates=${collisionWorld?.lastCandidateCount ?? 0} Hits=${collisionWorld?.lastHitCount ?? 0}`,
-    `VisibleTris=${visibleTriangles} Screenshot=${screenshotName || "-"}`,
+    `VisibleTris=${visibleTriangles}`,
     ...(app?.getFrameTimingLines?.() ?? [])
   ];
 }
@@ -1527,11 +1525,9 @@ function updateLoadingPanel(stage) {
   });
 }
 
-// スクリーンショット操作時に現在のcanvasを保存し、ファイル名を通知と状態表示へ反映する
+// Canvasを960×720 pixelで描画し、sample紹介用の標準寸法で保存する
 function takeViewerScreenshot() {
-  const file = app.takeScreenshot({ prefix: SAMPLE_LABEL });
-  screenshotName = file;
-  app.pushToast(`saved ${file}`, { durationMs: 1400 });
+  app.takeScreenshot({ prefix: SAMPLE_LABEL, width: 960, height: 720 });
 }
 
 // キー入力の受付後に、視点リセット、撮影、SSR強度変更のいずれかを実行する

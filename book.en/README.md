@@ -12,7 +12,7 @@ descriptions in this book apply to both loading methods.
 
 ## Where to Start
 
-To choose an existing example for the application you want to build, begin with [Development Entry Points and Runnable Examples](ExampleGuide.md). The [browser guide](../book/examples/guide.html) collects starting points by goal, the order for adding features, code to read, and checks to make. It serves both people and AI agents.
+To choose an existing example for the application you want to build, begin with [Development Entry Points and Runnable Examples](ExampleGuide.md). The [browser guide](../book/examples/guide.en.html) collects starting points by goal, the order for adding features, code to read, and checks to make. It serves both people and AI agents.
 
 Begin with the [preface](00_Preface.md), then follow Part I, from minimal rendering through `WebgApp`, cameras, and materials.
 
@@ -22,9 +22,9 @@ Part III explains shaders and GPU computing. Use Part IV when you need to extend
 
 Part V investigates coordinate transforms, depth, G-buffers, `Shape`, skinning, and physics internals.
 
-To go from a PBR scene to a small game with movement, selection, and particles, read [PBR Scene to a Small Game](PBRSceneToGame.md) alongside `samples/fantasy/`. Its [browser guide](../book/examples/fantasy_guide.html) points to functions to read and small experiments to try.
+To go from a PBR scene to a small game with movement, selection, and particles, read [PBR Scene to a Small Game](PBRSceneToGame.md) alongside `samples/fantasy/`. It maps functions to read and small experiments to try.
 
-For water reflections, refraction, and underwater caustics, compare Chapter 35 with `samples/water/index.html`. To integrate `WaterBody`, receiver registration, independent toggles, particles, screen effects, and resource disposal into a game, continue to `samples/fantasy/`.
+For water reflections, refraction, and underwater caustics, compare Chapter 35 with `samples/water/index.en.html`. To integrate `WaterBody`, receiver registration, independent toggles, particles, screen effects, and resource disposal into a game, continue to `samples/fantasy/`.
 
 ## Parts and Chapters
 

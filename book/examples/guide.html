@@ -1,5 +1,5 @@
 <!doctype html>
-  <!-- 2026/10/05: book/開発の入口と実行例.mdから生成したブラウザ閲覧用文書 -->
+  <!-- 2026/10/10: book/開発の入口と実行例.mdから生成したブラウザ閲覧用文書 -->
   <html lang="ja">
   <head>
   <meta charset="utf-8">
@@ -9,9 +9,9 @@
   <link rel="stylesheet" href="examples/examples_common.css">
   </head>
   <body class="example-guide"><main>
-  <nav aria-label="資料の入口"><a href="examples/index.html">教材例一覧</a><a href="https://jun-mizutani.github.io/webg/samples/">サンプル一覧</a><a href="examples/guide.html">開発の入口</a><a href="開発の入口と実行例.md" download>Markdown正本を保存</a></nav>
+  <nav aria-label="資料の入口"><a href="examples/index.html">教材例一覧</a><a href="https://jun-mizutani.github.io/webg/samples/">サンプル一覧</a><a href="examples/guide.html">開発の入口</a><a href="examples/guide.en.html" lang="en">English guide</a><a href="開発の入口と実行例.md" download>Markdown正本を保存</a></nav>
   <h1>開発の入口と実行例</h1>
-<p>更新日：2026年10月5日</p>
+<p>更新日：2026年10月10日</p>
 <p>初めてwebgを使う人と、開発を支援するAIのための案内です。作りたいアプリに近い既存例を一つ選び、動作を確認してから機能を追加します。全42章や全サンプルを読む必要はありません。</p>
 <p><code>book/examples/</code>は章の説明を小さな実行コードで確認する場所です。<code>samples/</code>には、機能の比較、モデルの読込み、編集ツール、ゲーム、複数機能を組み合わせた作品があります。同じ機能の例でも、短い仕組みの説明と、アプリでの運用という役割を使い分けます。</p>
 <p>統合版<code>lib/webg.core.min.js</code>の読み込みは02章、最小例のimportの置き換えは04章で説明します。既存サンプルの変換は<a href="付録C_統合版の利用.md">付録C「統合版の利用」</a>を参照してください。</p>
@@ -319,6 +319,6 @@
 <p>まず利用者の目的から、この文書の出発点を一つ選びます。選んだ入口、元にする実行ページとコード、追加する機能、表示・操作の確認ポイントを短く説明します。AIも人も、同じ例と同じ確認ポイントを使えます。</p>
 <p>API名が分からなければ<a href="%E4%BB%98%E9%8C%B2D_API%E4%B8%80%E8%A6%A7.md">API一覧</a>で所属クラスを探し、対応する章と実行例を読みます。一般的な3DライブラリのAPI名をwebgへ当てはめず、実際のimport、呼出し、戻り値を確認します。単位、既定値、自動更新の範囲が資料だけで確定できない場合は、該当APIの現行実装とテストを照合します。</p>
 <p><code>headless_tests/</code>はAPI契約や計算の確認、<code>unittest/</code>は小さな機能のブラウザ確認に使います。静的にリンクやimportが存在すること、実行時に例外がないこと、意図した画面・操作になることは別々に確認します。確認していない範囲を「動作確認済み」と扱いません。</p>
-<p>全体一覧は<a href="examples/index.html">book examples</a>と<a href="https://jun-mizutani.github.io/webg/samples/">samples</a>、既存例の役割と案内の整備根拠は<a href="../docs/example_navigation_audit.md">実行例の調査記録</a>にあります。</p>
+<p>全体一覧は<a href="examples/index.html">book examples</a>と<a href="https://jun-mizutani.github.io/webg/samples/">samples</a>で確認できます。</p>
 
   </main></body></html>

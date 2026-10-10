@@ -20,8 +20,6 @@ SSRは床、壁、斜面、天井の反射へ使用します。
 Bloomは`threshold = 0.60`、`softKnee = 0.40`、`strength = 1.10`、`1/32 Weight = 0.80`とし、天井灯の下面中央のHDR反射から広い光芒を作ります。
 Shadow MapとSSAOの効果は無効にしています。
 
-詳細な形状規則は[maze2_spec.md](./maze2_spec.md)に記載しています。
-
 ## 実行方法
 
 - 実行ファイルは[./maze2.html](./maze2.html)です
@@ -76,5 +74,4 @@ Shadow MapとSSAOの効果は無効にしています。
 - `maze2.html`: 実行ページ
 - `main.js`: 迷路生成、grouped mesh、first-person 操作、deferred lighting、SSR、geometry edge
 - `CollisionWorld.js`: 論理 wall segment に対する円柱 player collision
-- `maze2_spec.md`: 形状、迷路生成、衝突判定、照明の詳細仕様
 - `maze2.txt`: サンプル一覧向けの概要説明

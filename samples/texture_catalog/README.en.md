@@ -66,10 +66,8 @@ The previews show Color, Height and Normal in that order. Height is normalized t
 `heightRangeMeters`; check the displayed `Height range` when decoding the downloaded Height image.
 Use PNG when reusing Height or Normal maps. The cube uses normal mapping and retains its geometric outline.
 Applications that need actual relief must decode Height and intersect the resulting height field.
-See the [implementation notes](../../docs/sample_development/procedural_pebbles.md) and
-[GPU validation](../../unittest/procedural_pebbles/index.html).
 
-![Densely packed pebbles with raised centers](pebbles_preview.png)
+![Densely packed pebbles with raised centers](pebbles_preview.jpg)
 
 ## Editing and exporting
 

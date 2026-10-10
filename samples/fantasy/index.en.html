@@ -205,7 +205,7 @@ blockquote {
 <ul><li>Set <code>palette.steel.roughness</code> in <code>visuals.js</code> from 0.28 to 0.65, then rotate the camera to compare highlights. Shared terrain materials live in <code>scene.js</code>.</li><li>Set Rio's <code>move</code> in <code>rules.mjs</code> from 4 to 3. Column 4, row 5 should no longer be reachable from the initial position. Paths and cyan markers share the same result.</li><li>Increase the segment <code>duration</code> in <code>main.js</code>: <code>move()</code>. Keep combat values unchanged and check input locking and coordinate commitment.</li><li>Change both RGB entries of <code>steps.appearance.colors</code> in <code>scene.js</code>. Keep emission positions and paths unchanged.</li></ul>
 <p>Use the verification points after each change so that its effect has a clear cause.</p>
 <h2>Documents and rule checks</h2>
-<p><a href="fantasy_design.md">fantasy_design.md</a> describes the game and its scope in Japanese. <code>camera_reference.json</code> records the initial camera reference. The book's <a href="../../book.en/PBRSceneToGame.md">From a PBR Scene to a Small Game</a> explains how the individual feature examples connect in this app.</p>
+<p><code>camera_reference.json</code> records the initial camera reference. The book's <a href="../../book.en/PBRSceneToGame.md">From a PBR Scene to a Small Game</a> explains how the individual feature examples connect in this app.</p>
 <p>Run from the repository root to check paths, occupancy, range, enemy planning, and outcomes without a GPU. Rendering and interaction require separate browser verification.</p>
 <pre><code class="language-sh">node --test samples/fantasy/rules.test.mjs</code></pre>
     </article>

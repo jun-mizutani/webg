@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// samples/compute_json/main.js  2026/07/25
+// samples/compute_json/main.js  2026/10/10
 //   JSON animation viewer with ComputeEffectPipeline
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -93,7 +93,6 @@ let viewerSize = {
   centerz: 0.0,
   max: 10.0
 };
-let screenshotName = "";
 let wireframe = false;
 let commandPalette = null;
 let orbitRollGesture = null;
@@ -701,14 +700,12 @@ function toggleWireframe() {
   });
 }
 
-// `takeViewerScreenshot`は現在のキャンバス画像を取得し、指定形式で保存する
+// Canvasを960×720 pixelで描画し、sample紹介用の標準寸法で保存する
 function takeViewerScreenshot() {
-  const file = app.takeScreenshot({
-    prefix: "compute_json"
-  });
-  screenshotName = file;
-  app.pushToast(`saved ${file}`, {
-    durationMs: 1400
+  app.takeScreenshot({
+    prefix: "compute_json",
+    width: 960,
+    height: 720
   });
 }
 
@@ -919,7 +916,7 @@ function updateHudRows() {
     { label: "Edge", toggleKey: "E", value: effectState.edgeEnabled ? `ON ${effectState.edgeThickness}` : "OFF" },
     { label: "Edge Blend", key: "M", action: "cycle", value: effectState.edgeBlendMode },
     { label: "Lighting", toggleKey: "L", value: effectState.ambientOnly ? "AMBIENT" : "FULL" },
-    { label: "Wire", value: wireframe ? "on" : "off", note: `shot=${screenshotName || "-"}` },
+    { label: "Wire", value: wireframe ? "on" : "off" },
     { label: "GPU Compute", value: load.compute },
     { label: "GPU Render", value: load.render },
     { label: "JS Load", value: load.js },

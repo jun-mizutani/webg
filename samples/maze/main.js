@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// samples/maze/main.js  2026/08/11
+// samples/maze/main.js  2026/10/10
 //   Walk-through maze sample generated at runtime
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -123,7 +123,6 @@ let radarCanvas = null;
 let radarContext = null;
 let totalTriangles = 0;
 let visibleTriangles = 0;
-let screenshotName = "";
 let lastHelpText = "";
 let lastHelpUpdateMs = 0;
 let loadingStartedAtMs = 0;
@@ -1159,7 +1158,6 @@ function updateHudRows() {
       value: `Toon ${EFFECT_STATE.toonEnabled ? `ON ${EFFECT_STATE.toonLevels}` : "OFF"} Edge ${EFFECT_STATE.edgeEnabled ? "ON" : "OFF"}`,
       note: `spot ambient=${EFFECT_STATE.ambientOnly ? "only" : EFFECT_STATE.ambientStrength.toFixed(2)} ${EFFECT_STATE.edgeBlendMode}`
     },
-    { label: "Shot", value: screenshotName || "-", note: "K to save" },
     { label: "GPU Compute", value: load.compute },
     { label: "GPU Render", value: load.render },
     { label: "JS Load", value: load.js },
@@ -1190,7 +1188,7 @@ function buildHelpLines() {
     `Position=${firstPerson.position.map((value) => value.toFixed(2)).join(", ")}`,
     `Yaw=${getDisplayedYawDeg(firstPerson.bodyYaw).toFixed(1)} LookYaw=${firstPerson.lookYaw.toFixed(1)} LookPitch=${firstPerson.lookPitch.toFixed(1)}`,
     `Collision=${collisionStats?.segmentCount ?? 0} segments Candidates=${collisionWorld?.lastCandidateCount ?? 0} Hits=${collisionWorld?.lastHitCount ?? 0}`,
-    `VisibleTris=${visibleTriangles} Screenshot=${screenshotName || "-"}`,
+    `VisibleTris=${visibleTriangles}`,
     ...(app?.getFrameTimingLines?.() ?? [])
   ];
 }
@@ -1235,11 +1233,9 @@ function updateLoadingPanel(stage) {
   });
 }
 
-// `takeViewerScreenshot`は現在のキャンバス画像を取得し、指定形式で保存する
+// 次のpresentで現在のcanvasを画像として保存する
 function takeViewerScreenshot() {
-  const file = app.takeScreenshot({ prefix: SAMPLE_LABEL });
-  screenshotName = file;
-  app.pushToast(`saved ${file}`, { durationMs: 1400 });
+  app.takeScreenshot({ prefix: SAMPLE_LABEL });
 }
 
 // 操作を対象の状態または描画設定へ反映する

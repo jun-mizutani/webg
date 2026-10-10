@@ -131,7 +131,7 @@ const events = physics.getContactEventsFromReadback(stateData);
 
 `getLastContacts()`, `getLastManifolds()`, and `getLastContactEvents()` return the results most recently generated from an explicit readback. Listeners registered with `onBeginContact()`, `onStayContact()`, and `onEndContact()` are notified only when `dispatchContactEventsFromReadback()` is called. GPU contact events are not transferred to the CPU automatically.
 
-To inspect sleep decisions, explicitly read back `BodyState` together with `getContactsFromReadback()` and `getPlaneContactsFromReadback()`, then assemble audit values in an external module such as `user/dev_core/ComputePhysicsDiagnostics.js`. The Compute solver has no diagnostic buffer, diagnostic binding, or diagnostic-only branch. When timing is needed, a small explicit timestamp query may still be attached to the physics pass.
+To inspect sleep decisions, explicitly read back `BodyState` together with `getContactsFromReadback()` and `getPlaneContactsFromReadback()`, then assemble audit values in application code. The Compute solver has no diagnostic buffer, diagnostic binding, or diagnostic-only branch. When timing is needed, a small explicit timestamp query may still be attached to the physics pass.
 
 Compute entry points corresponding to the CPU `step()` and `stepFixed()` are also available. `step(commandEncoder, elapsedMs)` and `stepFixed(commandEncoder)` record commands just like `encode()` and `encodeFixedStep()`; the caller still submits them. The Broad Phase is fixed to the `xzGrid` returned by `getBroadphaseMode()`, so CPU `bruteForce` and `sweepAabb` modes cannot be selected.
 

@@ -457,11 +457,20 @@ app.attachInput({
   onKeyDown: (key, ev) => {
     if (ev.repeat) return;
     if (key === "s") {
-      app.takeScreenshot({ prefix: "sample" });
+      app.takeScreenshot({
+        prefix: "sample",
+        width: 720,
+        height: 540
+      });
     }
   }
 });
 ```
+
+`width` と `height` を両方指定すると、指定したpixel寸法で1 frame描画してPNGを保存します。
+この寸法はdevice pixel ratioを掛けない出力サイズです。画像の取得を始めた後、canvasとprojectionは通常の配置へ戻ります。
+画面内HUDも画像へ含まれるため、撮影時の状態はメッセージ表示を含めて確認してください。
+サイズを省略すると、現在のcanvas寸法で保存します。
 
 ## カメラの基本
 
@@ -648,7 +657,7 @@ app.showOverlayPanel(buildHelpPanelOptions({
 - **saveProgress()、loadProgress()**
   - 進行状況を保存または読み込みする
 - **takeScreenshot()**
-  - 描画後のキャンバスを画像として保存する
+  - 描画後のcanvasをPNGとして保存する。widthとheightで出力pixel寸法を指定できる
 
 `loadModel()` の例です。
 

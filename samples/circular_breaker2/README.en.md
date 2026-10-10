@@ -1,5 +1,7 @@
 # circular_breaker2
 
+![Circular Breaker 2 gameplay](./circular_breaker2.jpg)
+
 Columns and blocks have a strong continuous upper light band, lower strips, and indicator marks. The upper emission mask uses 255 and the lower lamps use 160.
 
 LEVEL, PACK, destroyed-block count, SCORE, phase, and objectives appear beside the title above the canvas. On narrow windows, the header wraps and the canvas fills the remaining height.

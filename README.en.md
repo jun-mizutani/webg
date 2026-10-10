@@ -1,6 +1,6 @@
 # webg 3.0
 
-[日本語](README.md) · [GitHub](https://github.com/jun-mizutani/webg) · [Sample gallery](https://jun-mizutani.github.io/webg/samples/) · [Guide to examples and samples](https://jun-mizutani.github.io/webg/book/examples/guide.html)
+[日本語](README.md) · [GitHub](https://github.com/jun-mizutani/webg) · [Sample gallery](https://jun-mizutani.github.io/webg/samples/index.en.html) · [Guide to examples and samples](https://jun-mizutani.github.io/webg/book/examples/guide.en.html)
 
 Build 3D applications with light, materials, and motion using JavaScript and WebGPU.
 
@@ -110,7 +110,7 @@ Sound synthesis, background music, and sound effects are available through the W
 
 ## Start building an application
 
-If you are new to webg, use the [guide to examples and samples](https://jun-mizutani.github.io/webg/book/examples/guide.html) to find an example close to what you want to build.
+If you are new to webg, use the [guide to examples and samples](https://jun-mizutani.github.io/webg/book/examples/guide.en.html) to find an example close to what you want to build.
 `book/examples/` contains small runnable examples for individual chapters; `samples/` contains reference applications combining multiple features.
 
 - **Describe geometry and motion in JavaScript:** Start with `WebgApp`, `Space`, `Node`, and `Shape`. See [high_level](https://jun-mizutani.github.io/webg/samples/high_level/index.en.html).
@@ -130,13 +130,13 @@ cd webg
 python3 -m http.server 8000
 ```
 
-Open `http://localhost:8000/samples/index.html` in your browser.
+Open `http://localhost:8000/samples/index.en.html` in your browser.
 Serve the repository over HTTP and retain its directory structure for ES Modules and asset loading.
 The library itself can be used through relative JavaScript imports.
 
 ## Learn with the book
 
-The English book is available in [`book.en/`](book.en/README.md). Its [entry guide](book.en/ExampleGuide.md) maps application goals to runnable examples, code to read, and checks to make. The companion [browser guide](https://jun-mizutani.github.io/webg/book/examples/guide.html) provides the same navigation in the browser.
+The English book is available in [`book.en/`](book.en/README.md). Its [entry guide](book.en/ExampleGuide.md) maps application goals to runnable examples, code to read, and checks to make. The companion [browser guide](https://jun-mizutani.github.io/webg/book/examples/guide.en.html) provides the same navigation in the browser.
 
 The chapters progress from minimal rendering through application structure, models, interaction, physics, PBR, and GPU processing. Each chapter links its explanation to runnable examples in `book/examples/` and larger applications in `samples/`.
 

@@ -384,7 +384,6 @@ These samples demonstrate the current SceneYAML and SceneApp structure:
 * `samples/project_app/project_app_physics.html`: external materials, compute physics, and SceneYAML
 * `samples/project_app/scene_animation.html`: position and quaternion animation targeting object IDs
 * `samples/edit_yaml/edit_yaml.html`: editor for SceneYAML placement, materials, physics, and inline meshes
-* `docs/scene_yaml_model_asset_definition.md`: formal definitions of SceneYAML, ModelAsset, and SceneAsset
 
 ## Grow a PBR scene into a small game
 

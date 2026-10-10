@@ -205,7 +205,7 @@ blockquote {
 <ul><li><strong>鎧の粗さを変える</strong>: <code>visuals.js</code>の<code>palette.steel.roughness</code>を0.28から0.65へ変えます。カメラを回してハイライトの広がりを比較します。地形の共通材質は<code>scene.js</code>側です。</li><li><strong>移動力を変える</strong>: <code>rules.mjs</code>のリオの<code>move</code>を4から3へ変えます。最初の「列4 行5」へ届かなくなることを確認します。経路と青い表示は同じ結果から更新されます。</li><li><strong>歩行をゆっくりにする</strong>: <code>main.js</code>の<code>move()</code>にある区間の<code>duration</code>を増やします。HPや射程を変えず、移動中の入力停止と到着時のマス確定を確認します。</li><li><strong>粒子を変える</strong>: <code>scene.js</code>の<code>steps.appearance.colors</code>の二つのRGB色を変えます。<code>main.js</code>の発生位置やゲームの経路はそのまま使えます。</li></ul>
 <p>一つ変更するごとに上の確認ポイントを試します。材質、ルール、表示速度、効果を同時に変えない方が、結果の原因を判断しやすくなります。</p>
 <h2>文書と自動確認</h2>
-<p><a href="fantasy_design.md">fantasy_design.md</a>はゲームの設計と機能の範囲です。<code>camera_reference.json</code>には初期視点の参照値を保存しています。<a href="../../book/examples/fantasy_guide.html">bookの「PBRシーンから小さなゲームへ」</a>と併せると、単機能の例からこの構成へ進む境界を確認できます。</p>
+<p><code>camera_reference.json</code>には初期視点の参照値を保存しています。<a href="../../book/examples/fantasy_guide.html">bookの「PBRシーンから小さなゲームへ」</a>と併せると、単機能の例からこの構成へ進む境界を確認できます。</p>
 <p>リポジトリのルートから次を実行すると、GPUを使わず地形・経路・占有・射程・敵の計画・勝敗を確認できます。描画と操作はブラウザで別に確認します。</p>
 <pre><code class="language-sh">node --test samples/fantasy/rules.test.mjs</code></pre>
     </article>

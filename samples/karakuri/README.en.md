@@ -31,4 +31,4 @@ The physics data for balls and dominoes does not define density; it uses mass an
 
 ## Sample scope
 
-The sample implements mesh selection, XY placement and dragging, turning, duplication, removal, Undo, same-screen physics trials, emitters, contact sounds, a distinct goal sound, contact-based goal messages, and file save/load. The trial continues after the goal message appears. During a trial, check the goal message and domino chain reactions. See [`docs/karakuri.md`](../../docs/karakuri.md) for the detailed design.
+The sample implements mesh selection, XY placement and dragging, turning, duplication, removal, Undo, same-screen physics trials, emitters, contact sounds, a distinct goal sound, contact-based goal messages, and file save/load. The trial continues after the goal message appears. During a trial, check the goal message and domino chain reactions.

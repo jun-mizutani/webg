@@ -178,7 +178,6 @@ blockquote {
 <p>迷路は1階建てです。通路グリッド幅は<code>2.5m</code>、壁厚と天井厚は<code>0.1m</code>、天井下面は床面から<code>3.0m</code>、歩行者のbaseは<code>y = 0.0</code>、<code>EyeRig.eyeHeight = 1.6m</code>です。壁厚を通路幅に含めるため、有効通路幅は概ね<code>2.4m</code>です。</p>
 <p>床色は通常通路、部屋、開始エリア、ゴールエリアで分けています。迷路生成後には複数箇所へ <code>2 x 2</code> cell 以上の room を上書きし、room の内部壁を取り除いたうえで、幅 <code>2.0m</code>、高さ <code>2.4m</code> の入口を作ります。入口の上部 lintel は高さ <code>0.55m</code> とし、天井下面 <code>3.0m</code> との間へ <code>0.05m</code> の余白を残します。</p>
 <p>レーダーは <code>walk_around</code> と同じ heading-up 方式で、現在位置近くの collision segment を右上の 2D canvas へ重ね表示します。door の上部 lintel はプレイヤー円柱の高さ範囲と重ならないため、衝突対象にもレーダー表示にも含まれません。door の左右 jamb は歩行者に対する衝突対象として残ります。</p>
-<p>迷路生成、部屋、扉、衝突判定、レーダーの詳しい規則は<a href="./maze_spec.md">maze_spec.md</a>に記載しています。</p>
 <h2>実行方法</h2>
 <ul><li>実行ファイルは <code>./maze.html</code> です</li><li>WebGPU 対応ブラウザで開きます</li><li>PC ではドラッグとキーボード、スマートフォンではドラッグと画面下の <code>W</code> / <code>A</code> / <code>S</code> / <code>D</code> button を使います</li><li>Canvas の double tap / double click、または <code>/</code> key で command palette を開きます</li></ul>
 <h2>使用している webg 機能</h2>
@@ -188,7 +187,7 @@ blockquote {
 <h2>確認ポイント</h2>
 <ul><li>起動直後と <code>0</code> による reset 後に、maze2と同じrow、colとcell内相対位置に対応する<code>[-2.5600, 0.0, 6.0572]</code>、方位角<code>-29.91°</code>のfirst-person視点へ戻ること</li><li>左右Dragで進行方向と視線が一緒に回転し、上下Dragでは操作中だけ上または下を見て、Drag終了時に水平へ戻ること</li><li><code>W</code> / <code>A</code> / <code>S</code> / <code>D</code> で、first-person 視点の移動として操作できること</li><li>壁や room door の side jamb で移動が止まり、door 開口部だけを通過できること</li><li>右上の <code>MAP</code> で、視点前方が上向きになり、近くの壁や柱の衝突線分が白い線として表示されること</li><li>room、start、goal、通常通路で floor color が異なること</li><li>固定 seed のため、再読み込み後も同じ迷路形状になること</li><li>初期状態では Edge が有効、Toon が無効で表示され、palette から各 effect を個別に切り替えられること</li><li>HelpPanel と HUD に、現在位置、視線角度、room 数、GPU Compute / GPU Render / JS Load が出ること</li></ul>
 <h2>ファイル</h2>
-<ul><li><code>maze.html</code>: 実行ページ</li><li><code>main.js</code>: 迷路生成、first-person 移動、Compute Effect、レーダーの実装</li><li><code>CollisionWorld.js</code>: XZ 平面の円柱プレイヤー用 collision world</li><li><code>WalkCollisionBuilder.js</code>: wall shape から collision segment を抽出する helper</li><li><code>maze_spec.md</code>: 迷路生成、部屋、扉、衝突判定、レーダーの詳細仕様</li><li><code>README.md</code>: 日本語の説明</li><li><code>README.en.md</code>: 英語の説明</li></ul>
+<ul><li><code>maze.html</code>: 実行ページ</li><li><code>main.js</code>: 迷路生成、first-person 移動、Compute Effect、レーダーの実装</li><li><code>CollisionWorld.js</code>: XZ 平面の円柱プレイヤー用 collision world</li><li><code>WalkCollisionBuilder.js</code>: wall shape から collision segment を抽出する helper</li><li><code>README.md</code>: 日本語の説明</li><li><code>README.en.md</code>: 英語の説明</li></ul>
     </article>
   </main>
 </body>

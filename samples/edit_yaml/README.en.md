@@ -30,7 +30,7 @@ The inspector edits bodyType, mass, friction and restitution. Physics objects re
 
 ## Implementation notes
 
-main.js handles inputs and history; scene_document.js handles source and validation; mesh_edit.js handles vertex/face operations; scene_view.js handles PBR display. GPU initialization runs once; edits rebuild Nodes and Shapes. Mesh validation and Shape construction use the core SceneMesh.js and PrimitiveScene.js modules. Run node samples/edit_yaml/check_document.mjs for data checks without a GPU. Development details are in docs/edit_yaml.md.
+main.js handles inputs and history; scene_document.js handles source and validation; mesh_edit.js handles vertex/face operations; scene_view.js handles PBR display. GPU initialization runs once; edits rebuild Nodes and Shapes. Mesh validation and Shape construction use the core SceneMesh.js and PrimitiveScene.js modules. Run node samples/edit_yaml/check_document.mjs for data checks without a GPU.
 
 ## Collider display and editing
 

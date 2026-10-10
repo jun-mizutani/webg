@@ -22,4 +22,4 @@ Bloom OFF/ON compares the glow while simulation and particle drawing continue. O
 
 The displayed estimated count uses CPU reservations and maximum lifetime, including pending bursts. Capacity rejection is reported by `emit()` through `accepted`, `rejected`, and `reason`, and by the diagnostic rejection counter. This sample uses `overflow: "reject"`. Particle generation and motion remain on the GPU, with no per-frame GPU readback.
 
-Particles are added to HDR after transparency composition, sharing Bloom and tone mapping. SSR reads the scene before particles are drawn. See [compute_particles](../compute_particles/index.html) for a custom-WGSL particle example.
+Particles are added to HDR after transparency composition, sharing Bloom and tone mapping. SSR reads the scene before particles are drawn. See [compute_particles](../compute_particles/index.en.html) for a custom-WGSL particle example.

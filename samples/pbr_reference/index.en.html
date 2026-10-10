@@ -210,7 +210,7 @@ node headless_tests/core/pbr_environment_compute/headless_probe.js
 node headless_tests/core/pbr_environment_cache/headless_probe.js
 node headless_tests/core/pbr_environment_debug_pass/headless_probe.js
 node headless_tests/core/pbr_environment_evaluation/headless_probe.js
-node user/pbr_environment_asset/generate_pbr_environment_test.mjs</code></pre>
+</code></pre>
 <p>The transparent forward shader covers GGX direct lighting, base color and normal mapping, metallic-roughness, occlusion, independent HDR emissive, texture alpha, IBL, directional and spot shadows, and point and cone lights. Local lights use the same relative or inverse-square attenuation as Deferred. Occlusion attenuates only indirect IBL, never direct lighting or emission. The forward path does not reuse screen-space visibility resolved at the opaque G-buffer depth; it performs the same PCF shadow-map test from each transparent fragment's view-space position. <code>SmoothShader</code> provides hooks through which a derived shader can extend material textures and additional bind groups, while the standard SmoothShader layout and output remain unchanged.</p>
     </article>
   </main>

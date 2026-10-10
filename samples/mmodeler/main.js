@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// samples/mmodeler/main.js  2026/07/25
+// samples/mmodeler/main.js  2026/10/10
 //   mmodeler sample
 //   Sections:
 //   - webg app subclasses and shaders
@@ -4477,13 +4477,12 @@ async function loadSelectedModelFile() {
 // 現在の canvas 内容を次の present 後に PNG として保存する
 // WebgApp 側の screenshot 入口を使い、ファイル名規則と保存処理を app 共通にそろえる
 function takeModelerScreenshot() {
-  const filename = app.takeScreenshot({
-    prefix: "mmodeler"
+  app.takeScreenshot({
+    prefix: "mmodeler",
+    width: 960,
+    height: 720
   });
   focusModelerCanvas();
-  // screenshot は次の present 後に保存されるため、canvas toast へ filename を描かない
-  // WebgApp.pushToast() は canvas HUD に描かれるので、保存画像内へ filename が写り込む
-  setMessage("screenshot requested");
 }
 
 // ------------------------------------------------------------

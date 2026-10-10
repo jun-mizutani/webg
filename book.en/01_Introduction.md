@@ -4,12 +4,12 @@ This chapter introduces the features available for building 3D applications with
 In webg 3.0, PBR (physically based rendering), procedural textures and materials, GPU physics, and compute-based effects share the same application structure as scenes, cameras, assets, input, UI, and diagnostics.
 By the end of this chapter, you should understand how these features fit together and know which chapters to read for the application you want to build.
 
-When starting an application, use the [Guide to Getting Started and Runnable Examples](../book/examples/guide.html) (`book/examples/guide.html`). This page helps you choose samples that match your goal. It lists a first example to run, code to read, an order for adding features, and points to check in the display and interaction. People and AI can follow the same guide to the same runnable examples. If an AI is reading the documentation, it can also use the Markdown version, [Guide to Getting Started and Runnable Examples](ExampleGuide.md).
+When starting an application, use the [Guide to Getting Started and Runnable Examples](../book/examples/guide.en.html) (`book/examples/guide.en.html`). This page helps you choose samples that match your goal. It lists a first example to run, code to read, an order for adding features, and points to check in the display and interaction. People and AI can follow the same guide to the same runnable examples. If an AI is reading the documentation, it can also use the Markdown version, [Guide to Getting Started and Runnable Examples](ExampleGuide.md).
 
 To grow a PBR scene into a game with movement, selection, and particles, read `PBRSceneToGame.md` and `samples/fantasy/`.
-The [supplementary browser guide](../book/examples/fantasy_guide.html) points to the functions to read and small experiments to try.
+The [supplementary guide](PBRSceneToGame.md) points to the functions to read and small experiments to try.
 
-To add water-surface reflection, refraction, and caustics to PBR, start with Chapter 35 and `samples/water/index.html`.
+To add water-surface reflection, refraction, and caustics to PBR, start with Chapter 35 and `samples/water/index.en.html`.
 For underwater lighting in a game, `samples/fantasy/` demonstrates how to apply these effects to a moving party and how to interact with the scene after switching them on and off.
 
 
@@ -129,9 +129,9 @@ Appendix A explains how to read the project and request help from an AI coding a
 When exploring `webg`, begin by understanding the file layout and the role of each directory.
 
 * `webg/` (core library): The library implementation, including `Screen`, `Space`, `Node`, `Shape`, and `WebgApp`.
-* `samples/` (learning samples): Samples for checking features and demonstrating applications. Each includes JavaScript implementation and runnable HTML, along with `README.md`, `README.en.md`, and an explanation page. Samples using SceneYAML or ModelYAML also include definition files; `samples/index.html` is the catalog.
+* `samples/` (learning samples): Samples for checking features and demonstrating applications. Each includes JavaScript implementation and runnable HTML, along with `README.md`, `README.en.md`, and an explanation page. Samples using SceneYAML or ModelYAML also include definition files; `samples/index.en.html` is the English catalog.
 * `unittest/` (unit tests): Test applications that isolate and check individual features. They are useful for narrowing down problems and checking behavior at a minimal scale.
-* `book/examples/` (book code examples): Runnable versions of code shown in this book. `index.html` lists the examples, and `guide.html` connects them with `samples/` by development goal.
+* `book/examples/` (book code examples): Runnable versions of code shown in this book. `index.en.html` lists the examples, and `guide.en.html` connects them with `samples/` by development goal.
 
 ## What you can build with webg
 

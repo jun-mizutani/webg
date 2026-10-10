@@ -9,7 +9,7 @@
 - WebgApp を入口にして、Screen、shader、Space、camera rig、InputController、Message をまとめて初期化します
 - README の最小例をそのまま確認しやすいように、camera 操作用として EyeRig(type="orbit") を加えています
 - object は毎 frame 自動回転しつつ、マウスドラッグ / ホイール / arrow key / [ ] と、タッチの 1本指ドラッグ / 2本指ドラッグ / pinch で camera を動かせるため、WebgApp で組んだ最小 3D app の感触をすぐ確認できます
-- S キーで WebgApp.takeScreenshot() を呼び、high_level_YYYYMMDD_HHMMSS.png 形式で canvas を保存できます
+- S キーで現在の canvas を保存し、Shift+S では720x540 pixelの画像を作成できます
 
 ## 実行方法
 - 実行ファイルは [./high_level.html](./high_level.html) です
@@ -35,3 +35,4 @@
 - arrow keys: orbit camera
 - [ / ]: zoom
 - S: screenshot 保存
+- Shift+S: 720x540 pixel の screenshot 保存

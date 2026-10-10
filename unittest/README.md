@@ -57,7 +57,6 @@ keyboard、pointer、touch、端末sensor、ブラウザAPIなどを人が操作
 - `particle_emitter`
 - `scene_loader_contracts`
 - `scene_mesh`
-- `procedural_pebbles`
 
 `scene_loader_contracts` は起動時contractに加えて、Scene JSONから構築したcrateの落下、停止、
 pause / resetを画面で確認できます。ページのURLは一覧から参照できます。

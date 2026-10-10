@@ -301,7 +301,7 @@ Select the chapter, sample, and automated check that match the layer being inves
 
 To understand integrated PBR, start with Chapter 30 for the meaning of materials, lights, IBL, and pre-integration, then use Chapters 31–33 and `book/examples/33_01.html` for the connection order. Chapter 29 covers procedural texture generation and real-world UV scale; Chapters 34–36 cover individual screen effects and performance. For transmission refraction, internal reflection, and ray-miss choices, see `samples/transmission`.
 
-Samples with similar names can compare rendering paths or compute locations. `bloom` versus its Compute version, `dof` versus its Compute version, and `physics_bounce` versus `compute_physics_bounce` are separate examples for those comparisons. `samples/README.md` describes the purpose and maintenance rationale for public Compute samples.
+Samples with similar names can compare rendering paths or compute locations. `bloom` versus its Compute version, `dof` versus its Compute version, and `physics_bounce` versus `compute_physics_bounce` are separate examples for those comparisons. `samples/README.en.md` describes the purpose and maintenance rationale for public Compute samples.
 
 ## How to Find an API
 

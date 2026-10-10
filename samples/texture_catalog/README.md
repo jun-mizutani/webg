@@ -74,10 +74,8 @@ Height／Normalを再利用する場合はPNGを選んでください。
 
 立方体はNormalで起伏を照明へ反映するため、輪郭は変位しません。
 実際の起伏へ光線を当てるアプリではHeightを復号し、高さ場の交差に使います。
-[設定と実装の詳細](../../docs/sample_development/procedural_pebbles.md)、
-[GPU検証](../../unittest/procedural_pebbles/index.html)も参照してください。
 
-![中心が高い石を敷き詰めた表示](pebbles_preview.png)
+![中心が高い石を敷き詰めた表示](pebbles_preview.jpg)
 
 ## 編集と出力
 

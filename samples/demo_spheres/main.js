@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// samples/demo_spheres/main.js  2026/07/25
+// samples/demo_spheres/main.js  2026/10/10
 //   demo_spheres sample
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -175,9 +175,23 @@ const start = async () => {
   // HUD や説明文の drag selection を妨げないよう、
   // pointerdown の既定抑止は canvas 上だけへ限定する
   input.setPointerPreventDefaultElement(screen.canvas);
+  // 代表画像を一定寸法で作るため、撮影する1フレームだけCanvasを960×720へ揃える
+  // 画像取得を開始した時点でviewport寸法へ戻し、表示中のCanvasと投影を保つ
+  const takeSampleScreenshot = () => {
+    const previousUseDevicePixelRatio = screen.useDevicePixelRatio;
+    screen.useDevicePixelRatio = false;
+    screen.resize(960, 720);
+    setProjection(screen, shader, 53);
+    screen.screenShot("demo_spheres.png", {
+      onSnapshot: () => {
+        screen.useDevicePixelRatio = previousUseDevicePixelRatio;
+        applyViewportLayout();
+      }
+    });
+  };
   const handleActionKey = (key) => {
     if (key === "q") quit = true;
-    else if (key === "p") screen.screenShot();
+    else if (key === "p") takeSampleScreenshot();
     else if (key === "w") eyeBase.rotateX(0.3 * SPEED);
     else if (key === "s") eyeBase.rotateX(-0.3 * SPEED);
     else if (key === "a") eyeBase.rotateY(0.3 * SPEED);

@@ -30,7 +30,7 @@ bodyType、mass、摩擦、反発を編集できます。物理を有効にす�
 
 ## 実装メモ
 
-main.jsは入力と履歴、scene_document.jsは原文と意味検証、mesh_edit.jsは頂点・面操作、scene_view.jsはPBR表示を担当します。GPU初期化は一度だけ行い、編集時はNodeとShapeを作り直します。メッシュ検証とShape生成はコアのSceneMesh.jsとPrimitiveScene.jsへ統一しています。node samples/edit_yaml/check_document.mjsでGPUを使わないデータ検証を実行できます。開発仕様はdocs/edit_yaml.mdに記載しています。
+main.jsは入力と履歴、scene_document.jsは原文と意味検証、mesh_edit.jsは頂点・面操作、scene_view.jsはPBR表示を担当します。GPU初期化は一度だけ行い、編集時はNodeとShapeを作り直します。メッシュ検証とShape生成はコアのSceneMesh.jsとPrimitiveScene.jsへ統一しています。node samples/edit_yaml/check_document.mjsでGPUを使わないデータ検証を実行できます。
 
 ## 衝突形状の確認と編集
 

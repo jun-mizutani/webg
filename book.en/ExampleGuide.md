@@ -1,6 +1,6 @@
 # Development Entry Points and Runnable Examples
 
-This guide connects application goals to runnable pages, code, and book chapters. Use it with the [browser guide](../book/examples/guide.html), which provides the same entry points and checkpoints in a browsable form.
+This guide connects application goals to runnable pages, code, and book chapters. Use it with the [browser guide](../book/examples/guide.en.html), which provides the same entry points and checkpoints in a browsable form.
 
 `book/examples/` contains compact runnable code for understanding a chapter. `samples/` contains comparisons, model loading, editing tools, games, and applications that combine multiple features. Use book examples to learn one feature, and samples to see how features work together in an application.
 
@@ -19,6 +19,10 @@ python3 -m http.server 8000
 ```
 
 Open `http://localhost:8000/book/examples/04_02.html`. Check the cube, its rotation, orbiting by dragging, and zooming with the wheel. Chapter 2 explains serving requirements; Chapter 4 explains the full HTML and where it lives.
+
+For shared prerequisites, read [Chapter 2: Runtime](02_Runtime.md), [Chapter 3: Space Basics](03_SpaceBasics.md), and [Chapter 4: Minimal Rendering](04_MinimalRender.md). Then choose an entry point below.
+
+For shared prerequisites, read [Chapter 2: Runtime](02_Runtime.md), [Chapter 3: Space Basics](03_SpaceBasics.md), and [Chapter 4: Minimal Rendering](04_MinimalRender.md). Then choose an entry point below.
 
 ## 2. Choose an Entry Point for Your Application
 
@@ -50,7 +54,7 @@ Choose between defining scene placement, materials, physics, and rendering in Sc
 
 For PBR alone, start with SceneYAML `renderer` and `materials`. Read Chapters 31–33 when you need to control rendering order or individual passes with `ComputeEffectPipeline`.
 
-To add water and caustics to PBR, use `samples/water/index.html` to reach `samples/water/water.html`, then read Chapter 35. It demonstrates receiver registration, shared waves, independent toggles, and GPU-resource release. Chapter 35 also covers wave height, wavelength, speed, RGB absorption, and draw order for transparent surfaces, particles, and post-processing. To apply the feature to gameplay, open `samples/fantasy/fantasy.html` and `connectWater()` in `samples/fantasy/main.js`.
+To add water and caustics to PBR, use `samples/water/index.en.html` to reach `samples/water/water.html`, then read Chapter 35. It demonstrates `WaterBody` receiver registration, shared waves, independent surface and caustics toggles, and GPU-resource release. Chapter 35 also covers wave height, wavelength, speed, RGB absorption, and draw order for transparent surfaces, particles, and post-processing. To apply the feature to gameplay, open `samples/fantasy/fantasy.html` and `connectWater()` in `samples/fantasy/main.js`. Compare the caustics and surface toggles separately; the fantasy sample keeps the battlefield readable with underwater lighting and fog while its water surface is disabled.
 
 ## 3. Read the Starting Code
 
@@ -75,13 +79,13 @@ For an external model hierarchy, continue to [`scene_model_yaml`'s code](../samp
 
 ### Build Game Progression
 
-Read the [`breakout` guide](../samples/breakout/README.md) for controls and states, then inspect [`main.js`](../samples/breakout/main.js) for state transitions, `registerActionMap()`, `onUpdate`, the HUD, and restart. It is a complete game with title, play, pause, and result states, and demonstrates combining 3D rendering with game rules.
+Read the [`breakout` guide](../samples/breakout/README.en.md) for controls and states, then inspect [`main.js`](../samples/breakout/main.js) for state transitions, `registerActionMap()`, `onUpdate`, the HUD, and restart. It is a complete game with title, play, pause, and result states, and demonstrates combining 3D rendering with game rules.
 
 `GameStateManager` is [application-side shared sample code](../samples/GameStateManager.js), not a core `webg` API. Narrow the states and controls needed by your application before adapting a larger sample.
 
 ### Go from a PBR Scene to a Small Game
 
-Use `samples/fantasy/` for a game that moves and attacks on a map with elevation. Run `samples/fantasy/fantasy.html`; find controls and reading order in `samples/fantasy/README.md`; use `samples/fantasy/index.html` for the browser overview.
+Use `samples/fantasy/` for a game that moves and attacks on a map with elevation. Run `samples/fantasy/fantasy.html`; find controls and reading order in `samples/fantasy/README.en.md`; use `samples/fantasy/index.en.html` for the browser overview.
 
 [From a PBR Scene to a Small Game](PBRSceneToGame.md) maps direct Shape materials, updates to added Nodes, screen-space picking, resizing, and the lifetime of particles and resources to functions in the sample. Start at `main.js`'s `start()`, then read `scene.js`, `visuals.js`, `move()` and `updateMotion()`, `pickTile()`, and `FantasyApp.js`.
 
@@ -146,7 +150,7 @@ Each entry connects a focused example to an application sample and gives a concr
   - Small example → application example: Sphere and Plane → [`27_02`](../book/examples/27_02.html)
   - Chapters and checkpoint: Chs. 9 and 27–28: use the high-level path first; use 27_02 to inspect readback and Node synchronization
 - **Direct GPU physics rendering and comparison**
-  - Small example → application example: [`27_03`](../book/examples/27_03.html) → [`compute_physics`](../samples/compute_physics/compute_physics.html), [`falling_box`](../samples/falling_box/README.md), [`joint`](../samples/joint/README.md)
+  - Small example → application example: [`27_03`](../book/examples/27_03.html) → [`compute_physics`](../samples/compute_physics/compute_physics.html), [`falling_box`](../samples/falling_box/README.en.md), [`joint`](../samples/joint/README.en.md)
   - Chapters and checkpoint: Chs. 27–28 and 42: distinguish direct GPU state rendering from CPU readback; choose the Joint page by method
 - **Procedural materials and real-world UV scale**
   - Small example → application example: [`29_01`](../book/examples/29_01.html) → [`texture_catalog`](../samples/texture_catalog/texture_catalog.html)
@@ -177,25 +181,25 @@ Each entry connects a focused example to an application sample and gives a concr
 
 Read a larger example after finding the minimal API for each feature. Choose one close to your application and inspect how scene configuration, application updates, input, and UI work together.
 
-For water, use `samples/water/index.html` to compare settings and toggles, and `samples/fantasy/index.html` to see water added to an existing game. First understand receivers and waves in the water sample; then follow their connection to movement, particles, input locking, and restart in Fantasy.
+For water, use `samples/water/index.en.html` to compare settings and toggles, and `samples/fantasy/index.en.html` to see water added to an existing game. First understand receivers and waves in the water sample; then follow their connection to movement, particles, input locking, and restart in Fantasy.
 
-- **[`breakout`](../samples/breakout/README.md), [`cube4`](../samples/cube4/README.md)**
+- **[`breakout`](../samples/breakout/README.en.md), [`cube4`](../samples/cube4/README.en.md)**
   - What to study: Game states, input, score, HUD, restart; cube4 adds a 3D board and camera-relative controls
-- **[`janken`](../samples/janken/README.md)**
+- **[`janken`](../samples/janken/README.en.md)**
   - What to study: Two placements share a model but have independent animation, connected to input and match results
-- **[`circular_breaker`](../samples/circular_breaker/README.md), [`circular_breaker2`](../samples/circular_breaker2/README.md)**
+- **[`circular_breaker`](../samples/circular_breaker/README.en.md), [`circular_breaker2`](../samples/circular_breaker2/README.en.md)**
   - What to study: Directly assembled game versus SceneYAML/ModelYAML with PBR
-- **[`maze`](../samples/maze/README.md), [`maze2`](../samples/maze2/README.md)**
+- **[`maze`](../samples/maze/README.en.md), [`maze2`](../samples/maze2/README.en.md)**
   - What to study: First-person movement, generated walls and collision, radar, lighting and screen effects; inspect game-side wall collision
-- **[`lumen`](../samples/lumen/README.md), [`neon_coaster`](../samples/neon_coaster/README.md), [`void_strike`](../samples/void_strike/README.md)**
+- **[`lumen`](../samples/lumen/README.en.md), [`neon_coaster`](../samples/neon_coaster/README.en.md), [`void_strike`](../samples/void_strike/README.en.md)**
   - What to study: High-level application use, repeated showcase motion, follow camera, shooting, and particles
-- **[`project_app`](../samples/project_app/README.md)**
+- **[`project_app`](../samples/project_app/README.en.md)**
   - What to study: Extend Sphere and Plane through joints, object sets, variants, and authoring scenes
-- **[`edit_yaml`](../samples/edit_yaml/README.md), [`mmodeler`](../samples/mmodeler/README.md), [`karakuri`](../samples/karakuri/README.md)**
+- **[`edit_yaml`](../samples/edit_yaml/README.en.md), [`mmodeler`](../samples/mmodeler/README.en.md), [`karakuri`](../samples/karakuri/README.en.md)**
   - What to study: Editing state, selection, undo/redo, save/load, and division between authoring and runtime
-- **[`compute_json`](../samples/compute_json/README.md)**
+- **[`compute_json`](../samples/compute_json/README.en.md)**
   - What to study: Display an animated `ModelAsset` JSON and connect screen effects manually
-- **[`compute_cloth`](../samples/compute_cloth/README.md), [`compute_texture`](../samples/compute_texture/README.md)**
+- **[`compute_cloth`](../samples/compute_cloth/README.en.md), [`compute_texture`](../samples/compute_texture/README.en.md)**
   - What to study: Update buffers and textures with custom WGSL; distinguish these from standard rigid-body physics and particles
 
 ## 6. Adapt an Example to Your Application
@@ -217,4 +221,4 @@ Find a class in the [API catalog](Appendix_D_API.md), then read its chapter and 
 
 Use `headless_tests/` for API contracts and calculations, and `unittest/` for small browser checks. Static link/import presence, absence of runtime exceptions, and the intended visible result are separate checks. Report only the checks that were actually completed.
 
-The overall indexes are [book examples](../book/examples/index.html) and [samples](../samples/index.html).
+The overall indexes are [book examples](../book/examples/index.en.html) and [samples](../samples/index.en.html).

@@ -35,5 +35,3 @@ app.start();
 `.yaml.gz`／`.yml.gz`／`.json.gz`はgzip展開後に同じ読込み経路へ渡します。`index.js`の`compressSceneYAML(text)`は、原文をgzip圧縮した`Promise<Blob>`を返します。Blenderでの往復編集は[SceneYAMLアドオン](../../blender_addon/README.md)を参照してください。
 
 ModelAsset／SceneAssetの外部材質manifestは、`pbr`、`preset`、`textures`のいずれかを選べます。`textures`では`textures.colorUrl`と`textures.normalUrl`から保存済み画像を読み込み、`appearance`のPBR値と合わせてShapeへ適用します。
-
-詳しい仕様は[`docs/webg_scene_app.md`](../../docs/webg_scene_app.md)、最初のアプリの作り方は[`docs/webg_scene_app_guide.md`](../../docs/webg_scene_app_guide.md)を参照してください。

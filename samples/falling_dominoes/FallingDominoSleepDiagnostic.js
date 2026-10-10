@@ -1,11 +1,11 @@
 // ---------------------------------------------
-// samples/falling_dominoes/FallingDominoSleepDiagnostic.js  2026/09/13
+// FallingDominoSleepDiagnostic.js  2026/10/10
 //   falling_dominoes専用のsleep・接触連鎖診断
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // ---------------------------------------------
 
-import { buildComputePhysicsStateDiagnostics } from "../../user/dev_core/ComputePhysicsDiagnostics.js";
+import { buildComputePhysicsStateDiagnostics } from "./ComputePhysicsStateDiagnostics.js";
 
 const READBACK_FRAME_INTERVAL = 1;
 

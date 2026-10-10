@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// unittest/embedded/main.js  2026/10/04
+// unittest/embedded/main.js  2026/10/10
 //   embedded unittest
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -348,7 +348,6 @@ const updateExternalStatus = (app, helpPanel, state) => {
     `dialogueActive: ${state.dialogueOverlay.isActive() ? "yes" : "no"}`,
     `fixedVisible: ${state.fixedPanelVisible ? "yes" : "no"}`,
     `touchVisible: ${app.input?.touch?.root ? "yes" : "no"}`,
-    `lastShot: ${state.lastScreenshot || "-"}`,
     "keys: H help  D dialogue  F fixed  S shot  R reset  1/2/3 scroll"
   ].join("\n");
 };
@@ -373,11 +372,10 @@ const handleFrameActions = (app, helpPanel, orbit, state) => {
     toggleFixedPanel(app, state);
   }
   if (app.wasActionPressed("capture")) {
-    state.lastScreenshot = app.takeScreenshot({
-      prefix: "embedded_test"
-    });
-    app.pushToast(`saved ${state.lastScreenshot}`, {
-      duration: 1.2
+    app.takeScreenshot({
+      prefix: "embedded_test",
+      width: 960,
+      height: 720
     });
   }
   if (app.wasActionPressed("reset")) {
@@ -518,7 +516,6 @@ const start = async () => {
     spinPhase: 0.0,
     fixedPanelVisible: false,
     fixedPanelNode: null,
-    lastScreenshot: "",
     dialogueOverlay
   };
 

@@ -93,7 +93,7 @@ main { width: min(1180px, calc(100% - 32px)); margin: 0 auto; padding: 32px 0 64
   <section class="guide" aria-labelledby="guide-title">
     <h2 id="guide-title">unittestの位置付け</h2>
     <p><strong>実行</strong>で確認画面を開き、<strong>説明を読む</strong>で目的、使用機能、操作方法、期待結果をHTMLで表示します。説明原文は各説明ページから保存できます。固定した条件で挙動を確かめる用途に利用できます。</p>
-    <p>利用者向けの完成した例は<a href="../samples/index.html">samples一覧</a>、book本文の実行例は<a href="../book/examples/index.html">book examples一覧</a>、Node.jsで自動実行する規約確認は<a href="../headless_tests/README.md" download>headless_tests/README.md</a>を参照してください。</p>
+    <p>利用者向けの完成した例は<a href="../samples/index.html">samples一覧</a>、book本文の実行例は<a href="../book/examples/index.html">book examples一覧</a>、Node.jsで自動実行する規約確認は<a href="../headless_tests/README.md" download>headless_tests/README.md</a>を参照してください。<a href="../headless_tests/README.en.md" download>English guide</a></p>
     <p><code>unittest/shared</code>は、各テストの初期化や固定した形状の準備を担当する共通コードです。一覧には実行ページを掲載しています。</p>
   </section>
 
@@ -192,7 +192,6 @@ const categories = [
     summary: '3D描画を支えるブラウザー標準APIと、保存・転送用データの処理を独立して確認します。',
     items: [
       ['compression', 'Compression Streams APIでModelAsset JSONをgzip圧縮・復元し、byte数、圧縮率、元文字列との完全一致を確認します。'],
-      ['procedural_pebbles', '石粒パターンのGPU Color・HeightをCPU参照値と比較し、色と高さの独立性、丸み、敷き詰め、周期端の法線を確認します。']
     ]
   }
 ];

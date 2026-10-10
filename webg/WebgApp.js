@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// WebgApp.js     2026/09/13
+// WebgApp.js     2026/10/10
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // ---------------------------------------------
@@ -264,6 +264,9 @@ export default class WebgApp {
     this.modelRuntime = null;
     this.sceneRuntime = null;
     this.frameTimer = null;
+    // サイズ指定付きスクリーンショットの一時canvas設定を保持し、撮影開始後に通常配置へ戻す
+    this.screenshotCanvasSize = null;
+    this.screenshotCanvasRestoreState = null;
   }
 
   // 利用側のGPU feature指定を維持し、frame計測時だけtimestamp-queryをoptionalへ追加する
@@ -1311,7 +1314,9 @@ export default class WebgApp {
     const reservedWidth = !this.isEmbeddedLayout() && this.isDebugDockActive()
       ? this.debugDock.reserveWidth + this.debugDock.gap
       : 0;
-    const hasFixedCanvasSize = !!this.fixedCanvasSize;
+    // 撮影中は出力寸法を優先し、撮影完了後は通常の固定寸法またはviewportへ戻す
+    const activeCanvasSize = this.screenshotCanvasSize ?? this.fixedCanvasSize;
+    const hasFixedCanvasSize = !!activeCanvasSize;
     const embeddedWidth = this.selectLayoutDimension([
       { value: this.screen?.displayWidth, label: "screen.displayWidth" },
       { value: this.screen?.requestedWidth, label: "screen.requestedWidth" },
@@ -1325,12 +1330,12 @@ export default class WebgApp {
       { value: 720, label: "defaultEmbeddedHeight" }
     ], "embedded height");
     const width = hasFixedCanvasSize
-      ? this.fixedCanvasSize.width
+      ? activeCanvasSize.width
       : (this.isEmbeddedLayout()
         ? embeddedWidth
         : Math.max(1, Math.floor(window.innerWidth - reservedWidth)));
     const height = hasFixedCanvasSize
-      ? this.fixedCanvasSize.height
+      ? activeCanvasSize.height
       : (this.isEmbeddedLayout()
         ? embeddedHeight
         : Math.max(1, Math.floor(window.innerHeight)));
@@ -2615,14 +2620,91 @@ export default class WebgApp {
     return `${prefix}_${this.formatScreenshotTimestamp(date)}.${extension}`;
   }
 
-  // 現在の canvas 内容を次の present 後に PNG として保存するよう予約する
-  // sample 側は Screen の内部 API を直接たどらず、WebgApp の高レベル入口だけで保存名まで扱える
+  // スクリーンショットの出力寸法を検証し、指定がある場合に整数pixelへそろえる
+  // widthとheightを組で受け取り、DPRを掛けない出力pixel数として扱う
+  normalizeScreenshotCanvasSize(options) {
+    const hasWidth = options.width !== undefined;
+    const hasHeight = options.height !== undefined;
+    if (!hasWidth && !hasHeight) {
+      return null;
+    }
+    if (hasWidth !== hasHeight) {
+      throw new Error("WebgApp screenshot width and height must be specified together");
+    }
+    if (!Number.isFinite(options.width) || Number(options.width) <= 0) {
+      throw new Error("WebgApp screenshot width must be a positive finite number");
+    }
+    if (!Number.isFinite(options.height) || Number(options.height) <= 0) {
+      throw new Error("WebgApp screenshot height must be a positive finite number");
+    }
+    const width = Math.floor(Number(options.width));
+    const height = Math.floor(Number(options.height));
+    if (width < 1 || height < 1) {
+      throw new Error("WebgApp screenshot width and height must be at least one pixel");
+    }
+    return { width, height, useDevicePixelRatio: false };
+  }
+
+  // サイズ指定付き撮影のcanvasとcamera projectionを元のlayoutへ戻す
+  // Screenは画像bitmapの取得開始後にcallbackを呼ぶため、その時点で画面表示を復帰できる
+  restoreScreenshotCanvasSize(cancelCapture = false) {
+    const previousState = this.screenshotCanvasRestoreState;
+    if (!previousState) {
+      return false;
+    }
+    this.screenshotCanvasRestoreState = null;
+    this.screenshotCanvasSize = null;
+    if (cancelCapture) {
+      this.screen?.cancelScreenshot?.();
+    }
+    if (this.screen) {
+      this.screen.fitToViewport = previousState.fitToViewport;
+      this.screen.useDevicePixelRatio = previousState.useDevicePixelRatio;
+      this.applyViewportLayout();
+    }
+    if (this.running) {
+      this.requestRender();
+    }
+    return true;
+  }
+
+  // 現在のcanvas内容を次のpresent後にPNGとして保存する
+  // widthとheightを指定するとそのpixel寸法で1 frame描画し、画像取得開始後に画面を元の寸法へ戻す
   takeScreenshot(options = {}) {
     if (!this.screen?.screenShot) {
       throw new Error("WebgApp must be initialized before taking a screenshot");
     }
     const filename = this.resolveScreenshotFilename(options);
-    this.screen.screenShot(filename);
+    if (this.screenshotCanvasRestoreState) {
+      throw new Error("WebgApp can capture only one screenshot at a time");
+    }
+    const canvasSize = options && typeof options === "object"
+      ? this.normalizeScreenshotCanvasSize(options)
+      : null;
+    if (!canvasSize) {
+      this.screen.screenShot(filename);
+      return filename;
+    }
+    if (this.screen.captureRequested) {
+      throw new Error("WebgApp can capture only one screenshot at a time");
+    }
+    this.screenshotCanvasRestoreState = {
+      fitToViewport: this.screen.fitToViewport,
+      useDevicePixelRatio: this.screen.useDevicePixelRatio
+    };
+    this.screenshotCanvasSize = canvasSize;
+    try {
+      this.screen.fitToViewport = false;
+      this.screen.useDevicePixelRatio = false;
+      this.applyViewportLayout();
+      this.screen.screenShot(filename, {
+        onSnapshot: () => this.restoreScreenshotCanvasSize()
+      });
+      this.requestRender();
+    } catch (error) {
+      this.restoreScreenshotCanvasSize(true);
+      throw error;
+    }
     return filename;
   }
 
@@ -3311,6 +3393,7 @@ export default class WebgApp {
   stop() {
     this.running = false;
     this._frameScheduled = false;
+    this.restoreScreenshotCanvasSize(true);
   }
 
   // 現在の page 状態で frame loop を pause すべきかを返す
@@ -3390,7 +3473,7 @@ export default class WebgApp {
     if (this.handlers.onUpdate) {
       const shouldStop = this.handlers.onUpdate(ctx);
       if (shouldStop === true) {
-        this.running = false;
+        this.stop();
         this.frameTimer?.endFrame();
         return;
       }

@@ -279,7 +279,6 @@ Unit tests are organized by responsibility:
 
 - `headless_tests/core/physics_node`: checks the standalone `PhysicsNode` API contract.
 - `headless_tests/core/physics_space`: checks gravity, fixed time steps, contacts, queries, sleeping, layer masks, and related features.
-- `user/joint/core_test.js`: independently checks four CPU XPBD Joint types, position correction, contact suppression, and body-removal rules.
 - `unittest/physics_node_fall`: visually checks a box falling and settling on the floor.
 - `unittest/physics_node_rotate`: visually checks angular velocity, torque, and fixed rotation (`fixedRotation`).
 - `samples/physics_bounce`: a public sample with balls bouncing against floors, walls, and one another; use it to see restitution and interactions, or check load with `?count=1000`.

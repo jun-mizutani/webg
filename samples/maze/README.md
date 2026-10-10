@@ -14,8 +14,6 @@
 
 レーダーは `walk_around` と同じ heading-up 方式で、現在位置近くの collision segment を右上の 2D canvas へ重ね表示します。door の上部 lintel はプレイヤー円柱の高さ範囲と重ならないため、衝突対象にもレーダー表示にも含まれません。door の左右 jamb は歩行者に対する衝突対象として残ります。
 
-迷路生成、部屋、扉、衝突判定、レーダーの詳しい規則は[maze_spec.md](./maze_spec.md)に記載しています。
-
 ## 実行方法
 
 - 実行ファイルは `./maze.html` です
@@ -66,6 +64,5 @@
 - `main.js`: 迷路生成、first-person 移動、Compute Effect、レーダーの実装
 - `CollisionWorld.js`: XZ 平面の円柱プレイヤー用 collision world
 - `WalkCollisionBuilder.js`: wall shape から collision segment を抽出する helper
-- `maze_spec.md`: 迷路生成、部屋、扉、衝突判定、レーダーの詳細仕様
 - `README.md`: 日本語の説明
 - `README.en.md`: 英語の説明

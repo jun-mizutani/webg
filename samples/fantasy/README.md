@@ -87,9 +87,9 @@ ON/OFF時は`sceneApp.stop()`で新しいframeを止め、`setWater()`の準備�
 
 一つ変更するごとに上の確認ポイントを試します。材質、ルール、表示速度、効果を同時に変えない方が、結果の原因を判断しやすくなります。
 
-## 文書と自動確認
+## 自動確認
 
-[fantasy_design.md](fantasy_design.md)はゲームの設計と機能の範囲です。`camera_reference.json`には初期視点の参照値を保存しています。[bookの「PBRシーンから小さなゲームへ」](../../book/examples/fantasy_guide.html)と併せると、単機能の例からこの構成へ進む境界を確認できます。
+`camera_reference.json`には初期視点の参照値を保存しています。[bookの「PBRシーンから小さなゲームへ」](../../book/examples/fantasy_guide.html)と併せると、単機能の例からこの構成へ進む境界を確認できます。
 
 リポジトリのルートから次を実行すると、GPUを使わず地形・経路・占有・射程・敵の計画・勝敗を確認できます。描画と操作はブラウザで別に確認します。
 

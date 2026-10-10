@@ -384,7 +384,6 @@ SceneYAMLを拡張するときは、次の順で確認します。
 - `samples/project_app/project_app_physics.html`: 外部材質、Compute physics、SceneYAMLの組合せ
 - `samples/project_app/scene_animation.html`: object IDを対象にした位置・Quaternion animation
 - `samples/edit_yaml/edit_yaml.html`: SceneYAMLの配置、材質、物理、inline meshを編集する画面
-- `docs/scene_yaml_model_asset_definition.md`: SceneYAML、ModelAsset、SceneAssetの正式な定義
 
 ## PBRシーンから小さなゲームへ進む
 

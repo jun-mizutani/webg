@@ -14,7 +14,7 @@ http://localhost:8765/samples/joint/joint_compute.html
 http://localhost:8765/samples/joint/joint_compute_node.html
 ```
 
-Detailed descriptions are available in [joint_cpu_node.md](./joint_cpu_node.md), [joint_compute.md](./joint_compute.md), [joint_compute_node.md](./joint_compute_node.md), and their English counterparts
+Detailed English descriptions are available in [joint_cpu_node.en.md](./joint_cpu_node.en.md), [joint_compute.en.md](./joint_compute.en.md), and [joint_compute_node.en.md](./joint_compute_node.en.md). Japanese versions are available in [joint_cpu_node.md (Japanese)](./joint_cpu_node.md), [joint_compute.md (Japanese)](./joint_compute.md), and [joint_compute_node.md (Japanese)](./joint_compute_node.md)
 
 ## Three rendering paths
 

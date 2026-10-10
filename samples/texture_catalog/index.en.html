@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>texture_catalog</title>
   <link rel="icon" href="data:," />
-  <!-- 2026/06/19 -->
+  <!-- 2026/10/10 -->
   <style>
 
 :root {
@@ -198,8 +198,8 @@ oak.applyTo(shape);</code></pre>
   } }
 });
 stones.applyTo(shape);</code></pre>
-<p>The previews show Color, Height and Normal in that order. Height is normalized to the material's<br /><code>heightRangeMeters</code>; check the displayed <code>Height range</code> when decoding the downloaded Height image.<br />Use PNG when reusing Height or Normal maps. The cube uses normal mapping and retains its geometric outline.<br />Applications that need actual relief must decode Height and intersect the resulting height field.<br />See the <a href="../../docs/sample_development/procedural_pebbles.md">implementation notes</a> and<br /><a href="../../unittest/procedural_pebbles/index.html">GPU validation</a>.</p>
-<p><img src="pebbles_preview.png" alt="Densely packed pebbles with raised centers" /></p>
+<p>The previews show Color, Height and Normal in that order. Height is normalized to the material's<br /><code>heightRangeMeters</code>; check the displayed <code>Height range</code> when decoding the downloaded Height image.<br />Use PNG when reusing Height or Normal maps. The cube uses normal mapping and retains its geometric outline.<br />Applications that need actual relief must decode Height and intersect the resulting height field.</p>
+<p><img src="pebbles_preview.jpg" alt="Densely packed pebbles with raised centers" /></p>
 <h2>Editing and exporting</h2>
 <p>The editor exposes resolution, base/dirt/joint colors, tile-to-tile color variation, physical unit dimensions, long-axis direction, variation-cell counts, joints, layout, pattern, surface detail, random seed, roughness, specular, metallic, and Normal strength. <code>Thickness m</code> is saved in the definition as a reference dimension for the material, but it is not used by procedural texture generation. Changes immediately update both the displayed code and the GPU textures. <code>Generate</code> or the <code>G</code> key manually rebuilds the same definition.</p>
 <p><code>Definition metadata</code> exposes editable <code>Material ID</code>, <code>Category</code>, Japanese and English <code>Label</code>, and <code>Tile preset ID</code> fields. The first <code>Category</code> field filters the existing preset list; the <code>Category</code> field under Definition metadata is the category saved in the exported definition. Select an existing preset first, then change these values to create a separate material definition based on the same tile and appearance settings.</p>

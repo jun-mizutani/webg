@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// samples/cube4/main.js  2026/09/20
+// samples/cube4/main.js  2026/10/10
 //   cube4
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -1530,9 +1530,8 @@ const handleGameKey = (runtime, key, options = {}) => {
     return;
   }
   if (key === "k" && !repeat) {
-    const file = app.takeScreenshot({ prefix: "cube4" });
+    app.takeScreenshot({ prefix: "cube4", width: 960, height: 720 });
     playSe("coin");
-    app.pushToast(`screenshot: ${file}`, { durationMs: 1400 });
     return;
   }
   if (key === "b" && !repeat) {

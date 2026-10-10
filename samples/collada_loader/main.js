@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// samples/collada_loader/main.js  2026/07/25
+// samples/collada_loader/main.js  2026/10/10
 //   collada_loader sample
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -54,7 +54,6 @@ let viewerSize = {
   centerz: 0.0,
   max: 10.0
 };
-let screenshotName = "";
 let wireframe = false;
 let palette = null;
 let lastHelpText = "";
@@ -168,14 +167,12 @@ function stepOrbitByButtons({ yaw = 0.0, pitch = 0.0, zoom = 1.0 } = {}) {
   syncOrbitStateToAppCamera();
 }
 
-// `takeViewerScreenshot`は現在のキャンバス画像を取得し、指定形式で保存する
+// Canvasを960×720 pixelで描画し、sample紹介用の標準寸法で保存する
 function takeViewerScreenshot() {
-  const file = app.takeScreenshot({
-    prefix: "collada_view"
-  });
-  screenshotName = file;
-  app.pushToast(`saved ${file}`, {
-    durationMs: 1400
+  app.takeScreenshot({
+    prefix: "collada_view",
+    width: 960,
+    height: 720
   });
 }
 
@@ -286,7 +283,7 @@ function buildStatusLines() {
     `Target: ${orbit.orbit.target[0].toFixed(2)}, ${orbit.orbit.target[1].toFixed(2)}, ${orbit.orbit.target[2].toFixed(2)}  panStep=${getPanUnit().toFixed(3)}`,
     `Animation: ${selectedState.label}  globalPause=${paused ? "on" : "off"}  bound=${clipBound ? "yes" : "no"}`,
     `Clip0: ${clipInfo?.id ?? "-"}`,
-    `Wireframe: ${wireframe ? "on" : "off"}  screenshot=${screenshotName || "-"}`
+    `Wireframe: ${wireframe ? "on" : "off"}`
   ];
 }
 

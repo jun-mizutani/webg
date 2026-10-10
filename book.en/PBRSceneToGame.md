@@ -4,7 +4,7 @@ After learning PBR, `Node`, selection, and particles from small feature examples
 
 ## Choose a Runnable Page and Reading Order
 
-Serve the repository over HTTP and open `samples/fantasy/fantasy.html`, for example `http://localhost:8000/samples/fantasy/fantasy.html`. Controls and checkpoints are in `samples/fantasy/README.md`; the browser introduction is `samples/fantasy/index.html`.
+Serve the repository over HTTP and open `samples/fantasy/fantasy.html`, for example `http://localhost:8000/samples/fantasy/fantasy.html`. Controls and checkpoints are in `samples/fantasy/README.en.md`; the browser introduction is `samples/fantasy/index.en.html`.
 
 Select Rio and move to a blue tile, then select another ally. Confirm that input pauses during movement and that attack choices appear after arrival. Next try the enemy turn, HP changes, and restart. This is also the order in which the corresponding behavior appears in the code. Toggle “Underwater Caustics” in the right panel: the game state remains available while caustics are off, and moving light patterns return on terrain when enabled.
 

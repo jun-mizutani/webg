@@ -77,7 +77,6 @@ node headless_tests/core/pbr_environment_compute/headless_probe.js
 node headless_tests/core/pbr_environment_cache/headless_probe.js
 node headless_tests/core/pbr_environment_debug_pass/headless_probe.js
 node headless_tests/core/pbr_environment_evaluation/headless_probe.js
-node user/pbr_environment_asset/generate_pbr_environment_test.mjs
 ```
 
 透明forward shaderは、GGX直接光、base colorとnormal、metallic-roughness、occlusion、独立HDR emissive、texture alpha、IBL、directional／spot shadow、point／cone lightを扱います。局所光はDeferredと同じ相対減衰または逆二乗減衰を使います。occlusionは直接光と発光には掛けず、IBLの間接光だけを弱めます。shadowは不透明G-buffer位置のscreen-space visibilityを流用せず、透明fragmentのview-space位置からshadow mapをPCF参照します。`SmoothShader`には派生shaderが材質textureと追加Bind Groupを拡張するhookを加え、標準SmoothShaderのlayoutと表示はそのまま使います。

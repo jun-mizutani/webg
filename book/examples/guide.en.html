@@ -1,0 +1,290 @@
+<!doctype html>
+<!-- book/examples/guide.en.html 2026/10/10: English browser guide generated from book.en/ExampleGuide.md -->
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <base href="../../book.en/">
+  <title>Development Entry Points and Runnable Examples | webg</title>
+  <link rel="stylesheet" href="../book/examples/examples_common.css">
+</head>
+<body class="example-guide">
+  <main>
+    <nav aria-label="Documentation navigation">
+      <a href="../book/examples/index.en.html">Book examples</a>
+      <a href="../samples/index.en.html">Sample catalog</a>
+      <a href="../book/examples/guide.html" lang="ja">日本語</a>
+      <a href="ExampleGuide.md" download>Download the Markdown guide</a>
+    </nav>
+<h1 id="development-entry-points-and-runnable-examples">Development Entry Points and Runnable Examples</h1>
+<p>This guide connects application goals to runnable pages, code, and book chapters. Use it with the <a href="../book/examples/guide.en.html">browser guide</a>, which provides the same entry points and checkpoints in a browsable form.</p>
+<p><code>book/examples/</code> contains compact runnable code for understanding a chapter. <code>samples/</code> contains comparisons, model loading, editing tools, games, and applications that combine multiple features. Use book examples to learn one feature, and samples to see how features work together in an application.</p>
+<p>To use <code>lib/webg.core.min.js</code>, start with “Load the Bundled Library” in Chapter 2. Chapter 4 shows the import replacement for the same minimal example. <a href="Appendix_C_Bundle.md">Appendix C</a> covers sample conversion. The class and method descriptions in this book apply to both loading methods.</p>
+<h2 id="1-run-one-example-first">1. Run One Example First</h2>
+<p>Serve the repository root over HTTP:</p>
+<pre class="sh"><code>python3 -m http.server 8000</code></pre>
+<p>Open <code>http://localhost:8000/book/examples/04_02.html</code>. Check the cube, its rotation, orbiting by dragging, and zooming with the wheel. Chapter 2 explains serving requirements; Chapter 4 explains the full HTML and where it lives.</p>
+<p>For shared prerequisites, read <a href="02_Runtime.md">Chapter 2: Runtime</a>, <a href="03_SpaceBasics.md">Chapter 3: Space Basics</a>, and <a href="04_MinimalRender.md">Chapter 4: Minimal Rendering</a>. Then choose an entry point below.</p>
+<p>For shared prerequisites, read <a href="02_Runtime.md">Chapter 2: Runtime</a>, <a href="03_SpaceBasics.md">Chapter 3: Space Basics</a>, and <a href="04_MinimalRender.md">Chapter 4: Minimal Rendering</a>. Then choose an entry point below.</p>
+<h2 id="2-choose-an-entry-point-for-your-application">2. Choose an Entry Point for Your Application</h2>
+<ul>
+<li><strong>Place shapes and move them with input</strong>
+<ul>
+<li>Runnable starting points: <a href="../book/examples/04_02.html"><code>04_02</code></a> → <a href="../samples/high_level/high_level.html"><code>high_level</code></a></li>
+<li>Main entry point and first chapters: <code>WebgApp</code>; Chapters 4–6; place updates in <code>onUpdate</code></li>
+</ul></li>
+<li><strong>Display a GLB model</strong>
+<ul>
+<li>Runnable starting points: <a href="../samples/gltf_loader/gltf_loader.html"><code>gltf_loader</code></a> → <a href="../samples/embedded_glb_viewer/embedded_glb_viewer.html"><code>embedded_glb_viewer</code></a></li>
+<li>Main entry point and first chapters: <code>WebgApp.loadModel()</code>; Chapter 8; the second example supports file selection, model replacement, and embedding</li>
+</ul></li>
+<li><strong>Define placement, PBR, and physics as documents</strong>
+<ul>
+<li>Runnable starting points: <a href="../samples/project_app/project_app_sphere_plane.html">Sphere and Plane</a> → <a href="../samples/scene_model_yaml/scene_model_yaml.html"><code>scene_model_yaml</code></a></li>
+<li>Main entry point and first chapters: SceneYAML and <code>createWebgSceneApp()</code>; Chapter 9, then Chapter 8 for external models</li>
+</ul></li>
+<li><strong>Make a game with input, score, start, pause, and restart</strong>
+<ul>
+<li>Runnable starting points: <a href="../samples/breakout/breakout.html"><code>breakout</code></a></li>
+<li>Main entry point and first chapters: <code>WebgApp</code> with application-side game state; Chapters 5 and 12–16</li>
+</ul></li>
+<li><strong>Combine PBR, physics, particles, and sound in a showcase</strong>
+<ul>
+<li>Runnable starting points: Sphere and Plane → <a href="../samples/compute_particle_emitter/compute_particle_emitter.html"><code>compute_particle_emitter</code></a> → <a href="../samples/lumen/lumen.html"><code>lumen</code></a></li>
+<li>Main entry point and first chapters: <code>WebgSceneApp</code>; Chapters 9 and 26–30; repeated showcase motion is JavaScript-driven</li>
+</ul></li>
+<li><strong>Edit placement or models in a UI and save them</strong>
+<ul>
+<li>Runnable starting points: <a href="../samples/model_yaml/model_yaml.html"><code>model_yaml</code></a> → <a href="../samples/edit_yaml/edit_yaml.html"><code>edit_yaml</code></a></li>
+<li>Main entry point and first chapters: <code>ModelAsset</code>, <code>SceneAsset</code>, and <code>WebgSceneApp</code>; Chapters 8–9; Chapter 15 for selection and editing</li>
+</ul></li>
+<li><strong>Write custom shaders, rendering, or GPU computation</strong>
+<ul>
+<li>Runnable starting points: Choose from <a href="../book/examples/19_01.html"><code>19_01</code></a>, <a href="../book/examples/20_01.html"><code>20_01</code></a>, and <a href="../book/examples/21_01.html"><code>21_01</code></a></li>
+<li>Main entry point and first chapters: <code>WebgApp</code> and individual APIs; Chapters 18–22; Chapter 37 for rendering internals</li>
+</ul></li>
+</ul>
+<p>For a PBR game that moves and attacks on a map with elevation, begin at <code>samples/fantasy/fantasy.html</code>. The reading sequence is in <a href="PBRSceneToGame.md">From a PBR Scene to a Small Game</a> and the sample guide.</p>
+<p>Choose between defining scene placement, materials, physics, and rendering in SceneYAML or building them directly in JavaScript. Use <code>WebgApp</code> for a simple screen and <code>WebgSceneApp</code> to start a PBR application from SceneYAML. Adding a feature does not require changing the application entry point.</p>
+<p>For PBR alone, start with SceneYAML <code>renderer</code> and <code>materials</code>. Read Chapters 31–33 when you need to control rendering order or individual passes with <code>ComputeEffectPipeline</code>.</p>
+<p>To add water and caustics to PBR, use <code>samples/water/index.en.html</code> to reach <code>samples/water/water.html</code>, then read Chapter 35. It demonstrates <code>WaterBody</code> receiver registration, shared waves, independent surface and caustics toggles, and GPU-resource release. Chapter 35 also covers wave height, wavelength, speed, RGB absorption, and draw order for transparent surfaces, particles, and post-processing. To apply the feature to gameplay, open <code>samples/fantasy/fantasy.html</code> and <code>connectWater()</code> in <code>samples/fantasy/main.js</code>. Compare the caustics and surface toggles separately; the fantasy sample keeps the battlefield readable with underwater lighting and fog while its water surface is disabled.</p>
+<h2 id="3-read-the-starting-code">3. Read the Starting Code</h2>
+<h3 id="build-directly-with-webgapp">Build Directly with <code>WebgApp</code></h3>
+<p><a href="../book/examples/04_02.html"><code>04_02</code></a> keeps initialization, shape creation, <code>Node</code>, and updates together in the page's <code>example-source</code>. The <a href="../samples/high_level/main.js"><code>high_level</code> source</a> adds usage instructions and screenshots to startup and updates.</p>
+<p>Begin by changing one value such as color, <code>Node</code> position, or rotation speed. Keep the working setup while adding cameras, input, and UI. Await <code>init()</code>, finish each shape with <code>endShape()</code>, attach it to a <code>Node</code>, and then start frame updates.</p>
+<h3 id="start-an-application-from-sceneyaml">Start an Application from SceneYAML</h3>
+<p>Read the <a href="../samples/project_app/project_app_sphere_plane_demo.js">Sphere and Plane JavaScript</a> alongside its <a href="../samples/project_app/project_app_sphere_plane_project.yaml">SceneYAML</a>.</p>
+<ul>
+<li>YAML <code>objects</code> describe objects and initial placement, <code>materials</code> describe surfaces, <code>physics</code> sets simulation conditions, and <code>renderer</code> configures PBR.</li>
+<li>JavaScript uses <code>createWebgSceneApp()</code> and handles camera, buttons, and status display.</li>
+<li>The example's Start/Stop buttons use <code>setPaused()</code> for physics. This differs from the frame loop's <code>start()</code> and <code>stop()</code>.</li>
+<li>Physics starts paused. Check that Start drops the sphere, Stop pauses it, and Reset restores its initial placement.</li>
+</ul>
+<p>First change one value such as sphere color or starting position. If you change the displayed floor and collision plane, keep them aligned. Check <code>physics.space.maxBodies</code> when adding spheres. <code>onUpdate</code> receives <code>deltaSec</code> in seconds, as in <code>WebgApp</code>; high-level physics updates internally, so application code does not add another physics <code>step()</code>.</p>
+<p>For an external model hierarchy, continue to <a href="../samples/scene_model_yaml/main.js"><code>scene_model_yaml</code>'s code</a>, <a href="../samples/scene_model_yaml/scene.yaml"><code>scene.yaml</code></a>, and <a href="../samples/scene_model_yaml/model.yaml"><code>model.yaml</code></a>. ModelYAML describes internal shapes and <code>Node</code> hierarchy; SceneYAML describes application physics and rendering. The example also covers saving, resetting to a paused state, error reporting, and <code>destroy()</code> on shutdown.</p>
+<h3 id="build-game-progression">Build Game Progression</h3>
+<p>Read the <a href="../samples/breakout/README.en.md"><code>breakout</code> guide</a> for controls and states, then inspect <a href="../samples/breakout/main.js"><code>main.js</code></a> for state transitions, <code>registerActionMap()</code>, <code>onUpdate</code>, the HUD, and restart. It is a complete game with title, play, pause, and result states, and demonstrates combining 3D rendering with game rules.</p>
+<p><code>GameStateManager</code> is <a href="../samples/GameStateManager.js">application-side shared sample code</a>, not a core <code>webg</code> API. Narrow the states and controls needed by your application before adapting a larger sample.</p>
+<h3 id="go-from-a-pbr-scene-to-a-small-game">Go from a PBR Scene to a Small Game</h3>
+<p>Use <code>samples/fantasy/</code> for a game that moves and attacks on a map with elevation. Run <code>samples/fantasy/fantasy.html</code>; find controls and reading order in <code>samples/fantasy/README.en.md</code>; use <code>samples/fantasy/index.en.html</code> for the browser overview.</p>
+<p><a href="PBRSceneToGame.md">From a PBR Scene to a Small Game</a> maps direct Shape materials, updates to added Nodes, screen-space picking, resizing, and the lifetime of particles and resources to functions in the sample. Start at <code>main.js</code>'s <code>start()</code>, then read <code>scene.js</code>, <code>visuals.js</code>, <code>move()</code> and <code>updateMotion()</code>, <code>pickTile()</code>, and <code>FantasyApp.js</code>.</p>
+<p>First change only armor roughness, then one unit's movement allowance, step duration, and footstep particle color. This shows when each API updates application state. The sample keeps the rules and visuals separate and uses no rigid-body physics.</p>
+<h2 id="4-add-only-the-features-you-need">4. Add Only the Features You Need</h2>
+<p>Each entry connects a focused example to an application sample and gives a concrete checkpoint for understanding.</p>
+<ul>
+<li><strong>Parent-child transforms</strong>
+<ul>
+<li>Small example → application example: <a href="../book/examples/03_01.html"><code>03_01</code></a> → <a href="../samples/detouch/detouch.html"><code>detouch</code></a></li>
+<li>Chapters and checkpoint: Ch. 3: child inherits parent transform; reparent while preserving world placement</li>
+</ul></li>
+<li><strong>Orbit, follow, and first-person cameras</strong>
+<ul>
+<li>Small example → application example: <a href="../book/examples/06_01.html"><code>06_01</code></a>, <a href="../book/examples/06_02.html"><code>06_02</code></a> → <a href="../samples/eye_rig/eye_rig.html"><code>eye_rig</code></a></li>
+<li>Chapters and checkpoint: Ch. 6: distinguish position following from looking toward a target</li>
+</ul></li>
+<li><strong>Embed in a web page</strong>
+<ul>
+<li>Small example → application example: <a href="../book/examples/05_03.html"><code>05_03</code></a> → <a href="../samples/embedded_glb_viewer/embedded_glb_viewer.html"><code>embedded_glb_viewer</code></a></li>
+<li>Chapters and checkpoint: Ch. 5: page scrolling, Canvas input, and display after model replacement</li>
+</ul></li>
+<li><strong>Materials, textures, and normal maps</strong>
+<ul>
+<li>Small example → application example: <a href="../book/examples/07_01.html"><code>07_01</code></a>, <a href="../book/examples/07_02.html"><code>07_02</code></a> → <a href="../samples/shapes/shapes.html"><code>shapes</code></a></li>
+<li>Chapters and checkpoint: Ch. 7: compare color, texture, normal map, and wireframe on the same shape</li>
+</ul></li>
+<li><strong>Share a <code>ModelAsset</code> across placements</strong>
+<ul>
+<li>Small example → application example: <a href="../book/examples/08_01.html"><code>08_01</code></a> → <a href="../samples/model_yaml/model_yaml.html"><code>model_yaml</code></a></li>
+<li>Chapters and checkpoint: Ch. 8: build once and place in separate Nodes; distinguish the source document from runtime instances</li>
+</ul></li>
+<li><strong>Load model formats</strong>
+<ul>
+<li>Small example → application example: <a href="../samples/gltf_loader/gltf_loader.html"><code>gltf_loader</code></a>, <a href="../samples/collada_loader/collada_loader.html"><code>collada_loader</code></a>, <a href="../samples/json_loader/json_loader.html"><code>json_loader</code></a></li>
+<li>Chapters and checkpoint: Ch. 8: read the needed format; check origin, scale, clips, and relative asset references</li>
+</ul></li>
+<li><strong>Select animation states</strong>
+<ul>
+<li>Small example → application example: <a href="../book/examples/10_01.html"><code>10_01</code></a> → <a href="../samples/animation_state/animation_state.html"><code>animation_state</code></a> → <a href="../samples/janken/janken.html"><code>janken</code></a></li>
+<li>Chapters and checkpoint: Chs. 10–11: separate Action playback from state selection; check independent playback per placement</li>
+</ul></li>
+<li><strong>Animate objects in SceneYAML</strong>
+<ul>
+<li>Small example → application example: <a href="../samples/project_app/scene_animation.html"><code>scene_animation</code></a></li>
+<li>Chapters and checkpoint: Chs. 9–11: distinguish Play, Pause, Seek, Reset, and stopping the frame loop</li>
+</ul></li>
+<li><strong>HUD, help panel, and theme</strong>
+<ul>
+<li>Small example → application example: <a href="../book/examples/12_01.html"><code>12_01</code></a>, <a href="../book/examples/12_02.html"><code>12_02</code></a>, <a href="../book/examples/13_01.html"><code>13_01</code></a> → <a href="../samples/com_palette/com_palette.html"><code>com_palette</code></a></li>
+<li>Chapters and checkpoint: Chs. 12–13: separate short status from DOM interaction and long text; connect UI to app state</li>
+</ul></li>
+<li><strong>Touch input</strong>
+<ul>
+<li>Small example → application example: <a href="../book/examples/14_01.html"><code>14_01</code></a> → <a href="../samples/breakout/breakout.html"><code>breakout</code></a></li>
+<li>Chapters and checkpoint: Ch. 14: connect keyboard and touch gestures to the same action</li>
+</ul></li>
+<li><strong>Selection and collision queries</strong>
+<ul>
+<li>Small example → application example: <a href="../book/examples/15_01.html"><code>15_01</code></a> → <a href="../samples/collisions/collisions.html"><code>collisions</code></a></li>
+<li>Chapters and checkpoint: Ch. 15: distinguish raycast, broad-phase candidates, and detailed tests; queries are separate from collision response</li>
+</ul></li>
+<li><strong>Sound effects, BGM, and audio files</strong>
+<ul>
+<li>Small example → application example: <a href="../book/examples/16_02.html"><code>16_02</code></a>–<a href="../book/examples/16_05.html"><code>16_05</code></a> → <a href="../samples/sound/sound.html"><code>sound</code></a></li>
+<li>Chapters and checkpoint: Ch. 16: start audio after user input; single-tone design is in <a href="../book/examples/16_01.html"><code>16_01</code></a> and <a href="../samples/tone/tone.html"><code>tone</code></a></li>
+</ul></li>
+<li><strong>Diagnostics and issue reports</strong>
+<ul>
+<li>Small example → application example: <a href="../book/examples/17_01.html"><code>17_01</code></a></li>
+<li>Chapters and checkpoint: Ch. 17: preserve environment, failed stage, and application state in diagnostics</li>
+</ul></li>
+<li><strong>Add bloom and DoF to standard rendering</strong>
+<ul>
+<li>Small example → application example: <a href="../book/examples/23_01.html"><code>23_01</code></a> → <a href="../samples/bloom/bloom.html"><code>bloom</code></a>, <a href="../samples/dof/dof.html"><code>dof</code></a></li>
+<li>Chapters and checkpoint: Chs. 23–25: compare before and after; check focus position for depth-based effects</li>
+</ul></li>
+<li><strong>Lightweight CPU particles</strong>
+<ul>
+<li>Small example → application example: <a href="../book/examples/26_01.html"><code>26_01</code></a> → <a href="../samples/billboard/billboard.html"><code>billboard</code></a></li>
+<li>Chapters and checkpoint: Ch. 26: check emission conditions and display; GPU particles use a different update path</li>
+</ul></li>
+<li><strong>Add standard Compute particles to PBR</strong>
+<ul>
+<li>Small example → application example: <a href="../samples/compute_particle_emitter/compute_particle_emitter.html"><code>compute_particle_emitter</code></a> → <a href="../samples/compute_particles/compute_particles.html"><code>compute_particles</code></a></li>
+<li>Chapters and checkpoint: Chs. 26 and 36: continuous/burst emission, stop, clear, and capacity; the second example connects directly in a Compute frame</li>
+</ul></li>
+<li><strong>CPU physics</strong>
+<ul>
+<li>Small example → application example: <a href="../book/examples/27_01.html"><code>27_01</code></a> → <a href="../samples/physics_bounce/physics_bounce.html"><code>physics_bounce</code></a>, <a href="../samples/physics_collider/physics_collider.html"><code>physics_collider</code></a></li>
+<li>Chapters and checkpoint: Chs. 27–28: physics runs on CPU and rendering on WebGPU; <code>PhysicsSpace.step()</code> uses milliseconds</li>
+</ul></li>
+<li><strong>Render GPU physics with ordinary Nodes</strong>
+<ul>
+<li>Small example → application example: Sphere and Plane → <a href="../book/examples/27_02.html"><code>27_02</code></a></li>
+<li>Chapters and checkpoint: Chs. 9 and 27–28: use the high-level path first; use 27_02 to inspect readback and Node synchronization</li>
+</ul></li>
+<li><strong>Direct GPU physics rendering and comparison</strong>
+<ul>
+<li>Small example → application example: <a href="../book/examples/27_03.html"><code>27_03</code></a> → <a href="../samples/compute_physics/compute_physics.html"><code>compute_physics</code></a>, <a href="../samples/falling_box/README.en.md"><code>falling_box</code></a>, <a href="../samples/joint/README.en.md"><code>joint</code></a></li>
+<li>Chapters and checkpoint: Chs. 27–28 and 42: distinguish direct GPU state rendering from CPU readback; choose the Joint page by method</li>
+</ul></li>
+<li><strong>Procedural materials and real-world UV scale</strong>
+<ul>
+<li>Small example → application example: <a href="../book/examples/29_01.html"><code>29_01</code></a> → <a href="../samples/texture_catalog/texture_catalog.html"><code>texture_catalog</code></a></li>
+<li>Chapters and checkpoint: Ch. 29: compare object dimensions and pattern period, then export settings or images</li>
+</ul></li>
+<li><strong>Generate height and normal maps</strong>
+<ul>
+<li>Small example → application example: <a href="../samples/proctex/proctex.html"><code>proctex</code></a> → <a href="../samples/procedural_texture/procedural_texture.html"><code>procedural_texture</code></a></li>
+<li>Chapters and checkpoint: Chs. 7 and 29: distinguish height from normal; start real-world materials at 29_01</li>
+</ul></li>
+<li><strong>PBR materials and environment lighting</strong>
+<ul>
+<li>Small example → application example: <a href="../book/examples/30_01.html"><code>30_01</code></a>, <a href="../book/examples/30_02.html"><code>30_02</code></a> → <a href="../samples/pbr_reference/pbr_reference.html"><code>pbr_reference</code></a></li>
+<li>Chapters and checkpoint: Ch. 30: compare metallic/roughness, direct light, IBL, and exposure independently</li>
+</ul></li>
+<li><strong>Connect a PBR pipeline</strong>
+<ul>
+<li>Small example → application example: <a href="../book/examples/31_01.html"><code>31_01</code></a> → <a href="../book/examples/32_01.html"><code>32_01</code></a> → <a href="../book/examples/33_01.html"><code>33_01</code></a></li>
+<li>Chapters and checkpoint: Chs. 31–33: use the same reference scene and pass one frame's camera data to each stage</li>
+</ul></li>
+<li><strong>Transparency, refraction, and AO</strong>
+<ul>
+<li>Small example → application example: <a href="../samples/opacity/opacity.html"><code>opacity</code></a>, <a href="../samples/transmission/transmission.html"><code>transmission</code></a>, or <a href="../book/examples/34_01.html"><code>34_01</code></a></li>
+<li>Chapters and checkpoint: Chs. 25 and 33–35: inspect opacity, material slots, refraction, and AO debug views separately</li>
+</ul></li>
+<li><strong>Measure GPU performance</strong>
+<ul>
+<li>Small example → application example: <a href="../samples/compute_benchmark/compute_benchmark.html"><code>compute_benchmark</code></a></li>
+<li>Chapters and checkpoint: Chs. 22 and 33: check timing support and which processing stage is measured</li>
+</ul></li>
+<li><strong>Custom meshes and terrain</strong>
+<ul>
+<li>Small example → application example: <a href="../book/examples/38_01.html"><code>38_01</code></a> → <a href="../book/examples/38_02.html"><code>38_02</code></a>, <a href="../book/examples/38_03.html"><code>38_03</code></a> → <a href="../book/examples/39_04.html"><code>39_04</code></a>, <a href="../samples/lowlevel_terrain/lowlevel_terrain.html"><code>lowlevel_terrain</code></a></li>
+<li>Chapters and checkpoint: Chs. 38–39: relate vertices, UVs, faces, and normals; use <code>WebgApp</code> for the application framework</li>
+</ul></li>
+<li><strong>Skinning internals</strong>
+<ul>
+<li>Small example → application example: <a href="../book/examples/40_01.html"><code>40_01</code></a>, <a href="../book/examples/40_02.html"><code>40_02</code></a> → <a href="../samples/skinning/skinning.html"><code>skinning</code></a>, <a href="../samples/bone_creature/bone_creature.html"><code>bone_creature</code></a></li>
+<li>Chapters and checkpoint: Ch. 40: for existing-model playback, start with Chapters 8 and 10–11</li>
+</ul></li>
+</ul>
+<h2 id="5-study-examples-that-combine-features">5. Study Examples That Combine Features</h2>
+<p>Read a larger example after finding the minimal API for each feature. Choose one close to your application and inspect how scene configuration, application updates, input, and UI work together.</p>
+<p>For water, use <code>samples/water/index.en.html</code> to compare settings and toggles, and <code>samples/fantasy/index.en.html</code> to see water added to an existing game. First understand receivers and waves in the water sample; then follow their connection to movement, particles, input locking, and restart in Fantasy.</p>
+<ul>
+<li><strong><a href="../samples/breakout/README.en.md"><code>breakout</code></a>, <a href="../samples/cube4/README.en.md"><code>cube4</code></a></strong>
+<ul>
+<li>What to study: Game states, input, score, HUD, restart; cube4 adds a 3D board and camera-relative controls</li>
+</ul></li>
+<li><strong><a href="../samples/janken/README.en.md"><code>janken</code></a></strong>
+<ul>
+<li>What to study: Two placements share a model but have independent animation, connected to input and match results</li>
+</ul></li>
+<li><strong><a href="../samples/circular_breaker/README.en.md"><code>circular_breaker</code></a>, <a href="../samples/circular_breaker2/README.en.md"><code>circular_breaker2</code></a></strong>
+<ul>
+<li>What to study: Directly assembled game versus SceneYAML/ModelYAML with PBR</li>
+</ul></li>
+<li><strong><a href="../samples/maze/README.en.md"><code>maze</code></a>, <a href="../samples/maze2/README.en.md"><code>maze2</code></a></strong>
+<ul>
+<li>What to study: First-person movement, generated walls and collision, radar, lighting and screen effects; inspect game-side wall collision</li>
+</ul></li>
+<li><strong><a href="../samples/lumen/README.en.md"><code>lumen</code></a>, <a href="../samples/neon_coaster/README.en.md"><code>neon_coaster</code></a>, <a href="../samples/void_strike/README.en.md"><code>void_strike</code></a></strong>
+<ul>
+<li>What to study: High-level application use, repeated showcase motion, follow camera, shooting, and particles</li>
+</ul></li>
+<li><strong><a href="../samples/project_app/README.en.md"><code>project_app</code></a></strong>
+<ul>
+<li>What to study: Extend Sphere and Plane through joints, object sets, variants, and authoring scenes</li>
+</ul></li>
+<li><strong><a href="../samples/edit_yaml/README.en.md"><code>edit_yaml</code></a>, <a href="../samples/mmodeler/README.en.md"><code>mmodeler</code></a>, <a href="../samples/karakuri/README.en.md"><code>karakuri</code></a></strong>
+<ul>
+<li>What to study: Editing state, selection, undo/redo, save/load, and division between authoring and runtime</li>
+</ul></li>
+<li><strong><a href="../samples/compute_json/README.en.md"><code>compute_json</code></a></strong>
+<ul>
+<li>What to study: Display an animated <code>ModelAsset</code> JSON and connect screen effects manually</li>
+</ul></li>
+<li><strong><a href="../samples/compute_cloth/README.en.md"><code>compute_cloth</code></a>, <a href="../samples/compute_texture/README.en.md"><code>compute_texture</code></a></strong>
+<ul>
+<li>What to study: Update buffers and textures with custom WGSL; distinguish these from standard rigid-body physics and particles</li>
+</ul></li>
+</ul>
+<h2 id="6-adapt-an-example-to-your-application">6. Adapt an Example to Your Application</h2>
+<ol type="1">
+<li>Run the example in place and compare its controls and checkpoints with what appears on screen.</li>
+<li>Inspect the HTML, JavaScript imports, YAML/JSON, images, and model files it reads. Include shared helpers and assets from other samples in the dependency list.</li>
+<li>Choose one application entry point. Before adding another frame loop, physics step, or final display pass, identify the processing already performed by the high-level application.</li>
+<li>Change one feature or setting and describe the expected display or interaction. Add the next feature while keeping the working state.</li>
+<li>Adapt relative paths and DOM IDs for your HTML and hosting location. When replacing a model, check clip names, Node IDs, origin, and dimensions.</li>
+<li>Decide what to release on shutdown or replacement. Distinguish shared models from their instances, and follow the sample's <code>destroy()</code> usage for high-level applications.</li>
+</ol>
+<p>Sample-only classes and helpers are application code, not core API. Read their actual imports instead of inferring ownership from their names. Samples such as <code>compute_cloth</code>, <code>compute_texture</code>, and <code>compute_physics_bounce</code> include custom GPU processing even when the result resembles a standard feature. For ordinary physics, start with Sphere and Plane or <code>physics_bounce</code>.</p>
+<h2 id="7-when-an-ai-agent-helps-with-development">7. When an AI Agent Helps with Development</h2>
+<p>Start from the user's goal and choose one entry point in this guide. Briefly identify the runnable page and source to use, the feature to add, and how to check the result. People and AI agents can use the same examples and checkpoints.</p>
+<p>Find a class in the <a href="Appendix_D_API.md">API catalog</a>, then read its chapter and runnable example. Do not map a familiar API name from another 3D library directly onto webg; check the actual import, call, and return value. If a unit, default, or automatic update scope is unclear, inspect the current implementation and tests.</p>
+<p>Use <code>headless_tests/</code> for API contracts and calculations, and <code>unittest/</code> for small browser checks. Static link/import presence, absence of runtime exceptions, and the intended visible result are separate checks. Report only the checks that were actually completed.</p>
+<p>The overall indexes are <a href="../book/examples/index.en.html">book examples</a> and <a href="../samples/index.en.html">samples</a>.</p>
+
+  </main>
+</body>
+</html>

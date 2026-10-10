@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// samples/bone_creature/main.js  2026/04/30
+// samples/bone_creature/main.js  2026/10/10
 //   bone_creature sample
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -410,13 +410,12 @@ const toggleBones = () => {
   updateStatusLines();
 };
 
-// スクリーンショット保存名は sample 名と時刻を含め、
-// 連続取得しても並べて区別しやすいようにする
+// Canvasを960×720 pixelで描画し、sample名と時刻を含む画像を保存する
 const requestScreenshot = () => {
   const now = new Date();
   const pad = (n) => String(n).padStart(2, "0");
   const name = `bone_creature_${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}_${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}.png`;
-  app.screen.screenShot(name);
+  app.takeScreenshot({ filename: name, width: 960, height: 720 });
 };
 
 // キーと touch の両方を同じ rotate flag / action へ流し込み、
