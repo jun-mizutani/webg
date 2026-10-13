@@ -7,10 +7,10 @@ JavaScriptとWebGPUで、光・材質・動きのある3Dアプリケーショ�
 `webg`は、PBR、環境光、水面とコースティクス、CPU／GPUの物理シミュレーション、アニメーション、粒子、サウンドを組み合わせられる自己完結型のライブラリです。
 高水準のアプリ構築から、Render Pass・Compute Pass・WGSLを直接扱う実装まで、同じシーンやモデルを使って進められます。
 
-[![イルカが泳ぐ水槽。水面、水底の集光、赤と黄色のランプ、泡を組み合わせたPBRシーン](https://jun-mizutani.github.io/webg/samples/aquarium/aquarium.jpg)](https://jun-mizutani.github.io/webg/samples/aquarium/aquarium.html)
+[![12組の臼と杵、固定カム、圧縮ローラーを備えたRotary Tablet MachineのPBR表示](https://jun-mizutani.github.io/webg/samples/tablet_machine/tablet_machine.jpg)](https://jun-mizutani.github.io/webg/samples/tablet_machine/tablet_machine.html)
 
-**水光のアクアリウム** — glTFモデルのアニメーション、コースティクス、水面、粒子、照明を組み合わせた情景です。
-[動かして見る](https://jun-mizutani.github.io/webg/samples/aquarium/aquarium.html) · [作り方とコード](https://jun-mizutani.github.io/webg/samples/aquarium/index.html)
+**Rotary Tablet Machine** — 臼と杵が回転し、固定カムとローラーに沿って充填、圧縮、排出する機構を観察できます。
+[動かして見る](https://jun-mizutani.github.io/webg/samples/tablet_machine/tablet_machine.html) · [作り方とコード](https://jun-mizutani.github.io/webg/samples/tablet_machine/index.html)
 
 ## サンプルで見るwebg
 

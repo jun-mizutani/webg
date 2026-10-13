@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>tablet_machine</title>
+  <link rel="icon" href="data:," />
+  <!-- 2026/10/13 -->
+  <style>
+
+:root {
+  color-scheme: light;
+  --bg: #eef3f8;
+  --paper: rgba(255, 255, 255, 0.94);
+  --line: #c8d5e4;
+  --ink: #17324a;
+  --muted: #5c748b;
+  --accent: #1566ab;
+  --accent-soft: #dfeefe;
+  --code-bg: #f3f7fb;
+  --shadow: rgba(29, 52, 79, 0.10);
+}
+* { box-sizing: border-box; }
+html, body {
+  margin: 0;
+  min-height: 100%;
+}
+body {
+  background:
+    radial-gradient(circle at top left, rgba(21, 102, 171, 0.12), transparent 24%),
+    radial-gradient(circle at top right, rgba(255, 191, 118, 0.10), transparent 22%),
+    linear-gradient(180deg, #f8fbfd 0%, var(--bg) 100%);
+  color: var(--ink);
+  font: 16px/1.78 "Avenir Next", "Hiragino Sans", "Yu Gothic", sans-serif;
+}
+.page {
+  width: min(1080px, calc(100% - 28px));
+  margin: 0 auto;
+  padding: 24px 0 56px;
+}
+.hero,
+.doc {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  box-shadow: 0 22px 52px var(--shadow);
+}
+.hero {
+  padding: 22px 24px;
+  margin-bottom: 18px;
+}
+.hero h1 {
+  margin: 0 0 8px;
+  font-size: clamp(2rem, 4vw, 3rem);
+  line-height: 1.08;
+}
+.hero p {
+  margin: 0;
+  color: var(--muted);
+}
+.doc {
+  padding: 28px;
+}
+.doc > :first-child {
+  margin-top: 0;
+}
+h1, h2, h3, h4, h5, h6 {
+  line-height: 1.25;
+  margin: 1.45em 0 0.55em;
+}
+h1 {
+  font-size: 2.2rem;
+}
+h2 {
+  padding-bottom: 0.28em;
+  border-bottom: 1px solid var(--line);
+  font-size: 1.48rem;
+}
+h3 {
+  font-size: 1.14rem;
+}
+p, ul, ol, table, pre, blockquote {
+  margin: 0 0 1em;
+}
+ul, ol {
+  padding-left: 1.4em;
+}
+li + li {
+  margin-top: 0.26em;
+}
+a {
+  color: var(--accent);
+  text-decoration: none;
+}
+a:hover {
+  text-decoration: underline;
+}
+img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  border-radius: 16px;
+  border: 1px solid var(--line);
+  box-shadow: 0 12px 32px rgba(29, 52, 79, 0.08);
+  margin: 1.1em 0 1.4em;
+}
+code {
+  padding: 0.12em 0.38em;
+  border-radius: 0.45em;
+  background: var(--code-bg);
+  border: 1px solid #dbe6f1;
+  font: 0.92em/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+pre {
+  padding: 14px 16px;
+  overflow-x: auto;
+  border-radius: 14px;
+  background: #0f1720;
+  color: #ecf5ff;
+}
+pre code {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #ffffff;
+}
+th, td {
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  text-align: left;
+  vertical-align: top;
+}
+th {
+  background: #f5f9fc;
+}
+hr {
+  border: 0;
+  border-top: 1px solid var(--line);
+  margin: 1.5em 0;
+}
+blockquote {
+  padding: 0.3em 0 0.3em 1em;
+  border-left: 4px solid #c9dbef;
+  color: var(--muted);
+}
+@media (max-width: 720px) {
+  .page {
+    width: min(100% - 18px, 1080px);
+    padding-top: 16px;
+  }
+  .hero,
+  .doc {
+    border-radius: 18px;
+  }
+  .doc {
+    padding: 20px;
+  }
+}
+
+  </style>
+</head>
+<body>
+  <main class="page">
+    <section class="hero">
+      <h1>tablet_machine</h1>
+    </section>
+    <article class="doc">
+<h1>回転式打錠機のアニメーション</h1>
+<p><a href="index.en.html">English</a> | 日本語</p>
+<p><img src="tablet_machine.jpg" alt="機構と工程の観察画面"></p>
+<p><a href="tablet_machine.html">tablet_machine.html</a> をHTTPサーバー経由で開きます。WebGPU対応ブラウザーを使ってください。</p>
+<p>例：リポジトリのルートで <code>python3 -m http.server 8898</code> を実行し、
+<code>http://localhost:8898/samples/tablet_machine/tablet_machine.html</code> を開きます。</p>
+<p>操作画面と工程説明は英語で表示します。</p>
+<h2>観察できる機構</h2>
+<p>12組の臼・上杵・下杵が直径10.56の円周上に並び、回転盤と一緒に公転します。水平方向の基準倍率は <code>RADIAL_SCALE = 1.20</code> で、公転径、回転盤、支持リング、中央ハブを共通の倍率で配置しています。テーブル上面は臼の上端と同じ高さ0.34に揃え、臼が入る12個の開口を設けています。臼は筒状の部品で、内側の孔に粉末を保持します。上杵と下杵の先端がその孔に入り、粉末を挟みます。杵は細い先端、肩、強度を担う太い胴体、細い首、ローラーが押す杵頭をつなげた形状にしています。下杵の先端は、錠剤を押し出す高さまで臼の中を通る長さを確保しています。</p>
+<p>上下杵の杵頭に沿う緑色の軌道は固定カムです。回転に伴って杵頭が軌道を通ることで、杵が上下に動きます。圧縮部では上下の紫色のローラーが杵頭を押し、上下の杵先端の間隔を縮めます。ローラーの回転軸は、杵の公転円周の半径方向（接線に垂直な方向）へ揃えています。ローラーの位置と軸は固定され、ローラー自体は軸の周りを回ります。予圧ローラーの直径は1.64、本圧ローラーの直径は2.00です。各ローラーの中心高さは半径と杵頭の接触面から決めています。</p>
+<table>
+<thead>
+<tr>
+<th>工程</th>
+<th>動き</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>充填</td>
+<td>下杵を下げ、供給器の下を通る臼へ粉末を入れる</td>
+</tr>
+<tr>
+<td>計量</td>
+<td>下杵を上げ、余剰の粉末をすり切り、粉末量を整える</td>
+</tr>
+<tr>
+<td>予圧</td>
+<td>最初の上下ローラーで粉末を予備圧縮する</td>
+</tr>
+<tr>
+<td>本圧</td>
+<td>次の上下ローラーで錠剤の厚さまで圧縮する</td>
+</tr>
+<tr>
+<td>排出</td>
+<td>上杵が抜け、下杵が上昇して錠剤を押し出し、排出板で樋へ導く</td>
+</tr>
+<tr>
+<td>復帰</td>
+<td>下杵を下げ、次の充填へ戻る</td>
+</tr>
+</tbody></table>
+<h2>操作</h2>
+<ul>
+<li>ドラッグ：視点の回転、ホイール：ズーム</li>
+<li>一時停止・再生、回転速度：初期値3 rpm（20秒で一周）。動きを観察しやすい速度に調整</li>
+<li>1工程進める・工程ボタン：注目する臼をその工程へ移動して停止</li>
+<li>観察する組：右側の断面図に表示する組を選択。3Dでは赤い輪で示す</li>
+<li>回転位置：回転盤の位置を直接指定して停止</li>
+<li>臼と回転盤を断面表示：臼の外側半分を開き、中央軸を隠して粉末と杵先端を表示</li>
+<li>カム軌道を表示：上下の固定軌道を表示</li>
+<li>自動周回：視点が機械の周りを上から見て反時計回りに20秒で一周。俯角を固定し、鉛直軸に対するyawだけで周回する。機械の一時停止中も視点の周回を続ける</li>
+<li>全体・側面・上面：カメラを所定の観察方向へ変更</li>
+</ul>
+<h2>表示の前提</h2>
+<p>機構を理解する模式モデルとして、12組の部品を間隔を広げて配置しています。透明な外装の代わりに開放した構成を採用し、初期表示では臼を縦に切った断面にしています。寸法は観察用のモデル座標です。</p>
+<p>供給ホッパーは上面を開いた容器とし、内部に淡い青の粉末層と粒を表示しています。粉末は粒の集合、成形後は円柱状の錠剤で表します。粉末の圧縮曲線、質量、密度、圧縮力は機構の動きと別の物性計算として扱う項目です。このモデルでは工程位置から杵の高さと錠剤の状態を決めます。予圧・本圧の接触位置では円形ローラーの輪郭を使って杵頭の高さを求めます。</p>
+<p>カムは杵頭に沿う軌道を細いレールで示します。実機のカム溝、保持部品、軸受、駆動装置は簡略化しています。供給器・排出板・樋は固定され、回転盤の孔がその下を通ります。排出樋は外側へ10度下り、錠剤の底面も同じ傾きで樋の上面に沿って移動します。</p>
+<h2>金属の質感</h2>
+<p>PBRとスタジオ環境光を使い、照明の明るい面が金属へ映り込む表示にしています。臼と上下杵、圧縮ローラーは金属度0.96とし、粗さは杵0.18、ローラー0.22、臼0.24で調整しています。上杵の淡い青、下杵の淡い暖色、ローラーの淡い紫は、金属を基調に部品を識別するための色です。粉末は明るい淡い青、成形後の錠剤はそれより少し濃い青で表示し、金属度0、粗さを高めにしています。弱い発光成分を加え、臼の内部でも粉末と錠剤の輪郭を見分けられる明るさにしています。</p>
+<h2>ファイル</h2>
+<ul>
+<li><code>mechanism.js</code>：工程の角度、上下杵の高さ、圧縮ローラーの接触軌道</li>
+<li><code>main.js</code>：webgの形状生成、インスタンス、アニメーション、断面図の更新</li>
+<li><code>tablet_machine.html</code> / <code>style.css</code>：画面、操作部品、工程の説明</li>
+</ul>
+<p>同じ部品の形状は <code>Shape.createInstance()</code> で共有し、部品位置はNodeで更新します。3Dと拡大断面は同じ <code>sampleCycle()</code> の結果を使います。</p>
+<h2>原理の参照</h2>
+<p>回転盤と上下杵の同期回転、カムによる軸方向の案内、充填・圧縮・排出の構成は、<a href="https://patents.google.com/patent/US20190039270A1/en">Fette Compactingの公開特許 US20190039270A1</a> を参考にしています。</p>
+
+</article>
+</main>
+</body>
+</html>

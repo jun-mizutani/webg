@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>filling_machine</title>
+  <link rel="icon" href="data:," />
+  <!-- 2026/10/13 -->
+  <style>
+
+:root {
+  color-scheme: light;
+  --bg: #eef3f8;
+  --paper: rgba(255, 255, 255, 0.94);
+  --line: #c8d5e4;
+  --ink: #17324a;
+  --muted: #5c748b;
+  --accent: #1566ab;
+  --accent-soft: #dfeefe;
+  --code-bg: #f3f7fb;
+  --shadow: rgba(29, 52, 79, 0.10);
+}
+* { box-sizing: border-box; }
+html, body {
+  margin: 0;
+  min-height: 100%;
+}
+body {
+  background:
+    radial-gradient(circle at top left, rgba(21, 102, 171, 0.12), transparent 24%),
+    radial-gradient(circle at top right, rgba(255, 191, 118, 0.10), transparent 22%),
+    linear-gradient(180deg, #f8fbfd 0%, var(--bg) 100%);
+  color: var(--ink);
+  font: 16px/1.78 "Avenir Next", "Hiragino Sans", "Yu Gothic", sans-serif;
+}
+.page {
+  width: min(1080px, calc(100% - 28px));
+  margin: 0 auto;
+  padding: 24px 0 56px;
+}
+.hero,
+.doc {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  box-shadow: 0 22px 52px var(--shadow);
+}
+.hero {
+  padding: 22px 24px;
+  margin-bottom: 18px;
+}
+.hero h1 {
+  margin: 0 0 8px;
+  font-size: clamp(2rem, 4vw, 3rem);
+  line-height: 1.08;
+}
+.hero p {
+  margin: 0;
+  color: var(--muted);
+}
+.doc {
+  padding: 28px;
+}
+.doc > :first-child {
+  margin-top: 0;
+}
+h1, h2, h3, h4, h5, h6 {
+  line-height: 1.25;
+  margin: 1.45em 0 0.55em;
+}
+h1 {
+  font-size: 2.2rem;
+}
+h2 {
+  padding-bottom: 0.28em;
+  border-bottom: 1px solid var(--line);
+  font-size: 1.48rem;
+}
+h3 {
+  font-size: 1.14rem;
+}
+p, ul, ol, table, pre, blockquote {
+  margin: 0 0 1em;
+}
+ul, ol {
+  padding-left: 1.4em;
+}
+li + li {
+  margin-top: 0.26em;
+}
+a {
+  color: var(--accent);
+  text-decoration: none;
+}
+a:hover {
+  text-decoration: underline;
+}
+img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  border-radius: 16px;
+  border: 1px solid var(--line);
+  box-shadow: 0 12px 32px rgba(29, 52, 79, 0.08);
+  margin: 1.1em 0 1.4em;
+}
+code {
+  padding: 0.12em 0.38em;
+  border-radius: 0.45em;
+  background: var(--code-bg);
+  border: 1px solid #dbe6f1;
+  font: 0.92em/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+pre {
+  padding: 14px 16px;
+  overflow-x: auto;
+  border-radius: 14px;
+  background: #0f1720;
+  color: #ecf5ff;
+}
+pre code {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #ffffff;
+}
+th, td {
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  text-align: left;
+  vertical-align: top;
+}
+th {
+  background: #f5f9fc;
+}
+hr {
+  border: 0;
+  border-top: 1px solid var(--line);
+  margin: 1.5em 0;
+}
+blockquote {
+  padding: 0.3em 0 0.3em 1em;
+  border-left: 4px solid #c9dbef;
+  color: var(--muted);
+}
+@media (max-width: 720px) {
+  .page {
+    width: min(100% - 18px, 1080px);
+    padding-top: 16px;
+  }
+  .hero,
+  .doc {
+    border-radius: 18px;
+  }
+  .doc {
+    padding: 20px;
+  }
+}
+
+  </style>
+</head>
+<body>
+  <main class="page">
+    <section class="hero">
+      <h1>filling_machine</h1>
+    </section>
+    <article class="doc">
+<h1>filling_machine — Rotary Capsule Filler</h1>
+<p>English | <a href="index.html">日本語</a></p>
+<p><img src="filling_machine.jpg" alt="Capsule filler mechanism and stage view"></p>
+<h2>Overview</h2>
+<p>Explore capsule supply, separation, powder filling, closing, ejection and cleaning in a rotary machine. Twelve pairs of holders rotate together: upper holders retain red caps, and lower holders carry cream-colored bodies. The English interface uses the same observation controls as <a href="../tablet_machine/index.en.html">the tablet press</a>.</p>
+<h2>Running and controls</h2>
+<p>Open <a href="filling_machine.html">filling_machine.html</a> through an HTTP server in a WebGPU-capable browser. From the repository root, run <code>python3 -m http.server 8898</code> and open <code>http://localhost:8898/samples/filling_machine/filling_machine.html</code>.</p>
+<ul>
+<li>Drag to orbit; scroll to zoom</li>
+<li><strong>Pause / Resume</strong> controls the mechanism; <strong>Speed</strong> sets 0–8 rpm, initially 3 rpm</li>
+<li><strong>Next stage</strong> and the stage buttons position the selected station and pause</li>
+<li><strong>Station</strong> selects the holders shown in the section view; a gold ring marks them in 3D</li>
+<li><strong>Rotation angle</strong> sets the turntable angle and pauses</li>
+<li><strong>Cutaway capsules and holders</strong> exposes the thin walls and powder, and hides the central shaft and lower table</li>
+<li><strong>Show cam tracks</strong> displays the stationary guide paths</li>
+<li><strong>Auto orbit</strong> circles counterclockwise once every 20 seconds at a fixed elevation, including while the mechanism is paused</li>
+<li><strong>Overview / Side / Top</strong> select a fixed view and stop automatic orbiting</li>
+</ul>
+<h2>Mechanism</h2>
+<table>
+<thead>
+<tr>
+<th>Stage</th>
+<th>Motion to observe</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Supply</td>
+<td>An alignment guide feeds an empty capsule into the holders</td>
+</tr>
+<tr>
+<td>Separation</td>
+<td>The cap remains held while vacuum pulls the body down</td>
+</tr>
+<tr>
+<td>Filling</td>
+<td>The body holder slides outward beneath a powder-dosing nozzle</td>
+</tr>
+<tr>
+<td>Closing</td>
+<td>The body returns beneath the cap and a lower pin pushes them together</td>
+</tr>
+<tr>
+<td>Ejection</td>
+<td>The finished capsule is lifted out and guided onto the chute</td>
+</tr>
+<tr>
+<td>Cleaning / return</td>
+<td>Empty holders pass the cleaning unit and return to supply</td>
+</tr>
+</tbody></table>
+<p>Green tracks show the paths guiding holder height and radial movement. Turquoise parts indicate the vacuum and cleaning units. The open hopper holds powder grains; the filling station includes a dosing cylinder, moving piston and nozzle. Powder enters a body as it passes beneath the nozzle.</p>
+<p>Caps and bodies have open ends, round closed ends and thin walls. The 3D model and section view share their profiles. During ejection, the capsule tips onto a chute sloping outward by 10 degrees. Its position follows the capsule outline and chute slope to maintain surface contact.</p>
+<h2>Model assumptions</h2>
+<p>This schematic model emphasizes the mechanism. Dimensions use model coordinates, and fill level is a 0–100% state. Vacuum, powder flow, shell deformation and locking grooves are represented through simplified motion. Stages progress continuously with rotation angle. An indexed machine can use separate timing for turntable motion and individual station drives.</p>
+<p>PBR environment reflections show metal parts; capsule shells use glossy dielectric materials and powder uses a bright diffuse material.</p>
+<h2>Code reading order</h2>
+<ul>
+<li><code>mechanism.js</code>: stage definitions, holder positions, capsule profiles and chute motion</li>
+<li><code>main.js</code>: component construction, PBR rendering, animation, section view and controls</li>
+<li><code>filling_machine.html</code> / <code>style.css</code>: interface and layout</li>
+</ul>
+<h2>Reference</h2>
+<p>The stage sequence follows the supply, separation, filling, alignment, closing, ejection and cleaning operations in <a href="https://www.syntegon.com/solutions/pharma/capsule-filling-machine/">Syntegon&#39;s capsule filling overview</a>.</p>
+
+</article>
+</main>
+</body>
+</html>

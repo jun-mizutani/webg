@@ -1,0 +1,52 @@
+<!doctype html>
+<!--
+  filling_machine.html  2026/10/13
+  Copyright (c) 2026 Jun Mizutani,
+  released under the MIT open source license.
+-->
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Rotary capsule filler — Separation, filling and closing</title>
+  <link rel="icon" href="data:,"><link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header><div><span class="eyebrow">MECHANISM STUDY / WEBGPU</span><h1>Rotary Capsule Filler</h1><p>Separate the cap and body, fill with powder, then close</p></div><span class="badge">12 capsule stations</span></header>
+  <main>
+    <section class="scene" aria-label="3D animation of a capsule filler">
+      <canvas id="canvas"></canvas>
+      <div class="scene-note">Drag to orbit · Scroll to zoom<br>The gold ring marks the station shown in the section view</div>
+      <div id="error" hidden></div>
+      <div class="legend"><span style="color:#f3a3a6">● Cap</span><span style="color:#f0ddba">● Body</span><span style="color:#a1d8fb">● Powder</span><span class="cam">● Cams / vacuum lines</span></div>
+    </section>
+    <aside>
+      <div class="section-heading"><span class="eyebrow">FOLLOW ONE CAPSULE</span><h2>Selected station <span id="station-number">01</span></h2></div>
+      <label class="select-row">Station <select id="station" aria-label="Station"></select></label>
+      <div class="phase-title"><span id="phase-dot"></span><h3 id="phase">Supply</h3><output id="angle-label">0°</output></div>
+      <p id="description" class="description"></p>
+      <svg id="detail" viewBox="0 0 320 350" role="img" aria-label="Section view of capsule separation and filling">
+        <defs><pattern id="powder" width="7" height="7" patternUnits="userSpaceOnUse"><rect width="7" height="7" fill="#b7e4ff"/><circle cx="2" cy="2" r="1.1" fill="#72b7dd"/></pattern></defs>
+        <g id="detail-capsule"><g id="detail-body"></g><g id="detail-charge"></g><g id="detail-cap"></g></g>
+        <path id="detail-movement" stroke="#77bdaa" stroke-dasharray="4 4" fill="none"/>
+        <g fill="#b8cbd8" font-size="12"><text id="cap-label" x="16">Cap</text><text id="body-label" x="16">Body</text><text id="powder-label" x="254">Powder</text></g>
+        <g stroke="#627384" fill="none"><path id="cap-leader"/><path id="body-leader"/><path id="powder-leader"/></g><text id="detail-note" x="160" y="280" text-anchor="middle" fill="#b8cbd8" font-size="12"></text>
+        <text x="160" y="337" text-anchor="middle" fill="#859aaa" font-size="11">Schematic section of separation and closing</text>
+      </svg>
+      <div class="metrics"><div><span>Fill level</span><output id="fill-value">0%</output></div><div><span>Radial offset</span><output id="offset-value">0.00</output></div></div>
+      <p class="small">Schematic fill ratio; offset in model units</p>
+    </aside>
+  </main>
+  <section class="controls" aria-label="Animation controls">
+    <button id="pause">Pause</button><button id="step">Next stage</button>
+    <label>Speed <input id="speed" type="range" min="0" max="8" step="0.25" value="3"><output id="speed-value">3 rpm</output></label>
+    <label><input id="cutaway" type="checkbox" checked>Cutaway capsules and holders</label>
+    <label><input id="cams" type="checkbox" checked>Show cam tracks</label>
+    <label><input id="auto-orbit" type="checkbox">Auto orbit: CCW · 20 s / turn</label>
+    <button id="overview">Overview</button><button id="side">Side</button><button id="top">Top</button>
+    <label class="scrub">Rotation angle <input id="rotation" aria-label="Rotation angle" type="range" min="0" max="360" step="0.1" value="0"></label>
+  </section>
+  <nav id="stages" class="stages" aria-label="Select a stage and pause"></nav>
+  <footer><p><strong>How it works:</strong>The cap stays in its holder while the body separates and slides outward for filling. The body returns beneath the cap, closes, and the finished capsule is ejected.</p><p>A schematic model for exploring the mechanism. Dimensions and timing are scaled for clarity; stages follow the rotation angle continuously. <a href="./index.en.html">Mechanism and implementation</a></p></footer>
+  <script type="module" src="main.js"></script>
+</body>
+</html>

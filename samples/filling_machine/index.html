@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>filling_machine</title>
+  <link rel="icon" href="data:," />
+  <!-- 2026/10/13 -->
+  <style>
+
+:root {
+  color-scheme: light;
+  --bg: #eef3f8;
+  --paper: rgba(255, 255, 255, 0.94);
+  --line: #c8d5e4;
+  --ink: #17324a;
+  --muted: #5c748b;
+  --accent: #1566ab;
+  --accent-soft: #dfeefe;
+  --code-bg: #f3f7fb;
+  --shadow: rgba(29, 52, 79, 0.10);
+}
+* { box-sizing: border-box; }
+html, body {
+  margin: 0;
+  min-height: 100%;
+}
+body {
+  background:
+    radial-gradient(circle at top left, rgba(21, 102, 171, 0.12), transparent 24%),
+    radial-gradient(circle at top right, rgba(255, 191, 118, 0.10), transparent 22%),
+    linear-gradient(180deg, #f8fbfd 0%, var(--bg) 100%);
+  color: var(--ink);
+  font: 16px/1.78 "Avenir Next", "Hiragino Sans", "Yu Gothic", sans-serif;
+}
+.page {
+  width: min(1080px, calc(100% - 28px));
+  margin: 0 auto;
+  padding: 24px 0 56px;
+}
+.hero,
+.doc {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  box-shadow: 0 22px 52px var(--shadow);
+}
+.hero {
+  padding: 22px 24px;
+  margin-bottom: 18px;
+}
+.hero h1 {
+  margin: 0 0 8px;
+  font-size: clamp(2rem, 4vw, 3rem);
+  line-height: 1.08;
+}
+.hero p {
+  margin: 0;
+  color: var(--muted);
+}
+.doc {
+  padding: 28px;
+}
+.doc > :first-child {
+  margin-top: 0;
+}
+h1, h2, h3, h4, h5, h6 {
+  line-height: 1.25;
+  margin: 1.45em 0 0.55em;
+}
+h1 {
+  font-size: 2.2rem;
+}
+h2 {
+  padding-bottom: 0.28em;
+  border-bottom: 1px solid var(--line);
+  font-size: 1.48rem;
+}
+h3 {
+  font-size: 1.14rem;
+}
+p, ul, ol, table, pre, blockquote {
+  margin: 0 0 1em;
+}
+ul, ol {
+  padding-left: 1.4em;
+}
+li + li {
+  margin-top: 0.26em;
+}
+a {
+  color: var(--accent);
+  text-decoration: none;
+}
+a:hover {
+  text-decoration: underline;
+}
+img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  border-radius: 16px;
+  border: 1px solid var(--line);
+  box-shadow: 0 12px 32px rgba(29, 52, 79, 0.08);
+  margin: 1.1em 0 1.4em;
+}
+code {
+  padding: 0.12em 0.38em;
+  border-radius: 0.45em;
+  background: var(--code-bg);
+  border: 1px solid #dbe6f1;
+  font: 0.92em/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+pre {
+  padding: 14px 16px;
+  overflow-x: auto;
+  border-radius: 14px;
+  background: #0f1720;
+  color: #ecf5ff;
+}
+pre code {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #ffffff;
+}
+th, td {
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  text-align: left;
+  vertical-align: top;
+}
+th {
+  background: #f5f9fc;
+}
+hr {
+  border: 0;
+  border-top: 1px solid var(--line);
+  margin: 1.5em 0;
+}
+blockquote {
+  padding: 0.3em 0 0.3em 1em;
+  border-left: 4px solid #c9dbef;
+  color: var(--muted);
+}
+@media (max-width: 720px) {
+  .page {
+    width: min(100% - 18px, 1080px);
+    padding-top: 16px;
+  }
+  .hero,
+  .doc {
+    border-radius: 18px;
+  }
+  .doc {
+    padding: 20px;
+  }
+}
+
+  </style>
+</head>
+<body>
+  <main class="page">
+    <section class="hero">
+      <h1>filling_machine</h1>
+    </section>
+    <article class="doc">
+<h1>回転式カプセル充填機</h1>
+<p><a href="index.en.html">English</a> | 日本語</p>
+<p><img src="filling_machine.jpg" alt="機構と工程の観察画面"></p>
+<p>打錠機のアプリ <code>samples/tablet_machine</code> と同じ観察操作を備えた、webgのWebGPUアプリです。</p>
+<p>操作画面と工程説明は英語で表示します。実行ページは <a href="filling_machine.html">filling_machine.html</a> です。</p>
+<p>リポジトリのルートで <code>python3 -m http.server 8898</code> を実行し、
+<code>http://localhost:8898/samples/filling_machine/filling_machine.html</code> を開いてください。</p>
+<h2>仕組み</h2>
+<p>12組の受け台が回転盤と一緒に移動します。上側の受け台は赤いキャップ、下側の受け台はクリーム色のボディを保持します。ボディには上側の開口と下側の丸い閉端があり、内部へ淡い青の粉末を入れます。</p>
+<table>
+<thead>
+<tr>
+<th>工程</th>
+<th>観察できる動き</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>供給</td>
+<td>整列ガイドから空のカプセルを受け台へ入れる</td>
+</tr>
+<tr>
+<td>分離</td>
+<td>キャップを保持し、吸引部でボディを下げて分離する</td>
+</tr>
+<tr>
+<td>充填</td>
+<td>ボディの受け台を外側へ移動し、計量シリンダとノズルから粉末を入れる</td>
+</tr>
+<tr>
+<td>結合</td>
+<td>ボディをキャップの下へ戻し、押上げピンで結合する</td>
+</tr>
+<tr>
+<td>排出</td>
+<td>完成品を持ち上げ、樋へ送り出す</td>
+</tr>
+<tr>
+<td>清掃・復帰</td>
+<td>空の受け台が清掃部を通って供給位置へ戻る</td>
+</tr>
+</tbody></table>
+<p>緑の固定軌道は、受け台の高さと外側への移動を案内するカムの模式表示です。青緑の固定部は分離位置の吸引部と清掃部です。粉末のホッパーには上面の開口と粒の層を設け、充填位置には計量シリンダ、上下するピストン、供給ノズルを表示しています。</p>
+<p>排出樋は外側へ10度下ります。排出されたカプセルは樋へ倒れながら移動し、外形と傾斜面から位置を求めて上面に沿わせています。</p>
+<h2>操作</h2>
+<ul>
+<li>ドラッグ：視点の回転、ホイール：ズーム</li>
+<li>一時停止・再生：機械の動作を停止・再開</li>
+<li>回転速度：初期値3 rpm、0～8 rpmで調整</li>
+<li>1工程進める・工程ボタン：注目する組を工程の代表位置へ移動して停止</li>
+<li>観察する組：右側の断面図に表示する受け台を選択。3Dでは金色の輪で示す</li>
+<li>回転位置：回転盤の位置を直接指定して停止</li>
+<li>カプセルと受け台を断面表示：外側半分を開き、内部の粉末と薄い壁を表示。中央軸と下側テーブルは隠す</li>
+<li>カム軌道を表示：固定軌道を表示</li>
+<li>自動周回：反時計回りに20秒で一周。視点の鉛直軸と俯角を保ち、機械を停止中も周回する</li>
+<li>全体・側面・上面：自動周回を止め、所定の観察方向へ変更</li>
+</ul>
+<h2>表示の前提</h2>
+<p>工程を読み取りやすい模式モデルです。寸法はモデル座標で、粉末量は0～100%の状態として表示します。吸引力、粉末の流動、カプセルの変形とロック溝は、機構を示すアニメーションへ簡略化しています。</p>
+<p>回転角に沿って工程を連続的に表しています。実機の割出停止や充填量の制御を表現する場合は、回転盤の時間進行と各工程の駆動を個別に設定する構成へ広げられます。</p>
+<p>キャップとボディの開口、丸い閉端、薄い壁は3Dと断面図で同じ形状の定義を使います。PBRの環境反射で金属部品を表示し、カプセルは金属度0の光沢材質、粉末は明るい拡散材質として描き分けています。</p>
+<h2>ファイル</h2>
+<ul>
+<li><code>mechanism.js</code>：工程と受け台の位置、カプセルの断面、樋上の位置</li>
+<li><code>main.js</code>：部品の生成、PBR描画、工程の更新、画面操作</li>
+<li><code>filling_machine.html</code> / <code>style.css</code>：観察画面、断面図、操作部品</li>
+</ul>
+<h2>原理の参照</h2>
+<p>工程の構成は、<a href="https://www.syntegon.com/solutions/pharma/capsule-filling-machine/">Syntegonのカプセル充填機の解説</a>に記載された、供給・分離・充填・位置合わせ・結合・排出・清掃を参考にしています。</p>
+
+</article>
+</main>
+</body>
+</html>

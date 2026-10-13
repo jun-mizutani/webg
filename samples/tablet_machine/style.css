@@ -1,0 +1,36 @@
+/*
+ * style.css  2026/10/13
+ * Copyright (c) 2026 Jun Mizutani,
+ * released under the MIT open source license.
+ */
+
+/* 機構と工程を同時に観察できる画面を配置する */
+:root { color-scheme: dark; font-family: system-ui, sans-serif; color: #e6edf2; background: #0c131b; }
+* { box-sizing: border-box; }
+body { margin: 0; }
+header { padding: 22px 30px 18px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #273441; }
+h1 { font-size: 27px; letter-spacing: .1em; margin: 5px 0; }
+header p { font-size: 13px; color: #9caebd; margin: 0; }
+.eyebrow { font-size: 10px; letter-spacing: .17em; color: #91a8ba; }
+.badge { border: 1px solid #394b59; border-radius: 30px; padding: 8px 15px; font-size: 12px; }
+main { display: grid; grid-template-columns: minmax(0, 1fr) 330px; }
+.scene { position: relative; height: min(68vh, 730px); min-height: 460px; background: #121d28; overflow: hidden; }
+#canvas { display: block; width: 100%; height: 100%; touch-action: none; }
+.scene-note { position: absolute; top: 18px; left: 22px; color: #b1c3d2; font-size: 12px; line-height: 1.8; pointer-events: none; }
+.legend { position: absolute; bottom: 18px; left: 20px; display: flex; gap: 16px; font-size: 12px; padding: 9px 13px; background: #101b27dc; border-radius: 6px; pointer-events: none; }
+.upper { color: #8fc3e2; } .lower { color: #e0b375; } .roller { color: #bda6ed; } .cam { color: #63bbaa; }
+aside { background: #101a24; padding: 23px 22px 12px; border-left: 1px solid #273441; }
+h2 { font-size: 17px; margin: 6px 0 15px; } h2 span { color: #f18d7d; padding-left: 10px; }
+.select-row { display: flex; justify-content: space-between; align-items: center; font-size: 12px; color: #a6bac9; }
+.phase-title { display: flex; gap: 9px; align-items: center; margin-top: 16px; } .phase-title h3 { margin: 0; font-size: 20px; } #phase-dot { width: 9px; height: 9px; border-radius: 50%; } #angle-label { margin-left: auto; color: #98afc0; font-size: 12px; }
+.description { color: #b4c4d0; line-height: 1.7; font-size: 13px; min-height: 67px; margin: 9px 0 0; }
+#detail { width: 100%; max-height: 290px; background: #0c151e; border-radius: 9px; }
+.metrics { display: flex; justify-content: space-between; margin-top: 12px; } .metrics div { display: flex; flex-direction: column; gap: 5px; } .metrics span,.small { color: #8398a9; font-size: 11px; } .metrics output { font-size: 16px; font-variant-numeric: tabular-nums; }
+.controls { display: flex; flex-wrap: wrap; gap: 12px 18px; padding: 16px 24px; align-items: center; border-top: 1px solid #273441; }
+button,select { font: inherit; font-size: 12px; padding: 8px 12px; color: #dbe6ed; background: #1b2b39; border: 1px solid #405565; border-radius: 6px; cursor: pointer; }
+button:hover { background: #304857; } #pause { background: #385f66; border-color: #739da3; min-width: 95px; }
+label { font-size: 12px; display: flex; align-items: center; gap: 8px; } input { accent-color: #92d0c5; } #speed { width: 95px; } #speed-value { min-width: 50px; } .scrub { width: 100%; } .scrub input { flex: 1; }
+.stages { display: grid; grid-template-columns: repeat(6,1fr); gap: 8px; padding: 0 24px 18px; } .stages button { border-top: 3px solid var(--stage); text-align: left; } .stages button.active { background: #30434f; } .stages small { display: block; color: #94a8b8; margin-top: 4px; }
+footer { border-top: 1px solid #273441; padding: 10px 24px 18px; color: #92a8b8; font-size: 12px; line-height: 1.8; } footer p { margin: 6px 0; } a { color: #95cbdc; }
+#error { position: absolute; inset: 100px 20px auto; background: #522d30; padding: 20px; white-space: pre-wrap; }
+@media (max-width: 850px) { main { grid-template-columns: 1fr; } .scene { height: 60vh; min-height: 400px; } aside { border-left: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 6px 20px; } #detail { grid-column: 2; grid-row: 1 / 6; } .stages { grid-template-columns: repeat(3,1fr); } .legend { gap: 10px; font-size: 10px; } }

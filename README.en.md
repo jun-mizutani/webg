@@ -7,10 +7,10 @@ Build 3D applications with light, materials, and motion using JavaScript and Web
 `webg` is a self-contained library that combines PBR, environment lighting, water surfaces and caustics, CPU/GPU physics simulation, animation, particles, and sound.
 You can move from high-level application development to direct control of Render Passes, Compute Passes, and WGSL while using the same scenes and models.
 
-[![Dolphins swimming in a PBR aquarium with a water surface, underwater caustics, red and yellow lamps, and bubbles](https://jun-mizutani.github.io/webg/samples/aquarium/aquarium.jpg)](https://jun-mizutani.github.io/webg/samples/aquarium/aquarium.html)
+[![A PBR rotary tablet machine with 12 die and punch stations, stationary cams, and compression rollers](https://jun-mizutani.github.io/webg/samples/tablet_machine/tablet_machine.jpg)](https://jun-mizutani.github.io/webg/samples/tablet_machine/tablet_machine.html)
 
-**Aquarium — Light beneath the water** — A scene combining glTF model animation, caustics, a water surface, particles, and lighting.
-[Run the sample](https://jun-mizutani.github.io/webg/samples/aquarium/aquarium.html) · [Explanation and code](https://jun-mizutani.github.io/webg/samples/aquarium/index.en.html)
+**Rotary Tablet Machine** — Explore how the dies and punches rotate past stationary cams and rollers through filling, compression, and ejection.
+[Run the sample](https://jun-mizutani.github.io/webg/samples/tablet_machine/tablet_machine.html) · [Explanation and code](https://jun-mizutani.github.io/webg/samples/tablet_machine/index.en.html)
 
 ## Explore webg through samples
 
