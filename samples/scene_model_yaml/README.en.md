@@ -34,6 +34,6 @@ The loaded model is available through sceneApp.model.asset. Source inspection us
 
 scene_model_yaml.html is the executable page, main.js initializes the app and controls, scene.yaml contains artwork settings, and model.yaml contains the model. Japanese and English README files have corresponding HTML guides.
 
-Asset values remain unchanged while physics updates runtime Nodes, preserving YAML comments during export. Startup and saving failures appear on screen. Runtime rendering or physics errors stop updates. WebgSceneApp.destroy() releases resources on page exit.
+ModelAsset source data and YAML comments are preserved while physics updates runtime Nodes. Saving writes the document data separately from runtime positions.
 
 This sample demonstrates the external ModelYAML path. See [model_yaml](../model_yaml/index.en.html) for loading and instancing ModelYAML on its own.

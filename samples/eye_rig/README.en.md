@@ -29,15 +29,15 @@ The sample uses the core `EyeRig` directly to demonstrate Follow, Orbit world-to
 
 ## Checkpoints
 
-In Orbit mode, press `H` to compare a camera base parented to the vehicle with one parented to a non-rotating anchor that only shares its position. This demonstrates that inherited rotation is selected by the application hierarchy.
+In Orbit mode, press `H` to compare a camera base parented to the vehicle with one parented to an independent camera anchor that follows the vehicle position while keeping its own orientation. This demonstrates that inherited rotation is selected by the application hierarchy.
 
 In First Person mode, the base starts behind, above, and slightly to the right of the camera vehicle. The camera body faces local `-Z`, while the vehicle faces local `+Z`, so `bodyYaw: 180` aligns their forward axes. `W` moves along the body local `-Z` rotated by `bodyYaw`, `D` moves along local `+X`, and `S / A` move in the opposite directions. Horizontal dragging changes `eye.lookYaw` while preserving `bodyYaw` and the movement direction. This allows the view to turn while the vehicle heading remains unchanged. `Q / E` move the base vertically in its parent coordinate system.
 
-In Follow mode, the base stays attached to the camera vehicle and is never copied to the target position. The rod preserves the application-controlled composition, while the eye stores the dynamic local orientation that looks at the target vehicle. A `follow dot` value near 1 in the Help panel means that the eye world-forward direction matches the target direction.
+In Follow mode, the base stays attached to the camera vehicle and looks toward the target from that position. The rod preserves the application-controlled composition, while the eye stores the dynamic local orientation that looks at the target vehicle. A `follow dot` value near 1 in the Help panel means that the eye world-forward direction matches the target direction.
 
 Press `U` to compare `base`, `rod`, and `world` up references. When the target direction is nearly parallel to the selected up direction, the sample projects the previous right axis onto the new view plane to preserve roll continuity.
 
-Follow interpolates orientation with a frame-rate-independent response and a maximum angular speed. It does not delay the target position itself.
+Follow interpolates orientation with a frame-rate-independent response and a maximum angular speed. It calculates the target orientation from the current target position and interpolates the camera orientation toward it.
 
 ## Controls
 

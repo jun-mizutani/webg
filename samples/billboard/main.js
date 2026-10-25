@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// samples/billboard/main.js  2026/07/25
+// samples/billboard/main.js  2026/10/25
 //   billboard sample
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -77,7 +77,7 @@ const createFloorShape = (gpu) => {
 
 // `core`の形状を生成し、後続処理で利用できる状態にする
 const createCoreShape = (gpu) => {
-  // particle の見えを妨げない小さめの sphere を中心オブジェクトにする
+  // 小さめの sphere を中心へ置き、周囲の particle も見える構成にする
   const shape = new Shape(gpu);
   shape.applyPrimitiveAsset(Primitive.sphere(CORE_RADIUS, 24, 24, shape.getPrimitiveOptions()));
   shape.endShape();
@@ -529,7 +529,7 @@ const start = async () => {
       if (input.has("arrowdown")) state.cameraPitchDeg = clamp(state.cameraPitchDeg - deltaSec * 68.0, CAMERA_PITCH_MIN, CAMERA_PITCH_MAX);
       updateCamera();
 
-      // 背景 object も完全静止にせず、少し上下させて depth 感を残す
+      // 背景 object を少し上下させ、奥行きを感じやすい動きを添える
       // Y 回転も足し、specular の動きから球面の陰影を読み取りやすくする
       coreNode.setPosition(0.0, CORE_BASE_Y + Math.sin(timeSec * 0.75) * 0.8, 0.0);
       coreNode.setAttitude(timeSec * 24.0, 0.0, 0.0);

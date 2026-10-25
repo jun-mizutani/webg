@@ -9,7 +9,7 @@ English | [日本語](README.md)
 - It drops polycubes into a `6x6x10` 3D board and raises the score by clearing layers that become filled beyond a threshold
 - `WebgApp` is used as the entry point, and `Shape / Primitive` are used to build the floor, blocks, and per-layer wireframe walls
 - The camera uses an `EyeRig` orbit configuration, and movement input is corrected into the `x / z` directions based on camera yaw
-- Before the game starts, pieces do not fall automatically, so you can inspect the controls while watching the rotation demo of every block type
+- Before the game starts, pieces stay at their starting height while you inspect the controls and rotation demos for every block type
 - During gameplay, the HUD is reduced to a single `score / level / layer` line, and the operation guide is shown only before the start and on game over
 - The sample includes ghost display, next-piece display, high-score saving, screenshots, sound effects, and BGM
 - A layer clears when at least 29 of its 36 cells are filled, and score changes according to occupancy rate
@@ -31,7 +31,7 @@ English | [日本語](README.md)
 ## Checkpoints
 - Confirm that wireframe walls surrounding each layer are visible around the 3D board, making it easier to understand the height of the blocks
 - Confirm that arrow-key movement is corrected based on camera yaw, producing natural left-right / front-back movement relative to the viewing direction
-- Confirm that before the start, pieces do not fall automatically and the game begins only after move / rotate / drop input
+- Confirm that pieces stay at their starting height before input, and that move / rotate / drop starts the game
 - Confirm that the ghost display indicates the final drop position and that hard drop fixes the piece there immediately
 - Confirm that a layer clears when 29 or more cells are filled and that score increases according to how full the layer was
 - Confirm that before the game starts, the rotation demo shows 8 polycube types at individual speeds and disappears after gameplay begins

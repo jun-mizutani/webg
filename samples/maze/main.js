@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// samples/maze/main.js  2026/10/10
+// samples/maze/main.js  2026/10/25
 //   Walk-through maze sample generated at runtime
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -149,7 +149,7 @@ let currentSpotLight = {
 
 // 迷路生成専用のMT19937を固定seedから初期化する
 // callbackを呼ぶたびに[0, 1)の値を順番に返し、掘削と部屋配置で一つの乱数列を共有する
-// util.MersenneTwister側がseedをunsigned 32bit整数として検証するため、暗黙の丸めは行わない
+// seed は unsigned 32bit 整数として util.MersenneTwister の検証へ渡す
 function createMazeRandom(seed) {
   const generator = new util.MersenneTwister(seed);
   return () => generator.random();
@@ -762,7 +762,7 @@ function buildMazeScene() {
   rebuildCollisionWorld();
 }
 
-// 表示を初期状態へ戻し、前回の状態を残さない
+// 表示を初期状態へ戻し、次の実行を同じ条件で始める
 function resetView() {
   eyeRig.setType("first-person");
   eyeRig.setPosition(...initialViewState.position);

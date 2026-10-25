@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// samples/procedural_texture/procedural_texture_test.mjs  2026/08/09
+// samples/procedural_texture/procedural_texture_test.mjs  2026/10/25
 //   CPU contracts for procedural material presets and directional wood grain
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -73,7 +73,7 @@ const EXPECTED_VARIATION_CELLS = Object.freeze({
   "vinyl.tile.marble": Object.freeze({ longUnitCount: 4, rowCount: 4, width: 244, height: 244 })
 });
 
-// 3m面で色模様とNormalの粒度が粗く戻らないよう、材質ごとの実寸scaleと高さ振幅を固定する
+// 材質ごとの実寸 scale と高さ振幅を固定し、3m 面での色模様と Normal の粒度を検証する
 const EXPECTED_FINE_MATERIAL_SCALES = Object.freeze({
   "wood.oak.plank": Object.freeze({ pattern: 0.018, patternHeight: 0.00025, detail: 0.015, detailHeight: 0.00010 }),
   "wood.walnut.plank": Object.freeze({ pattern: 0.014, patternHeight: 0.00018, detail: 0.0125, detailHeight: 0.00008 }),
@@ -503,7 +503,7 @@ for (const [ratio, denominator] of [[1 / 3, 3], [0.25, 4]]) {
   }
 }
 
-// 分母で閉じない行数とPaletteにない任意ratioを受理せず、周期が途中で切れる設定を防ぐ
+// 行周期が閉じる行数と定義済みratioを検証し、つながる周期の設定だけを受理する
 assert.throws(
   () => generate("brick.running.red", {
     layout: { rowOffsetRatio: 1 / 3 },

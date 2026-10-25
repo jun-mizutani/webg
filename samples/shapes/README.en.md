@@ -24,8 +24,8 @@ English | [日本語](README.md)
 ## Checkpoints
 - When switching the surface mode with `C / T / I / N / D`, confirm that only the differences between texture / image normal / procedural normal change while the geometry stays the same
 - Confirm that texture comparison with `T`, image-normal comparison with `I`, and procedural-normal comparison with `N / D` can all be read within the same sample
-- Confirm with the `1 - 9` wireframe toggles that the topology is as expected, and that line display does not break even when the surface mode changes
-- Confirm that across the nine shapes, including `cube / cuboid / mapCube`, both texture and normal comparison remain usable without severe breakage
+- Confirm with the `1 - 9` wireframe toggles that topology matches expectations and that the same edges remain continuous across surface modes
+- Compare texture and normal patterns and shading across all nine shapes, including `cube / cuboid / mapCube`
 
 ## Controls
 - `C`: solid-color display

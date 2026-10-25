@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// FallingDominoSleepDiagnostic.js  2026/10/10
+// FallingDominoSleepDiagnostic.js  2026/10/25
 //   falling_dominoes専用のsleep・接触連鎖診断
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -71,7 +71,7 @@ function findPairImpulseAudit(trace, bodyAId, bodyBId) {
 }
 
 // CPUエミュレータが保持したbody別traceを隣接pairの表示形式へまとめます
-// GPUの通常solverへ固定body番号の診断処理を追加せず、診断の対象と粒度をsample側で選びます
+// 診断対象のbody番号と記録の粒度はsample側で選び、GPUの通常solverと診断を分担します
 function buildPairImpulseAudit(trace, fixedStep) {
   const body29To30 = findPairImpulseAudit(trace, 29, 30);
   const body30To31 = findPairImpulseAudit(trace, 30, 31);

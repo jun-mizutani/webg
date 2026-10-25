@@ -1,4 +1,4 @@
-// mesh_edit.js 2026/09/18
+// mesh_edit.js 2026/10/25
 // 頂点と面を保存データのまま編集する関数群。Copyright (c) 2026 Jun Mizutani, MIT
 import util from "../../webg/util.js";
 import { readSceneMesh } from "../../webg/app/SceneMesh.js";
@@ -10,7 +10,7 @@ export function makeMesh(kind = "cube") {
   return { vertices, faces };
 }
 
-// GPUへ送る前に全頂点と面の参照を検査し、不正データを現在の作品へ反映させない
+// GPU へ送る前に全頂点と面の参照を検査し、有効なデータを現在の作品へ反映する
 export function validateMesh(mesh, label) {
   readSceneMesh(mesh, label);
   if (mesh.vertices.length > 20000 || mesh.faces.length > 40000) throw Error(`${label}: 編集上限は頂点20000、面40000です`);

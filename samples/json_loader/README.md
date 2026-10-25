@@ -7,7 +7,7 @@
 ## 概要
 - main.js 内で指定した ModelAsset JSON ファイルを読み込み、そのまま表示するサンプルです。
 - gltf_loader や collada_loader が D キーで出力した JSON を、ファイル名を合わせてこのサンプルで再表示できます。
-- WebgApp.loadModel() から JSON facade を呼び、形式差を意識せず ModelAsset と runtime を得るサンプルです。
+- WebgApp.loadModel() から JSON facade を呼び、共通の呼び出しでModelAssetとruntimeを得るサンプルです。
 - 同梱の`modelasset.json`には、同じ元clipを複製した`ArmatureAction_skeleton_0`と`ArmatureAction_skeleton_0_copy`の2 clipを収録しています。
 
 ## 実行方法
@@ -34,7 +34,7 @@
 - 4 / 5 キーで ArmatureAction_skeleton_0 と ArmatureAction_skeleton_0_copy を切り替えられることを確認します
 - 1 キーで選択中 clip を restartAnimation(clipId) により名前指定で再始動できることを確認します
 - 2 / 3 キーで選択中 clip を pauseAnimation(clipId) / resumeAnimation(clipId) により個別停止・再開できることを確認します
-- カメラ距離がバウンディングボックスのサイズに応じて自動設定され、モデル全体を見失わないことを確認します
+- カメラ距離がバウンディングボックスのサイズに応じて自動設定され、モデル全体が画面内に収まることを確認します
 - Shift + Arrow と Shift + Drag で camera target を平行移動でき、細部を中央へ寄せて確認できることを確認します
 - W で wireframe、S で screenshot、R で初期 framing へ戻ることを確認します
 - CommandPalette から clip の replay / pause / resume / selection、wireframe、screenshot、JSON 出力、camera reset を実行できることを確認します

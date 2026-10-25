@@ -174,7 +174,7 @@ blockquote {
 <p>English | <a href="index.html">日本語</a></p>
 <p><img src="./json_loader.jpg" alt="json_loader" /></p>
 <h2>Overview</h2>
-<ul><li>This sample loads and displays the <code>ModelAsset</code> JSON file specified in <code>main.js</code> as-is</li><li>JSON exported by <code>gltf_loader</code> or <code>collada_loader</code> with the <code>D</code> key can be shown again in this sample by matching the file name</li><li>It calls the JSON facade from <code>WebgApp.loadModel()</code>, making it a sample that obtains <code>ModelAsset</code> data and runtime objects without caring about format differences</li><li>The included <code>modelasset.json</code> contains two clips, <code>ArmatureAction_skeleton_0</code> and <code>ArmatureAction_skeleton_0_copy</code>, created by duplicating the same source clip</li></ul>
+<ul><li>This sample loads and displays the <code>ModelAsset</code> JSON file specified in <code>main.js</code> as-is</li><li>JSON exported by <code>gltf_loader</code> or <code>collada_loader</code> with the <code>D</code> key can be shown again in this sample by matching the file name</li><li>It calls the JSON facade from <code>WebgApp.loadModel()</code> to obtain <code>ModelAsset</code> data and runtime objects through one shared entry point</li><li>The included <code>modelasset.json</code> contains two clips, <code>ArmatureAction_skeleton_0</code> and <code>ArmatureAction_skeleton_0_copy</code>, created by duplicating the same source clip</li></ul>
 <h2>How to Run</h2>
 <ul><li>Open <a href="./json_loader.html">./json_loader.html</a></li><li>Use a browser with WebGPU support, and check the Help Panel and CommandPalette together with the sample when needed</li></ul>
 <h2>webg Features Used</h2>

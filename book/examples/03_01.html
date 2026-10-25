@@ -1,5 +1,5 @@
 <!doctype html>
-<!-- book/examples/03_01.html 2026/10/04 -->
+<!-- book/examples/03_01.html 2026/10/25 -->
 <html lang="ja">
 <head>
   <meta charset="UTF-8" />
@@ -113,12 +113,18 @@ function buildSolarHierarchy(app) {
   root.setPosition(-5.2, 1.2, 0.0);
 
   const sun = app.space.addNode(root, "sun");
-  sun.addShape(createSphereShape(gpu, 0.95, [1.0, 0.74, 0.18, 1.0]));
+
+  // 自転する見た目を、地球の公転軸と兄弟のNodeへ取り付ける
+  const sunBody = app.space.addNode(sun, "sunBody");
+  sunBody.addShape(createSphereShape(gpu, 0.95, [1.0, 0.74, 0.18, 1.0]));
 
   const earthOrbit = app.space.addNode(sun, "earthOrbit");
   const earth = app.space.addNode(earthOrbit, "earth");
   earth.setPosition(3.6, 0.0, 0.0);
-  earth.addShape(createSphereShape(gpu, 0.42, [0.24, 0.66, 1.0, 1.0]));
+
+  // 地球の自転は、この本体だけに適用して月の軌道を独立させる
+  const earthBody = app.space.addNode(earth, "earthBody");
+  earthBody.addShape(createSphereShape(gpu, 0.42, [0.24, 0.66, 1.0, 1.0]));
 
   const moonOrbit = app.space.addNode(earth, "moonOrbit");
   const moon = app.space.addNode(moonOrbit, "moon");
@@ -128,8 +134,10 @@ function buildSolarHierarchy(app) {
   return {
     root,
     sun,
+    sunBody,
     earthOrbit,
     earth,
+    earthBody,
     moonOrbit,
     moon
   };
@@ -223,11 +231,11 @@ app.start({
     elapsedSec += deltaSec;
 
     // 太陽系は親 pivot を回して公転を作り、本体 node を回して自転を作る
-    solar.sun.rotateY(0.2 * deltaSec);
-    solar.earthOrbit.rotateY(0.8 * deltaSec);
-    solar.earth.rotateY(2.5 * deltaSec);
-    solar.moonOrbit.rotateY(2.2 * deltaSec);
-    solar.moon.rotateY(1.6 * deltaSec);
+    solar.sunBody.rotateY(12.0 * deltaSec);
+    solar.earthOrbit.rotateY(24.0 * deltaSec);
+    solar.earthBody.rotateY(72.0 * deltaSec);
+    solar.moonOrbit.rotateY(55.0 * deltaSec);
+    solar.moon.rotateY(48.0 * deltaSec);
 
     // 人体側は腰の揺れ、肩の振り、肘の曲げを分け、
     // 手先の world position が上流の関節すべてを反映することを確認する

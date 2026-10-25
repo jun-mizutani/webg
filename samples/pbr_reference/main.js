@@ -1,5 +1,5 @@
 // ---------------------------------------------------------
-// main.js  2026/10/10
+// main.js  2026/10/25
 //   Forward and deferred GGX comparison application
 // ---------------------------------------------------------
 import WebgApp from "../../webg/WebgApp.js";
@@ -234,7 +234,7 @@ function toggleHdrEnvironment() {
   setIblEnabled(true);
 }
 
-// 元HDRを物体のないpixelへ表示し、同じ環境をIBLにも必ず使用します
+// 背景 pixel へ元 HDR を表示し、同じ環境を IBL にも使用します
 function toggleHdrBackground() {
   hdrBackgroundEnabled = !hdrBackgroundEnabled;
   if (hdrBackgroundEnabled) setIblEnabled(true);
@@ -535,7 +535,7 @@ async function createRgbaTexture(gpu, width, height, pixels) {
   return texture;
 }
 
-// RGBA8画素を補間せずに読むTextureを作り、alpha境界とchecker境界を明確に保つ
+// RGBA8画素をnearestで読むTextureを作り、alpha境界とchecker境界を明確に保つ
 async function createNearestRgbaTexture(gpu, width, height, pixels) {
   const texture = new Texture(gpu);
   await texture.initPromise;
@@ -549,7 +549,7 @@ async function createNearestRgbaTexture(gpu, width, height, pixels) {
   return texture;
 }
 
-// camera側を向く開いた四角形を作り、閉じた立体の裏面がalpha結果へ混入しないようにする
+// camera側を向く一枚の四角形で、前面のalphaによる背景の見え方を比較する
 function createOpenPlane(gpu, width, height, materialId, materialParams) {
   const shape = new Shape(gpu);
   const halfWidth = width * 0.5;
@@ -560,7 +560,7 @@ function createOpenPlane(gpu, width, height, materialId, materialParams) {
     [halfWidth, halfHeight, 0.0, 1.0, 0.0],
     [-halfWidth, halfHeight, 0.0, 0.0, 0.0]
   ];
-  // U=0とU=1は平面の左右端であり、球面用のUV継ぎ目補正対象ではない
+  // U=0とU=1を平面の左右端として保持し、一枚の画像全体をその範囲へ対応させる
   shape.setTextureMappingMode(-1);
   shape.setAutoCalcNormals(false);
   for (let index = 0; index < vertices.length; index += 1) {
@@ -724,7 +724,7 @@ function createMaterialSphere(gpu, roughness, metallic) {
   return shape;
 }
 
-// roughnessを横方向、metallicを縦方向へ並べ、切替後もShapeを作り直さない比較sceneを構築する
+// roughness を横、metallic を縦へ並べ、同じ Shape で条件を切り替えて比較する
 function createComparisonScene() {
   const gpu = app.getGPU();
   const xStep = 2.15;
@@ -754,7 +754,7 @@ function getSelectedEnvironment() {
   throw new Error(`unknown PBR environment mode: ${environmentMode}`);
 }
 
-// 比較に不要なeffectを全て無効にし、直接光、Reinhard Tone Map、sRGB出力だけを実行する
+// 直接光、Reinhard Tone Map、sRGB出力に効果を絞り、照明の差を比較する
 function encodeDeferredFrame(cameraFrame) {
   const gpu = app.getGPU();
   gpu.endPass();
@@ -774,7 +774,7 @@ function encodeDeferredFrame(cameraFrame) {
       unitSystem: photometricEnabled ? "photometric" : "relative",
       ambient: 0.0,
       environment: iblEnabled ? selectedEnvironment.getResources() : null,
-      // 二つの比較環境は測光校正済みではないため、photometric比較では明示scaleだけを与えます
+      // 二つの環境をphotometricで比較するときは、校正値として利用者が指定したscaleを使います
       environmentIntensity: iblEnabled ? (photometricEnabled ? 500.0 : 1.0) : undefined,
       environmentBackground: iblEnabled && hdrBackgroundEnabled,
       environmentRotationDegrees: iblEnabled ? environmentRotationDegrees : undefined,
@@ -904,7 +904,7 @@ function verifyComputePreprocess(reference, actual) {
   return maximum;
 }
 
-// timestamp-query対応deviceでは前処理全体のGPU開始／終了をqueryで測り、未対応時はunavailableを返します
+// timestamp-query対応deviceでは前処理全体のGPU時間を測り、その他の device では利用状態を unavailable として返します
 // wall timeはpipeline準備やqueue待ちを含むため、GPU timestampと別の値として常に記録します
 async function encodeTimedEnvironmentPreprocess(gpu, preprocessor, source) {
   const timestampSupported = gpu.device.features?.has?.("timestamp-query") === true;
@@ -975,7 +975,7 @@ async function start() {
     document,
     autoDrawScene: false,
     shaderClass: PbrForwardShader,
-    // 比較画像の画角とpixel位置がbrowser viewportやDPRで変わらないよう、実験解像度を固定する
+    // 実験解像度を固定し、browser viewport や DPR の変更後も同じ画角と pixel 位置で比較する
     layoutMode: "embedded",
     renderMode: "continuous",
     fixedCanvasSize: {
@@ -1168,7 +1168,7 @@ async function start() {
   pipeline = new ComputeEffectPipeline(gpu, {
     width: app.screen.getWidth(),
     height: app.screen.getHeight(),
-    // Pipelineのdirectional lightはshadow blockではなくconstructor直下のworld-space directionで指定する
+    // Pipeline の directional light は constructor 直下の world-space direction で指定する
     lightDirection: [...LIGHT_TO_SURFACE_WORLD],
     shadow: {
       type: "directional"
@@ -1238,7 +1238,7 @@ async function start() {
   document.getElementById("statusError").textContent = "なし";
 
   app.start({
-    // resize時はdeferred側の全targetをCanvas寸法へ合わせ、古いtextureを参照しない
+    // resize時はdeferred側の全targetをCanvas寸法へ合わせ、現在の寸法のtextureを参照する
     onUpdate: ({ screen }) => {
       pipeline.resize(screen.getWidth(), screen.getHeight());
       environmentDebugPass.resize(screen.getWidth(), screen.getHeight());
@@ -1255,8 +1255,8 @@ async function start() {
           iblEnabled ? cameraFrame : null,
           iblEnabled ? environmentRotationDegrees : 0.0
         );
-        // draw単位のdoParameter()は材質にradianceがなければshader既定値を使うため、
-        // frame直前の一時uniformではなく既定値を更新し、15球すべてへ同じ直接光状態を適用します
+        // draw 単位の doParameter() は、材質の radiance を省略した場合に shader の既定値を使うため、
+        // その既定値を更新し、15 球すべてへ同じ直接光の状態を適用します
         app.shader.setDefaultParam(
           "radiance",
           directLightEnabled ? [1.0, 1.0, 1.0] : [0.0, 0.0, 0.0]
@@ -1302,7 +1302,7 @@ document.addEventListener("DOMContentLoaded", () => {
   start().catch(showStartError);
 });
 
-// requestAnimationFrame内の同期例外と未処理Promise拒否も画面へ出し、黒画面だけを残さない
+// 同期例外と未処理 Promise 拒否の理由を、画面にも表示する
 window.addEventListener("error", (event) => {
   showStartError(event.error ?? event.message);
 });

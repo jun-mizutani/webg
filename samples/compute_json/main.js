@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// samples/compute_json/main.js  2026/10/10
+// samples/compute_json/main.js  2026/10/25
 //   JSON animation viewer with ComputeEffectPipeline
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -151,7 +151,7 @@ function isCommandPaletteButtonActive(key) {
   return false;
 }
 
-// command palette の表示中心を、double tap 位置を覆いすぎない場所へずらして決める
+// double tap 位置の斜め外側へ command palette の表示中心をずらす
 // mmodeler と同じ考え方で tap 位置の斜め外側を優先し、収まらないときだけ画面内へ clamp する
 function chooseCommandPaletteCenter(rect, localX, localY, halfWidth, halfHeight) {
   const margin = 12.0;
@@ -196,7 +196,7 @@ function closeCommandPalette() {
 }
 
 // command palette の button 表示内容を更新する
-// page 切替、active 表示、空 slot の非表示をまとめて反映し、状態変更直後でも表示が古くならないようにする
+// page、active 表示、空 slot を一括更新し、操作直後の状態を表示へ反映する
 function renderCommandPalette() {
   if (!commandPalette?.root || !Array.isArray(commandPalette.buttons)) {
     return;
@@ -429,7 +429,7 @@ function installCommandPaletteGesture() {
 }
 
 // mmodeler と同じく2本のpointerを登録順に取り出し、画面上の線分角度をroll入力として読む
-// pointer座標はcanvas localへ変換せず、両点の差だけを使うためclient座標のまま扱える
+// pointerの移動差を求めるため、両点を同じclient座標で扱う
 function getOrbitRollGesturePointers(state) {
   return Array.from(state.pointers.values()).slice(0, 2);
 }
@@ -448,7 +448,7 @@ function getOrbitRollGestureMetrics(pointers) {
   };
 }
 
-// atan2が+180度と-180度をまたいでも1frameの入力差が急反転しないよう符号付き角度へ正規化する
+// atan2の±180度の境界をまたぐ入力差を符号付き角度へ正規化し、回転の連続性を保つ
 // 不正値を0へ置き換えるとgesture破損を隠すため、呼び出し側で有限値を確認してから使用する
 function normalizeOrbitRollDelta(delta) {
   let value = Number(delta);
@@ -461,7 +461,7 @@ function normalizeOrbitRollDelta(delta) {
 }
 
 // UIが検出した角度差だけを反転し、mmodelerと同じview forward軸回りの回転APIへ渡す
-// yaw/pitch/target/distanceの処理は変更せず、入力deltaから適用deltaへの変換をこの関数へ限定する
+// この関数は入力deltaを適用deltaへ変換し、yaw/pitch/target/distanceの処理へ渡す
 function applyInvertedOrbitRollInput(detectedDelta = 0.0) {
   if (!orbit?.orbit) {
     return false;
@@ -505,7 +505,7 @@ function updateOrbitRollGesture(state) {
 }
 
 // touch pointerの追加・移動・終了を追跡し、2本ある期間だけroll gestureを有効にする
-// pointerTypeをtouchへ限定するため、PCのmouse dragによる通常orbit操作には干渉しない
+// pointerTypeがtouchの操作へ限定し、mouse dragは通常のorbit操作へ渡す
 function installInvertedOrbitRollGesture() {
   const canvas = app?.screen?.canvas;
   if (!canvas) {
@@ -674,7 +674,7 @@ function applyExplicitTextureFlagsToRuntimeShapes(modelRuntime) {
     shape.updateMaterial({
       color,
       use_texture: hasTexture ? 1 : 0,
-      // ModelAssetに含まれないDeferred Shading用surface値をviewerの表示材質として明示する
+      // Deferred Shading 用の surface 値を、viewer の表示材質として明示する
       specular: 0.35,
       roughness: 0.55,
       metallic: 0.0,

@@ -1,4 +1,4 @@
-// main.js 2026/09/25
+// main.js 2026/10/25
 // SceneYAML、物理、Compute粒子、音楽をLUMENの展示操作へまとめる
 import { parseSceneYAML } from "../../webg/SceneYaml.js";
 import GameAudioSynth from "../../webg/GameAudioSynth.js";
@@ -11,7 +11,7 @@ let audio = null;
 let musicEnabled = false;
 let elapsed = 0;
 let pulseTime = -10;
-// 描画が進んだ秒数で自動展示を進め、非表示タブから復帰しても演出を連打しない
+// 描画中の経過秒数で自動展示を進め、タブ復帰後も演出を順番に再生する
 const PULSE_INTERVAL_SEC = 8;
 const DROP_INTERVAL_SEC = 12;
 let nextPulseTime = PULSE_INTERVAL_SEC;

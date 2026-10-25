@@ -6,7 +6,7 @@
 
 ## 概要
 - WebGPU の Compute Shader を使い、格子状の布を mass-spring モデルで更新するサンプルです
-- webg コアライブラリには compute 用 API を追加せず、WebgApp が初期化した WebGPU device / queue / canvas context をサンプル内で直接使っています
+- WebgAppが初期化したWebGPU device / queue / canvas contextを使い、サンプル内でcompute処理を組み立てています
 - 布の頂点は storage buffer に保持し、compute pass が前フレームの頂点位置と近傍頂点を読んで次フレームの位置と速度を書き込みます
 - src buffer と dst buffer を分ける ping-pong 構成にしているため、ある頂点が近傍頂点を読む途中で別 invocation がその近傍値を書き換える競合を避けています
 - 構造バネの力だけでは布が伸びすぎやすいため、上下左右の隣接頂点との距離が許容長を超えた場合に少し戻す strain limit を入れています
@@ -24,9 +24,9 @@
 
 ## 使用している webg 機能
 - WebgApp: Screen、diagnostics、入力基盤をまとめて初期化する
-- WebgApp computeFrame: `computeFrame: true`と`onComputeFrame` handlerで、標準scene描画を行わずcompute / renderの順序を制御する
+- WebgApp computeFrame: `computeFrame: true`と`onComputeFrame` handlerで、computeとrenderの順序をサンプル側で制御する
 - Screen.resize(): WebgApp が保持する Screen を通じて viewport 変更時の canvas 実ピクセルを更新する
-- WebgApp.getGPU(): core API を変更せず、サンプル側で raw WebGPU pipeline を作るための入口
+- WebgApp.getGPU(): 初期化済みGPUを取得し、サンプル側でraw WebGPU pipeline を作るための入口
 - buildHelpPanelOptions() + showOverlayPanel(): 操作説明と現在状態を折りたたみ可能な help panel として表示
 - InputController.installTouchControls(): PCとスマートフォンの両方へ 1 / 2 / 3 / R / P / W の操作ボタンを表示
 
@@ -76,9 +76,9 @@
 
 ## 実装の詳細
 - main.js の compute shader は srcState を read-only、dstState を read-write として分けています
-- ばね計算では上下左右と斜め近傍を読み、距離が極端に短い場合は正規化せずゼロ寄与にしています
-- 重力は質量に左右されない加速度として加え、バネ、風、速度抵抗は力を頂点質量で割って加速度へ変換します
-- strain limitや床で位置を補正した後は、補正済み位置と前substep位置の差から速度を再計算し、補正前の下向き速度を残しません
+- ばね計算では上下左右と斜め近傍を読み、距離が極端に短い場合の寄与をゼロとして、方向を求める除算を安全に扱います
+- 重力は全頂点へ同じ加速度として加え、バネ、風、速度抵抗は力を頂点質量で割って加速度へ変換します
+- strain limitや床で位置を補正した後は、補正済み位置と前substep位置の差から速度を再計算し、次のsubstepは補正後の速度から進めます
 - render shader は vertex attribute で渡された cloth vertex index を使い、storage buffer 内の頂点位置を直接参照しています
 - Flat / Smooth は同じ triangle stream を使い、Flat は変形後の3頂点から作った面法線を WGSL の `@interpolate(flat)` で triangle 全体へ一定値として渡し、Smooth は grid 近傍から作った頂点法線を補間しています
 - 布の色は固定で、視点右上の光に対する diffuse と specular highlight によって揺れと面の向きを読み取ります

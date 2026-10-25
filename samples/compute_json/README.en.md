@@ -28,7 +28,7 @@ To display another model, place a ModelAsset JSON or gzipped ModelAsset JSON fil
 4. `ComputeEffectPipeline.encode()` receives the current effect switches and executes only the enabled compute effects
 5. `FullscreenPass` presents the composed color texture on the canvas
 
-This order applies the same screen-space effects to static JSON models, skeletal animation, and node-transform animation. When every effect is disabled, no unnecessary effect pass is encoded and the normal scene color is sent to the final output.
+This order applies the same screen-space effects to static JSON models, skeletal animation, and node-transform animation. When every effect is disabled, the normal scene color passes directly to the final output.
 
 ## Controls
 
@@ -63,19 +63,19 @@ This order applies the same screen-space effects to static JSON models, skeletal
 
 Verify that Toon and Edge follow the silhouette and shading of the animated model. Then toggle SSAO, Shadow Map, SSR, DoF, and Bloom independently, and compare the visual result together with the GPU Compute / GPU Render values in the HUD to see that each effect enters the output flow only when needed.
 
-After replacing the asset with JSON that has multiple animation clips, verify that `4` / `9` changes the selected clip and that `1` / `2` / `3` affects only that clip. A JSON file without animation can still use the model viewer and all compute effect controls.
+After replacing the asset with JSON that has multiple animation clips, verify that `4` / `9` changes the selected clip and that `1` / `2` / `3` affects only that clip. The model viewer and Compute effect controls work with static JSON models as well as animated ones.
 
 ## Blender Import / Export Add-on
 
 `blender_modelasset_animation_io.py` converts Blender meshes, Armatures, vertex weights, and Actions to ModelAsset JSON. Install the Python file from Blender's Add-ons preferences. `Webg Animated ModelAsset JSON` will then appear in the File menu under Import and Export. Both plain JSON and gzip-compressed `.json.gz` files are supported.
 
-When `Export Skeletons` is enabled, the add-on finds the Armature modifier of each selected mesh and writes its bone hierarchy, rest pose, inverse bind matrices, and per-vertex weights. It keeps and normalizes the four strongest bone weights per vertex. A vertex without any weight for the Armature is reported as an error instead of being silently assigned to a bone.
+When `Export Skeletons` is enabled, the add-on finds the Armature modifier of each selected mesh and writes its bone hierarchy, rest pose, inverse bind matrices, and per-vertex weights. It keeps and normalizes the four strongest bone weights per vertex. The exporter checks that every vertex has an Armature weight and reports unweighted vertices with an error that identifies the input to fix.
 
-Rigify Armatures can contain many `ORG-*` and `MCH-*` control bones that do not deform the mesh directly. The exporter never writes those bones as joints, regardless of their weights, and collapses them into the local matrices of their retained children. This removes control joints while preserving the rest pose, inverse bind matrices, and evaluated Action poses. Export stops with an error if the resulting skeleton still exceeds webg's 320-bone limit. If a vertex is weighted only to `ORG-*` / `MCH-*` bones, export reports invalid weights instead of silently reassigning it to another bone.
+Rigify Armatures can contain many `ORG-*` and `MCH-*` bones that control the poses of deforming bones. The exporter folds their transforms into child local matrices and writes the deforming joints. This removes control joints while preserving the rest pose, inverse bind matrices, and evaluated Action poses. Export stops with an error if the resulting skeleton still exceeds webg's 320-bone limit. If a vertex is weighted only to `ORG-*` / `MCH-*` bones, export reports invalid weights instead of silently reassigning it to another bone.
 
-When `Export Animations` is enabled, Blender Actions that control pose bones of the exported Armature are written as clips. The exporter forms the union of keyframe times found in every bone F-Curve and stores only those times in the shared ModelAsset timeline. Constraints are included in the evaluated pose at each keyframe, but Blender's Bezier interpolation curves are not exported; interpolation between keys is performed by the webg animation runtime. Because every animation targets a skeleton, `Export Animations` is disabled when `Export Skeletons` is off.
+When `Export Animations` is enabled, Blender Actions that control pose bones of the exported Armature are written as clips. The exporter forms the union of keyframe times found in every bone F-Curve and stores only those times in the shared ModelAsset timeline. Constraints are included in the evaluated pose at each keyframe, but Blender's Bezier interpolation curves are not exported; interpolation between keys is performed by the webg animation runtime. Because every animation targets a skeleton, Enable `Export Skeletons` to select `Export Animations`, which refers to the exported skeleton.
 
-On import, `Import Skeletons` recreates Blender Armatures and vertex groups from the ModelAsset skeletons. `Import Animations` converts each clip into a Blender Action with linearly interpolated keyframes. Static ModelAsset files without animation can be imported through the same add-on.
+On import, `Import Skeletons` recreates Blender Armatures and vertex groups from the ModelAsset skeletons. `Import Animations` converts each clip into a Blender Action with linearly interpolated keyframes. The same add-on also imports static ModelAsset files.
 
 A skinned mesh must preserve the correspondence between undeformed vertices and vertex groups. For that reason, `Apply Modifiers` is not applied to skinned meshes during export and is applied to static meshes. Animation support covers Armature-based skeletal animation. Shape keys, morph targets, Actions that contain only object transforms, and direct conversion of NLA strips into clips are not supported.
 

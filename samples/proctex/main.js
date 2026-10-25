@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// samples/proctex/main.js  2026/07/25
+// samples/proctex/main.js  2026/10/25
 //   proctex sample
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -296,7 +296,7 @@ const start = async () => {
     // HUDを現在の入力と実行状態に合わせて更新する
     const refreshHud = () => {
       // HUD と debug dock は同じ行情報を見るようにし、
-      // 操作ガイドと現在値がずれないようにする
+      // 操作ガイドと現在値を同じ状態から更新する
       app.setControlRows(buildControlRows(state, colorPresets), HUD_ROW_OPTIONS);
     };
 

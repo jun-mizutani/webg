@@ -1,4 +1,4 @@
-// samples/circular_breaker2/ArenaSceneApp.js 2026/09/20
+// samples/circular_breaker2/ArenaSceneApp.js 2026/10/25
 // 円形アリーナの複数色照明を、既存のDeferred Lightingへ接続する
 import WebgSceneApp from "../../webg/app/WebgSceneApp.js";
 
@@ -14,15 +14,15 @@ export function createArenaLights() {
   });
 }
 
-// 公開コアを変更せず、サンプルの描画後段にだけ複数光源を追加する
+// サンプルの派生クラスで描画後段を拡張し、複数の光源を追加する
 export default class ArenaSceneApp extends WebgSceneApp {
   // 初期化後、見出しを除く表示領域にCanvasの実描画サイズを合わせる
-  // CSS拡大だけで済ませず、Screenと投影行列を既存の更新処理で同期する
+  // 既存の更新処理でScreenと投影行列を同期し、表示領域の寸法へそろえる
   async initialize() {
     await super.initialize();
     const stage = this.document.querySelector(".stage");
     if (!stage) throw new Error("ArenaSceneApp requires .stage");
-    // 非表示などで領域が0の間は描画サイズを更新せず、再表示の通知を待つ
+    // 表示領域が正の寸法になった通知を受け取り、描画サイズを更新する
     const resize = () => {
       const width = stage.clientWidth, height = stage.clientHeight;
       if (width === 0 || height === 0) return;
@@ -36,7 +36,7 @@ export default class ArenaSceneApp extends WebgSceneApp {
     resize();
   }
 
-  // 終了後にサイズ通知が破棄済みGPUリソースへ触れないよう監視を先に解除する
+  // 終了時はサイズ監視を先に解除し、その後で GPU resource を破棄する
   destroy() {
     this.stageResizeObserver?.disconnect();
     this.stageResizeObserver = null;

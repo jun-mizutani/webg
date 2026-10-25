@@ -1,12 +1,12 @@
-// collider_edit.js 2026/09/18
+// collider_edit.js 2026/10/25
 // 衝突形状の明示的な選択と、確認用の線分生成
 
-// メニューに表示した初期寸法で新しい衝突形状を作る。表示メッシュから寸法を推測しない
+// メニューに表示した初期寸法で、新しい衝突形状を作る
 export function newCollider(type) {
   if (type === "box") return { type, size: [1, 1, 1] };
   if (type === "sphere") return { type, radius: 0.5 };
   if (type === "capsule") return { type, radius: 0.3, segmentLength: 0.4 };
-  throw Error(`未対応の衝突形状: ${type}`);
+  throw Error(`衝突形状はbox・sphere・capsuleから指定してください: ${type}`);
 }
 
 // コアで検証済みの形状をlocal座標の線分へ変換する。offsetは物体の回転前に加える
@@ -33,6 +33,6 @@ export function colliderLines(shape) {
         const a=[0,-h,0],b=[0,h,0];a[axis]=b[axis]=sign*r;line(a,b);
       }
     }
-  } else throw Error(`未対応の衝突形状: ${shape.type}`);
+  } else throw Error(`衝突形状はbox・sphere・capsuleから指定してください: ${shape.type}`);
   return lines;
 }

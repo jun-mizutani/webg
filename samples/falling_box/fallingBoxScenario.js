@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// samples/falling_box/fallingBoxScenario.js  2026/08/28
+// samples/falling_box/fallingBoxScenario.js  2026/10/25
 //   Shared falling-box scenario for CPU and Compute samples
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -60,7 +60,7 @@ export const FALLING_BOX_SOLVER = Object.freeze({
 });
 
 // 本体の種類、寸法、初期姿勢、角速度、材質、色を固定します
-// 配置の変化はseed付き生成側へ分離し、backendが個別に条件を変えないようにします
+// seed 付きの配置生成を共有し、両 backend を同じ初期条件で動かします
 const BASE_BODY_SPECS = Object.freeze([
   Object.freeze({
     role: "long beam", size: Object.freeze([0.10, 0.02, 0.02]),
@@ -100,7 +100,7 @@ const BASE_BODY_SPECS = Object.freeze([
 ]);
 const BODY_SPEC_ORDER = Object.freeze([0, 2, 3, 4, 1, 0, 2, 4, 3]);
 
-// body数を検証し、200体を超えた値を静かに切り詰めないようにします
+// body 数を検証し、上限の 200 体を超えた指定はエラーで知らせます
 // 生成数を変える場合も、比較条件の誤りを呼出時点で発見できるようにします
 export function validateFallingBoxBodyCount(count) {
   if (!Number.isSafeInteger(count) || count < 1 || count > FALLING_BOX_MAX_BODY_COUNT) {
@@ -112,7 +112,7 @@ export function validateFallingBoxBodyCount(count) {
 }
 
 // seed付き乱数から初期配置の小さな揺らぎを作ります
-// Math.randomを使わず、CPU/Computeと複数回の実行で同じscenarioを再現します
+// seed付き乱数で、CPU/Computeと複数回の実行に同じscenarioを使う
 function randomRange(random, minimum, maximum) {
   return minimum + (maximum - minimum) * random.random();
 }

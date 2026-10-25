@@ -20,7 +20,7 @@ http://localhost:8765/samples/joint/joint_compute_node.html
 
 `joint_cpu_node` は `PhysicsSpace.stepFixed()`でCPU側の剛体とJointを更新し、通常の `Space.draw()`でNodeを描画します。CPU版のJoint solverと、通常のCollider、Shape、Nodeの組み合わせを確認する基準実装です
 
-`joint_compute` は `ComputePhysicsSpace.encodeFixedStep()`でGPU上のbody、contact、Jointを更新し、ping-pong `BodyState`をvertex shaderから直接読みます。物理状態をCPU Nodeへ毎frame転送しないGPU-firstの描画経路です
+`joint_compute` は `ComputePhysicsSpace.encodeFixedStep()`でGPU上のbody、contact、Jointを更新し、ping-pong `BodyState`をvertex shaderから直接読みます。GPU上の物理状態を直接参照して描画する経路です
 
 `joint_compute_node` は `joint_compute`と同じGPU物理を使いますが、明示的なstate readback後に `syncNodesFromPhysics()`で通常のNodeへ姿勢を反映し、`Space.draw()`で描画します。GPU直接描画との比較や、Compute物理結果を既存のNode描画へ接続する経路の確認に使います。readbackは非同期であるため、GPU直接描画より表示が遅れ、転送とNode更新のコストが加わります
 
@@ -41,7 +41,7 @@ http://localhost:8765/samples/joint/joint_compute_node.html
 - `H`: Help Panelの表示／非表示
 - Drag: camera orbit　Wheel: camera zoom
 
-Help Panelは各アプリの起動状態に従います。展開すると、物理条件、body／Joint数、振り子の理論周期と実測周期、ロープ速度、角速度、Joint誤差などを表示します。画面へHUD文字は重ねません
+Help Panelは各アプリの起動状態に従います。展開すると、物理条件、body／Joint数、振り子の理論周期と実測周期、ロープ速度、角速度、Joint誤差などを表示します。状態の文字表示はHelp Panelへまとめています
 
 ## ファイル構成
 

@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// samples/animation_state/main.js  2026/07/25
+// samples/animation_state/main.js  2026/10/25
 //   AnimationState sample based on hand sample
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -651,7 +651,7 @@ async function start() {
       updateHud();
     },
     onAfterDraw3d: () => {
-      // WebgApp の自動 bone 描画を使わず、
+      // sample側でbone描画を担当し、
       // sample 側で明示的に bone を重ねて state machine 導入前後の違いを追いやすくする
       app.screen.clearDepthBuffer();
       boneShader.setProjectionMatrix(app.projectionMatrix);

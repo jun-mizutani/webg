@@ -188,7 +188,7 @@ blockquote {
 <p><strong>SceneYAML保存</strong> (Save SceneYAML) and <strong>ModelYAML保存</strong> (Save ModelYAML) download the initial definitions as source text. Runtime physics positions are separate from these saved values. Keep <code>scene.yaml</code> and <code>model.yaml</code> in the same folder to preserve their relative reference. The ModelYAML button saves the external model separately.</p>
 <h2>Files and implementation</h2>
 <p>scene_model_yaml.html is the executable page, main.js initializes the app and controls, scene.yaml contains artwork settings, and model.yaml contains the model. Japanese and English README files have corresponding HTML guides.</p>
-<p>Asset values remain unchanged while physics updates runtime Nodes, preserving YAML comments during export. Startup and saving failures appear on screen. Runtime rendering or physics errors stop updates. WebgSceneApp.destroy() releases resources on page exit.</p>
+<p>ModelAsset source data and YAML comments are preserved while physics updates runtime Nodes. Saving writes the document data separately from runtime positions.</p>
 <p>This sample demonstrates the external ModelYAML path. See <a href="../model_yaml/index.en.html">model_yaml</a> for loading and instancing ModelYAML on its own.</p>
     </article>
   </main>

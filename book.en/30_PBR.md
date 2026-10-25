@@ -106,7 +106,7 @@ F0 = mix(dielectric F0, base color, metallic)
 
 `roughness` describes how widely microscopic surface facets vary around the average normal. This distribution controls the width of a specular highlight. Aligned facets on a smooth surface reflect strongly in a narrow direction; a rough surface spreads that reflection across a wider region. Consider the total reflected energy separately from its distribution.
 
-webg gives roughness a minimum greater than zero. A value of exactly zero creates a singular GGX distribution and unstable numerical calculations. The shared `PBR_MIN_ROUGHNESS` and input validation check the range and report an out-of-range value as a configuration error.
+Set roughness for a webg PBR material in the range 0.04–1.0. A value of exactly zero creates a singular GGX distribution and unstable numerical calculations. The shared `PBR_MIN_ROUGHNESS` and input validation check the range and report an out-of-range value as a configuration error.
 
 ## Preserve Light in Linear HDR
 
@@ -189,7 +189,7 @@ lighting: {
 }
 ```
 
-When IBL supplies environment diffuse lighting, `ambient: 0.0` keeps the environment contribution distinct from a fixed ambient value. `book/examples/33_01.html` uses this setting.
+When environment lighting is enabled, set `ambient: 0.0` so environment diffuse lighting remains the ambient contribution. `book/examples/33_01.html` uses this setting.
 
 ### 4. Material Reflection
 
@@ -248,7 +248,7 @@ Doubling the distance reduces illuminance on the same facing surface to one quar
 
 Real sources have area. Their size affects the distribution of light directions, highlight shape, and softness of shadows. A small source produces a small sharp highlight; a larger source spreads the highlight according to its shape and produces a broader penumbra.
 
-webg's point, cone, spot, and directional lights are idealized for real-time calculations. Integrating all directions from an area light is a separate lighting model. Roughness broadens highlights, while an area light is appropriate when a rectangular source itself should appear in the reflection.
+webg's point, cone, spot, and directional lights are idealized for real-time calculations. Integrating all directions from an area light is a separate lighting model. Roughness adjusts highlight spread. To reflect the shape of a rectangular light, use an HDR environment that contains the shape or provide lighting code that supports area lights.
 
 An HDR environment can contain the apparent shape and size of windows, the sky, and lamps. Bright regions in the environment influence IBL specular highlights, which is a key difference from a fixed single-color ambient value.
 
@@ -319,7 +319,7 @@ webg stores generated resources in `.webgpbr`. The cache records the source iden
 
 Use the same rotation for environment lighting and background so that a visible window and the corresponding object highlight point in the same direction. `environmentRotationDegrees` applies the same Y-axis rotation to radiance background, diffuse irradiance, and prefiltered specular environment. Deferred lighting converts view-space normals and reflection directions back to world space before applying the environment rotation.
 
-When environment lighting is enabled, use `lighting.ambient: 0` to avoid counting a fixed ambient term on top of the diffuse and specular environment. Low-level drawing can accept both inputs, while the `WebgSceneApp` PBR configuration validates that `ambient` is zero when the environment is enabled.
+When environment lighting is enabled, `lighting.ambient` must be zero. The `DeferredLightingPass` and the `WebgSceneApp` PBR configuration both validate this condition.
 
 ## Compensate for IBL Energy Loss
 

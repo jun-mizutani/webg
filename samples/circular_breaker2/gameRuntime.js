@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// samples/circular_breaker2/gameRuntime.js  2026/09/22
+// samples/circular_breaker2/gameRuntime.js  2026/10/25
 //   circular_breaker2 sample
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -94,7 +94,7 @@ export const createGameRuntime = ({
     puckBackVisualApplied: false,
     // パドルの反作用速度
     // パックを打ち返した瞬間に「反射法線の逆向き」へインパルスを与える
-    // カメラを揺らさないため、当たり判定用の基準ノードではなく
+    // カメラと当たり判定の基準位置を保ち、反動を
     // paddleBodyNode / paddleShadowBodyNode の見た目オフセットとして使う
     paddleRecoilVx: 0.0,
     paddleRecoilVz: 0.0,
@@ -121,7 +121,7 @@ export const createGameRuntime = ({
     stageIntroSec: STAGE_INTRO_MAX_SEC,
     stageIntroNeedsInput: true,
     // gameFinished は stage 内ルールの終端フラグであり、
-    // top-level phase の result と同義ではない
+    // ステージ内の終了状態を表し、ゲーム全体のphaseは別に管理する
     // scenePhases.js はこの事実を見て result phase へ入る
     gameFinished: false,
     paddleHitCooldown: 0.0,
@@ -145,7 +145,7 @@ export const createGameRuntime = ({
   };
 
   // play phase に入る瞬間の初期化は runtime 側へ残し、
-  // stageFlow.js が「次の stage 条件判定」と混ざらないようにする
+  // stageFlow.js は次の stage の条件判定を担当する
   const beginStagePlay = () => {
     state.stageIntroSec = 0.0;
     state.stageIntroNeedsInput = false;
@@ -176,7 +176,7 @@ export const createGameRuntime = ({
   });
 
   // result からの再開始は top-level phase の切り替えに近い準備なので、
-  // stage 内ルール helper ではなく runtime 側で状態全体を戻す
+  // runtime が保持する状態全体を初期状態へ戻す
   const restartGame = () => {
     clearKeys();
     state.level = 1;
@@ -357,7 +357,7 @@ export const createGameRuntime = ({
         metallic: 0.42,
         roughness: 0.24,
         specular: 1.0,
-        // 緑を主成分とするHDR発光をBloomへ渡し、白い面ではなく緑の光を広げる
+        // 緑を主成分とする HDR 発光を Bloom へ渡し、緑の光を広げる
         emissive_factor: [emission * .035, emission, emission * .12],
         use_emissive_texture: 1,
         use_texture: 1,
@@ -424,7 +424,7 @@ export const createGameRuntime = ({
       state.paddleSpin = Math.atan2(Math.sin(state.paddleSpin), Math.cos(state.paddleSpin));
     }
 
-    // A/D は向きのみ更新する（中心はここでは動かさない）
+    // A/D は中心位置を保ち、向きを更新する
     state.paddleYaw = Math.PI * 0.5 + state.paddleSpin;
     paddleNode.setAttitude(state.paddleYaw * RAD, 0, 0);
     paddleNode.setPosition(state.paddleCx, PADDLE_Y, state.paddleCz);
@@ -540,7 +540,7 @@ export const createGameRuntime = ({
 
     // 打ち返し時の反作用:
     // 反射中心の法線ベクトル (nx,nz) の反対向きへパドルを少し押す
-    // 値は「目で追えるが操作性を壊さない」程度に抑える
+    // 動きが目で追え、操作にも応答できる大きさに抑える
     const paddleRecoilImpulse = 13.5;
     const paddleRecoilInstantKick = 0.78;
     state.paddleRecoilOffsetX += -nx * paddleRecoilInstantKick;
@@ -644,7 +644,7 @@ export const createGameRuntime = ({
         break;
       }
 
-      // hard は2耐久1発目は破壊せず見た目だけ変える
+      // hardは2耐久とし、1発目は残り耐久1の見た目へ変える
       if (b.type === "hard" && b.hp > 1) {
         b.hp--;
         applyHardBlockDamageAppearance(b, {
@@ -698,7 +698,7 @@ export const createGameRuntime = ({
     if (state.puckMissGraceSec > 0.0) return;
     // 仕様:
     // - paddleNode ローカルZ正領域へ「入った瞬間」にのみ1機減算
-    // - 入った後に領域内へ留まり続けても追加減算しない
+    // - 領域へ入った時点で1回減算し、滞在中はその残数を保持する
     const enteredNow = state.puckInPaddleLocalZPositive && !state.puckWasInPaddleLocalZPositive;
     if (!enteredNow) return;
 

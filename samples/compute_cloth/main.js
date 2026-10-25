@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// samples/compute_cloth/main.js  2026/08/11
+// samples/compute_cloth/main.js  2026/10/25
 //   Compute Shader cloth simulation sample
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -94,8 +94,8 @@ const buildHelpLines = () => [
 ];
 
 // WebgApp 初期化後に book 14.5 と compute_particles と同じ構成の help panel を表示する
-// panel は折りたたみ可能とし、広い画面を確認したい場合も DOM を破棄せず Show Help で戻せるようにする
-// lastHelpText は毎 frame の不要な DOM 更新を避ける比較用として保存する
+// panelのDOMを保持して本文を折りたたみ、Show Helpで同じ本文を再表示する
+// lastHelpText は前回の文字列との比較に使い、内容が変わった frame で DOM を更新する
 const showHelpPanel = () => {
   if (!app) return;
   const lines = buildHelpLines();
@@ -114,8 +114,8 @@ const showHelpPanel = () => {
 };
 
 // simulation や camera の状態が変わった場合だけ help panel の本文を更新する
-// 連続 GPU simulation 中に同じ文字列で DOM を毎 frame 再構築しないよう、前回文字列と比較する
-// panel が未作成または app 初期化前なら、表示先がないため処理を行わない
+// 前回文字列と比較し、診断値が変わったframeだけDOMを更新する
+// app の初期化と panel の作成がそろった段階から、診断値を表示する
 const updateHelpPanel = () => {
   if (!app?.getOverlayPanel?.("computeClothHelp")) return;
   const lines = buildHelpLines();
@@ -126,7 +126,7 @@ const updateHelpPanel = () => {
 };
 
 // browser window の CSS pixel サイズを Screen の canvas 実ピクセルへ同期する
-// screen が未初期化なら何もせず、初期化済みなら最低 1 pixel を保証した整数値を Screen.resize() へ渡す
+// screenの初期化完了後に、最低1 pixelを保証した整数値をScreen.resize()へ渡す
 // Screen が depth texture も同時に作り直すため、後段の raw render pass は常に canvas と同じサイズを使える
 const resizeToWindow = () => {
   if (!screen) return;
@@ -170,8 +170,8 @@ const createInitialClothData = () => {
 
 // Wire mode の line-list 描画へ渡す vertex stream を CPU 側で作る
 // 横隣接と縦隣接を線分の両端として順番に並べ、各 entry には cloth index と未使用の面 index を入れる
-// Wire も Fill と同じ vertex layout を使うため 4 float に揃えるが、面 index は Wire fragment では参照しない
-// 戻り値は頂点座標そのものではなく index stream で、vertex shader が storage buffer から実座標を読む
+// WireとFillのvertex layoutを4 floatでそろえ、Wire fragmentは線に必要な属性だけを使う
+// index stream を返し、vertex shader が各 index に対応する実座標を storage buffer から読む
 const createLineVertexStream = () => {
   const indices = [];
   // line-list の片端となる cloth index を 1 頂点分追加する
@@ -197,7 +197,7 @@ const createLineVertexStream = () => {
 // Flat / Smooth mode が共用する、simulation grid と同じ細かさの triangle-list vertex stream を作る
 // 各 grid cell を 2 triangle、合計 6 頂点へ展開し、描画頂点 index と面を構成する3 index を格納する
 // 3頂点すべてへ同じ面 index を渡し、vertex shader が現在の変形位置から Flat 用面法線を計算する
-// 戻り値の index は storage buffer を直接指すため、CPU が変形後の頂点座標を作り直す必要はない
+// 返した index で storage buffer の頂点座標を参照し、GPU 上の変形結果をそのまま描画する
 const createTriangleVertexStream = () => {
   const indices = [];
   // triangle-list の1面を構成する3頂点を、描画頂点と共通の面 index を持つ3 entry へ展開する
@@ -246,8 +246,8 @@ fn indexOf(x: u32, y: u32) -> u32 {
   return y * u32(params.grid.x) + x;
 }
 
-// grid 座標から、力が加わっていない初期状態の world position を計算する
-// 固定された上端頂点を毎 frame 正しい位置へ戻すために使い、storage buffer の現在位置には依存しない
+// grid 座標から、初期状態の world position を計算する
+// 固定した上端頂点の基準位置を、毎frame同じ格子座標から求める
 fn restPosition(x: u32, y: u32) -> vec3<f32> {
   let width = params.grid.x;
   let spacing = params.grid.z;
@@ -263,7 +263,7 @@ fn restPosition(x: u32, y: u32) -> vec3<f32> {
 
 // 現在頂点 pos と 1 個の neighbor の距離から Hooke 型のばね力を計算する
 // restLength より長ければ neighbor 側へ、短ければ反対側へ力を返し、二点が重なる場合はゼロ vector を返す
-// この関数は位置を変更せず、main() が全近傍の戻り値を合計してから速度へ積分する
+// この関数は近傍から受ける力を返し、main()が全近傍の寄与を合計して速度へ積分する
 fn springForce(pos: vec3<f32>, neighbor: vec3<f32>, restLength: f32, stiffness: f32) -> vec3<f32> {
   let delta = neighbor - pos;
   let lenSq = dot(delta, delta);
@@ -293,8 +293,8 @@ fn strainLimitContribution(pos: vec3<f32>, neighbor: vec3<f32>, restLength: f32,
 
 // compute pipeline の入口で、globalId.x が指す布頂点 1 個の次状態を計算する
 // 固定頂点はrestPosition()へ戻し、可動頂点は構造ばね、斜めばね、曲げばね、風、減衰、strain limit、床反発を順に適用する
-// 重力は質量に依存しない加速度として扱い、バネ、風、速度抵抗は力から逆質量で加速度へ変換する
-// strain limit と床補正後は確定位置の移動量から速度を再計算し、補正前の下向き速度を次 substep へ残さない
+// 重力は加速度として加え、バネ、風、速度抵抗は力へ逆質量を掛けて加速度へ変換する
+// strain limit と床補正後は、確定位置の移動量から次 substep で使う速度を再計算する
 // 読み取りはすべて srcState、最終書き込みは同じ index の dstState だけに限定し、invocation 間の競合を避ける
 @compute @workgroup_size(${WORKGROUP_SIZE})
 fn main(@builtin(global_invocation_id) globalId: vec3<u32>) {
@@ -457,13 +457,13 @@ fn indexOf(x: u32, y: u32) -> u32 {
 }
 
 // grid 外を指す可能性がある signed 座標を、0 から maxValue - 1 の有効範囲へ制限する
-// 布端の法線計算で存在しない隣接頂点を読まず、端自身の位置を代用できるようにする
+// 布端では参照先を有効な頂点の範囲へそろえ、端自身の位置で法線を計算する
 fn clampIndex(value: i32, maxValue: u32) -> u32 {
   return u32(clamp(value, 0, i32(maxValue) - 1));
 }
 
 // world position を camera yaw / pitch / distance に基づく簡易 view 座標へ変換する
-// 入力 position は変更せず、vertex の perspective 投影と world normal の view 変換に使う座標を返す
+// 入力positionの値を保ち、透視投影とworld normalのview変換に使う座標を返す
 fn toViewPosition(p: vec3<f32>) -> vec3<f32> {
   let yaw = renderParams.view.x;
   let pitch = renderParams.view.y;
@@ -810,7 +810,7 @@ const writeSimParams = (deltaSec, timeSec) => {
 
 // 現在の camera、表示 mode、grid サイズ、視点右上の light direction、固定の布色、PAN量を render shader 用 uniform へ転送する
 // canvas の aspect は height 0 を避けて計算し、Wire / Flat / Smooth の mode 値は fragment shader の分岐に使う
-// この関数は布頂点を変更せず、同じ state buffer をどの視点と陰影で見せるかだけを更新する
+// この関数は布頂点のstate bufferを保持し、表示用の視点と陰影を更新する
 const writeRenderParams = () => {
   const aspect = screen.getWidth() / Math.max(screen.getHeight(), 1);
   const params = new Float32Array(RENDER_PARAM_FLOATS);
@@ -838,7 +838,7 @@ const writeRenderParams = () => {
 };
 
 // R key から呼ばれ、変形中の布を createInitialClothData() が作る初期配置へ戻す
-// ping-pong の両方へ同じ配列を書き、次 frame がどちらを src として選んでも古い変形を読まないようにする
+// ping-pong の両方へ同じ配列を書き、次 frame の src を同じ初期形状にそろえる
 // statePair も 0 に戻し、computeBindGroups[0] の 0 -> 1 フローから再開する
 const resetCloth = () => {
   const initial = createInitialClothData();
@@ -913,7 +913,7 @@ const renderComputeClothFrame = (timeMs, elapsedSec) => {
 };
 
 // keyboard と Touch button から共通利用する単発 action を sample 状態へ反映する
-// 入力元に依存せず同じ関数を通すことで、PC key とスマートフォン button の動作差を作らない
+// PC keyとスマートフォンbuttonを共通の関数へ接続し、同じ操作結果へそろえる
 // 未知の action は false を返し、呼び出し側が処理済みか判定できるようにする
 const applyAction = (action) => {
   if (action === "pause") {
@@ -936,7 +936,7 @@ const applyAction = (action) => {
 
 // 2本以上の touch pointer から重心と先頭2点間の距離を計算する
 // 重心差は PAN、距離差は pinch zoom に使用し、毎 move 後に基準を更新して連続操作へ変換する
-// pointer 数が2未満なら gesture を構成できないため null を返す
+// pointerが2本以上ある場合にgestureを作り、1本以下の場合はnullを返す
 const readTouchGesture = () => {
   const points = [...activeTouchPointers.values()];
   if (points.length < 2) return null;
@@ -995,9 +995,9 @@ const handlePointerDown = (event) => {
 };
 
 // mouse drag または touch gesture の移動量を orbit、PAN、zoom の変化へ変換する
-// pointerDragging が false なら何もせず、pitch は布を上下反転して見失わない範囲へ制限する
+// pointerDraggingがtrueの間に姿勢を更新し、pitchは布の表裏を観察しやすい範囲へ制限する
 // touch は1本指を orbit、2本以上を重心 PAN と pinch zoom として同時に処理する
-// storage buffer 内の布頂点には触れないため、camera を動かしても compute simulation は同じ状態で継続する
+// camera の更新と布頂点の compute 更新を分け、視点操作中も同じ simulation を継続する
 const handlePointerMove = (event) => {
   if (event.pointerType === "touch") {
     if (!activeTouchPointers.has(event.pointerId)) return;
@@ -1059,7 +1059,7 @@ const handlePointerUp = (event) => {
   }
 };
 
-// canvas 上の右 drag を PAN に利用するため、browser 標準の context menu を表示しない
+// canvas上の右dragをPANへ割り当て、その操作中のcontext menuを抑止する
 // pointerdown で右 button を PAN mode として記録し、その後の move を camera offset へ変換する
 const handleContextMenu = (event) => {
   event.preventDefault();
@@ -1074,7 +1074,7 @@ const handleWheel = (event) => {
 
 // window の keydown を受け、共通 applyAction() を通して simulation と描画 mode を切り替える
 // P は pause、W は風、R は reset、1/2/3 は Wire/Flat/Smooth、H は help panel の折りたたみを担当する
-// 次 frame の writeSimParams() / writeRenderParams() が現在値を uniform へ反映するため、ここでは GPU command を直接発行しない
+// ここでは操作状態を更新し、次frameのwriteSimParams()とwriteRenderParams()でuniformへ反映する
 const handleKeyDown = (event) => {
   if (event.key.toLowerCase() === "p") {
     applyAction("pause");
@@ -1096,7 +1096,7 @@ const handleKeyDown = (event) => {
 
 // PC、スマートフォン、タブレットへ、低頻度の単発操作を共通の Touch button として配置する
 // camera の連続操作は canvas gesture、mode / wind / pause / reset は button と役割を分ける
-// onAction は keyboard と同じ applyAction() を呼び、入力経路ごとの状態差を作らない
+// onAction と keyboard を共通の applyAction() へ集約し、同じ状態更新を行う
 const installMobileControls = () => {
   app.input.installTouchControls({
     touchDeviceOnly: false,
@@ -1168,7 +1168,7 @@ const start = async () => {
 };
 
 // HTML の解析完了を待って start() を呼ぶ entry point
-// 非同期初期化に失敗した場合は console と OverlayPanel へ理由を出し、黒画面だけで失敗を隠さない
+// 非同期初期化の失敗理由を、console と OverlayPanel へ表示する
 document.addEventListener("DOMContentLoaded", () => {
   // Promise rejection を受け取り、WebGPU validation や初期化失敗を利用者が読める表示へ変換する
   start().catch((error) => {

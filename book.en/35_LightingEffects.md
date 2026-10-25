@@ -30,14 +30,15 @@ Each additional light increases lighting calculations and GPU cost. The current 
 
 The bidirectional reflectance distribution function (BRDF) uses the light direction, view direction, normal, and material to determine the amount of light reflected toward the camera. `DeferredLightingPass` uses GGX for specular reflection and a diffuse contribution weighted by Fresnel reflectance and metalness.
 
-Conceptually, the result is:
+Conceptually, the result is shown below. The emission equation uses scalar `emissive`; a PBR material with a separate emission color adds the HDR color calculated from its emission texture and `emissive_factor`.
 
 ```text
 F0 = mix(0.04 × specular, albedo, metallic)
 Environment diffuse = albedo × environment light × AO visibility × diffuse share
 Direct light = GGX BRDF(albedo, normal, view, light, material) × shadow visibility
 Emission = albedo × emissive
-HDR scene = environment diffuse + direct light + emission
+Environment specular = preintegrated specular environment × BRDF factor
+HDR scene = environment diffuse + environment specular + direct light + emission
 ```
 
 Environment lighting also uses Fresnel reflection and reduces diffuse contribution according to metalness. A fully metallic surface is primarily evaluated through specular environment reflection.
@@ -221,7 +222,7 @@ Camera depth: depth32float / clear 0 / greater / near 1 / far 0
 Shadow depth: depth32float / clear 1 / less / near 0 / far 1
 ```
 
-Shadow resolve reconstructs the receiver's view-space position from camera Reverse-Z depth, transforms it to light space, and compares it with conventional-Z shadow depth. Each depth texture follows its own convention; the shadow map uses Standard-Z `less`.
+Shadow resolve reconstructs the receiver's view-space position from camera Reverse-Z depth, then compares the depth projected into light space against the shadow map on the same Standard-Z scale.
 
 For fixed directional-light bounds, use `createDirectionalLightMatrices()`. To follow the camera frustum, configure `shadow.directional.fitMode: "frustum-fit"` in the integrated pipeline. It transforms the camera's eight corners into light space, builds an axis-aligned bounding box (AABB) for projection, and stabilizes bounds in texel increments. `fitFar` must not exceed camera `far`; an out-of-range value raises an error instead of being silently reduced.
 

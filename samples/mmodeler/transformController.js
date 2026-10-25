@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// samples/mmodeler/transformController.js  2026/07/25
+// samples/mmodeler/transformController.js  2026/10/25
 //   mmodeler transform controller
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -199,7 +199,7 @@ export function createTransformController(services) {
     return true;
   }
 
-  // mobile touch では pointerup を確定ではなく 1 drag segment の終了として扱う
+  // mobile touch の pointerup は 1 回分の drag segment の終了として扱う
   // 現在の preview を次 segment の基準へ移し、tap で明示 confirm できるようにする
   function finishTransformDragSegment() {
     const objectTransformObjects = Array.from(state.initialObjectTransforms.keys());
@@ -343,7 +343,7 @@ export function createTransformController(services) {
 
   // transformController の pointer bridge を登録する
   function installTransformPointerBridge(canvas) {
-    // transform 中の pointer event を通常選択や camera 操作へ流さないよう止める
+    // transform 中の pointer event を、この操作の入口で受け取って処理を完結させる
     const stopTransformEvent = (ev) => {
       ev.preventDefault();
       ev.stopImmediatePropagation();

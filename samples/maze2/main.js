@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// samples/maze2/main.js  2026/10/10
+// samples/maze2/main.js  2026/10/25
 //   Octagonal sci-fi walk-through maze
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -116,7 +116,7 @@ const CEILING_LIGHT_COLORS = Object.freeze({
   red: [1.00, 0.05, 0.10]
 });
 const FLOOR_COLORS = Object.freeze({
-  // alphaは透明度ではなくSSR reflectivityで、白系床も鏡面にならない低い値に抑える
+  // 第4成分は SSR reflectivity として使い、白系床の反射を控えめにする
   corridor: [0.68, 0.73, 0.80, 0.28],
   room: [0.82, 0.76, 0.66, 0.28],
   start: [0.04, 0.72, 0.48, 0.22],
@@ -124,7 +124,7 @@ const FLOOR_COLORS = Object.freeze({
   junction: [0.04, 0.48, 0.88, 0.24]
 });
 // 床以外の通路内装は同じ白系の色を使い、照明色による変化を素直に受けるようにする
-// 主壁、上下斜面、天井の面の違いはcolorではなくroughness / metallicで表現する
+// 主壁、上下斜面、天井には同系統の色を使い、roughness / metallic の差で面の違いを表現する
 const INTERIOR_SURFACE_COLOR = [0.82, 0.84, 0.88, 0.70];
 const WALL_COLOR = INTERIOR_SURFACE_COLOR;
 const RAIL_COLOR = INTERIOR_SURFACE_COLOR;
@@ -172,7 +172,7 @@ let mazeState = null;
 
 // 迷路生成専用のMT19937を固定seedから初期化する
 // callbackを呼ぶたびに[0, 1)の値を順番に返し、掘削、部屋配置、照明色選択で一つの乱数列を共有する
-// util.MersenneTwister側がseedをunsigned 32bit整数として検証するため、暗黙の丸めは行わない
+// seed は unsigned 32bit 整数として util.MersenneTwister の検証へ渡す
 function createMazeRandom(seed) {
   const generator = new util.MersenneTwister(seed);
   return () => generator.random();
@@ -265,7 +265,7 @@ function makeMaterial(color, options = {}) {
     power: options.power ?? 24.0,
     roughness: options.roughness ?? 0.72,
     metallic: options.metallic ?? 0.0,
-    // 第2版G-bufferはsurface値を必須検証するため、発光しない材質も0を明示する
+    // G-bufferへ必要なsurface値をそろえ、発光量0の材質も値を明示する
     emissive: options.emissive ?? 0.0,
     flat_shading: options.flatShading ?? 1
   };
@@ -391,7 +391,7 @@ function carveRoom(cells, room) {
 }
 
 // 部屋生成段階で、部屋の外周から迷路通路へ接続できる入口候補を列挙する
-// 迷路の外へ出る辺は候補に含めない
+// 迷路の範囲内に収まる辺を候補にする
 function collectRoomDoorCandidates(cells, room) {
   const candidates = [];
   for (let row = room.row; row < room.row + room.height; row += 1) {
@@ -637,7 +637,7 @@ class MeshBuilder {
   }
 
   // 形状生成の完了段階で、蓄積した頂点を確定し、材質を設定してsceneへ登録する
-  // 面が一つもない場合は空のShapeを登録せずnullを返す
+  // 面がある場合にShapeを登録し、面数0の場合はnullを返す
   finish() {
     if (this.faceCount === 0) return null;
     this.shape.endShape();
@@ -651,7 +651,7 @@ class MeshBuilder {
 
 // cellの開口方向から、天井panelの幅と前後長を決める
 // 直線cellは通路方向へ3.60mまで伸ばし、上部斜面側は1.48mに抑える
-// 曲がり角、T字、十字、roomは一方向へ不自然に伸ばさず、斜面に接触しない正方形panelを使う
+// 曲がり角、T字、十字、roomには正方形panelを使い、上部斜面との間隔を確保する
 function getFixturePanelSize(cell) {
   const xOpenings = Number(!cell.walls.e) + Number(!cell.walls.w);
   const zOpenings = Number(!cell.walls.n) + Number(!cell.walls.s);
@@ -673,7 +673,7 @@ function createBuilders() {
     flatShading: 1
   });
   // fixtureの側面もpoint lightと同じ色相で見えるよう、色別のmaterial groupを持つ
-  // 形状をcellごとに分割せず、4色のgroupへまとめてShape数を抑える
+  // 形状を4色のgroupへまとめて、色単位のShapeを構築する
   const fixtureMaterial = (color) => makeMaterial([...color, 0.10], {
     ambient: 0.18,
     specular: 0.80,
@@ -812,7 +812,7 @@ function addWallSpan(segments, axis, fixed, start, end, minY = 0, maxY = WALL_HE
 }
 
 // 入口を持つ壁の収集段階で、入口の左右と上部に残る壁区間を分けて追加する
-// 入口中央の通行範囲は衝突線分にも描画面にも含めない
+// 入口中央は、歩行者が通れる空間として開けておく
 function addDoorwaySpans(segments, axis, fixed, center, spanLength, options = {}) {
   const doorWidth = options.doorWidth ?? ROOM_DOOR_WIDTH;
   const doorHeight = options.doorHeight ?? ROOM_DOOR_HEIGHT;
@@ -883,7 +883,7 @@ function collectWallSegments() {
 }
 
 // wall中心から見たrail断面と、その長手方向終端の頂点を返す
-// wall / floor / ceilingと重なる面はこの段階では生成せず、呼び出し側が可視面だけを選ぶ
+// 呼び出し側で可視面を選び、その面だけをwall / floor / ceilingへ追加する
 function createRailSection(segment, side, upper) {
   if (segment.minY > 0 || segment.maxY < WALL_HEIGHT - 1.0e-6) return;
   const half = WALL_THICKNESS * 0.5;
@@ -911,7 +911,7 @@ function createRailSection(segment, side, upper) {
 }
 
 // 三角柱のうち通路側から見える斜面だけをquadとして追加する
-// wall面、床面、天井面は主構造側に既に存在するため、重複させない
+// wall 面、床面、天井面は既存の主構造を使う
 function addRailSlope(builder, segment, side, upper) {
   const rail = createRailSection(segment, side, upper);
   if (!rail) return;
@@ -925,7 +925,7 @@ function addRailSlope(builder, segment, side, upper) {
 
 // railの終端面だけに三角形capを1枚追加する
 // 自由端にはaccent cap materialを使い、L字のrail終端は別のmiter bridgeで接続する
-// 短い三角柱を重ねないため、通常railと同一平面の面を作らない
+// 通常 rail との接続境界を共有し、必要な bridge の面だけを作る
 function addRailEndCap(builder, segment, side, upper, atStart) {
   const rail = createRailSection(segment, side, upper);
   if (!rail) return;
@@ -934,7 +934,7 @@ function addRailEndCap(builder, segment, side, upper, atStart) {
 
 // 直交するhorizontal / vertical railの終端辺を一枚のmiter bridgeで接続する
 // sx / szはcornerから見たそれぞれのrail側面の符号で、4組すべてがL字の上下角を囲む
-// bridgeの4頂点は二本のslope quadがすでに持つ終端辺の頂点をそのまま使うため、座標差の隙間を作らない
+// bridge の 4 頂点には二本の slope quad の終端辺を使い、同じ座標で接続する
 function addRailCornerMiter(builder, x, z, sx, sz, upper) {
   const half = WALL_THICKNESS * 0.5;
   const bevelSize = upper ? UPPER_BEVEL_SIZE : LOWER_BEVEL_SIZE;
@@ -942,7 +942,7 @@ function addRailCornerMiter(builder, x, z, sx, sz, upper) {
   const tipY = upper ? WALL_HEIGHT : 0;
 
   // horizontal railの終端辺はxを固定し、vertical railの終端辺はzを固定する
-  // 4頂点を順に結ぶと、二本の斜面の間を閉じつつwall、floor、ceilingのcoplanar面を作らない
+  // 4 頂点を順に結び、既存の主構造を保ちながら二本の斜面の間を閉じる
   const horizontalWallEdge = [x, wallY, z + sz * half];
   const horizontalTipEdge = [x, tipY, z + sz * (half + bevelSize)];
   const verticalTipEdge = [x + sx * (half + bevelSize), tipY, z];
@@ -957,10 +957,10 @@ function addRailCornerMiter(builder, x, z, sx, sz, upper) {
 }
 
 // 壁区間の収集後に、主壁、上下斜面、自由端、直角接続部の実際の面を生成する
-// 隣接区間の接続関係を先に調べ、重複面や不要な終端面を作らない
+// 隣接区間の接続を先に調べ、外から見える面と終端面を選んで生成する
 function createWallGeometry(builders) {
   wallSegments = collectWallSegments();
-  // 壁区間の端点を、方向に依存しない同じ形式の文字列へ変換する
+  // 壁区間の端点を方向にかかわらず共通の文字列表現へ変換する
   const endpointKey = (axis, fixed, along) => axis === "x"
     ? `${along.toFixed(4)},${fixed.toFixed(4)}`
     : `${fixed.toFixed(4)},${along.toFixed(4)}`;
@@ -968,7 +968,7 @@ function createWallGeometry(builders) {
   const endpointTopology = new Map();
 
   // endpointごとに、そこからどの方角へfull-height wallが伸びるかを記録する
-  // 単なる本数ではL字、T字、十字、自由端を区別できないため、方向集合を保持する
+  // 接続方向の集合を保持し、L字、T字、十字、自由端を区別する
   wallSegments.forEach((segment) => {
     if (segment.minY > 0 || segment.maxY < WALL_HEIGHT - 1.0e-6) return;
     const endpointEntries = [
@@ -1005,7 +1005,7 @@ function createWallGeometry(builders) {
   };
 
   // 自由端とjunctionの端だけにaccent capを置く
-  // L字は後段でmiter bridgeを追加するため、ここでcapを作らない
+  // L 字部分は、後段で miter bridge を追加して接続する
   // 一つの壁端について、上下左右の斜面へ必要な終端面だけを追加する
   const addEndpointCaps = (segment, topology, direction, atStart) => {
     if (!shouldAddEndCap(topology, direction)) return;
@@ -1023,7 +1023,7 @@ function createWallGeometry(builders) {
     const size = segment.axis === "x" ? [length, segment.maxY - segment.minY, WALL_THICKNESS] : [WALL_THICKNESS, segment.maxY - segment.minY, length];
     builders.walls.addBox(center, size);
 
-    // railはwall / floor / ceilingと重なる面を持たない可視斜面quadだけを作る
+    // rail の可視斜面だけを quad で作り、wall / floor / ceiling との境界へ配置する
     addRailSlope(builders.lowerRails, segment, -1, false);
     addRailSlope(builders.lowerRails, segment, 1, false);
     addRailSlope(builders.upperRails, segment, -1, true);
@@ -1039,7 +1039,7 @@ function createWallGeometry(builders) {
   });
 
   // L字の4組のrail側面を、それぞれ共有する終端辺でmiter接続する
-  // これは自由端capではなく二本のslopeを連続させるbridgeなので、junctionの開口へは伸びない
+  // 二本の slope を連続させる bridge を、junction の開口を保つ範囲に作る
   for (const [key, topology] of endpointTopology) {
     if (!isRightAngleCorner(topology)) continue;
     const [x, z] = key.split(",").map(Number);
@@ -1936,7 +1936,7 @@ async function start() {
       });
 
       app.endGpuTiming(gpu.commandEncoder);
-      // 画面copyはdepth attachmentを持たないpresentation passへ記録する
+      // 表示用の presentation pass へ、画面 copy の command を記録する
       // 後続のFont/HUD用にはcolorを保持してReverse-Z depth passを開き直す
       app.screen.beginPresentPass({
         clearColor: app.clearColor,
@@ -1947,7 +1947,7 @@ async function start() {
     }
   });
 
-  // page遷移後に巨大なmaze用GPU resourceを保持しないよう、所有者順に解放する
+  // page遷移時に所有者の順で解放し、maze用GPU resourceの寿命を終了する
   window.addEventListener("pagehide", () => {
     app.stop();
     copyPass.destroy?.();

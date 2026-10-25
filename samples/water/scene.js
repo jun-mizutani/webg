@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// scene.js  2026/10/04
+// scene.js  2026/10/25
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // ---------------------------------------------
@@ -35,7 +35,7 @@ export async function createScene(app) {
   objects.excluded = solid("excluded", options => Primitive.cuboid(1.1, 0.9, 1.1, options),
     [2.0, 0.45, -2.3], [0.66, 0.32, 0.25]);
 
-  // 頂点で高さを変えた斜面。座標ではなくShape登録で受光を決める
+  // 頂点で高さを変えた斜面。受光対象は Shape 単位で登録する
   const slope = new Shape(app.getGPU());
   for (const [x, y, z] of [[-1, 0.08, -0.65], [-1, 0.08, 0.65],
     [1, 0.95, 0.65], [1, 0.95, -0.65]]) slope.addVertex(x, y, z);

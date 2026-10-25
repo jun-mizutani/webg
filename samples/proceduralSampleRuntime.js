@@ -1,5 +1,5 @@
 // -------------------------------------------------
-// proceduralSampleRuntime.js      2026/07/21
+// proceduralSampleRuntime.js      2026/10/25
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // -------------------------------------------------
@@ -239,7 +239,7 @@ export async function setupProceduralSampleApp(options = {}) {
   return runtime;
 }
 
-// 秒単位の回転速度ベクトルを node へ適用し、frame rate に依存しない自動回転を行う
+// 秒単位の回転速度へ経過秒数を掛け、実時間に合わせて node を自動回転する
 export function applySpin(sampleNode, deltaSec, spinDegPerSec = [0.0, 0.0, 0.0]) {
   if (!sampleNode) return;
   const spinX = Number(spinDegPerSec[0] ?? 0.0) * deltaSec;

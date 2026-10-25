@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// samples/cube4/main.js  2026/10/10
+// samples/cube4/main.js  2026/10/25
 //   cube4
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -179,7 +179,7 @@ const validateBeveledBoxParams = (width, height, depth, bevel) => {
 };
 
 // ベベル付き箱を組み立てる前に、各段階で使う半サイズと内側寸法をまとめて計算する
-// ここでは「成立する形状だけを返す」ことを目的にし、値の自動補正は行わない
+// 成立する形状を返すため、入力値を検証し、範囲外の値はエラーとして知らせる
 // 返り値は外周、段差、中央パネルの座標計算で共通利用する基準寸法群
 const computeBeveledBoxDims = (width, height, depth, bevel) => {
   // まず入力が有限値かつ正の寸法かを検証し、明らかな設定ミスを先に落とす
@@ -274,7 +274,7 @@ const createSharedBeveledBoxShape = (gpu, width, height, depth, bevel, color, ma
   const shape = new Shape(gpu);
 
   // まず直方体の半サイズを求め、その内側にベベルと中央パネルを収める基準寸法を作る
-  // ここでは自動補正せず、成立しない設定は例外として表面化させる
+  // 設定の成立条件を検証し、範囲外の値は例外で通知する
   const { hx, hy, hz, ix, iy, iz, panelLift, jx, jy, jz } = computeBeveledBoxDims(width, height, depth, bevel);
 
   // 同じ位置の頂点を 1 度だけ登録し、以後は同じ index を再利用する
@@ -290,7 +290,7 @@ const createSharedBeveledBoxShape = (gpu, width, height, depth, bevel, color, ma
   };
 
   // 任意の polygon を 1 面として追加する helper
-  // 面の向きは入力順に依存させず、面中心と外向き法線の内積で自動補正する
+  // 面中心と外向き法線の内積から面の向きを判定し、頂点順を外向きへそろえる
   // 共有頂点版でも面定義の手順は非共有版と同じにし、比較対象をそろえる
   const addFace = (pts) => {
     const n = pts.length;
@@ -358,14 +358,14 @@ const createSharedBeveledBoxShape = (gpu, width, height, depth, bevel, color, ma
   );
 
   // 各面の外周をつなぐ 4 辺のベルト面を追加する
-  // ここは「中央パネル」でも「角」でもない中間帯で、箱の厚みを見せる役割を持つ
+  // 中央パネルと角の間をつなぐ中間帯として、箱の厚みを表現する
   addFace([[-ix, iy, hz], [ix, iy, hz], [ix, hy, iz], [-ix, hy, iz]]);
   addFace([[-ix, -hy, iz], [ix, -hy, iz], [ix, -iy, hz], [-ix, -iy, hz]]);
   addFace([[-ix, hy, -iz], [ix, hy, -iz], [ix, iy, -hz], [-ix, iy, -hz]]);
   addFace([[-ix, -iy, -hz], [ix, -iy, -hz], [ix, -hy, -iz], [-ix, -hy, -iz]]);
 
   // 左右方向の側帯を追加する
-  // 前後面と左右面のつながりを作り、単なる押し出し箱ではない輪郭を作る
+  // 前後面と左右面を接続し、段差を持つ立体的な輪郭を作る
   addFace([[ix, -iy, hz], [ix, iy, hz], [hx, iy, iz], [hx, -iy, iz]]);
   addFace([[-hx, -iy, iz], [-hx, iy, iz], [-ix, iy, hz], [-ix, -iy, hz]]);
   addFace([[-ix, -iy, -hz], [-ix, iy, -hz], [-hx, iy, -iz], [-hx, -iy, -iz]]);
@@ -1283,7 +1283,7 @@ const renderBoard = (runtime) => {
 // HUDを現在の入力と実行状態に合わせて更新する
 const updateHud = (runtime) => {
   // cube4 では Text.js ベースの固定 HUD を常時重ねるため、
-  // WebgApp 標準の guide/status は空にして表示領域を競合させない
+  // WebgApp 標準の guide / status を空にし、ゲーム独自の表示領域を確保する
   app.message.setLines("status", [], HUD_STATUS_OPTIONS);
   app.message.setLines("guide", [], HUD_GUIDE_OPTIONS);
 };
@@ -1328,7 +1328,7 @@ const createDecor = (space, gpu) => {
   );
   for (let y = 0; y < BOARD.height; y++) {
     // 各層を 1 セルぶんの高さで囲む
-    // ワイヤーフレーム表示にすることで、厚みを持たせずに層境界だけを見せる
+    // ワイヤーフレームで各層の境界線を示す
     const layerWallNode = space.addNode(wallRoot, `layer_wall_${y}`);
     layerWallNode.setPosition(center[0], BASE_Y + y * BOARD.cell, center[2]);
     layerWallNode.addShape(wallShape);

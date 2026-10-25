@@ -26,7 +26,7 @@ Open either page in a WebGPU-capable browser. The Help Panel starts collapsed. P
 
 The initial conditions are defined in `fallingBoxScenario.js`. The 200 bodies are arranged in four columns by four rows per layer, with placement jitter reproduced from seed `20260822`. Each body is a Box, and the five Planes represent the floor and four walls. Gravity is `-4.9 m/s²`, the fixed timestep is `1/120 s`, and the solver uses 14 iterations.
 
-The CPU page converts each descriptor into a `PhysicsNode` and `BoxCollider`, then registers the five Planes as static `PhysicsNode` objects in `PhysicsSpace`. `PhysicsSpace` converts those registered Planes into solver inputs and resolves the Box/Plane contacts in one CPU path. The visible floor board is a separate normal Node, so the floor is not solved twice. The Compute page converts the same descriptors into GPU BodyState records for `ComputePhysicsSpace`. CPU `PhysicsNode` stores angular velocity in degrees per second, so the common descriptor’s radians-per-second values are converted when solver state is synchronized to the Node.
+The CPU page converts each descriptor into a `PhysicsNode` and `BoxCollider`, then registers the five Planes as static `PhysicsNode` objects in `PhysicsSpace`. `PhysicsSpace` converts those registered Planes into solver inputs and resolves the Box/Plane contacts in one CPU path. The visible floor board is a separate render Node, while the registered Plane handles floor contacts. The Compute page converts the same descriptors into GPU BodyState records for `ComputePhysicsSpace`. CPU `PhysicsNode` stores angular velocity in degrees per second, so the common descriptor’s radians-per-second values are converted when solver state is synchronized to the Node.
 
 ## What to Check
 

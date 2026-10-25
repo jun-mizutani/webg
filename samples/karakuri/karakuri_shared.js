@@ -1,5 +1,5 @@
 // ---------------------------------------------
-//  karakuri_shared.js  2026/09/10
+//  karakuri_shared.js  2026/10/25
 //   Shared language, file control, and status helpers for Karakuri Maker/Player
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -241,7 +241,7 @@ export function setLanguage(language) {
   return value;
 }
 
-// 現在の言語に対応する短い表示文字列を返し、HTMLに識別子を直接持ち込まないようにします
+// 現在の言語に対応する表示文字列へ、識別子を変換します
 export function t(language, key) {
   return TEXT[language]?.[key] ?? TEXT.ja[key] ?? key;
 }

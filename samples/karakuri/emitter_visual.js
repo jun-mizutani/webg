@@ -1,5 +1,5 @@
 // ---------------------------------------------
-//  emitter_visual.js  2026/09/11
+//  emitter_visual.js  2026/10/25
 //   Visible, non-physical emitter parts for Karakuri Maker and Player
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -34,7 +34,7 @@ function emitterYaw(emitter) {
   return Math.hypot(x, z) > 1e-8 ? Math.atan2(z, x) * 180.0 / Math.PI : 0.0;
 }
 
-// カプセル型のノズルを作り、物理bodyを持たない発射台の表示Nodeへ登録します
+// カプセル型のノズルを作り、発射台の表示専用 Node へ登録します
 function addEmitterNozzle(app, parent, name, position, material) {
   const node = app.app.space.addNode(parent, name);
   node.setPosition(...position);

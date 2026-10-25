@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// samples/mmodeler/ModelerRenderer.js  2026/07/25
+// samples/mmodeler/ModelerRenderer.js  2026/10/25
 //   WebGPU scene graph rendering helpers for mmodeler.
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -55,7 +55,7 @@ export default class ModelerRenderer {
 
   // 表示用 material を作る
   // smoothShading が ON の場合だけ SmoothShader の flat_shading を 0 にし、
-  // editor geometry や保存用 ModelAsset の頂点共有構造は変更しない
+  // editor geometryと保存用ModelAssetの頂点共有構造をそのまま保持する
   makeMeshMaterial(baseMaterial, smoothShading) {
     return {
       ...baseMaterial,
@@ -71,7 +71,7 @@ export default class ModelerRenderer {
   }
 
   // 全 object の mesh Shape を編集データから再構築する
-  // object selection や wireframe は描画表現なので引数で受け取り、scene state 自体は変更しない
+  // object selectionとwireframeを表示用引数として受け取り、描画用の状態として参照する
   rebuildMeshShapes(options = {}) {
     const objects = Array.isArray(options.objects) ? options.objects : [];
     const selectedObjectIds = options.selectedObjectIds;
@@ -131,7 +131,7 @@ export default class ModelerRenderer {
   }
 
   // Edit Mode の選択 face overlay Shape を再構築する
-  // 選択 face が無い場合や Edit Mode ではない場合は、overlay node を取り除いて終了する
+  // Edit Modeでfaceを選択したときにoverlayを表示し、それ以外ではoverlay nodeを取り除く
   rebuildSelectedFaceShape(options = {}) {
     this.removeNodeTree(this.selectedFaceNode);
     this.selectedFaceNode = null;
@@ -324,7 +324,7 @@ export default class ModelerRenderer {
     });
   }
 
-  // 3D marker nodeを使わず、marker rootを空に保つ
+  // marker rootを空に保ち、頂点markerは画面上のoverlayへ描く
   rebuildMarkers() {
     this.removeNodeTree(this.markerRoot);
     this.markerRoot = null;

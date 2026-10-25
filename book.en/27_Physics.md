@@ -26,7 +26,7 @@ You can register bodies with a `PhysicsSpace` and connect the results from eithe
 
 The physics engine updates positions and velocities over time and determines motion through gravity, collision, restitution, and friction. This chapter explains `PhysicsSpace`, `PhysicsNode`, and `Collider`, starting with the smallest floor-and-box example and continuing to contact events, queries, collision layers, and SceneYAML configuration.
 
-> **Reading path:** To use physics in an application, read “Overall Structure,” “Implementation Example: Dropping a Box onto a Floor,” “PhysicsNode,” “Collider,” “Contact Events and Query APIs,” and “Update Pipeline.” The sections on the Separating Axis Theorem (SAT), contact manifolds, inertia, the solver, and support propagation explain internals for investigating or extending the engine.
+> **Using physics and reading its internals:** Start with the floor-and-box example to learn how bodies, Colliders, and materials connect. Chapter 28 continues with events, queries, SceneYAML settings, and update order. For OBBs, SAT, contact points, inertia, and solver equations, see the engine internals in Chapter 42.
 
 Earlier chapters introduced `Node`, `Space`, `Shape`, `SceneYAML`, and scene fundamentals such as ray casting and collision queries. Combining these pieces supports basic rendering, input-driven movement, and overlap checks using bounding boxes.
 

@@ -48,10 +48,10 @@
 ## 確認ポイント
 - GLTF_FILE で指定したファイルが読み込まれ、shape / skeleton / animation が正しく構築されるかを確認します
 - facade 1 回の呼び出しで、glTF の node 復元と animation binding が他形式と同じ共通 helper で行えることを確認します
-- skinned mesh を含む glTF でも、static な親回転や uniform scale が importer 側で bake され、static mesh と skinned mesh の向きが大きく食い違わないことを確認します
+- skinned mesh を含む glTF でも、static な親回転や uniform scale が importer 側で bake され、static mesh と skinned mesh の向きがそろうことを確認します
 - D キーで保存した ModelAsset JSON に staticBake meta が残り、どの node / skeleton へ bake が適用されたかを後から確認できることを確認します
 - raw glTF の animation sampler に CUBICSPLINE が入っている場合は、中間値を抜いて LINEAR に変換され、Interpolation Notice と Help Panel に animationInterpolation=LINEAR converted=CUBICSPLINE->LINEAR:... 相当の情報が表示されることを確認します
-- 大きい glTF / GLB を読み込むときでも、起動中は Load Progress panel に stage=... が表示され、少なくともどの段階まで進んだかを確認できることを確認します
+- 大きい glTF / GLB を読み込むときでも、起動中は Load Progress panel に stage=... が表示され、処理がどの段階まで進んだかを確認します
 - Rigify 系モデルでは required=... に加えて helperWeighted=...、helperAncestor=...、helperPruned=... を見ることで、helper 骨が実際に weight で使われているのか、親子関係維持のために残っているだけなのか、あるいは importer が焼き込んで削除できたのかを判断できることを確認します
 - Help Panel に file / model / orbit / target / anim / clip0 / interpolation / wireframe 状態が表示され、viewer として必要な状態を画面上で追えることを確認します
 - 1 キーで先頭 clip を restartAnimation(clipId) により名前指定で再始動できることを確認します
@@ -65,8 +65,8 @@
 
 読み取りポイント
 - 「表示は合っているが scale がどこで反映されたか分からない」ときは、まず meshes[].meta.staticBake と nodes[].matrix を見ます。
-- 「animation はあるが再生されない」ときは、animations[].targetSkeleton と nodes[].animationBindings の対応を見ます。
-- 「clip が再生されない」ときは、Help Panel の Anim / Clip0 表示と JSON の binding を見比べます。
+- アニメーションの再生開始を確認するときは、animations[].targetSkeleton と nodes[].animationBindings の対応を見ます。
+- clipの再生状態を確認するときは、Help Panel の Anim / Clip0 表示と JSON の binding を見比べます。
 - 「親 node を持つ skinned mesh の向きが怪しい」ときは、skeletons[].meta.staticBake が入っているか、対象 asset が scale animation / non-uniform scale を含んでいないかを確認します。
 
 ## 操作方法

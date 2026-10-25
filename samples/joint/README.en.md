@@ -20,7 +20,7 @@ Detailed English descriptions are available in [joint_cpu_node.en.md](./joint_cp
 
 `joint_cpu_node` updates CPU rigid bodies and Joints with `PhysicsSpace.stepFixed()` and renders Nodes through the normal `Space.draw()` path. It is the reference combination of the CPU Joint solver, ordinary Colliders, Shapes, and Nodes
 
-`joint_compute` updates bodies, contacts, and Joints on the GPU with `ComputePhysicsSpace.encodeFixedStep()` and reads the ping-pong `BodyState` directly from a vertex shader. It is the GPU-first path without per-frame physics-state transfer into CPU Nodes
+`joint_compute` updates bodies, contacts, and Joints on the GPU with `ComputePhysicsSpace.encodeFixedStep()` and reads the ping-pong `BodyState` directly from a vertex shader. It renders directly from the GPU physics buffer through a vertex shader
 
 `joint_compute_node` uses the same GPU physics as `joint_compute`, but reads back an explicit state copy, applies the result to ordinary Nodes with `syncNodesFromPhysics()`, and renders with `Space.draw()`. It is useful for comparing GPU-direct rendering with the path that connects Compute physics to an existing Node renderer. Readback is asynchronous, so it can display a later state and adds transfer and Node-update cost
 
@@ -41,7 +41,7 @@ The driver Capsule is a gravity-free kinematic body. Its local Y axis is rotated
 - `H`: show or hide the Help Panel
 - Drag: orbit the camera　Wheel: zoom the camera
 
-Each application follows its own Help Panel startup state. When expanded, it reports physical conditions, body and Joint counts, pendulum target and measured periods, rope speeds, angular speeds, and Joint error. No HUD text is drawn over the scene
+Each application follows its own Help Panel startup state. When expanded, it reports physical conditions, body and Joint counts, pendulum target and measured periods, rope speeds, angular speeds, and Joint error. Text status is collected in the Help Panel
 
 ## File layout
 

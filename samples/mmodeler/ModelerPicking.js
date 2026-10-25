@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// samples/mmodeler/ModelerPicking.js  2026/07/25
+// samples/mmodeler/ModelerPicking.js  2026/10/25
 //   Picking calculations for the mmodeler sample.
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -731,7 +731,7 @@ export default class ModelerPicking {
       };
     }
 
-    // box select では矩形の広さで可視判定アルゴリズムを変えない
+    // box select は、すべての矩形サイズに同じ可視判定を使う
     // 狭い範囲だけ exact occlusion を使うと、遮蔽候補集合の違いで選択結果と速度が不安定になる
     // vertex は接続 face の front-facing 判定だけを行い、候補数によらず同じ処理フローに揃える
     const context = this.makeVisibleAdjacencyContext(projectionContext, new Set(entries.map((entry) => entry.vertex.id)));
@@ -775,7 +775,7 @@ export default class ModelerPicking {
       };
     }
 
-    // face box select も矩形の広さで可視判定アルゴリズムを変えない
+    // face box select も、すべての矩形サイズに同じ可視判定を使う
     // face center が矩形内にある候補へ front-facing 判定だけを行い、狭い範囲でも広い範囲でも同じ結果規則にする
     const context = this.makeFastFaceVisibilityContext(editMesh);
     const rayContext = this.makeRayBuildContext();

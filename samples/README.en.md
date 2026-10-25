@@ -6,7 +6,7 @@ For a first project, use the [Getting Started and Examples](../book.en/01_Introd
 
 `samples` contains browser-based applications for people using webg to explore API usage, rendering, interaction, and performance. It includes both focused feature examples and application-scale examples that combine multiple features.
 
-Small browser pages for checking individual features belong in `unittest/`. Automated contracts that do not require a browser belong in `headless_tests/`. Runnable examples that accompany the book belong in `book/examples/`.
+Small browser pages for checking individual features belong in `unittest/`. Node.js-based automated contracts belong in `headless_tests/`. Runnable examples that accompany the book belong in `book/examples/`.
 
 During development, if a browser reuses an older ES module URL for webg, open [`cache_clear_webg/cache_clear_webg.html`](./cache_clear_webg/cache_clear_webg.html) through a web server and select “全coreを再import” (“Reimport all core modules”). The page loads every JavaScript module under `webg` with a unique `?v=...` URL. Core modules retain their original import statements.
 
@@ -41,7 +41,7 @@ Larger examples include:
 - `pbr_reference`: integrated comparisons of Forward and Deferred PBR, IBL, HDR, SSR, and transparent materials
 - `texture_catalog`: selection, editing, preview, and code generation for core Procedural Texture presets
 
-Directories are not divided by application size. The catalog and documentation explain each sample's purpose while keeping public URLs and references between samples stable.
+The directory structure keeps public URLs and references between samples stable. The catalog and documentation explain each sample's scope and purpose.
 
 ## Public Compute samples
 
@@ -64,10 +64,10 @@ Each pass example shows how image quality, internal targets, GPU workload, and b
 ## How samples are organized
 
 1. Keep CPU and Compute, low-level and high-level, or standalone and integrated examples when they serve a clear comparison.
-2. When samples share only a scene or UI, consolidate the shared implementation in a helper or core module while retaining each sample's purpose.
+2. When samples share a scene or UI, retain each sample's purpose and consolidate the shared implementation in a helper or core module.
 3. Choose names that make the input, approach, and core API clear.
 4. Consider combining or removing a sample only when its distinct purpose is gone and another sample covers its interaction, display, and explanation.
-5. Large samples demonstrate feature integration and complement smaller focused samples.
+5. Use smaller samples to learn individual features and larger samples to follow their integration in an application.
 
 ## Running the samples
 

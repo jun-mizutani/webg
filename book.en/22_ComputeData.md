@@ -226,7 +226,7 @@ Representative basic layouts are:
 - `vec4f`: 16-byte alignment / 16-byte size
 - `mat4x4f`: 16-byte alignment / 64-byte size
 
-A `vec3f` starts on a 16-byte boundary but occupies 12 bytes. The next member follows its own alignment requirement: an `f32` can occupy the remaining four bytes, while another `vec3f` starts at the next 16-byte boundary. An array of `vec3f` therefore has a 16-byte element stride. Calculate each member offset and the overall stride rather than assuming that every vector is tightly packed.
+The start of a `vec3f` is aligned to a 16-byte boundary. Each following structure member uses the alignment required by its own type. For example, an `f32` after a `vec3f` can occupy the position 12 bytes from the start, while another `vec3f` starts at the next 16-byte boundary. An `array<vec3f>` has a 16-byte element stride. Calculate structure-member offsets separately from array stride, and check the additional alignment rules that apply to arrays and structures in uniform address space.
 
 For arrays or structures frequently updated by the CPU, grouping related values in `vec4f` units makes the layout easier to follow:
 
@@ -255,6 +255,8 @@ particleData.set([
 ```
 
 `ComputePass.setUniforms()` requires an exact match with the specified float count so it can detect a layout mismatch before GPU execution. Whenever a structure changes, update all three together: WGSL member order and type, JavaScript offsets and element counts, and total buffer size and array stride.
+
+`setUniforms()` requests a transfer with `queue.writeBuffer()` when called. `encode()` records commands that read the same uniform buffer when they execute. If the pass receives several values before the recorded commands are submitted, every dispatch reads the final value in that buffer. To preserve different values in one command sequence, give each value its own `ComputePass` or use a separate buffer layout with explicit read positions.
 
 ## Data Races and Synchronization
 
@@ -317,15 +319,24 @@ fn main(
   @builtin(local_invocation_id) localId : vec3<u32>,
   @builtin(global_invocation_id) globalId : vec3<u32>
 ) {
-  tile[localId.x] = source[globalId.x];
+  let inRange = globalId.x < arrayLength(&source)
+    && globalId.x < arrayLength(&destination);
+  tile[localId.x] = 0.0;
+  if (inRange) {
+    tile[localId.x] = source[globalId.x];
+  }
 
   // Wait until every invocation has written to tile.
   workgroupBarrier();
 
   let value = tile[localId.x];
-  destination[globalId.x] = value;
+  if (inRange) {
+    destination[globalId.x] = value;
+  }
 }
 ```
+
+This partial example connects `source` and `destination` as runtime-sized storage arrays. Invocations beyond the array ends write zero to shared memory and still reach the barrier together; only valid elements are written to the output.
 
 `workgroupBarrier()` synchronizes invocations in the same workgroup. Use `storageBarrier()` when those invocations need to synchronize storage-buffer writes.
 

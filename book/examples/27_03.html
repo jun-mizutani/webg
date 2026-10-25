@@ -1,5 +1,5 @@
 <!doctype html>
-<!-- book/examples/27_03.html 2026/10/04 -->
+<!-- book/examples/27_03.html 2026/10/25 -->
 <html lang="ja">
 <head>
   <meta charset="UTF-8" />
@@ -14,7 +14,7 @@
     <div class="section-card">
       <p>`book/27_物理エンジンを使う.md` の床と箱の最小例を、Compute Shaderで実行する固定canvasへ調整した確認ページです</p>
       <p>この例は、CPUとGPU間の転送を削減できる高速化構成です。Compute Physicsが更新したGPU上のBodyStateを、位置や姿勢としてCPUへ読み戻さず、描画用WGSLの頂点シェーダーが直接参照します。そのため、GPU上で物理計算から描画までを続けられ、body数が増えたときにreadback、CPU側のNode同期、CPUでの頂点変換を省けることが主な利点です</p>
-      <p>ただし、GPU状態を直接描画すれば常に速くなるわけではありません。body数が少ない場合は差が小さく、描画用WGSLとバインド設定を利用者側で用意する必要があります。通常の`Shape`と`Node`を簡単に使いたい場合は、27_02のように計算結果をreadbackして同期する方法が適しています</p>
+      <p>直接描画による速度差は、body数とCPUへの転送量に応じて変わります。body数が少ない場合は差が小さく、描画用WGSLとバインド設定を利用者側で用意する必要があります。通常の`Shape`と`Node`を簡単に使いたい場合は、27_02のように計算結果をreadbackして同期する方法が適しています</p>
       <p id="status" class="note">Compute Physicsを初期化しています</p>
     </div>
 
@@ -372,7 +372,7 @@ async function start() {
     solverIterations: 8,
     persistentSleep: true
   });
-  // ComputePhysicsSpaceの二本のBodyStateを描画側へ渡し、描画中のCPU同期を不要にします
+  // ComputePhysicsSpaceの二本のBodyStateを描画側へ渡し、GPU上の最新状態を直接参照します
   const renderer = new ComputeBookRenderer(gpu, {
     boxShape,
     floorShape,

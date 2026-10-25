@@ -584,7 +584,7 @@ SceneAssetの文書データとruntime resourceを同じ変数だけで管理せ
 
 **目的：CPU物理からCompute物理へ移す**
 
-最初に読む文書・sample：`42_物理エンジンの詳細設計.md`、`samples/compute_physics/index.html`
+最初に読む文書・sample：`27_物理エンジンを使う.md`、`28_物理イベント、設定、更新.md`、`samples/compute_physics/index.html`。ソルバー内部は42章を参照します。
 
 **目的：Compute物理の表示同期を確認する**
 

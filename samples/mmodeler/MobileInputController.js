@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// samples/mmodeler/MobileInputController.js  2026/07/25
+// samples/mmodeler/MobileInputController.js  2026/10/25
 //   mobile input state and gesture controller for mmodeler
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -642,7 +642,7 @@ export default class MobileInputController {
     return ev.pointerId === this.suppressCanvasPointerId;
   }
 
-  // キャンバスの`suppression`を初期状態へ戻し、前回の状態を残さない
+  // キャンバスの suppression を初期状態へ戻し、次の入力を受け付ける状態へそろえる
   clearCanvasSuppression() {
     this.suppressCanvasPointerId = null;
     this.suppressCanvasPointerUntil = 0;

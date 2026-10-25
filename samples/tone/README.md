@@ -28,7 +28,7 @@ Hold Single は押している間だけ現在の root を鳴らします。Hold 
 ## 確認ポイント
 最初に Audio Start を押し、Hold Single を押している間だけ単音が鳴り、離すと release で止まることを確認します。次に Wave を sine から triangle、square、sawtooth へ切り替えると、同じ envelope でも倍音の量によって明るさや硬さが変わることが分かります。
 
-Envelope の Profile を切り替えると、同じ root と wave でも時間変化が変わります。percussion はほとんど sustain しない短い打撃音、organ はほぼ一定に鳴り続ける持続音、piano と guitar は押し続けてもすぐ減衰する撥弦/打弦系の音、brass と woodwind は立ち上がりが遅く、押し続けると息の持続が見える音として比較しやすくしています。Attack、Decay、Sustain、Release を動かすと、選択中 profile の次の発音から変化します。
+Envelope の Profile を切り替えると、同じ root と wave でも時間変化が変わります。percussion は立ち上がりの後すぐ減衰する短い打撃音、organ はほぼ一定に鳴り続ける持続音、piano と guitar は押し続けてもすぐ減衰する撥弦/打弦系の音、brass と woodwind は立ち上がりが遅く、押し続けると息の持続が見える音として比較しやすくしています。Attack、Decay、Sustain、Release を動かすと、選択中 profile の次の発音から変化します。
 
 Reverb では Dry、Room、Hall、Plate を切り替えて、残響が音の輪郭に与える影響を確認します。短い envelope では reverb tail が特に目立ち、長い envelope では原音と残響の重なり方が変わって聞こえます。
 
@@ -51,7 +51,7 @@ Hold Triad を押すと、単音では分かりにくい reverb のにじみや�
 
 つまずきやすい点
 
-Audio Start を押していないと音は鳴りません。これは browser の自動再生制限に合わせた動きです。
+browser の自動再生制限に合わせ、Audio Start を押してから音を再生します。
 
 Tone Gain は1 voice あたりの音量の基準です。3和音では音が重なるため、サンプル側で各 voice の gain を少し下げ、単音との音量差が大きくなりすぎないようにしています。
 

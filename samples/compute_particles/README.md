@@ -4,7 +4,7 @@
 
 ## 概要
 
-`ComputeParticleEmitter`を使い、49,152個の粒子をGPUで生成・更新・描画するサンプルです。利用側のコードはWGSLや粒子bufferのレイアウトを定義せず、発生位置、方向、速度、寿命を標準APIへ渡します。粒子の位置・速度・寿命はGPU上のstorage bufferで更新され、同じbufferがbillboard描画に使われます。
+`ComputeParticleEmitter`を使い、49,152個の粒子をGPUで生成・更新・描画するサンプルです。利用側のコードは発生位置、方向、速度、寿命を標準APIへ渡し、WGSLと粒子bufferの構築は標準クラスが担当します。粒子の位置・速度・寿命はGPU上のstorage bufferで更新され、同じbufferがbillboard描画に使われます。
 
 fountainは一つの発生要求から上向きの粒子群を作り、ringは24個の発生要求を円周上へ配置します。どちらも`ComputeParticleEmitter`の同じAPIで構成しています。発光色は線形HDRで加算合成されます。
 
@@ -54,7 +54,7 @@ fountainは1件の要求、ringは24件の要求として`emit()`を呼びます
 
 `targetFormat`は、このサンプルのようにCanvasへ直接描画するときのswapchain formatです。PBRシーンへ登録する場合は、`WebgSceneApp.createComputeParticleEmitter()`がHDR中間画像と`ComputeParticlePass`を用意します。
 
-表示中の`estimated`は最大寿命からCPUが管理する予約数の推定値です。通常の描画で粒子位置をCPUへ戻さないため、GPU処理の流れを維持したまま容量と発生要求を確認できます。
+表示中の`estimated`は最大寿命からCPUが管理する予約数の推定値です。通常の描画では粒子位置をGPU上で直接参照し、容量と発生要求はCPUが管理する予約数から確認できます。
 
 ## 確認ポイント
 

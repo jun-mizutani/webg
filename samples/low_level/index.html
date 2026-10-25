@@ -174,7 +174,7 @@ blockquote {
 <p><a href="index.en.html">English</a> | 日本語</p>
 <p><img src="./low_level.jpg" alt="low_level" /></p>
 <h2>概要</h2>
-<ul><li>README.md の「標準の使い方」にある low-level 例を、そのまま実行しやすいサンプルとして切り出したものです</li><li>Screen、SmoothShader、Space、Shape、Primitive を直接つなぎ、WebgApp を使わずに最小構成の 3D 表示を作ります</li><li>起動時に WebGPU と shader を初期化し、projection matrix を設定してから、立方体 1 個だけを scene に置いています</li><li>object は毎 frame 少しずつ回転するため、辺と面の向きが変わり、立体感と light の当たり方をそのまま確認できます</li><li>resize と orientationchange に合わせて canvas size と projection を更新するので、PC とスマホで縦横比が崩れにくい構成です</li></ul>
+<ul><li>README.md の「標準の使い方」にある low-level 例を、そのまま実行しやすいサンプルとして切り出したものです</li><li>Screen、SmoothShader、Space、Shape、Primitive を直接つなぎ、初期化から描画までを直接構成した3D表示を作ります</li><li>起動時に WebGPU と shader を初期化し、projection matrix を設定してから、立方体 1 個だけを scene に置いています</li><li>object は毎 frame 少しずつ回転するため、辺と面の向きが変わり、立体感と light の当たり方をそのまま確認できます</li><li>resize と orientationchange に合わせて canvas size と projection を更新するので、PC とスマホで縦横比が崩れにくい構成です</li></ul>
 <h2>実行方法</h2>
 <ul><li>実行ファイルは <a href="./low_level.html">./low_level.html</a> です</li><li>WebGPU に対応したブラウザで開き、必要に応じて help panel や HUD と合わせて確認してください</li></ul>
 <h2>使用している webg 機能</h2>

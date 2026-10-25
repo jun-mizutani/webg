@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// samples/compute_physics_bounce/main.js  2026/08/11
+// samples/compute_physics_bounce/main.js  2026/10/25
 //   Compute Shader sphere rigid-body simulation sample
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -194,13 +194,13 @@ fn main(@builtin(global_invocation_id) id : vec3<u32>) {
           }
 
           let penetration = minDistance - distance;
-          // 速度だけでは既に発生した重なりを解消できないため、位置補正も蓄積します
+          // 接触で生じた重なりは位置補正で解消し、速度の補正と合わせて反映します
           correction -= normal * penetration * 0.52;
         }
       }
     }
     let correctionLength = length(correction);
-    // 多数の球と同時接触した場合に、位置補正が一度に大きくなりすぎないよう制限します
+    // 同時接触した多数の球からの位置補正を、許容する移動量に収めます
     if (correctionLength > radius * 0.8) {
       correction *= radius * 0.8 / correctionLength;
     }
@@ -218,7 +218,7 @@ fn main(@builtin(global_invocation_id) id : vec3<u32>) {
 
 const RENDER_SHADER = `
 // Compute Shaderと同じBall layoutをVertex Shaderからread-only storageとして読みます
-// CPUへ位置をreadbackせず、そのままinstance描画へ渡すのがこのsampleの要点です
+// GPUで更新した位置をそのままinstance描画へ渡す構成が、このsampleの要点です
 struct Ball {
   positionRadius : vec4f,
   velocityRestitution : vec4f,
@@ -343,7 +343,7 @@ fn shadeSurface(input : VertexOutput, shininess : f32, specularStrength : f32) -
 
 @fragment
 fn fsBall(input : VertexOutput) -> @location(0) vec4f {
-  // 球は小さく鋭いhighlightにして、回転のない球体でも立体感が分かるようにします
+  // 小さく鋭い highlight で、球体の丸みを表します
   return shadeSurface(input, 128.0, 1.9);
 }
 
@@ -383,7 +383,7 @@ let fpsFrameCount = 0;
 let fpsElapsedMs = 0;
 
 // WebgAppが時間差分を検証した直後に呼ぶ正式handlerから、表示用の平均FPSを更新する
-// simulation時間やGPU command発行はonComputeFrameへ分離し、計測処理と混在させない
+// simulation 時間と GPU command 発行を onComputeFrame へまとめ、計測処理の役割を分けます
 const updateFrameTiming = (deltaMs) => {
   if (deltaMs <= 0.0) return;
   fpsElapsedMs += deltaMs;
@@ -408,7 +408,7 @@ function readBallCount() {
 
 // `hash01`の条件を判定し、結果を真偽値で返す
 function hash01(value) {
-  // 初期配置を毎回同じにするため、外部乱数を使わない簡易deterministic hashです
+  // 座標から決まる簡易 hash を使い、reset ごとに同じ初期配置を再現します
   const x = Math.sin(value * 12.9898) * 43758.5453;
   return x - Math.floor(x);
 }
@@ -517,7 +517,7 @@ function createPipelines() {
     usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST
   });
   const arenaData = createArenaData();
-  // 容器instanceはsimulation中に変化しないため、1本のread-only storage bufferに固定します
+  // 容器instanceの固定データは、1本のread-only storage bufferへ保持します
   arenaBuffer = device.createBuffer({
     label: "compute-physics-bounce:arena",
     size: arenaData.byteLength,
@@ -660,9 +660,9 @@ function writeRenderParams() {
   queue.writeBuffer(renderParamBuffer, 0, values);
 }
 
-// `simulation`を初期状態へ戻し、前回の状態を残さない
+// simulation を初期状態へ戻し、次の実行を同じ条件で始める
 function resetSimulation() {
-  // GPUから状態をreadbackせず、決定的に再生成した初期データを両bufferへ書き戻します
+  // 同じseedから初期データを再生成し、両bufferへ書き戻してシミュレーションを初期化します
   const initial = createInitialBallData();
   queue.writeBuffer(stateBuffers[0], 0, initial);
   queue.writeBuffer(stateBuffers[1], 0, initial);
@@ -728,7 +728,7 @@ function buildHelpLines() {
 
 // ヘルプのパネルを現在の入力と実行状態に合わせて更新する
 function updateHelpPanel(force = false) {
-  // 表示内容が変わらないframeはpanel更新を省略します
+  // 表示内容が変わった frame に panel を更新します
   const lines = buildHelpLines();
   const text = lines.join("\n");
   if (!force && text === lastHelpText) return;
@@ -746,11 +746,11 @@ function updateHelpPanel(force = false) {
 
 // フレームの描画段階で、必要な描画命令と表示内容を記録する
 function renderFrame(elapsedSec) {
-  // 長いframeの直後にsimulationが一気に進まないよう、物理へ渡すdtを1/30秒でclampします
+  // 物理へ渡す dt を 1/30 秒以下に収め、長い frame の直後も小さな刻みで進めます
   // さらに2 substepへ分割し、高速な球が床や他球を抜ける可能性を下げます
   const frameDelta = paused ? 0 : Math.min(elapsedSec, 1 / 30);
   if (tiltEnabled && !paused) {
-    // X/Zで異なる周期のsin波を使い、容器が単純な一方向往復に見えないようにします
+    // X / Z に異なる周期の sin 波を使い、容器を平面内の曲線に沿って動かします
     tiltElapsedSec += frameDelta;
     tiltX = Math.sin(tiltElapsedSec * 0.275) * TILT_X_RADIANS;
     tiltZ = Math.sin(tiltElapsedSec * 0.205 + 1.2) * TILT_Z_RADIANS;
@@ -859,7 +859,7 @@ async function start() {
     }
   });
   await app.init();
-  // このsampleはWebgAppの高レベル描画APIではなく、device/queueへ直接commandを発行します
+  // この sample は device / queue へ直接 command を発行して描画します
   screen = app.screen;
   device = app.getGPU().device;
   queue = app.getGPU().queue;

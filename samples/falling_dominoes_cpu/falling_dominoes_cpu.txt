@@ -6,7 +6,7 @@
 
 ## CPU版とCompute版の対応
 
-CPU版はGPU BodyStateを使わず、`PhysicsSpace`が計算した位置、姿勢、速度、sleep状態を`PhysicsNode`へ同期して通常のWebgApp scene描画へ渡します。CPUのBox/Plane接触は、PhysicsSpaceへ統合したCPUのBox接触処理で行います。寸法、質量、重力、反発、摩擦、固定step、solver反復数、sleep条件、カメラはCompute版と同じです。
+CPU版は、`PhysicsSpace`が計算した位置、姿勢、速度、sleep状態を`PhysicsNode`へ同期して通常のWebgApp scene描画へ渡します。CPUのBox/Plane接触は、PhysicsSpaceへ統合したCPUのBox接触処理で行います。寸法、質量、重力、反発、摩擦、固定step、solver反復数、sleep条件、カメラはCompute版と同じです。
 
 CPU PhysicsNodeの角速度はdegree/secで保持されるため、共通の初期条件rad/secはNodeへ渡す境界でdegree/secへ変換します。Help Panelへ表示するときはrad/secへ戻します。
 

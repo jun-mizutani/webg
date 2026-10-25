@@ -1,4 +1,4 @@
-// scene_document.js 2026/09/19
+// scene_document.js 2026/10/25
 // SceneYAML原文・編集履歴・コア仕様による検証。Copyright (c) 2026 Jun Mizutani, MIT
 import { parseSceneYAMLDocument, SceneDefinition } from "../../webg/app/index.js";
 import { readPrimitiveDefinitions, readPrimitiveMaterialManifest } from "../../webg/app/PrimitiveScene.js";
@@ -6,7 +6,7 @@ import { validateMesh } from "./mesh_edit.js";
 
 const CORE_KEYS = ["format", "version", "name", "objects", "objectSets", "materials", "physics", "renderer", "animations", "meshes"];
 
-// 初回起動の作品を毎回同じ設定から作り、保存済みブラウザ状態には依存しない
+// リポジトリの初期定義から、起動時に同じ設定の作品を作る
 export function initialManifest() {
   return {
     format: "webg-scene", version: 1, name: "my-scene",
@@ -53,7 +53,7 @@ export function validateDocument(manifest) {
   if (manifest.meshes !== undefined && !Array.isArray(manifest.meshes)) throw Error("meshesは配列で指定してください");
   const meshes = new Map();
   for (const mesh of manifest.meshes ?? []) {
-    if (typeof mesh.id !== "string" || !mesh.id.trim() || meshes.has(mesh.id)) throw Error("mesh IDは重複しない文字列で指定してください");
+    if (typeof mesh.id !== "string" || !mesh.id.trim() || meshes.has(mesh.id)) throw Error("mesh IDには一意の文字列を指定してください");
     validateMesh(mesh, `meshes.${mesh.id}`);
     meshes.set(mesh.id, mesh);
   }
@@ -63,7 +63,7 @@ export function validateDocument(manifest) {
     const definition = SceneDefinition.fromData(core, { orientationFormat: "euler" });
     try { definition.validate(); } finally { definition.destroy(); }
   } else {
-    if (core.animations?.length || core.physics?.joints?.length) throw Error("空の作品へanimationやJointを参照させることはできません");
+    if (core.animations?.length || core.physics?.joints?.length) throw Error("animationやJointを使う場合は、参照対象のobjectを配置してください");
     const definition = SceneDefinition.fromData({ ...core, objects: undefined }, { orientationFormat: "euler" });
     // 空のobjectsは描画生成へ渡さず、基本設定の検証を実行する
     delete definition.manifest.objects;
@@ -74,7 +74,7 @@ export function validateDocument(manifest) {
     ? readPrimitiveDefinitions(core.objects, core.objectSets, "editor", { materialDefinitions: materials, orientationFormat: "euler", meshDefinitions: meshes }) : [];
   for (const entry of entries) {
     const object = manifest.objects.find(item => item.id === entry.id);
-    if (object?.mesh && entry.material.uvMapping) throw Error(`${entry.id}: メッシュのuvMappingは未対応です。材質設定を確認してください`);
+    if (object?.mesh && entry.material.uvMapping) throw Error(`${entry.id}: メッシュのUVは形状データへ指定し、材質のuvMappingはprimitive形状へ使用してください`);
   }
   return { core, meshes, entries };
 }

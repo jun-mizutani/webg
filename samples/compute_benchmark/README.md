@@ -6,7 +6,7 @@
 
 ## 概要
 
-`compute_benchmark`は、`ComputeEffectPipeline`でPBR表示を構成する実行時の全段階を同じscene条件で測り、PBRのgeometry、照明、反射、透明面、出力変換の負荷を確認するサンプルです。測定範囲をPBR処理へ限定し、無関係な後処理を基準値へ含めません。
+`compute_benchmark`は、`ComputeEffectPipeline`でPBR表示を構成する実行時の全段階を同じscene条件で測り、PBRのgeometry、照明、反射、透明面、出力変換の負荷を確認するサンプルです。PBR表示を構成する処理を測定対象として、各段階の負荷を比較します。
 
 固定sceneには粗さと金属度が異なる不透明物体、閉じたTransmission球、床、壁を配置します。照明には方向光、指定数のpoint light、線形HDRのprocedural IBLを使います。SSRは`pbr-ssr`で鏡面IBLを置換し、透明球にはIORと吸収距離を指定します。このため、測定ボタンを押した時点でDeferred PBR、IBL、PBR SSR、Transmission、Frost、透明Forwardがすべて実行されます。
 
@@ -41,13 +41,13 @@
 6. `Run PBR Baseline`を押し、全caseが完了するまでbrowser tabとwindowを前面に保ちます
 7. 必要に応じて`Download JSON`または`Download CSV`で結果を保存します
 
-入力値は範囲外を自動補正しません。不正な整数や範囲外の灯数は測定を停止して表示します。解像度はcanvasの物理pixel数を使うため、windowサイズとDPRを変えた結果は同じ系列として比較できません。二つのrunを比較するときはcanvas寸法、DPR、Local Light数、電源状態、browser、GPU driverを揃えてください。
+入力値が範囲外の場合は、エラーで有効な設定範囲を知らせます。不正な整数や範囲外の灯数は測定を停止して表示します。解像度はcanvasの物理pixel数を使うため、同じ系列の比較では、windowサイズとDPRをそろえて測定します。二つのrunを比較するときはcanvas寸法、DPR、Local Light数、電源状態、browser、GPU driverを揃えてください。
 
 ## 結果の読み方
 
 単一のrender/compute pass、または開始と終了のtimestampを内部passへ渡せるtop-level行は、`timestamp-query`でGPU時間を測り`timer`へ`gpu`と表示します。`full-pbr-pipeline`は先頭のShadow Map Render Passへ開始timestamp、最終Tone Mapへ終了timestampを渡し、その間にある全PBR passのGPU時間を測ります。複数passを持つTransparency単体は外側のtimestampを一つのpass descriptorへ渡せないため、`transparency-pbr`だけcommand encode完了後のsubmit直前からqueue完了までを測り`queue`と表示します。`avg ms`は平均、`median`は中央値、`P95`は遅い側から5%の境界、`min/max`は観測範囲、`n`は記録数を表します。まず中央値で通常負荷を比較し、P95と最大値で揺れを確認し、平均が中央値から大きく離れる場合は外れ値を調べます。
 
-`transparency:*`行の`timer`は`profile`です。これは`TransparencyPass`が最大60 frame保持する内部GPU timestampの移動統計で、中央値、平均、最小、最大を表示します。生sample配列を公開していないためP95と標準偏差は`--`になります。top-levelの`transparency-pbr`は透明処理全体を外側から囲む値なので、内部区間の合計と完全には一致しません。
+`transparency:*`行の`timer`は`profile`です。これは`TransparencyPass`が最大60 frame保持する内部GPU timestampの移動統計で、中央値、平均、最小、最大を表示します。生sample配列を公開していないためP95と標準偏差は`--`になります。top-levelの`transparency-pbr`は透明処理全体を外側から囲む値なので、内部区間に加えて、その間の合成や接続も含む時間として比較します。
 
 `full-pbr-pipeline`には、G-bufferとshadow mapのrender pass、およびPBRのcompute/透明render passが一つのcommand列として含まれます。計測範囲はGPUで実行するcommand列です。CPU側のscene走査やcommand encode時間は計測範囲の外です。各段階の比率を探すときは個別行、実際のPBR frame全体の改善を確認するときは`full-pbr-pipeline`を使います。
 
@@ -57,7 +57,7 @@ JSONは`rawSamplesMs`とともに、物理解像度、表示寸法、DPR、Local
 
 - sample固有のshaderや複製pipelineを作らず、公開済みの`ComputeEffectPipeline`と各passを直接使います
 - PBR全caseで同じCamera Frame、固定scene、方向光、Local Light、IBL、SSR、Transmission設定を使います
-- 個別caseの入力準備は毎回実行しますが、準備時間はそのcaseのtimestampへ含めません
+- 個別caseの入力準備を済ませてから、そのcaseの処理区間をtimestampで測定します
 - PBR SSR合成にはDeferred Lightingの鏡面IBL、G-buffer material、AO、BRDF LUTを明示します
 - `Fused`はroughness出力の`rgba16float`丸めと低解像度pixel対応を再現し、独立Composer dispatchだけを省きます
 - `Two-pass reference`は比較を明示した場合だけroughness filterとComposerを順に実行します

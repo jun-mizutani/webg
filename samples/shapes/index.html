@@ -180,7 +180,7 @@ blockquote {
 <h2>使用している webg 機能</h2>
 <ul><li>Primitive: sphere / cone / donut / cube などの基本形状生成</li><li>Shape.setWireframe: ワイヤーフレーム表示切り替え</li><li>Texture: num256.png の読み込み</li><li>Texture.buildNormalMapFromProceduralHeight: noise/dots 法線生成</li><li>SmoothShader: texture + normal map と wireframe を同じ入口で扱う描画。flat shading も同じ shader 側の機能として切り替えられる</li><li>Message: 3x3 配置の primitive 番号ラベルだけを重ねる</li></ul>
 <h2>確認ポイント</h2>
-<ul><li>C / T / I / N / D で surface mode を切り替えたとき、同じ geometry のまま texture / image normal / procedural normal の差だけが変わることを確認します</li><li>T で texture 比較、I で image normal 比較、N / D で procedural normal 比較が同じサンプル内で読めることを確認します</li><li>1 - 9 のワイヤーフレーム切り替えでトポロジが想定どおりかを確認し、surface mode を変えても線表示が破綻しないことを確認します</li><li>cube / cuboid / mapCube を含む 9 形状で、texture と normal の両方が極端に破綻せず比較できることを確認します</li></ul>
+<ul><li>C / T / I / N / D で surface mode を切り替えたとき、同じ geometry のまま texture / image normal / procedural normal の差だけが変わることを確認します</li><li>T で texture 比較、I で image normal 比較、N / D で procedural normal 比較が同じサンプル内で読めることを確認します</li><li>1 - 9 のワイヤーフレーム切り替えでトポロジが想定どおりかを確認し、surface modeを変えた後も同じ辺が連続して表示されることを確認します</li><li>cube / cuboid / mapCube を含む 9 形状で、textureとnormalの模様・陰影のつながりを比較できることを確認します</li></ul>
 <h2>操作方法</h2>
 <ul><li>C: solid color 表示</li><li>T: texture 表示</li><li>I: image normal 表示</li><li>N: noise normal 表示</li><li>D: dots normal 表示</li><li>1 - 9: 対応シェイプのワイヤーフレームON / OFF</li><li>Space: 回転の一時停止 / 再開</li><li>タッチボタン: C/T/I/N/D と 1-9、Pause をキーボードと同じ key 名で扱う</li></ul>
     </article>

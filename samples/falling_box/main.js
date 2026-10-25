@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// samples/falling_box/main.js  2026/08/28
+// samples/falling_box/main.js  2026/10/25
 //   CPU and Compute falling-box comparison sample
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -617,7 +617,7 @@ function showHelpPanel() {
 }
 
 // Help Panelの展開状態を切り替え、非表示だった場合だけ再表示します
-// panelの状態変更で物理stepが止まらないよう、simulationとは独立して扱います
+// panel と simulation の状態を個別に管理し、表示を切り替えても物理 step を継続します
 function toggleHelpPanel() {
   const panel = app.getOverlayPanel("fallingBoxHelp");
   if (!panel) return;

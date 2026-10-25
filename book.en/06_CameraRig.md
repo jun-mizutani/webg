@@ -903,8 +903,7 @@ eyeRig.setType("follow");
 Because the roles of the three Nodes differ by mode, preserving world position and orientation during a transition requires the application to read the previous world transform and convert it into the local state of the new mode.
 For example, Orbit's `target` and first-person `position` both map to `base.position`, but the first means a point of interest and the second means a body or mount position.
 
-When continuous appearance matters, explicitly convert the previous world transform into the next mode's local state.
-Automatically copying values with different meanings can hide issues, especially when the parent hierarchy differs or the Follow mode includes an automatic pose.
+Each mode gives its local values a different meaning, so their relationship to the parent hierarchy and automatic Follow pose can be ambiguous. Use the previous world transform to calculate the local values expected by the destination mode.
 
 Immediately after switching to Follow, `EyeRig` looks at the target and establishes a valid initial orientation, then follows it smoothly on subsequent frames.
 Changing the target performs the same initialization.

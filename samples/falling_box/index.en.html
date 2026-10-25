@@ -5,58 +5,188 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>falling_box</title>
   <link rel="icon" href="data:," />
-  <!-- 2026/08/28 -->
+  <!-- 2026/06/19 -->
   <style>
-    :root { color-scheme: light; --bg: #eef3f8; --paper: #fff; --line: #c8d5e4; --ink: #17324a; --muted: #5c748b; --accent: #1566ab; }
-    * { box-sizing: border-box; }
-    html, body { margin: 0; min-height: 100%; }
-    body { background: linear-gradient(180deg, #f8fbfd 0%, var(--bg) 100%); color: var(--ink); font: 16px/1.78 "Avenir Next", "Hiragino Sans", "Yu Gothic", sans-serif; }
-    .page { width: min(1080px, calc(100% - 28px)); margin: 0 auto; padding: 24px 0 56px; }
-    .hero, .doc { background: rgba(255, 255, 255, 0.94); border: 1px solid var(--line); border-radius: 18px; box-shadow: 0 18px 42px rgba(29, 52, 79, 0.10); }
-    .hero { padding: 22px 24px; margin-bottom: 18px; }
-    .hero h1 { margin: 0 0 8px; font-size: clamp(2rem, 4vw, 3rem); line-height: 1.08; }
-    .hero p { margin: 0; color: var(--muted); }
-    .doc { padding: 28px; }
-    .doc > :first-child { margin-top: 0; }
-    h2 { margin: 1.45em 0 0.55em; padding-bottom: 0.28em; border-bottom: 1px solid var(--line); font-size: 1.48rem; line-height: 1.25; }
-    p, ul { margin: 0 0 1em; }
-    ul { padding-left: 1.4em; }
-    li + li { margin-top: 0.26em; }
-    a { color: var(--accent); text-decoration: none; }
-    a:hover { text-decoration: underline; }
-    code { padding: 0.12em 0.38em; border-radius: 0.45em; background: #f3f7fb; border: 1px solid #dbe6f1; font: 0.92em/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
-    @media (max-width: 720px) { .page { width: min(100% - 18px, 1080px); padding-top: 16px; } .doc { padding: 20px; } }
+
+:root {
+  color-scheme: light;
+  --bg: #eef3f8;
+  --paper: rgba(255, 255, 255, 0.94);
+  --line: #c8d5e4;
+  --ink: #17324a;
+  --muted: #5c748b;
+  --accent: #1566ab;
+  --accent-soft: #dfeefe;
+  --code-bg: #f3f7fb;
+  --shadow: rgba(29, 52, 79, 0.10);
+}
+* { box-sizing: border-box; }
+html, body {
+  margin: 0;
+  min-height: 100%;
+}
+body {
+  background:
+    radial-gradient(circle at top left, rgba(21, 102, 171, 0.12), transparent 24%),
+    radial-gradient(circle at top right, rgba(255, 191, 118, 0.10), transparent 22%),
+    linear-gradient(180deg, #f8fbfd 0%, var(--bg) 100%);
+  color: var(--ink);
+  font: 16px/1.78 "Avenir Next", "Hiragino Sans", "Yu Gothic", sans-serif;
+}
+.page {
+  width: min(1080px, calc(100% - 28px));
+  margin: 0 auto;
+  padding: 24px 0 56px;
+}
+.hero,
+.doc {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  box-shadow: 0 22px 52px var(--shadow);
+}
+.hero {
+  padding: 22px 24px;
+  margin-bottom: 18px;
+}
+.hero h1 {
+  margin: 0 0 8px;
+  font-size: clamp(2rem, 4vw, 3rem);
+  line-height: 1.08;
+}
+.hero p {
+  margin: 0;
+  color: var(--muted);
+}
+.doc {
+  padding: 28px;
+}
+.doc > :first-child {
+  margin-top: 0;
+}
+h1, h2, h3, h4, h5, h6 {
+  line-height: 1.25;
+  margin: 1.45em 0 0.55em;
+}
+h1 {
+  font-size: 2.2rem;
+}
+h2 {
+  padding-bottom: 0.28em;
+  border-bottom: 1px solid var(--line);
+  font-size: 1.48rem;
+}
+h3 {
+  font-size: 1.14rem;
+}
+p, ul, ol, table, pre, blockquote {
+  margin: 0 0 1em;
+}
+ul, ol {
+  padding-left: 1.4em;
+}
+li + li {
+  margin-top: 0.26em;
+}
+a {
+  color: var(--accent);
+  text-decoration: none;
+}
+a:hover {
+  text-decoration: underline;
+}
+img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  border-radius: 16px;
+  border: 1px solid var(--line);
+  box-shadow: 0 12px 32px rgba(29, 52, 79, 0.08);
+  margin: 1.1em 0 1.4em;
+}
+code {
+  padding: 0.12em 0.38em;
+  border-radius: 0.45em;
+  background: var(--code-bg);
+  border: 1px solid #dbe6f1;
+  font: 0.92em/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+pre {
+  padding: 14px 16px;
+  overflow-x: auto;
+  border-radius: 14px;
+  background: #0f1720;
+  color: #ecf5ff;
+}
+pre code {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #ffffff;
+}
+th, td {
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  text-align: left;
+  vertical-align: top;
+}
+th {
+  background: #f5f9fc;
+}
+hr {
+  border: 0;
+  border-top: 1px solid var(--line);
+  margin: 1.5em 0;
+}
+blockquote {
+  padding: 0.3em 0 0.3em 1em;
+  border-left: 4px solid #c9dbef;
+  color: var(--muted);
+}
+@media (max-width: 720px) {
+  .page {
+    width: min(100% - 18px, 1080px);
+    padding-top: 16px;
+  }
+  .hero,
+  .doc {
+    border-radius: 18px;
+  }
+  .doc {
+    padding: 20px;
+  }
+}
+
   </style>
 </head>
 <body>
-<main class="page">
-  <header class="hero">
-    <h1>falling_box</h1>
-    <p>English | <a href="README.md">日本語</a></p>
-    <p>Compare the same 200-box scenario with the CPU core and Compute core.</p>
-  </header>
-  <article class="doc">
-    <h2>Overview</h2>
-    <p>This sample compares a 200-box falling scenario in CPU and Compute versions. The CPU page uses the normal <code>PhysicsSpace</code> API and its CPU Box contact implementation, while the Compute page uses the core <code>ComputePhysicsSpace</code>. Both start with the same seed, initial transforms, angular velocities, gravity, five Plane boundaries, fixed timestep, solver iterations, and sleep settings.</p>
-    <h2>How to Run</h2>
-    <ul>
-      <li><a href="./falling_box_cpu.html">CPU falling_box_cpu.html</a>: registers <code>PhysicsNode</code> and <code>PlaneCollider</code> objects with the normal <code>PhysicsSpace</code></li>
-      <li><a href="./falling_box_compute.html">Compute falling_box_compute.html</a>: uses the GPU BodyState and WGSL solver of <code>ComputePhysicsSpace</code></li>
-    </ul>
-    <p>The Help Panel starts collapsed. Press <code>H</code> to inspect frame interval, GPU Render and JavaScript load, active bodies, sleeping bodies, and fixed-step count.</p>
-    <h2>Shared Scenario</h2>
-    <p>The initial conditions are defined in <code>fallingBoxScenario.js</code>. The 200 bodies are arranged in layers with placement jitter reproduced from seed <code>20260822</code>. Each body is a Box, and five Planes represent the floor and four walls. Gravity is <code>-4.9 m/s²</code>, the fixed timestep is <code>1/120 s</code>, and the solver uses 14 iterations.</p>
-    <p>The CPU page converts the shared descriptors into <code>PhysicsNode</code> and <code>BoxCollider</code> objects, then registers the five Planes as static <code>PhysicsNode</code> objects in <code>PhysicsSpace</code>. <code>PhysicsSpace</code> converts those registered Planes into solver inputs and resolves the Box/Plane contacts in one CPU path. The visible floor board is a separate normal Node, so the floor is not solved twice. The Compute page converts the same descriptors into GPU BodyState records for <code>ComputePhysicsSpace</code>.</p>
-    <h2>What to Check</h2>
-    <p>Run both pages with the same conditions and confirm that the 200 bodies fall, contact the boundary Planes, and move toward a settled state. The goal is to inspect the complete fall, contact, and sleep process and the CPU Node-rendering versus Compute GPU-state-rendering difference rather than bit-for-bit numerical equality.</p>
-    <h2>Controls</h2>
-    <ul>
-      <li><code>P</code> or <code>Space</code>: pause / resume</li>
-      <li><code>R</code>: reload the page and reset the initial conditions</li>
-      <li><code>H</code>: expand / collapse the Help Panel</li>
-      <li>Drag: orbit the camera; mouse wheel: zoom</li>
-    </ul>
-  </article>
-</main>
+  <main class="page">
+    <section class="hero">
+      <h1>falling_box</h1>
+    </section>
+    <article class="doc">
+<h1>falling_box</h1>
+<p>English | <a href="index.html">日本語</a></p>
+<h2>Overview</h2>
+<p>This sample compares a 200-box falling scenario in a CPU version and a Compute version. The CPU page uses the normal <code>PhysicsSpace</code> API and its CPU Box contact implementation; the Compute page uses the core <code>ComputePhysicsSpace</code>. Both start with the same seed, initial positions, orientations, angular velocities, gravity, five Plane boundaries, fixed timestep, solver iterations, and sleep settings.</p>
+<h2>How to Run</h2>
+<ul><li><a href="./falling_box_cpu.html">CPU falling_box_cpu.html</a>: registers <code>PhysicsNode</code> and <code>PlaneCollider</code> objects with the normal <code>PhysicsSpace</code></li></ul><ul><li><a href="./falling_box_compute.html">Compute falling_box_compute.html</a>: uses the GPU BodyState and WGSL solver of <code>ComputePhysicsSpace</code> and renders instanced Boxes</li></ul>
+<p>Open either page in a WebGPU-capable browser. The Help Panel starts collapsed. Press <code>H</code> to expand it and inspect frame interval, GPU Render time and load, JavaScript time and load, active bodies, sleeping bodies, and fixed-step count.</p>
+<h2>webg Features Used</h2>
+<ul><li><code>WebgApp</code>: initializes WebGPU, the canvas, depth texture, camera, input, Help Panel, and frame timing<ul><li><code>PhysicsSpace</code>: processes CPU fixed steps, Box/Plane contacts, friction, restitution, position correction, and persistent sleep, then synchronizes the result to <code>PhysicsNode</code></li></ul></li></ul><ul><li><code>ComputePhysicsSpace</code>: processes GPU BodyState, predicted AABBs, the XZ Grid, candidate bitsets, the combined solver, and persistent sleep</li><li><code>PhysicsNode</code>, <code>BoxCollider</code>, and <code>PlaneCollider</code>: build the CPU Box bodies and infinite Plane boundaries</li><li><code>Primitive</code> and <code>Shape</code>: create CPU-sized Boxes and the unit cube used for Compute instancing</li><li><code>getRenderState()</code>: exposes the latest Compute ping-pong BodyState to the renderer</li></ul>
+<h2>Shared Scenario</h2>
+<p>The initial conditions are defined in <code>fallingBoxScenario.js</code>. The 200 bodies are arranged in four columns by four rows per layer, with placement jitter reproduced from seed <code>20260822</code>. Each body is a Box, and the five Planes represent the floor and four walls. Gravity is <code>-4.9 m/s²</code>, the fixed timestep is <code>1/120 s</code>, and the solver uses 14 iterations.</p>
+<p>The CPU page converts each descriptor into a <code>PhysicsNode</code> and <code>BoxCollider</code>, then registers the five Planes as static <code>PhysicsNode</code> objects in <code>PhysicsSpace</code>. <code>PhysicsSpace</code> converts those registered Planes into solver inputs and resolves the Box/Plane contacts in one CPU path. The visible floor board is a separate render Node, while the registered Plane handles floor contacts. The Compute page converts the same descriptors into GPU BodyState records for <code>ComputePhysicsSpace</code>. CPU <code>PhysicsNode</code> stores angular velocity in degrees per second, so the common descriptor’s radians-per-second values are converted when solver state is synchronized to the Node.</p>
+<h2>What to Check</h2>
+<p>Run the CPU and Compute pages with the same scenario and confirm that the 200 bodies fall, contact the boundary Planes, and move toward a settled state. The goal is to inspect the complete fall, contact, and sleep process from the same initial conditions in both backends. The pages also expose the state-transfer difference between CPU <code>PhysicsNode</code> scene rendering and Compute GPU BodyState instancing. The CPU page uses the normal <code>PhysicsSpace</code> API, whose Box/Plane contacts use the core CPU contact implementation.</p>
+<h2>Controls</h2>
+<ul><li><code>P</code> or <code>Space</code>: pause / resume</li><li><code>R</code>: reload the page and reset the initial conditions</li><li><code>H</code>: expand / collapse the Help Panel</li><li>Drag: orbit the camera</li><li>Mouse wheel: zoom</li></ul>
+    </article>
+  </main>
 </body>
 </html>

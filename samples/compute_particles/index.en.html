@@ -1,23 +1,206 @@
-<!doctype html>
-<!-- 2026/09/23: README-equivalent standard ComputeParticleEmitter guide -->
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>compute_particles</title><link rel="icon" href="data:,">
-<style>body{margin:0;background:#eef3f8;color:#17324a;font:16px/1.75 sans-serif}.page{max-width:900px;margin:auto;padding:24px 18px 56px}.hero,.doc{background:#fff;border:1px solid #c8d5e4;border-radius:18px;padding:22px;margin-bottom:18px}.hero{background:linear-gradient(135deg,#15324b,#175f86);color:#fff}.doc{box-shadow:0 16px 40px #1d344f18}h1,h2{line-height:1.25}h2{border-bottom:1px solid #c8d5e4;padding-bottom:6px}a{color:#1566ab}code{background:#f3f7fb;padding:2px 5px;border-radius:4px}pre{background:#0f1720;color:#ecf5ff;padding:14px;overflow:auto;border-radius:10px}li+li{margin-top:5px}</style></head>
-<body><main class="page"><header class="hero"><h1>compute_particles</h1><p>GPU particles with the standard ComputeParticleEmitter</p></header><article class="doc">
-<p><a href="README.en.md">README</a> / <a href="README.md">日本語README</a> / <a href="compute_particles.html">Run</a></p>
-<h2>Overview</h2><p>This sample uses <code>ComputeParticleEmitter</code> to generate, update, and render 49,152 particles on the GPU. Application code supplies emission position, direction, speed, and lifetime without defining custom WGSL or a particle-buffer layout. Fountain uses one request and ring uses 24 requests placed around a circle. HDR colors use additive blending.</p>
-<h2>How to Run</h2><p>Open <a href="compute_particles.html">compute_particles.html</a> through an HTTP server in a WebGPU-capable browser.</p>
-<h2>webg Features Used</h2><ul><li><code>WebgApp</code>: manages the Screen, camera, input, compute frame, and GPU submission</li><li><code>ComputeParticleEmitter</code>: manages emission requests, storage, uniforms, Compute/Render pipelines, billboard rendering, and lifetime updates</li><li><code>GpuParticleEmitter</code>: low-level GPU resource base class inherited by the standard emitter</li><li><code>OverlayPanel</code>: displays controls, estimated alive count, requests, and rejections</li><li><code>Screen</code>: provides Canvas color/depth views and records Compute and Render in one command encoder</li></ul>
-<h2>Controls</h2><ul><li><code>Space</code>: emit an additional burst of 2,048 sparks</li><li><code>1</code>: fountain</li><li><code>2</code>: ring</li><li><code>P</code>: pause/resume motion and lifetime updates</li><li><code>H</code>: collapse/show the Help panel</li><li>Drag: orbit, <code>Shift</code> + Drag: pan, mouse wheel: zoom</li></ul>
-<h2>Implementation Details</h2><pre><code>const emitter = new ComputeParticleEmitter(screen.getGPU(), {
-  capacity: 49152, preset: "spark", targetFormat: screen.getGPU().format,
-  overflow: "replace-oldest",
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>compute_particles</title>
+  <link rel="icon" href="data:," />
+  <!-- 2026/06/19 -->
+  <style>
+
+:root {
+  color-scheme: light;
+  --bg: #eef3f8;
+  --paper: rgba(255, 255, 255, 0.94);
+  --line: #c8d5e4;
+  --ink: #17324a;
+  --muted: #5c748b;
+  --accent: #1566ab;
+  --accent-soft: #dfeefe;
+  --code-bg: #f3f7fb;
+  --shadow: rgba(29, 52, 79, 0.10);
+}
+* { box-sizing: border-box; }
+html, body {
+  margin: 0;
+  min-height: 100%;
+}
+body {
+  background:
+    radial-gradient(circle at top left, rgba(21, 102, 171, 0.12), transparent 24%),
+    radial-gradient(circle at top right, rgba(255, 191, 118, 0.10), transparent 22%),
+    linear-gradient(180deg, #f8fbfd 0%, var(--bg) 100%);
+  color: var(--ink);
+  font: 16px/1.78 "Avenir Next", "Hiragino Sans", "Yu Gothic", sans-serif;
+}
+.page {
+  width: min(1080px, calc(100% - 28px));
+  margin: 0 auto;
+  padding: 24px 0 56px;
+}
+.hero,
+.doc {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  box-shadow: 0 22px 52px var(--shadow);
+}
+.hero {
+  padding: 22px 24px;
+  margin-bottom: 18px;
+}
+.hero h1 {
+  margin: 0 0 8px;
+  font-size: clamp(2rem, 4vw, 3rem);
+  line-height: 1.08;
+}
+.hero p {
+  margin: 0;
+  color: var(--muted);
+}
+.doc {
+  padding: 28px;
+}
+.doc > :first-child {
+  margin-top: 0;
+}
+h1, h2, h3, h4, h5, h6 {
+  line-height: 1.25;
+  margin: 1.45em 0 0.55em;
+}
+h1 {
+  font-size: 2.2rem;
+}
+h2 {
+  padding-bottom: 0.28em;
+  border-bottom: 1px solid var(--line);
+  font-size: 1.48rem;
+}
+h3 {
+  font-size: 1.14rem;
+}
+p, ul, ol, table, pre, blockquote {
+  margin: 0 0 1em;
+}
+ul, ol {
+  padding-left: 1.4em;
+}
+li + li {
+  margin-top: 0.26em;
+}
+a {
+  color: var(--accent);
+  text-decoration: none;
+}
+a:hover {
+  text-decoration: underline;
+}
+img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  border-radius: 16px;
+  border: 1px solid var(--line);
+  box-shadow: 0 12px 32px rgba(29, 52, 79, 0.08);
+  margin: 1.1em 0 1.4em;
+}
+code {
+  padding: 0.12em 0.38em;
+  border-radius: 0.45em;
+  background: var(--code-bg);
+  border: 1px solid #dbe6f1;
+  font: 0.92em/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+pre {
+  padding: 14px 16px;
+  overflow-x: auto;
+  border-radius: 14px;
+  background: #0f1720;
+  color: #ecf5ff;
+}
+pre code {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #ffffff;
+}
+th, td {
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  text-align: left;
+  vertical-align: top;
+}
+th {
+  background: #f5f9fc;
+}
+hr {
+  border: 0;
+  border-top: 1px solid var(--line);
+  margin: 1.5em 0;
+}
+blockquote {
+  padding: 0.3em 0 0.3em 1em;
+  border-left: 4px solid #c9dbef;
+  color: var(--muted);
+}
+@media (max-width: 720px) {
+  .page {
+    width: min(100% - 18px, 1080px);
+    padding-top: 16px;
+  }
+  .hero,
+  .doc {
+    border-radius: 18px;
+  }
+  .doc {
+    padding: 20px;
+  }
+}
+
+  </style>
+</head>
+<body>
+  <main class="page">
+    <section class="hero">
+      <h1>compute_particles</h1>
+    </section>
+    <article class="doc">
+<h1>compute_particles</h1>
+<p>English | <a href="index.html">日本語</a></p>
+<h2>Overview</h2>
+<p>This sample uses <code>ComputeParticleEmitter</code> to generate, update, and render 49,152 particles on the GPU. Application code supplies emission position, direction, speed, and lifetime; the standard class builds the WGSL and particle-buffer layout. Position, velocity, and lifetime are updated in a GPU storage buffer, and the same buffer is read for billboard rendering.</p>
+<p>The fountain mode uses one emission request for an upward particle group. The ring mode uses 24 requests placed around a circle. Both modes use the same <code>ComputeParticleEmitter</code> API. HDR particle colors use additive blending.</p>
+<h2>How to Run</h2>
+<p>Open <a href="./compute_particles.html">compute_particles.html</a> through an HTTP server in a WebGPU-capable browser.</p>
+<h2>webg Features Used</h2>
+<ul><li><code>WebgApp</code>: initializes and manages the Screen, camera, input, compute frame, and GPU submission</li><li><code>ComputeParticleEmitter</code>: groups emission requests, particle storage, uniforms, Compute/Render pipelines, billboard rendering, and lifetime updates</li><li><code>GpuParticleEmitter</code>: the low-level GPU resource base class inherited by the standard emitter</li><li><code>OverlayPanel</code>: displays controls, estimated alive count, pending requests, and rejection count</li><li><code>Screen</code>: provides color/depth views and records particle Compute and Render passes in the same command encoder</li></ul>
+<h2>Controls</h2>
+<ul><li><code>Space</code>: emit an additional burst of 2,048 sparks</li><li><code>1</code>: switch to fountain mode</li><li><code>2</code>: switch to ring mode</li><li><code>P</code>: pause/resume particle motion and lifetime updates</li><li><code>H</code>: collapse/show the Help panel</li><li>Drag: orbit the camera</li><li><code>Shift</code> + Drag: pan the camera</li><li>Mouse wheel: zoom</li></ul>
+<h2>Implementation Details</h2>
+<p><code>main.js</code> creates <code>ComputeParticleEmitter</code> with the following settings.</p>
+<pre><code class="language-js">const emitter = new ComputeParticleEmitter(screen.getGPU(), {
+  capacity: 49152,
+  preset: &quot;spark&quot;,
+  targetFormat: screen.getGPU().format,
+  overflow: &quot;replace-oldest&quot;,
   simulation: { gravity: [0, -0.70, 0], drag: 0.05 },
   appearance: {
     colors: [[1.0, 0.28, 0.04], [0.04, 0.46, 1.0]],
-    intensity: 1.26, size: [0.006, 0.018]
+    intensity: 1.26,
+    size: [0.006, 0.018]
   }
-});</code></pre><p>Each emission request specifies <code>position</code>, <code>direction</code>, <code>spreadAngle</code>, <code>speed</code>, and <code>lifetime</code>. The Compute Shader generates initial state and updates motion. <code>targetFormat</code> selects the direct Canvas format. PBR scenes use <code>WebgSceneApp.createComputeParticleEmitter()</code> with an HDR intermediate target and <code>ComputeParticlePass</code>.</p>
-<p><code>estimated</code> is a CPU reservation estimate based on maximum lifetime. Normal rendering keeps particle positions on the GPU.</p>
-<h2>Checkpoints</h2><ul><li>49,152 particles appear in a fountain pattern at startup</li><li><code>2</code> switches to the 24-direction ring pattern</li><li><code>Space</code> emits a burst, with <code>replace-oldest</code> handling capacity</li><li><code>P</code> pauses and resumes the simulation</li><li>The Help panel diagnostics respond to controls</li></ul>
-</article></main></body></html>
+});</code></pre>
+<p>Fountain uses one request, while ring uses 24 requests. Each request specifies <code>position</code>, <code>direction</code>, <code>spreadAngle</code>, <code>speed</code>, and <code>lifetime</code>. Emission requests, camera data, and time are packed into uniforms; the Compute Shader generates initial particle state and updates motion.</p>
+<p><code>targetFormat</code> selects the swapchain format for direct Canvas rendering in this sample. For PBR scenes, <code>WebgSceneApp.createComputeParticleEmitter()</code> creates the HDR intermediate target and <code>ComputeParticlePass</code>.</p>
+<p>The displayed <code>estimated</code> count is a CPU reservation estimate based on maximum lifetime. Normal rendering reads particle positions directly from the GPU, while capacity and emission diagnostics use the CPU reservation estimate.</p>
+<h2>Checkpoints</h2>
+<ul><li>49,152 particles appear in a fountain pattern at startup</li><li><code>2</code> switches to a 24-direction ring pattern</li><li><code>Space</code> emits an additional burst, and <code>replace-oldest</code> replaces older particles at capacity</li><li><code>P</code> freezes particle pose and lifetime, and resume advances the simulation</li><li>The Help panel estimated count, request count, and rejection count respond to controls</li><li>The Compute Shader updates particle positions every frame</li></ul>
+    </article>
+  </main>
+</body>
+</html>

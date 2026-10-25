@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// samples/procedural_texture/main.js  2026/08/14
+// samples/procedural_texture/main.js  2026/10/25
 //   Six-face procedural tiled texture comparison with an orbit camera
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -29,7 +29,7 @@ import ProceduralMaterials from "../../webg/ProceduralMaterials.js";
 // - 軌道カメラで立方体の全方向を観察し、長手方向や凹凸差を比較する
 
 // 立方体一辺の実寸をmeterで定義し、頂点座標と各面のUV反復回数へ同じ値を使用する
-// 材質側の部材寸法は変更せず、3m面の中へ実寸比を保った回数だけtextureを反復する
+// 部材寸法を保持し、3m面の中へ実寸比に応じた回数だけtextureを反復する
 const CUBE_SIZE_METERS = 3.0;
 const CUBE_HALF_SIZE_METERS = CUBE_SIZE_METERS * 0.5;
 const NORMAL_STRENGTH = 1.6;
@@ -37,7 +37,7 @@ const BACKGROUND_PREVIEW_MARGIN_PIXELS = 24;
 const BACKGROUND_PREVIEW_GAP_PIXELS = 12;
 
 // 3m立方体を見渡せるよう、視点距離とzoom範囲を設定する
-// targetと角度は維持し、立方体の大きさ以外で比較時の見える面が変わらないようにする
+// target と角度を維持し、同じ向きから立方体の大きさを比較する
 const CAMERA_CONFIG = {
   target: [0.0, 0.0, 0.0],
   distance: 6.75,
@@ -149,10 +149,10 @@ let textureBackgroundSource = null;
 let textureBackgroundLayoutSize = [0, 0, 0, 0];
 
 // +Z編集面の現在値と直前値だけを保持し、Palette操作をまたいでsurface detail fieldを再利用する
-// 固定比較用5面は再生成しないためcache対象にせず、初期生成時の一時fieldをそのまま解放する
+// 固定比較用5面は初回生成の結果を保持し、生成時の一時fieldはその場で解放する
 const editableSurfaceDetailFieldCache = new ProceduralTextureFieldCache(2);
 
-// catalogの既定値からpalette用の変更可能な複製を作り、既定値をsample内へ重複記載しない
+// catalogの既定値を変更可能な複製へ展開し、paletteの設定元を一つにそろえる
 function createDefaultTextureParameters(presetId = editablePresetId) {
   const specification = ProceduralMaterials.resolve(presetId);
   return {
@@ -257,7 +257,7 @@ function createProceduralTextureDiagnosticsReport() {
   return report;
 }
 
-// 必須のHTML要素を取得し、legendのID誤記を空表示として処理しない
+// 必須のHTML要素を取得し、legendのIDが一致することを初期化時に検証する
 function requireElement(id) {
   const element = document.getElementById(id);
   if (!element) {
@@ -352,7 +352,7 @@ async function createFaceTextureSets(gpu, referenceOverrides, referencePresetId)
       results.push(result.entry);
     }
   } catch (error) {
-    // 作成途中のGPU textureを残さず、表示中のactive textureへ影響を与えない
+    // 作成途中の GPU texture を解放し、表示中の active texture を維持する
     destroyTextureSets(results);
     throw error;
   }
@@ -539,7 +539,7 @@ async function createMapPreviewBackground(texture, label) {
   await background.init();
   background.setBackground(texture);
 
-  // mapの値をそのまま確認できるよう、背景側で暗くしたり着色したりしない
+  // mapの値をそのまま確認できるよう、背景色を明るさと色の基準として固定する
   background.setColor(1.0, 1.0, 1.0);
   background.setAspect(1.0);
   return background;
@@ -743,7 +743,7 @@ function updateHelpPanel() {
   });
 }
 
-// 完成した6面分を一括交換し、途中状態のColor/Normal組が同時に表示されないようにする
+// 完成した6面分を一括交換し、同じ生成処理のColorとNormalを組にして表示する
 async function regenerateTextureScene(parameters, presetId) {
   const totalStarted = nowMilliseconds();
   let nextReference = null;
@@ -812,7 +812,7 @@ async function regenerateTextureScene(parameters, presetId) {
 }
 
 // DOMを更新した同じtask内で重いCPU生成を始めると、値は変わっていてもbrowserがPaletteを
-// paintできないため、requestAnimationFrame後のtaskまで待ち、表示値を先に画面へ反映する
+// requestAnimationFrame後のtaskまで待ち、生成開始前に現在の表示値を画面へ反映する
 function waitForPalettePaint() {
   return new Promise((resolve) => {
     if (typeof requestAnimationFrame !== "function") {

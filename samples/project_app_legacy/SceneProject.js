@@ -1,5 +1,5 @@
 // ---------------------------------------------
-//  SceneProject.js  2026/09/23
+//  SceneProject.js  2026/10/25
 //   ProjectApp sample implementation for validating and loading a Scene project manifest
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -703,7 +703,7 @@ export default class SceneProject {
   }
 
   // project.objectsからprimitive NodeとShapeを構築し、body bindingと同じID表を返します
-  // ModelAsset経路とは別に、外部メッシュを準備しない一般sceneの入口を明示します
+  // 通常のscene定義からNodeと形状を構築する入口を、ModelAsset経路と並べて用意します
   async buildPrimitiveScene(target) {
     this.requireAlive();
     if (!target?.space || typeof target.getGPU !== "function") {

@@ -174,7 +174,7 @@ blockquote {
 <p><a href="index.en.html">English</a> | 日本語</p>
 <h2>概要</h2>
 <p><code>samples/falling_dominoes</code>と同じ32個のドミノを、通常の<code>PhysicsSpace</code>でシミュレーションするサンプルです。左端のドミノだけへ初期角速度を与え、後続31個へBox接触を順番に伝えます。Compute版と同じ寸法、質量、重力、反発係数、摩擦係数、固定刻み、solver反復数、sleep条件、カメラを使い、GPU上でBodyStateを更新する方式と、CPU上で<code>PhysicsNode</code>を更新する方式を比較できます。</p>
-<p>CPU版のBox/Plane接触は、<code>PhysicsSpace</code>のCPU接触処理を使います。<code>BoxCollider</code>、<code>PlaneCollider</code>、<code>PhysicsNode</code>を通常のwebg APIで登録し、Plane Nodeをsolverの明示的なPlane入力へ変換します。画面に見える床板は描画専用Nodeとして分け、物理Planeと二重に接触計算しません。</p>
+<p>CPU版のBox/Plane接触は、<code>PhysicsSpace</code>のCPU接触処理を使います。<code>BoxCollider</code>、<code>PlaneCollider</code>、<code>PhysicsNode</code>を通常のwebg APIで登録し、Plane Nodeをsolverの明示的なPlane入力へ変換します。画面に見える床板は描画専用Nodeとして分け、床との接触計算は物理Planeだけで行います。</p>
 <h2>実行方法</h2>
 <p>実行ファイルは<a href="./falling_dominoes_cpu.html">`falling_dominoes_cpu.html`</a>です。WebGPU対応ブラウザで開くと、画面中央のドミノ列が左から右へ順番に倒れます。WebGPUは通常のscene描画に使い、物理更新はCPUの<code>PhysicsSpace</code>が行い、結果を<code>PhysicsNode</code>へ同期します。Help Panelは起動時に畳まれているため、<code>H</code>で展開するとframe間隔、GPU Render時間・負荷率、JavaScript時間・負荷率、active body数、sleeping body数、fixed step数を確認できます。</p>
 <p>初期カメラはCompute版と同じく、<code>target=(-0.16, -0.13, -0.06)</code>、<code>distance=0.28</code>、<code>yaw=-67.19</code>、<code>pitch=-43.59</code>、<code>roll=-29.93</code>、<code>fovX=70.00</code>です。ドラッグ、ホイール、キー、pinchによるzoom速度もCompute版と同じ設定です。</p>
@@ -186,7 +186,7 @@ blockquote {
 <p>起動直後に先頭の赤いドミノが倒れ、後続のドミノへ接触が伝わることを確認します。ドミノが床Planeをすり抜けず、倒れたbodyが床上に残ること、最後に複数bodyがsleepしてHelp Panelのsleeping数へ反映されることを確認します。Compute版との比較では、連鎖の順序、床による支持、最終的な停止という動作が同等であることを確認するサンプルです。</p>
 <h2>実装の流れ</h2>
 <p><code>createInitialDescriptors()</code>は、Compute版と同じ32体の位置、Box寸法、質量、初期角速度、材質値を生成します。CPUの<code>PhysicsNode</code>が角速度をdegree/secで保持するため、descriptorのrad/secを<code>PhysicsNode</code>へ渡す境界でdegree/secへ変換します。変換後もHelp Panelの速度表示はrad/secへ戻して、Compute版の表示単位と合わせています。</p>
-<p><code>createPhysicsSpace()</code>はfixed stepを120Hz、solver反復数を10、最大sub step数を4として、Compute版のBox候補余白、support feature許容値、位置補正slop、sleep・wake閾値を<code>PhysicsSpace</code>へ設定します。床は<code>PlaneCollider</code>付きstatic <code>PhysicsNode</code>として<code>PhysicsSpace</code>へ登録し、画面に見える薄い床板は描画専用の通常Nodeとして別に作ります。PhysicsSpaceは登録されたPlaneをsolver入力へ変換するため、boundsから別のPlaneを追加しません。</p>
+<p><code>createPhysicsSpace()</code>はfixed stepを120Hz、solver反復数を10、最大sub step数を4として、Compute版のBox候補余白、support feature許容値、位置補正slop、sleep・wake閾値を<code>PhysicsSpace</code>へ設定します。床は<code>PlaneCollider</code>付きstatic <code>PhysicsNode</code>として<code>PhysicsSpace</code>へ登録し、画面に見える薄い床板は描画専用の通常Nodeとして別に作ります。PhysicsSpaceは登録されたPlaneをsolver入力へ変換するため、登録済みのPlaneを床の唯一の判定面として使います。</p>
 <p>各frameでは<code>PhysicsSpace.step(deltaMs)</code>が実時間をfixed stepへ分配し、各fixed stepで重力積分、damping、姿勢積分、予測AABB、候補生成、Box/Plane接触、local impulse solver、position correction、sleep判定を実行します。solverが更新した<code>PhysicsNode</code>は通常の<code>WebgApp</code> scene描画で表示されるため、GPU BodyStateをvertex shaderから直接読むCompute版とは描画状態の受け渡しが異なります。</p>
 <p><code>R</code>によるresetではページを再読み込みし、PhysicsSpace、PhysicsNode、接触履歴、sleep状態を初期条件から作り直します。各試行は接触履歴と時間accumulatorを初期化して開始します。</p>
     </article>

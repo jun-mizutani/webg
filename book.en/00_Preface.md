@@ -10,7 +10,7 @@ Touch, mouse, and pen input use Pointer Events and a shared gesture system. You 
 The Logo programming language introduced many people to turtle graphics: drawing pictures by telling an on-screen turtle to move forward, turn, and raise or lower its pen.
 Around 1991, I wrote a 16-bit fixed-point 3D package in assembly language to try a three-dimensional version of that idea. That was the beginning of my work in 3D graphics.
 When I first tried to draw a cube, I encountered gimbal lock as I tilted the view upward by 90 degrees.
-With Euler-angle rotations, certain orientations align two rotation axes, making it difficult to control the next rotation independently.
+When the view points straight up, two of the three Euler rotation axes overlap, making the orientation difficult to specify.
 That experience led me to study matrices and quaternions and understand the calculations behind them.
 The code in `webg`'s `Quat.js` and `Matrix.js` grew out of that work and has been refined over more than 30 years.
 Along the way, I worked with Pascal, C++, Python, Lua, and JavaScript.

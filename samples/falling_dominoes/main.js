@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// samples/falling_dominoes/main.js  2026/09/23
+// samples/falling_dominoes/main.js  2026/10/25
 //   ComputePhysicsSpace falling dominoes sample
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -17,13 +17,13 @@ import { buildErrorPanelOptions, buildHelpPanelOptions } from "../../webg/Overla
 
 // このサンプルの目的:
 // - ComputePhysicsSpaceとComputeBoxColliderだけで、連続するドミノの接触を構成する
-// - GPU上のping-pong BodyStateをvertex shaderから直接読み、bodyごとのNode同期を行わない
+// - GPU 上の ping-pong BodyState を vertex shader から直接読み、body の姿勢を描画へ反映する
 // - 左端のドミノだけへ初期角速度を与え、後続bodyは接触で倒れて最後にsleepする処理を目視で確認する
 // - 共有pairの一回力積は長い連鎖の床接触で残留角速度を作るため、このサンプルは局所反復solverを使う
 
 // 初版と同じ32体へ戻し、先頭1体から後続31体までの連鎖を確認します
 const DOMINO_COUNT = 32;
-// 短い接触をpeak値から取りこぼさないよう、診断readbackは毎frame試行します
+// 短い接触も peak 値へ反映できるよう、診断 readback を毎 frame 試行します
 const WAKE_DIAGNOSTIC_FRAME_INTERVAL = 1;
 // 物理単位をm・kg・sへ揃え、一般的な木製ドミノに近い寸法を使います
 const DOMINO_LONG_SIDE = 0.025;
@@ -198,7 +198,7 @@ fn quatRotate(q : vec4f, value : vec3f) -> vec3f {
 }
 
 // 全slotをinstance描画し、Box以外のslotをclip外へ送る共通処理です
-// 現在はBoxだけを登録するため、形状判定は未対応bodyの混入を検出する役割も持ちます
+// 登録対象をBoxとして検証し、入力の形状種別を初期化時に確認します
 fn buildVertex(input : VertexInput, instanceIndex : u32) -> VertexOutput {
   let state = states[instanceIndex];
   var output : VertexOutput;
@@ -425,7 +425,7 @@ class FallingDominoRenderer {
 }
 
 // 最新BodyStateからactiveとsleepingの2 counterだけを集計し、panelへ非同期で渡します
-// body位置や姿勢をreadbackせず、描画のためのGPU状態直接参照を維持します
+// 描画はGPU状態を直接参照し、body位置と姿勢をStorage Bufferから読み取ります
 class FallingDominoStats {
   // 2本のstate buffer、counter、readback buffer、集計pipelineを初期化します
   constructor(gpu, stateBuffers, bodyCount) {
@@ -569,7 +569,7 @@ function updateFrameTiming(deltaSec) {
 }
 
 // wake診断の一行を作り、現在接触しているか、接触時の最大接近速度が閾値へ届いたかを示します
-// Eは回転慣性を含まない法線方向の換算質量エネルギーで、wake速度の比較用として表示します
+// E は法線方向の並進運動から求める換算質量エネルギーで、wake 速度の比較用に表示します
 function formatWakePair(pair) {
   const target = `B${pair.bodyBId}:${pair.sleepingTarget ? "S" : "A"}`;
   const peak = pair.peakApproachSpeed.toFixed(4);
@@ -629,7 +629,7 @@ function formatWakePair(pair) {
 }
 
 // B29/B30へ実際に適用した最大接近反復の法線・摩擦力積を同じ単位で表示します
-// denominatorとunrestrictedを残し、力積の差を結果だけから推測しないようにします
+// denominatorとunrestrictedを残し、力積の差が生じた計算条件も確認できるようにします
 function formatPairImpulseAudit(label, normal, friction, applied) {
   if (!Array.isArray(normal) || !Array.isArray(friction) || !Array.isArray(applied) || applied[1] < 0.5) {
     return [`${label}: no approaching impulse recorded`];
@@ -677,7 +677,7 @@ function buildStageVelocityLines(stage) {
 
 // wake診断の全pairをpanel行へ変換し、衝突前の間隔と衝突後のpeak値を同時に見せます
 // CPUエミュレータのfixed step数、readback前後の最大差分、sleep差分をpanelへ表示します
-// GPU状態をCPUへ上書きせず独立計算の差分を保持するため、solver再現の崩れを診断できます
+// CPUの独立計算を保持してGPUとの差分を求め、solver再現が分かれる時点を診断します
 function buildCpuEmulatorLines(report) {
   if (!report) return ["CPU emulator: waiting for state readback"];
   const formatCompare = (label, value) => [
@@ -949,7 +949,7 @@ async function start() {
     // 通常起動は明示的なstate readbackを省略し、?diagnostics=1のときだけ外部診断moduleを有効にします
     scale: COMPUTE_PHYSICS_SCALE
   });
-  // GPUへ渡した初期descriptorを同じ順序でCPUエミュレータへ渡し、readbackを補正入力にしない比較を開始します
+  // GPUへ渡した初期descriptorを同じ順序でCPUエミュレータへ渡し、独立計算の比較を開始します
   // ComputePhysicsSpaceのscaleから取得できる寸法依存値は、ここでも同じ比率から明示的に算出します
   cpuEmulator = new ComputePhysicsCpuEmulator({
     bodies: initialBodies,
@@ -1010,7 +1010,7 @@ async function start() {
       if (!paused) {
         physics.encode(encoder, deltaSec * 1000, {
           // 実際に記録されたfixed stepの先頭clearと末尾solverへだけqueryを置きます
-          // app.beginGpuTiming()が計測slotを確保できないframeではundefinedになり計測を省略します
+          // app.beginGpuTiming()がslotを確保したframeで計測し、その他のframeではundefinedを受け取ります
           getTimestampWrites: (phase, stepIndex, stepCount) => app.getGpuTimestampWrites(
             phase === "begin" && stepIndex === 0,
             phase === "end" && stepIndex === stepCount - 1
@@ -1048,7 +1048,7 @@ async function start() {
 }
 
 // HTML解析後に初期化を開始し、失敗時はconsoleとerror panelへ同じ原因を表示します
-// GPU初期化に失敗した場合はエラーを表示し、scene描画を開始せず原因を示します
+// GPU初期化に失敗した場合は、起動時のエラーを画面へ表示して原因を示します
 document.addEventListener("DOMContentLoaded", () => {
   start().catch((error) => {
     console.error("falling_dominoes failed:", error);

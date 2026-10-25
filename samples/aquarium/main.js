@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// main.js  2026/10/04
+// main.js  2026/10/25
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // ---------------------------------------------
@@ -161,7 +161,7 @@ async function start() {
 
   waterSurface = await createWaterSurface(app, water);
 
-  // 微小な浮遊粒子。屈折する気泡ではなく、水中の雰囲気を添える低輝度の点
+  // 水中の雰囲気を添える微小な浮遊粒子を、低輝度の点として描く
   particles = new ComputeParticleEmitter(gpu, { preset: "light", capacity: 128, seed: 17,
     overflow: "replace-oldest", simulation: { gravity: [0, .02, 0], drag: .1 },
     appearance: { colors: [[.25, .55, .6], [.4, .65, .7]], size: [.012, .028], intensity: .4 } });

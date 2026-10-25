@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// samples/transmission/main.js  2026/08/14
+// samples/transmission/main.js  2026/10/25
 //   Screen-space PBR transmission and refraction comparison
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -36,7 +36,7 @@ const DEFAULT_STATE = {
   }
 };
 
-// HelpのFPSは0.2秒分のframe数と実経過時間から平均し、瞬間値の細かな揺れを表示しない
+// HelpのFPSは0.2秒分のframe数と実経過時間から平均し、短い変動をならして表示する
 const FPS_AVERAGE_INTERVAL_SEC = 0.2;
 // 通常frameはprimitive値の比較だけにし、原因分析に必要な状態変化と長いframeだけを保存する
 const ANOMALY_LOG_CAPACITY = 64;
@@ -89,7 +89,7 @@ let previousAmbiguousPairCount = 0;
 let previousIgnoredSmallOverlapPairCount = 0;
 let previousQueueTotalMs = 0.0;
 
-// ring内部順ではなく古い順へ並べたcopyは、利用者がconsoleから要求したときだけ生成する
+// console から要求された時点で、記録を古い順に並べた copy を生成する
 window.transmissionAnomalyLog = transmissionAnomalyLog;
 window.getTransmissionAnomalyLog = () => {
   const ordered = [];
@@ -104,13 +104,13 @@ window.getTransmissionAnomalyLog = () => {
 };
 
 // 未計測のnullを保持したまま、取得済み時間だけをmicrosecond相当の小数3桁へ丸める
-// Diagnostics JSONで文字列ではなく数値として出し、後から表計算や比較scriptへ渡せるようにする
+// Diagnostics JSON へ数値として出力し、表計算や比較 script で集計できるようにする
 function roundTiming(value) {
   return Number.isFinite(value) ? Number(value.toFixed(3)) : null;
 }
 
 // TransparencyPassの階層化snapshotをF9+Mのflatなstatsへ展開し、区間名をJSON keyへ固定する
-// GPU未対応時はnullを残し、0 msという実測値とtimestamp-query未取得を区別する
+// GPU計測を利用できる環境では実測値を保持し、計測値が得られた段階でnullから更新する
 function createPerformanceDiagnostics(snapshot) {
   const gpu = snapshot.gpu;
   const cpu = snapshot.cpu;
@@ -158,7 +158,7 @@ function createPerformanceDiagnostics(snapshot) {
   };
 }
 
-// 不透明と透明で同じ公開material fieldを使い、G-bufferと透明Forwardの入力差を作らない
+// 不透明面と透明面で共通の material field を使い、両経路の入力をそろえる
 function createMaterial(color, options = {}) {
   return {
     has_bone: 0,
@@ -364,7 +364,7 @@ async function createScene() {
 }
 
 // 各材質のTransmission、IOR、吸収、Alpha、roughnessを対応するShapeへ個別に反映する
-// Thicknessは2D offset用の互換入力で、2面屈折には使わないためsampleから設定しない
+// 2面屈折はentryとexitの深度から厚みを求め、Thicknessの2D offset用入力は省略する
 function applyMaterialState() {
   for (const [key, shape] of transmissiveShapes) {
     const material = state.materials[key];
@@ -405,7 +405,7 @@ function updatePerformanceDiagnostics() {
   const selectedMaterial = state.materials[state.selectedMaterial];
   const performanceSnapshot = pipeline.getTransparencyPerformanceSnapshot();
   const performanceDiagnostics = createPerformanceDiagnostics(performanceSnapshot);
-  // 画面UIを操作せずに、ブラウザ計測とconsoleから同じsnapshotを取得できるよう公開する
+  // ブラウザ計測とconsoleへsnapshotの取得口を公開し、画面UIと同じ状態を参照できるようにする
   window.transmissionPerformance = performanceSnapshot;
   document.body.dataset.transmissionTimingReady =
     performanceDiagnostics.transmissionGpuSampleCount >= 30 ? "true" : "false";
@@ -535,7 +535,7 @@ function recordTransmissionAnomaly(deltaSec, screen) {
 function buildHelpLines() {
   const selected = state.materials[state.selectedMaterial];
   // WebgAppのFrameTimerが求めたframe間隔と処理時間の割合をそのまま使い、
-  // sample側でGPUとJavaScriptの計測区間や未取得値の扱いを重複実装しない
+  // GPUとJavaScriptの計測区間、および計測結果の状態は共通の処理へまとめる
   const frameTimingLines = app?.getFrameTimingLines?.() ?? [
     "Frame timing: measuring..."
   ];
@@ -765,7 +765,7 @@ async function start() {
       app.afterGpuSubmit();
       pipeline.afterGpuSubmit();
       recordTransmissionAnomaly(deltaSec, screen);
-      // 同じ0.2秒tickでHelpと計測snapshotを更新し、統計配列の複製・sortを毎frame行わない
+      // 同じ 0.2 秒 tick で Help と計測 snapshot を更新し、配列の複製と sort もその時点にまとめる
       const refreshPerformanceDiagnostics = updateDisplayedFps(deltaSec);
       if (refreshPerformanceDiagnostics) {
         updateHelpPanel();
@@ -784,7 +784,7 @@ async function start() {
     // 不透明物だけをG-bufferへ描き、透明形状は後段TransparencyPassへ残す
     onBeforeDraw: ({ cameraFrame }) => {
       // G-buffer Renderと後続ComputeEffectPipelineを同じframe timing slotへ記録し、
-      // HelpのGPU loadが未接続の「--」ではなく実測percentageになるようにする
+      // Help の GPU load に実測した percentage を表示する
       app.beginGpuTiming();
       pipeline.renderScene(app.space, cameraFrame, app.clearColor, {
         shadowEnabled: false,
@@ -810,7 +810,7 @@ async function start() {
           transmissionEnabled: state.enabled,
           transmissionStrength: 1.0,
           transmissionRayDebugEnabled: state.rayDebug,
-          // HDR environmentを使わないsampleでは背景未到達rayをアプリのclearColorへ置き換える
+          // HDR environment を省略した sample では、背景に届かなかった ray の色に clearColor を使う
           transmissionRayMissFallback: "clear"
         }
       });

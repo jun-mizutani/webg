@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// samples/scene_model_yaml/main.js  2026/09/19
+// samples/scene_model_yaml/main.js  2026/10/25
 // SceneYAMLの外部ModelYAML参照をPBRとCompute物理へ接続する
 // Copyright (c) 2026 Jun Mizutani, MIT license
 // ---------------------------------------------
@@ -19,7 +19,7 @@ function showError(error) {
   console.error(error);
 }
 
-// フレーム処理の失敗時はループを止め、続行できない操作を無効にする
+// フレーム処理の失敗時はループを止め、画面をエラー確認用の状態へ切り替える
 function handleRuntimeError(error) {
   stoppedByError = true;
   if (sceneApp) sceneApp.stop();
@@ -28,7 +28,7 @@ function handleRuntimeError(error) {
 }
 
 // 物理の進行と読み込んだ二つの文書の情報を表示する
-// 初期化完了前のcallbackでは、まだ参照できないsceneAppを使わない
+// 初期化完了後のcallbackで、生成済みのsceneAppを参照する
 function updateStatus() {
   if (!sceneApp) return;
   const state = sceneApp.getDiagnostics();
@@ -61,7 +61,7 @@ function connectButton(id, action) {
 }
 
 // SceneAssetが保持するSceneYAMLから起動し、モデル読込みはSceneDefinitionへ任せる
-// 実際に描画されたModelAssetを参照するため、表示用に再fetchしない
+// 実際に描画されたModelAssetを、表示用のデータとしても再利用する
 async function start() {
   sceneAsset = await SceneAsset.load("./scene.yaml");
   sceneAsset.assertValid();

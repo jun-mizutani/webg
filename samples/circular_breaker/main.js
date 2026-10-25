@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// samples/circular_breaker/main.js  2026/07/25
+// samples/circular_breaker/main.js  2026/10/25
 //   circular_breaker sample
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -318,7 +318,7 @@ const start = async () => {
   };
 
   // pause は play <-> pause の往復だけを受け持ち、
-  // intro / result / stage-clear では反応させない
+  // play と pause の二つの phase で切り替える
   const handlePauseAction = () => {
     if (getScenePhase() === "play") {
       setScenePhase("pause", {
@@ -335,7 +335,7 @@ const start = async () => {
   };
 
   // action map から得た one-shot input を gameplay 操作へ反映する
-  // game 操作は key 名ではなく action 名で扱い、入力源差を main loop へ持ち込まない
+  // key や画面 button の入力を共通の action 名へ変換し、main loop で同じ操作として扱う
   const handleGameActions = () => {
     if (app.wasActionPressed("pause")) {
       handlePauseAction();
@@ -412,7 +412,7 @@ const start = async () => {
       console.error("circular_breaker loop error:", err);
     } finally {
       // action edge は 1 frame ごとに落とし、
-      // wasActionPressed() を次 frame へ持ち越さない
+      // wasActionPressed() の結果を、その frame で読み取った操作へ限定する
       input.beginFrame();
       requestAnimationFrame(loop);
     }

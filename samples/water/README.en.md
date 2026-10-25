@@ -6,11 +6,11 @@ English | [日本語](index.html)
 
 ## Overview
 
-A small integration example applying caustics to a floor, sphere, box, and slope, with an independently switchable water surface. `WaterBody` stores the water region, waves, absorption, and registered receivers. `ComputeEffectPipeline.setWater()` owns GPU resources and composition order. Applications connect water through this public API while retaining the standard rendering sequence.
+A small integration example applying caustics to a floor, sphere, box, and slope, with an independently switchable water surface. `WaterBody` stores the water region, waves, absorption, and registered receivers. `ComputeEffectPipeline.setWater()` manages GPU resources and composition order. Connect `WaterBody` to the standard PBR pipeline to display water and caustics.
 
 ## Run
 
-Open [water.html](water.html) from an HTTP server serving the repository. Use a WebGPU browser on localhost or HTTPS. Enable caustics and water separately, select receivers, move the sphere, animate waves, or change caustic quality. Drag to orbit and scroll to zoom. The verification button runs explicit GPU image comparisons; normal rendering does not read images back.
+Open [water.html](water.html) from an HTTP server serving the repository. Use a WebGPU browser on localhost or HTTPS. Enable caustics and water separately, select receivers, move the sphere, animate waves, or change caustic quality. Drag to orbit and scroll to zoom. The verification button reads back GPU images and compares them when selected.
 
 ## Connect water
 
@@ -44,13 +44,13 @@ Caustics modify the registered opaque receiver's direct diffuse reflection. Spec
 
 Water combines screen-space refraction, IOR Fresnel, RGB absorption, GGX directional specular, and the current PBR environment in linear HDR. Alpha Blend fragments and Compute particles are split at water depth: underwater fragments enter the refracted background, while foreground fragments are drawn afterwards. Particle simulation updates once per frame. Fog, DoF, Bloom, Tone Map, and Edge run afterwards, with combined water depth and normals where needed.
 
-`low` uses 512² rays and a 256² field; `high` uses 1024² rays and a 512² field. Both use 48 refraction steps. The pipeline reuses a paused caustic field. When both features are off, water resources are released and rendering follows the standard lighting path. Water-only and caustics-only modes allocate their resources independently.
+`low` uses 512² rays and a 256² field; `high` uses 1024² rays and a 512² field. Both use 48 refraction steps. The pipeline reuses a paused caustic field. When both features are off, water resources are released and rendering returns to the standard 17-binding lighting path. Water-only and caustics-only modes allocate their resources independently.
 
 Standard `PbrRenderer.createFrameCallbacks()` collects timing at the next frame. With a custom loop, call `pipeline.afterGpuSubmit()` or `renderer.afterGpuSubmit()` immediately after queue submission.
 
-`getWaterStats()` exposes dispatch/pass counts and asynchronous GPU timestamps. Timestamp support may be unavailable. Timing covers field generation, surface compute, and depth transfer; it excludes receiver-mask rendering, additional lighting cost, and translucent rendering. Resource figures are logical buffer/texture capacities, not driver memory measurements.
+`getWaterStats()` exposes dispatch/pass counts and asynchronous GPU timestamps. Timestamp support may be unavailable. Timing covers irradiance generation, surface compute, and depth transfer. Compare total frame cost separately to include receiver masks, the lighting variant, and translucent rendering. Resource figures show requested logical buffer/texture capacities. Use GPU diagnostics to inspect driver allocation and cache usage.
 
-The sample focuses on one finite horizontal water region viewed from above. It demonstrates refraction at the water surface and caustics projected from a horizontal field onto opaque receivers. It does not cover underwater cameras, vertical water walls, offscreen refraction, reflected scene geometry, or combining water with Frost, Transmission, or Volume materials. The caustic projection does not trace rays against each receiver mesh.
+The sample focuses on one finite horizontal water region viewed from above. It demonstrates surface refraction and caustics projected from a horizontal field onto opaque receivers. The projection approximates how vertical light illuminates three-dimensional receivers; applications that need exact ray tracing against each receiver can add geometry-based tracing. The model can be extended for underwater cameras, vertical walls, offscreen refraction, reflected scene geometry, and transparent Frost, Transmission, or Volume materials.
 
 ## Source guide
 

@@ -94,7 +94,7 @@ The perspective projection matrix determines the visible range in addition to ca
 
 ![Field of view and visible range](../book/img/fov.png)
 
-A smaller FOV shows a narrower range with a telephoto appearance; a larger FOV shows a wider range with a wide-angle appearance.
+A smaller FOV shows a narrower range; a larger FOV shows a wider range.
 
 ```js
 makeProjectionMatrix(near, far, vfov, ratio) {
@@ -113,7 +113,7 @@ makeProjectionMatrix(near, far, vfov, ratio) {
 
 This excerpt is the finite-`far` Reverse-Z projection used by the ordinary camera: the near plane maps to depth 1 and the far plane to depth 0. The implementation also validates the near plane, far plane, FOV, and aspect ratio, and supports `far: Infinity`. Shadow maps use a different projection: pass `SHADOW_STANDARD_Z` as the fifth argument so near maps to 0 and far to 1.
 
-`vfov` is the vertical field of view. Since `h = 1 / tan(vfov / 2)`, reducing FOV increases `h` and narrows the visible range, much like using a longer camera lens. Increasing FOV widens the view and strengthens wide-angle perspective.
+`vfov` is the vertical field of view. Since `h = 1 / tan(vfov / 2)`, reducing FOV increases `h` and narrows the visible range. With the camera position fixed, FOV changes the visible range and image magnification; the perspective relationship between objects is determined by camera position. Increasing FOV shows a wider range from the same position.
 
 For a full-frame equivalent, using a 24 mm short sensor dimension gives:
 
@@ -137,7 +137,7 @@ focalLengthMm = 24 / (2 * tan(fovShort / 2))
 
 ![How focal length changes the view](../book/img/camera_fov.jpg)
 
-At the same subject size, wide-angle views make near objects look larger and far objects smaller; telephoto views compress apparent depth. `viewAngle` approximates a physical lens FOV and helps a viewer or modeler communicate the intended lens feel.
+At the same subject size, wide-angle views make near objects look larger and far objects smaller; telephoto views compress apparent depth. `viewAngle` approximates a physical lens FOV. Comparing short-side FOV with the table helps a viewer or modeler identify the intended lens feel.
 
 Choose application FOV for its subject: modeling tools often benefit from a narrower view that makes proportions easy to inspect, while broad landscapes and racing games may use a wider view for context and motion, with more distortion near the edges.
 

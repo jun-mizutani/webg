@@ -4,7 +4,7 @@ English | [日本語](README.md)
 
 ## Overview
 
-This sample uses `ComputeParticleEmitter` to generate, update, and render 49,152 particles on the GPU. Application code supplies emission position, direction, speed, and lifetime without defining custom WGSL or a particle-buffer layout. Position, velocity, and lifetime are updated in a GPU storage buffer, and the same buffer is read for billboard rendering.
+This sample uses `ComputeParticleEmitter` to generate, update, and render 49,152 particles on the GPU. Application code supplies emission position, direction, speed, and lifetime; the standard class builds the WGSL and particle-buffer layout. Position, velocity, and lifetime are updated in a GPU storage buffer, and the same buffer is read for billboard rendering.
 
 The fountain mode uses one emission request for an upward particle group. The ring mode uses 24 requests placed around a circle. Both modes use the same `ComputeParticleEmitter` API. HDR particle colors use additive blending.
 
@@ -54,7 +54,7 @@ Fountain uses one request, while ring uses 24 requests. Each request specifies `
 
 `targetFormat` selects the swapchain format for direct Canvas rendering in this sample. For PBR scenes, `WebgSceneApp.createComputeParticleEmitter()` creates the HDR intermediate target and `ComputeParticlePass`.
 
-The displayed `estimated` count is a CPU reservation estimate based on maximum lifetime. Particle positions remain on the GPU during normal rendering, so capacity and emission diagnostics can be displayed without interrupting the GPU-first flow.
+The displayed `estimated` count is a CPU reservation estimate based on maximum lifetime. Normal rendering reads particle positions directly from the GPU, while capacity and emission diagnostics use the CPU reservation estimate.
 
 ## Checkpoints
 

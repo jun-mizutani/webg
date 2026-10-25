@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// samples/skinning/main.js  2026/07/25
+// samples/skinning/main.js  2026/10/25
 //   skinning sample
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -140,8 +140,8 @@ const createStaticCylinder = (
   rings = 12,
   segments = 24
 ) => {
-  // skinning を使わない静的 cylinder を同じ silhouette で作り、
-  // static 比較 mode では「変形しない参照物」として使えるようにする
+  // 静的な cylinder を同じ silhouette で作り、
+  // static比較modeでは、レスト姿勢を保つ参照物として使う
   const shape = new Shape(gpu);
   shape.setAutoCalcNormals(true);
 
@@ -374,7 +374,7 @@ const start = async () => {
 
   // モードの状態を対象の状態または描画設定へ反映する
   const applyModeState = () => {
-    // reload を使わず、3 系統の shape / skeleton を最初から持っておき、
+    // 3系統のshape / skeletonを初期化時に用意しておき、
     // 現在 mode に応じて visible な node と material だけを切り替える
     const activeSkinned = state.useHardWeights ? hardSkinned : softSkinned;
     staticNode.hide(!state.forceStatic);

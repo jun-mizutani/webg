@@ -177,8 +177,8 @@ blockquote {
 <p>このサンプルは、同じ16個のイコスフィアを標準の<code>SmoothShader</code>とDeferred Lightingで切り替えて描き、材質パラメーターの意味と見え方を比較します。同じシーングラフ、カメラ、頂点法線、光源位置を使うため、Phong型とGGX型の照明モデルの差を観察できます。</p>
 <p><code>SmoothShader</code>は<code>ambient</code>、<code>specular</code>、<code>power</code>を主に使用します。Deferred LightingはG-bufferへ保存した<code>specular</code>、<code>roughness</code>、<code>metallic</code>、<code>emissive</code>をGGX反射モデルで評価します。同じ<code>specular</code>という名前でも、標準側では白いハイライトの加算強度、Deferred側では非金属F0の0から4%を指定する倍率であり、指定値は、それぞれの照明モデルの定義に沿って解釈されます。</p>
 <h2>表示の読み方</h2>
-<p>初期状態は4×4の比較格子です。上から下へ<code>roughness / power</code>、左から右へ<code>specular / metallic</code>が変化します。標準表示では<code>roughness</code>と<code>metallic</code>を読みません。Deferred表示では<code>power</code>を読みません。片方だけが読む値を操作することで、各パラメーターの担当範囲を確認できます。</p>
-<p>Smooth用ambientは0.18、Deferred用の線形拡散環境強度は0.035として別々に管理します。両者は照明式での意味が異なるため、一つの数値を共有しません。Deferred側の最終表示は、照明モデルの比較へReinhard圧縮を混ぜないようlinear clampを使用し、その後に正確なsRGB表示変換を行います。</p>
+<p>初期状態は4×4の比較格子です。上から下へ<code>roughness / power</code>、左から右へ<code>specular / metallic</code>が変化します。標準表示では<code>power</code>、Deferred表示では<code>roughness</code>と<code>metallic</code>が材質へ反映されます。それぞれの値を操作して、各パラメーターの担当範囲を確認できます。</p>
+<p>Smooth用ambientは0.18、Deferred用の線形拡散環境強度は0.035として別々に管理します。両者は照明式での意味が異なるため、それぞれの照明へ個別の値を指定します。Deferred側の最終表示は、照明モデルの比較へReinhard圧縮を混ぜないようlinear clampを使用し、その後に正確なsRGB表示変換を行います。</p>
 <p>イコスフィアは分割数2の162共有頂点と320三角形からなり、位置を正規化した球面法線を使用します。UV継ぎ目で複製される頂点にも同じ手動法線をコピーするため、標準経路とG-buffer経路が同じ滑らかな法線を読みます。</p>
 <h2>操作方法</h2>
 <p><a href="./materials.html">materials.html</a>をWebGPU対応ブラウザで開きます。</p>
@@ -186,7 +186,7 @@ blockquote {
 <p>Command Paletteでは描画方式、配置、RGB、現在の描画方式に対応するambient、specular、emissive、roughness、metallic、powerを変更できます。格子表示では相対的な4段階を保ったまま入力値が反映され、均一表示では入力値が全16個へそのまま適用されます。</p>
 <h2>実装上の要点</h2>
 <p>標準経路は<code>Space.draw(cameraFrame)</code>でforward描画します。Deferred経路は、同じ<code>cameraFrame</code>を<code>ComputeEffectPipeline.renderScene()</code>と<code>encode()</code>へ渡し、G-buffer生成と後段照明が同じカメラ状態を共有するようにします。完成した表示色は<code>beginPresentPass()</code>でcanvasへ転送し、<code>clearDepthBuffer()</code>でHUD用のdepth付きpassへ戻します。</p>
-<p>材質値は、片方の描画方式が読まない場合もShapeへすべて明示します。欠落値を推測するフォールバックは使用しません。このサンプルは環境鏡面反射を使用しないため、完全金属は黒くなる場合があります。既定格子のmetallicは0.00、0.25、0.50、0.75としています。均一表示では利用者が1.0を明示して挙動を確認できます。</p>
+<p>材質値は、両方の描画方式が使う値をShapeへそろえて明示します。必要な材質値を入力時に検証し、欠落は項目名を含む例外として通知します。このサンプルは直接光と固定の拡散環境光で照明するため、完全金属の暗部は黒く見える場合があります。既定格子のmetallicは0.00、0.25、0.50、0.75としています。均一表示では利用者が1.0を明示して挙動を確認できます。</p>
     </article>
   </main>
 </body>

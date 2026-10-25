@@ -24,7 +24,7 @@ You will be able to query objects along the view direction and overlaps in a sce
 
 Use raycasting to find a 3D object at a position selected on screen. Use collision queries to check whether `Shape` objects in the scene overlap. This chapter chooses APIs based on the query origin and required precision, then distinguishes broad-phase candidate checks from triangle-level detail.
 
-The APIs here query rays and shape overlap. Physical response after contact—pushback, bounce, friction, and continuous body updates—is handled by the physics engine in Chapters 27–28.
+The APIs here query rays and shape overlap. Physical response after contact—pushback, bounce, friction, and continuous body updates—is covered in Chapter 27, “Using the Physics Engine,” and Chapter 28, “Physics Events, Settings, and Updates.”
 
 After accepting user input, an application often needs to determine which object the input reached in 3D space or which scene objects overlap. The API depends on whether the task is selecting an object with a click or checking contact between objects. In `webg`, `Space.raycast()`, `Space.checkCollisions()`, and `Space.checkCollisionsDetailed()` divide these responsibilities.
 

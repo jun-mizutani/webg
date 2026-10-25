@@ -20,6 +20,6 @@ Bloom OFF/ON compares the glow while simulation and particle drawing continue. O
 
 `emit(64, { position, direction, spreadAngle, speed, lifetime })` supplies burst settings. Angles use degrees, speeds use world units per second, and lifetimes use seconds. `startEmission({ rate, ... })` specifies particles per second. `simulation` configures gravity and drag; `appearance` controls two linear HDR colors, intensity, and radius range. All emitters are released with the application.
 
-The displayed estimated count uses CPU reservations and maximum lifetime, including pending bursts. Capacity rejection is reported by `emit()` through `accepted`, `rejected`, and `reason`, and by the diagnostic rejection counter. This sample uses `overflow: "reject"`. Particle generation and motion remain on the GPU, with no per-frame GPU readback.
+The displayed estimated count uses CPU reservations and maximum lifetime, including pending bursts. Capacity rejection is reported by `emit()` through `accepted`, `rejected`, and `reason`, and by the diagnostic rejection counter. This sample uses `overflow: "reject"`. Particle generation and motion stay on the GPU, and the current GPU state is drawn directly.
 
 Particles are added to HDR after transparency composition, sharing Bloom and tone mapping. SSR reads the scene before particles are drawn. See [compute_particles](../compute_particles/index.en.html) for a custom-WGSL particle example.

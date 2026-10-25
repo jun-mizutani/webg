@@ -1,5 +1,5 @@
 <!doctype html>
-<!-- book/examples/04_02.html 2026/10/04 -->
+<!-- book/examples/04_02.html 2026/10/25 -->
 <html lang="ja">
 <head>
   <meta charset="UTF-8" />
@@ -97,8 +97,8 @@ app.start({
   // deltaSecを毎秒の回転角度へ掛け、画面の更新頻度に合わせて進める
   // 本文の最小例と同じ速度でY軸とX軸の回転を加える
   onUpdate: ({ deltaSec }) => {
-    obj.rotateY(0.8 * deltaSec);
-    obj.rotateX(0.4 * deltaSec);
+    obj.rotateY(30.0 * deltaSec);
+    obj.rotateX(15.0 * deltaSec);
   }
 });
     </script>

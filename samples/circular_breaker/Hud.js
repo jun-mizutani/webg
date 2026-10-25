@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// samples/circular_breaker/Hud.js  2026/07/25
+// samples/circular_breaker/Hud.js  2026/10/25
 //   circular_breaker sample
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -186,7 +186,7 @@ export const drawHud = (msg, state, options = {}) => {
         color: [0.92, 0.90, 0.98]
       });
     }
-    // 静止画面に見えないよう、終了画面では点滅ガイドを表示する
+    // 終了画面に点滅する操作ガイドを表示する
     // これにより requestAnimationFrame が継続していることを視認できる
     const blinkOn = (Math.floor(performance.now() / 350.0) % 2) === 0;
     if (blinkOn) {

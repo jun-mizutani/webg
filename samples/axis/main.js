@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// samples/axis/main.js  2026/08/11
+// samples/axis/main.js  2026/10/25
 //   axis sample
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -36,7 +36,7 @@ const FOG_SETTINGS = {
 };
 const DOF_SETTINGS = {
   focusDistance: 31.0,
-  // focusRange は最大blurまでの距離ではなく、scene -> small など 1 stage 分の距離幅
+  // focusRange は scene -> small など、1 stage 分の距離幅を表す
   focusRange: 7.0,
   maxBlurMix: 0.92,
   sharpnessWidth: 0.35,
@@ -284,7 +284,7 @@ const nextDofView = () => {
   state.dofView = order[(current + 1) % order.length];
 };
 
-// 表示を初期状態へ戻し、前回の状態を残さない
+// 表示を初期状態へ戻し、次の実行を同じ条件で始める
 const resetView = () => {
   applyViewAngle(DEFAULT_VIEW_ANGLE);
   state.fogEnabled = true;
@@ -567,7 +567,7 @@ const start = async () => {
     },
     onBeforeDraw: ({ renderFrameToken }) => {
       // beginScene() はコア側で寸法変化を判定し、必要な場合だけtargetを再生成する
-      // tokenはWebgAppが所有し、sampleはCameraFrameやdepth方式を直接扱わない
+      // WebgApp が token にまとめた camera と depth の情報を、各描画段階で共有する
       dof?.beginScene(app.screen, app.clearColor, { renderFrameToken });
       // offscreen sceneも同じtokenで描き、DoF depth復元とのcamera snapshot混在を防ぐ
       app.space.draw(renderFrameToken);

@@ -39,8 +39,8 @@ WebGPUでは、この経路が `@group`、`@binding`、`@location` というア�
 WebGPUにおけるデータの流れは、大きく分けて以下の3段階のステップで構成されています。
 
 ### 1. CPU側での値の保持（JavaScript）
-まず、`shape.setMaterial()` や `shader.setLightPosition()` などのメソッドが呼ばれると、値はシェーダークラス内の `Float32Array`（`this.uniformData`）の特定のオフセット（`OFF_LIGHT` など）に書き込まれます。
-この時点では、データはまだCPUのメモリ上にあります。
+`shape.setMaterial()`は、まずShapeのパラメーター辞書へ値を保存します。描画直前に`shader.doParameter()`がその値を受け取り、各setterを通じてシェーダー内の`Float32Array`（`uniformData`）へ書き込みます。共有ライトの`shader.setLightPosition()`は、その配列の`OFF_LIGHT`などの位置を直接更新します。
+どちらもこの段階ではCPU上の値で、次の`writeBuffer()`によってGPUへ渡ります。
 
 ### 2. GPUメモリへの転送（`writeBuffer`）
 次に、`gpu.queue.writeBuffer()` を介して、CPU上のデータがGPU上の専用バッファ（`GPUBuffer`）へとコピーされます。
@@ -155,8 +155,10 @@ if (condition) {
 }
 ```
 
-条件選択 (`select`)シェーダーでは、`if` による分岐がパフォーマンスに影響を与えるため、`select` 関数を用いて値を切り替える手法がよく使われます。
-`select(false_value, true_value, condition)`$\rightarrow$ `condition` が真なら `true_value` を、偽なら `false_value` を返します。
+条件選択には`select`を使えます。二つの値を計算したうえで、条件に応じて一方を選ぶ関数です。
+`select(false_value, true_value, condition)`$\rightarrow$ `condition`が真なら`true_value`を、偽なら`false_value`を返します。
+
+`select`の引数式は選択前に評価されます。配列の範囲確認やゼロ除算の回避には`if`で実行範囲を分けます。値の選択と、処理そのものの実行条件を分けることが重要です。
 
 ### 関数定義
 関数は `fn` キーワードを用いて定義し、戻り値の型を `->` で指定します。
@@ -170,7 +172,7 @@ fn calculateLighting(normal: vec3f, lightDir: vec3f) -> f32 {
 WGSLには3D計算に特化した組み込み関数が豊富に用意されています。
 
 - **dot(a, b)： 内積**
-  - 2つのベクトルのなす角を求める
+  - 2つのベクトルの内積を求める。単位ベクトル同士では、なす角のcosに等しい
   - 例：ライティングの強度計算
 - **cross(a, b)： 外積**
   - 2つのベクトルに垂直なベクトルを求める
@@ -238,9 +240,9 @@ let texColor = textureSample(myTexture, mySampler, input.vTexCoord);
 
 ### `textureSampleLevel` の使い分け
 `SmoothShader` のノーマルマップ処理では、`textureSample` ではなく `textureSampleLevel(..., 0.0)` が使用されています。
-これはWebGPUの「非一様制御フロー（Non-ユニフォームControl Flow）」という制約を避けるためです。
+これは、暗黙の微分を使う関数に対するWGSLの一様性の条件へ対応するためです。
 
-`if (u.flags.w != 0.0)` のような条件分岐の中で通常の `textureSample` を使用すると、GPUのハードウェアによっては描画エラーやパフォーマンス低下を招くことがあります。
+`textureSample`は、参照するミップ段階を求めるために近隣フラグメントの微分を使います。呼び出しへ一様に到達すると解析できない分岐では、既定の診断設定でシェーダー作成時のエラーになります。判断基準はハードウェアの種類ではなく、[WGSLの一様性の規則](https://www.w3.org/TR/WGSL/#uniformity)です。
 非一様な分岐の中で、暗黙の微分を必要とするサンプルを避けたい場合は、`textureSampleLevel`でLOD（Level of Detail：参照するミップマップ段階）を明示します。
 ただし`0.0`は常に最高解像度を読む指定であり、通常のミップマップ選択を使わないため、負荷や画質が変わります。
 分岐の外で通常の`textureSample`を使える場合は、その経路で必要なLODを利用します。LOD 0固定は、分岐内で暗黙の勾配を利用できない箇所へ限定します。
@@ -321,8 +323,8 @@ nnormal = normalize(cross(dpdy(input.vPosition), dpdx(input.vPosition))) * facin
 最後に、`SmoothShader` が大量のオブジェクトを高速に描画できる核心的な仕組みである「ダイナミックオフセット」について解説します。
 
 ### 巨大な単一バッファの運用
-通常、オブジェクトごとにユニフォームバッファを作成すると、描画のたびに `setBindGroup` を呼び出す必要があり、CPU負荷が高くなります。
-`SmoothShader` では、`maxUniforms` (2048個分) のデータを格納できる一つの巨大なバッファをあらかじめ作成しています。
+オブジェクトごとにユニフォームバッファとバインドグループを作ると、管理するGPUリソースが増えます。
+`SmoothShader`では、描画用ユニフォームを最大`maxUniforms`（2048個分）格納できる一つのバッファを用意し、同じバインドグループを再利用します。
 
 ### オフセットによる参照切り替え
 描画時に、そのオブジェクトがバッファの「どこからデータが始まっているか」というオフセット（開始位置）だけを指定してバインドします。
@@ -330,7 +332,7 @@ nnormal = normalize(cross(dpdy(input.vPosition), dpdx(input.vPosition))) * facin
 * JavaScript側: `passEncoder.setBindGroup(0, this.uniformBindGroup, [offset])`
 * WGSL側: 指定されたオフセットから `DrawUniforms` 構造体としてデータを読み出す。
 
-この手法により、バッファの切り替え（バインド）回数を劇的に減らし、GPUのパイプラインを効率的に稼働させています。
+各描画では引き続き`setBindGroup()`を呼び、参照するオフセットを変更します。最適化する対象は、バッファとバインドグループの生成数・管理コストです。
 `SmoothShader` の `uniformStride` が256バイトの倍数になるように設定されているのは、WebGPUの仕様でダイナミックオフセットを256バイト単位で配置する必要があるためです。
 
 ## まとめ

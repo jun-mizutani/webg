@@ -28,7 +28,7 @@
 4. `ComputeEffectPipeline.encode()` に現在のON/OFF状態を渡し、有効なCompute効果だけを実行します
 5. `FullscreenPass` が合成済みの色textureをcanvasへ出力します
 
-この順序により、静止したJSONモデルだけでなく、スケルトンやnode transformで動くモデルにも同じ画面効果を適用できます。すべての効果がOFFの場合は不要なeffect passを実行せず、通常のscene colorを最終出力へ渡します。
+この順序により、静止したJSONモデルだけでなく、スケルトンやnode transformで動くモデルにも同じ画面効果を適用できます。すべての効果がOFFの場合は、通常のscene colorをそのまま最終出力へ渡します。
 
 ## 操作方法
 
@@ -63,19 +63,19 @@
 
 アニメーション中の輪郭や陰影へToonとEdgeが追従することを確認します。次にSSAO、Shadow Map、SSR、DoF、Bloomを個別に切り替え、各効果が必要なときだけ出力フローへ追加されることをHUDのGPU Compute / GPU Render表示と見た目から比較できます。
 
-複数のanimation clipを持つJSONへ差し替えた場合は、`4` / `9` で選択対象が変わり、`1` / `2` / `3` が選択中clipだけに作用することも確認できます。animationを持たないJSONでもモデル表示とCompute効果の操作は利用できます。
+複数のanimation clipを持つJSONへ差し替えた場合は、`4` / `9` で選択対象が変わり、`1` / `2` / `3` が選択中clipだけに作用することも確認できます。animationの有無によらず、JSONのモデル表示とCompute効果の操作を利用できます。
 
 ## Blender用import / exportアドオン
 
 `blender_modelasset_animation_io.py` は、Blenderのmesh、Armature、vertex weight、ActionをModelAsset JSONへ変換するアドオンです。BlenderのPreferencesにあるAdd-ons画面からこのPythonファイルをインストールすると、FileメニューのImport / Exportに `Webg Animated ModelAsset JSON` が追加されます。通常JSONとgzip圧縮した `.json.gz` の両方を読み書きできます。
 
-export時の `Export Skeletons` をONにすると、選択したmeshのArmature modifierを調べ、bone階層、rest pose、inverse bind matrix、各頂点のweightを出力します。1頂点あたりweightの大きい4boneを採用して正規化します。Armatureに対するweightが1つもない頂点は、意図しない変形を隠さないようエラーにします。
+export時の `Export Skeletons` をONにすると、選択したmeshのArmature modifierを調べ、bone階層、rest pose、inverse bind matrix、各頂点のweightを出力します。1頂点あたりweightの大きい4boneを採用して正規化します。各頂点へArmatureのweightがあることを検証し、weightが0の頂点は修正箇所としてエラーで知らせます。
 
-RigifyのArmatureには、meshを直接変形しない `ORG-*` や `MCH-*` の制御用boneが多数含まれます。エクスポータはこれらをweightの有無にかかわらずjointへ出力せず、子boneのlocal matrixへ畳み込みます。rest pose、inverse bind matrix、Action評価後のposeを保ちながら制御用jointを除外し、最終的に必要なboneがwebgの上限である320本を超える場合はexport時にエラーで停止します。頂点が `ORG-*` / `MCH-*` にしかweightを持たない場合は通常boneへ自動付け替えず、weightの不備としてエラーにします。
+RigifyのArmatureには、変形用boneの姿勢を制御する`ORG-*`や`MCH-*`のboneが多数含まれます。エクスポータはこれらの変換を子boneのlocal matrixへ畳み込み、変形に使うjointを出力します。rest pose、inverse bind matrix、Action評価後のposeを保ちながら制御用jointを除外し、最終的に必要なboneがwebgの上限である320本を超える場合はexport時にエラーで停止します。頂点が `ORG-*` / `MCH-*` にしかweightを持たない場合は変形用boneへのweightを付ける必要がある入力として、エラーで知らせます。
 
-`Export Animations` をONにすると、対象Armatureのpose boneを操作するBlender Actionをclipとして出力します。各boneのF-Curveに置かれたキーフレーム時刻の和集合を作り、その時刻だけをModelAssetの共通timesとして保存します。キーフレーム時点ではconstraintを含むscene評価後のposeを取得しますが、BlenderのBezier補間曲線そのものは出力しないため、キーフレーム間はwebg側のanimation補間になります。`Export Animations` はskeletonを参照するため、`Export Skeletons` がOFFのときは選択できません。
+`Export Animations` をONにすると、対象Armatureのpose boneを操作するBlender Actionをclipとして出力します。各boneのF-Curveに置かれたキーフレーム時刻の和集合を作り、その時刻だけをModelAssetの共通timesとして保存します。キーフレーム時点ではconstraintを含むscene評価後のposeを取得しますが、出力には評価済みのキーフレーム値を使い、その間はwebg側のanimation補間で再生します。BlenderのBezier曲線まで再現する用途では、必要な時刻へキーを追加してから書き出します。`Export Animations` はskeletonを参照するため、`Export Skeletons`をONにすると選択できます。
 
-import時の `Import Skeletons` はModelAssetのskeletonからBlender Armatureとvertex groupを復元します。`Import Animations` は各clipをBlender Actionへ変換し、keyframeをlinear補間で作成します。animationを持たない静的ModelAssetも同じアドオンで読み込めます。
+import時の `Import Skeletons` はModelAssetのskeletonからBlender Armatureとvertex groupを復元します。`Import Animations` は各clipをBlender Actionへ変換し、keyframeをlinear補間で作成します。静的ModelAssetも同じアドオンで読み込めます。
 
 skinned meshではArmature変形前の頂点とvertex groupを対応させる必要があるため、export時の`Apply Modifiers`はskinned meshには適用されず、静的meshに適用されます。animationはArmatureによるskeletal animationに対応します。shape key、morph target、object transformだけのAction、NLA stripそのもののclip化は対象外です。
 

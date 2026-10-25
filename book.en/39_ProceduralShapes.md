@@ -26,7 +26,7 @@ A procedural shape is built by generating vertices, faces, normals, and UV coord
 
 Choose a topic that matches the problem: an icosphere demonstrates a smooth closed surface and shared vertices; a Möbius strip demonstrates parameterized surfaces and seams; a Sierpinski tetrahedron demonstrates recursion and sharp faces; fractal terrain demonstrates a grid and a height field.
 
-The low-level `Shape` API is useful when a structure is difficult to create by adjusting built-in primitives. The goal is not to practice typing vertex coordinates by hand. It is to understand how to design topology that makes a less conventional shape possible. Each topic emphasizes a different concern, while sharing the same overall process of constructing a mesh.
+Each example separates the work of calculating positions from equations, sharing vertices, and connecting faces. Change one generation rule at a time, then check whether the shape, its shading, or both have changed.
 
 Work back and forth between the explanation and its runnable examples: read the code, inspect the result, then return to the code and connect the visible structure to the algorithm.
 

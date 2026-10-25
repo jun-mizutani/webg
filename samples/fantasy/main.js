@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// main.js  2026/10/04
+// main.js  2026/10/25
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // ---------------------------------------------
@@ -335,7 +335,7 @@ async function choose(x, z) {
   if (!attacks && !moves) {
     element("#hint").textContent = target?.team === "enemy"
       ? "その敵は射程外、または行動済みです。先に移動してください。"
-      : "そのマスへは移動できません。青いマスを選択してください。";
+      : "移動先は青いマスから選択してください。";
     return;
   }
 

@@ -71,7 +71,7 @@ Applications that need actual relief must decode Height and intersect the result
 
 ## Editing and exporting
 
-The editor exposes resolution, base/dirt/joint colors, tile-to-tile color variation, physical unit dimensions, long-axis direction, variation-cell counts, joints, layout, pattern, surface detail, random seed, roughness, specular, metallic, and Normal strength. `Thickness m` is saved in the definition as a reference dimension for the material, but it is not used by procedural texture generation. Changes immediately update both the displayed code and the GPU textures. `Generate` or the `G` key manually rebuilds the same definition.
+The editor exposes resolution, base/dirt/joint colors, tile-to-tile color variation, physical unit dimensions, long-axis direction, variation-cell counts, joints, layout, pattern, surface detail, random seed, roughness, specular, metallic, and Normal strength. `Thickness m` is saved in the definition as a reference dimension for the material. Pattern and surface-detail settings control the relief in the generated images. Changes immediately update both the displayed code and the GPU textures. `Generate` or the `G` key manually rebuilds the same definition.
 
 `Definition metadata` exposes editable `Material ID`, `Category`, Japanese and English `Label`, and `Tile preset ID` fields. The first `Category` field filters the existing preset list; the `Category` field under Definition metadata is the category saved in the exported definition. Select an existing preset first, then change these values to create a separate material definition based on the same tile and appearance settings.
 
@@ -95,7 +95,7 @@ export default {
 };
 ```
 
-This sample only exports definition files; it does not edit `webg/ProceduralMaterials.js` directly. To add the exported definition as a core preset or replace an existing preset, review the file and apply it to the core separately.
+This sample exports definition files for review and reuse. To add the exported definition as a core preset or replace an existing preset, review the file and apply it to the core separately.
 
 The `stack` layout always uses a row offset of 0. When changing to `running-bond` while the row offset is 0, the editor selects the standard 1/2 offset so the layout difference is visible. You can then change the running-bond offset to 0, 1/3, or 1/4 and regenerate with that value.
 
@@ -107,7 +107,7 @@ The initial wood layouts are `running-bond` with 1/2 for Oak, 1/3 for Walnut, an
 | --- | --- |
 | Pixels per meter | Generation resolution. Unit dimensions, joint width, and edge round are aligned to integer pixels at this resolution |
 | Long/Short size m | Long and short dimensions of one unit. These affect one texture period and real-size repeats |
-| Thickness mode/Thickness m | Reference thickness of the material unit. Changing it does not change the generated Color/Height/Normal maps |
+| Thickness mode/Thickness m | Reference thickness saved with the definition. Pattern and surface-detail settings control the generated image relief |
 | Long axis | Assigns the long dimension to texture `u` or `v` |
 | Variation columns/rows | Number of different unit variations placed in the generated texture |
 | Joint edge round m | Rounding distance from the joint bottom back to the unit surface |
@@ -146,7 +146,7 @@ Every numeric field supports direct typed entry as well as its spin buttons. Whi
 | Metallic, Roughness, Specular | 0.01 |
 | Normal strength | 0.05 |
 
-`G` performs the same operation as the Generate button, both over the Canvas and while a numeric field has focus. `Ctrl+G`, `Command+G`, and `Alt+G` remain available to the browser or operating system. Holding the key does not repeatedly start generation.
+`G` performs the same operation as the Generate button, both over the Canvas and while a numeric field has focus. `Ctrl+G`, `Command+G`, and `Alt+G` remain available to the browser or operating system. Each key press starts generation once.
 
 While typing a number, the editor updates the displayed code and starts GPU generation when the value is committed. The ↑/↓ spin buttons also generate after the value is committed. This prevents a decimal such as `0.01` from being committed prematurely at `0` or `0.`. Values outside the step, min, max, or exact-pixel constraints are rounded to the nearest input-acceptable value, and the info area reports the adjustment.
 `G` is inserted as a character in text inputs and textareas; in other controls and over the Canvas it remains the Generate shortcut.

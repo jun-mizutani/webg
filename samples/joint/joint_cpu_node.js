@@ -1,5 +1,5 @@
 // ---------------------------------------------
-//  samples/joint/joint_cpu_node.js  2026/08/27
+//  samples/joint/joint_cpu_node.js  2026/10/25
 //   CPU Physics Joint dynamics verification sample
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -102,7 +102,7 @@ const MOTION_MODES = ["quasiStatic", "impact"];
 // 物理solverはwebgコアへ任せ、このclassはサンプル固有のA/D操作とquasiStatic / impactの速度選択だけを担当する
 class KinematicMotionController {
   // kinematic body、始点・終点、速度、接触速度の初期モードを検証して初期化する
-  // 移動量はworld座標そのものではなく、経路上の距離travelDistanceで保持します
+  // 経路上の距離 travelDistance として移動量を保持します
   // そのためfixed stepの刻みが変わっても、始点から終点までの位置を同じ一次元値から再構成できます
   constructor(options = {}) {
     const opts = util.readPlainObject(options, "KinematicMotionController options", {});
@@ -150,8 +150,8 @@ class KinematicMotionController {
     this.direction = 0;
   }
 
-  // quasiStaticまたはimpactを明示的に選び、速度の大きさによる自動切り替えをしない
-  // quasiStaticは「位置を指定するが接触速度は渡さない」モード、impactは
+  // quasiStaticとimpactは、操作で明示されたモードを使う
+  // quasiStatic は位置処方と接触速度 0 を渡すモード、impact は
   // 「位置の指定に加えて処方速度もcontact solverへ渡す」モードです
   setMode(mode) {
     this.mode = util.readOptionalEnum(
@@ -191,7 +191,7 @@ class KinematicMotionController {
   }
 
   // 経路方向へ進む処方速度を返す
-  // この速度はbodyを積分して得た速度ではなく、sampleがkinematic bodyへ与える目標速度です
+  // sample が kinematic body へ与える目標速度を返します
   // quasiStaticでもHelp Panelには表示しますが、実際に接触solverへ渡す値はgetContactVelocity()で0になります
   getPrescribedVelocity() {
     if (this.direction === 0) {
@@ -222,7 +222,7 @@ class KinematicMotionController {
   }
 
   // 一つのfixed stepだけ経路を進め、位置とcontact solver用速度を同じstepへ渡す
-  // PhysicsSpace.step()の内部callbackへ依存せず、sample側がstepFixed()の直前に呼ぶ
+  // sample側からstepFixed()を呼ぶ直前に、kinematic bodyの状態を更新する
   // 先にtravelDistanceを端点へclampしてからpositionを作るため、端で停止したstepに
   // 端点を越えた速度を端点速度へそろえます。最後にteleportと速度設定を連続して行い、同じfixed stepの
   // broad phase、接触solver、Joint solverが同じdriver位置を参照するようにします
@@ -352,7 +352,7 @@ function createCapsuleBody(scene, name, {
 }
 
 // sphereのPhysicsNodeを作り、振り子のweightやロープrootへ登録できる状態にする
-// 球の表示半径とSphereColliderの半径を共通化し、見た目だけが接触面からずれないようにする
+// 球の表示半径と SphereCollider の半径を共通化し、見た目と接触面をそろえる
 function createSphereBody(scene, name, {
   position,
   radius,
@@ -421,7 +421,7 @@ function addJoint(joint) {
 function createPendulum(scene) {
   // pivotはstatic、weightはdynamicとして、重力を受けるweightだけが動きます
   // DistanceJointの両anchorをbody中心へ置くことで、拘束距離をpivot中心とweight中心の距離に一致させます
-  // connectorは物理bodyではないため、ここで作るJointが振り子を動かす唯一の接続になります
+  // DistanceJointが振り子の物理的な接続を担い、connectorはその接続を可視化する
   pendulumPivot = createSphereBody(scene, "pendulum_pivot", {
     position: PENDULUM_PIVOT_POSITION,
     radius: 0.025,
@@ -454,23 +454,23 @@ function createPendulum(scene) {
 }
 
 // 振り子のpivot anchorとweight anchorを現在のworld座標で返す
-// body中心ではなくJointが拘束しているanchorを使い、表示棒と距離計測の基準を一致させる
+// Joint が拘束する anchor を使い、表示棒と距離計測の基準を一致させる
 function getPendulumAnchors() {
   if (!pendulumPivot || !pendulumWeight) {
     throw new Error("getPendulumAnchors requires an initialized pendulum");
   }
   return {
     // getWorldAnchor()はlocal anchorをbodyの現在姿勢でworldへ変換するため、
-    // body中心ではなく実際にDistanceJointが拘束している点を返します
+    // DistanceJoint が拘束する二点の world 座標を返します
     pivot: getWorldAnchor(pendulumPivot, PENDULUM_LOCAL_ANCHOR_A),
     weight: getWorldAnchor(pendulumWeight, PENDULUM_LOCAL_ANCHOR_B)
   };
 }
 
-// 質量を持たない表示用Capsuleを作り、支点と球の間へ配置する
-// 物理的な接続はDistanceJointが担当し、表示用Nodeは衝突・重力・solverへ参加しない
+// 表示専用 Capsule を作り、支点と球の間へ配置する
+// DistanceJointで物理的に接続し、表示用Nodeでその接続の位置と形を示す
 function createPendulumConnector(scene) {
-  // connectorは表示専用Nodeです。物理bodyへ登録せず、質量・重力・接触・solver反復を持たない表示要素として扱います
+  // connectorは表示専用Nodeです。物理計算の結果に合わせて位置と姿勢を更新し、支点と球の接続を可視化します
   // Shapeの長さだけは共有シナリオのDistanceJoint距離から決め、初期表示と拘束距離を一致させます
   pendulumConnectorNode = scene.addNode(null, "pendulum_connector");
   pendulumConnectorNode.addShape(createCapsuleShape(
@@ -510,11 +510,11 @@ function updatePendulumConnector() {
 
 // 一本の吊りロープをstatic top pivotと10本のdynamic Capsuleで構成する
 // 下端は自由端にし、隣接linkのJoint間へ小さなgapを残して重力による揺れを見える状態にする
-// rope linkはlayer 2、操作Capsuleはlayer 4とし、rope同士は接触させず操作Capsuleだけを受ける
-// 操作用Capsuleとの接触は法線方向の押し出しだけを残し、摩擦トルクと反発による角速度増幅を使わない
+// rope linkはlayer 2、操作Capsuleはlayer 4とし、両者の組み合わせに接触を限定する
+// 操作用 Capsule との接触は、法線方向の押し出しへ作用を絞る
 function createRopeColumn(scene, columnIndex, x, z) {
-  // 各ロープは「動かないSphere pivot + 10本のdynamic Capsule link + 10個のDistanceJoint」です
-  // link同士は接触させず、Jointの距離拘束だけで列を作ります。これにより、接触solverが
+  // 各ロープを static Sphere pivot、10 本の dynamic Capsule link、10 個の DistanceJoint で構成する
+  // linkの列はJointの距離拘束で構成し、接触相手は操作Capsuleに限定しますこれにより、接触solverが
   // 隣接linkを押し戻す効果と、Joint solverがlink間隔を保つ効果を別の診断値として扱います
   const topPivot = createSphereBody(scene, `rope_${columnIndex}_top_pivot`, {
     position: [x, ROPE_TOP_PIVOT_Y, z],
@@ -531,7 +531,7 @@ function createRopeColumn(scene, columnIndex, x, z) {
   for (let index = 0; index < ROPE_LINK_COUNT; index++) {
     // Capsuleの全長は2*radius+segmentLength、隣接linkの中心間隔は
     // 2*ROPE_LINK_ANCHOR+ROPE_ANCHOR_GAPです。Jointのdistanceには
-    // link中心間隔ではなく、対向するlocal anchor間に残す見かけのgapだけを指定します
+    // 対向する local anchor の間へ残す、見かけの gap を指定します
     const centerY = topAnchor[1]
       - ROPE_LINK_ANCHOR
       - ROPE_ANCHOR_GAP
@@ -598,7 +598,7 @@ function createCrossingCapsule(scene) {
 }
 
 // すべての吊りロープと操作対象を同じPhysicsSpaceへ配置する
-// バックホーや動かない表示用アームは作らず、重力とキー入力による二種類の動きを比較できる構成にする
+// 重力によるロープの動きと、キー入力による操作対象の動きを比較する
 function createScene() {
   // シーン再構築時に診断配列と参照を先に空にし、新しいbodyやJointだけを計測します
   // 物理bodyの生成順をpivot、pendulum、rope、crossing Capsuleに固定します
@@ -633,7 +633,7 @@ function createScene() {
 }
 
 // 振り子の二つのJoint anchorから、鉛直下向きを0とした左右角度を計算する
-// body中心ではなくanchorを使うため、pivotとweightの表示半径を変えても周期計測の基準が変わらない
+// anchor を計測の基準にすることで、表示半径を変えても同じ周期計測を行える
 function getPendulumAngleRadians() {
   const anchors = getPendulumAnchors();
   return Math.atan2(
@@ -643,7 +643,7 @@ function getPendulumAngleRadians() {
 }
 
 // 下向き通過時刻を補間し、同じ向きの通過間隔から振り子の実測周期を更新する
-// frame間隔そのものを周期にせず、angle=0の交点を線形補間してHelp Panelの値を安定させる
+// angle=0を挟む前後の値から交差時刻を線形補間し、Help Panelの周期を安定させる
 function updatePendulumPeriodMeasurement() {
   const angle = getPendulumAngleRadians();
   if (angle === null) {
@@ -657,7 +657,7 @@ function updatePendulumPeriodMeasurement() {
     && angle <= 0.0
   ) {
     // 前回angleが正で今回angleが0以下なら、下向きの同じ通過方向を検出します
-    // readbackやframeのサンプル間隔に依存しないよう、前後のangleから交差時刻を線形補間します
+    // 前後のangleから交差時刻を線形補間し、実際のサンプル時刻の間で通過時点を求めます
     const angleSpan = pendulumLastAngleRadians - angle;
     const interpolation = pendulumLastAngleRadians / angleSpan;
     const crossingTimeSec = pendulumLastAngleTimeSec
@@ -671,7 +671,7 @@ function updatePendulumPeriodMeasurement() {
   pendulumLastAngleTimeSec = timeSec;
 }
 
-// 振り子の実測状態を初期化し、reset直後の初期角度を周期の開始通過と誤認しないようにする
+// 振り子の実測状態を初期化し、reset後にangle=0を通過した時点から周期を測ります
 function resetPendulumPeriodMeasurement() {
   pendulumLastAngleRadians = null;
   pendulumLastAngleTimeSec = null;
@@ -680,10 +680,10 @@ function resetPendulumPeriodMeasurement() {
 }
 
 // dynamic bodyを初期位置、初期姿勢、初期速度へ戻し、操作Capsuleと周期計測も初期状態へ戻す
-// Jointを再生成せず、現在のJoint定義を保ったまま重力シナリオを最初から再実行する
+// 現在のJoint定義を保持し、重力シナリオを初期の配置から再実行する
 function resetSimulation() {
   // Joint定義は作り直さず、dynamic bodyの初期transformと速度だけを復元します
-  // Joint lambdaを含むsolver内部状態を再初期化するAPIではないため、ここでは現在の構成を保ちます
+  // ここでは現在のJoint構成と内部lambdaを保持し、bodyの配置と運動を初期化します
   for (let i = 0; i < dynamicRecords.length; i++) {
     const record = dynamicRecords[i];
     record.body.teleport(record.position, { keepVelocity: false, wakeUp: true });
@@ -732,7 +732,7 @@ function stepPhysics(deltaMs) {
 // Jointの現在最大誤差を計算し、重力下で拘束が維持されているかHelp Panelへ表示する
 function getMaximumJointError() {
   // 各Jointが生成するconstraint rowのposition errorを絶対値で比較します
-  // これは速度誤差やlambdaではなく、現在のanchor配置が目標拘束から何mずれているかを表します
+  // 現在の anchor 配置と目標拘束との差を m 単位で表します
   let maximum = 0.0;
   for (let i = 0; i < joints.length; i++) {
     const rows = joints[i].buildConstraintRows();
@@ -775,7 +775,7 @@ function getMaximumRopeAngularSpeed() {
 // 直前fixed stepで操作Capsuleと接触していたrope link数を数える
 // getLastContacts()はsolver反復ごとの重複を含むため、pair化済みのcontact eventだけを診断に使う
 function getCurrentRopeContactPairCount() {
-  // Contact eventはsolver反復ごとの内部接触ではなく、fixed step後にまとめられたbegin/stayを使います
+  // Contact event は fixed step 後にまとめられた begin / stay を使います
   // crossingBodyとrope linkの組だけをbody参照で選び、Setで同じpairを一度だけ数えます
   const events = physicsSpace.getLastContactEvents();
   const ropeIndices = new Set();
@@ -809,9 +809,9 @@ function updateRopeDiagnostics() {
 }
 
 // Help Panelへ、吊りロープ、操作Capsule、振り子の目標値と実測値を表示する
-// HUDへ直接描画せず、実験条件と現在のsolver状態を同じ説明パネルへまとめる
+// 実験条件と現在のsolver状態を、同じ説明パネルへまとめて表示する
 function buildHelpLines() {
-  // 表示値はPhysicsSpaceの内部変数を直接参照せず、公開APIから取得した現在状態を組み合わせます
+  // 公開APIから取得した現在状態を組み合わせ、表示値を作ります
   // solver設定、拘束誤差、速度、接触数を同じパネルへ出し、見た目の揺れと数値を対応付けます
   const diagnostics = physicsSpace.getLastJointDiagnostics();
   const capsuleCount = dynamicRecords.filter((record) => record.shapeType === "capsule").length;
@@ -850,7 +850,7 @@ function buildHelpLines() {
   ];
 }
 
-// 初期化済みの重力JointシナリオをHelp Panelへ登録し、起動時はhide状態にしてHUDの文字表示を使わない
+// 重力 Joint シナリオの情報を Help Panel へまとめ、起動時は閉じた状態にする
 function showHelpPanel() {
   // 起動時は本文を生成しておきますが、パネル本体をhideして描画領域を空けます
   // Hキーで表示したときだけ本文を展開するため、初期画面は物理シーンを広く表示します
@@ -867,7 +867,7 @@ function showHelpPanel() {
 }
 
 // Help Panel全体の表示状態をHキーで切り替え、表示時は説明本文も開く
-// 起動時はパネル自体をhiddenにして、物体の表示領域へHelpの見出しも残さない
+// 起動時は Help Panel を閉じ、画面全体で物体の動きを見られるようにする
 function toggleHelpPanel() {
   // Panelのvisible状態だけを切り替え、物理更新や描画は継続します
   // 非表示中もHelp用の計測値は更新され、再表示した時点の状態を確認できます
@@ -885,7 +885,7 @@ function toggleHelpPanel() {
 // updateOverlayPanel()を使い、毎frameのDOM再構築とHUDへの再描画を避ける
 function updateHelpPanel() {
   // 文字列全体を比較して、値が変わったframeだけDOMのoverlay内容を更新します
-  // この処理は物理fixed stepの代わりではなく、表示の更新頻度を抑えるためのものです
+  // この比較で DOM の更新を値が変わった frame に絞り、表示処理の頻度を抑えます
   const panel = app?.getOverlayPanel?.("jointDynamicsHelp");
   if (!panel) return;
   const lines = buildHelpLines();

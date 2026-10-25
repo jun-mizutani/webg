@@ -8,7 +8,7 @@ English | [日本語](index.html)
 
 A small turn-based battle on a 9×9 map with three elevation levels. Command a knight, mage, and ranger against three enemies. This sample adds moving Nodes, picking, DOM controls, GPU particles, victory, defeat, and restart to a PBR scene.
 
-No external models or audio assets are required. Primitive geometry forms the characters; parent and child Nodes connect their limbs and equipment. Rules run independently of the GPU and DOM, making the boundary between a grid path and its animation visible.
+Primitive geometry builds the characters, and parent-child Nodes connect their limbs and equipment.
 
 The keep is submerged. Core caustics illuminate terrain, scenery, and moving units; blue-green light, distance fog, and drifting particles give the battlefield an underwater atmosphere. Toggle **水中のコースティクス** (Underwater Caustics) to compare the moving illumination. Underwater colors and fog remain when caustics are off.
 
@@ -38,7 +38,7 @@ Drag to rotate and use the wheel to zoom. The initial view uses perspective proj
 - `Space.raycast()` picks terrain and character AABBs from a Reverse-Z pointer ray.
 - `ComputeParticleEmitter` handles footsteps, magic, sparks, and ambient light. The standard app handles simulation and PBR composition.
 
-The app uses `physics:false`. Tile rules determine paths and elevation; no rigid-body simulation, external model skinning, or animation clips are used.
+The app uses `physics:false`. Movement and attacks use grid rules; Node transforms animate motion and character parts.
 
 ## Verification points
 
@@ -53,7 +53,7 @@ The app uses `physics:false`. Tile rules determine paths and elevation; no rigid
 
 ## Read the code in this order
 
-1. **`main.js`: `start()`** — initialize through one entry point, add moving Nodes and input, then start frames. Do not add a second render loop or particle step.
+1. **`main.js`: `start()`** — initialize through one entry point, add moving Nodes and input, then start frames. WebgApp runs the render loop and particle steps.
 2. **`scene.js`: `createManifest()`** — read initial placement, materials, PBR, and emitters. Grid coordinates and display height come from `rules.mjs`.
 3. **`visuals.js`: `part()` and `character()`** — examine RGBA/PBR material parameters, Node hierarchy, and ownership of manually created Shapes.
 4. **`main.js`: `choose()` → `move()` → `updateMotion()`** — select a tile, await animation, and commit coordinates. `rules.mjs`: `paths()` includes uphill movement costs.
@@ -76,7 +76,7 @@ await sceneApp.renderer.setWater(water, {
 
 When the caustics control changes, its handler pauses rendering while it awaits `setWater()`, then resumes the app. Turning caustics off releases the dedicated GPU resources. Turning them on again preserves the battle state and registered Nodes; restarting the battle reuses the same water body.
 
-Lighting creates the underwater atmosphere: absorption attenuates the projected caustic field, and distance Fog adds a water haze toward the camera. The sample projects caustics across a horizontal field onto opaque receivers; ordinary PBR handles shadows and specular reflections. It does not render underwater refraction, total internal reflection, or the underside of the surface. See the [water sample](../water/index.en.html) for the API.
+Caustics, teal lighting, and distance fog create the underwater atmosphere:
 
 ## Change one thing at a time
 
@@ -85,7 +85,7 @@ Lighting creates the underwater atmosphere: absorption attenuates the projected 
 - Increase the segment `duration` in `main.js`: `move()`. Keep combat values unchanged and check input locking and coordinate commitment.
 - Change both RGB entries of `steps.appearance.colors` in `scene.js`. Keep emission positions and paths unchanged.
 
-Use the verification points after each change so that its effect has a clear cause.
+After each change, use the verification points to compare its effect with the starting behavior.
 
 ## Camera reference and rule checks
 

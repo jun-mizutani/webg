@@ -144,8 +144,8 @@ The main SceneYAML fields are:
 
 | Field | Purpose |
 | --- | --- |
-| `objects[]` | Scene objects, placement, parent, primitive or mesh reference, material, and physics body |
-| `objectSets[]` | Generate groups of primitives using prototypes, variants, and placement rules |
+| `objects[]` | Object placement, parent, shape reference, material, and physics body |
+| `objectSets[]` | Batch generation using prototypes, variants, and placement rules |
 | `meshes[]` | Display geometry defined directly in SceneYAML |
 | `materials[]` | PBR values such as color, metallic, roughness, and specular |
 | `physics.space` | Space settings such as gravity, fixed step, solver, capacity, and planes |

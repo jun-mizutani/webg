@@ -8,7 +8,7 @@
 
 `com_palette`は、コアの`webg/CommandPalette.js`をWebgAppから独立したUI部品として使うサンプルです。button、toggle、stepper、select、排他的なmode switchを一つのpaletteへ配置し、command定義とapplication stateをどのように接続するかを確認します。
 
-画面中央の2D previewとHUDは、paletteが更新する同じ`state`を読みます。`Obj / Edit / Scpt`を切り替えると選択中buttonのactive表示とpreviewが同時に変わり、toggleやstepperを操作すると次のframeから背景や図形へ反映されます。これにより、CommandPalette自身へapplication固有の状態を持たせず、利用側の状態を表示・更新する基本構成を確認できます。
+画面中央の2D previewとHUDは、paletteが更新する同じ`state`を読みます。`Obj / Edit / Scpt`を切り替えると選択中buttonのactive表示とpreviewが同時に変わり、toggleやstepperを操作すると次のframeから背景や図形へ反映されます。これにより、application固有の状態は利用側が保持し、CommandPaletteがその状態を表示・更新する基本構成を確認できます。
 
 ## 実行方法
 
@@ -34,7 +34,7 @@ buttonは`onCommand`で処理し、値を持つtoggle、stepper、selectは`onCh
 - double click、double tap、`/` keyのどれから開いても同じpaletteが表示されること
 - `Obj / Edit / Scpt`では一つだけがactiveになり、中央previewも同じmodeへ切り替わること
 - toggle、stepper、selectの変更がHUDとpreviewへ反映され、paletteを開き直しても現在値が保たれること
-- `Next`で行数を基準に分割された次pageへ進み、stepperとselectが途中で分断されないこと
+- `Next`で行数を基準に分割された次pageへ進み、stepperとselectがそれぞれ一組のまま表示されること
 - `CSS`で全体styleが変わり、`Def`でdefault CSSと既定themeへ戻ること
 
 ## 操作方法

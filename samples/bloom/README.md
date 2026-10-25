@@ -8,7 +8,7 @@
 - BloomPass を使って、3D scene を一度 offscreen RenderTarget へ描いてから bloom 合成して canvas へ戻すサンプルです。
 - PBR や shadow map を入れる前でも、postprocess を別レイヤとして独立に追加できることを確認するための最小実装です。
 - WebgApp は起動と CommandPalette 表示に使いつつ、3D scene 本体は autoDrawScene: false で offscreen 描画へ切り替えています。
-- 操作説明は buildHelpPanelOptions() と showOverlayPanel() を使って左上へまとめ、不要なときは本文を畳んで Show Help ボタンだけを残せるようにしています。
+- 操作説明は buildHelpPanelOptions() と showOverlayPanel() を使って左上へまとめ、画面を広く使うときは本文を畳んで Show Help ボタンだけを残せるようにしています。
 - 中央球の specular highlight だけでなく、暖色 / 青 / ピンクの強い emissive 小球も置き、色付き glow が背景側へどう広がるかも見やすくしています。
 
 ## 実行方法
@@ -40,7 +40,7 @@
 - bloom extract は luma だけでなく max(rgb) も強めに使うため、青やピンクの強い emissive が extract view に乗りやすいことを確認します
 - V で composite / scene / extract / extractHeat / blurA / blurB を切り替え、extract そのものの色と、gain を heat 表示した状態を切り分けて確認できることを確認します
 - viewport サイズが変わっても BloomPass.resizeToScreen() により offscreen target が追従し、ぼけの位置ずれや解像度崩れが起きないことを確認します
-- カメラだけを回してもハイライト位置が完全には追従せず、world 固定 light が使われていることを確認します
+- カメラを回し、worldに固定したlightと視点の位置関係によってハイライトが変わることを確認します
 - 幅が狭いときも CommandPalette を必要なときだけ開けるため、画面を覆い続けずに parameter を確認できることを確認します
 
 ## 操作方法

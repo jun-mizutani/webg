@@ -10,7 +10,7 @@ mmodeler is a Blender-inspired 3D modeling tool optimized for touch operation on
 ## How to Run
 - Open [./mmodeler.html](./mmodeler.html) in a browser with WebGPU support.
 
-mmodeler does not depend on external libraries or servers; once launched, everything runs locally in your browser.
+mmodeler runs with the code included in the project, and editing and saving stay in the local browser.
 
 You can access the tool here:
 [https://jun-mizutani.github.io/webg/samples/mmodeler.html](https://jun-mizutani.github.io/webg/samples/mmodeler.html)
@@ -36,7 +36,7 @@ The most important operation is the **double-tap on geometry**, which opens the 
 - **Long Press**:
     - **On Geometry in Object/Edit Mode**: Toggles between Object Mode and Edit Mode.
     - **On Empty Area in Object/Edit Mode**: Opens the same object info overlay as the `Info` button.
-    - **On Geometry in Sculpt Mode**: Does not switch modes. It is disabled to avoid conflicts with brush operations.
+    - **On Geometry in Sculpt Mode**: Keeps the current mode and continues brush interaction.
     - **On Empty Area in Sculpt Mode**: Opens the same brush settings overlay as `Brsh`.
 - **Upward Flick**: Quickly switch to "Sculpt Mode" by flicking up from the view dock or the bottom edge of the canvas.
 
@@ -156,7 +156,7 @@ For `G/R/S/E/GG` operations:
     - `Triangle`: Linear attenuation based on distance.
     - `Peak`: Strong center with sharp attenuation.
     - `Flat`: Uniform application within the radius.
-- **Long Press**: In Sculpt Mode, long-pressing an empty area opens the same brush settings overlay as `Brsh`, while long-pressing geometry does not switch modes. In Object/Edit Mode, long-pressing geometry toggles modes.
+- **Long Press**: In Sculpt Mode, long-pressing an empty area opens the same brush settings overlay as `Brsh`, while long-pressing geometry keeps the current mode. In Object/Edit Mode, long-pressing geometry toggles modes.
 
 ### Box Selection
 1. Double-tap an empty area to start.
@@ -182,8 +182,8 @@ Select a sequence of vertices connected by quad faces.
 - **Termination**: Selection stops at corners (90°), triangles, or pentagons.
 
 ### Subdivision
-- **Subd**: Subdivide quad-only meshes by 1 level (1 quad $\rightarrow$ 4 quads).
-- **Catmull-Clark**: Reconstruct the mesh using face/edge midpoints for a smooth, rounded surface.
+- **Subd**: Subdivide a mesh whose faces are all quads by one level (1 quad $\rightarrow$ 4 quads). Triangles produce a message describing the required face layout.
+- **Catmull-Clark**: Reconstruct manifold meshes with simple boundaries using face/edge midpoints for a smooth, rounded surface; other boundary layouts produce an explanatory error.
 
 ### Selection & Display
 - **Markers**: Selected vertices are marked red. Edges with both endpoints selected also appear red.

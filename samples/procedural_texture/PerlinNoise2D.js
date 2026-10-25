@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// samples/procedural_texture/PerlinNoise2D.js  2026/08/06
+// samples/procedural_texture/PerlinNoise2D.js  2026/10/25
 //   Material-independent CPU reference implementation of 2D Perlin noise
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -29,7 +29,7 @@ const GRADIENTS = new Float32Array([
   DIAGONAL, -DIAGONAL
 ]);
 
-// optionの入口で通常objectだけを受け付け、配列やnullを設定objectとして誤認しないようにする
+// optionの入口で通常objectを受け付け、配列とnullは入力形式の例外として通知する
 // undefinedは省略可能なoptionを表すため、後段が既定値を補える空objectへ変換する
 function readPlainObject(value, label) {
   if (value === undefined) return {};
@@ -138,7 +138,7 @@ function readFbmOptions(value, periodCells, label = "fBm options") {
 
 class PerlinNoise2D {
   // seed、salt、周期、数値modeを検証し、必要なら周期格子のgradient cacheを準備する
-  // 構築後の設定変更で既知値が変わらないよう、最後にinstance自体を固定する
+  // 最後に instance を固定し、構築時に決めた値を保持する
   constructor(options = {}) {
     const source = readPlainObject(options, "PerlinNoise2D options");
     rejectUnknownKeys(
@@ -161,7 +161,7 @@ class PerlinNoise2D {
   }
 
   // 一つの格子座標とseed、saltをhashし、固定gradient table内の偶数offsetへ変換する
-  // 呼び出し順に依存する乱数列を使わないため、同じ格子は常に同じgradientとなる
+  // 格子座標から gradient を決め、呼び出し順によらず同じ座標へ同じ値を返す
   _hashGradientOffset(latticeX, latticeY) {
     const hash = util.hashUint32Sequence([
       toLatticeUint32(latticeX, "lattice x"),
@@ -176,7 +176,7 @@ class PerlinNoise2D {
   _buildPeriodGradientOffsets() {
     const [periodX, periodY] = this.periodCells;
     const count = periodX * periodY;
-    // 巨大periodを指定した単点sampleで過大なcacheを確保しない
+    // 巨大periodの単点sampleには座標hashを使い、必要な格子点だけを計算する
     if (!Number.isSafeInteger(count) || count > 1048576) return null;
     const result = new Uint8Array(count);
     for (let y = 0; y < periodY; y += 1) {
@@ -271,7 +271,7 @@ class PerlinNoise2D {
     return this._combineOctavesValidated(baseX, baseY, config, "signed");
   }
 
-  // 各octaveの絶対値を合成し、0を中心とした谷を持たないturbulence値を返す
+  // 各 octave の絶対値を合成し、0 以上の turbulence 値を返す
   turbulence(x, y, options = {}) {
     const config = readFbmOptions(options, this.periodCells);
     const f = this._round;
@@ -311,7 +311,7 @@ class PerlinNoise2D {
   }
 
   // 出力寸法とnoise domain領域を検証し、row-major Float32ArrayへfBm fieldを生成する
-  // texture反復では終端pixelを重複させず、column/widthとrow/heightで半開区間をsampleする
+  // column/widthとrow/heightで半開区間をsampleし、反復面のpixel数をそろえる
   fillFbm(options) {
     const source = readPlainObject(options, "fillFbm options");
     rejectUnknownKeys(

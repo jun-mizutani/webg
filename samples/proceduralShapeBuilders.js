@@ -1,5 +1,5 @@
 // -------------------------------------------------
-// proceduralShapeBuilders.js       2026/04/05
+// proceduralShapeBuilders.js       2026/10/25
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // -------------------------------------------------
@@ -15,7 +15,7 @@ export function buildIcosphere(shape, options = {}) {
   const flatShading = options.flatShading === true;
 
   // smooth / flat のどちらも sample 側で明示的に normal を作るため、
-  // Shape の自動法線計算は使わない
+  // 法線の生成を sample 側で管理する
   shape.setAutoCalcNormals(false);
 
   const vertices = [];
@@ -330,7 +330,7 @@ export function buildSierpinskiTetrahedron(shape, options = {}) {
 }
 
 // palette 補間や smoothstep の入力を 0..1 へ制限し、
-// 高さ帯 color の計算が帯外へはみ出さないようにする
+// 高さ帯 color の計算範囲を 0..1 へ収める
 const clamp01 = (value) => Math.max(0.0, Math.min(1.0, value));
 
 // 2 値の間を t で線形補間し、
@@ -338,7 +338,7 @@ const clamp01 = (value) => Math.max(0.0, Math.min(1.0, value));
 const lerp = (a, b, t) => a + (b - a) * t;
 
 // 0..1 の範囲だけを持つ滑らかな補間カーブを返し、
-// palette の帯境界が急に切り替わりすぎないようにする
+// palette の帯境界を滑らかにつなぐ
 const smoothstep01 = (value) => {
   const t = clamp01(value);
   return t * t * (3.0 - 2.0 * t);
@@ -369,7 +369,7 @@ export function generateFractalTerrainHeightField(options = {}) {
     return (h >>> 0) / 4294967295;
   };
 
-  // value noise の格子境界で傾きが急に変わりすぎないよう、
+  // value noise の格子境界で傾きを滑らかにつなぐため、
   // 補間係数へ cubic fade をかける
   const fade = (t) => t * t * (3.0 - 2.0 * t);
 

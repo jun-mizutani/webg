@@ -6,7 +6,7 @@
 
 ## 概要
 - README.md の「標準の使い方」にある low-level 例を、そのまま実行しやすいサンプルとして切り出したものです
-- Screen、SmoothShader、Space、Shape、Primitive を直接つなぎ、WebgApp を使わずに最小構成の 3D 表示を作ります
+- Screen、SmoothShader、Space、Shape、Primitive を直接つなぎ、初期化から描画までを直接構成した3D表示を作ります
 - 起動時に WebGPU と shader を初期化し、projection matrix を設定してから、立方体 1 個だけを scene に置いています
 - object は毎 frame 少しずつ回転するため、辺と面の向きが変わり、立体感と light の当たり方をそのまま確認できます
 - resize と orientationchange に合わせて canvas size と projection を更新するので、PC とスマホで縦横比が崩れにくい構成です

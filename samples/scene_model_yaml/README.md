@@ -34,6 +34,6 @@ main.jsはSceneAsset.load("./scene.yaml")で原文と値を読み込み、assert
 
 scene_model_yaml.htmlが実行ページ、main.jsが初期化とボタン処理、scene.yamlが作品設定、model.yamlがモデル定義です。日英READMEとindexに同じ説明を掲載しています。
 
-両Assetの値を変更せず、物理結果は実行時のNodeへ同期するため、保存時にYAMLコメントを保持できます。起動・保存のエラーは画面へ表示します。実行中の物理や描画エラーでは更新を止めます。終了時はWebgSceneApp.destroy()でリソースを解放します。
+両Assetの元データを保持し、物理結果は実行時のNodeへ同期するため、保存時にYAMLコメントを保持できます。起動・保存のエラーは画面へ表示します。実行中の物理や描画エラーでは更新を止めます。終了時はWebgSceneApp.destroy()でリソースを解放します。
 
 このサンプルは、SceneYAMLのinline mesh経路と外部ModelYAML経路のうち、外部モデルを使う構成を示します。ModelYAMLだけの読込みと複数配置は[model_yaml](../model_yaml/index.html)も参照してください。

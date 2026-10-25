@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// main.js  2026/10/04
+// main.js  2026/10/25
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // ---------------------------------------------
@@ -581,7 +581,7 @@ async function readTextureRgba(texture, width, height) {
 }
 
 // RGBA8を書き込んだ非表示Canvasをbrowser encoderへ渡し、PNGまたはJPEG Blobの完了を待つ
-// toBlobの未対応形式やencoder失敗はPromiseのrejectで呼出側へ報告する
+// 指定形式での画像生成が失敗した場合は、Promiseのrejectで呼出側へ理由を報告する
 function encodeCanvas(canvas, mimeType, quality) {
   return new Promise((resolve, reject) => {
     canvas.toBlob((blob) => {

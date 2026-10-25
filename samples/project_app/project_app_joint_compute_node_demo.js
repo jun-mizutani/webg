@@ -1,5 +1,5 @@
 // ---------------------------------------------
-//  project_app_joint_compute_node_demo.js  2026/09/10
+//  project_app_joint_compute_node_demo.js  2026/10/25
 //   SceneYAML Joint Compute physics with Node synchronization
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -29,7 +29,7 @@ const CAMERA_OPTIONS = {
 };
 
 // SceneYAMLの論理IDからWebgSceneAppが割り当てたCompute body bindingを取得します
-// SceneYAMLの文字列IDとGPU内部の数値body IDを画面側で混同しないため、登録結果を一度だけ参照します
+// 登録結果を一度参照し、SceneYAMLの文字列IDとGPU内部の数値body IDを対応付けます
 function findBodyBinding(id) {
   const binding = sceneApp?.bodyBindings.find((entry) => entry.id === id);
   if (!binding) throw new Error(`project_app_joint_compute_node body binding is unavailable: ${id}`);
@@ -37,7 +37,7 @@ function findBodyBinding(id) {
 }
 
 // 指定方向へcapsuleのローカルY軸を向けるNode用Quaternionを作ります
-// 振り子connectorは物理bodyを持たない表示専用Nodeのため、readbackした二点から毎回姿勢を再構成します
+// 振り子 connector は表示専用 Node として、readback した二点から毎回姿勢を再構成します
 function createQuaternionFromUpDirection(direction) {
   const length = Math.hypot(direction[0], direction[1], direction[2]);
   if (!Number.isFinite(length) || length <= 1.0e-8) {
@@ -115,13 +115,13 @@ function updateCrossingCapsule(deltaSec) {
       })
     }, { syncVelocity: true, wakeUp: true });
   } else {
-    // quasiStatic modeでは位置処方だけを渡し、接触側へ外部速度を与えない実験を行います
+    // quasiStatic mode は位置処方を反映し、接触速度を 0 として扱う実験です
     sceneApp.physics.syncComputeFromNode(binding.bodyId, node, { syncVelocity: false, wakeUp: true });
   }
 }
 
 // project、renderer、Compute physics、Node bindingをまとめて表示状態へ変換します
-// sceneAppが返す診断値を使うため、body数やJoint数を作品側で再計算しません
+// sceneAppが返す診断値から、登録済みのbody数とJoint数を取得します
 function updateStatus() {
   if (!sceneApp || !statusElement) return;
   const diagnostics = sceneApp.getDiagnostics();
@@ -164,7 +164,7 @@ function applyAction(key, event) {
 }
 
 // SceneYAMLのbody、Joint、Node姿勢、readback世代を初期状態へ戻します
-// 高水準入口のreset()を使い、GPU bodyを作品側で個別に再登録する処理を置きません
+// 高水準入口の reset() に GPU body の再登録をまとめて任せます
 function resetScene() {
   sceneApp.reset();
   driverDistance = 0.0;

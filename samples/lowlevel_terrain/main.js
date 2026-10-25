@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// samples/lowlevel_terrain/main.js  2026/04/12
+// samples/lowlevel_terrain/main.js  2026/10/25
 //   lowlevel_terrain sample
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -180,7 +180,7 @@ async function start() {
   });
 
   app.start({
-    // terrain 自体は自動回転しないため、毎frameではstatusだけ更新する
+    // terrainの姿勢を固定し、各frameではstatusの表示を更新する
     // orbit cameraはcreateOrbitEyeRig()によりWebgApp側で更新される
     onUpdate: () => {
       runtime.updateStatus();

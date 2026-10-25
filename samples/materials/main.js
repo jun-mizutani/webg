@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// samples/materials/main.js  2026/07/25
+// samples/materials/main.js  2026/10/25
 //   SmoothShader / Deferred Lighting material comparison
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -26,8 +26,8 @@ const SPHERE_RADIUS = 1.25;
 const GRID_SPACING = 3.05;
 const LIGHT_POSITION = Object.freeze([4.5, 8.0, 13.0]);
 
-// 行方向では、Deferred Lightingが読むroughnessとSmoothShaderが読むpowerを同時に変える。
-// ここにある値を初期基準とし、Paletteの値を動かすと4行全体が同じ差を保って移動する。
+// 行方向では、Deferred Lightingが読むroughnessとSmoothShaderが読むpowerを同時に変える
+// ここにある値を初期基準とし、Paletteの値を動かすと4行全体が同じ差を保って移動する
 const GRID_ROWS = Object.freeze([
   Object.freeze({ roughness: 0.08, power: 128.0 }),
   Object.freeze({ roughness: 0.28, power: 48.0 }),
@@ -35,8 +35,8 @@ const GRID_ROWS = Object.freeze([
   Object.freeze({ roughness: 0.90, power: 4.0 })
 ]);
 
-// 列方向では両モデルが読むspecularと、Deferred Lightingだけが読むmetallicを組み合わせる。
-// ここにある値を初期基準とし、Paletteの値を動かすと4列全体が同じ差を保って移動する。
+// 列方向では両モデルが読むspecularと、Deferred Lightingだけが読むmetallicを組み合わせる
+// ここにある値を初期基準とし、Paletteの値を動かすと4列全体が同じ差を保って移動する
 const GRID_COLUMNS = Object.freeze([
   Object.freeze({ specular: 0.15, metallic: 0.00 }),
   Object.freeze({ specular: 0.40, metallic: 0.25 }),
@@ -59,8 +59,8 @@ const DEFAULT_STATE = Object.freeze({
   emissive: 0.00
 });
 
-// GGX側のLambert項に含まれる1/PIを初期ambient条件で概ね補う固定光量。
-// ambient操作と光量を連動させないため、二つの照明式がambientを扱う違いもそのまま観察できる。
+// GGX側のLambert項に含まれる1/PIを初期ambient条件で概ね補う固定光量
+// 光量を固定して ambient だけを操作し、二つの照明式による違いを観察する
 const DEFERRED_LIGHT_INTENSITY = Math.PI * (1.0 - DEFAULT_STATE.deferredAmbient);
 
 let app = null;
@@ -68,8 +68,8 @@ let palette = null;
 let lastHelpText = "";
 const state = { ...DEFAULT_STATE };
 
-// イコサヘドロンの各辺の中点を球面へ正規化し、subdivisions回だけ4分割する。
-// 隣接面は同じ頂点を共有し、位置を正規化した球面法線で滑らかに補間します。
+// イコサヘドロンの各辺の中点を球面へ正規化し、subdivisions回だけ4分割する
+// 隣接面は同じ頂点を共有し、位置を正規化した球面法線で滑らかに補間します
 export function buildIcosphere(shape, radius = 1.0, subdivisions = 2) {
   const checkedRadius = util.readFiniteNumber(radius, "materials icosphere radius", {
     minExclusive: 0.0
@@ -113,7 +113,7 @@ export function buildIcosphere(shape, radius = 1.0, subdivisions = 2) {
     [-goldenRatio, 0, -1], [-goldenRatio, 0, 1]
   ].forEach((vertex) => addSphereVertex(...vertex));
 
-  // 外向き法線に対して反時計回りになる20面のインデックス。
+  // 外向き法線に対して反時計回りになる20面のインデックス
   faces = [
     [0, 11, 5], [0, 5, 1], [0, 1, 7], [0, 7, 10], [0, 10, 11],
     [1, 5, 9], [5, 11, 4], [11, 10, 2], [10, 7, 6], [7, 1, 8],
@@ -122,7 +122,7 @@ export function buildIcosphere(shape, radius = 1.0, subdivisions = 2) {
   ];
 
   for (let level = 0; level < checkedSubdivisions; level += 1) {
-    // 同じ辺を共有する二つの面が同じ中点頂点を参照するよう、levelごとにcacheする。
+    // 同じ辺を共有する二つの面が同じ中点頂点を参照するよう、levelごとにcacheする
     const midpointCache = new Map();
     const midpoint = (a, b) => {
       const low = Math.min(a, b);
@@ -158,8 +158,8 @@ export function buildIcosphere(shape, radius = 1.0, subdivisions = 2) {
     faces = subdivided;
   }
 
-  // 分割中に共有した頂点を一度だけShapeへ追加し、位置から球面法線を求めます。
-  // addTriangle()は共有indexを参照するため、fragment間で法線が滑らかに補間されます。
+  // 分割中に共有した頂点を一度だけShapeへ追加し、位置から球面法線を求めます
+  // addTriangle()は共有indexを参照するため、fragment間で法線が滑らかに補間されます
   const sharedVertexIndices = vertices.map((position, vertexIndex) => {
     const normalLength = Math.hypot(...position);
     if (normalLength <= 1.0e-8) {
@@ -229,8 +229,8 @@ function readMaterialState() {
   };
 }
 
-// 比較格子では、Paletteの現在値を基準に初期4段階との差を加える。
-// 0.0–1.0の境界では値を範囲内へ収めるが、入力値自体はreadMaterialState()で先に検証する。
+// 比較格子では、Paletteの現在値を基準に初期4段階との差を加える
+// 0.0–1.0の境界では値を範囲内へ収めるが、入力値自体はreadMaterialState()で先に検証する
 function resolveGridRows(material) {
   return GRID_ROWS.map((preset) => ({
     roughness: Math.min(1.0, Math.max(
@@ -258,8 +258,8 @@ function resolveGridColumns(material) {
   }));
 }
 
-// 両描画経路へ同じShapeを渡すため、片方が読まない値も省略せず全て登録する。
-// これにより、非対応パラメータを動かしても見え方が変わらないことを比較できる。
+// 両描画経路へ同じShapeを渡すため、各経路が参照する材質値をそろえて登録する
+// 材質値を一つずつ操作し、その値を参照する描画経路の変化を比較する
 function applyMaterials(spheres) {
   const material = readMaterialState();
   const gridRows = resolveGridRows(material);
@@ -312,8 +312,8 @@ function buildHelpLines() {
   lines.push(
     `Smooth ambient ${material.smoothAmbient.toFixed(2)} / Deferred ambient ${material.deferredAmbient.toFixed(3)}`,
     `emissive ${material.emissive.toFixed(2)}`,
-    "SmoothShader ignores roughness and metallic.",
-    "Deferred Lighting ignores power; final display uses linear clamp.",
+    "SmoothShader uses power for highlight size.",
+    "Deferred Lighting uses roughness and metallic; final display uses linear clamp.",
     ...(app?.getFrameTimingLines?.() ?? [])
   );
   return lines;
@@ -330,12 +330,12 @@ function updateHelpPanel() {
   lastHelpText = text;
 }
 
-// 一つのGPU形状リソースから16個のShape instanceを作り、材質辞書だけを独立させる。
+// 一つのGPU形状リソースから16個のShape instanceを作り、材質辞書だけを独立させる
 function createMaterialGrid() {
   const baseShape = new Shape(app.getGPU());
   buildIcosphere(baseShape, SPHERE_RADIUS, 2);
-  // 共有頂点の球面法線を両経路で読み、同じ滑らかな法線補間による鏡面反射を比較します。
-  // UV継ぎ目で必要になる頂点複製はShape.endShape()が法線を保ったまま処理します。
+  // 共有頂点の球面法線を両経路で読み、同じ滑らかな法線補間による鏡面反射を比較します
+  // UV継ぎ目で必要になる頂点複製はShape.endShape()が法線を保ったまま処理します
   baseShape.endShape();
 
   const spheres = [];
@@ -356,8 +356,8 @@ function createMaterialGrid() {
   return spheres;
 }
 
-// SmoothShaderはSpaceのpoint lightを、Deferred Lightingは同じworld位置のLocal Lightを読む。
-// Deferred側の半径を十分大きくし、距離減衰よりもBRDFの差が観察しやすい条件にする。
+// SmoothShaderはSpaceのpoint lightを、Deferred Lightingは同じworld位置のLocal Lightを読む
+// Deferred側の半径を十分大きくし、距離減衰よりもBRDFの差が観察しやすい条件にする
 function createSharedLight() {
   const lightNode = app.space.addNode(null, "material-light");
   lightNode.setPosition(...LIGHT_POSITION);
@@ -372,7 +372,7 @@ function createSharedLight() {
   };
 }
 
-// 状態を初期状態へ戻し、前回の状態を残さない
+// 材質の状態を初期値へそろえ、同じ条件で比較を始める
 function resetState(spheres) {
   Object.assign(state, DEFAULT_STATE);
   applyMaterials(spheres);
@@ -588,7 +588,7 @@ async function start() {
     },
     onBeforeDraw: ({ cameraFrame }) => {
       if (state.renderer === "smooth") {
-        // WebgAppが確定した同じCameraFrameで標準のforward描画を明示的に実行する。
+        // WebgAppが確定した同じCameraFrameで標準のforward描画を明示的に実行する
         app.space.draw(cameraFrame);
         return;
       }

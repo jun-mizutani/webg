@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// samples/json_loader/main.js  2026/10/10
+// samples/json_loader/main.js  2026/10/25
 //   json_loader sample
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -500,7 +500,7 @@ async function start() {
     pitch: DEFAULT_ORBIT.pitch
   });
 
-  // JSON も同じ facade へ寄せることで、sample 側では形式差をほぼ意識せず
+  // JSON も同じ facade へ渡し、sample 側では共通の呼び出しで
   // ModelAsset と runtime を扱える
   model = await app.loadModel(MODEL_ASSET_FILE, {
     format: "json",

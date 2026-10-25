@@ -7,10 +7,10 @@
 `samples` は、webgを使う人がブラウザで起動し、APIの利用方法、表示、操作、性能を確認する公開向けアプリの置き場です。
 小さな機能例だけでなく、複数の機能を組み合わせたアプリ規模の例も含みます。
 
-ブラウザで機能単位を確認する小さなテストページは `unittest/`、ブラウザを必要としない自動contractは `headless_tests/`、
+ブラウザで機能単位を確認する小さなテストページは `unittest/`、Node.jsで実行する自動contractは `headless_tests/`、
 書籍本文と一緒に読む実行例は `book/examples/` が所有します。
 
-開発時にwebgコアの古いES module URLを避ける場合は、[`cache_clear_webg/cache_clear_webg.html`](./cache_clear_webg/cache_clear_webg.html)をWebサーバー経由で開き、`全coreを再import`を実行します。このページは`webg`配下の全JavaScript moduleを一意な`?v=...`付きURLで読み込みます。webgコア自身のimport文にはキャッシュクエリを追加しません。
+開発時にwebgコアの古いES module URLを避ける場合は、[`cache_clear_webg/cache_clear_webg.html`](./cache_clear_webg/cache_clear_webg.html)をWebサーバー経由で開き、`全coreを再import`を実行します。このページは`webg`配下の全JavaScript moduleを一意な`?v=...`付きURLで読み込みます。webgコア自身のimport文は配布時のURLを保持し、cache clear用ページが生成する読み込みURLへクエリを付けます。
 
 ## 規模と目的
 
@@ -48,7 +48,7 @@ GLBの泳ぐモデルへ集光を組み合わせる小さな統合例は、[aqua
 - `pbr_reference`: Forward／Deferred PBR、IBL、HDR、SSR、透明材質の統合比較
 - `texture_catalog`: コアProcedural Texture presetの選択、編集、preview、コード出力
 
-directoryは規模では分けません。公開URLとsample間参照を安定させつつ、一覧と本文で目的を明示します。
+公開URLとsample間参照を保つdirectory構成を使い、一覧と本文で各sampleの規模と目的を案内します。
 
 ## compute sampleの公開範囲
 
@@ -72,10 +72,10 @@ PBR効果の統合処理は[book/examples/32_01.html](../book/examples/32_01.htm
 ## 整理の基準
 
 1. 同じ見た目でもCPU / Compute、低水準 / 高水準、単体 / 統合の比較目的が明確なら両方を残します。
-2. sceneやUIだけが共通なら、sampleを削除せず共通helperまたはコアへ実装を集約します。
+2. sceneやUIだけが共通なら、各sampleの目的を保ち、共通helperまたはコアへ実装を集約します。
 3. 入力・方式・利用するコアAPIが分かる名前を使います。
 4. sample固有の目的がなくなり、別sampleが操作・表示・説明をすべて包含した場合にだけ統合・削除を検討します。
-5. 大規模sampleは小さなsampleの代替とはせず、複数機能を組み合わせる実例として位置付けます。
+5. 小さなsampleは機能の原理、大規模sampleは複数機能を組み合わせる実例として使い分けます。
 
 ## 実行
 

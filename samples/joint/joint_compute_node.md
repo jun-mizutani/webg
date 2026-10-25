@@ -18,7 +18,7 @@ GPUからCPUへの転送とNode更新があるため、body数が増えた場合
 
 ## シナリオと色
 
-6本の吊りロープ、DistanceJointで接続した振り子、ロープ中央を横切るkinematic Capsuleを登録します。床と境界Planeは登録していません。`joint_compute`との比較用に、ロープを緑／ライム、振り子のSphereを赤、操作Capsuleをシアン、表示用connectorを金色にしています
+6本の吊りロープ、DistanceJointで接続した振り子、ロープ中央を横切るkinematic Capsuleを登録します。接触対象は、上記のロープlinkと操作Capsuleです。`joint_compute`との比較用に、ロープを緑／ライム、振り子のSphereを赤、操作Capsuleをシアン、表示用connectorを金色にしています
 
 ## 操作
 
@@ -44,7 +44,7 @@ ComputePhysicsSpace.encodeFixedStep()
   -> Space.draw()
 ```
 
-物理bodyの `ComputeSphereCollider` / `ComputeCapsuleCollider` と、描画用の通常 `Shape` は別に作ります。`Node` は `Space` へ配置しますが、`ComputePhysicsSpace` へbodyとして登録しません。`book/26_物理エンジン.md`の「Compute版の状態を通常のNodeへ同期する」構成に対応します
+物理bodyの `ComputeSphereCollider` / `ComputeCapsuleCollider` と、描画用の通常 `Shape` は別に作ります。表示用の`Node`は`Space`へ配置し、GPUで計算するbodyは別のdescriptorとして`ComputePhysicsSpace`へ登録します。`book/27_物理エンジンを使う.md`の「Compute版の状態を通常のNodeへ同期する」構成に対応します
 
 ## ファイル構成
 

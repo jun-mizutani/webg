@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// samples/scene/main.js  2026/07/25
+// samples/scene/main.js  2026/10/25
 //   scene sample
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -389,7 +389,7 @@ function toggleScenePause() {
   return true;
 }
 
-// カメラを初期状態へ戻し、前回の状態を残さない
+// カメラを初期状態へ戻し、次の表示を同じ視点から始める
 function resetCamera() {
   if (!sceneRuntime?.entries?.length) {
     return false;
@@ -401,9 +401,9 @@ function resetCamera() {
 
 // 操作の`handlers`を生成し、後続処理で利用できる状態にする
 function buildActionHandlers() {
-  // Scene JSON の input は action 名までしか持たないため、
+  // Scene JSON の input が定義する action 名に、
   // 実際の操作意味は sample 側でこの map に割り当てる
-  // HTML button もここを通すことで、キー操作と button 操作の差をなくす
+  // HTML button とキー操作を同じ action の入口へまとめる
   return {
     "toggle-pause": () => {
       if (!toggleScenePause()) {

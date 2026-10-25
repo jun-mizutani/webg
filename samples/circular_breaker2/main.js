@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// samples/circular_breaker2/main.js  2026/09/22
+// samples/circular_breaker2/main.js  2026/10/25
 //   SceneYAML / ModelYAML / PBR based circular breaker sample
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -302,7 +302,7 @@ const start = async () => {
   destroyBlockTextures = destroy;
   gameBlocks = blocks;
   // 統合pipelineの既存BloomをHDR段階で有効にし、トーンマッピング前に合成する
-  // SceneYAMLの高水準renderer設定にBloom項目がないため、サンプル側で明示する
+  // Bloom はサンプル側から高水準 renderer の pipeline へ設定する
   Object.assign(sceneApp.renderer.pipeline.bloomOptions, {
     enabled: true, threshold: 1.1, softKnee: .4, strength: .38, filterRadius: 1.0
   });

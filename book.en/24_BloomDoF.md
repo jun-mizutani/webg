@@ -2,6 +2,10 @@
 
 Bloom adds a glow around bright regions, while depth of field (DoF) keeps a chosen distance sharp and blurs other depths. This chapter connects both effects to manually rendered scene textures. Bloom reads color; DoF also requires depth and a token identifying the same render frame.
 
+This chapter extends the manual post-processing from Chapter 23 with Bloom, which uses color, and DoF, which uses color, depth, and camera information. They are independent connection examples. Choose one effect and add it to an initialized `app` configured with `autoDrawScene: false`.
+
+Each debug-view example replaces the `app.start()` call shown immediately before that effect. Chapters 31–33 cover combining effects in a PBR setup; Chapter 36 explains the Compute implementations of Bloom and DoF in more detail.
+
 ## How to read this chapter
 
 ### Prerequisites

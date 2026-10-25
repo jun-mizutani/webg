@@ -24,9 +24,9 @@ BoxとSphereをメッシュへ変換できます。物理付き物体は、変�
 
 SceneYAMLの正式形式としてmeshes配列とobjects[].mesh参照を使います。各meshはid、vertices、facesを持ちます。保存した作品は通常のcreateWebgSceneApp({ project: './scene.yaml' })から直接表示できます。mesh物体にphysicsを指定する場合はphysics.shapeにBox・Sphere・Capsuleを明示します。物理には明示したBox・Sphere・Capsuleを使い、表示メッシュには頂点座標と面を入力します。objectSetsはprimitive形状を生成します。
 
-inline objects/materials/physicsに対応し、objectSetsの生成物体はYAMLから編集します。外部SceneAsset、ModelAsset、外部材質ファイルの参照は読込み時に説明付きで拒否します。renderer、animations、独自の追加項目は保存します。表示は編集専用のスタジオ照明を使い、物理・アニメーション・emitter・goalなどの作品固有処理は実行しません。したがって保存作品の実行時の照明や動作は、実行用アプリで確認します。
+inline objects/materials/physicsに対応し、objectSetsの生成物体はYAMLから編集します。外部SceneAsset、ModelAsset、外部材質ファイルの参照は読込み時に説明付きで拒否します。renderer、animations、独自の追加項目は保存します。表示には編集専用のスタジオ照明を使い、作品の初期配置と設定を編集します。物理・アニメーション・emitter・goalの進行は実行用アプリが担当します。したがって保存作品の実行時の照明や動作は、実行用アプリで確認します。
 
-bodyType、mass、摩擦、反発を編集できます。物理を有効にする作品にはphysics.spaceが必要です。新規作品には240Hz、maxBodies: 128の設定を明示しています。容量を超える場合はYAMLで変更してください。自動で容量や数値を補正しません。
+bodyType、mass、摩擦、反発を編集できます。物理を有効にする作品にはphysics.spaceが必要です。新規作品には240Hz、maxBodies: 128の設定を明示しています。容量を超える場合はYAMLで変更してください。入力値を検証し、容量を超えた場合は必要な設定項目をエラーで示します。
 
 ## 実装メモ
 

@@ -226,7 +226,7 @@ darkenPass.encode(
 
 To integrate the pass, provide a scene render target, a storage-texture output, and a `FullscreenPass` to draw the result to the canvas. The following example connects `darkenPass` to a Render-first frame.
 
-Assume scene shapes and nodes have already been added to `app.space` as in the earlier `Shape` chapters.
+Assume scene shapes and nodes have already been added to `app.space` as in Chapters 4 and 5.
 
 ```js
 import WebgApp from "./webg/WebgApp.js";

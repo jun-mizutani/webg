@@ -1,5 +1,5 @@
 // ---------------------------------------------
-//  PrimitiveProjectScene.js  2026/09/08
+//  PrimitiveProjectScene.js  2026/10/25
 //   Project manifestからprimitive sceneを構築するProjectApp sample
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -289,7 +289,7 @@ function readPrimitiveObjectSetPlacement(value, label) {
 }
 
 // objectSetの個体差へ適用できる数値patternを検証し、cycleとrangeを共通形式へ変換します
-// 値の種類と配列長を呼出側で固定し、任意の式を実行せずに設定内容を追跡できる形にします
+// 値の種類と配列長を固定し、宣言された値から設定内容を追跡できる形にします
 function readPrimitiveObjectSetValuePattern(value, label, valueLength = null) {
   const pattern = util.readPlainObject(value, label, {});
   requireKnownKeys(pattern, label, new Set(["type", "values", "start", "step"]));
@@ -400,7 +400,7 @@ function applyPrimitiveObjectSetInstancePattern(value, pattern, index) {
 }
 
 // 小さな決定的乱数を使い、objectSetsのseed付きjitterを再現可能な座標へ変換します
-// Math.randomを使わず、ブラウザ再読込みとdiagnosticsの再生成で同じ配置を保ちます
+// seed付きの乱数で、ブラウザ再読込みとdiagnosticsの再生成に同じ配置を使います
 function primitiveSetHash01(value) {
   const raw = Math.sin(value * 91.3458 + 17.123) * 47453.5453;
   return raw - Math.floor(raw);

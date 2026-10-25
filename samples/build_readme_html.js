@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// samples/build_readme_html.js  2026/07/25
+// samples/build_readme_html.js  2026/10/25
 //   Build HTML documents from sample README files
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -19,7 +19,7 @@ const README_FILES = [
   { source: "README.en.md", output: "index.en.html", lang: "en" }
 ];
 
-// コマンドラインから渡された sample 名を読み取り、指定がなければ全 sample を対象にする
+// コマンドラインの sample 名を読み取り、引数を省略した場合は全 sample を対象にする
 // 例:
 //   node samples/build_readme_html.js
 //   node samples/build_readme_html.js dof
@@ -28,7 +28,7 @@ const readRequestedSampleNames = () => process.argv
   .filter((name) => name.trim() !== "");
 
 // HTML へ埋め込む最小限の装飾を 1 か所で管理し、生成物ごとの揺れを避ける
-// docs 側は app 側の見た目を再現する必要はないため、読みやすさ優先の紙面レイアウトに寄せる
+// 説明ページは読みやすさを優先し、紙面風のレイアウトで本文を配置する
 const buildDocumentCss = () => `
 :root {
   color-scheme: light;
@@ -185,7 +185,7 @@ blockquote {
 }
 `;
 
-// HTML 特殊文字をそのまま埋め込まないよう、テキスト部分だけを明示的に escape する
+// テキスト中の HTML 特殊文字を escape し、文字として表示する
 // inline 要素の組み立て中にも何度も使うため、小さな関数として分離しておく
 const escapeHtml = (text) => String(text)
   .replaceAll("&", "&amp;")
@@ -194,7 +194,7 @@ const escapeHtml = (text) => String(text)
   .replaceAll("\"", "&quot;");
 
 // README.md / README.en.md へのリンクは生成後の HTML 名へ自動変換する
-// sample 実行ページや外部 URL のように、そのまま使うべき URL は変更しない
+// sample 実行ページと外部 URL は、元の参照先をそのまま保持する
 const rewriteHref = (href) => {
   if (href === "README.md" || href === "./README.md") return href.replace("README.md", "index.html");
   if (href === "README.en.md" || href === "./README.en.md") return href.replace("README.en.md", "index.en.html");
@@ -275,7 +275,7 @@ const renderTable = (lines, startIndex) => {
 };
 
 // 箇条書き / 番号付きリストを indentation に応じた入れ子構造として組み立てる
-// mmodeler README には 2 段以上の list があるため、単純に 1 段へ潰すのではなく nest を維持する
+// mmodeler README の 2 段以上の list も、元の階層を維持して HTML へ変換する
 const renderList = (lines, startIndex) => {
   const tokenPattern = /^(\s*)([-*]|\d+\.)\s+(.*)$/;
   const stack = [];
@@ -333,7 +333,7 @@ const renderList = (lines, startIndex) => {
 };
 
 // 見出し、段落、表、リストの順に block を判定し、README 全体を本文 HTML へ変換する
-// GitHub Flavored Markdown 全体を実装するのではなく、この repository の README 群で実際に使っている表現に絞る
+// この repository の README 群で使う Markdown 表現を HTML へ変換する
 const renderMarkdown = (source) => {
   const lines = source.replace(/\r/g, "").split("\n");
   let index = 0;

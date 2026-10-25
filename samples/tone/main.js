@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// samples/tone/main.js  2026/07/25
+// samples/tone/main.js  2026/10/25
 //   ToneSynth sample
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -30,7 +30,7 @@ let selectedEnvelopeProfile = "piano";
 let heldVoices = [];
 let heldMode = null;
 
-// UI 要素参照を一箇所にまとめ、以後の処理で DOM 検索を繰り返さないようにする
+// UI 要素の参照を一か所で取得し、後続処理で再利用する
 const getUiRefs = () => ({
   status: $("status"),
   btnInit: $("btnInit"),
@@ -74,7 +74,7 @@ const getUiRefs = () => ({
 });
 
 // ステータス欄は現在の操作結果や検証エラーを表示する
-// 音が鳴らないときに「Audio Start 前なのか、設定エラーなのか」を区別しやすくする
+// Audio Start の実行状態と設定エラーを示し、発音までの段階を確認できるようにする
 const setStatus = (text) => {
   ui.status.textContent = `status: ${text}`;
 };
@@ -82,7 +82,7 @@ const setStatus = (text) => {
 // 秒数表示を小数 3 桁にそろえ、attack / decay / release の差を読みやすくする
 const formatSeconds = (value) => `${Number(value).toFixed(3)} sec`;
 
-// reverb length は細かすぎる桁を見せないことで、空間サイズの比較に集中しやすくする
+// reverb length は比較に使う桁数に丸め、空間サイズを見比べやすくする
 const formatReverbSeconds = (value) => `${Number(value).toFixed(2)} sec`;
 
 // 比率や gain は小数 2 桁にそろえ、slider の値と表示の対応を単純にする
@@ -274,7 +274,7 @@ const bindRange = (slider, valueLabel, formatter, onInput = null) => {
 };
 
 // button を押している間だけ発音し、pointerup / pointercancel で release へ移る
-// click ではなく pointer を使うことで、mouse と touch のどちらでも同じ処理フローにする
+// pointer event に mouse と touch の入力をまとめ、同じ手順で処理する
 const bindHoldButton = (button, modeFactory) => {
   button.addEventListener("pointerdown", (event) => {
     if (button.disabled) return;

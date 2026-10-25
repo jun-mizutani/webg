@@ -74,8 +74,8 @@ obj.addShape(shape);
 
 app.start({
   onUpdate: ({ deltaSec }) => {
-    obj.rotateY(0.8 * deltaSec);
-    obj.rotateX(0.4 * deltaSec);
+    obj.rotateY(30.0 * deltaSec);
+    obj.rotateX(15.0 * deltaSec);
   }
 });
   </script>
@@ -114,7 +114,7 @@ The `Node` represents where a shape is placed. `app.space.addNode(null, "obj")` 
 
 For an orbit camera, `target` is the point to look at and `distance` is the distance from that point. The cube is at the origin, so its target is `[0, 0, 0]` as well. `yaw` and `pitch` set the initial view direction, while `minDistance` and `maxDistance` define the zoom range.
 
-Calling `app.start()` begins frame updates and rendering. `onUpdate` runs before a frame is drawn, and `deltaSec` is the number of seconds since the previous frame. `rotateY(0.8 * deltaSec)` rotates at 0.8 degrees per second. Multiplying by elapsed time keeps the angle advanced over a given interval approximately the same even when the frame rate changes.
+Calling `app.start()` begins frame updates and rendering. `onUpdate` runs before a frame is drawn, and `deltaSec` is the number of seconds since the previous frame. `rotateY(30.0 * deltaSec)` rotates at 30 degrees per second. Multiplying by elapsed time keeps the angle advanced over a given interval approximately the same even when the frame rate changes.
 
 ## Check the rendered result
 

@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// samples/physics_collider/main.js  2026/07/25
+// samples/physics_collider/main.js  2026/10/25
 //   physics_collider sample
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -340,7 +340,7 @@ const activateBodyEntry = (entry) => {
   entry.released = true;
 };
 
-// まだリリースしていないエントリの中から、指定数だけリリースする
+// 使用中の entry から、指定された数を選んで release する
 const activateBurstEntries = (entries, count) => {
   let activated = 0;
   for (let i = 0; i < entries.length && activated < count; i++) {

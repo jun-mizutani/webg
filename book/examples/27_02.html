@@ -1,5 +1,5 @@
 <!doctype html>
-<!-- book/examples/27_02.html 2026/10/04 -->
+<!-- book/examples/27_02.html 2026/10/25 -->
 <html lang="ja">
 <head>
   <meta charset="UTF-8" />
@@ -13,8 +13,8 @@
     <h2>27_02 Compute版物理エンジンの基本例 — GPU計算結果を通常のNodeへ同期</h2>
     <div class="section-card">
       <p>Compute Physicsの計算だけをGPUへ任せ、利用者側のWGSLを書かずに通常の`WebgApp`、`Shape`、`Node`で描画する確認ページです</p>
-      <p>この例では、Compute Physics内部のWGSLで計算したBodyStateをreadback bufferへコピーし、CPU側へ読み戻してから通常のNodeへ位置と姿勢を同期します。利用者は描画用WGSLやGPU状態のバインドを用意しなくてよいため、CPU版に近い処理フローでCompute Physicsを利用できます</p>
-      <p>一方、毎フレームのreadback、GPUからCPUへの同期、Nodeの更新には追加の待ち時間とCPU処理が発生します。body数が多い場合やGPU上の計算結果をそのまま描画したい場合は27_03が適しています。body数が少ない場合や通常の`Shape`と`Node`を優先する場合は、この例の構成が簡単です。簡単な構成であることと、高速であることは同じではありません</p>
+      <p>この例では、Compute Physics内部のWGSLで計算したBodyStateをreadback bufferへコピーし、CPU側へ読み戻してから通常のNodeへ位置と姿勢を同期します。計算結果のNode同期はコアの公開APIへ任せ、CPU版に近い処理フローでCompute Physicsを利用できます</p>
+      <p>一方、毎フレームのreadback、GPUからCPUへの同期、Nodeの更新には追加の待ち時間とCPU処理が発生します。body数が多い場合やGPU上の計算結果をそのまま描画したい場合は27_03が適しています。body数が少ない場合や通常の`Shape`と`Node`を優先する場合は、この例の構成が簡単です。構成の分かりやすさと実行速度を分け、物体数と転送時間を測って選びます</p>
       <p id="status" class="note">Compute Physicsとreadbackを初期化しています</p>
     </div>
 

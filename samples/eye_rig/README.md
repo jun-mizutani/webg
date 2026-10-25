@@ -29,15 +29,15 @@
 
 ## 確認ポイント
 
-Orbitでは、camera rigをcamera vehicleの子にした場合、vehicleの移動、pitch、rollがbaseへ継承されます。`H`で独立camera anchorへ付け替えると、vehicleと同じ位置を移動しながら回転は継承しません。この違いがアプリケーションの階層構造によることを確認します。
+Orbitでは、camera rigをcamera vehicleの子にした場合、vehicleの移動、pitch、rollがbaseへ継承されます。`H`で独立camera anchorへ付け替えると、vehicleの位置だけを追従し、cameraの向きは独立して保持します。この違いがアプリケーションの階層構造によることを確認します。
 
 First Personでは、baseをcamera vehicleの後方、上方、右側へ置きます。camera bodyの前方はlocal `-Z`、camera vehicleの前方はlocal `+Z`なので、`bodyYaw: 180`によって両方の前方軸を一致させています。`W`はbodyYawで回転したbodyのlocal `-Z`、`D`はlocal `+X`へ進み、反対方向を`S / A`で確認できます。ドラッグの水平差分はeyeのlookYawへ反映され、lookYawは移動方向を変えないため、vehicleの進行方向を維持したまま周囲を見られます。`Q / E`ではbaseを親座標系内で上下へ移動できます。
 
-Followでは、baseはcamera vehicleの子として固定され、target vehicleの位置へ移動しません。rodはアプリケーションが決める比較的安定した基準角度を保持し、eyeはtarget vehicleを見るための動的なローカル姿勢だけを担当します。Help panelの `follow dot` が1に近いほど、eyeのworld前方がtarget方向へ一致しています。
+Followでは、baseをcamera vehicleの子として固定し、その位置からtarget vehicleを注視します。rodはアプリケーションが決める比較的安定した基準角度を保持し、eyeはtarget vehicleを見るための動的なローカル姿勢だけを担当します。Help panelの `follow dot` が1に近いほど、eyeのworld前方がtarget方向へ一致しています。
 
 `U`で `base / rod / world` の上方向基準を切り替えると、camera vehicleがbankしたときのロール基準が変化します。追跡方向と上方向がほぼ平行な場合は、直前のright軸を対象方向へ直交投影し、直前姿勢のロール連続性を維持します。
 
-Followの姿勢補間にはフレームレート非依存のresponse係数と最大角速度を使用します。target位置そのものを遅らせず、実際のtarget位置から求めた目標姿勢へクォータニオンで徐々に近づきます。
+Followの姿勢補間にはフレームレート非依存のresponse係数と最大角速度を使用します。現在のtarget位置から目標姿勢を求め、cameraの姿勢をクォータニオンで徐々に近づけます。
 
 ## 操作方法
 

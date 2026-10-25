@@ -1,4 +1,4 @@
-// main.js 2026/09/25
+// main.js 2026/10/25
 // 星間戦闘の入力、wave進行、衝突、Compute火花、HUD、音楽を接続する
 import { parseSceneYAML } from "../../webg/SceneYaml.js";
 import GameAudioSynth from "../../webg/GameAudioSynth.js";
@@ -457,7 +457,7 @@ function updateFrame({ deltaSec }) {
   updateHud();
 }
 
-// キーボードを登録し、ゲーム中にOrbit EyeRigが同じキーを消費しないようにする
+// ゲーム専用のキーを登録し、同じキーを消費するOrbit EyeRigの操作を休止する
 function installInput() {
   sceneApp.app.registerActionMap({
     left: ["arrowleft", "a"],

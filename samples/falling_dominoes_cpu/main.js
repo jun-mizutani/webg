@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// samples/falling_dominoes_cpu/main.js  2026/09/23
+// samples/falling_dominoes_cpu/main.js  2026/10/25
 //   CPU PhysicsSpace falling dominoes sample
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -18,7 +18,7 @@ import {
 } from "../../webg/OverlayPanelPresets.js";
 
 // このサンプルは、samples/falling_dominoesと同じ32体の配置・材質・初期条件を使います
-// Compute版のGPU BodyStateを使わず、PhysicsSpaceの登録solver stateをPhysicsNodeへ同期します
+// PhysicsSpaceの登録solver stateをPhysicsNodeへ同期し、CPU版の物理結果を通常描画へ渡します
 const DOMINO_COUNT = 32;
 const DOMINO_LONG_SIDE = 0.025;
 const DOMINO_HEIGHT = 0.050;
@@ -306,7 +306,7 @@ function readStatistics() {
 }
 
 // CPU版の現在状態をHelp Panelで読める行へ変換します
-// Compute時間は存在しないため、frame計測結果とCPU solver stepの累積値を分けて表示します
+// frame計測結果とCPU solver stepの累積時間を、実行場所ごとの値として表示します
 function buildHelpLines() {
   const stats = readStatistics();
   return [

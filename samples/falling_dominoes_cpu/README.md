@@ -6,7 +6,7 @@
 
 `samples/falling_dominoes`と同じ32個のドミノを、通常の`PhysicsSpace`でシミュレーションするサンプルです。左端のドミノだけへ初期角速度を与え、後続31個へBox接触を順番に伝えます。Compute版と同じ寸法、質量、重力、反発係数、摩擦係数、固定刻み、solver反復数、sleep条件、カメラを使い、GPU上でBodyStateを更新する方式と、CPU上で`PhysicsNode`を更新する方式を比較できます。
 
-CPU版のBox/Plane接触は、`PhysicsSpace`のCPU接触処理を使います。`BoxCollider`、`PlaneCollider`、`PhysicsNode`を通常のwebg APIで登録し、Plane Nodeをsolverの明示的なPlane入力へ変換します。画面に見える床板は描画専用Nodeとして分け、物理Planeと二重に接触計算しません。
+CPU版のBox/Plane接触は、`PhysicsSpace`のCPU接触処理を使います。`BoxCollider`、`PlaneCollider`、`PhysicsNode`を通常のwebg APIで登録し、Plane Nodeをsolverの明示的なPlane入力へ変換します。画面に見える床板は描画専用Nodeとして分け、床との接触計算は物理Planeだけで行います。
 
 ## 実行方法
 
@@ -41,7 +41,7 @@ CPU版のBox/Plane接触は、`PhysicsSpace`のCPU接触処理を使います。
 
 `createInitialDescriptors()`は、Compute版と同じ32体の位置、Box寸法、質量、初期角速度、材質値を生成します。CPUの`PhysicsNode`が角速度をdegree/secで保持するため、descriptorのrad/secを`PhysicsNode`へ渡す境界でdegree/secへ変換します。変換後もHelp Panelの速度表示はrad/secへ戻して、Compute版の表示単位と合わせています。
 
-`createPhysicsSpace()`はfixed stepを120Hz、solver反復数を10、最大sub step数を4として、Compute版のBox候補余白、support feature許容値、位置補正slop、sleep・wake閾値を`PhysicsSpace`へ設定します。床は`PlaneCollider`付きstatic `PhysicsNode`として`PhysicsSpace`へ登録し、画面に見える薄い床板は描画専用の通常Nodeとして別に作ります。PhysicsSpaceは登録されたPlaneをsolver入力へ変換するため、boundsから別のPlaneを追加しません。
+`createPhysicsSpace()`はfixed stepを120Hz、solver反復数を10、最大sub step数を4として、Compute版のBox候補余白、support feature許容値、位置補正slop、sleep・wake閾値を`PhysicsSpace`へ設定します。床は`PlaneCollider`付きstatic `PhysicsNode`として`PhysicsSpace`へ登録し、画面に見える薄い床板は描画専用の通常Nodeとして別に作ります。PhysicsSpaceは登録されたPlaneをsolver入力へ変換するため、登録済みのPlaneを床の唯一の判定面として使います。
 
 各frameでは`PhysicsSpace.step(deltaMs)`が実時間をfixed stepへ分配し、各fixed stepで重力積分、damping、姿勢積分、予測AABB、候補生成、Box/Plane接触、local impulse solver、position correction、sleep判定を実行します。solverが更新した`PhysicsNode`は通常の`WebgApp` scene描画で表示されるため、GPU BodyStateをvertex shaderから直接読むCompute版とは描画状態の受け渡しが異なります。
 

@@ -364,17 +364,6 @@ Headless tests verify CPU-side behavior. Launch the example in a browser to veri
 
 Keep frequent controls in a HUD or fixed buttons and collect infrequent effect settings in `CommandPalette`.
 
-## Prioritize Sources by Purpose
-
-1. Use the API catalog for API names and owning classes.
-2. Use the chapter for context, role, rationale, and constraints.
-3. Use a sample README for purpose and application integration.
-4. Use `headless_tests` for behavior that can be checked automatically.
-5. Use `unittest` to inspect display, interaction, real GPU use, and browser APIs.
-6. Use current `webg` source for final public API, error, and resource-management details.
-
-Headless checks cover CPU-side behavior; browser checks cover WebGPU display and interaction. Combine them for boundary values, exceptions, and post-disposal state because each verifies different behavior.
-
 ## Keep API Layers Consistent
 
 Choose one owner for resource creation, resizing, updates, and disposal. For an application driven by a scene definition, consider `WebgSceneApp`. For direct rendering control, consider `WebgApp`, `SmoothShader`, and `ComputeEffectPipeline`. Keep the frame processing of an existing `WebgApp`, and maintain the resource ownership convention when using raw WebGPU or individual passes. Report incomplete input through an exception that names the property and expected format.

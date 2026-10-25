@@ -1,8 +1,8 @@
 // ---------------------------------------------
-// samples/mmodeler/ModelerPrimitiveFactory.js  2026/06/02
+// samples/mmodeler/ModelerPrimitiveFactory.js  2026/10/25
 //   Editable primitive geometry factory for mmodeler.
 //   mmodeler は頂点選択、face 選択、loop cut、subdivision などの編集操作を行うため、
-//   webg core の描画用 Primitive ではなく、編集可能な vertices / faces 構造を直接生成する。
+//   編集操作に使う vertices / faces 構造を直接生成する
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // ---------------------------------------------
@@ -11,7 +11,7 @@ import { readVec3 } from "./math3d.js";
 export const VALID_PRIMITIVE_SEGMENTS = Object.freeze([3, 4, 8, 12, 16, 24, 32]);
 
 // primitive の分割数を検証する
-// UI 側の選択肢と生成側の前提を一致させ、意図しない値で壊れた mesh を作らないようにする
+// UIの選択肢と形状生成の入力条件をそろえ、入力値を検証してからmeshを作る
 export function readPrimitiveSegments(value) {
   const segments = Number(value);
   if (!VALID_PRIMITIVE_SEGMENTS.includes(segments)) {
@@ -23,7 +23,7 @@ export function readPrimitiveSegments(value) {
 // primitive 追加で使う頂点配列と face 配列を作る
 // 既存 object を置き換えず、1 primitive を 1 object として scene へ足すための local geometry を返す
 // primitive の local origin は形状の中心に置き、object origin と一致させる
-// ここで返す face loop は外向きの面順を正とし、追加後に原点基準の自動反転を掛けない
+// face loop は外向きの面順で生成し、その向きを描画まで保持する
 // face loop の値は vertices 配列を直接指す 0-based index とする
 export function makePrimitiveGeometry(kind, options = {}) {
   const normalized = String(kind ?? "").trim().toLowerCase();

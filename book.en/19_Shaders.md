@@ -69,10 +69,12 @@ Chapter 7 introduces `SmoothShader` as the standard shader most applications sel
 With a texture enabled and `color[3]` set to 1, the conceptual color sequence is:
 
 ```text
-base = color * texture
-adjusted = base * multiplyColor + addColor
+base = mix(color.rgb, texture.rgb, color.w)
+adjusted = base * multiplyColor.rgb + addColor.rgb
 lit = lighting(adjusted)
 ```
+
+This conceptual formula follows the color handoff. `color.w` is the texture blend amount described in Chapter 7; `alpha` controls drawing transparency. The shader calculates diffuse and specular reflection as separate terms.
 
 `use_texture` and `texture` select whether to use a base texture and which texture to sample.
 
@@ -108,11 +110,11 @@ shape.setMaterial("smooth-shader", {
 
 The flag changes the normal calculation at draw time without modifying mesh vertices. Compare smooth shading and visible flat faces on the same geometry.
 
-## Compare the Phong Shaders Incrementally
+## Compare Phong-Family Lighting and Feature Differences
 
 Comparing the four Phong shaders in stages makes their structure clear. `NormPhong` adds normal mapping to `Phong`; `BonePhong` adds skinning; `BoneNormPhong` combines both.
 
-The Phong shading model approximates lighting by calculating three terms and adding them together: ambient, diffuse, and specular light.
+The Phong-family shaders in this section calculate lighting as three terms and add them together: ambient, diffuse, and specular light. PBR from Chapter 30 onward uses a separate lighting calculation that evaluates material and light reflection with models such as GGX.
 
 ### Ambient Light
 

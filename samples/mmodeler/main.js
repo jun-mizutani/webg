@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// samples/mmodeler/main.js  2026/10/10
+// samples/mmodeler/main.js  2026/10/25
 //   mmodeler sample
 //   Sections:
 //   - webg app subclasses and shaders
@@ -78,8 +78,8 @@ class ModelerSmoothShader extends SmoothShader {
 }
 
 class ModelerWebgApp extends WebgApp {
-  // mmodeler の透視投影だけ、編集対象に寄せた depth range を使う。
-  // 正射影は専用の range を使い、projection mode を切り替えても編集対象の見え方を保つ。
+  // mmodeler の透視投影だけ、編集対象に寄せた depth range を使う
+  // 正射影は専用の range を使い、projection mode を切り替えても編集対象の見え方を保つ
   updateProjection(viewAngle = this.viewAngle) {
     const proj = new Matrix();
     const vfov = this.screen.getRecommendedFov(viewAngle);
@@ -96,8 +96,8 @@ class ModelerWebgApp extends WebgApp {
     return proj;
   }
 
-  // webg コアの WebgApp は透視投影を標準入口にしている。
-  // mmodeler ではコアを変更せず、サンプル専用 subclass で正射影行列だけを追加する。
+  // webg コアの WebgApp は透視投影を標準入口にしている
+  // mmodeler専用の派生クラスで正射影行列を追加し、コアの共通機能と組み合わせる
   updateOrthographicProjection(viewHeight) {
     if (!Number.isFinite(viewHeight) || viewHeight <= 0.0) {
       throw new Error(`ModelerWebgApp.updateOrthographicProjection requires positive viewHeight: ${viewHeight}`);
@@ -127,7 +127,7 @@ class ModelerWebgApp extends WebgApp {
 class SelectedFaceOverlayShader extends ModelerSmoothShader {
   // インスタンス生成時に renderer や shader が使う状態を初期化する
   constructor(gpu) {
-    // 選択面は通常 mesh の後に重ねるため、depth buffer を更新しない
+    // 選択面を通常meshの後に重ね、depth bufferの既存値を保つ
     // Camera Reverse-Zで同一深度の面を通すためgreater-equal比較を使用する
     // 通常 mesh は裏面確認のため両面描画するが、選択面 overlay は背面まで色を出すと
     // 反対側の face が選択されているように見えるため、overlay だけ back-face culling を有効にする
@@ -138,7 +138,7 @@ class SelectedFaceOverlayShader extends ModelerSmoothShader {
     });
     // world 座標の頂点を動かすと選択面が剥がれて見えるため、vertex shader の
     // clip-space z だけをごく小さく手前へ寄せるw 比例にすることで透視除算後の
-    // bias が距離に対して極端に変わらないようにする
+    // bias が透視除算後もほぼ一定になるようにする
     this.wgslSrc = this.wgslSrc.replace(
       "output.position = u.projMatrix * pos4;",
       `output.position = u.projMatrix * pos4;\n        output.position.z = min(output.position.w, output.position.z + ${SELECTED_FACE_Z_BIAS_PERSPECTIVE.toFixed(8)} * output.position.w);`
@@ -457,7 +457,7 @@ function getFullFrameFocalLengthMm() {
   return FULL_FRAME_SENSOR_HEIGHT_MM / (2.0 * tangent);
 }
 
-// HUD / status / diagnostics には視野角の度数ではなく、
+// HUD / status / diagnostics には、
 // フルサイズ換算で何 mm 相当の見え方かを表示する
 function getFocalLengthLabel() {
   const focalLengthMm = getFullFrameFocalLengthMm();
@@ -550,7 +550,7 @@ function markMarkerOverlayDirty() {
   markerOverlayDirty = true;
 }
 
-// edge overlay の色や alpha だけが変わったとき、line-list geometry は再計算せず色付き buffer だけ作り直す
+// 色やalphaの変更時はline-list geometryを再利用し、色付きbufferだけを更新する
 function markEdgeOverlayUploadDirty() {
   overlayEdgeUploadDirty = true;
 }
@@ -822,7 +822,7 @@ function installModelerKeyBridge() {
       app.input.release(panModifierKey);
     }
   };
-  // window focus を失った時に camera key state が押しっぱなしで残らないよう解除する
+  // window focus を失った時に camera key state を解除し、キーを離した状態へ戻す
   const onBlur = () => {
     cameraModifier.shift = false;
     for (const key of bridgedKeys) {
@@ -941,7 +941,7 @@ function getMobileRibbonActionLabel(action) {
 }
 
 // command palette は未選択状態でも開けるため、選択が前提の command だけを個別に無効化する
-// long press 自体では hit した polygon / vertex を選択せず、利用者が作った選択状態を保つ
+// long pressでは現在の選択状態を保持し、操作を選ぶUIを開く
 function hasMobileSelectionForAction(action) {
   if (getRenderableEditorMode() === EDITOR_MODE_OBJECT) {
     return editor.selectedObjectIds.size > 0;
@@ -1214,7 +1214,7 @@ function closeObjectInfoOverlay() {
   focusModelerCanvas();
 }
 
-// iPhone Safari では touchstart / touchend の preventDefault により click が発火しない場合がある
+// iPhone Safariではtouchstart / touchendの既定動作を抑止すると、clickも抑止される場合がある
 // coordinate overlay の操作部品だけは Safari guard の対象外にし、button は touchend / pointerup でも実行する
 function isCoordinateOverlayControl(target) {
   const element = target?.closest
@@ -1308,7 +1308,7 @@ function applyPaletteTransformAxisConstraint() {
 
 // mobile の短い tap を記録する
 // 次の pointerdown が近い時刻・近い座標・同じ pointerType なら double tap 候補として扱う
-// 2 回目 pointerdown の段階で通常 click tracking を始めないための基準値として使う
+// 2 回目の pointerdown を double tap として扱うための基準値にする
 function rememberMobileCanvasTap(ev) {
   mobileInput.rememberCanvasTap(ev);
 }
@@ -1859,7 +1859,7 @@ function pushUndo(label) {
 }
 
 // transform preview は開始時に undo を 1 件積み、失敗・cancel・無変更確定ではその 1 件だけを戻す
-// undo stack の深さも transaction に含め、別の履歴を誤って取り除かないよう境界を明示する
+// undo stack の深さを transaction に保存し、取り消す範囲を開始時点までに限定する
 function beginTransformTransaction(label) {
   const startSnapshot = makeSnapshot();
   const wasDirty = editor.dirty;
@@ -1882,7 +1882,7 @@ function restoreTransformStartSnapshot(transaction) {
 }
 
 // transform 開始時に積んだ undo entry と dirty state を transaction 境界まで戻す
-// 変形開始後に失敗した場合や、preview だけで確定しなかった場合に履歴を汚さないための処理
+// 失敗や preview の cancel 時に、編集開始前の履歴と保存状態へ戻す
 function rollbackTransformTransaction(transaction) {
   if (!transaction) {
     return;
@@ -1964,7 +1964,7 @@ function getCameraInfoForOverlay() {
 }
 
 // 座標 overlay の input へ現在の vertex position を反映する
-// 表示用の丸めは使わず、入力欄には編集対象の実数値をそのまま入れる
+// 入力欄には編集対象の実数値をそのまま設定する
 function setCoordinateOverlayValues(vertex) {
   coordinateOverlayMode = "coordinate";
   const labels = ["X", "Y", "Z"];
@@ -2028,7 +2028,7 @@ function setBrushOverlayValues() {
 }
 
 // 座標 overlay の入力欄を無効にする
-// 複数選択時に誤って一部の vertex だけを書き換えないよう、表示だけに切り替える
+// 複数選択時は座標の表示へ切り替え、選択した vertex の現在値を保つ
 function disableCoordinateOverlayFields() {
   for (const field of ui.coordinateOverlayFields) {
     field.value = "";
@@ -2037,7 +2037,7 @@ function disableCoordinateOverlayFields() {
 }
 
 // coordinate overlay の入力値を単一選択 vertex へ反映する
-// 不正な数値は readFiniteNumber() が例外にし、message に理由を出して geometry は変更しない
+// readFiniteNumber()で数値を検証し、不正値では理由をmessageへ表示して現在のgeometryを保つ
 function applyCoordinateOverlayInput() {
   if (coordinateOverlayMode === "brush") {
     applyBrushOverlayInput();
@@ -2411,7 +2411,7 @@ function buildModelAssetFromEditor() {
 }
 
 // 選択 face だけの overlay geometry を作る
-// 選択状態が mesh material 全体へ混ざらないよう、選択面は別 Shape として重ねる
+// 選択面を別 Shape として重ね、mesh 本体と選択表示の材質を個別に管理する
 function buildSelectedFaceAsset() {
   const selectedFaces = editModeController.getSelectedFaceObjects();
   if (selectedFaces.length === 0) {
@@ -2428,7 +2428,7 @@ function buildSelectedFaceAsset() {
         throw new Error(`selected face ${face.id} references missing vertex ${vertexId}`);
       }
       // selected face は通常 mesh の後、edge / marker overlay の前に描く
-      // 別 geometry として重ねるだけなので、world-space で法線方向へ浮かせない
+      // 元の mesh と同じ world-space 位置へ、選択表示用の geometry を重ねる
       // 大きな位置 offset は薄い面や斜め視点で「剥がれた別ポリゴン」に見えるため避ける
       const p = vertex.position;
       positions.push(p[0], p[1], p[2]);
@@ -2490,7 +2490,7 @@ function rebuildSelectedFaceShape() {
   });
 }
 
-// 旧 3D marker node を使わないため marker root を空に保つ
+// marker の再構築を renderer へ依頼し、marker root の構成をそろえる
 function rebuildMarkers() {
   modelerRenderer.rebuildMarkers();
 }
@@ -2502,13 +2502,13 @@ function rebuildScene() {
   rebuildMeshShape();
   // Edit Mode の選択 face overlay Shape を再構築する
   rebuildSelectedFaceShape();
-  // 3D marker nodeを使わず、marker rootを空に保つ
+  // marker rootを空に保ち、頂点markerは画面上のoverlayへ描く
   rebuildMarkers();
   // editor / camera / diagnostics の現在状態を DOM status と HUD へ反映する
   updateStatus();
 }
 
-// 頂点・面・object geometry が変わらない選択操作では mesh 本体を作り直さない
+// geometry を保つ選択操作では、生成済みの mesh 本体を再利用する
 // 多頂点 model で single tap selection の応答を保つため、選択 face / marker / edge overlay だけ更新する
 function refreshSelectionVisuals() {
   markEditOverlayVisualDirty();
@@ -2554,7 +2554,7 @@ function matrixKey(matrix, precision = 100000) {
 // marker overlay の再投影が必要か判定する camera key を作る
 function makeMarkerOverlayCameraKey(viewProjection, canvas) {
   // marker は screen-space quad なので、camera/projection/canvas size が同じなら
-  // 静止中に全頂点を再投影する必要はない
+  // 計算済みの投影位置を再利用する
   return [
     canvas.width,
     canvas.height,
@@ -2803,7 +2803,7 @@ function makeGuideOverlayLines({ includeBaseGuides = true, includeEditPreviews =
 }
 
 // 床 grid とワールド軸を line-list overlay として描く
-// X=赤、Y=青、Z=緑。補助線なので Shape の wireframe ではなく専用線描画を使う。
+// X=赤、Y=青、Z=緑の補助線を、専用の線描画で表示する
 function drawGuideOverlayPass() {
   const viewState = modelerRenderer.makeOverlayViewProjection();
   modelerRenderer.drawGuideOverlayLines({
@@ -2818,7 +2818,7 @@ function drawGuideOverlayPass() {
 }
 
 // loop cut / Chain Select などの編集 preview は edit edge overlay の後に描く
-// Chain Select は既存 edge と完全に重なるため、黒い edit edge に隠れない描画順にする
+// Chain Select を黒い edit edge の後に描き、選択候補が見える順序へそろえる
 function drawEditPreviewOverlayPass() {
   const viewState = modelerRenderer.makeOverlayViewProjection();
   modelerRenderer.drawGuideOverlayLines({
@@ -2832,7 +2832,7 @@ function drawEditPreviewOverlayPass() {
   });
 }
 
-// 旧 grid shape が残っている場合だけ取り除く。現在の grid / axis は line-list overlay で描く。
+// 旧 grid shape が残っている場合だけ取り除く。現在の grid / axis は line-list overlay で描く
 function buildGrid() {
   modelerRenderer.clearGridRoot();
 }
@@ -3158,14 +3158,10 @@ function replaceObjectsAndActivate(objects, activeObjectId, {
   selectedObjectIds = [activeObjectId],
   mode = EDITOR_MODE_OBJECT
 } = {}) {
-  // import / new scene のように editor.objects 全体を差し替える場面では、
-  // 差し替え前の activeObjectId が新しい object id と偶然一致することがある
-  // その状態で activateObject() を直接呼ぶと、activateObject() 冒頭の
-  // commitActiveObject() が古い edit buffer を新しい object へ
-  // 書き戻してしまうhand.glb を読み込んでも cube が残って見えた原因がこれである
-  //
-  // ここでは一度 activeObjectId を null にして、古い編集バッファを commit しない
-  // 状態を明示的に作ってから新しい object を activate する
+  // 差替え先の object 一覧と active ID を検証し、位置・回転・scale を正規化する
+  // 次に編集中の session を破棄し、新しい一覧と選択状態を ModelerScene へ渡す
+  // ModelerScene が以前の active 参照を初期化してから新しい object を選ぶため、
+  // import 前後で ID が同じ場合も、新しく読み込んだ編集データを基準に操作を始められる
   if (!Array.isArray(objects) || objects.length === 0) {
     throw new Error("replaceObjectsAndActivate requires at least one object");
   }
@@ -3404,7 +3400,7 @@ function invertSelectionForCurrentMode() {
 }
 
 // X<0 側の要素を現在 mode / tool に合わせて選択する
-// X mirror 編集で左側だけをまとめて選びたい場面を想定し、自動補正せず X 座標の符号だけで判定する
+// X座標の符号で左右を判定し、mirror編集で片側の頂点をまとめて選べるようにする
 function selectXNegativeForCurrentMode() {
   transformController.cancelTransformMode();
   cancelLoopCutPreview();
@@ -3464,7 +3460,7 @@ function cancelLoopCutPreview(message = "") {
 }
 
 // preview 中の pointer 位置から、選択 face のどの辺が最も近いかを求める
-// 画面上の距離で選ぶことで、透視投影や正射影の違いを気にせず直感的に切り替えられる
+// 画面上の距離で対象を選び、透視投影と正射影で同じ操作感を保つ
 function updateLoopCutPreviewFromPointer(clientX, clientY) {
   const loopCutPreview = editModeController.getLoopCutPreview();
   if (!loopCutPreview.active) {
@@ -3495,7 +3491,7 @@ function updateLoopCutPreviewFromPointer(clientX, clientY) {
 }
 
 // Chain Select preview を終了する
-// preview 中は通常の tap selection を行わないため、確定または cancel の入口を明示しておく
+// preview の操作を確定と cancel へ割り当て、それぞれの入口から通常の選択操作へ戻す
 function cancelChainSelectPreview(message = "") {
   const canceled = editModeController.cancelChainSelectPreview();
   if (!canceled) {
@@ -3508,7 +3504,7 @@ function cancelChainSelectPreview(message = "") {
 }
 
 // Chain Select の方向候補を screen 座標へ投影し、pointer に近い方向を preview として選ぶ
-// seed vertex は edit session 側の頂点を使い、active object 側の古い mesh を参照しない
+// seed vertexはedit sessionの頂点を参照し、編集中の座標で選択範囲を求める
 function updateChainSelectPreviewFromPointer(clientX, clientY) {
   const preview = editModeController.getChainSelectPreview();
   if (!preview.active) {
@@ -3566,7 +3562,7 @@ function isAdditiveSelectionEvent(ev) {
 
 // 左ドラッグ矩形選択は modifier なしの左ドラッグだけで開始する
 // Option + 左ドラッグは macOS 向け orbit fallback、Ctrl + 左ドラッグは drag zoom fallback、
-// Shift + 左ドラッグは fallback PAN へ使うため、選択矩形としては扱わない
+// Shift + 左ドラッグを fallback PAN へ割り当てる
 function isPlainLeftDragSelectionEvent(ev) {
   return ev.button === 0
     && ev.shiftKey !== true
@@ -3818,7 +3814,7 @@ function handleCanvasClick(ev) {
 
 // 左クリック / 矩形選択 tracking 状態を初期化する
 // mobile の box select preview 待ちでは、pointercancel や tap confirm の微小 move で
-// 確認用の矩形が消えないよう、session が残っている間は preview 表示を保持する
+// session が続く間は preview の矩形表示を保持する
 function resetCanvasClick({ forceHidePreview = false } = {}) {
   canvasClick.active = false;
   canvasClick.pointerId = null;
@@ -4021,12 +4017,12 @@ function handleCanvasPointerDown(ev) {
     updateSculptPreviewFromPointer(ev.clientX, ev.clientY);
   }
   if (isMobileCanvasDoubleTapCandidate(ev)) {
-    // empty/object の判定が重い場合でも、1 回目 tap の選択 timer が先に走らないよう先に破棄する
+    // 保留中の single tap 選択 timer を破棄してから、empty / object を判定する
     cancelPendingMobileCanvasTap();
   }
   updateLoopCutPreviewFromPointer(ev.clientX, ev.clientY);
   updateChainSelectPreviewFromPointer(ev.clientX, ev.clientY);
-  // 編集用の pick は pointerdown では実行しない
+  // 編集用のpickは、pointerupで操作の移動量を確認してから実行する
   // pointerdown の時点で scene を再生成すると、短いクリックと選択後の drag 操作を区別しにくい
   // 編集操作は左クリックの pointerup で確定し、中ボタン camera 操作とは入力ボタンで分ける
   canvasClick.active = true;
@@ -4109,7 +4105,7 @@ function handleCanvasPointerUp(ev) {
   if (moveDistance > 4.0) {
     if (allowRectangle && !(getRenderableEditorMode() === EDITOR_MODE_EDIT && getRenderableEditorTool() === TOOL_ADD_VERTEX)) {
       if (IS_MOBILE_PROFILE && mobileInput.boxSelectArmed) {
-        // mobile では pointerup を確定にせず、指で隠れていた終点を確認できる preview として保持する
+        // mobileのpointerupではpreviewを保持し、指を離した後に終点を確認できるようにする
         boxSelectSession?.holdPreview(dragRect, additive);
       } else {
         // desktop では drag 終了時点で矩形内の object / vertex / face を選択する
@@ -4139,7 +4135,7 @@ function handleCanvasPointerUp(ev) {
   if (mobileInput.boxSelectArmed) {
     // empty double tap 直後に pointer を離しただけなら、box select 準備を維持する
     // preview 作成後の短い tap は confirmBoxSelectPreview() で確定済みなので、
-    // ここではまだ矩形が存在しない準備状態だけを維持する
+    // 矩形選択の準備状態を保ち、次のdragによる範囲指定を待つ
     setMessage("box select armed: drag to add selection");
     ev.preventDefault();
     return;
@@ -4249,7 +4245,7 @@ function installKeyboardHandlers() {
     else if (key === "escape") {
       // edit selection の vertex / face を空にする
       editModeController.clearSelection();
-      // 選択だけの変更なので mesh 本体は再生成せず overlay だけ更新する
+      // 選択の変更をoverlayへ反映し、mesh本体は既存の形状を保つ
       refreshSelectionVisuals();
       // 最後のユーザー向け message を保存し status を更新する
       setMessage("selection cleared");
@@ -4467,9 +4463,8 @@ async function loadSelectedModelFile() {
   try {
     await loadModelFile(file);
   } finally {
-    // embedded_glb_viewer と同じく value を戻し、同じ GLB を再選択した場合も
-    // change event が発火するようにするこれは失敗後の再試行を確実にするための
-    // UI 状態リセットであり、ロード失敗を隠す fallback ではない
+    // file input の選択を空へ戻し、同じ GLB を選び直したときも change event を発生させる
+    // 読込み成功後の再選択と、失敗後の再試行を同じ操作で行えるようにする
     ui.fileInput.value = "";
   }
 }
@@ -4814,8 +4809,8 @@ async function start() {
     projectionFar: PERSPECTIVE_PROJECTION_FAR,
     messageFontTexture: "../../webg/font512.png",
     light: {
-      // mmodeler は形状確認を優先するため、光源は world 固定ではなく視点上方に固定する。
-      // 裏側へ回り込んでも camera 側から陰影が入り、Object Mode の立体感を保てる。
+      // 形状を確認しやすいよう、光源を視点の上方へ固定する
+      // 裏側へ回り込んでも camera 側から陰影が入り、Object Mode の立体感を保てる
       mode: "eye-fixed",
       position: [30.0, 80.0, 120.0, 1.0],
       type: 1.0
@@ -4843,9 +4838,9 @@ async function start() {
     modelerImportExport,
     material: MATERIAL
   });
-  // iPhone Safari では file picker 復帰後に document.hasFocus() が false のまま残り、
-  // ondemand 描画の requestRender() が canvas frame を再予約できない場合がある
-  // mmodeler は公開済み webg core の挙動を変えず、この sample だけ page visibility を pause 根拠にする
+  // iPhone Safari では file picker 復帰後に document.hasFocus() が false を保つ場合がある
+  // この sample の ondemand 描画は page visibility を基準に休止を判定し、
+  // file picker から表示中のページへ戻った時点で frame を再予約できるようにする
   app.shouldAutoPauseFrameLoop = function shouldAutoPauseFrameLoopForModeler() {
     if (this.renderMode === "continuous") {
       return false;
@@ -5118,7 +5113,7 @@ async function start() {
       normalizeOrbitPitchForModeler();
       if (viewController.projectionMode === PROJECTION_MODE_ORTHOGRAPHIC) {
         // Orthographic では orbit distance を表示スケールとして使うため、
-        // wheel / drag zoom 後の距離を毎 frame projection に反映する。
+        // wheel / drag zoom 後の距離を毎 frame projection に反映する
         applyModelerProjection({
           updateStatus: false
         });

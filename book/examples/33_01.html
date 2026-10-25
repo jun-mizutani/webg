@@ -1,5 +1,5 @@
 <!doctype html>
-<!-- book/examples/33_01.html 2026/10/04 -->
+<!-- book/examples/33_01.html 2026/10/25 -->
 <html lang="ja">
 <head>
   <meta charset="UTF-8" />
@@ -13,10 +13,10 @@
     <h2>33_01 PBR統合フロー</h2>
     <div class="section-card">
       <p>この例は、<code>WebgApp</code>で構築した一つのシーンを<code>ComputeEffectPipeline</code>へ渡し、物理ベースレンダリング（Physically-Based Rendering：PBR）から最終表示までを連続して処理します。Shadow、Screen-Space Ambient Occlusion（SSAO）、Screen-Space Reflection（SSR）、透明・屈折、Fog、Bloom、Tone Mapping、Edge、Vignetteを同じフレームの処理として確認できます</p>
-      <p>PBRの見え方はマテリアル値だけでは決まりません。この例では、環境から届く拡散光を表すirradiance、roughnessごとに事前積分した鏡面反射、視線と表面の関係を補正するBRDF LUT、方向光と二つの点光源を、GGXに基づく同じ反射モデルへ接続します。コードだけで実行できるように小型の手続き環境データを使いますが、radiance、irradiance、prefiltered specular、BRDF LUTの役割はHDR環境マップを使う場合と同じです</p>
+      <p>PBRの見え方は、マテリアル、直接光、環境光、露出の組み合わせで決まります。この例では、環境から届く拡散光を表すirradiance、roughnessごとに事前積分した鏡面反射、視線と表面の関係を補正するBRDF LUT、方向光と二つの点光源を、GGXに基づく同じ反射モデルへ接続します。コードだけで実行できるように小型の手続き環境データを使いますが、radiance、irradiance、prefiltered specular、BRDF LUTの役割はHDR環境マップを使う場合と同じです</p>
       <p>シーンには、金属球、ピンク系の陶製タイルを貼った立方体、1.0を超える線形HDR値を持つ発光柱、屈折と吸収を行うガラス球を配置しています。金属球ではbase colorが鏡面反射色へ影響し、立方体では陶製タイルのColor、目地、Normal、roughnessによる非金属表面を確認できます。床、壁、立方体は<code>ProceduralMaterials</code>でColor、Height、Normalを生成し、<code>Primitive.mapRealCuboid()</code>の実寸UVを使って模様の大きさを決めています</p>
-      <p>不透明物は最初にPBR G-bufferへ表面情報を保存し、Deferred Lightingで直接光とImage-Based Lighting（IBL）を評価します。SSRはIBLへ反射色を単純加算せず、画面内で交差を確認できた範囲だけ鏡面IBLを画面内反射へ置き換えます。そのため、SSRが見つけられない画面外の情報はIBLに残り、両者を一つの鏡面反射として扱えます</p>
-      <p>ガラス球は不透明物とは別のPBR Forward描画で処理します。表面反射には不透明物と同じBRDFを使い、透過光はentry面で物体内へ屈折し、exit面で空気中へ戻ります。物体内を通った距離にはBeer–Lambert則による色吸収を適用し、屈折後の背景へ合成します。背景には環境画像を直接表示せず、青みがかったclear colorを使うため、IBLによる照明と画面背景を独立に確認できます</p>
+      <p>不透明物は最初にPBR G-bufferへ表面情報を保存し、Deferred Lightingで直接光とImage-Based Lighting（IBL）を評価します。SSRは、画面内で交差を確認できた範囲だけ鏡面IBLを画面内反射へ置き換えます。そのため、SSRが見つけられない画面外の情報はIBLに残り、両者を一つの鏡面反射として扱えます</p>
+      <p>ガラス球は不透明物とは別のPBR Forward描画で処理します。表面反射には不透明物と同じBRDFを使い、透過光はentry面で物体内へ屈折し、exit面で空気中へ戻ります。物体内を通った距離にはBeer–Lambert則による色吸収を適用し、屈折後の背景へ合成します。背景には青みがかったclear colorを使い、IBLによる照明と画面背景を独立に確認できます</p>
       <ol>
         <li><code>PbrEnvironment</code>へradiance、irradiance、prefiltered specular、BRDF LUTを用意し、IBLで参照できるGPUリソースにします</li>
         <li><code>ProceduralMaterials</code>で床、壁、立方体のColor、Height、Normalを生成し、実寸UVを持つ直方体へ適用します</li>
@@ -24,7 +24,7 @@
         <li><code>encode()</code>で直接光とIBL、SSAO、SSR、透明PBRとTransmission、Fog、Bloom、Tone Mapping、Edge、Vignetteの順にGPUコマンドを記録します</li>
         <li>Tone Mapping後の表示テクスチャを<code>FullscreenPass</code>でCanvasへ転送し、その後に文字やHUDが使う深度バッファを再開します</li>
       </ol>
-      <p>コード先頭の<code>EFFECTS</code>は、各効果の初期状態と<code>pipeline.encode()</code>へ渡す設定名を対応させています。すべての効果を有効にする必要があるという意味ではありません。S、A、R、T、F、B、E、Vキーで個別に切り替えると、Shadow、SSAO、SSR、Transmission、Fog、Bloom、Edge、Vignetteが最終画像へ加える変化を比較できます。PキーまたはSpaceキーはアニメーションだけを停止し、カメラはドラッグ、矢印キー、マウスホイールで操作できます</p>
+      <p>コード先頭の<code>EFFECTS</code>は、各効果の初期状態と<code>pipeline.encode()</code>へ渡す設定名を対応させています。使いたい効果を選び、個別に有効・無効を切り替えて比較します。S、A、R、T、F、B、E、Vキーで個別に切り替えると、Shadow、SSAO、SSR、Transmission、Fog、Bloom、Edge、Vignetteが最終画像へ加える変化を比較できます。PキーまたはSpaceキーはアニメーションだけを停止し、カメラはドラッグ、矢印キー、マウスホイールで操作できます</p>
       <p id="status" class="note">ドラッグまたは矢印キーで視点を回転できます</p>
     </div>
 

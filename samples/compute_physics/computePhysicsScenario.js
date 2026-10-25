@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// samples/compute_physics/computePhysicsScenario.js  2026/08/29
+// samples/compute_physics/computePhysicsScenario.js  2026/10/25
 //   Shared mixed-shape scenario for CPU and Compute comparison pages
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -59,7 +59,7 @@ const CAPSULE_COLORS = Object.freeze({
 });
 
 // indexから決定的な0以上1未満の値を作り、CPU版とCompute版で同じ揺らぎを使います
-// Math.randomを使わないため、reset後とbackend切替後も同じ初期配置を再現します
+// 座標に基づく決定的な値を使い、reset 後と backend 切替後も同じ初期配置を再現します
 function hash01(value) {
   const raw = Math.sin(value * 91.3458 + 17.123) * 47453.5453;
   return raw - Math.floor(raw);

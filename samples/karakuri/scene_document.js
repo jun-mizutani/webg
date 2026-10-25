@@ -1,5 +1,5 @@
 // ---------------------------------------------
-//  scene_document.js  2026/09/19
+//  scene_document.js  2026/10/25
 //   Karakuri SceneYAML validation, project conversion, and download formatting
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -284,7 +284,7 @@ export async function prepareKarakuriProceduralMaterials(app, manifest, cache = 
 }
 
 // ページ終了時にキャッシュしたProcedural Textureだけを解放します
-// preview／playerの再構築中はmanagerを維持し、同じGPUDevice上のpreset生成を繰り返しません
+// preview／playerの再構築中はmanagerを維持し、同じGPUDevice上の生成済みpresetを再利用します
 export function destroyKarakuriProceduralMaterialCache(cache) {
   if (cache === null || cache === undefined) return false;
   if (typeof cache !== "object" || Array.isArray(cache)) {

@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// rules.mjs  2026/10/04
+// rules.mjs  2026/10/25
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // ---------------------------------------------
@@ -122,7 +122,7 @@ export function damage(attacker, target) {
   return attacker.power + (higher ? 3 : 0);
 }
 
-// 生存チームを調べ、終了していなければnullを返す
+// 生存チームを調べ、勝敗が確定した場合は結果を、戦闘の継続中は null を返す
 export function outcome(units) {
   if (!units.some(unit => unit.team === "enemy" && unit.hp > 0)) return "victory";
   if (!units.some(unit => unit.team === "ally" && unit.hp > 0)) return "defeat";

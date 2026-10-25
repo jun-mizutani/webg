@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// samples/procedural_texture/ProceduralTiledSurface.js  2026/08/09
+// samples/procedural_texture/ProceduralTiledSurface.js  2026/10/25
 //   Reusable tiled Color/Height map generator and GPU texture uploader
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -18,7 +18,7 @@ const SURFACE_DETAIL_FIELD_LACUNARITY = 2.0;
 const SURFACE_DETAIL_FIELD_GAIN = 0.5;
 const SURFACE_DETAIL_OUTPUT_GAIN = 2.1;
 
-// 0から1の色channelを8bitへ変換し、範囲外値を自動補正せず生成側の誤りとして停止する
+// 0〜1の色channelを8bitへ変換し、範囲外の値は生成処理の入力エラーとして通知する
 function colorChannelToByte(value, label) {
   const channel = util.readFiniteNumber(value, label, { min: 0.0, max: 1.0 });
   return Math.round(channel * 255.0);
@@ -129,7 +129,7 @@ function smoothstep01(value) {
 }
 
 // Palette操作をまたいで再利用できるCPU scalar fieldを、件数制限付きLRUとして保持する
-// generator module全体のglobal cacheにせず、利用側がcacheの寿命と対象面を明示できるようにする
+// 利用側が生成したcacheへfieldを保持し、対象面と解放時期をその所有者が管理する
 class ProceduralTextureFieldCache {
   // 保持件数を正の整数で確定し、Mapの挿入順をLRU順として利用する
   constructor(maxEntries = 2) {
@@ -141,7 +141,7 @@ class ProceduralTextureFieldCache {
     this.entries = new Map();
   }
 
-  // keyが存在すれば末尾へ移して最新利用とし、呼び出し側が変更しないfieldを返す
+  // keyが存在すれば末尾へ移して最新利用とし、共有の読み取り用fieldを返す
   get(key) {
     if (typeof key !== "string" || key.length === 0) {
       throw new Error("ProceduralTextureFieldCache key must be a non-empty string");
@@ -302,7 +302,7 @@ class ProceduralTiledSurface {
   }
 
   // 各タイル面の周辺bucketだけを調べ、大小のモノトーンchipをscalar fieldへ事前生成する
-  // bucketごの属性はutil.jsの座標hashから決め、タイルの反復位置と呼び出し順序に依存しない
+  // bucketごとの属性はutil.jsの座標hashで決め、同じタイル座標から同じ値を得る
   buildTerrazzoPatternField(dimensions) {
     const spec = this.specification;
     const field = new Float32Array(dimensions.width * dimensions.height);
@@ -349,7 +349,7 @@ class ProceduralTiledSurface {
             const occupancy = util.uint32ToUnitFloat(baseWord);
             if (occupancy > 0.64) continue;
 
-            // 一つの32bit hashから用途別の固定値を再混合し、順番依存の乱数列を作らない
+            // 一つの 32bit hash を用途別に再混合し、用途ごとに同じ値を再現する
             const centerLong = bucketLong + 0.18 + util.uint32ToUnitFloat(
               util.hashUint32((baseWord ^ 0x43484c58) >>> 0)
             ) * 0.64;
@@ -384,7 +384,7 @@ class ProceduralTiledSurface {
           }
         }
 
-        // chip輪郭の最後15%を滑らかにし、低解像度でも過度なジャギーを出さない
+        // chip 輪郭の最後 15% を滑らかにして、低解像度でも連続した輪郭を作る
         if (selectedDistance < 1.0) {
           const coverage = 1.0 - smoothstep01((selectedDistance - 0.72) / 0.28);
           field[pixelIndex] = -0.10 + (selectedTone + 0.10) * coverage;
@@ -800,7 +800,7 @@ class ProceduralTiledSurface {
           patternContext
         );
 
-        // 石粒は色のfieldと非負Heightを分け、暗い石の色を負の高さへ流用しない。
+        // 石粒の色と非負Heightを別fieldで保持し、暗い石も底面から上向きの曲面として生成する
         let patternColor = patternValue * spec.pattern.colorAmount;
         let patternHeight = patternValue * spec.pattern.heightMeters;
         if (spec.pattern.mode === "pebbles") {
@@ -848,7 +848,7 @@ class ProceduralTiledSurface {
             shortLocal,
             dimensions.shortPixels - shortLocal
           );
-          // 目地幅0では部材境界の丸みも無効にし、見えない境界にHeightの帯を作らない
+          // 目地幅 0 では部材境界の丸みを無効にし、境界部分を平らに保つ
           const edgeBlend = dimensions.jointPixels === 0 || dimensions.edgeRoundPixels === 0
             ? 1.0
             : smoothstep01(edgeDistancePixels / dimensions.edgeRoundPixels);

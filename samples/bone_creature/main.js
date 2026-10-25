@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// samples/bone_creature/main.js  2026/10/10
+// samples/bone_creature/main.js  2026/10/25
 //   bone_creature sample
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -68,7 +68,7 @@ const rotateKeys = {
 };
 
 // ボーンの local rest pose を同じ手順で設定し、
-// tentacle 生成側が matrix の細部を都度書かなくて済むようにする
+// tentacle 生成側では位置を渡すだけで、rest pose の行列を設定できるようにする
 const setRest = (bone, x, y, z) => {
   const m = new Matrix();
   m.makeUnit();
@@ -124,7 +124,7 @@ const makePoseFromYAxis = (dir, pos) => {
 };
 
 // quaternion 経由の再計算を避けて回転行列をそのまま Node へ渡し、
-// 触手基底の向きが崩れないようにする
+// 計算した触手基底の向きを正確に保持する
 const setNodePoseExact = (node, dir, pos) => {
   const pose = makePoseFromYAxis(dir, pos);
   node.matrix.copyFrom(pose);
@@ -135,7 +135,7 @@ const setNodePoseExact = (node, dir, pos) => {
 };
 
 // quad ごとに向きを判定してから triangle 化し、
-// procedural mesh で裏返り面が混ざらないようにする
+// procedural mesh の各面を外向きにそろえる
 const addOrientedQuad = (shape, a, b, c, d) => {
   const pa = shape.positionArray;
   const ax = pa[a * 3];
@@ -170,7 +170,7 @@ const addOrientedQuad = (shape, a, b, c, d) => {
 };
 
 // ボーン可視化は軽量な補助 SmoothShader を使い、
-// debugBone の見え方が崩れない安全な経路を維持する
+// debugBone を補助表示用の同じ陰影で描く
 const createBoneShape = (gpu, shader, size = 0.22, color = [0.90, 0.75, 0.28, 1.0]) => {
   const boneShape = new Shape(gpu);
   boneShape.applyPrimitiveAsset(Primitive.debugBone(size, boneShape.getPrimitiveOptions()));

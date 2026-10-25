@@ -6,7 +6,7 @@ English | [日本語](README.md)
 
 ## Overview
 - This sample uses a WebGPU compute shader to update a grid-shaped cloth with a mass-spring model
-- Rather than adding a compute-specific API to the `webg` core library, it uses the WebGPU `device / queue / canvas context` initialized by `WebgApp` directly inside the sample
+- It uses the WebGPU `device / queue / canvas context` initialized by `WebgApp` to build the sample's compute processing
 - Cloth vertices are stored in a storage buffer, and the compute pass reads the previous frame's vertex positions and neighboring vertices, then writes the next frame's positions and velocities
 - Because the sample uses a ping-pong structure with separate `src` and `dst` buffers, it avoids conflicts where one invocation might overwrite a neighbor value while another vertex is still reading it
 - Structural spring forces alone allow the cloth to stretch too much, so a strain limit is added that pulls vertices back slightly when the distance to the up / down / left / right neighbors exceeds the allowed length
@@ -26,7 +26,7 @@ English | [日本語](README.md)
 - `WebgApp`: initializes `Screen`, diagnostics, and the input foundation together
 - `WebgApp` compute frame: `computeFrame: true` and the `onComputeFrame` handler skip standard scene drawing and control compute/render order
 - `Screen.resize()`: updates the actual canvas pixel size on viewport changes through the `Screen` held by `WebgApp`
-- `WebgApp.getGPU()`: entry point for building raw WebGPU pipelines on the sample side without changing the core API
+- `WebgApp.getGPU()`: provides the initialized GPU objects used to build raw WebGPU pipelines in the sample
 - `buildHelpPanelOptions() + showOverlayPanel()`: displays the operation guide and current state as a collapsible help panel
 - `InputController.installTouchControls()`: shows `1 / 2 / 3 / R / P / W` control buttons on both desktop and smartphones
 
@@ -76,9 +76,9 @@ English | [日本語](README.md)
 
 ## Implementation Details
 - The compute shader in `main.js` separates `srcState` as read-only and `dstState` as read-write
-- Spring calculations read up / down / left / right and diagonal neighbors, and if the distance becomes extremely short they contribute zero instead of being normalized
+- Spring calculations read up / down / left / right and diagonal neighbors, and treats extremely short distances as zero contribution before calculating a normalized direction
 - Gravity is added as acceleration independent of mass, while spring force, wind force, and velocity drag are divided by vertex mass to obtain acceleration
-- After correcting positions with the strain limit and the floor, velocity is recalculated from the difference between the corrected position and the previous substep position, so downward velocity from before the correction is not retained
+- After correcting positions with the strain limit and the floor, velocity is recalculated from the difference between the corrected position and the previous substep position, so the next substep starts from the corrected velocity
 - The render shader uses a cloth-vertex index passed as a vertex attribute and directly references vertex positions inside the storage buffer
 - `Flat / Smooth` share the same triangle stream. `Flat` sends the face normal created from the three deformed vertices as a constant value over the triangle with WGSL `@interpolate(flat)`, while `Smooth` interpolates vertex normals created from grid neighbors
 - The cloth color is fixed, and the motion and surface direction are read from the diffuse and specular highlights produced by the light at the upper right of the view

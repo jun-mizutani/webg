@@ -174,13 +174,13 @@ blockquote {
 <p><a href="index.en.html">English</a> | 日本語</p>
 <p><img src="./cube4.jpg" alt="cube4" /></p>
 <h2>概要</h2>
-<ul><li>webg ベースで作った 3D falling-block game です</li><li>6x6x10 の立体盤面へ polycube を落とし、一定以上埋まった layer を消しながら score を伸ばします</li><li>WebgApp を入口にし、Shape / Primitive で床・ブロック・層ごとのワイヤーフレーム壁を構築しています</li><li>camera は EyeRig の orbit 構成で、移動入力は camera yaw 基準で x / z 方向へ補正しています</li><li>開始前は自動落下せず、全ブロック種の回転デモを見ながら操作を確認できます</li><li>ゲーム中は HUD を score / level / layer の 1 行へ絞り、開始前と game over 時だけ操作ガイドを表示します</li><li>ghost 表示、next piece 表示、high score 保存、スクリーンショット、効果音、BGM を含む構成です</li><li>layer clear は1 層 36 マス中 29 マス以上で成立し、占有率に応じて得点が変わります</li></ul>
+<ul><li>webg ベースで作った 3D falling-block game です</li><li>6x6x10 の立体盤面へ polycube を落とし、一定以上埋まった layer を消しながら score を伸ばします</li><li>WebgApp を入口にし、Shape / Primitive で床・ブロック・層ごとのワイヤーフレーム壁を構築しています</li><li>camera は EyeRig の orbit 構成で、移動入力は camera yaw 基準で x / z 方向へ補正しています</li><li>開始前はブロックの高さを保ち、全ブロック種の回転デモを見ながら操作を確認できます</li><li>ゲーム中は HUD を score / level / layer の 1 行へ絞り、開始前と game over 時だけ操作ガイドを表示します</li><li>ghost 表示、next piece 表示、high score 保存、スクリーンショット、効果音、BGM を含む構成です</li><li>layer clear は1 層 36 マス中 29 マス以上で成立し、占有率に応じて得点が変わります</li></ul>
 <h2>実行方法</h2>
 <ul><li>実行ファイルは <a href="./cube4.html">./cube4.html</a> です</li><li>WebGPU に対応したブラウザで開き、必要に応じて help panel や HUD と合わせて確認してください</li></ul>
 <h2>使用している webg 機能</h2>
 <ul><li>WebgApp: Screen / Shader / Space / Input / Message / progress 保存の標準初期化</li><li>EyeRig(type=&quot;orbit&quot;): 盤面全体を見る orbit camera</li><li>Shape / Primitive: ブロック、床、台座、層ごとのワイヤーフレーム壁を生成</li><li>Shape.createInstance(): block 形状の shared resource を再利用し、slot ごとに色と材質だけを切り替える</li><li>Shape.setWireframe(true): 層壁をポリゴン辺ループの wireframe として表示</li><li>Message: status と guide の HUD 表示</li><li>GameAudioSynth: SE と BGM の再生</li><li>takeScreenshot(): 画面キャプチャ保存</li></ul>
 <h2>確認ポイント</h2>
-<ul><li>立体盤面の周囲に、各層を囲うワイヤーフレーム壁が見え、ブロックがどの高さにあるか把握しやすいことを確認します</li><li>矢印キー移動が camera yaw 基準で補正され、見ている向きに対して自然な左右前後移動になることを確認します</li><li>開始前は自動落下せず、move / rotate / drop のいずれかで game が始まることを確認します</li><li>ghost 表示が最終落下位置を示し、hard drop 後はその位置へ即座に固定されることを確認します</li><li>layer が 29 マス以上埋まると clear され、埋まり具合に応じて score が増えることを確認します</li><li>開始前デモで 8 種の polycube が個別速度で回転し、ゲーム開始後は非表示になることを確認します</li><li>score / level / layer の HUD、SE、BGM、high score 保存、スクリーンショットが連動して動くことを確認します</li></ul>
+<ul><li>立体盤面の周囲に、各層を囲うワイヤーフレーム壁が見え、ブロックがどの高さにあるか把握しやすいことを確認します</li><li>矢印キー移動が camera yaw 基準で補正され、見ている向きに対して自然な左右前後移動になることを確認します</li><li>開始前はブロックの高さを保ち、move / rotate / drop のいずれかで game が始まることを確認します</li><li>ghost 表示が最終落下位置を示し、hard drop 後はその位置へ即座に固定されることを確認します</li><li>layer が 29 マス以上埋まると clear され、埋まり具合に応じて score が増えることを確認します</li><li>開始前デモで 8 種の polycube が個別速度で回転し、ゲーム開始後は非表示になることを確認します</li><li>score / level / layer の HUD、SE、BGM、high score 保存、スクリーンショットが連動して動くことを確認します</li></ul>
 <p>形状と描画負荷の見方</p>
 <p>このサンプルは、多数の block を表示しながら Shape.createInstance() による mesh 共有の効果も確認できる構成です。diagnostics の vertexCount、triangleCount、nodeCount、shapeCount、meshCount を見ると、同じ見た目でも shape の作り方によって GPU へ渡す頂点数や mesh 数が大きく変わることが分かります。以下は block shape 構成ごとの代表値です。</p>
 <ul><li>bevel 1段</li></ul>

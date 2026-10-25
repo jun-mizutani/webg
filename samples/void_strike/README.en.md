@@ -27,7 +27,7 @@ Collision, scoring, and wave progression use a compact sample-local game update.
 
 After starting, the blue player craft and red enemies move in opposing directions, and Space fires two laser bolts at once. Hits produce sparks; destroying an enemy increases score and kill chain. Later waves add larger enemies that require multiple hits.
 
-Enemy fire reduces hull on contact. A brief shield blink prevents repeated damage during the same impact window. Holding Shift drains the boost meter and protects the ship from shots; the meter recovers gradually after boosting. PAUSE freezes combat and can resume it. The on-screen direction keys, FIRE, and BOOST provide the same controls on touch devices.
+Enemy fire reduces hull on contact. A brief shield blink preserves hull durability during the same impact window. Holding Shift drains the boost meter and protects the ship from shots; the meter recovers gradually after boosting. PAUSE freezes combat and can resume it. The on-screen direction keys, FIRE, and BOOST provide the same controls on touch devices.
 
 ## Reading the implementation
 

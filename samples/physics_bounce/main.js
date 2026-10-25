@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// samples/physics_bounce/main.js  2026/07/25
+// samples/physics_bounce/main.js  2026/10/25
 //   physics_bounce sample
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -145,7 +145,7 @@ const readBallCount = (win) => {
 };
 
 // 初期球群の配置を作る
-// 単純な縦積みではなく、横方向へばらした lane と落下高さの差で球同士の衝突を見やすくする
+// 横方向に分かれた lane と落下高さの差を設け、球同士の衝突を見やすくする
 const generateBallSpecs = (count) => {
   const specs = [];
   const columnsPerLayer = 20;

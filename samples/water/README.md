@@ -6,7 +6,7 @@
 
 ## 概要
 
-球・箱・斜面と石砂利の底へコースティクスを設定し、同じ波の水面を表示する小さな統合例です。`WaterBody`は水域・波・吸収・受光対象を保持し、`ComputeEffectPipeline.setWater()`がGPU資源と描画順を管理します。シェーダーの置換や描画関数の差し替えは不要です。
+球・箱・斜面と石砂利の底へコースティクスを設定し、同じ波の水面を表示する小さな統合例です。`WaterBody`は水域・波・吸収・受光対象を保持し、`ComputeEffectPipeline.setWater()`がGPU資源と描画順を管理します。`WaterBody`を標準のPBRパイプラインへ接続して表示します。
 
 ## 実行と操作
 
@@ -15,9 +15,9 @@ WebGPU対応ブラウザで[water.html](water.html)を開きます。リポジ�
 1. 「コースティクスを使う」と「水面を表示する」を個別にONにします。
 2. 受光対象のチェックを外し、その物体の集光だけが消えることを確認します。
 3. 「波を動かす」、球の高さ、品質を変更します。ドラッグで視点を回し、ホイールで拡大できます。
-4. 検証ボタンでGPU画像を比較します。描画中の自動readbackはありません。
+4. 検証ボタンを押した時点でGPU画像をreadbackし、比較します。
 
-初期状態は両方OFF、時刻1.5秒で停止です。水面を表示しなくても集光を使えます。青空は既存の`ProceduralEnvironment`で生成し、PBRの環境光と水面反射へ同じ前処理済み環境を渡しています。
+初期状態は両方OFF、時刻1.5秒で停止です。水面表示と集光を個別に切り替えられます。青空は既存の`ProceduralEnvironment`で生成し、PBRの環境光と水面反射へ同じ前処理済み環境を渡しています。
 
 ## 最小の接続
 
@@ -38,14 +38,14 @@ const water = new WaterBody({
 water.addReceiver(floorShape);
 water.addReceiver(objectNode, { children: true, strength: 0.7 });
 
-// 切替中はframe生成を止める。必要なGPU資源・shaderの準備完了を待つ。
+// 切替中はframe生成を止める。必要なGPU資源・shaderの準備完了を待つ
 await pipeline.setWater(water, {
   surfaceEnabled: true,
   causticsEnabled: true,
   quality: "low"
 });
 
-// frameごとに時刻だけ更新し、通常のrenderScene → encodeを使う。
+// frameごとに時刻だけ更新し、通常のrenderScene → encodeを使う
 water.setTime(timeMs / 1000);
 ```
 
@@ -54,11 +54,11 @@ water.setTime(timeMs / 1000);
 ## 変更、対象の解除、OFF
 
 ```js
-// 高さ・波・色を変更する場合は再接続不要。次のframeで反映する。
+// 高さ・波・色はsetOptions()で変更する。既存の接続を使い、次のframeで反映する
 water.setOptions({ waveMix: [0.4, 1, 0.3], speed: 0.8 });
 water.setOptions({ absorption: [0.07, 0.015, 0.07] }); // 緑系
 
-// Shapeの指定はNodeより優先。強度0でそのShapeだけ除外する。
+// Shapeの指定はNodeより優先。強度0でそのShapeだけ除外する
 water.addReceiver(objectShape, { strength: 0 });
 water.removeReceiver(objectNode);
 
@@ -77,7 +77,7 @@ await pipeline.setWater(null); // 全専用GPU資源と追加照明variantを解
 
 ## 描画への接続
 
-集光は受光面のPBR直接光の拡散成分へ接続します。直接光の鏡面、IBL、局所光、emissiveは既存の経路を保ちます。実際の波の高さで水中を判定するため、球の頂部で固定高さによる輪状の切れ目を作りません。
+集光は受光面のPBR直接光の拡散成分へ接続します。直接光の鏡面、IBL、局所光、emissiveは既存の経路を保ちます。実際の波の高さで水中を判定し、球の頂部にも波の形に沿って集光を反映します。
 
 水面は画面内の深度を使う屈折、IORによるFresnel、RGBのBeer–Lambert吸収、現在のdirectional lightによるGGX鏡面、PBR環境の反射を線形HDRで合成します。水面の手前にある不透明物は、元の表示を保ちます。
 
@@ -87,13 +87,13 @@ Alpha Blendの面とCompute粒子がある場合は水面深度を先に求め�
 
 `low`は512²光線・256²照度画像、`high`は1024²光線・512²照度画像です。水面の屈折探索は両品質で48ステップです。停止中の照度画像は再利用し、動く受光物体のmaskだけを更新します。照度生成とmask描画は受光対象を登録した場合に実行します。
 
-両方OFFでは水用のbuffer・texture・QuerySet・描画パスを保持せず、通常の17bindingの照明経路を使います。水面のみONでは水面資源を、集光のみONでは集光資源を用意します。ON時の画面寸法に比例する資源は、リサイズ時に更新します。
+両方OFFでは水用のbuffer・texture・QuerySet・描画パスを解放し、通常の17bindingの照明経路へ戻ります。水面のみONでは水面資源を、集光のみONでは集光資源を用意します。ON時の画面寸法に比例する資源は、リサイズ時に更新します。
 
 `PbrRenderer.createFrameCallbacks()`では計測結果を次のframeで回収します。独自loopでは`queue.submit()`の直後に`pipeline.afterGpuSubmit()`または`renderer.afterGpuSubmit()`を呼びます。
 
-`getWaterStats()`は実行したdispatch/pass数とGPU timestampの非同期測定値を返します。timestamp非対応時は`timing.timestampSupported: false`です。計測区間は照度生成、水面compute、深度転写であり、受光mask・照明variant・透明物の描画を含む全体の追加時間ではありません。`ResourceLedger.js`はQuerySetの個数も追跡します。容量はtexture/bufferの論理容量で、ドライバのcacheや配置まで測る値ではありません。
+`getWaterStats()`は実行したdispatch/pass数とGPU timestampの非同期測定値を返します。timestamp非対応時は`timing.timestampSupported: false`です。計測区間は照度生成、水面compute、深度転写であり、受光mask・照明variant・透明物の描画を含む全frameの追加時間は、全体の計測値で別に比較します。`ResourceLedger.js`はQuerySetの個数も追跡します。容量はtexture/bufferへ要求した論理容量を表します。ドライバのcacheや実配置を含むメモリ使用量は、GPU側の診断ツールで確認します。
 
-有限の水平水域を上から見る用途に対応します。水中カメラ、水の側面、複数水域、画面外・物体の裏側の屈折、周囲の物体の鏡像は扱いません。水面交差を得られない画素や、屈折先を探せない画素には元の背景を使います。集光は垂直入射で基準面へ集めた照度を立体へ投影する近似であり、物体の各面へ厳密に光線を追跡する処理ではありません。水中の透明物のFrost・Transmission・Volume吸収を水と重ねた物理的な屈折は、このサンプルの対応範囲外です。
+有限の水平水域を上から見る用途に対応します。水中カメラ、水の側面、複数水域、画面外・物体の裏側の屈折、周囲の物体の鏡像は扱いません。水面交差を得られない画素や、屈折先を探せない画素には元の背景を使います。集光は、垂直入射の光が水平基準面へ作る照度を立体へ投影する近似です。物体の各面への厳密な光線追跡が必要な用途では、受光形状を使う別の追跡処理を用意します。水中の透明物のFrost・Transmission・Volume吸収を水と重ねた物理的な屈折は、このサンプルの対応範囲外です。
 
 ## 読む順序と確認箇所
 

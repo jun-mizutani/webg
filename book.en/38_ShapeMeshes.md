@@ -24,7 +24,7 @@ You can construct a Shape by combining vertex data and faces.
 
 `Shape` collects vertices, faces, normals, texture coordinates (UVs), and indices, then converts them into a mesh the GPU can draw. This chapter compares using supplied primitives with registering vertices and faces individually, then follows how `endShape()` finalizes editable data into render buffers.
 
-`Shape` bridges CPU-side mesh construction and GPU-side rendering. There are two main routes: a high-level route that loads a predefined form such as `Primitive.cube()`, and a low-level route that registers vertices and faces one at a time. Both finish through `endShape()`, converting CPU arrays to GPU-ready mesh data. The key is understanding how to assemble the mesh and when to move into the drawing phase.
+`Shape` finalizes its CPU-side construction data for the GPU with `endShape()`. The following sections compare two ways to reach that same finalization step.
 
 Vertex sharing is also a core mesh-design decision. Share vertices to create smooth curved surfaces; duplicate and separate vertices at corners to create sharp edges. With automatic normals, contributions from the faces meeting at a vertex are accumulated and normalized by `endShape()`, so vertex sharing directly affects shading. With manual normals, provide the completed normal for each vertex. Mesh construction designs both shape and how the surface is shaded.
 
@@ -32,7 +32,7 @@ Vertex sharing is also a core mesh-design decision. Share vertices to create smo
 
 `Shape` groups vertices, indices, normals, UVs, material slots, and a shader. From WebGPU's perspective, it is the data set used to create vertex and index buffers. Each triangle stores a material-slot index, allowing opaque and transparent surfaces to coexist in one Shape.
 
-`Shape` also connects geometry with materials and shaders. The focus here is mesh construction; Chapters 7 and later cover material and rendering details.
+`Shape` also connects geometry with materials and shaders. The focus here is mesh construction; Chapter 7's section “Use Multiple Materials in One Shape” explains material slots, lookup, partial updates, and per-instance independence.
 
 The following example assumes `app` is an initialized `WebgApp` from Chapter 5. It loads a Primitive into a Shape and finalizes its GPU buffers:
 

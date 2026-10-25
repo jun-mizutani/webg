@@ -1,12 +1,12 @@
 // ---------------------------------------------
-// GameStateManager.js 2026/07/25
+// GameStateManager.js 2026/10/25
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // ---------------------------------------------
 
 export default class GameStateManager {
   // ゲーム全体の scene phase を扱う最小 state machine
-  // - WebgApp の core ではなく、game app 側で必要な時だけ保持する
+  // - game app 側で、各ゲームに必要な状態を保持する
   constructor(options = {}) {
     this.initialState = options.initialState ?? null;
     this.states = new Map();

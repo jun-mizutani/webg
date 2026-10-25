@@ -1,5 +1,5 @@
 <!doctype html>
-<!-- book/examples/guide.en.html 2026/10/10: English browser guide generated from book.en/ExampleGuide.md -->
+<!-- book/examples/guide.en.html 2026/10/25: English browser guide generated from book.en/ExampleGuide.md -->
 <html lang="en">
 <head>
   <meta charset="utf-8">
@@ -65,7 +65,7 @@
 </ul></li>
 </ul>
 <p>For a PBR game that moves and attacks on a map with elevation, begin at <code>samples/fantasy/fantasy.html</code>. The reading sequence is in <a href="PBRSceneToGame.md">From a PBR Scene to a Small Game</a> and the sample guide.</p>
-<p>Choose between defining scene placement, materials, physics, and rendering in SceneYAML or building them directly in JavaScript. Use <code>WebgApp</code> for a simple screen and <code>WebgSceneApp</code> to start a PBR application from SceneYAML. Adding a feature does not require changing the application entry point.</p>
+<p>Choose between defining scene placement, materials, physics, and rendering in SceneYAML or building them directly in JavaScript. Use <code>WebgApp</code> for a simple screen and <code>WebgSceneApp</code> to start a PBR application from SceneYAML. Use the same application entry point as you add features.</p>
 <p>For PBR alone, start with SceneYAML <code>renderer</code> and <code>materials</code>. Read Chapters 31–33 when you need to control rendering order or individual passes with <code>ComputeEffectPipeline</code>.</p>
 <p>To add water and caustics to PBR, use <code>samples/water/index.en.html</code> to reach <code>samples/water/water.html</code>, then read Chapter 35. It demonstrates <code>WaterBody</code> receiver registration, shared waves, independent surface and caustics toggles, and GPU-resource release. Chapter 35 also covers wave height, wavelength, speed, RGB absorption, and draw order for transparent surfaces, particles, and post-processing. To apply the feature to gameplay, open <code>samples/fantasy/fantasy.html</code> and <code>connectWater()</code> in <code>samples/fantasy/main.js</code>. Compare the caustics and surface toggles separately; the fantasy sample keeps the battlefield readable with underwater lighting and fog while its water surface is disabled.</p>
 <h2 id="3-read-the-starting-code">3. Read the Starting Code</h2>
@@ -80,15 +80,15 @@
 <li>The example's Start/Stop buttons use <code>setPaused()</code> for physics. This differs from the frame loop's <code>start()</code> and <code>stop()</code>.</li>
 <li>Physics starts paused. Check that Start drops the sphere, Stop pauses it, and Reset restores its initial placement.</li>
 </ul>
-<p>First change one value such as sphere color or starting position. If you change the displayed floor and collision plane, keep them aligned. Check <code>physics.space.maxBodies</code> when adding spheres. <code>onUpdate</code> receives <code>deltaSec</code> in seconds, as in <code>WebgApp</code>; high-level physics updates internally, so application code does not add another physics <code>step()</code>.</p>
+<p>First change one value such as sphere color or starting position. If you change the displayed floor and collision plane, keep them aligned. Check <code>physics.space.maxBodies</code> when adding spheres. <code>onUpdate</code> receives <code>deltaSec</code> in seconds, as in <code>WebgApp</code>; high-level physics advances through its own <code>step()</code> as part of frame processing, while <code>onUpdate</code> handles application-specific updates.</p>
 <p>For an external model hierarchy, continue to <a href="../samples/scene_model_yaml/main.js"><code>scene_model_yaml</code>'s code</a>, <a href="../samples/scene_model_yaml/scene.yaml"><code>scene.yaml</code></a>, and <a href="../samples/scene_model_yaml/model.yaml"><code>model.yaml</code></a>. ModelYAML describes internal shapes and <code>Node</code> hierarchy; SceneYAML describes application physics and rendering. The example also covers saving, resetting to a paused state, error reporting, and <code>destroy()</code> on shutdown.</p>
 <h3 id="build-game-progression">Build Game Progression</h3>
 <p>Read the <a href="../samples/breakout/README.en.md"><code>breakout</code> guide</a> for controls and states, then inspect <a href="../samples/breakout/main.js"><code>main.js</code></a> for state transitions, <code>registerActionMap()</code>, <code>onUpdate</code>, the HUD, and restart. It is a complete game with title, play, pause, and result states, and demonstrates combining 3D rendering with game rules.</p>
-<p><code>GameStateManager</code> is <a href="../samples/GameStateManager.js">application-side shared sample code</a>, not a core <code>webg</code> API. Narrow the states and controls needed by your application before adapting a larger sample.</p>
+<p><code>GameStateManager</code> is <a href="../samples/GameStateManager.js">shared sample code for application-side game state</a>. Inspect its imports and calls when adapting its state transitions to your application.</p>
 <h3 id="go-from-a-pbr-scene-to-a-small-game">Go from a PBR Scene to a Small Game</h3>
 <p>Use <code>samples/fantasy/</code> for a game that moves and attacks on a map with elevation. Run <code>samples/fantasy/fantasy.html</code>; find controls and reading order in <code>samples/fantasy/README.en.md</code>; use <code>samples/fantasy/index.en.html</code> for the browser overview.</p>
 <p><a href="PBRSceneToGame.md">From a PBR Scene to a Small Game</a> maps direct Shape materials, updates to added Nodes, screen-space picking, resizing, and the lifetime of particles and resources to functions in the sample. Start at <code>main.js</code>'s <code>start()</code>, then read <code>scene.js</code>, <code>visuals.js</code>, <code>move()</code> and <code>updateMotion()</code>, <code>pickTile()</code>, and <code>FantasyApp.js</code>.</p>
-<p>First change only armor roughness, then one unit's movement allowance, step duration, and footstep particle color. This shows when each API updates application state. The sample keeps the rules and visuals separate and uses no rigid-body physics.</p>
+<p>First change only armor roughness, then one unit's movement allowance, step duration, and footstep particle color. This shows when each API updates application state. Movement and combat rules use grid coordinates, while visuals follow the same tile elevations.</p>
 <h2 id="4-add-only-the-features-you-need">4. Add Only the Features You Need</h2>
 <p>Each entry connects a focused example to an application sample and gives a concrete checkpoint for understanding.</p>
 <ul>
@@ -278,10 +278,10 @@
 <li>Adapt relative paths and DOM IDs for your HTML and hosting location. When replacing a model, check clip names, Node IDs, origin, and dimensions.</li>
 <li>Decide what to release on shutdown or replacement. Distinguish shared models from their instances, and follow the sample's <code>destroy()</code> usage for high-level applications.</li>
 </ol>
-<p>Sample-only classes and helpers are application code, not core API. Read their actual imports instead of inferring ownership from their names. Samples such as <code>compute_cloth</code>, <code>compute_texture</code>, and <code>compute_physics_bounce</code> include custom GPU processing even when the result resembles a standard feature. For ordinary physics, start with Sphere and Plane or <code>physics_bounce</code>.</p>
+<p>Read each sample's imports to identify which classes are application helpers and which are webg APIs. Samples such as <code>compute_cloth</code>, <code>compute_texture</code>, and <code>compute_physics_bounce</code> include custom GPU processing even when the result resembles a standard feature. For ordinary physics, start with Sphere and Plane or <code>physics_bounce</code>.</p>
 <h2 id="7-when-an-ai-agent-helps-with-development">7. When an AI Agent Helps with Development</h2>
 <p>Start from the user's goal and choose one entry point in this guide. Briefly identify the runnable page and source to use, the feature to add, and how to check the result. People and AI agents can use the same examples and checkpoints.</p>
-<p>Find a class in the <a href="Appendix_D_API.md">API catalog</a>, then read its chapter and runnable example. Do not map a familiar API name from another 3D library directly onto webg; check the actual import, call, and return value. If a unit, default, or automatic update scope is unclear, inspect the current implementation and tests.</p>
+<p>Find a class in the <a href="Appendix_D_API.md">API catalog</a>, then read its chapter and runnable example. For each webg API, check its actual import, call, and return value, including when its name resembles an API from another 3D library. If a unit, default, or automatic update scope is unclear, inspect the current implementation and tests.</p>
 <p>Use <code>headless_tests/</code> for API contracts and calculations, and <code>unittest/</code> for small browser checks. Static link/import presence, absence of runtime exceptions, and the intended visible result are separate checks. Report only the checks that were actually completed.</p>
 <p>The overall indexes are <a href="../book/examples/index.en.html">book examples</a> and <a href="../samples/index.en.html">samples</a>.</p>
 

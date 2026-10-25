@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// samples/detouch/main.js  2026/04/30
+// samples/detouch/main.js  2026/10/25
 //   detouch/main.js
 //   detach_attach.html 相当の挙動を current webg API で実装したサンプル
 //   Copyright (c) 2026 Jun Mizutani,
@@ -197,7 +197,7 @@ const ensureTouchDebugStyle = () => {
 };
 
 // キーと touch button の両方を同じ処理フローへ流し、
-// sample の本題である attach / detach 確認が入力方式に依存しないようにする
+// attach / detach を共通の関数へ接続し、キーとタッチの両方から同じ動作を確認する
 const handleKey = (key) => {
   if (!app) return;
   if (key === "w") app.cameraRig.rotateX(3.0);
@@ -286,7 +286,7 @@ const buildScene = async () => {
 };
 
 // touch button はキー入力の代替としてだけ使い、
-// guide/status の役割は Message HUD に残して表示責務を混ぜない
+// guide / status は Message HUD、操作パネルは DOM として役割を分ける
 const attachInput = () => {
   app.attachInput({
     onKeyDown: (key) => {

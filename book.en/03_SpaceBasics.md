@@ -82,7 +82,7 @@ A camera has a position and orientation from which it views objects. Chapter 04 
 
 The field of view (FOV) is the angular extent of the camera's view. In `WebgApp`, `viewAngle` specifies the angle in degrees along the shorter canvas dimension: vertical in landscape orientation and horizontal in portrait orientation. Chapter 06 explains how this is converted to the vertical FOV used by the projection matrix. At the same camera distance, a wider FOV includes more of the scene and makes objects look smaller; a narrower FOV shows a smaller area at a larger scale.
 
-With perspective projection, nearby objects appear larger and distant objects appear smaller. Adjusting camera distance separately from field of view makes it easier to compose a scene. `near` and `far` define the rendered depth range. Chapter 06 explains camera controls and settings; Chapter 41 covers projection equations and depth precision.
+With perspective projection, nearby objects appear larger and distant objects appear smaller. Adjusting camera distance separately from field of view makes it easier to compose a scene. `WebgApp` uses `projectionNear` and `projectionFar` to define the rendered depth range. Chapter 06 explains camera controls and settings; Chapter 41 covers projection equations and depth precision.
 
 ## Describe surfaces with normals and UVs
 
@@ -112,15 +112,17 @@ The Moon's position is the result of combining Earth's world position with the M
 With `Node`, the parent-child structure looks like this:
 
 ```text
-sun
-└── earthOrbit
-    └── earth
-        └── moonOrbit
-            └── moon
+sun (solar-system reference)
+├── sunBody (Sun appearance and rotation)
+└── earthOrbit (Earth's orbit)
+    └── earth (Earth's position)
+        ├── earthBody (Earth appearance and rotation)
+        └── moonOrbit (Moon's orbit)
+            └── moon (Moon appearance and rotation)
 ```
 
-Setting `earth`'s local position to `[3.5, 0, 0]` means that the Earth object is 3.5 units along X relative to its parent, `earthOrbit`.
-Rotating `earthOrbit` makes its child, `earth`, appear to orbit in a circle with a radius of 3.5.
+Setting `earth`'s local position to `[3.6, 0, 0]` means that Earth is 3.6 units along X relative to its parent, `earthOrbit`.
+Rotating `earthOrbit` makes its child, `earth`, appear to orbit in a circle with a radius of 3.6.
 
 The Moon's world matrix is composed as follows:
 
@@ -135,26 +137,29 @@ moonWorld = moonOrbitWorld * moonLocal
 With column vectors, transformations on the right act first. When computing `moonWorld * v`, `moonLocal` first transforms the Moon's local geometry `v`; then the Moon's orbit around Earth, Earth's placement, and the orientation of the whole solar system are applied in sequence.
 It helps to think of each child as building on the transformed result of its parent.
 
-In code, separating a rotation pivot from the visible body keeps the hierarchy clear:
+Separate each orbit pivot from the body that rotates on its own axis. Attach the Sun's Shape to `sunBody` and Earth's Shape to `earthBody`. Place `moonOrbit` as a sibling of the rotating `earthBody`, so changing Earth's rotation speed leaves the Moon's orbit independent. The following example shows these Nodes and their updates:
 
 ```js
 const sun = app.space.addNode(null, "sun");
+const sunBody = app.space.addNode(sun, "sunBody");
 
 const earthOrbit = app.space.addNode(sun, "earthOrbit");
 const earth = app.space.addNode(earthOrbit, "earth");
-earth.setPosition(3.5, 0.0, 0.0);
+earth.setPosition(3.6, 0.0, 0.0);
+const earthBody = app.space.addNode(earth, "earthBody");
 
 const moonOrbit = app.space.addNode(earth, "moonOrbit");
 const moon = app.space.addNode(moonOrbit, "moon");
-moon.setPosition(1.2, 0.0, 0.0);
+moon.setPosition(1.3, 0.0, 0.0);
 
 app.start({
+  // Advance orbit pivots and rotating bodies independently using elapsed seconds
   onUpdate({ deltaSec }) {
-    sun.rotateY(0.2 * deltaSec);        // Sun's rotation
-    earthOrbit.rotateY(0.8 * deltaSec); // Earth's orbit
-    earth.rotateY(2.5 * deltaSec);      // Earth's rotation
-    moonOrbit.rotateY(2.2 * deltaSec);  // Moon's orbit
-    moon.rotateY(1.6 * deltaSec);       // Moon's rotation
+    sunBody.rotateY(12.0 * deltaSec);    // Sun's rotation
+    earthOrbit.rotateY(24.0 * deltaSec); // Earth's orbit
+    earthBody.rotateY(72.0 * deltaSec);  // Earth's rotation
+    moonOrbit.rotateY(55.0 * deltaSec);  // Moon's orbit
+    moon.rotateY(48.0 * deltaSec);       // Moon's rotation
   }
 });
 ```

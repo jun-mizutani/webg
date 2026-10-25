@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// samples/collada_loader/main.js  2026/10/10
+// samples/collada_loader/main.js  2026/10/25
 //   collada_loader sample
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -13,7 +13,7 @@ import SmoothShader from "../../webg/SmoothShader.js";
 import Diagnostics from "../../webg/Diagnostics.js";
 
 // Blender から Collada を書き出す場合も、loader 側の座標変換前提と
-// ぶつからないよう export 時に追加変換を入れないファイルを前提とする
+// 合わせるため、Y-up を基準にした座標を追加変換せずに書き出したファイルを使う
 const COLLADA_FILE = "./hand.dae";
 const DOWNLOAD_FILE = "collada_modelasset.json";
 const DEBUG_MODE = "release";

@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>webg Texture Catalog</title>
   <link rel="icon" href="data:," />
-  <!-- 2026/08/15 -->
+  <!-- 2026/10/25 -->
   <style>
     [hidden] { display: none !important; }
     .map-caption { position: absolute; bottom: 8px; left: 18px; margin: 0; font-size: 11px; color: #b9deef; pointer-events: none; }
@@ -106,7 +106,7 @@
         <label>砂利の配置尺度 m<input id="gravelScale" type="number" step="0.0025" min="0.0025" /></label>
         <label>砂利の高さ m<input id="gravelHeight" type="number" step="0.00001" min="0" /></label>
         <label>砂利の色の濃淡<input id="gravelColor" type="number" step="0.005" min="0" max="0.25" /></label>
-        <p class="status wide">Color amountは色の濃淡、Pattern heightは粒の高さ。暗い石も上向きに盛り上がります。Height／Normalによる表現で、立方体の輪郭は変位しません。</p>
+        <p class="status wide">Color amountは色の濃淡、Pattern heightは粒の高さ。暗い石も上向きに盛り上がります。立方体の輪郭は元のgeometryで保ち、Height／Normalで表面の陰影を作ります。</p>
       </section>
 
       <section class="group grid">

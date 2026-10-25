@@ -24,9 +24,9 @@ Meshes use triangles and quads with zero-based vertex indices. Quads are triangu
 
 SceneYAML officially supports the meshes array and objects[].mesh references. Each mesh contains id, vertices and faces. Saved files load directly through createWebgSceneApp({ project: './scene.yaml' }). Physics mesh objects require an explicit box, sphere or capsule in physics.shape. Physics uses the explicitly selected box, sphere, or capsule, while display meshes use vertex positions and faces. Generated objectSets use primitive shapes.
 
-Inline objects/materials/physics are supported. Generated objectSets are edited in YAML. External SceneAsset, ModelAsset and material references are rejected with an explanation. Renderer settings, animations and application-specific fields are preserved. The preview uses editor studio lighting and does not execute physics, animations, emitters, goals or other application-specific logic. Verify final lighting and behavior in the application's runtime.
+Inline objects/materials/physics are supported. Generated objectSets are edited in YAML. External SceneAsset, ModelAsset and material references are rejected with an explanation. Renderer settings, animations and application-specific fields are preserved. The preview uses editor studio lighting to edit initial placement and settings. The application runtime advances physics, animations, emitters, and goals, so verify the saved work there.
 
-The inspector edits bodyType, mass, friction and restitution. Physics objects require physics.space. New scenes explicitly start with a 240Hz configuration and maxBodies: 128. Change capacity in YAML when needed; values and capacity are never automatically corrected.
+The inspector edits bodyType, mass, friction and restitution. Physics objects require physics.space. New scenes explicitly start with a 240Hz configuration and maxBodies: 128. Change capacity in YAML when needed. Input values are validated, and an over-capacity setting reports the required field.
 
 ## Implementation notes
 

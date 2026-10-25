@@ -18,7 +18,7 @@ The GPU-to-CPU transfer and Node updates cost more than GPU-direct rendering for
 
 ## Scenario and colors
 
-The sample registers six hanging ropes, a DistanceJoint pendulum, and a kinematic Capsule crossing the rope centers. No floor or boundary planes are registered. The palette is intentionally different from `joint_compute`: green/lime ropes, a red pendulum Sphere, a cyan driver Capsule, and a gold visual connector.
+The sample registers six hanging ropes, a DistanceJoint pendulum, and a kinematic Capsule crossing the rope centers. The contact setup includes the rope links and driver Capsule. The palette is intentionally different from `joint_compute`: green/lime ropes, a red pendulum Sphere, a cyan driver Capsule, and a gold visual connector.
 
 ## Controls
 
@@ -44,7 +44,7 @@ ComputePhysicsSpace.encodeFixedStep()
   -> Space.draw()
 ```
 
-The `ComputeSphereCollider` / `ComputeCapsuleCollider` physics bodies and the normal rendering `Shape` objects are separate. The visual `Node` objects live in `Space` but are not registered as bodies in `ComputePhysicsSpace`. This corresponds to the “synchronize Compute state into ordinary Nodes” path described in `book/26_物理エンジン.md`.
+The `ComputeSphereCollider` / `ComputeCapsuleCollider` physics bodies and the normal rendering `Shape` objects are separate. Place visual `Node` objects in `Space`, and register GPU-simulated bodies separately as descriptors in `ComputePhysicsSpace`. This corresponds to the “Two Ways to Render Compute State” section in [Chapter 27, Physics](../../book.en/27_Physics.md).
 
 ## Files
 

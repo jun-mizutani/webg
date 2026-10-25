@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// ProjectJointBindings.js     2026/09/08
+// ProjectJointBindings.js     2026/10/25
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // ---------------------------------------------
@@ -172,7 +172,7 @@ export default class ProjectJointBindings {
     return this.getEntries();
   }
 
-  // physics bodyをResetする前にJointを解放し、累積lambdaを新しい世代へ持ち越さない
+  // physics body の Reset 前に Joint を解放し、次の実行では新しい累積 lambda から計算する
   clear(physics) {
     if (physics && typeof physics.removeJoint === "function") {
       for (const id of this.ids.values()) physics.removeJoint(id);

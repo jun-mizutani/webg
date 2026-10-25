@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// samples/compute_benchmark/main.js  2026/09/03
+// samples/compute_benchmark/main.js  2026/10/25
 //   Runtime PBR full-pass GPU baseline benchmark
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -70,7 +70,7 @@ const TRANSPARENCY_PROFILE_NAMES = Object.freeze([
   "forward"
 ]);
 
-// 測定条件は結果の意味そのものなので、自動補正せず範囲外入力を例外として通知する
+// 測定条件を指定どおりに比較するため、範囲外入力は期待する範囲を含む例外で通知する
 function readIntegerInput(element, label, { min, max }) {
   return util.readFiniteNumber(Number(element.value), label, {
     integer: true,
@@ -84,7 +84,7 @@ function setStatus(message) {
   dom.status.textContent = message;
 }
 
-// 同じGPU resourceへpreviewとbenchmarkが同時にcommandを記録しないよう操作を止める
+// previewとbenchmarkが順番に同じGPU resourceを使えるよう、測定中の操作を止める
 function setRunning(nextRunning) {
   running = nextRunning;
   dom.run.disabled = nextRunning;
@@ -297,7 +297,7 @@ function createBenchmarkScene() {
   );
 }
 
-// 最大128灯から選べる固定point light列を作り、灯数以外の入力条件をrun間で変えない
+// 最大 128 灯の固定 point light 列を共有し、run 間では灯数だけを変えて比較する
 function createBenchmarkLights() {
   const palette = [
     [1.0, 0.18, 0.08], [0.08, 0.42, 1.0], [0.10, 1.0, 0.38],
@@ -380,7 +380,7 @@ async function prepareInputs(localLights, pbrSsrFusionEnabled) {
   const options = createPbrPipelineOptions(cameraFrame, localLights, pbrSsrFusionEnabled);
   const finalColor = pipeline.encode(gpu.commandEncoder, options);
   // Two-pass reference caseが使うSSR出力とComposer出力を計測外で準備する
-  // full-pbr-pipelineは融合経路を使い、この準備commandの時間は各caseのtimestampへ含めない
+  // full-pbr-pipeline は融合経路を使い、準備 command の完了後から各 case を計測する
   const resources = pipeline.gbuffer.getBindingResources();
   const lighting = pipeline.deferredLightingPass.getOutputTarget();
   const ambientOcclusion = pipeline.ssaoPass.getOutputTarget();
@@ -461,7 +461,7 @@ function average(values) {
   return values.reduce((sum, value) => sum + value, 0.0) / values.length;
 }
 
-// 平均だけでなく中央値と95 percentileを残し、外れ値で最適化判断を誤りにくくする
+// 平均、中央値、95 percentile をそろえ、外れ値の影響も踏まえて最適化を判断する
 function summarizeSamples(samples) {
   const sorted = [...samples].sort((a, b) => a - b);
   const averageMs = average(sorted);
@@ -481,7 +481,7 @@ function summarizeSamples(samples) {
   };
 }
 
-// 欠損したプロファイル統計は0にせず明示的な未計測記号で表示する
+// プロファイル統計の取得状態を確認し、値が得られた区間だけ数値で表示する
 function formatMs(value) {
   return Number.isFinite(value) ? value.toFixed(3) : "--";
 }
@@ -511,7 +511,7 @@ function renderResultTable(result) {
   `;
 }
 
-// Top-level PBR passを現在の公開class境界で個別実行し、前処理時間を測定値へ混ぜない
+// Top-level PBR pass を公開 class ごとに実行し、前処理後の実行区間を測定する
 function getBenchmarkCases(localLights, pbrSsrFusionEnabled) {
   return [
     {

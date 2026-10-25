@@ -1,6 +1,175 @@
-<!doctype html>
-<!-- index.html 2026/09/19: README.mdと同内容 -->
-<html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>SceneYAML Studio</title><style>body{max-width:900px;margin:40px auto;padding:0 24px;font:16px/1.9 system-ui;color:#24364b;background:#f2f6fa}h1,h2{color:#135c72}nav a{display:inline-block;margin:8px;padding:10px 18px;background:#155f75;color:white;border-radius:6px}</style></head><body><nav><a href="edit_yaml.html">エディタを開く</a><a href="index.en.html">English</a></nav>
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>SceneYAML Studio</title>
+  <link rel="icon" href="data:," />
+  <!-- 2026/06/19 -->
+  <style>
+
+:root {
+  color-scheme: light;
+  --bg: #eef3f8;
+  --paper: rgba(255, 255, 255, 0.94);
+  --line: #c8d5e4;
+  --ink: #17324a;
+  --muted: #5c748b;
+  --accent: #1566ab;
+  --accent-soft: #dfeefe;
+  --code-bg: #f3f7fb;
+  --shadow: rgba(29, 52, 79, 0.10);
+}
+* { box-sizing: border-box; }
+html, body {
+  margin: 0;
+  min-height: 100%;
+}
+body {
+  background:
+    radial-gradient(circle at top left, rgba(21, 102, 171, 0.12), transparent 24%),
+    radial-gradient(circle at top right, rgba(255, 191, 118, 0.10), transparent 22%),
+    linear-gradient(180deg, #f8fbfd 0%, var(--bg) 100%);
+  color: var(--ink);
+  font: 16px/1.78 "Avenir Next", "Hiragino Sans", "Yu Gothic", sans-serif;
+}
+.page {
+  width: min(1080px, calc(100% - 28px));
+  margin: 0 auto;
+  padding: 24px 0 56px;
+}
+.hero,
+.doc {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  box-shadow: 0 22px 52px var(--shadow);
+}
+.hero {
+  padding: 22px 24px;
+  margin-bottom: 18px;
+}
+.hero h1 {
+  margin: 0 0 8px;
+  font-size: clamp(2rem, 4vw, 3rem);
+  line-height: 1.08;
+}
+.hero p {
+  margin: 0;
+  color: var(--muted);
+}
+.doc {
+  padding: 28px;
+}
+.doc > :first-child {
+  margin-top: 0;
+}
+h1, h2, h3, h4, h5, h6 {
+  line-height: 1.25;
+  margin: 1.45em 0 0.55em;
+}
+h1 {
+  font-size: 2.2rem;
+}
+h2 {
+  padding-bottom: 0.28em;
+  border-bottom: 1px solid var(--line);
+  font-size: 1.48rem;
+}
+h3 {
+  font-size: 1.14rem;
+}
+p, ul, ol, table, pre, blockquote {
+  margin: 0 0 1em;
+}
+ul, ol {
+  padding-left: 1.4em;
+}
+li + li {
+  margin-top: 0.26em;
+}
+a {
+  color: var(--accent);
+  text-decoration: none;
+}
+a:hover {
+  text-decoration: underline;
+}
+img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  border-radius: 16px;
+  border: 1px solid var(--line);
+  box-shadow: 0 12px 32px rgba(29, 52, 79, 0.08);
+  margin: 1.1em 0 1.4em;
+}
+code {
+  padding: 0.12em 0.38em;
+  border-radius: 0.45em;
+  background: var(--code-bg);
+  border: 1px solid #dbe6f1;
+  font: 0.92em/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+pre {
+  padding: 14px 16px;
+  overflow-x: auto;
+  border-radius: 14px;
+  background: #0f1720;
+  color: #ecf5ff;
+}
+pre code {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #ffffff;
+}
+th, td {
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  text-align: left;
+  vertical-align: top;
+}
+th {
+  background: #f5f9fc;
+}
+hr {
+  border: 0;
+  border-top: 1px solid var(--line);
+  margin: 1.5em 0;
+}
+blockquote {
+  padding: 0.3em 0 0.3em 1em;
+  border-left: 4px solid #c9dbef;
+  color: var(--muted);
+}
+@media (max-width: 720px) {
+  .page {
+    width: min(100% - 18px, 1080px);
+    padding-top: 16px;
+  }
+  .hero,
+  .doc {
+    border-radius: 18px;
+  }
+  .doc {
+    padding: 20px;
+  }
+}
+
+  </style>
+</head>
+<body>
+  <main class="page">
+    <section class="hero">
+      <h1>SceneYAML Studio</h1>
+    </section>
+    <article class="doc">
 <h1>SceneYAML Studio</h1>
 <p>SceneYAMLをファイルとして読み書きしながら、3Dの配置と形状を編集するサンプルです。WebgSceneAppのPBR表示、SceneDefinitionの検証、SceneYAMLの解析とgzip圧縮を組み合わせています。mmodelerの頂点・面による形状表現とprimitive生成を再利用し、作品データと表示処理を分けています。</p>
 <h2>起動と基本操作</h2>
@@ -14,8 +183,8 @@
 <p>メッシュは三角面と四角面を使い、頂点番号は0から始まります。四角面は頂点順に三角形へ分けて表示します。頂点移動で面をねじる場合は先に面分割すると形状を判断しやすくなります。面数が0になる編集、面積0の面、無効な頂点番号を拒否します。上限は1メッシュあたり20000頂点・40000面です。法線はShapeが生成し、material.flatShadingで面ごとの表示を指定できます。形状の編集はBoxとSphereのメッシュ変換、頂点位置、面構成、材質の設定に対応します。</p>
 <h2>保存形式と対応範囲</h2>
 <p>SceneYAMLの正式形式としてmeshes配列とobjects[].mesh参照を使います。各meshはid、vertices、facesを持ちます。保存した作品は通常のcreateWebgSceneApp({ project: './scene.yaml' })から直接表示できます。mesh物体にphysicsを指定する場合はphysics.shapeにBox・Sphere・Capsuleを明示します。物理には明示したBox・Sphere・Capsuleを使い、表示メッシュには頂点座標と面を入力します。objectSetsはprimitive形状を生成します。</p>
-<p>inline objects/materials/physicsに対応し、objectSetsの生成物体はYAMLから編集します。外部SceneAsset、ModelAsset、外部材質ファイルの参照は読込み時に説明付きで拒否します。renderer、animations、独自の追加項目は保存します。表示は編集専用のスタジオ照明を使い、物理・アニメーション・emitter・goalなどの作品固有処理は実行しません。したがって保存作品の実行時の照明や動作は、実行用アプリで確認します。</p>
-<p>bodyType、mass、摩擦、反発を編集できます。物理を有効にする作品にはphysics.spaceが必要です。新規作品には240Hz、maxBodies: 128の設定を明示しています。容量を超える場合はYAMLで変更してください。自動で容量や数値を補正しません。</p>
+<p>inline objects/materials/physicsに対応し、objectSetsの生成物体はYAMLから編集します。外部SceneAsset、ModelAsset、外部材質ファイルの参照は読込み時に説明付きで拒否します。renderer、animations、独自の追加項目は保存します。表示には編集専用のスタジオ照明を使い、作品の初期配置と設定を編集します。物理・アニメーション・emitter・goalの進行は実行用アプリが担当します。したがって保存作品の実行時の照明や動作は、実行用アプリで確認します。</p>
+<p>bodyType、mass、摩擦、反発を編集できます。物理を有効にする作品にはphysics.spaceが必要です。新規作品には240Hz、maxBodies: 128の設定を明示しています。容量を超える場合はYAMLで変更してください。入力値を検証し、容量を超えた場合は必要な設定項目をエラーで示します。</p>
 <h2>実装メモ</h2>
 <p>main.jsは入力と履歴、scene_document.jsは原文と意味検証、mesh_edit.jsは頂点・面操作、scene_view.jsはPBR表示を担当します。GPU初期化は一度だけ行い、編集時はNodeとShapeを作り直します。メッシュ検証とShape生成はコアのSceneMesh.jsとPrimitiveScene.jsへ統一しています。node samples/edit_yaml/check_document.mjsでGPUを使わないデータ検証を実行できます。</p>
 <h2>衝突形状の確認と編集</h2>
@@ -24,4 +193,7 @@
 <p>primitiveでphysics.shapeを省略した場合は表示形状の寸法を使用します。「表示形状を独立した衝突形状へコピー」で現在の形状をphysics.shapeへ保存すると、以降は独立して調整できます。メッシュへ変換する前にもこの操作を使えます。変更はUndo/RedoとYAML保存へ反映されます。物理プレビューの実行は次の拡張段階です。</p>
 <h2>数値入力</h2>
 <p>数値は入力後にEnterまたはTabで確定します。矢印キーとスピンボタンは0.01刻みで変更します。連続操作中も入力欄のフォーカスを維持します。不正な値はエラーを表示し、直前の有効な値へ戻します。</p>
-</body></html>
+    </article>
+  </main>
+</body>
+</html>

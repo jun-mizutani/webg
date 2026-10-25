@@ -6,7 +6,7 @@
 
 ## 概要
 
-`maze2` は、壁心間と天井高を4 mとし、壁上下の構造斜面で八角形断面を作るwalk-through mazeです。曲がり角では直交するrail終端辺をmiter bridgeで直接つなぎ、隙間を作らず開口側へ不要な面を張りません。分岐、部屋、扉は論理wall boundaryから生成し、同じboundaryを衝突判定とレーダーにも使用します。
+`maze2` は、壁心間と天井高を4 mとし、壁上下の構造斜面で八角形断面を作るwalk-through mazeです。曲がり角では直交するrail終端辺をmiter bridgeで直接つなぎ、隣接するrailの端を連続させ、開口部を通行できる面構成にします。分岐、部屋、扉は論理wall boundaryから生成し、同じboundaryを衝突判定とレーダーにも使用します。
 
 描画は`ComputeEffectPipeline`を使用し、`WebgApp`が描画直前に確定した同一の`CameraFrame`をG-buffer、Deferred Shading、SSR、Bloom、geometry edgeで共有します。
 各cellの天井には、通路方向へ長い薄型panelを中心高さ`y = 3.95m`で配置し、その下の`y = 3.70m`に通路照明用のpoint Local Lightを置きます。
@@ -40,7 +40,7 @@ Shadow MapとSSAOの効果は無効にしています。
 
 ## 実装の流れ
 
-`main.js`は固定seedから15×15 cellの迷路を作り、roomとdoorを上書きして、通行可能な論理wall boundaryを確定します。次に同じboundaryから床、斜面、壁、rail、天井のgrouped meshと衝突線分を作ります。レーダーもこの衝突線分を読むため、画面上の壁、移動を止める壁、レーダー上の線が別々の規則から生成されません。
+`main.js`は固定seedから15×15 cellの迷路を作り、roomとdoorを上書きして、通行可能な論理wall boundaryを確定します。次に同じboundaryから床、斜面、壁、rail、天井のgrouped meshと衝突線分を作ります。レーダーもこの衝突線分を読むため、画面の壁、衝突判定、レーダーの線を同じ境界データへそろえます。
 
 毎frameの更新では、入力からfirst-personの移動量を求め、`CollisionWorld`でplayer円柱をwall segmentの外へ押し戻します。cameraが一定距離以上移動したときだけ近傍lightを選び直し、最大64灯をDeferred Lightingへ渡します。HUDとレーダーは衝突解決後の位置を使って更新します。
 

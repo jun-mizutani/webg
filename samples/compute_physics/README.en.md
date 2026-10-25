@@ -8,13 +8,13 @@ This sample uses `ComputePhysicsSpace` to update and render Box, Sphere, and Cap
 
 Capsules use a mesh made from two spherical halves connected by a cylinder at the equator along local Y. The mesh uses the same radius/center-line ratio as `ComputeCapsuleCollider`, and Capsule-Capsule, Capsule-Sphere, Capsule-Box, and Capsule-Plane contacts run in the same Space.
 
-Body positions, orientations, velocities, and sleep state remain in two `BodyState` storage buffers. The buffers ping-pong at each fixed step, and the vertex shader directly reads the current buffer returned by `getRenderState()`. The sample does not read every position back to the CPU or copy it into a `Node`.
+Body positions, orientations, velocities, and sleep state remain in two `BodyState` storage buffers. The buffers ping-pong at each fixed step, and the vertex shader reads the current buffer returned by `getRenderState()` for direct GPU rendering.
 
 ## How to Run
 
 Open [./compute_physics.html](./compute_physics.html) in a WebGPU-capable browser. Colored Boxes, Spheres, and Capsules fall from the upper part of the boundary frame, collide, and settle on the floor. The panel at the upper left starts collapsed so that it does not cover the moving bodies.
 
-Both the normal release launch and the `?debug=1` debug launch create resources without starting an application-side GPU validation scope. `?debug=1` enables the DebugDock so you can inspect startup state and runtime results. WebGPU still performs its own validation, but this sample does not wait on a startup scope or collect its result.
+Both release and `?debug=1` debug launches create GPU resources and receive validation results through standard WebGPU error notifications.
 
 Use [./compute_physics_cpu.html](./compute_physics_cpu.html) for the CPU comparison. This page registers the same 72 bodies as `PhysicsNode` instances in the regular `PhysicsSpace` and uses CPU physics with scene-graph rendering. Both pages read the same initial positions, orientations, velocities, shape dimensions, materials, and five boundary Planes from [./computePhysicsScenario.js](./computePhysicsScenario.js).
 
@@ -70,13 +70,13 @@ On each frame, `physics.encode()` divides elapsed time into fixed steps. Every f
 
 The Render Pass uses the `bufferIndex` from `ComputePhysicsSpace.getRenderState()` to select a bind group created during initialization. The Box, Sphere, and Capsule pipelines read the same 32-float BodyState and apply position, quaternion, shape dimensions, color, and sleep flag per instance.
 
-Every 12 rendered frames, a small Compute Pass counts sleep flags and collider types in the latest BodyState for the panel. Only five integers—`active / sleeping / Box / Sphere / Capsule`—are returned to the CPU. Positions and orientations are not read back, and no new statistics copy is issued until the previous asynchronous readback completes.
+Every 12 rendered frames, a small Compute Pass counts sleep flags and collider types in the latest BodyState for the panel. The renderer reads positions and orientations directly from the GPU buffer.
 
 ## CPU and Compute API Correspondence
 
 ### Collider queries and contacts
 
-In addition to GPU dimensions, inverse inertia, and WGSL libraries, `ComputeBoxCollider`, `ComputeSphereCollider`, and `ComputeCapsuleCollider` expose the same shape-query surface as the CPU Colliders. `getWorldInfo(position, quat)` returns world-space shape information, while `getAabb()`, `intersectRay()`, `overlapsAabb()`, and `overlapSphere()` query an explicit pose. `buildContactWith()` and `buildManifoldWith()` validate and process Compute Box, Sphere, Capsule, and Plane combinations, preserving multiple contacts for Box face contacts. Capsules rotate the CPU-compatible local Y axis with the body quaternion and store `[radius, halfSegment, radius]` in BodyState. The Broad Phase uses an axis-aligned AABB formed by expanding the rotated center-line endpoints by the radius. These methods record no GPU commands and can be used with readback BodyState or for Collider-only validation.
+`ComputeBoxCollider`, `ComputeSphereCollider`, and `ComputeCapsuleCollider` provide GPU dimensions, inverse inertia, WGSL libraries, and the same shape-query surface as the CPU Colliders. These CPU-side queries use explicit poses or readback BodyState data.
 
 `ComputePlaneCollider` also provides `getWorldInfo()`, `getPlaneDistance()`, `intersectRay()`, `buildContactWith()`, and `buildManifoldWith()`. Its `planeDistance` is the distance compared with `dot(position, normal)`, not the position-offset vector used by the CPU `PlaneCollider`. Because the `ComputePhysicsSpace` BodyState has no collider-offset field, a Box, Sphere, or Capsule registered in the Space must have a zero collider offset; a nonzero value throws during initialization. The `offset` option is rejected with an explicit rename error; use `planeDistance` instead. Capsules use the same local-Y pose convention for the collider and sample mesh; arbitrary-axis conversion is not implicit.
 
@@ -102,9 +102,9 @@ physics.syncNodesFromPhysics(stateData, [{ bodyId, node }], {
 });
 ```
 
-This synchronization does not issue a GPU copy or asynchronous map by itself. Call it only on frames that need Node synchronization so the direct GPU rendering flow does not wait for readback.
+The caller records and runs GPU-to-CPU copy and asynchronous mapping, then passes the result to this synchronization method.
 
-Readback-state queries are also available through `raycastFromReadback()`, `raycastAllFromReadback()`, `queryAabbFromReadback()`, and `overlapSphereFromReadback()`. Each method requires the `Float32Array` returned by `readStateReadback()` as its first argument, so it never falls back to the initial placement or another CPU shadow. Results do not create fake GPU objects; they return `bodyId` and `slot` together with hit position, normal, distance, or AABB min/max. A `filter` callback receives the body information equivalent to `getBodyInfo()`. `ComputePlaneCollider` boundary planes have no body ID and are therefore excluded from these body query results.
+Readback-state queries are available through `raycastFromReadback()`, `raycastAllFromReadback()`, `queryAabbFromReadback()`, and `overlapSphereFromReadback()`. Each query uses the `Float32Array` returned by `readStateReadback()` as its explicit state snapshot and returns body IDs, slots, hit data, or AABB bounds.
 
 ```js
 const hit = physics.raycastFromReadback(stateData, [0, 1, -2], [0, 0, 1]);
@@ -116,7 +116,7 @@ const bodies = physics.queryAabbFromReadback(
 );
 ```
 
-Body-to-body contacts can be obtained from the same readback state with `getContactsFromReadback()`. Each result contains `bodyAId`, `bodyBId`, slots, a normal, penetration, and a contact point. Face contacts preserve multiple contacts produced by the Collider, and `getManifoldsFromReadback()` returns that manifold form. It does not reconstruct contact impulses that are not present in the readback state, and boundary `ComputePlaneCollider` instances are excluded because they do not have body IDs.
+Body-to-body contacts can be reconstructed from the same readback state with `getContactsFromReadback()`. Results include contact geometry such as body IDs, slots, normal, penetration, and contact points; solver impulses are separate diagnostic data.
 
 Contacts with Planes such as the floor and walls are returned separately by `getPlaneContactsFromReadback()`. Each result contains `bodyAId`, `bodyASlot`, `planeIndex`, the Plane normal, penetration, contact point, and support-point count. `planeIndex` follows the registration order in `physics.planes`; it is not a virtual body ID for the Plane.
 
@@ -131,10 +131,10 @@ const events = physics.getContactEventsFromReadback(stateData);
 
 `getLastContacts()`, `getLastManifolds()`, and `getLastContactEvents()` return the results most recently generated from an explicit readback. Listeners registered with `onBeginContact()`, `onStayContact()`, and `onEndContact()` are notified only when `dispatchContactEventsFromReadback()` is called. GPU contact events are not transferred to the CPU automatically.
 
-To inspect sleep decisions, explicitly read back `BodyState` together with `getContactsFromReadback()` and `getPlaneContactsFromReadback()`, then assemble audit values in application code. The Compute solver has no diagnostic buffer, diagnostic binding, or diagnostic-only branch. When timing is needed, a small explicit timestamp query may still be attached to the physics pass.
+For sleep diagnostics, explicitly read back `BodyState` with contact data and assemble the audit values in application code. Diagnostic aggregation stays in the application layer, while the Compute solver handles physics.
 
-Compute entry points corresponding to the CPU `step()` and `stepFixed()` are also available. `step(commandEncoder, elapsedMs)` and `stepFixed(commandEncoder)` record commands just like `encode()` and `encodeFixedStep()`; the caller still submits them. The Broad Phase is fixed to the `xzGrid` returned by `getBroadphaseMode()`, so CPU `bruteForce` and `sweepAabb` modes cannot be selected.
+Compute entry points corresponding to the CPU `step()` and `stepFixed()` are also available. `step(commandEncoder, elapsedMs)` and `stepFixed(commandEncoder)` record commands like `encode()` and `encodeFixedStep()`; the caller submits them. Compute uses the `xzGrid` Broad Phase. Compare `bruteForce` and `sweepAabb` with the CPU sample.
 
 ## Sample Scope
 
-This sample renders dynamic, static, and kinematic Boxes, Spheres, and Capsules with fixed Planes. It covers restitution, friction, rotation, persistent sleep, triggers, layer/mask filtering, force commands, shape queries, body contacts, and Plane contacts. Applications explicitly read back a BodyState snapshot before querying GPU results; contact records include geometry and penetration data, while solver impulse values are not part of that snapshot. Capsule Broad Phase uses an axis-aligned AABB around the rotated center line, and the sample renders the local-Y Capsule mesh from spherical halves and an equatorial cylinder.
+This sample renders dynamic, static, and kinematic Boxes, Spheres, and Capsules with fixed Planes. It covers restitution, friction, rotation, persistent sleep, triggers, layer/mask filtering, force commands, readback-state shape queries, body contacts, and Plane contacts. Input values are checked against supported features and settings; invalid values report the required conditions.

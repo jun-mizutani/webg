@@ -7,7 +7,7 @@ English | [日本語](README.md)
 ## Overview
 - This sample loads and displays the `ModelAsset` JSON file specified in `main.js` as-is
 - JSON exported by `gltf_loader` or `collada_loader` with the `D` key can be shown again in this sample by matching the file name
-- It calls the JSON facade from `WebgApp.loadModel()`, making it a sample that obtains `ModelAsset` data and runtime objects without caring about format differences
+- It calls the JSON facade from `WebgApp.loadModel()` to obtain `ModelAsset` data and runtime objects through one shared entry point
 - The included `modelasset.json` contains two clips, `ArmatureAction_skeleton_0` and `ArmatureAction_skeleton_0_copy`, created by duplicating the same source clip
 
 ## How to Run

@@ -14,7 +14,7 @@ bodyの位置、姿勢、速度、停止状態は2本の`BodyState` Storage Buff
 
 実行ファイルは[./compute_physics.html](./compute_physics.html)です。WebGPU対応ブラウザで開くと、赤や青などで色分けしたBox、Sphere、Capsuleが境界枠の上部から落下し、床上で衝突しながら積み重なります。画面左上のpanelは初期状態では畳まれているため、bodyの動きを広く確認できます。
 
-通常のrelease起動と`?debug=1`によるdebug起動は、アプリ側のGPU validation scopeを開始せずにresourceを生成します。`?debug=1`ではDebugDockを表示して、起動後の状態や処理結果を確認できます。GPU自体のvalidationはWebGPUが実行しますが、このサンプルは起動時にscopeを待機してエラーを収集しません。
+通常のrelease起動と`?debug=1`によるdebug起動は、アプリ側のGPU resourceを生成し、検証結果はWebGPUの標準的なエラー通知で受け取ります。`?debug=1`ではDebugDockを表示して、起動後の状態や処理結果を確認できます。GPU自体のvalidationはWebGPUが実行しますが、このサンプルの起動処理は、その標準通知を使って進みます。
 
 CPU版との比較には[./compute_physics_cpu.html](./compute_physics_cpu.html)を使います。このページは通常の`PhysicsSpace`へ同じ72体を`PhysicsNode`として登録し、CPU物理とscene graph描画を実行します。両ページは[./computePhysicsScenario.js](./computePhysicsScenario.js)から同じ初期位置、姿勢、速度、形状寸法、材質、5枚の境界Planeを読みます。
 
@@ -47,7 +47,7 @@ CPU版は通常の`PhysicsSpace`を入口とし、`CpuMixedPhysicsPipeline`が�
 - panelに平均FPS、平均frame時間、active / sleeping body数、Box / Sphere / Capsule数が表示されること
 - `P`でCompute更新だけが止まり、現在のGPU stateの描画は継続すること
 - `R`で同じ初期配置へ戻ること
-- cameraを動かしても、body位置をCPUへreadbackせず描画できること
+- cameraを動かしても、GPU上のbody位置を直接参照して描画できること
 - `H`または`Show Panel`で状況表示を開閉できること
 
 ## 操作方法
@@ -70,17 +70,17 @@ CPU版の`PhysicsSpace.stepFixed()`は`PhysicsStepPipeline`を通って`CpuMixed
 
 Render Passでは`ComputePhysicsSpace.getRenderState()`の`bufferIndex`を使って初期化済みbind groupを選びます。Box、Sphere、Capsuleの各pipelineは同じ32 floatのBodyStateを読み、位置、quaternion、shape寸法、色、sleep flagをinstanceごとに適用します。
 
-panel用のbody統計は、12描画frameごとの小さなCompute Passが最新BodyStateのsleep flagと形状種別を数えます。CPUへ戻すのは`active / sleeping / Box / Sphere / Capsule`の5整数だけです。位置や姿勢はreadbackせず、前回の非同期readbackが完了するまで次の集計copyを発行しません。
+panel用のbody統計は、12描画frameごとの小さなCompute Passが最新BodyStateのsleep flagと形状種別を数えます。CPUへ戻すのは`active / sleeping / Box / Sphere / Capsule`の5整数だけです。位置と姿勢は描画側がGPU bufferから参照します。統計の集計copyは、前回の非同期readbackが完了してから記録します。
 
 ## CPU版に対応したCompute API
 
 ### Colliderのqueryと接触API
 
-`ComputeBoxCollider`、`ComputeSphereCollider`、`ComputeCapsuleCollider`は、GPU用の寸法・逆慣性・WGSLに加えて、CPU版Colliderと同じ形状queryを持ちます。`getWorldInfo(position, quat)`はworld形状を返し、`getAabb()`、`intersectRay()`、`overlapsAabb()`、`overlapSphere()`は明示した位置と姿勢から問い合わせます。`buildContactWith()`と`buildManifoldWith()`はCompute Box、Sphere、Capsule、Planeの組合せを検証して処理し、Boxのface接触では複数contactを保持します。CapsuleはCPU版と同じlocal Y軸をbody quaternionで回転し、BodyStateには`[radius, halfSegment, radius]`を保存します。Broad Phaseでは回転後の芯線両端を半径で広げた軸平行AABBを使います。これらはGPU commandを記録せず、readbackしたBodyStateやGPUを使わないCollider検証から呼び出せます。
+`ComputeBoxCollider`、`ComputeSphereCollider`、`ComputeCapsuleCollider`は、GPU用の寸法・逆慣性・WGSLに加えて、CPU版Colliderと同じ形状queryを持ちます。`getWorldInfo(position, quat)`はworld形状を返し、`getAabb()`、`intersectRay()`、`overlapsAabb()`、`overlapSphere()`は明示した位置と姿勢から問い合わせます。`buildContactWith()`と`buildManifoldWith()`はCompute Box、Sphere、Capsule、Planeの組合せを検証して処理し、Boxのface接触では複数contactを保持します。CapsuleはCPU版と同じlocal Y軸をbody quaternionで回転し、BodyStateには`[radius, halfSegment, radius]`を保存します。Broad Phaseでは回転後の芯線両端を半径で広げた軸平行AABBを使います。これらはCPU上の問い合わせAPIで、読み戻したBodyStateやColliderの検証データから呼び出せます。
 
 `ComputePlaneCollider`も`getWorldInfo()`、`getPlaneDistance()`、`intersectRay()`、`buildContactWith()`、`buildManifoldWith()`を提供します。ただしPlaneの`planeDistance`は`dot(position, normal)`と比較する距離です。CPU版PlaneColliderの位置offsetベクトルとは指定方法が異なります。`ComputePhysicsSpace`のBodyStateにはcollider offset欄がないため、Spaceへ登録するBox、Sphere、Capsuleのoffsetはゼロでなければならず、非ゼロ値は初期化時に例外になります。`offset` optionは受け付けず、`planeDistance`を指定します。Capsuleはlocal Y軸のmeshとcolliderを同じ姿勢で扱い、回転はbodyのquaternionで明示します。
 
-`ComputePhysicsSpace`はbody配列の再登録だけでなく、body IDを使った個別操作にも対応しています。`addBody()`、`removeBody()`、`getBodies()`でbodyを管理し、`setBodyType()`、`setBodyMass()`、`setBodyGravityScale()`、`setBodyMaterial()`、`setBodyAllowSleep()`、`setBodyTrigger()`、`setBodyCollisionLayer()`、`setBodyCollisionMask()`、`setBodyFixedRotation()`で登録後の属性を変更できます。削除後も他のbodyのslotは移動せず、取得したIDとslotの対応は維持されます。
+`ComputePhysicsSpace`はbody配列の再登録だけでなく、body IDを使った個別操作にも対応しています。`addBody()`、`removeBody()`、`getBodies()`でbodyを管理し、`setBodyType()`、`setBodyMass()`、`setBodyGravityScale()`、`setBodyMaterial()`、`setBodyAllowSleep()`、`setBodyTrigger()`、`setBodyCollisionLayer()`、`setBodyCollisionMask()`、`setBodyFixedRotation()`で登録後の属性を変更できます。削除後も他のbodyのslotを保持し、取得したIDとslotの対応を維持します。
 
 外部からの動作変更には`setBodyLinearVelocity()`、`setBodyAngularVelocity()`、`applyForce()`、`applyTorque()`、`applyImpulse()`、`applyAngularImpulse()`、`teleport()`、`stopBodyMotion()`、`wakeBody()`、`sleepBody()`を使います。これらは次のfixed stepでGPU上の`BodyControl`へ適用され、forceやimpulseはそのstepで一度だけ消費されます。呼出側はcommand encoderへ`encode()`または`encodeFixedStep()`を記録する前に命令を発行します。
 
@@ -102,9 +102,9 @@ physics.syncNodesFromPhysics(stateData, [{ bodyId, node }], {
 });
 ```
 
-この同期処理はGPUからCPUへのcopyと非同期mapを自動では発行しません。GPU上の状態を直接描画する処理フローへreadback待ちを混ぜないため、Node同期が必要なframeだけ呼び出します。
+GPUからCPUへのcopyと非同期mapは呼出側で記録・実行し、その結果をこの同期処理へ渡します。GPU上の状態を直接描画する処理フローへreadback待ちを混ぜないため、Node同期が必要なframeだけ呼び出します。
 
-readbackしたBodyStateに対するqueryとして、`raycastFromReadback()`、`raycastAllFromReadback()`、`queryAabbFromReadback()`、`overlapSphereFromReadback()`も用意しています。いずれも第1引数に`readStateReadback()`の結果を要求し、古い初期配置やCPU側の別のshadowを使いません。結果はGPU上のobject参照を作らず、`bodyId`と`slot`、hit位置・法線・距離、またはAABBのmin/maxを返します。`filter` callbackには`getBodyInfo()`相当のbody情報を渡します。`ComputePlaneCollider`の境界Planeはbody IDを持たないため、これらのbody query結果には含めません。
+readbackしたBodyStateに対するqueryとして、`raycastFromReadback()`、`raycastAllFromReadback()`、`queryAabbFromReadback()`、`overlapSphereFromReadback()`も用意しています。いずれも第1引数に`readStateReadback()`の結果を要求し、queryは渡したreadback状態を基準に計算します。結果として、`bodyId`と`slot`、hit位置・法線・距離、またはAABBのmin/maxを返します。`filter` callbackには`getBodyInfo()`相当のbody情報を渡します。`ComputePlaneCollider`の境界Planeはbody IDを持たないため、これらのbody query結果には含めません。
 
 ```js
 const hit = physics.raycastFromReadback(stateData, [0, 1, -2], [0, 0, 1]);
@@ -116,7 +116,7 @@ const bodies = physics.queryAabbFromReadback(
 );
 ```
 
-body同士の接触も、同じreadback状態から`getContactsFromReadback()`で取得できます。結果は`bodyAId`、`bodyBId`、slot、法線、penetration、接触点を持ちます。Boxのface接触ではColliderが生成した複数contactを保持します。`getManifoldsFromReadback()`はそのmanifold形式を返しますが、readbackへ出ていない接触impulseは復元しません。境界`ComputePlaneCollider`はbody IDを持たないため対象外です。
+body同士の接触も、同じreadback状態から`getContactsFromReadback()`で取得できます。結果は`bodyAId`、`bodyBId`、slot、法線、penetration、接触点を持ちます。Boxのface接触ではColliderが生成した複数contactを保持します。`getManifoldsFromReadback()`はそのmanifold形式を返しますが、返す情報は、読み戻した状態から再計算できる幾何的な接触点と法線などです。solver内の接触impulseは別の診断情報として扱います。境界`ComputePlaneCollider`はbody IDを持たないため対象外です。
 
 床や壁などPlaneとの接触は`getPlaneContactsFromReadback()`で別に取得します。結果には`bodyAId`、`bodyASlot`、`planeIndex`、Plane法線、penetration、接触点、支持点数が含まれます。`planeIndex`は`physics.planes`に登録したPlaneの配列indexです。
 
@@ -131,10 +131,10 @@ const events = physics.getContactEventsFromReadback(stateData);
 
 `getLastContacts()`、`getLastManifolds()`、`getLastContactEvents()`は、最後に明示的なreadbackから生成した結果を返します。`onBeginContact()`、`onStayContact()`、`onEndContact()`のlistenerは、`dispatchContactEventsFromReadback()`を呼んだ時だけ通知されます。contact eventのCPUへの取得と通知は、上記の明示的なreadback操作で行います。
 
-sleep判定を調べる場合は、通常の`BodyState` readbackと`getContactsFromReadback()`、`getPlaneContactsFromReadback()`を明示的に取得し、アプリケーション側で監査値を組み立てます。Compute solverへ診断buffer、診断binding、診断専用分岐は持ち込みません。GPU timestampが必要な計測では、少量のtimestamp queryをphysics passへ明示的に付けられます。
+sleep判定を調べる場合は、通常の`BodyState` readbackと`getContactsFromReadback()`、`getPlaneContactsFromReadback()`を明示的に取得し、アプリケーション側で監査値を組み立てます。診断用の集計はアプリケーション側へまとめ、Compute solverは物理計算を担当します。GPU timestampが必要な計測では、少量のtimestamp queryをphysics passへ明示的に付けられます。
 
-CPU版の`step()`と`stepFixed()`に対応するCompute版入口もあります。`step(commandEncoder, elapsedMs)`と`stepFixed(commandEncoder)`は`encode()`と`encodeFixedStep()`と同じくcommandを記録するだけで、submitは呼出側が行います。Broad Phaseは`getBroadphaseMode()`が返す`xzGrid`に固定され、CPU版の`bruteForce`と`sweepAabb`は選択できません。
+CPU版の`step()`と`stepFixed()`に対応するCompute版入口もあります。`step(commandEncoder, elapsedMs)`と`stepFixed(commandEncoder)`は`encode()`と`encodeFixedStep()`と同じくcommandを記録するだけで、submitは呼出側が行います。Compute版のBroad Phaseは、`getBroadphaseMode()`が返す`xzGrid`を使います。`bruteForce`と`sweepAabb`を比較する場合はCPU版のサンプルへ進みます。
 
 ## このサンプルの対応範囲
 
-このサンプルの描画と初期配置は動的・固定・kinematicのBox/Sphere/Capsuleと固定Planeを対象とします。反発、摩擦、回転、persistent sleep、trigger、layer / mask、force command、readback状態に対する形状query、body接触、Plane接触を対象とします。Capsuleはlocal Y軸をbody quaternionでworld空間へ回転し、Broad Phaseは回転後の芯線を包む軸平行AABBを使います。接触取得はColliderの複数contactとPlaneごとの代表接触を返しますが、readbackへ出ていないimpulse値、GPU上の現在状態を隠れてCPUへ戻す即時APIは対象外です。未対応機能を別の挙動へ置き換える処理はありません。
+このサンプルの描画と初期配置は動的・固定・kinematicのBox/Sphere/Capsuleと固定Planeを対象とします。反発、摩擦、回転、persistent sleep、trigger、layer / mask、force command、readback状態に対する形状query、body接触、Plane接触を対象とします。Capsuleはlocal Y軸をbody quaternionでworld空間へ回転し、Broad Phaseは回転後の芯線を包む軸平行AABBを使います。接触取得はColliderの複数contactとPlaneごとの代表接触を返しますが、readbackへ出ていないimpulse値、GPU上の現在状態を隠れてCPUへ戻す即時APIは対象外です。入力は実装された機能と設定範囲へ照合し、範囲外の指定は必要な条件を示す例外で通知します。

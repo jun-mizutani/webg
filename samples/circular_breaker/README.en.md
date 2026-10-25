@@ -53,7 +53,7 @@ The frame flow converts input to actions, updates the scene phase, advances the 
 
 ## Checkpoints
 - Confirm that the reflection direction of the pack is updated stably in response to paddle movement and rotation, verifying the basic quality of the collision-response logic
-- Confirm that when the pack enters the positive local-Z side of `paddleNode`, the remaining `PACK` count decreases by 1 exactly once and does not keep decreasing while the pack remains in the area
+- Confirm that when the pack enters the positive local-Z side of `paddleNode`, the remaining `PACK` count decreases by 1 exactly once and remains unchanged while the pack stays in the area
 - Confirm that when `PACK` reaches `0`, the game ends on that frame and the ending HUD shows the top five high scores
 - Confirm that destroying the green supply block (single-color `SmoothShader` path without normals or texture) produces an effect that increases the remaining `PACK` count by 1
 - Confirm that score and progress display (`current count / target count`) update immediately when blocks are destroyed, verifying that the gameplay HUD linked through `drawHud()` is correct
@@ -73,4 +73,4 @@ The frame flow converts input to actions, updates the scene phase, advances the 
 - `M`: switch between debug and release display
 - `Enter / Space / click`: start trigger while waiting to begin the stage
 - On smartphones (`coarse pointer`), touch buttons `← / → / A / D / R` are shown at the bottom of the screen
-- The smartphone UI does not show pause / debug / diagnostics buttons such as `K / O / P / Q / W / C / V / J / L / F / G / M`
+- The smartphone UI focuses on in-game controls such as movement, rotation, and starting the game

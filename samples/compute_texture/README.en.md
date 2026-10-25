@@ -19,14 +19,14 @@ English | [日本語](README.md)
 - `WebgApp`: initializes `Screen`, diagnostics, and the input foundation together
 - `WebgApp` compute frame: `computeFrame: true` and the `onComputeFrame` handler skip standard scene drawing and control compute/render order
 - `Screen.resize()`: updates the actual canvas pixel size on viewport changes through the `Screen` held by `WebgApp`
-- `WebgApp.getGPU()`: entry point for building raw WebGPU textures, samplers, and pipelines on the sample side without changing the core API
+- `WebgApp.getGPU()`: provides the initialized GPU objects used to build raw WebGPU textures, samplers, and pipelines in the sample
 - `buildHelpPanelOptions() + showOverlayPanel()`: displays the operation guide and current state in the `OverlayPanel` help panel
 - `InputController.installTouchControls()`: shows touch buttons for mode switching and clearing on both desktop and smartphones
 
 ## WebGPU Features Used
 - `sampled texture`: used as the input that the compute shader reads from the previous frame's color distribution
 - `storage texture`: used as the output into which the compute shader writes the next frame's color
-- `ping-pong texture`: avoids read/write conflicts by swapping source and destination every frame instead of reading and writing the same texture
+- `ping-pong texture`: keeps reads and writes separate by swapping the source and destination roles each frame
 - `sampler`: reads neighboring pixels and UVs shifted along the flow direction with linear interpolation, generating bleed and flow
 - `uniform buffer`: passes time, `deltaTime`, pointer position, mode, brush radius, burst state, and brush color to the shader
 - `compute pipeline`: combines previous-frame color, neighboring color, background waves, and input injection with one invocation per pixel

@@ -1,12 +1,12 @@
 // ---------------------------------------------
-// samples/procedural_texture/perlin_noise_2d_test.mjs  2026/08/06
+// samples/procedural_texture/perlin_noise_2d_test.mjs  2026/10/25
 //   CPU contracts for the material-independent PerlinNoise2D reference class
 // ---------------------------------------------
 import assert from "node:assert/strict";
 import { performance } from "node:perf_hooks";
 import PerlinNoise2D from "./PerlinNoise2D.js";
 
-// CPUと将来のGPUで完全一致しないscalarも比較できるよう、誤差上限付きで値を検証する
+// scalarの比較へ許容誤差を設け、CPUとGPUの浮動小数点演算の差を評価する
 function assertNear(actual, expected, tolerance, label) {
   assert.ok(
     Math.abs(actual - expected) <= tolerance,
@@ -84,7 +84,7 @@ assertNear(
   "periodic y boundary derivative"
 );
 
-// 大きなperiodでは格子cacheを確保せず、座標hashへfallbackして同じ周期契約を保つ
+// 大きなperiodには座標hashを使い、同じ周期条件で必要な値を計算する
 const largePeriod = new PerlinNoise2D({
   seed: 123456789,
   salt: 0x5045524c,

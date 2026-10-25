@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// samples/computeSimplePostprocessApp.js  2026/07/25
+// samples/computeSimplePostprocessApp.js  2026/10/25
 //   Single-dispatch Compute Shader sample runtime
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -43,7 +43,7 @@ function makeTimingHudRows(app) {
   ];
 }
 
-// smooth-shaderへ渡すmaterialを揃え、各effectの比較でscene条件が変わらないようにします
+// smooth-shader へ渡す material をそろえ、同じ scene 条件で各 effect を比較します
 function makeMaterial(color, ambient, specular, power, emissive = 0.0) {
   return {
     has_bone: 0,
@@ -236,7 +236,7 @@ export async function runSimpleComputePostprocess(config) {
       });
     }
 
-    // storage textureはswapchainへ直接表示できないため、最後だけrender passでコピーします
+    // storage textureの計算結果を表示するため、最後にrender passでswapchainへコピーする
     const copyPass = new FullscreenPass(app.getGPU(), {
       targetFormat: app.getGPU().format
     });

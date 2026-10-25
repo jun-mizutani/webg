@@ -24,8 +24,8 @@
 ## 確認ポイント
 - C / T / I / N / D で surface mode を切り替えたとき、同じ geometry のまま texture / image normal / procedural normal の差だけが変わることを確認します
 - T で texture 比較、I で image normal 比較、N / D で procedural normal 比較が同じサンプル内で読めることを確認します
-- 1 - 9 のワイヤーフレーム切り替えでトポロジが想定どおりかを確認し、surface mode を変えても線表示が破綻しないことを確認します
-- cube / cuboid / mapCube を含む 9 形状で、texture と normal の両方が極端に破綻せず比較できることを確認します
+- 1 - 9 のワイヤーフレーム切り替えでトポロジが想定どおりかを確認し、surface modeを変えた後も同じ辺が連続して表示されることを確認します
+- cube / cuboid / mapCube を含む 9 形状で、textureとnormalの模様・陰影のつながりを比較できることを確認します
 
 ## 操作方法
 - C: solid color 表示

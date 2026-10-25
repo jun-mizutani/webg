@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// samples/collisions/main.js  2026/07/25
+// samples/collisions/main.js  2026/10/25
 //   collisions sample
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -75,7 +75,7 @@ const start = async () => {
   let orbitYawDeg = 0;
   let orbitPitchDeg = 8;
   const input = new InputController(document);
-  // document 全体の text selection を止めないよう、
+  // document 上の text selection を利用できるよう、
   // pointerdown の既定抑止は canvas 内だけへ絞る
   input.setPointerPreventDefaultElement(screen.canvas);
 

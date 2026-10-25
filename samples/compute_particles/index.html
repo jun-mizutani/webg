@@ -1,23 +1,206 @@
-<!doctype html>
-<!-- 2026/09/23: READMEと同じ標準ComputeParticleEmitterの説明 -->
-<html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>compute_particles</title><link rel="icon" href="data:,">
-<style>body{margin:0;background:#eef3f8;color:#17324a;font:16px/1.75 sans-serif}.page{max-width:900px;margin:auto;padding:24px 18px 56px}.hero,.doc{background:#fff;border:1px solid #c8d5e4;border-radius:18px;padding:22px;margin-bottom:18px}.hero{background:linear-gradient(135deg,#15324b,#175f86);color:#fff}.doc{box-shadow:0 16px 40px #1d344f18}h1,h2{line-height:1.25}h2{border-bottom:1px solid #c8d5e4;padding-bottom:6px}a{color:#1566ab}code{background:#f3f7fb;padding:2px 5px;border-radius:4px}pre{background:#0f1720;color:#ecf5ff;padding:14px;overflow:auto;border-radius:10px}li+li{margin-top:5px}</style></head>
-<body><main class="page"><header class="hero"><h1>compute_particles</h1><p>標準ComputeParticleEmitterによるGPU粒子</p></header><article class="doc">
-<p><a href="README.md">README</a> / <a href="README.en.md">English README</a> / <a href="compute_particles.html">実行</a></p>
-<h2>概要</h2><p><code>ComputeParticleEmitter</code>を使い、49,152個の粒子をGPUで生成・更新・描画します。利用側はWGSLや粒子bufferのレイアウトを定義せず、発生位置、方向、速度、寿命を標準APIへ渡します。fountainは1件、ringは24件の発生要求で構成し、発光色を線形HDRで加算合成します。</p>
-<h2>実行方法</h2><p>HTTPサーバー経由で<a href="compute_particles.html">compute_particles.html</a>を開いてください。WebGPUに対応したブラウザが必要です。</p>
-<h2>使用しているwebg機能</h2><ul><li><code>WebgApp</code>: Screen、カメラ、入力、Compute frame、GPU submitを管理</li><li><code>ComputeParticleEmitter</code>: 発生要求、storage buffer、uniform、Compute/Render pipeline、billboard描画、寿命更新を管理</li><li><code>GpuParticleEmitter</code>: 標準Emitterが継承する低水準GPU resource基盤</li><li><code>OverlayPanel</code>: 操作方法、推定生存数、発生要求数、拒否数を表示</li><li><code>Screen</code>: Canvasのcolor/depth viewを用意し、同じcommand encoderへComputeとRenderを記録</li></ul>
-<h2>操作方法</h2><ul><li><code>Space</code>: 2,048粒の火花を追加発生</li><li><code>1</code>: fountain</li><li><code>2</code>: ring</li><li><code>P</code>: 移動・寿命更新の停止／再開</li><li><code>H</code>: Help panelの折りたたみ／表示</li><li>ドラッグ: カメラ回転、<code>Shift</code> + ドラッグ: カメラ移動、ホイール: 拡大縮小</li></ul>
-<h2>実装の要点</h2><pre><code>const emitter = new ComputeParticleEmitter(screen.getGPU(), {
-  capacity: 49152, preset: "spark", targetFormat: screen.getGPU().format,
-  overflow: "replace-oldest",
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>compute_particles</title>
+  <link rel="icon" href="data:," />
+  <!-- 2026/06/19 -->
+  <style>
+
+:root {
+  color-scheme: light;
+  --bg: #eef3f8;
+  --paper: rgba(255, 255, 255, 0.94);
+  --line: #c8d5e4;
+  --ink: #17324a;
+  --muted: #5c748b;
+  --accent: #1566ab;
+  --accent-soft: #dfeefe;
+  --code-bg: #f3f7fb;
+  --shadow: rgba(29, 52, 79, 0.10);
+}
+* { box-sizing: border-box; }
+html, body {
+  margin: 0;
+  min-height: 100%;
+}
+body {
+  background:
+    radial-gradient(circle at top left, rgba(21, 102, 171, 0.12), transparent 24%),
+    radial-gradient(circle at top right, rgba(255, 191, 118, 0.10), transparent 22%),
+    linear-gradient(180deg, #f8fbfd 0%, var(--bg) 100%);
+  color: var(--ink);
+  font: 16px/1.78 "Avenir Next", "Hiragino Sans", "Yu Gothic", sans-serif;
+}
+.page {
+  width: min(1080px, calc(100% - 28px));
+  margin: 0 auto;
+  padding: 24px 0 56px;
+}
+.hero,
+.doc {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  box-shadow: 0 22px 52px var(--shadow);
+}
+.hero {
+  padding: 22px 24px;
+  margin-bottom: 18px;
+}
+.hero h1 {
+  margin: 0 0 8px;
+  font-size: clamp(2rem, 4vw, 3rem);
+  line-height: 1.08;
+}
+.hero p {
+  margin: 0;
+  color: var(--muted);
+}
+.doc {
+  padding: 28px;
+}
+.doc > :first-child {
+  margin-top: 0;
+}
+h1, h2, h3, h4, h5, h6 {
+  line-height: 1.25;
+  margin: 1.45em 0 0.55em;
+}
+h1 {
+  font-size: 2.2rem;
+}
+h2 {
+  padding-bottom: 0.28em;
+  border-bottom: 1px solid var(--line);
+  font-size: 1.48rem;
+}
+h3 {
+  font-size: 1.14rem;
+}
+p, ul, ol, table, pre, blockquote {
+  margin: 0 0 1em;
+}
+ul, ol {
+  padding-left: 1.4em;
+}
+li + li {
+  margin-top: 0.26em;
+}
+a {
+  color: var(--accent);
+  text-decoration: none;
+}
+a:hover {
+  text-decoration: underline;
+}
+img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  border-radius: 16px;
+  border: 1px solid var(--line);
+  box-shadow: 0 12px 32px rgba(29, 52, 79, 0.08);
+  margin: 1.1em 0 1.4em;
+}
+code {
+  padding: 0.12em 0.38em;
+  border-radius: 0.45em;
+  background: var(--code-bg);
+  border: 1px solid #dbe6f1;
+  font: 0.92em/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+pre {
+  padding: 14px 16px;
+  overflow-x: auto;
+  border-radius: 14px;
+  background: #0f1720;
+  color: #ecf5ff;
+}
+pre code {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #ffffff;
+}
+th, td {
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  text-align: left;
+  vertical-align: top;
+}
+th {
+  background: #f5f9fc;
+}
+hr {
+  border: 0;
+  border-top: 1px solid var(--line);
+  margin: 1.5em 0;
+}
+blockquote {
+  padding: 0.3em 0 0.3em 1em;
+  border-left: 4px solid #c9dbef;
+  color: var(--muted);
+}
+@media (max-width: 720px) {
+  .page {
+    width: min(100% - 18px, 1080px);
+    padding-top: 16px;
+  }
+  .hero,
+  .doc {
+    border-radius: 18px;
+  }
+  .doc {
+    padding: 20px;
+  }
+}
+
+  </style>
+</head>
+<body>
+  <main class="page">
+    <section class="hero">
+      <h1>compute_particles</h1>
+    </section>
+    <article class="doc">
+<h1>compute_particles</h1>
+<p><a href="index.en.html">English</a> | 日本語</p>
+<h2>概要</h2>
+<p><code>ComputeParticleEmitter</code>を使い、49,152個の粒子をGPUで生成・更新・描画するサンプルです。利用側のコードは発生位置、方向、速度、寿命を標準APIへ渡し、WGSLと粒子bufferの構築は標準クラスが担当します。粒子の位置・速度・寿命はGPU上のstorage bufferで更新され、同じbufferがbillboard描画に使われます。</p>
+<p>fountainは一つの発生要求から上向きの粒子群を作り、ringは24個の発生要求を円周上へ配置します。どちらも<code>ComputeParticleEmitter</code>の同じAPIで構成しています。発光色は線形HDRで加算合成されます。</p>
+<h2>実行方法</h2>
+<p>HTTPサーバー経由で<a href="./compute_particles.html">compute_particles.html</a>を開いてください。WebGPUに対応したブラウザが必要です。</p>
+<h2>使用しているwebg機能</h2>
+<ul><li><code>WebgApp</code>: Screen、カメラ、入力、Compute frame、GPU submitを初期化・管理します</li><li><code>ComputeParticleEmitter</code>: 発生要求、粒子storage buffer、uniform、Compute/Render pipeline、billboard描画、寿命更新をまとめます</li><li><code>GpuParticleEmitter</code>: 標準Emitterが継承する低水準GPU resource基盤です</li><li><code>OverlayPanel</code>: 操作方法、推定生存数、発生要求数、拒否数を表示します</li><li><code>Screen</code>: Canvasのcolor/depth viewを用意し、粒子のComputeとRenderを同じcommand encoderへ記録します</li></ul>
+<h2>操作方法</h2>
+<ul><li><code>Space</code>: 2,048粒の火花を追加発生</li><li><code>1</code>: fountainへ切り替え</li><li><code>2</code>: ringへ切り替え</li><li><code>P</code>: 粒子の移動・寿命更新を停止／再開</li><li><code>H</code>: Help panelを折りたたむ／表示する</li><li>ドラッグ: カメラ回転</li><li><code>Shift</code> + ドラッグ: カメラ移動</li><li>ホイール: 拡大縮小</li></ul>
+<h2>実装の要点</h2>
+<p><code>main.js</code>は<code>ComputeParticleEmitter</code>を次の設定で生成します。</p>
+<pre><code class="language-js">const emitter = new ComputeParticleEmitter(screen.getGPU(), {
+  capacity: 49152,
+  preset: &quot;spark&quot;,
+  targetFormat: screen.getGPU().format,
+  overflow: &quot;replace-oldest&quot;,
   simulation: { gravity: [0, -0.70, 0], drag: 0.05 },
   appearance: {
     colors: [[1.0, 0.28, 0.04], [0.04, 0.46, 1.0]],
-    intensity: 1.26, size: [0.006, 0.018]
+    intensity: 1.26,
+    size: [0.006, 0.018]
   }
-});</code></pre><p>発生要求には<code>position</code>、<code>direction</code>、<code>spreadAngle</code>、<code>speed</code>、<code>lifetime</code>を指定します。初期値生成と移動はCompute Shaderが行います。<code>targetFormat</code>はCanvasへ直接描画する形式です。PBRシーンでは<code>WebgSceneApp.createComputeParticleEmitter()</code>がHDR中間画像と<code>ComputeParticlePass</code>を用意します。</p>
-<p><code>estimated</code>は最大寿命からCPUが管理する予約数です。通常の描画では粒子位置をGPUからCPUへ戻しません。</p>
-<h2>確認ポイント</h2><ul><li>起動直後に49,152個の粒子がfountain状に表示される</li><li><code>2</code>で24方向のring表示へ切り替わる</li><li><code>Space</code>で追加発生し、容量超過時は<code>replace-oldest</code>で置換される</li><li><code>P</code>で停止・再開できる</li><li>Help panelの推定数、要求数、拒否数が操作に応じて変化する</li></ul>
-</article></main></body></html>
+});</code></pre>
+<p>fountainは1件の要求、ringは24件の要求として<code>emit()</code>を呼びます。1件の要求には<code>position</code>、<code>direction</code>、<code>spreadAngle</code>、<code>speed</code>、<code>lifetime</code>を指定します。発生要求とカメラ・時間はuniformへまとめて転送され、粒子の初期値生成と移動はCompute Shaderが行います。</p>
+<p><code>targetFormat</code>は、このサンプルのようにCanvasへ直接描画するときのswapchain formatです。PBRシーンへ登録する場合は、<code>WebgSceneApp.createComputeParticleEmitter()</code>がHDR中間画像と<code>ComputeParticlePass</code>を用意します。</p>
+<p>表示中の<code>estimated</code>は最大寿命からCPUが管理する予約数の推定値です。通常の描画では粒子位置をGPU上で直接参照し、容量と発生要求はCPUが管理する予約数から確認できます。</p>
+<h2>確認ポイント</h2>
+<ul><li>起動直後に49,152個の粒子がfountain状に表示される</li><li><code>2</code>で24方向のring表示へ切り替わる</li><li><code>Space</code>で追加発生し、容量を超える粒子は<code>replace-oldest</code>で置き換わる</li><li><code>P</code>で停止中の粒子が同じ姿勢を保ち、再開後に寿命更新が進む</li><li>Help panelの推定数、要求数、拒否数が操作に応じて変化する</li><li>粒子の位置をCompute Shaderで毎frame更新する</li></ul>
+    </article>
+  </main>
+</body>
+</html>

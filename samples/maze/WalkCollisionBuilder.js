@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// samples/maze/WalkCollisionBuilder.js  2026/07/07
+// samples/maze/WalkCollisionBuilder.js  2026/10/25
 //   Build walk-through collision segments from runtime shapes
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -29,7 +29,7 @@ function triangleNormal(a, b, c) {
 }
 
 // XZ平面へ投影した辺の長さを返す
-// 衝突は水平移動だけを扱うため、Y方向の長さではなく歩行平面上の長さを基準にする
+// 水平移動の衝突を扱うため、歩行平面上の長さを基準にする
 function edgeLength2d(a, b) {
   return Math.hypot(b[0] - a[0], b[2] - a[2]);
 }

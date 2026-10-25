@@ -6,7 +6,7 @@
 
 ## 概要
 - WebGPU の Compute Shader を使い、2 枚の texture を ping-pong しながら毎フレーム内容を書き換えるサンプルです
-- webg コアライブラリには compute 専用 API を追加せず、WebgApp が初期化した WebGPU device / queue / canvas context をサンプル内で直接使っています
+- WebgAppが初期化したWebGPU device / queue / canvas contextを使い、サンプル内でcompute処理を組み立てています
 - compute pass は前フレームの sampled texture を読み、拡散、流れ場、背景模様、ポインタ入力、中央 burst を合成して次フレームの storage texture へ書き込みます
 - render pass は同じ texture を左下の平面 preview と、`Primitive.sphere()` で作った球 mesh へ同時に使い、GPU 内で更新したテクスチャを CPU readback なしで画面へ出します
 - ドラッグするとポインタ位置に色の種を注入し、クリック時には反転した色の輪が少しずつ大きくなりながら薄れていく演出も重なります。左下の平面 preview では入力位置との対応を確認でき、中央の球体では貼り込まれた texture と照明の見え方を確認できます
@@ -17,16 +17,16 @@
 
 ## 使用している webg 機能
 - WebgApp: Screen、diagnostics、入力基盤をまとめて初期化する
-- WebgApp computeFrame: `computeFrame: true`と`onComputeFrame` handlerで、標準scene描画を行わずcompute / renderの順序を制御する
+- WebgApp computeFrame: `computeFrame: true`と`onComputeFrame` handlerで、computeとrenderの順序をサンプル側で制御する
 - Screen.resize(): WebgApp が保持する Screen を通じて viewport 変更時の canvas 実ピクセルを更新する
-- WebgApp.getGPU(): core API を変更せず、サンプル側で raw WebGPU texture / sampler / pipeline を作るための入口
+- WebgApp.getGPU(): 初期化済みGPUを取得し、サンプル側でraw WebGPU texture / sampler / pipeline を作るための入口
 - buildHelpPanelOptions() + showOverlayPanel(): 操作説明と現在状態を OverlayPanel の help panel として表示する
 - InputController.installTouchControls(): PC とスマートフォンの両方へ mode 切替や clear を行うタッチボタンを表示する
 
 ## 使用している WebGPU 機能
 - sampled texture: 前フレームの色分布を compute shader が読む入力として使う
 - storage texture: compute shader が次フレームの色を書き込む出力として使う
-- ping-pong texture: 同じ texture を読み書きせず、source と destination を毎フレーム交換して更新競合を避ける
+- ping-pong texture: 読み取り用sourceと書き込み用destinationを分け、毎フレーム役割を交換する
 - sampler: 隣接 pixel や流れ方向のずれた UV を線形補間で読み、にじみや流れを作る
 - uniform buffer: time、deltaTime、pointer 位置、mode、brush 半径、burst、brush color を shader へ渡す
 - compute pipeline: 1 invocation = 1 pixel として前フレームの色、近傍色、背景波形、入力注入を合成する

@@ -50,7 +50,7 @@ When you press `Hold Triad`, the chord makes reverb overlap and the stronger har
 
 ## Common Pitfalls
 
-If you do not press `Audio Start`, no sound will play. This follows browser autoplay restrictions.
+Press `Audio Start` to enable sound, following browser autoplay requirements.
 
 `Tone Gain` is the loudness baseline per voice. In a triad, several notes sound together, so the sample lowers each voice slightly to avoid too large a level difference from the single-note case.
 

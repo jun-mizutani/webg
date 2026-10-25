@@ -1,14 +1,14 @@
 // ---------------------------------------------
-// samples/mmodeler/ModelerScene.js  2026/06/02
+// samples/mmodeler/ModelerScene.js  2026/10/25
 //   scene state container for mmodeler
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // ---------------------------------------------
 
 // mmodeler が編集対象として扱う scene state を保持する
-// この class は DOM、WebGPU、command palette、camera を知らない
-// 最初の段階では main.js の既存 property 参照を壊さないよう、editor plain object と同じ field を持つ
-// 今後、selection、undo、active object、edit mode commit を method 化していくための中核 object とする
+// 編集データ、選択状態、undo / redo 履歴を保持する class として、UI と描画から独立させる
+// editor plain object と共通の field を持ち、main.js から同じ property 名で参照する
+// selection と active object の変更、履歴の追加と取得を method にまとめる
 export default class ModelerScene {
   constructor({
     mode,
@@ -40,7 +40,7 @@ export default class ModelerScene {
     this.nextFaceId = 1;
 
     // Edit Mode の選択 tool を保持する
-    // Object Mode では直接使わないが、Edit Mode に戻ったときの操作状態として維持する
+    // Edit Mode の選択 tool を記憶し、mode を切り替えて戻ったときも同じ tool を使う
     this.tool = tool;
 
     // scene の変更状態とユーザー向け status message
@@ -94,7 +94,7 @@ export default class ModelerScene {
   }
 
   // undo 時に現在状態を redo stack へ退避する
-  // snapshot 作成の責務は、WebGPU 表示を知らない main.js 側に残す
+  // main.js で作成した snapshot を受け取り、redo stack に保存する
   pushRedoSnapshot(snapshot) {
     this.redoStack.push(snapshot);
   }
@@ -178,7 +178,7 @@ export default class ModelerScene {
   }
 
   // 編集対象 mesh の接続を空にする
-  // object list を差し替える前後や、object がすべて消えたときに古い mesh 参照が残らないようにする
+  // object list の差替え時や全削除時に、active mesh の参照を現在の object にそろえる
   clearEditableMesh() {
     this.vertices = [];
     this.faces = [];
@@ -252,7 +252,7 @@ export default class ModelerScene {
   }
 
   // 次に使う object id を払い出す
-  // id の増加規則を scene 側に閉じ込め、primitive 追加や join が直接 nextObjectId を増やさないようにする
+  // id の採番を scene 側へまとめ、primitive 追加と join で共通の規則を使う
   allocateObjectId() {
     const id = this.nextObjectId;
     this.nextObjectId += 1;

@@ -1,6 +1,175 @@
-<!doctype html>
-<!-- 2026/09/25: VOID STRIKE sample guide -->
-<html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>VOID STRIKE — Guide</title><style>body{max-width:860px;margin:54px auto;padding:0 24px;background:#06101b;color:#c9dce4;font:16px/1.9 system-ui}h1,h2{color:#effaff}h2{margin-top:2em}a{color:#60d9ff}nav{display:flex;gap:24px;flex-wrap:wrap}</style><nav><a href="void_strike.html">VOID STRIKE ↗</a><a href="index.html">日本語</a><a href="index.en.html">English</a></nav><main>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>VOID STRIKE — Rift Defense</title>
+  <link rel="icon" href="data:," />
+  <!-- 2026/06/19 -->
+  <style>
+
+:root {
+  color-scheme: light;
+  --bg: #eef3f8;
+  --paper: rgba(255, 255, 255, 0.94);
+  --line: #c8d5e4;
+  --ink: #17324a;
+  --muted: #5c748b;
+  --accent: #1566ab;
+  --accent-soft: #dfeefe;
+  --code-bg: #f3f7fb;
+  --shadow: rgba(29, 52, 79, 0.10);
+}
+* { box-sizing: border-box; }
+html, body {
+  margin: 0;
+  min-height: 100%;
+}
+body {
+  background:
+    radial-gradient(circle at top left, rgba(21, 102, 171, 0.12), transparent 24%),
+    radial-gradient(circle at top right, rgba(255, 191, 118, 0.10), transparent 22%),
+    linear-gradient(180deg, #f8fbfd 0%, var(--bg) 100%);
+  color: var(--ink);
+  font: 16px/1.78 "Avenir Next", "Hiragino Sans", "Yu Gothic", sans-serif;
+}
+.page {
+  width: min(1080px, calc(100% - 28px));
+  margin: 0 auto;
+  padding: 24px 0 56px;
+}
+.hero,
+.doc {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  box-shadow: 0 22px 52px var(--shadow);
+}
+.hero {
+  padding: 22px 24px;
+  margin-bottom: 18px;
+}
+.hero h1 {
+  margin: 0 0 8px;
+  font-size: clamp(2rem, 4vw, 3rem);
+  line-height: 1.08;
+}
+.hero p {
+  margin: 0;
+  color: var(--muted);
+}
+.doc {
+  padding: 28px;
+}
+.doc > :first-child {
+  margin-top: 0;
+}
+h1, h2, h3, h4, h5, h6 {
+  line-height: 1.25;
+  margin: 1.45em 0 0.55em;
+}
+h1 {
+  font-size: 2.2rem;
+}
+h2 {
+  padding-bottom: 0.28em;
+  border-bottom: 1px solid var(--line);
+  font-size: 1.48rem;
+}
+h3 {
+  font-size: 1.14rem;
+}
+p, ul, ol, table, pre, blockquote {
+  margin: 0 0 1em;
+}
+ul, ol {
+  padding-left: 1.4em;
+}
+li + li {
+  margin-top: 0.26em;
+}
+a {
+  color: var(--accent);
+  text-decoration: none;
+}
+a:hover {
+  text-decoration: underline;
+}
+img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  border-radius: 16px;
+  border: 1px solid var(--line);
+  box-shadow: 0 12px 32px rgba(29, 52, 79, 0.08);
+  margin: 1.1em 0 1.4em;
+}
+code {
+  padding: 0.12em 0.38em;
+  border-radius: 0.45em;
+  background: var(--code-bg);
+  border: 1px solid #dbe6f1;
+  font: 0.92em/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+pre {
+  padding: 14px 16px;
+  overflow-x: auto;
+  border-radius: 14px;
+  background: #0f1720;
+  color: #ecf5ff;
+}
+pre code {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #ffffff;
+}
+th, td {
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  text-align: left;
+  vertical-align: top;
+}
+th {
+  background: #f5f9fc;
+}
+hr {
+  border: 0;
+  border-top: 1px solid var(--line);
+  margin: 1.5em 0;
+}
+blockquote {
+  padding: 0.3em 0 0.3em 1em;
+  border-left: 4px solid #c9dbef;
+  color: var(--muted);
+}
+@media (max-width: 720px) {
+  .page {
+    width: min(100% - 18px, 1080px);
+    padding-top: 16px;
+  }
+  .hero,
+  .doc {
+    border-radius: 18px;
+  }
+  .doc {
+    padding: 20px;
+  }
+}
+
+  </style>
+</head>
+<body>
+  <main class="page">
+    <section class="hero">
+      <h1>VOID STRIKE — Rift Defense</h1>
+    </section>
+    <article class="doc">
 <h1>VOID STRIKE — Rift Defense</h1>
 <p>VOID STRIKE is a 3D shooter about intercepting enemy formations emerging from an interstellar rift. The player flies through enemy craft, red tracking shots, and luminous ring gates while firing twin blue-white lasers. Chain kills to increase the score multiplier and use a boost to break through incoming fire. PBR metal ships, colored lighting, emissive gates, Bloom, and Compute sparks combine to make every action fill the screen with feedback.</p>
 <h2>Running and controls</h2>
@@ -13,7 +182,10 @@
 <p>Collision, scoring, and wave progression use a compact sample-local game update. Player bolts are checked against enemies, enemy shots against the player, and hits reduce enemy hull points. <code>GameAudioSynth</code> plays its 175 BPM <code>run_neon</code> score and synthesized effects. Audio starts after the SOUND control is used; master volume is 42% and BGM volume is 28%.</p>
 <h2>What to check</h2>
 <p>After starting, the blue player craft and red enemies move in opposing directions, and Space fires two laser bolts at once. Hits produce sparks; destroying an enemy increases score and kill chain. Later waves add larger enemies that require multiple hits.</p>
-<p>Enemy fire reduces hull on contact. A brief shield blink prevents repeated damage during the same impact window. Holding Shift drains the boost meter and protects the ship from shots; the meter recovers gradually after boosting. PAUSE freezes combat and can resume it. The on-screen direction keys, FIRE, and BOOST provide the same controls on touch devices.</p>
+<p>Enemy fire reduces hull on contact. A brief shield blink preserves hull durability during the same impact window. Holding Shift drains the boost meter and protects the ship from shots; the meter recovers gradually after boosting. PAUSE freezes combat and can resume it. The on-screen direction keys, FIRE, and BOOST provide the same controls on touch devices.</p>
 <h2>Reading the implementation</h2>
 <p><code>scene.yaml</code> defines PBR, SSR, and particle settings. <code>space_scene.js</code> builds the starfield, gates, ships, and reusable projectile pools. <code>ShooterApp.js</code> installs lighting, camera, and Canvas resizing. <code>main.js</code> handles controls, collisions, waves, scoring, HUD, and audio. Sample-specific code stays in this folder and uses the published webg core files directly.</p>
-</main></html>
+    </article>
+  </main>
+</body>
+</html>

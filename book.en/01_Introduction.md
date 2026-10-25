@@ -113,7 +113,7 @@ This part examines the rendering used in Parts I and II from the shader perspect
 
 ### Part IV: Expanding visual expression
 
-This part covers bloom, depth of field, transparency, particles, physics, procedural textures, PBR, and advanced screen effects. Chapters 23–26 add screen effects and lightweight effects. Chapters 27–28 use `PhysicsSpace` to work with the CPU and compute versions of the physics engine. Chapters 29–33 cover physical-scale procedural materials, environment lighting, and PBR integration. Chapters 34–36 combine individual compute passes to create advanced effects.
+This part covers bloom, depth of field, transparency, particles, physics, procedural textures, PBR, and advanced screen effects. Chapters 23–26 add screen effects and lightweight effects. Chapters 27–28 use CPU `PhysicsSpace` and compute-based `ComputePhysicsSpace` for their respective physics paths. Chapters 29–33 cover physical-scale procedural materials, environment lighting, and PBR integration. Chapters 34–36 combine individual compute passes to create advanced effects.
 
 ### Part V: Understanding the internals
 

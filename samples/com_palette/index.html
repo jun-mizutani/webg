@@ -175,7 +175,7 @@ blockquote {
 <p><img src="./com_palette.jpg" alt="com_palette" /></p>
 <h2>概要</h2>
 <p><code>com_palette</code>は、コアの<code>webg/CommandPalette.js</code>をWebgAppから独立したUI部品として使うサンプルです。button、toggle、stepper、select、排他的なmode switchを一つのpaletteへ配置し、command定義とapplication stateをどのように接続するかを確認します。</p>
-<p>画面中央の2D previewとHUDは、paletteが更新する同じ<code>state</code>を読みます。<code>Obj / Edit / Scpt</code>を切り替えると選択中buttonのactive表示とpreviewが同時に変わり、toggleやstepperを操作すると次のframeから背景や図形へ反映されます。これにより、CommandPalette自身へapplication固有の状態を持たせず、利用側の状態を表示・更新する基本構成を確認できます。</p>
+<p>画面中央の2D previewとHUDは、paletteが更新する同じ<code>state</code>を読みます。<code>Obj / Edit / Scpt</code>を切り替えると選択中buttonのactive表示とpreviewが同時に変わり、toggleやstepperを操作すると次のframeから背景や図形へ反映されます。これにより、application固有の状態は利用側が保持し、CommandPaletteがその状態を表示・更新する基本構成を確認できます。</p>
 <h2>実行方法</h2>
 <ul><li><a href="./com_palette.html">./com_palette.html</a> を開きます</li><li>Canvas 2DとDOMを利用できるbrowserで動作します</li></ul>
 <h2>使用しているwebg機能</h2>
@@ -184,7 +184,7 @@ blockquote {
 <p><code>state</code>にはpause、grid、glow、wire、mode、brush、radius、strength、themeを保持します。<code>commands</code>配列の<code>value</code>関数と<code>getCommandState</code>は、この状態を読んでtoggle、stepper、select、mode switchの現在値を表示します。</p>
 <p>buttonは<code>onCommand</code>で処理し、値を持つtoggle、stepper、selectは<code>onChange</code>で<code>state</code>を更新します。更新後に<code>palette.render()</code>とHUD更新を行うことで、palette、preview、HUDが同じ値を表示します。<code>pageRows: 4</code>を全体の基準とし、<code>pageRowsByPage: [4, 3]</code>で2ページ目だけ3行へ変更します。buttonは1 cell、stepperとselectは1行として数えるため、小さい画面でもcommandが重ならず次ページへ分割されます。</p>
 <h2>確認ポイント</h2>
-<ul><li>double click、double tap、<code>/</code> keyのどれから開いても同じpaletteが表示されること</li><li><code>Obj / Edit / Scpt</code>では一つだけがactiveになり、中央previewも同じmodeへ切り替わること</li><li>toggle、stepper、selectの変更がHUDとpreviewへ反映され、paletteを開き直しても現在値が保たれること</li><li><code>Next</code>で行数を基準に分割された次pageへ進み、stepperとselectが途中で分断されないこと</li><li><code>CSS</code>で全体styleが変わり、<code>Def</code>でdefault CSSと既定themeへ戻ること</li></ul>
+<ul><li>double click、double tap、<code>/</code> keyのどれから開いても同じpaletteが表示されること</li><li><code>Obj / Edit / Scpt</code>では一つだけがactiveになり、中央previewも同じmodeへ切り替わること</li><li>toggle、stepper、selectの変更がHUDとpreviewへ反映され、paletteを開き直しても現在値が保たれること</li><li><code>Next</code>で行数を基準に分割された次pageへ進み、stepperとselectがそれぞれ一組のまま表示されること</li><li><code>CSS</code>で全体styleが変わり、<code>Def</code>でdefault CSSと既定themeへ戻ること</li></ul>
 <h2>操作方法</h2>
 <ul><li>Double click / double tap: command palette</li><li><code>/</code>: command palette</li><li>Palette button: command 実行</li><li>Obj / Edit / Scpt: Mode Switch。選択中modeをactive色で示し、中央の図形も切り替える</li><li>Next: 行数を基準に分割された次pageへ進む</li><li>Radius / Strength: stepper</li><li>Brush / Theme: select row</li><li>CSS: <code>setStyle()</code> の実験</li><li>Def: default style へ戻す</li></ul>
     </article>

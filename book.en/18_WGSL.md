@@ -36,7 +36,9 @@ WebGPU data flow has three main stages:
 
 ### 1. Store Values on the CPU (JavaScript)
 
-`shape.setMaterial()` stores material values on the shape. When drawing, `Shape` passes those values to the shader setters; shared settings such as `shader.setLightPosition()` can be set directly. Each setter writes to an offset, such as `OFF_LIGHT`, in the shader's `Float32Array` (`this.uniformData`). At this stage, the data is still in CPU memory.
+`shape.setMaterial()` first stores values in the shape's parameter dictionary. Immediately before drawing, `shader.doParameter()` receives them and writes them to the shader's `Float32Array` (`uniformData`) through its setters. Shared light settings such as `shader.setLightPosition()` update positions such as `OFF_LIGHT` in that array directly.
+
+At this stage, both kinds of values remain on the CPU. The next `writeBuffer()` call transfers them to the GPU.
 
 ### 2. Transfer Data to GPU Memory (`writeBuffer`)
 
@@ -137,13 +139,13 @@ if (condition) {
 }
 ```
 
-Shader code can use `select` to choose a value without an `if` branch:
+Shader code can use `select` to choose between two values:
 
 ```text
 select(false_value, true_value, condition)
 ```
 
-It returns `true_value` when the condition is true and `false_value` otherwise. Whether this form is appropriate depends on the operation and pipeline.
+It returns `true_value` when the condition is true and `false_value` otherwise. Both argument expressions are evaluated before the choice. Use `if` to guard operations such as array access or division by zero; use `select` to choose between already computed values.
 
 ### Functions
 
@@ -159,7 +161,7 @@ fn calculateLighting(normal: vec3f, lightDir: vec3f) -> f32 {
 
 WGSL includes built-in functions for 3D calculations:
 
-- `dot(a, b)`: Dot product; used for angle and lighting intensity.
+- `dot(a, b)`: Dot product. For two unit vectors, it equals the cosine of the angle between them; it is also used for lighting intensity.
 - `cross(a, b)`: Cross product; returns a vector perpendicular to both inputs, such as a face normal.
 - `normalize(v)`: Scales a vector to unit length; useful for directions.
 - `reflect(i, n)`: Reflects incident vector `i` around normal `n`.
@@ -215,9 +217,9 @@ Pass both `myTexture` (image data) and `mySampler` (the interpolation method for
 
 ### Choose `textureSampleLevel()` When Needed
 
-The normal-map path in `SmoothShader` uses `textureSampleLevel(..., 0.0)` rather than `textureSample()`. This handles WebGPU's restrictions on non-uniform control flow.
+The normal-map path in `SmoothShader` uses `textureSampleLevel(..., 0.0)` rather than `textureSample()` to follow WGSL's uniformity requirements for functions that use implicit derivatives.
 
-`textureSample()` relies on implicit derivatives and requires suitable uniform control flow. Shader validation can reject it inside a branch whose control flow cannot be proven uniform. When sampling inside non-uniform branches without implicit derivatives, specify the level of detail (LOD) explicitly with `textureSampleLevel`. The `0.0` value always selects the highest-resolution mip level, so it changes normal mip selection and can affect quality and cost. Use regular `textureSample()` outside the branch when implicit LOD is available; reserve fixed LOD 0 for paths that cannot use implicit gradients.
+`textureSample()` uses neighboring fragment derivatives to select a mip level. Under the default diagnostic settings, shader creation reports an error when validation cannot establish uniform control flow to the call. The deciding factor is the [WGSL uniformity rule](https://www.w3.org/TR/WGSL/#uniformity), rather than a particular hardware type. In a branch where implicit derivatives are unavailable, specify the level of detail (LOD) with `textureSampleLevel`. The `0.0` value always selects the highest-resolution mip level, changing normal-map mip selection and potentially affecting quality and cost.
 
 ### Bind-Group Caching
 

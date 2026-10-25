@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// samples/bloom/BloomDebugFullscreenPass.js  2026/07/16
+// samples/bloom/BloomDebugFullscreenPass.js  2026/10/25
 //   Legacy Bloom intermediate target preview
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -56,7 +56,7 @@ export default class BloomDebugFullscreenPass extends FullscreenPass {
   }
 
   // BloomPassの中間targetに必要な公開API、色形式、正の寸法、生成済みresourceを検証します
-  // 寸法一致は要求せず、親クラスの正規化UVとlinear samplerで低解像度targetをcanvas全体へ拡大します
+  // 親クラスの正規化UVとlinear samplerで、低解像度targetをcanvas全体へ拡大します
   validateSource(texture) {
     if (
       !texture

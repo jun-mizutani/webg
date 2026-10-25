@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// samples/gltf_loader/main.js  2026/10/10
+// samples/gltf_loader/main.js  2026/10/25
 //   gltf_loader sample
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -275,8 +275,8 @@ function applyExplicitTextureFlagsToRuntimeShapes(runtime) {
     const params = material?.params ?? {};
     const hasTexture = !!(params.texture ?? shape.texture);
     // SmoothShader を共通 shader として使う sample では、
-    // texture を持たない mesh も use_texture を明示しておかないと
-    // 直前の textured mesh の条件が残って bind 条件が shape 順序依存になりやすい
+    // mesh ごとに texture の使用状態を明示し、
+    // 各 shape の material に対応する bind 条件を設定する
     shape.updateMaterial({
       use_texture: hasTexture ? 1 : 0
     });
@@ -672,7 +672,7 @@ async function start() {
   loadStartedAtMs = performance.now();
   updateLoadStage("fetch");
 
-  // glTF loader facade により、sample 側では importer 差分を意識せず
+  // glTF loader facade を通し、sample 側では共通の呼び出しで
   // source path と build 方針だけを渡せば ModelAsset / runtime を得られる
   model = await app.loadModel(GLTF_FILE, {
     format: "gltf",

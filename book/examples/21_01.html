@@ -1,5 +1,5 @@
 <!doctype html>
-<!-- book/examples/21_01.html 2026/10/04 -->
+<!-- book/examples/21_01.html 2026/10/25 -->
 <html lang="ja">
 <head>
   <meta charset="UTF-8" />
@@ -13,7 +13,7 @@
     <h1>book/examples</h1>
     <h2>21_01 Storage Bufferによる1次元計算</h2>
     <div class="section-card">
-      <p>この例は画像を描画せず、8個の数値をGPUへ渡して並列計算し、その結果をJavaScriptへ戻すまでの処理を確認します。入力配列の各要素へ <code>value × 2 + 1</code> を適用します。</p>
+      <p>この例は8個の数値をGPUへ渡して並列計算し、JavaScriptへ戻した結果を表で確認します。入力配列の各要素へ <code>value × 2 + 1</code> を適用します。</p>
       <ol class="compute-steps">
         <li><code>[1, 2, 3, 4, 5, 6, 7, 8]</code>を入力用Storage Bufferへ転送します</li>
         <li>Compute Shaderの各invocationが、担当する配列要素を1個ずつ読みます</li>

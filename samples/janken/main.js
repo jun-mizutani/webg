@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// samples/janken/main.js  2026/07/25
+// samples/janken/main.js  2026/10/25
 //   Janken game using hand.glb and AnimationState
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -182,7 +182,7 @@ function buildHandStateMachine(hand) {
     });
   }
   // 起動直後は 2 つの hand ともグーにそろえ、
-  // 画面を開いた時点で pose が不定にならないようにする
+  // 画面を開いた時点の pose を確定する
   hand.machine.setState("rock", {
     startOptions: {
       entryDurationMs: 250
@@ -281,7 +281,7 @@ async function createHandController(options) {
 
 // diagnostics 用の要約値を毎 frame 更新する
 // player / cpu の state と action を同じ report へまとめることで、
-// どちらか片方だけが止まっていないかを見つけやすくする
+// 両方の手の animation 状態を同じ画面で確認できるようにする
 function updateDiagnosticsStats() {
   const envReport = app.checkEnvironment({
     stage: "runtime-check",
@@ -455,7 +455,7 @@ function startRound(playerChoiceId) {
   updateResultMessage();
 }
 
-// ゲームを初期状態へ戻し、前回の状態を残さない
+// ゲームを初期状態へ戻し、次の実行を同じ条件で始める
 function resetGame() {
   // reset は round 数だけでなく、2 つの hand pose と Message 表示も
   // 起動直後と同じ状態へ戻す
@@ -660,7 +660,7 @@ async function start() {
       }
     },
     onAfterHud: () => {
-      // 勝敗 title は HUD block の後ろへ埋もれないよう、
+      // 勝敗 title を画面の手前へ表示するため、
       // canvas HUD を描いたあとで中央に重ねる
       resultMessage.drawScreen();
     }

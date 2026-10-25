@@ -57,7 +57,3 @@ PBRとスタジオ環境光を使い、照明の明るい面が金属へ映り�
 - `tablet_machine.html` / `style.css`：画面、操作部品、工程の説明
 
 同じ部品の形状は `Shape.createInstance()` で共有し、部品位置はNodeで更新します。3Dと拡大断面は同じ `sampleCycle()` の結果を使います。
-
-## 原理の参照
-
-回転盤と上下杵の同期回転、カムによる軸方向の案内、充填・圧縮・排出の構成は、[Fette Compactingの公開特許 US20190039270A1](https://patents.google.com/patent/US20190039270A1/en) を参考にしています。

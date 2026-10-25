@@ -1,5 +1,5 @@
 <!doctype html>
-  <!-- 2026/10/10: book/開発の入口と実行例.mdから生成したブラウザ閲覧用文書 -->
+  <!-- 2026/10/25: book/開発の入口と実行例.mdから生成したブラウザ閲覧用文書 -->
   <html lang="ja">
   <head>
   <meta charset="utf-8">
@@ -11,68 +11,48 @@
   <body class="example-guide"><main>
   <nav aria-label="資料の入口"><a href="examples/index.html">教材例一覧</a><a href="https://jun-mizutani.github.io/webg/samples/">サンプル一覧</a><a href="examples/guide.html">開発の入口</a><a href="examples/guide.en.html" lang="en">English guide</a><a href="開発の入口と実行例.md" download>Markdown正本を保存</a></nav>
   <h1>開発の入口と実行例</h1>
-<p>更新日：2026年10月10日</p>
-<p>初めてwebgを使う人と、開発を支援するAIのための案内です。作りたいアプリに近い既存例を一つ選び、動作を確認してから機能を追加します。全42章や全サンプルを読む必要はありません。</p>
+<p>更新日：2026年10月25日</p>
+<p>初めてwebgを使う人と、開発を支援するAIのための案内です。作りたいアプリに近い既存例を一つ選び、動作を確認してから機能を追加します。最初は選んだ例と関連する章を読み、必要な機能に合わせて参照範囲を広げます。</p>
 <p><code>book/examples/</code>は章の説明を小さな実行コードで確認する場所です。<code>samples/</code>には、機能の比較、モデルの読込み、編集ツール、ゲーム、複数機能を組み合わせた作品があります。同じ機能の例でも、短い仕組みの説明と、アプリでの運用という役割を使い分けます。</p>
-<p>統合版<code>lib/webg.core.min.js</code>の読み込みは02章、最小例のimportの置き換えは04章で説明します。既存サンプルの変換は<a href="付録C_統合版の利用.md">付録C「統合版の利用」</a>を参照してください。</p>
+<p>統合版を使う場合は、02章の「統合版を読み込む」から始めてください。
+04章には個別モジュール版と同じ例のimportの置き換えがあり、
+<code>付録C_統合版の利用.md</code>にはサンプル変換の手順があります。
+<code>lib/webg.core.min.js</code>を利用する場合も、本書のクラスとメソッドの説明を使えます。</p>
 <h2>1. 最初に一つ動かす</h2>
 <p>リポジトリのルートでHTTPサーバーを起動します。</p>
 <pre><code class="language-sh">python3 -m http.server 8000
 </code></pre>
 <p><code>http://localhost:8000/book/examples/04_02.html</code>を開きます。立方体の表示と回転、ドラッグによる周回、ホイールによるズームを確認します。詳しい実行条件は02章、HTML全体と保存場所は04章です。</p>
 <p>リンク先の実行ページも、このサーバーを経由して開きます。JavaScriptだけを別フォルダーへコピーすると、HTMLの要素、相対import、モデル、画像などが欠ける場合があります。まず元の配置で実行し、自作コードは例えば<code>user/my_app/</code>へ置きます。この配置からコアのimportは<code>../../webg/</code>になります。</p>
-<p>初回に読む共通範囲は、<a href="02_%E5%AE%9F%E8%A1%8C%E7%92%B0%E5%A2%83.md">02章の実行環境</a>、<a href="03_3D%E7%A9%BA%E9%96%93%E3%81%AE%E5%9F%BA%E7%A4%8E.md">03章の座標</a>、<a href="04_%E6%9C%80%E5%B0%8F%E6%8F%8F%E7%94%BB.md">04章の最小描画</a>です。その後は次の表で入口を選びます。</p>
+<p>初回に読む共通範囲は、<a href="02_%E5%AE%9F%E8%A1%8C%E7%92%B0%E5%A2%83.md">02章の実行環境</a>、<a href="03_3D%E7%A9%BA%E9%96%93%E3%81%AE%E5%9F%BA%E7%A4%8E.md">03章の座標</a>、<a href="04_%E6%9C%80%E5%B0%8F%E6%8F%8F%E7%94%BB.md">04章の最小描画</a>です。その後は次の目的別の案内で入口を選びます。</p>
 <h2>2. 作りたいアプリから入口を選ぶ</h2>
-<div class="table-scroll" tabindex="0" role="region" aria-label="実行例の対応表"><table>
-<thead>
-<tr>
-<th>作りたいもの</th>
-<th>出発点となる実行例</th>
-<th>主な入口と先に読む章</th>
-</tr>
-</thead>
-<tbody><tr>
-<td>形状を配置し、入力で動かすアプリ</td>
-<td><a href="examples/04_02.html">04_02</a> → <a href="https://jun-mizutani.github.io/webg/samples/high_level/high_level.html">high_level</a></td>
-<td><code>WebgApp</code>。04〜06章。更新処理は<code>onUpdate</code>へ置く</td>
-</tr>
-<tr>
-<td>GLBモデルを表示するビューア</td>
-<td><a href="https://jun-mizutani.github.io/webg/samples/gltf_loader/gltf_loader.html">gltf_loader</a> → <a href="https://jun-mizutani.github.io/webg/samples/embedded_glb_viewer/embedded_glb_viewer.html">embedded_glb_viewer</a></td>
-<td><code>WebgApp.loadModel()</code>。08章。後者はファイル選択、モデル差し替え、埋込み表示を扱う</td>
-</tr>
-<tr>
-<td>配置、PBR、物理を文書で定義する作品</td>
-<td><a href="https://jun-mizutani.github.io/webg/samples/project_app/project_app_sphere_plane.html">球と床</a> → <a href="https://jun-mizutani.github.io/webg/samples/scene_model_yaml/scene_model_yaml.html">scene_model_yaml</a></td>
-<td>SceneYAML＋<code>createWebgSceneApp()</code>。09章。外部モデルを使う段階で08章</td>
-</tr>
-<tr>
-<td>入力、得点、開始・停止・再開始を持つゲーム</td>
-<td><a href="https://jun-mizutani.github.io/webg/samples/breakout/breakout.html">breakout</a></td>
-<td><code>WebgApp</code>＋アプリ側のゲーム状態管理。05・12〜16章</td>
-</tr>
-<tr>
-<td>PBR、物理、粒子、音を組み合わせた展示</td>
-<td><a href="https://jun-mizutani.github.io/webg/samples/project_app/project_app_sphere_plane.html">球と床</a> → <a href="https://jun-mizutani.github.io/webg/samples/compute_particle_emitter/compute_particle_emitter.html">compute_particle_emitter</a> → <a href="https://jun-mizutani.github.io/webg/samples/lumen/lumen.html">lumen</a></td>
-<td><code>WebgSceneApp</code>。09・26〜30章。展示の反復動作はJavaScript</td>
-</tr>
-<tr>
-<td>画面で配置やモデルを編集して保存するツール</td>
-<td><a href="https://jun-mizutani.github.io/webg/samples/model_yaml/model_yaml.html">model_yaml</a> → <a href="https://jun-mizutani.github.io/webg/samples/edit_yaml/edit_yaml.html">edit_yaml</a></td>
-<td><code>ModelAsset</code>／<code>SceneAsset</code>と<code>WebgSceneApp</code>。08〜09章。選択・編集操作は15章</td>
-</tr>
-<tr>
-<td>独自シェーダー、独自の描画・GPU計算</td>
-<td><a href="examples/19_01.html">19_01</a>、<a href="examples/20_01.html">20_01</a>、<a href="examples/21_01.html">21_01</a>から必要なものを選ぶ</td>
-<td><code>WebgApp</code>＋個別API。18〜22章。描画基盤そのものを調べる場合は37章</td>
-</tr>
-</tbody></table></div>
+<h3>形状を配置し、入力で動かすアプリ</h3>
+<p>出発点となる実行例：<a href="examples/04_02.html">04_02</a> → <a href="https://jun-mizutani.github.io/webg/samples/high_level/high_level.html">high_level</a></p>
+<p>主な入口と先に読む章：<code>WebgApp</code>。04〜06章。更新処理は<code>onUpdate</code>へ置く</p>
+<h3>GLBモデルを表示するビューア</h3>
+<p>出発点となる実行例：<a href="https://jun-mizutani.github.io/webg/samples/gltf_loader/gltf_loader.html">gltf_loader</a> → <a href="https://jun-mizutani.github.io/webg/samples/embedded_glb_viewer/embedded_glb_viewer.html">embedded_glb_viewer</a></p>
+<p>主な入口と先に読む章：<code>WebgApp.loadModel()</code>。08章。後者はファイル選択、モデル差し替え、埋込み表示を扱う</p>
+<h3>配置、PBR、物理を文書で定義する作品</h3>
+<p>出発点となる実行例：<a href="https://jun-mizutani.github.io/webg/samples/project_app/project_app_sphere_plane.html">球と床</a> → <a href="https://jun-mizutani.github.io/webg/samples/scene_model_yaml/scene_model_yaml.html">scene_model_yaml</a></p>
+<p>主な入口と先に読む章：SceneYAML＋<code>createWebgSceneApp()</code>。09章。外部モデルを使う段階で08章</p>
+<h3>入力、得点、開始・停止・再開始を持つゲーム</h3>
+<p>出発点となる実行例：<a href="https://jun-mizutani.github.io/webg/samples/breakout/breakout.html">breakout</a></p>
+<p>主な入口と先に読む章：<code>WebgApp</code>＋アプリ側のゲーム状態管理。05・12〜16章</p>
+<h3>PBR、物理、粒子、音を組み合わせた展示</h3>
+<p>出発点となる実行例：<a href="https://jun-mizutani.github.io/webg/samples/project_app/project_app_sphere_plane.html">球と床</a> → <a href="https://jun-mizutani.github.io/webg/samples/compute_particle_emitter/compute_particle_emitter.html">compute_particle_emitter</a> → <a href="https://jun-mizutani.github.io/webg/samples/lumen/lumen.html">lumen</a></p>
+<p>主な入口と先に読む章：<code>WebgSceneApp</code>。09・26〜30章。展示の反復動作はJavaScript</p>
+<h3>画面で配置やモデルを編集して保存するツール</h3>
+<p>出発点となる実行例：<a href="https://jun-mizutani.github.io/webg/samples/model_yaml/model_yaml.html">model_yaml</a> → <a href="https://jun-mizutani.github.io/webg/samples/edit_yaml/edit_yaml.html">edit_yaml</a></p>
+<p>主な入口と先に読む章：<code>ModelAsset</code>／<code>SceneAsset</code>と<code>WebgSceneApp</code>。08〜09章。選択・編集操作は15章</p>
+<h3>独自シェーダー、独自の描画・GPU計算</h3>
+<p>出発点となる実行例：<a href="examples/19_01.html">19_01</a>、<a href="examples/20_01.html">20_01</a>、<a href="examples/21_01.html">21_01</a>から必要なものを選ぶ</p>
+<p>主な入口と先に読む章：<code>WebgApp</code>＋個別API。18〜22章。描画基盤そのものを調べる場合は37章</p>
 <p>PBRで高低差のあるマスを移動して戦うゲームには、
 <a href="https://jun-mizutani.github.io/webg/samples/fantasy/fantasy.html"><code>samples/fantasy/fantasy.html</code></a>を出発点にします。
 小さな統合例の読む順序は、下の「PBRのシーンから小さなゲームへ進む」と
 <a href="examples/fantasy_guide.html"><code>PBRシーンから小さなゲームへ.md</code></a>にあります。</p>
-<p>選択の基準は、作品の配置・材質・物理・描画設定をSceneYAMLとして管理するか、JavaScriptで直接組み立てるかです。単純な画面には<code>WebgApp</code>、SceneYAMLからPBR作品を起動する場合には<code>WebgSceneApp</code>を使います。機能を追加するたびにアプリの入口を変更する必要はありません。</p>
-<p>PBRを使うだけなら、最初から<code>ComputeEffectPipeline</code>の手動接続を学ぶ必要はありません。SceneYAMLの<code>renderer</code>と<code>materials</code>から始めます。描画の処理順や個別パスを自分で制御する必要が生じたら31〜33章へ進みます。</p>
+<p>選択の基準は、作品の配置・材質・物理・描画設定をSceneYAMLとして管理するか、JavaScriptで直接組み立てるかです。単純な画面には<code>WebgApp</code>、SceneYAMLからPBR作品を起動する場合には<code>WebgSceneApp</code>を使います。機能の追加は、選んだ入口の更新・描画・リソース管理へ接続して進めます。</p>
+<p>PBRの最初の作品は、SceneYAMLの<code>renderer</code>と<code>materials</code>から始められます。描画の処理順や個別パスを自分で制御する必要が生じたら31〜33章へ進みます。</p>
 <p>水面と集光をPBRに加える場合は、<a href="https://jun-mizutani.github.io/webg/samples/water/index.html"><code>samples/water/index.html</code></a>から
 <a href="https://jun-mizutani.github.io/webg/samples/water/water.html"><code>samples/water/water.html</code></a>へ進みます。35章の「水面とコースティクス」と併せて、
 <code>WaterBody</code>の対象登録、共通の波、独立ON/OFF、GPU資源の解放を確認できます。
@@ -93,7 +73,7 @@
 <li>起動時は物理が停止しています。Startで落下、Stopで停止、Resetで初期配置へ戻ることを確認します</li>
 </ul>
 <p>初めは球の色か開始位置を一つ変更します。床の表示形状と衝突Planeを変更する場合は、両者の位置をそろえます。球を増やす場合には<code>physics.space.maxBodies</code>も確認します。</p>
-<p><code>onUpdate</code>の<code>deltaSec</code>は<code>WebgApp</code>と同じ秒単位です。高水準アプリの物理更新は内部で行われるため、利用側で物理の<code>step()</code>を追加する必要はありません。</p>
+<p><code>onUpdate</code>の<code>deltaSec</code>は<code>WebgApp</code>と同じ秒単位です。高水準アプリの物理更新は内部のフレーム処理が担当し、利用側は作品固有の更新を接続します。</p>
 <p>外部のモデル階層を使う段階で<a href="https://jun-mizutani.github.io/webg/samples/scene_model_yaml/main.js">scene_model_yamlのコード</a>、<a href="https://jun-mizutani.github.io/webg/samples/scene_model_yaml/scene.yaml">scene.yaml</a>、<a href="https://jun-mizutani.github.io/webg/samples/scene_model_yaml/model.yaml">model.yaml</a>へ進みます。モデル内部の形状とNode階層はModelYAML、作品側の物理と描画設定はSceneYAMLです。この例は保存、停止状態へのリセット、エラー表示、終了時の<code>destroy()</code>も含みます。</p>
 <h3>ゲームの進行を組み立てる</h3>
 <p><a href="https://jun-mizutani.github.io/webg/samples/breakout/index.html">breakoutの説明</a>で操作と状態を確認し、<a href="https://jun-mizutani.github.io/webg/samples/breakout/main.js">main.js</a>の状態遷移、<code>registerActionMap()</code>、<code>onUpdate</code>、HUD、再開始処理を読みます。title／play／pause／resultを持つ既存の完成ゲームです。3D描画とゲームルールを組み合わせる参考にできます。</p>
@@ -109,202 +89,122 @@
 <code>move()</code>と<code>updateMotion()</code>、<code>pickTile()</code>、<code>FantasyApp.js</code>の順に読みます。</p>
 <p>最初は鎧の粗さだけを変え、次に一人の移動力、歩く表示時間、足元の粒子色を
 一つずつ変えます。単機能の例で覚えたAPIが、ゲームのどの状態をいつ更新するかを
-確認できます。剛体物理を使わず、ルールと表示を分けた小さな統合例です。</p>
+確認できます。移動と戦闘はマスの規則で決め、ルールと表示を分けた小さな統合例です。</p>
 <h2>4. 必要な機能だけ追加する</h2>
-<p>表の順序は、短い例で機能を理解し、その後に操作や運用を持つ例へ進む順序です。読み終える条件は、最後の列にある変更と動作を説明できることです。</p>
-<div class="table-scroll" tabindex="0" role="region" aria-label="実行例の対応表"><table>
-<thead>
-<tr>
-<th>追加する機能</th>
-<th>小さく理解する例 → アプリでの利用例</th>
-<th>章と確認ポイント</th>
-</tr>
-</thead>
-<tbody><tr>
-<td>親子構造・座標変換</td>
-<td><a href="examples/03_01.html">03_01</a> → <a href="https://jun-mizutani.github.io/webg/samples/detouch/detouch.html">detouch</a></td>
-<td>03章。親の変換が子へ伝わること、親の付け替えでワールド配置を保つこと</td>
-</tr>
-<tr>
-<td>周回・追従・主観カメラ</td>
-<td><a href="examples/06_01.html">06_01</a>、<a href="examples/06_02.html">06_02</a> → <a href="https://jun-mizutani.github.io/webg/samples/eye_rig/eye_rig.html">eye_rig</a></td>
-<td>06章。カメラの位置追従と、対象へ視線を向ける追従を区別する</td>
-</tr>
-<tr>
-<td>ページへの埋込み</td>
-<td><a href="examples/05_03.html">05_03</a> → <a href="https://jun-mizutani.github.io/webg/samples/embedded_glb_viewer/embedded_glb_viewer.html">embedded_glb_viewer</a></td>
-<td>05章。ページのスクロールとCanvas内の入力、モデル差し替え後の表示</td>
-</tr>
-<tr>
-<td>標準材質・テクスチャ・法線マップ</td>
-<td><a href="examples/07_01.html">07_01</a>、<a href="examples/07_02.html">07_02</a> → <a href="https://jun-mizutani.github.io/webg/samples/shapes/shapes.html">shapes</a></td>
-<td>07章。色、テクスチャ、法線マップ、ワイヤーフレームを同じ形で比較する</td>
-</tr>
-<tr>
-<td>ModelAssetの共有と複数配置</td>
-<td><a href="examples/08_01.html">08_01</a> → <a href="https://jun-mizutani.github.io/webg/samples/model_yaml/model_yaml.html">model_yaml</a></td>
-<td>08章。一度構築し、個別Nodeへ複数配置する。元の文書と動作中の配置を区別する</td>
-</tr>
-<tr>
-<td>モデル形式の読込み</td>
-<td><a href="https://jun-mizutani.github.io/webg/samples/gltf_loader/gltf_loader.html">gltf_loader</a>、<a href="https://jun-mizutani.github.io/webg/samples/collada_loader/collada_loader.html">collada_loader</a>、<a href="https://jun-mizutani.github.io/webg/samples/json_loader/json_loader.html">json_loader</a></td>
-<td>08章。使用形式の例だけ読む。モデルの原点、サイズ、clip、相対アセット参照を確認する</td>
-</tr>
-<tr>
-<td>アニメーションの状態選択</td>
-<td><a href="examples/10_01.html">10_01</a> → <a href="https://jun-mizutani.github.io/webg/samples/animation_state/animation_state.html">animation_state</a> → <a href="https://jun-mizutani.github.io/webg/samples/janken/janken.html">janken</a></td>
-<td>10〜11章。Actionの再生と状態選択を分ける。複数配置の再生状態が独立していること</td>
-</tr>
-<tr>
-<td>SceneYAMLの物体アニメーション</td>
-<td><a href="https://jun-mizutani.github.io/webg/samples/project_app/scene_animation.html">scene_animation</a></td>
-<td>09〜11章。Play、Pause、Seek、Resetとフレームループの停止を区別する</td>
-</tr>
-<tr>
-<td>HUD・説明パネル・テーマ</td>
-<td><a href="examples/12_01.html">12_01</a>、<a href="examples/12_02.html">12_02</a>、<a href="examples/13_01.html">13_01</a> → <a href="https://jun-mizutani.github.io/webg/samples/com_palette/com_palette.html">com_palette</a></td>
-<td>12〜13章。短い状態表示とDOMの操作・長文を分け、UIとアプリ状態を接続する</td>
-</tr>
-<tr>
-<td>タッチ入力</td>
-<td><a href="examples/14_01.html">14_01</a> → <a href="https://jun-mizutani.github.io/webg/samples/breakout/breakout.html">breakout</a></td>
-<td>14章。ジェスチャー検出と、同じアクションへのキー／タッチ接続</td>
-</tr>
-<tr>
-<td>選択・衝突クエリ</td>
-<td><a href="examples/15_01.html">15_01</a> → <a href="https://jun-mizutani.github.io/webg/samples/collisions/collisions.html">collisions</a></td>
-<td>15章。raycast、広域候補、詳細判定を区別する。クエリは物理の衝突応答とは別</td>
-</tr>
-<tr>
-<td>効果音・BGM・音声ファイル</td>
-<td><a href="examples/16_02.html">16_02</a>、<a href="examples/16_03.html">16_03</a>、<a href="examples/16_04.html">16_04</a>、<a href="examples/16_05.html">16_05</a> → <a href="https://jun-mizutani.github.io/webg/samples/sound/sound.html">sound</a></td>
-<td>16章。ユーザー操作後に音声を開始する。単音の設計は<a href="examples/16_01.html">16_01</a>と<a href="https://jun-mizutani.github.io/webg/samples/tone/tone.html">tone</a></td>
-</tr>
-<tr>
-<td>診断・不具合の共有</td>
-<td><a href="examples/17_01.html">17_01</a></td>
-<td>17章。環境、失敗した段階、アプリ状態を診断として残す</td>
-</tr>
-<tr>
-<td>標準描画へBloom／DoFを追加</td>
-<td><a href="examples/23_01.html">23_01</a> → <a href="https://jun-mizutani.github.io/webg/samples/bloom/bloom.html">bloom</a>、<a href="https://jun-mizutani.github.io/webg/samples/dof/dof.html">dof</a></td>
-<td>23〜25章。元画像と効果後を比較し、深度を使う効果は焦点位置も確認する</td>
-</tr>
-<tr>
-<td>軽量なCPU粒子</td>
-<td><a href="examples/26_01.html">26_01</a> → <a href="https://jun-mizutani.github.io/webg/samples/billboard/billboard.html">billboard</a></td>
-<td>26章。発生条件と表示を確認する。GPU粒子とは更新方式が異なる</td>
-</tr>
-<tr>
-<td>PBRへ標準Compute粒子を追加</td>
-<td><a href="https://jun-mizutani.github.io/webg/samples/compute_particle_emitter/compute_particle_emitter.html">compute_particle_emitter</a> → <a href="https://jun-mizutani.github.io/webg/samples/compute_particles/compute_particles.html">compute_particles</a></td>
-<td>26・36章。連続／一括発生、停止、消去、容量を確認する。後者はCompute frameでの直接接続を調べる段階</td>
-</tr>
-<tr>
-<td>CPU物理</td>
-<td><a href="examples/27_01.html">27_01</a> → <a href="https://jun-mizutani.github.io/webg/samples/physics_bounce/physics_bounce.html">physics_bounce</a>、<a href="https://jun-mizutani.github.io/webg/samples/physics_collider/physics_collider.html">physics_collider</a></td>
-<td>27〜28章。物理はCPU、描画はWebGPU。<code>PhysicsSpace.step()</code>はミリ秒</td>
-</tr>
-<tr>
-<td>GPU物理を通常Nodeで描画</td>
-<td><a href="https://jun-mizutani.github.io/webg/samples/project_app/project_app_sphere_plane.html">球と床</a> → <a href="examples/27_02.html">27_02</a></td>
-<td>09・27〜28章。高水準の接続を先に使い、readbackとNode同期を調べる場合に27_02へ進む</td>
-</tr>
-<tr>
-<td>GPU物理の直接描画・方式比較</td>
-<td><a href="examples/27_03.html">27_03</a> → <a href="https://jun-mizutani.github.io/webg/samples/compute_physics/compute_physics.html">compute_physics</a>、<a href="https://jun-mizutani.github.io/webg/samples/falling_box/index.html">falling_box</a>、<a href="https://jun-mizutani.github.io/webg/samples/joint/index.html">joint</a></td>
-<td>27〜28・42章。GPU状態の直接描画とCPUへの読戻しを区別する。Jointは方式別ページを選ぶ</td>
-</tr>
-<tr>
-<td>手続き材質と実寸UV</td>
-<td><a href="examples/29_01.html">29_01</a> → <a href="https://jun-mizutani.github.io/webg/samples/texture_catalog/texture_catalog.html">texture_catalog</a></td>
-<td>29章。形状の寸法と模様の周期を確認し、設定や画像を出力する</td>
-</tr>
-<tr>
-<td>Height／Normal mapの生成</td>
-<td><a href="https://jun-mizutani.github.io/webg/samples/proctex/proctex.html">proctex</a> → <a href="https://jun-mizutani.github.io/webg/samples/procedural_texture/procedural_texture.html">procedural_texture</a></td>
-<td>07・29章。HeightとNormalを区別する。実寸材質の入口は29_01</td>
-</tr>
-<tr>
-<td>PBR材質と環境光</td>
-<td><a href="examples/30_01.html">30_01</a>、<a href="examples/30_02.html">30_02</a> → <a href="https://jun-mizutani.github.io/webg/samples/pbr_reference/pbr_reference.html">pbr_reference</a></td>
-<td>30章。metallic／roughness、直接光、IBL、露出を分けて比較する</td>
-</tr>
-<tr>
-<td>PBRの処理順を自分で接続</td>
-<td><a href="examples/31_01.html">31_01</a> → <a href="examples/32_01.html">32_01</a> → <a href="examples/33_01.html">33_01</a></td>
-<td>31〜33章。同じ基準シーンで比較し、同一フレームのカメラ情報を各処理へ渡す</td>
-</tr>
-<tr>
-<td>透明材質・屈折・AO</td>
-<td><a href="https://jun-mizutani.github.io/webg/samples/opacity/opacity.html">opacity</a>、<a href="https://jun-mizutani.github.io/webg/samples/transmission/transmission.html">transmission</a>、<a href="examples/34_01.html">34_01</a>から目的のものを選ぶ</td>
-<td>25・33〜35章。透明度、material slot、屈折、AO単体表示を分けて調べる</td>
-</tr>
-<tr>
-<td>GPU性能の計測</td>
-<td><a href="https://jun-mizutani.github.io/webg/samples/compute_benchmark/compute_benchmark.html">compute_benchmark</a></td>
-<td>22・33章。GPU計測の対応状況と、測定する処理段階を確認する</td>
-</tr>
-<tr>
-<td>独自メッシュ・地形</td>
-<td><a href="examples/38_01.html">38_01</a> → <a href="examples/38_02.html">38_02</a>、<a href="examples/38_03.html">38_03</a> → <a href="examples/39_04.html">39_04</a>、<a href="https://jun-mizutani.github.io/webg/samples/lowlevel_terrain/lowlevel_terrain.html">lowlevel_terrain</a></td>
-<td>38〜39章。頂点・UV・面・法線の対応。アプリ基盤はWebgAppを利用できる</td>
-</tr>
-<tr>
-<td>スキニングの内部</td>
-<td><a href="examples/40_01.html">40_01</a>、<a href="examples/40_02.html">40_02</a> → <a href="https://jun-mizutani.github.io/webg/samples/skinning/skinning.html">skinning</a>、<a href="https://jun-mizutani.github.io/webg/samples/bone_creature/bone_creature.html">bone_creature</a></td>
-<td>40章。既存モデルの再生だけなら先に08・10〜11章を使う</td>
-</tr>
-</tbody></table></div>
+<p>各項目は、短い例で機能を理解し、その後に操作や運用を持つ例へ進む順序です。「章と確認ポイント」に示した変更と動作を説明できれば、次の機能へ進めます。</p>
+<h3>親子構造・座標変換</h3>
+<p>小さく理解する例 → アプリでの利用例：<a href="examples/03_01.html">03_01</a> → <a href="https://jun-mizutani.github.io/webg/samples/detouch/detouch.html">detouch</a></p>
+<p>章と確認ポイント：03章。親の変換が子へ伝わること、親の付け替えでワールド配置を保つこと</p>
+<h3>周回・追従・主観カメラ</h3>
+<p>小さく理解する例 → アプリでの利用例：<a href="examples/06_01.html">06_01</a>、<a href="examples/06_02.html">06_02</a> → <a href="https://jun-mizutani.github.io/webg/samples/eye_rig/eye_rig.html">eye_rig</a></p>
+<p>章と確認ポイント：06章。カメラの位置追従と、対象へ視線を向ける追従を区別する</p>
+<h3>ページへの埋込み</h3>
+<p>小さく理解する例 → アプリでの利用例：<a href="examples/05_03.html">05_03</a> → <a href="https://jun-mizutani.github.io/webg/samples/embedded_glb_viewer/embedded_glb_viewer.html">embedded_glb_viewer</a></p>
+<p>章と確認ポイント：05章。ページのスクロールとCanvas内の入力、モデル差し替え後の表示</p>
+<h3>標準材質・テクスチャ・法線マップ</h3>
+<p>小さく理解する例 → アプリでの利用例：<a href="examples/07_01.html">07_01</a>、<a href="examples/07_02.html">07_02</a> → <a href="https://jun-mizutani.github.io/webg/samples/shapes/shapes.html">shapes</a></p>
+<p>章と確認ポイント：07章。色、テクスチャ、法線マップ、ワイヤーフレームを同じ形で比較する</p>
+<h3>ModelAssetの共有と複数配置</h3>
+<p>小さく理解する例 → アプリでの利用例：<a href="examples/08_01.html">08_01</a> → <a href="https://jun-mizutani.github.io/webg/samples/model_yaml/model_yaml.html">model_yaml</a></p>
+<p>章と確認ポイント：08章。一度構築し、個別Nodeへ複数配置する。元の文書と動作中の配置を区別する</p>
+<h3>モデル形式の読込み</h3>
+<p>小さく理解する例 → アプリでの利用例：<a href="https://jun-mizutani.github.io/webg/samples/gltf_loader/gltf_loader.html">gltf_loader</a>、<a href="https://jun-mizutani.github.io/webg/samples/collada_loader/collada_loader.html">collada_loader</a>、<a href="https://jun-mizutani.github.io/webg/samples/json_loader/json_loader.html">json_loader</a></p>
+<p>章と確認ポイント：08章。使用形式の例だけ読む。モデルの原点、サイズ、clip、相対アセット参照を確認する</p>
+<h3>アニメーションの状態選択</h3>
+<p>小さく理解する例 → アプリでの利用例：<a href="examples/10_01.html">10_01</a> → <a href="https://jun-mizutani.github.io/webg/samples/animation_state/animation_state.html">animation_state</a> → <a href="https://jun-mizutani.github.io/webg/samples/janken/janken.html">janken</a></p>
+<p>章と確認ポイント：10〜11章。Actionの再生と状態選択を分ける。複数配置の再生状態が独立していること</p>
+<h3>SceneYAMLの物体アニメーション</h3>
+<p>小さく理解する例 → アプリでの利用例：<a href="https://jun-mizutani.github.io/webg/samples/project_app/scene_animation.html">scene_animation</a></p>
+<p>章と確認ポイント：09〜11章。Play、Pause、Seek、Resetとフレームループの停止を区別する</p>
+<h3>HUD・説明パネル・テーマ</h3>
+<p>小さく理解する例 → アプリでの利用例：<a href="examples/12_01.html">12_01</a>、<a href="examples/12_02.html">12_02</a>、<a href="examples/13_01.html">13_01</a> → <a href="https://jun-mizutani.github.io/webg/samples/com_palette/com_palette.html">com_palette</a></p>
+<p>章と確認ポイント：12〜13章。短い状態表示とDOMの操作・長文を分け、UIとアプリ状態を接続する</p>
+<h3>タッチ入力</h3>
+<p>小さく理解する例 → アプリでの利用例：<a href="examples/14_01.html">14_01</a> → <a href="https://jun-mizutani.github.io/webg/samples/breakout/breakout.html">breakout</a></p>
+<p>章と確認ポイント：14章。ジェスチャー検出と、同じアクションへのキー／タッチ接続</p>
+<h3>選択・衝突クエリ</h3>
+<p>小さく理解する例 → アプリでの利用例：<a href="examples/15_01.html">15_01</a> → <a href="https://jun-mizutani.github.io/webg/samples/collisions/collisions.html">collisions</a></p>
+<p>章と確認ポイント：15章。raycast、広域候補、詳細判定を区別する。クエリは物理の衝突応答とは別</p>
+<h3>効果音・BGM・音声ファイル</h3>
+<p>小さく理解する例 → アプリでの利用例：<a href="examples/16_02.html">16_02</a>、<a href="examples/16_03.html">16_03</a>、<a href="examples/16_04.html">16_04</a>、<a href="examples/16_05.html">16_05</a> → <a href="https://jun-mizutani.github.io/webg/samples/sound/sound.html">sound</a></p>
+<p>章と確認ポイント：16章。ユーザー操作後に音声を開始する。単音の設計は<a href="examples/16_01.html">16_01</a>と<a href="https://jun-mizutani.github.io/webg/samples/tone/tone.html">tone</a></p>
+<h3>診断・不具合の共有</h3>
+<p>小さく理解する例 → アプリでの利用例：<a href="examples/17_01.html">17_01</a></p>
+<p>章と確認ポイント：17章。環境、失敗した段階、アプリ状態を診断として残す</p>
+<h3>標準描画へBloom／DoFを追加</h3>
+<p>小さく理解する例 → アプリでの利用例：<a href="examples/23_01.html">23_01</a> → <a href="https://jun-mizutani.github.io/webg/samples/bloom/bloom.html">bloom</a>、<a href="https://jun-mizutani.github.io/webg/samples/dof/dof.html">dof</a></p>
+<p>章と確認ポイント：23〜25章。元画像と効果後を比較し、深度を使う効果は焦点位置も確認する</p>
+<h3>軽量なCPU粒子</h3>
+<p>小さく理解する例 → アプリでの利用例：<a href="examples/26_01.html">26_01</a> → <a href="https://jun-mizutani.github.io/webg/samples/billboard/billboard.html">billboard</a></p>
+<p>章と確認ポイント：26章。発生条件と表示を確認する。GPU粒子とは更新方式が異なる</p>
+<h3>PBRへ標準Compute粒子を追加</h3>
+<p>小さく理解する例 → アプリでの利用例：<a href="https://jun-mizutani.github.io/webg/samples/compute_particle_emitter/compute_particle_emitter.html">compute_particle_emitter</a> → <a href="https://jun-mizutani.github.io/webg/samples/compute_particles/compute_particles.html">compute_particles</a></p>
+<p>章と確認ポイント：26・36章。連続／一括発生、停止、消去、容量を確認する。後者はCompute frameでの直接接続を調べる段階</p>
+<h3>CPU物理</h3>
+<p>小さく理解する例 → アプリでの利用例：<a href="examples/27_01.html">27_01</a> → <a href="https://jun-mizutani.github.io/webg/samples/physics_bounce/physics_bounce.html">physics_bounce</a>、<a href="https://jun-mizutani.github.io/webg/samples/physics_collider/physics_collider.html">physics_collider</a></p>
+<p>章と確認ポイント：27〜28章。物理はCPU、描画はWebGPU。<code>PhysicsSpace.step()</code>はミリ秒</p>
+<h3>GPU物理を通常Nodeで描画</h3>
+<p>小さく理解する例 → アプリでの利用例：<a href="https://jun-mizutani.github.io/webg/samples/project_app/project_app_sphere_plane.html">球と床</a> → <a href="examples/27_02.html">27_02</a></p>
+<p>章と確認ポイント：09・27〜28章。高水準の接続を先に使い、readbackとNode同期を調べる場合に27_02へ進む</p>
+<h3>GPU物理の直接描画・方式比較</h3>
+<p>小さく理解する例 → アプリでの利用例：<a href="examples/27_03.html">27_03</a> → <a href="https://jun-mizutani.github.io/webg/samples/compute_physics/compute_physics.html">compute_physics</a>、<a href="https://jun-mizutani.github.io/webg/samples/falling_box/index.html">falling_box</a>、<a href="https://jun-mizutani.github.io/webg/samples/joint/index.html">joint</a></p>
+<p>章と確認ポイント：27〜28・42章。GPU状態の直接描画とCPUへの読戻しを区別する。Jointは方式別ページを選ぶ</p>
+<h3>手続き材質と実寸UV</h3>
+<p>小さく理解する例 → アプリでの利用例：<a href="examples/29_01.html">29_01</a> → <a href="https://jun-mizutani.github.io/webg/samples/texture_catalog/texture_catalog.html">texture_catalog</a></p>
+<p>章と確認ポイント：29章。形状の寸法と模様の周期を確認し、設定や画像を出力する</p>
+<h3>Height／Normal mapの生成</h3>
+<p>小さく理解する例 → アプリでの利用例：<a href="https://jun-mizutani.github.io/webg/samples/proctex/proctex.html">proctex</a> → <a href="https://jun-mizutani.github.io/webg/samples/procedural_texture/procedural_texture.html">procedural_texture</a></p>
+<p>章と確認ポイント：07・29章。HeightとNormalを区別する。実寸材質の入口は29_01</p>
+<h3>PBR材質と環境光</h3>
+<p>小さく理解する例 → アプリでの利用例：<a href="examples/30_01.html">30_01</a>、<a href="examples/30_02.html">30_02</a> → <a href="https://jun-mizutani.github.io/webg/samples/pbr_reference/pbr_reference.html">pbr_reference</a></p>
+<p>章と確認ポイント：30章。metallic／roughness、直接光、IBL、露出を分けて比較する</p>
+<h3>PBRの処理順を自分で接続</h3>
+<p>小さく理解する例 → アプリでの利用例：<a href="examples/31_01.html">31_01</a> → <a href="examples/32_01.html">32_01</a> → <a href="examples/33_01.html">33_01</a></p>
+<p>章と確認ポイント：31〜33章。同じ基準シーンで比較し、同一フレームのカメラ情報を各処理へ渡す</p>
+<h3>透明材質・屈折・AO</h3>
+<p>小さく理解する例 → アプリでの利用例：<a href="https://jun-mizutani.github.io/webg/samples/opacity/opacity.html">opacity</a>、<a href="https://jun-mizutani.github.io/webg/samples/transmission/transmission.html">transmission</a>、<a href="examples/34_01.html">34_01</a>から目的のものを選ぶ</p>
+<p>章と確認ポイント：25・33〜35章。透明度、material slot、屈折、AO単体表示を分けて調べる</p>
+<h3>GPU性能の計測</h3>
+<p>小さく理解する例 → アプリでの利用例：<a href="https://jun-mizutani.github.io/webg/samples/compute_benchmark/compute_benchmark.html">compute_benchmark</a></p>
+<p>章と確認ポイント：22・33章。GPU計測の対応状況と、測定する処理段階を確認する</p>
+<h3>独自メッシュ・地形</h3>
+<p>小さく理解する例 → アプリでの利用例：<a href="examples/38_01.html">38_01</a> → <a href="examples/38_02.html">38_02</a>、<a href="examples/38_03.html">38_03</a> → <a href="examples/39_04.html">39_04</a>、<a href="https://jun-mizutani.github.io/webg/samples/lowlevel_terrain/lowlevel_terrain.html">lowlevel_terrain</a></p>
+<p>章と確認ポイント：38〜39章。頂点・UV・面・法線の対応。アプリ基盤はWebgAppを利用できる</p>
+<h3>スキニングの内部</h3>
+<p>小さく理解する例 → アプリでの利用例：<a href="examples/40_01.html">40_01</a>、<a href="examples/40_02.html">40_02</a> → <a href="https://jun-mizutani.github.io/webg/samples/skinning/skinning.html">skinning</a>、<a href="https://jun-mizutani.github.io/webg/samples/bone_creature/bone_creature.html">bone_creature</a></p>
+<p>章と確認ポイント：40章。既存モデルの再生だけなら先に08・10〜11章を使う</p>
 <h2>5. 複数機能を組み合わせるときの参考</h2>
 <p>大きな例は、各機能の最小APIを探す段階の後で読みます。作品に近いものを一つ選び、シーン設定、作品固有の更新、入力、UIの分担を確認します。</p>
 <p>水の表現には、設定とON/OFFを比較する<a href="https://jun-mizutani.github.io/webg/samples/water/index.html"><code>samples/water/index.html</code></a>と、
 既存ゲームへ追加する<a href="https://jun-mizutani.github.io/webg/samples/fantasy/index.html"><code>samples/fantasy/index.html</code></a>があります。
 前者で対象と波を理解してから、後者で移動、粒子、入力停止、再開始への接続を読みます。</p>
-<div class="table-scroll" tabindex="0" role="region" aria-label="実行例の対応表"><table>
-<thead>
-<tr>
-<th>作品・ツール</th>
-<th>組合せを読む目的</th>
-</tr>
-</thead>
-<tbody><tr>
-<td><a href="https://jun-mizutani.github.io/webg/samples/breakout/index.html">breakout</a>、<a href="https://jun-mizutani.github.io/webg/samples/cube4/index.html">cube4</a></td>
-<td>ゲーム状態、入力、得点、HUD、再開始。cube4は3D盤面とカメラ方向に対応した操作</td>
-</tr>
-<tr>
-<td><a href="https://jun-mizutani.github.io/webg/samples/janken/index.html">janken</a></td>
-<td>共有モデルから独立したアニメーションを持つ二つの配置を作り、入力と勝敗へ接続</td>
-</tr>
-<tr>
-<td><a href="https://jun-mizutani.github.io/webg/samples/circular_breaker/index.html">circular_breaker</a>、<a href="https://jun-mizutani.github.io/webg/samples/circular_breaker2/index.html">circular_breaker2</a></td>
-<td>前者は直接構成するゲーム、後者はSceneYAML／ModelYAMLとPBRを利用する構成</td>
-</tr>
-<tr>
-<td><a href="https://jun-mizutani.github.io/webg/samples/maze/index.html">maze</a>、<a href="https://jun-mizutani.github.io/webg/samples/maze2/index.html">maze2</a></td>
-<td>主観移動、生成した壁と衝突、レーダー、照明・画面効果。壁の衝突処理は作品側の実装も読む</td>
-</tr>
-<tr>
-<td><a href="https://jun-mizutani.github.io/webg/samples/lumen/index.html">lumen</a>、<a href="https://jun-mizutani.github.io/webg/samples/neon_coaster/index.html">neon_coaster</a>、<a href="https://jun-mizutani.github.io/webg/samples/void_strike/index.html">void_strike</a></td>
-<td>高水準アプリの利用・拡張。展示の反復動作、追従カメラ、シューティングと粒子の接続</td>
-</tr>
-<tr>
-<td><a href="https://jun-mizutani.github.io/webg/samples/project_app/index.html">project_app</a></td>
-<td>球と床からJoint、objectSets、variants、制作シーンへ段階的に拡張</td>
-</tr>
-<tr>
-<td><a href="https://jun-mizutani.github.io/webg/samples/edit_yaml/index.html">edit_yaml</a>、<a href="https://jun-mizutani.github.io/webg/samples/mmodeler/index.html">mmodeler</a>、<a href="https://jun-mizutani.github.io/webg/samples/karakuri/index.html">karakuri</a></td>
-<td>編集状態、選択、Undo／Redo、保存と読込み、制作と実行の分担</td>
-</tr>
-<tr>
-<td><a href="https://jun-mizutani.github.io/webg/samples/compute_json/index.html">compute_json</a></td>
-<td>アニメーション付きModelAsset JSONの表示と手動接続する画面効果</td>
-</tr>
-<tr>
-<td><a href="https://jun-mizutani.github.io/webg/samples/compute_cloth/index.html">compute_cloth</a>、<a href="https://jun-mizutani.github.io/webg/samples/compute_texture/index.html">compute_texture</a></td>
-<td>独自WGSLとbuffer／textureの更新。一般的な剛体や標準粒子の利用例とは分ける</td>
-</tr>
-</tbody></table></div>
+<h3>breakout、cube4</h3>
+<p>説明ページ：<a href="https://jun-mizutani.github.io/webg/samples/breakout/index.html">breakout</a>、<a href="https://jun-mizutani.github.io/webg/samples/cube4/index.html">cube4</a></p>
+<p>組合せを読む目的：ゲーム状態、入力、得点、HUD、再開始。cube4は3D盤面とカメラ方向に対応した操作</p>
+<h3>janken</h3>
+<p>説明ページ：<a href="https://jun-mizutani.github.io/webg/samples/janken/index.html">janken</a></p>
+<p>組合せを読む目的：共有モデルから独立したアニメーションを持つ二つの配置を作り、入力と勝敗へ接続</p>
+<h3>circular_breaker、circular_breaker2</h3>
+<p>説明ページ：<a href="https://jun-mizutani.github.io/webg/samples/circular_breaker/index.html">circular_breaker</a>、<a href="https://jun-mizutani.github.io/webg/samples/circular_breaker2/index.html">circular_breaker2</a></p>
+<p>組合せを読む目的：前者は直接構成するゲーム、後者はSceneYAML／ModelYAMLとPBRを利用する構成</p>
+<h3>maze、maze2</h3>
+<p>説明ページ：<a href="https://jun-mizutani.github.io/webg/samples/maze/index.html">maze</a>、<a href="https://jun-mizutani.github.io/webg/samples/maze2/index.html">maze2</a></p>
+<p>組合せを読む目的：主観移動、生成した壁と衝突、レーダー、照明・画面効果。壁の衝突処理は作品側の実装も読む</p>
+<h3>lumen、neon_coaster、void_strike</h3>
+<p>説明ページ：<a href="https://jun-mizutani.github.io/webg/samples/lumen/index.html">lumen</a>、<a href="https://jun-mizutani.github.io/webg/samples/neon_coaster/index.html">neon_coaster</a>、<a href="https://jun-mizutani.github.io/webg/samples/void_strike/index.html">void_strike</a></p>
+<p>組合せを読む目的：高水準アプリの利用・拡張。展示の反復動作、追従カメラ、シューティングと粒子の接続</p>
+<h3>project_app</h3>
+<p>説明ページ：<a href="https://jun-mizutani.github.io/webg/samples/project_app/index.html">project_app</a></p>
+<p>組合せを読む目的：球と床からJoint、objectSets、variants、制作シーンへ段階的に拡張</p>
+<h3>edit_yaml、mmodeler、karakuri</h3>
+<p>説明ページ：<a href="https://jun-mizutani.github.io/webg/samples/edit_yaml/index.html">edit_yaml</a>、<a href="https://jun-mizutani.github.io/webg/samples/mmodeler/index.html">mmodeler</a>、<a href="https://jun-mizutani.github.io/webg/samples/karakuri/index.html">karakuri</a></p>
+<p>組合せを読む目的：編集状態、選択、Undo／Redo、保存と読込み、制作と実行の分担</p>
+<h3>compute_json</h3>
+<p>説明ページ：<a href="https://jun-mizutani.github.io/webg/samples/compute_json/index.html">compute_json</a></p>
+<p>組合せを読む目的：アニメーション付きModelAsset JSONの表示と手動接続する画面効果</p>
+<h3>compute_cloth、compute_texture</h3>
+<p>説明ページ：<a href="https://jun-mizutani.github.io/webg/samples/compute_cloth/index.html">compute_cloth</a>、<a href="https://jun-mizutani.github.io/webg/samples/compute_texture/index.html">compute_texture</a></p>
+<p>組合せを読む目的：独自WGSLとbuffer／textureの更新。一般的な剛体や標準粒子の利用例とは分ける</p>
 <h2>6. 例を自分のアプリへ移すとき</h2>
 <ol>
 <li>選んだ例を元の場所で実行し、READMEの確認ポイントと表示・操作を対応させます</li>
@@ -317,8 +217,8 @@
 <p><code>samples/</code>固有のクラス・helperは、コアAPIとして推測して呼ばず、実際のimport先を読みます。標準機能と同じ見た目でも、<code>compute_cloth</code>、<code>compute_texture</code>、<code>compute_physics_bounce</code>などには独自GPU処理があります。通常の物理を使う出発点には、球と床や<code>physics_bounce</code>を選びます。</p>
 <h2>7. AIが開発を支援するとき</h2>
 <p>まず利用者の目的から、この文書の出発点を一つ選びます。選んだ入口、元にする実行ページとコード、追加する機能、表示・操作の確認ポイントを短く説明します。AIも人も、同じ例と同じ確認ポイントを使えます。</p>
-<p>API名が分からなければ<a href="%E4%BB%98%E9%8C%B2D_API%E4%B8%80%E8%A6%A7.md">API一覧</a>で所属クラスを探し、対応する章と実行例を読みます。一般的な3DライブラリのAPI名をwebgへ当てはめず、実際のimport、呼出し、戻り値を確認します。単位、既定値、自動更新の範囲が資料だけで確定できない場合は、該当APIの現行実装とテストを照合します。</p>
-<p><code>headless_tests/</code>はAPI契約や計算の確認、<code>unittest/</code>は小さな機能のブラウザ確認に使います。静的にリンクやimportが存在すること、実行時に例外がないこと、意図した画面・操作になることは別々に確認します。確認していない範囲を「動作確認済み」と扱いません。</p>
+<p>API名が分からなければ<a href="%E4%BB%98%E9%8C%B2D_API%E4%B8%80%E8%A6%A7.md">API一覧</a>で所属クラスを探し、対応する章と実行例を読みます。webgの実際のimport、呼出し、戻り値を読み、目的に対応するAPIを確認します。単位、既定値、自動更新の範囲を詳しく調べるときは、該当APIの現行実装とテストを照合します。</p>
+<p><code>headless_tests/</code>はAPI契約や計算の確認、<code>unittest/</code>は小さな機能のブラウザ確認に使います。静的にリンクやimportが存在すること、実行時に例外がないこと、意図した画面・操作になることは別々に確認します。確認記録には、実行した条件と観察した結果を対応付けます。</p>
 <p>全体一覧は<a href="examples/index.html">book examples</a>と<a href="https://jun-mizutani.github.io/webg/samples/">samples</a>で確認できます。</p>
 
   </main></body></html>

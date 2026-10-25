@@ -48,7 +48,3 @@ PBR environment reflections show metal parts; capsule shells use glossy dielectr
 - `mechanism.js`: stage definitions, holder positions, capsule profiles and chute motion
 - `main.js`: component construction, PBR rendering, animation, section view and controls
 - `filling_machine.html` / `style.css`: interface and layout
-
-## Reference
-
-The stage sequence follows the supply, separation, filling, alignment, closing, ejection and cleaning operations in [Syntegon's capsule filling overview](https://www.syntegon.com/solutions/pharma/capsule-filling-machine/).

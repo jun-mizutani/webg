@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// samples/circular_breaker/arenaScene.js  2026/03/26
+// samples/circular_breaker/arenaScene.js  2026/10/25
 //   circular_breaker sample
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -20,7 +20,7 @@ import { makeBeveledCylinder, colorize } from "./shapeFactory.js";
 
 // この file は main.js から createArenaLight() / createArenaBackdrop() として呼ばれ、
 // 床、床パターン、外周壁、guide ring など背景側 node をまとめて構築する
-// runtime や stage 進行に依存しない scene builder をここへ集め、
+// シーン構築の処理をここへ集め、runtimeとstage進行から共通して呼び出せるようにし、
 // main.js では scene の組み立て順だけを追えるようにする
 
 // floor の base mesh を作る
@@ -107,7 +107,7 @@ const createArenaWalls = ({ space, gpu }) => {
 };
 
 // block ring の位置をプレイヤーが読みやすくするための guide ring
-// runtime では直接使わないが、diagnostics で endedShapeCount に含めるため shape を返す
+// diagnostics で endedShapeCount を集計できるように shape を返す
 const createBlockGuideRing = ({ space, gpu }) => {
   const ringNode = space.addNode(null, "ring");
   const ringShape = makeBeveledCylinder(gpu, BLOCK_RING_RADIUS, 1.0, 0.2, 64);

@@ -1,5 +1,5 @@
 // ---------------------------------------------
-//  ProjectApp.js  2026/09/23
+//  ProjectApp.js  2026/10/25
 //   User-facing ProjectApp entry for general PBR and Compute physics applications
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -485,7 +485,7 @@ export default class ProjectApp {
   }
 
   // 解決済みproject、renderer、physics、readbackの状態を利用者向けに返します
-  // 内部GPU objectではなく、設定と対応関係を調べられる値へ限定します
+  // 設定と対応関係を調べられる値を選んで診断情報へまとめます
   getDiagnostics() {
     this.requireAlive();
     const physicsDiagnostics = this.runtime?.getDiagnostics() ?? null;

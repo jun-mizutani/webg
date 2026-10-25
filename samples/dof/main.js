@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// samples/dof/main.js  2026/08/11
+// samples/dof/main.js  2026/10/25
 //   dof sample
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -117,7 +117,7 @@ function formatStageBlurIterations(dof) {
 
 // 被写界深度の`blur`の倍率を読み込み、検証済みのデータとして後続処理へ渡す
 function readDofBlurScale(dof) {
-  // DofPassの公開methodだけを使用し、未公開propertyへのfallbackでAPI不一致を隠さない
+  // DofPass の公開 method から取得した値を使い、現在の API 契約で状態を確認する
   return dof.getBlurScale();
 }
 
@@ -156,7 +156,7 @@ function captureDofSettings(dof) {
 // 被写界深度の`settings`を対象の状態または描画設定へ反映する
 function applyDofSettings(dof, settings) {
   // benchmark 用の case 切り替えでも通常 UI と同じ setter を通し、
-  // DofPass 内の uniform と blur pass 状態がずれないようにする
+  // DofPass の uniform と blur pass に同じ設定を渡す
   dof.setEnabled(settings.enabled);
   dof.setDofMode(settings.dofMode);
   dof.setFocusDistance(settings.focusDistance);
@@ -191,8 +191,8 @@ function cloneBenchmarkCase(baseSettings, definition) {
 
 // フレームの`timing`の`snapshot`を読み込み、検証済みのデータとして後続処理へ渡す
 function readFrameTimingSnapshot(frameTimer) {
-  // Help panel 用の文字列ではなく、集計しやすい生の数値を JSON へ残す
-  // timestamp-query 未対応時は GPU 値を 0 に補正せず null のまま保持する
+  // 集計や比較に使えるよう、JSON には計測した数値を保存する
+  // timestamp-queryで値が得られた区間をGPU実測値で表示し、それ以外はnullで取得状態を保持する
   if (!frameTimer) {
     return null;
   }
@@ -370,7 +370,7 @@ function createSharedSphereSource(app) {
 
 // 深度の`sphere`を生成し、後続処理で利用できる状態にする
 function createDepthSphere(app, sourceShape, name, options) {
-  // 色は instance ごとに変えたいが、頂点バッファまでは増やしたくないため、
+  // 頂点 buffer を共有しながら、色を instance ごとに変えられるよう、
   // shared sphere resource を参照する instance に材質だけ個別設定する
   const shape = sourceShape.createInstance();
   shape.setMaterial("smooth-shader", {
@@ -656,7 +656,7 @@ async function start() {
   // `benchmark`の`runner`を生成し、後続処理で利用できる状態にする
   function createBenchmarkRunner() {
     // benchmark は現在の利用者設定を基準に組み立て、終了後にその設定へ戻す
-    // 表示経路は常に composite へ固定し、debug view の追加 cost を測定へ混ぜない
+    // 表示経路を composite へ固定し、その経路の時間を計測する
     const baseSettings = captureDofSettings(dof);
     const cases = BENCHMARK_CASES.map((definition) => cloneBenchmarkCase(baseSettings, definition));
     return {
@@ -824,7 +824,7 @@ async function start() {
   };
 
   // mode switch buttonのactive表示を、現在のDofPass状態から決める
-  // CommandPalette側の見た目と実際のdofModeがずれないようここで一元化する
+  // CommandPalette の表示と実際の dofMode を同じ入口で更新する
   const getCommandState = (id) => ({
     active: (id === "mode-staged" && dof.dofMode === "staged") ||
       (id === "bench-run" && state.benchmark.running),
@@ -1021,7 +1021,7 @@ async function start() {
       }
 
       // orbit target と eye の現在位置から focus 面のガイド位置を更新する
-      // debug view を見なくても、scene 上で sharp にしたい距離を追いやすくする
+      // scene 上のガイドから、鮮明に表示する距離を確認できるようにする
       updateFocusGuide(
         focusGuide,
         app.eye.getWorldPosition(),
@@ -1040,7 +1040,7 @@ async function start() {
       // highlightだけが消えて不自然になるため、DoFでも照明済みscene colorを使う
       app.beginGpuTiming();
       dof.beginScene(app.screen, app.clearColor, {
-        // tokenはCameraFrameの内部値を公開せず、同一描画frameであることだけをpassへ伝える
+        // tokenは同一の描画frameであることを示す識別子としてpassへ渡す
         renderFrameToken,
         timestampWrites: app.getGpuRenderTimestampWrites(true, false)
       });
@@ -1053,7 +1053,7 @@ async function start() {
         clearColor: app.clearColor,
         timestampWrites: app.getGpuRenderTimestampWrites(false, true)
       });
-      // timestamp query の resolve は RenderPassEncoder を閉じてからでないと記録できない
+      // RenderPassEncoderを閉じた後に、timestamp queryのresolveを記録する
       // 通常の present() なら自動で閉じるが、GPU timing はその前に resolve を追加するため明示的に閉じる
       app.getGPU().endPass();
       app.endGpuTiming(app.getGPU().commandEncoder);

@@ -20,6 +20,6 @@ SceneYAMLで定義した標準Compute粒子を、PBRシーンへ表示します�
 
 `emit(64, { position, direction, spreadAngle, speed, lifetime })`で発生条件を渡します。角度は度、速度はワールド長さ/秒、寿命は秒です。`startEmission({ rate, ... })`は秒当たり発生数を指定します。重力と速度減衰は`simulation`、二つのHDR色・強度・半径範囲は`appearance`で調整できます。全Emitterはアプリ終了時に解放されます。
 
-表示する推定数は、最大寿命からCPUで求めた予約数です。保留要求も含みます。容量不足時は`emit()`の`accepted`・`rejected`・`reason`と診断の拒否数で確認できます。このサンプルは満杯の要求を拒否する`overflow: "reject"`です。初期値と移動はGPUに保持し、毎frameのGPU readbackを伴いません。
+表示する推定数は、最大寿命からCPUで求めた予約数です。保留要求も含みます。容量不足時は`emit()`の`accepted`・`rejected`・`reason`と診断の拒否数で確認できます。このサンプルは満杯の要求を拒否する`overflow: "reject"`です。初期値と移動はGPUに保持し、その状態を直接描画へ渡します。
 
 標準粒子は透明合成後のHDRへ加算し、Bloomとトーンマッピングを共有します。SSRは粒子描画前のシーンを参照します。独自WGSLで粒子の動きを設計する例は、[compute_particles](../compute_particles/index.html)にあります。

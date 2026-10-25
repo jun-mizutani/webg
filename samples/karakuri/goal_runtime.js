@@ -1,5 +1,5 @@
 // ---------------------------------------------
-//  goal_runtime.js  2026/09/10
+//  goal_runtime.js  2026/10/25
 //   Shared contact-to-goal matching for Karakuri Maker and Player
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -31,7 +31,7 @@ export function goalContactMatches(goal, references, contact) {
     || (other.kind === goal.source.kind && other.id === goal.source.id);
 }
 
-// 一つのcontactにゴール対象のobjectが含まれるかを調べ、source条件に依存しない板の接触判定へ使います
+// 一つのcontactにゴール対象のobjectが含まれるかを調べ、各source条件で共通の板接触判定に使います
 export function contactIncludesGoalTarget(contact, references, goals) {
   if (!contact || !references || !Array.isArray(goals)) return false;
   const targetIds = new Set(goals.map((goal) => String(goal?.target ?? "")));

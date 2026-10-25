@@ -1,4 +1,4 @@
-// track.js 2026/09/27
+// track.js 2026/10/25
 // 閉じた三次曲線と通過済み区間の形状変化からレール、枕木、支柱と車両を生成する
 import Matrix from "../../webg/Matrix.js";
 import Primitive from "../../webg/Primitive.js";
@@ -692,7 +692,7 @@ export function createCoasterScene(app) {
     return finishedChange;
   }
 
-  // 更新が重ならない短い間隔でdirty区間だけ再生成し、他区間のGPU形状を維持する
+  // dirty 区間の再生成を短い間隔でまとめて実行し、他区間の GPU 形状を維持する
   function refreshDirtyChunks(deltaSec, force = false) {
     if (dirtyChunks.size === 0) return;
     geometryRefreshElapsed += deltaSec;

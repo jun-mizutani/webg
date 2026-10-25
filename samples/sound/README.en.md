@@ -18,7 +18,7 @@ The melody uses a low-pass filter to soften strong harmonics, with frequencies a
 
 `Melody Vol` scales the lead. `Rhythm Vol` scales the bass, chords, and percussion (0–2, default 1). Set either to zero to compare the parts separately. These values persist when you switch songs and affect newly scheduled notes; notes already playing and effect tails decay naturally. `BGM Vol` controls the overall level.
 
-The score format currently supports eight bars in 4/4, eighth-note positions, and a monophonic lead. It cannot encode sixteenth notes, independent triplets, lead chords, or ties across bar lines. Swing controls the ratio between paired eighth notes. Instruments use basic waveforms and filters rather than recorded instrument samples. Separate part volumes apply to GameAudioSynth scores, not AudioSynth degree-based melodies.
+The score format currently uses eight bars in 4/4, eighth-note positions, and a monophonic lead. To represent sixteenth notes, independent triplets, lead chords, or ties across bar lines, extend the score format and playback logic.
 
 | Style | Preset / BPM | Preset / BPM |
 |---|---|---|
@@ -59,7 +59,7 @@ The 18 effects combine short filtered noise, low resonances, continuous pitch ch
 
 Noise layers also follow the selected SE Envelope profiles. SE Profiles is generated from the layers actually used, and Editing Profile changes their next playback. Attack and Decay are proportionally shortened to fit brief layers; Release uses the current profile value. Tail_probe combines a short noise onset with sustained tones for envelope and reverb comparisons.
 
-Audition All waits until each effect’s tones and current Release finish, then adds 0.15 seconds before the next effect. You can also keep BGM running to compare the clarity of collision and UI sounds. Delay and reverb tails are not included in the audition wait time.
+Audition All waits until each effect’s tones and current Release finish, then adds 0.15 seconds before the next effect. You can also keep BGM running to compare the clarity of collision and UI sounds. The next effect starts after the tone and Release interval plus 0.15 seconds, while delay and reverb tails continue naturally.
 
 ## Checkpoints
 The first thing to do is press `Audio Start`. Once sound output is enabled, use `Sound Effect` and `Play SE` to inspect short effects, then use `BGM Start` to play a melody. If you want to inspect the contour of the sound, change `SE Envelope`. If you want to inspect spatial character, change `SE Reverb Kind`, `SE Reverb Length`, and `SE Reverb Decay`. If you want to inspect the flow of BGM, change `Melody` and `BPM`.

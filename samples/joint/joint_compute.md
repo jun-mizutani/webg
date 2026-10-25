@@ -30,13 +30,13 @@ Help Panelは起動時に見出しだけを表示した折り畳み状態です�
 
 6本のロープは、それぞれ上端のstatic Sphere pivotと10本のdynamic Capsule linkで構成します。linkは半径 `0.06 m`、芯線長 `0.18 m`、全長 `0.30 m`、中心間隔 `0.305 m`、見かけの隙間約 `0.005 m`、質量 `0.50 kg`です。隣接linkの接触はcollision layer／maskで除外し、ロープ同士がJoint拘束以外の接触で固まらないようにしています。ロープlinkと操作Capsuleの接触は有効です。床や境界Planeは登録していないため、自由端の重力運動を床の反発と分けて観察できます
 
-操作Capsuleは `bodyType="kinematic"`、半径 `0.33 m`、芯線長 `1.20 m`、Y位置 `4.00 m`です。Capsuleのlocal Y軸をX軸回転のquaternionでworld Z軸へ向け、画面の前後方向を長軸にしています。`quasiStatic`ではfixed stepごとに次の位置をteleportし、速度0をBodyStateへ渡します。`impact`では同じ位置処方に加えて `0.80 m/s` の処方速度を渡します。モードは速度から自動判定せず、`Q`／`I`で明示します
+操作Capsuleは `bodyType="kinematic"`、半径 `0.33 m`、芯線長 `1.20 m`、Y位置 `4.00 m`です。Capsuleのlocal Y軸をX軸回転のquaternionでworld Z軸へ向け、画面の前後方向を長軸にしています。`quasiStatic`ではfixed stepごとに次の位置をteleportし、速度0をBodyStateへ渡します。`impact`では同じ位置処方に加えて `0.80 m/s` の処方速度を渡します。モードは`Q`／`I`で明示的に選びます
 
 振り子は、左端ロープの根元からworld X方向へ `1 m` 左へ移したstatic Sphere pivotと、半径 `0.18 m` のSphere weightをDistanceJointで接続します。Joint距離は `T=2π√(L/g)` から `L=|g|(T/(2π))²` を計算し、重力 `9.80665 m/s²`、目標周期 `3 s`から約 `2.2356 m`を得ます。支点とSphereの間はGPU rendererが二つのBodyState位置を読み、白い質量なしconnectorとして表示します。connectorは二つのBodyState位置を結ぶ描画用の線です。物理計算にはpivot、weight、DistanceJointを使います
 
 ## Compute実装
 
-`joint_compute.js` は `ComputePhysicsSpace` のbody descriptorへ `ComputeSphereCollider` と `ComputeCapsuleCollider` を渡し、body IDを明示した `DistanceJoint` descriptorを `addJoint()` へ登録します。Jointは `webg/ComputeJointBuffer.js` の固定stride GPU bufferへbody slot、anchor、距離、compliance、lambdaを格納し、`webg/ComputeJointSolver.js` がcontact solver後の独立WGSL passでXPBD position correctionを行います。Joint slotの偶奇を別passへ分け、1回のdispatchで全bodyを同じstateから更新した後にping-pong stateを交換します。設定された反復回数だけ偶奇passを繰り返すことで、同じbodyへ接続する隣接Jointが一つのdispatch内で古い相手位置を使い続けることを避け、ロープ上部のDistanceJoint誤差を抑えます。Joint bufferはCPUへlambdaを毎step読み戻しません
+`joint_compute.js` は `ComputePhysicsSpace` のbody descriptorへ `ComputeSphereCollider` と `ComputeCapsuleCollider` を渡し、body IDを明示した `DistanceJoint` descriptorを `addJoint()` へ登録します。Jointは `webg/ComputeJointBuffer.js` の固定stride GPU bufferへbody slot、anchor、距離、compliance、lambdaを格納し、`webg/ComputeJointSolver.js` がcontact solver後の独立WGSL passでXPBD position correctionを行います。Joint slotの偶奇を別passへ分け、1回のdispatchで全bodyを同じstateから更新した後にping-pong stateを交換します。設定された反復回数だけ偶奇passを繰り返すことで、同じbodyへ接続する隣接Jointが一つのdispatch内で古い相手位置を使い続けることを避け、ロープ上部のDistanceJoint誤差を抑えます。lambdaはGPU上のJoint bufferへ保持し、次のsolver反復で参照します
 
 物体の描画は `samples/compute_physics` と同じく、Compute終了後のping-pong `BodyState`をvertex shaderから直接参照します。SphereとCapsuleの位置・姿勢・色をCPU側のNodeへ同期する通常処理はありません。振り子周期、ロープ速度、角速度、Joint誤差は、8 frameに1回の明示的な `MAP_READ` state readbackから計算します。readbackは診断表示のためだけに行い、描画や物理stepをCPU同期へ切り替えるfallbackにはしていません
 

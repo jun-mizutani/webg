@@ -4,7 +4,7 @@
 
 `eye_rig` は、`webg/EyeRig.js` が扱う `base -> rod -> eye` の3段構成を、Orbit、First Person、Followの三つの用途で比較するサンプルです。EyeRigが設定するローカル変換と、アプリケーションが構成する親子階層を組み合わせることで、カメラの動きをどのように選べるかを確認します。
 
-Followはcamera baseを移動させず、独立して動くtargetをeyeの姿勢で滑らかに追跡します。回転した親の下でOrbitのPANと視点基準回転を正しいローカル座標へ変換し、First Personの水平dragをlookYawへ反映します。
+Followはcamera baseの位置を保ち、独立して動くtargetをeyeの姿勢で滑らかに追跡します。回転した親の下でOrbitのPANと視点基準回転を正しいローカル座標へ変換し、First Personの水平dragをlookYawへ反映します。
 
 ## シーンの構成
 
@@ -21,13 +21,13 @@ camera vehicle
 target vehicle
 ```
 
-Followではcamera rigとtarget vehicleは親子関係を持ちません。target vehicleのworld位置は視線方向の計算にだけ使い、base位置にはコピーしません。
+Followではcamera rigとtarget vehicleは親子関係を持ちません。target vehicleのworld位置は視線方向の計算に使い、baseはcamera vehicle側の位置を保ちます。
 
 ## Orbitの確認
 
 Orbitでは、baseが注視中心、rodが周回角度、eyeが距離を担当します。camera rigをcamera vehicleの子にすると、vehicleの位置、yaw、pitch、rollをすべて継承します。
 
-`H`を押すとcamera rigの親をindependent camera anchorへ変更します。このanchorはcamera vehicleのworld位置だけを受け取り、姿勢はidentityを保ちます。そのためcamera vehicleと同じ場所を移動しても、vehicleの回転はcameraへ継承されません。
+`H`を押すとcamera rigの親をindependent camera anchorへ変更します。このanchorはcamera vehicleのworld位置だけを受け取り、姿勢はidentityを保ちます。そのためcamera vehicleと同じ場所を移動しても、cameraの向きは独立して保持されます。
 
 Orbit stateを保持し、同じOrbitをアプリケーション側の異なる親子階層で使用しています。
 
@@ -37,7 +37,7 @@ PANではeyeのworld right/upから画面平面上の移動量を求めた後、
 
 First Personではbaseが取り付け位置とbody姿勢、rodがeye height、eyeが独立視線を担当します。camera bodyの前方はlocal `-Z`ですが、camera vehicleはlocal `+Z`を前方としているため、初期状態ではbodyYawを180度にして両方の前方軸を一致させます。baseはcamera vehicleの後方、上方、右側に配置します。
 
-標準pointer処理は水平dragをlookYawへ、垂直dragをlookPitchへ反映します。lookYawはeyeの独立視線だけを変え、bodyYawを基準とする移動方向には影響しません。これにより、vehicleの進行方向とは独立して左右や上下を見る仕様を検証します。
+標準pointer処理は水平dragをlookYawへ、垂直dragをlookPitchへ反映します。lookYawはeyeの視線、bodyYawは移動方向の基準として個別に使います。これにより、vehicleの進行方向とは独立して左右や上下を見る仕様を検証します。
 
 `W`はbodyYawで回転したbodyのlocal `-Z`、`D`はlocal `+X`へbaseを移動します。`S / A`はそれぞれの反対方向、`Q / E`は親座標系内の上下方向です。通常の利用では初期取り付け位置へ固定できますが、base自体が親座標系内で自由に移動できることも同じmodeで確認できます。
 

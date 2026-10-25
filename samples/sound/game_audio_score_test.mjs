@@ -1,5 +1,6 @@
+// game_audio_score_test.mjs  2026/10/25
 // node samples/sound/game_audio_score_test.mjs
-// 全プリセットの予約時刻と打音の後始末を、音声デバイスなしで検証する。
+// 全プリセットの予約時刻と打音の後始末を、音声デバイスなしで検証する
 import assert from "node:assert/strict";
 import GameAudioSynth from "../../webg/GameAudioSynth.js";
 import { GAME_MUSIC_PRESETS } from "../../webg/GameMusicPresets.js";
@@ -74,7 +75,7 @@ for (const name of synth.getMelodyList()) {
   }
 }
 
-// 高域補正は移調後の周波数を使い、伴奏の音量には影響しない。
+// 移調後の周波数で旋律の高域補正を求め、伴奏は独立した音量設定で再生する
 synth.setBgmEnvelope({attack:.03, decay:.2, sustain:.6, release:.4});
 function peak(note, root, soften) {
   synth.setRootHz(root);
@@ -89,7 +90,7 @@ assert.ok(peak(91, 220, true) < peak(69, 220, true));
 assert.ok(peak(81, 440, true) < peak(81, 220, true));
 assert.equal(peak(91, 220, false), .032);
 
-// 曲切替は予約済みのノイズ音源も止める。
+// 曲切替は予約済みのノイズ音源も止める
 synth.playScoreDrum("snare", 10, .03);
 const pending = [...synth.scoreVoices];
 synth.setMelody("jazz_cafe");
@@ -98,7 +99,7 @@ assert.ok(pending.every(source => source.stopTime === undefined));
 pending.forEach(source => source.onended());
 assert.ok(synth.ctx.nodes.slice(-3).every(node => node.disconnected));
 
-// nullを持続として扱いつつ、明示的な休符で音価を区切る。
+// nullを持続として扱いつつ、明示的な休符で音価を区切る
 const restSynth = new GameAudioSynth();
 const config = {...GAME_MUSIC_PRESETS.jazz_cafe, leadGate:.5,
   lead:[[-1,60,null,-1,64,null,null,-1], ...Array.from({length:7}, () => Array(8).fill(-1))]};
@@ -122,7 +123,7 @@ restSynth.setBgmMelodyVolume(0);
 restSynth.scheduleScoreStep(1, 2);
 assert.equal(leadCalls.length, 2, "muted melody schedules no voices");
 
-// 倍率は曲切替で保持し、両パートを0にすると音源を生成しない。
+// 倍率は曲切替後も保持し、各パートの倍率が正の場合にその音源を生成する
 synth.setBgmMelodyVolume(0);
 synth.setBgmRhythmVolume(0);
 synth.setMelody("jazz_corner");
@@ -142,7 +143,7 @@ synth.scheduleScoreDrums(synth.melody, 0, 1);
 const kick = synth.ctx.nodes.slice(first).find(node => node.kind === "amp");
 assert.equal(kick.gain.events[1].value, .12 * .8 * .5);
 
-// 単純な移調だけの曲を作らず、休符と音程の並びも24曲で書き分ける。
+// 単純な移調だけの曲を作らず、休符と音程の並びも24曲で書き分ける
 const shapes = new Set();
 for (const song of Object.values(GAME_MUSIC_PRESETS)) {
   const notes = song.lead.flat();

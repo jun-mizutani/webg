@@ -89,9 +89,10 @@ main { width: min(1180px, calc(100% - 32px)); margin: 0 auto; padding: 32px 0 64
   <section class="guide" aria-labelledby="guide-title">
     <h2 id="guide-title">How to use this catalog</h2>
     <p>New to webg? Start with the <a href="../book.en/ExampleGuide.md">English example guide</a> to choose a first sample and build toward a complete app. Each guide links runnable code with practical checks.</p>
-    <p><strong>Run</strong> opens the sample app. <strong>Details</strong> opens its English guide, and <strong>日本語</strong> opens the Japanese guide. Use <strong>README</strong> to save the English Markdown source.</p>
+    <p><strong>Run</strong> opens the sample app. <strong>Details</strong> opens the English guide, and <strong>日本語</strong> opens the Japanese guide. The guide is UTF-8 HTML based on the matching <code>README.en.md</code>; use <strong>README</strong> to save the Markdown source.</p>
     <p>For focused browser checks, see the <a href="../unittest/index.en.html">unittest catalog</a>. Runnable examples from the book are listed in the <a href="../book/examples/index.en.html">book examples catalog</a>. The <a href="./README.en.md" download>Samples guide</a> explains how samples, unittests, and headless tests differ.</p>
     <p>To explore YAML scenes, start with <a href="./model_yaml/index.en.html">ModelYAML</a>, then try <a href="./scene_model_yaml/index.en.html">SceneYAML with ModelYAML</a>. Use the <a href="./edit_yaml/index.en.html">SceneYAML editor</a> to change placement, materials, and physics settings.</p>
+    <p>During development, use <a href="./cache_clear_webg/cache_clear_webg.html"><code>cache_clear_webg</code></a> to reload webg core modules through unique <code>?v=...</code> URLs. Core import statements retain their distribution URLs.</p>
     <p>In samples that use <code>WebgApp</code>, press <code>F9</code> to open the CommandPalette. Press <code>M</code> to switch between debug and release modes, <code>C</code> to show diagnostics, or <code>V</code> to copy diagnostic JSON.</p>
   </section>
 
@@ -247,7 +248,7 @@ const categories = [
     id: "compute",
     title: "Compute and procedural generation",
     chapters: "Book chapters 20–22, 26–29",
-    summary: "Explore GPU computation with Compute Shaders, along with procedural geometry and texture generation.",
+    summary: "Explore GPU computation with Compute Shaders, along with geometry and texture generation from formulas and noise.",
     items: [
       ["compute_cloth", "Update a grid of masses and springs on the GPU, then render cloth deformation from neighbor constraints, gravity, and fixed points."],
       ["compute_particle_emitter", "Build standard Compute particle emitters from SceneYAML and inspect bursts, continuous emission, stopping, capacity limits, PBR, and Bloom."],

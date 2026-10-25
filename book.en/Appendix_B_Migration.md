@@ -487,7 +487,7 @@ Use an actual WebGPU browser to verify:
 - **Use procedural textures**
   - Start with: `samples/procedural_texture/index.html`
 - **Move from CPU to Compute physics**
-  - Start with: `27_Physics.md`, `28_PhysicsEvents.md`, `samples/compute_physics/index.html`
+  - Start with: `27_Physics.md`, `28_PhysicsEvents.md`, `samples/compute_physics/index.html`; see Chapter 42 for solver internals.
 - **Verify Compute-physics rendering sync**
   - Start with: `samples/falling_box/index.html`, `samples/falling_dominoes/index.html`
 - **Add Compute particles or cloth**

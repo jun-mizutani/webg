@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// samples/mmodeler/ModelerCommandDispatcher.js  2026/07/25
+// samples/mmodeler/ModelerCommandDispatcher.js  2026/10/25
 //   command dispatcher for mmodeler
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -140,7 +140,7 @@ export default class ModelerCommandDispatcher {
   }
 
   // pointerup と click の二重発火を短い時間窓で抑止する
-  // UI event 側ではなく command 入口で抑止することで、palette / ribbon / view button の挙動をそろえる
+  // command の入口で実行条件を判定し、palette / ribbon / view button の操作をそろえる
   shouldSuppressRepeatedAction(action) {
     const currentTime = this.now();
     if (this.lastAction === action && (currentTime - this.lastActionTime) < 280) {

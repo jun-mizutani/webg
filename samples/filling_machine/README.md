@@ -54,7 +54,3 @@
 - `mechanism.js`：工程と受け台の位置、カプセルの断面、樋上の位置
 - `main.js`：部品の生成、PBR描画、工程の更新、画面操作
 - `filling_machine.html` / `style.css`：観察画面、断面図、操作部品
-
-## 原理の参照
-
-工程の構成は、[Syntegonのカプセル充填機の解説](https://www.syntegon.com/solutions/pharma/capsule-filling-machine/)に記載された、供給・分離・充填・位置合わせ・結合・排出・清掃を参考にしています。

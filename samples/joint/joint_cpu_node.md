@@ -14,15 +14,15 @@ http://localhost:8765/samples/joint/joint_cpu_node.html
 
 ## シナリオ
 
-画面左の振り子は、staticなSphere pivotとSphere weightを1本の `DistanceJoint` で接続しています。Joint距離は小振幅近似の `T=2π√(L/g)` から `L=|g|(T/(2π))²` へ変形して、重力 `9.80665 m/s²` と目標周期 `3 s` から約 `2.2356 m` としています。支点と球をつなぐ白いCapsuleは表示専用の通常Nodeであり、PhysicsSpaceへ登録せず、質量、重力、衝突、Jointを持ちません。Help Panelには目標周期と、下向き通過間隔から求めた実測周期を表示します
+画面左の振り子は、staticなSphere pivotとSphere weightを1本の `DistanceJoint` で接続しています。Joint距離は小振幅近似の `T=2π√(L/g)` から `L=|g|(T/(2π))²` へ変形して、重力 `9.80665 m/s²` と目標周期 `3 s` から約 `2.2356 m` としています。支点と球をつなぐ白いCapsuleは表示専用の通常Nodeであり、描画用NodeとしてSpaceへ配置します。物理の接続と運動は支点・球のbodyとDistanceJointが担当します。Help Panelには目標周期と、下向き通過間隔から求めた実測周期を表示します
 
-6本のロープは、それぞれ上端のstatic Sphere pivotから10本のdynamic Capsule linkを `DistanceJoint` で連結したchainです。linkは半径 `0.06 m`、芯線長 `0.18 m`、全長 `0.30 m`、中心間隔 `0.305 m`、見かけの隙間約 `0.005 m`、質量 `0.50 kg`です。隣接link同士はcollision layer / maskで接触させず、ロープlinkと操作Capsuleの接触だけを有効にしています。床や境界Planeは配置していません
+6本のロープは、それぞれ上端のstatic Sphere pivotから10本のdynamic Capsule linkを `DistanceJoint` で連結したchainです。linkは半径 `0.06 m`、芯線長 `0.18 m`、全長 `0.30 m`、中心間隔 `0.305 m`、見かけの隙間約 `0.005 m`、質量 `0.50 kg`です。collision layer / maskで、ロープlinkと操作Capsuleの組み合わせに接触を限定しています。接触対象は、上記のロープlinkと操作Capsuleです
 
-操作Capsuleは重力を受けないkinematic bodyです。local Y軸をX軸回転のquaternionでworld Z軸へ向けるため、画面の前後方向が長軸になります。起動時はDキーを押した状態として右へ移動を開始し、A/Dで方向を切り替え、端で停止します。Qの `quasiStatic` では位置をfixed stepごとに処方し、contact solverへ速度0を渡します。Iの `impact` では同じ位置処方に `0.80 m/s` の処方速度を渡します。モードの切り替えは速度から自動判定しません
+操作Capsuleは重力を受けないkinematic bodyです。local Y軸をX軸回転のquaternionでworld Z軸へ向けるため、画面の前後方向が長軸になります。起動時はDキーを押した状態として右へ移動を開始し、A/Dで方向を切り替え、端で停止します。Qの `quasiStatic` では位置をfixed stepごとに処方し、contact solverへ速度0を渡します。Iの `impact` では同じ位置処方に `0.80 m/s` の処方速度を渡します。モードの切り替えはQ／Iの操作で選びます
 
 ## webgコアとの関係
 
-`joint_cpu_node.js` は `WebgApp`、`PhysicsSpace`、`CapsuleCollider`、`SphereCollider`、`Primitive`、`Shape`、`DistanceJoint`、`JointMath`を `webg/` から直接importし、`Scene.addPhysicsNode()`でcoreのPhysicsNodeを登録します。Jointの位置拘束はcoreのXPBD solverが担当し、`jointSolverIterations=16`、`jointPositionCorrectionIterations=16`を設定しています。サンプル内の `KinematicMotionController` はA/D入力からkinematic bodyの位置と接触速度を作るだけで、衝突やJointのsolverを複製しません
+`joint_cpu_node.js` は `WebgApp`、`PhysicsSpace`、`CapsuleCollider`、`SphereCollider`、`Primitive`、`Shape`、`DistanceJoint`、`JointMath`を `webg/` から直接importし、`Scene.addPhysicsNode()`でcoreのPhysicsNodeを登録します。Jointの位置拘束はcoreのXPBD solverが担当し、`jointSolverIterations=16`、`jointPositionCorrectionIterations=16`を設定しています。サンプル内の `KinematicMotionController` はA/D入力からkinematic bodyの位置と接触速度を作るだけで、衝突とJointの解決にはcoreのsolverを使います
 
 frame時間を固定刻みへ分配し、各stepの直前にCapsuleのposition commandを更新してから `PhysicsSpace.stepFixed()` を呼びます。これにより複数のfixed stepが必要なframeでも、入力による位置処方と物理更新の順序を確認できます。表示形状と衝突形状には、`Primitive.capsule()` と `CapsuleCollider`、`Primitive.sphere()` と `SphereCollider` の対応する組み合わせを使います
 
@@ -38,7 +38,7 @@ frame時間を固定刻みへ分配し、各stepの直前にCapsuleのposition c
 - Drag: camera orbit
 - Wheel: camera zoom
 
-Help Panelは起動時に非表示です。`H`で表示するとgravity、body数、Joint数、ロープ数、振り子の目標・実測周期、Capsuleの位置と速度、ロープの現在値・ピーク値、接触数、Joint最大位置誤差を表示します。画面へHUD文字は重ねません
+Help Panelは起動時に非表示です。`H`で表示するとgravity、body数、Joint数、ロープ数、振り子の目標・実測周期、Capsuleの位置と速度、ロープの現在値・ピーク値、接触数、Joint最大位置誤差を表示します。状態の文字表示はHelp Panelへまとめています
 
 ## ファイル構成
 

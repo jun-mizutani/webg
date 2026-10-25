@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// samples/mmodeler/CommandPalette.js  2026/07/25
+// samples/mmodeler/CommandPalette.js  2026/10/25
 //   mobile command palette controller for mmodeler
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -214,7 +214,7 @@ export default class CommandPalette {
   }
 
   // 現在表示中の page に対応する action 配列を返す
-  // page が不正値になった場合は 1 枚目を返し、空 palette を出さない
+  // page が不正値の場合は 1 枚目の palette を表示する
   getActions() {
     const pages = this.getPageSet();
     return pages[this.page] ?? pages[0];
@@ -222,7 +222,7 @@ export default class CommandPalette {
 
   // command palette を開く
   // double tap や空 scene の操作から呼ばれ、まず保留中の single tap 選択を破棄する
-  // その後、tap 位置を隠さない中心点を計算して palette を配置し、1 枚目の command page を描画する
+  // tap 位置の斜め外側を中心に palette を配置し、1 枚目の command page を描く
   open(kind, clientX, clientY) {
     if (!this.isMobileProfile || !this.root) {
       return;

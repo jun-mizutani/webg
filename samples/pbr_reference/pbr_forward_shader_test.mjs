@@ -1,11 +1,11 @@
 // ---------------------------------------------------------
-// pbr_forward_shader_test.mjs  2026/08/03
+// pbr_forward_shader_test.mjs  2026/10/25
 //   Source transformation contracts for PbrForwardShader
 // ---------------------------------------------------------
 import assert from "node:assert/strict";
 import PbrForwardShader from "./PbrForwardShader.js";
 
-// GPU初期化前のconstructorだけを使い、生成WGSLがPhong項を残していないことを確認する
+// GPU 初期化前の constructor から生成 WGSL を取得し、PBR の照明項を検査する
 {
   const shader = new PbrForwardShader({ format: "bgra8unorm" });
   assert.match(shader.wgslSrc, /fn pbrEvaluateDirectBrdf/);

@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// samples/demo_spheres/main.js  2026/10/10
+// samples/demo_spheres/main.js  2026/10/25
 //   demo_spheres sample
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -172,7 +172,7 @@ const start = async () => {
   eye.setPosition(0, 30, 100);
 
   const input = new InputController(document);
-  // HUD や説明文の drag selection を妨げないよう、
+  // HUD や説明文では通常の drag selection を使えるよう、
   // pointerdown の既定抑止は canvas 上だけへ限定する
   input.setPointerPreventDefaultElement(screen.canvas);
   // 代表画像を一定寸法で作るため、撮影する1フレームだけCanvasを960×720へ揃える

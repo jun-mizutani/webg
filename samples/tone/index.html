@@ -184,13 +184,13 @@ blockquote {
 <ul><li>ToneSynth: 単音の再生、停止、envelope preset、reverb impulse、volume 調整を担当します。</li><li>ToneSynth.playTone(): 周波数、wave type、profile、gain、pan を指定して1 voice を鳴らします。duration を null にすることで、ボタンを離すまで sustain します。</li><li>ToneSynth.setSeEnvelopePreset(): 現在選択中の envelope profile を slider の値で更新します。</li><li>ToneSynth.setSeReverb() と ToneSynth.setSeReverbImpulse(): 残響量と impulse response の性格を切り替えます。</li></ul>
 <h2>確認ポイント</h2>
 <p>最初に Audio Start を押し、Hold Single を押している間だけ単音が鳴り、離すと release で止まることを確認します。次に Wave を sine から triangle、square、sawtooth へ切り替えると、同じ envelope でも倍音の量によって明るさや硬さが変わることが分かります。</p>
-<p>Envelope の Profile を切り替えると、同じ root と wave でも時間変化が変わります。percussion はほとんど sustain しない短い打撃音、organ はほぼ一定に鳴り続ける持続音、piano と guitar は押し続けてもすぐ減衰する撥弦/打弦系の音、brass と woodwind は立ち上がりが遅く、押し続けると息の持続が見える音として比較しやすくしています。Attack、Decay、Sustain、Release を動かすと、選択中 profile の次の発音から変化します。</p>
+<p>Envelope の Profile を切り替えると、同じ root と wave でも時間変化が変わります。percussion は立ち上がりの後すぐ減衰する短い打撃音、organ はほぼ一定に鳴り続ける持続音、piano と guitar は押し続けてもすぐ減衰する撥弦/打弦系の音、brass と woodwind は立ち上がりが遅く、押し続けると息の持続が見える音として比較しやすくしています。Attack、Decay、Sustain、Release を動かすと、選択中 profile の次の発音から変化します。</p>
 <p>Reverb では Dry、Room、Hall、Plate を切り替えて、残響が音の輪郭に与える影響を確認します。短い envelope では reverb tail が特に目立ち、長い envelope では原音と残響の重なり方が変わって聞こえます。</p>
 <p>Hold Triad を押すと、単音では分かりにくい reverb のにじみや、square / sawtooth の倍音の混み方を確認しやすくなります。和音では各 voice の pan を少し分けているため、左右の広がりも聞き取れます。</p>
 <h2>操作方法</h2>
 <ul><li>Audio Start: AudioContext を開始します。</li><li>Hold Single: 押している間だけ root の単音を鳴らします。</li><li>Hold Triad: 押している間だけ major または minor の3和音を鳴らします。</li><li>Stop All: 現在鳴っている tone を短い release で停止します。</li><li>Root: 基準音を選びます。</li><li>Wave: OscillatorNode の波形を選びます。</li><li>Mode: 単音、major triad、minor triad を選びます。</li><li>Tone Gain: playTone() に渡す voice gain を調整します。</li><li>Profile: envelope preset を選びます。</li><li>Attack / Decay / Sustain / Release: 選択中 profile の ADSR を調整します。</li><li>Reverb Mix: convolver への send と return の量をまとめて調整します。</li><li>Kind / Length / Decay: reverb impulse の性格、長さ、落ち方を調整します。</li><li>Dry / Room / Hall / Plate: 代表的な reverb 設定へ切り替えます。</li></ul>
 <p>つまずきやすい点</p>
-<p>Audio Start を押していないと音は鳴りません。これは browser の自動再生制限に合わせた動きです。</p>
+<p>browser の自動再生制限に合わせ、Audio Start を押してから音を再生します。</p>
 <p>Tone Gain は1 voice あたりの音量の基準です。3和音では音が重なるため、サンプル側で各 voice の gain を少し下げ、単音との音量差が大きくなりすぎないようにしています。</p>
 <p>Reverb Mix が大きい状態で Release を長くすると、原音と残響が重なって輪郭がぼやけやすくなります。まず Dry で envelope の形を確認し、そのあと Room、Hall、Plate を切り替えると違いを追いやすくなります。</p>
 <p>関連文書</p>

@@ -1,5 +1,5 @@
 // ---------------------------------------------
-//  karakuri_player.js  2026/09/23
+//  karakuri_player.js  2026/10/25
 //   SceneYAML-driven Karakuri Player with PBR, Compute physics, and emitters
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -359,7 +359,7 @@ async function loadSceneText(text, sourceUrl) {
     }
   });
   if (proceduralCache.device !== undefined && proceduralCache.device !== candidate.app.getGPU().device) {
-    // WebGPUDeviceをまたいだTexture再利用は許可せず、切替時に旧cacheを明示的に解放します
+    // WebGPUDeviceの切替時に旧cacheを解放し、切替先device用のTextureを用意します
     destroyKarakuriProceduralMaterialCache(proceduralCache);
   }
   procedural = await prepareKarakuriProceduralMaterials(candidate, nextState.manifest, proceduralCache);
@@ -435,7 +435,7 @@ async function start() {
   setControlsEnabled(false);
   installPageControls();
   const source = new URLSearchParams(globalThis.location.search).get("source");
-  // 通常起動では保存済みSceneYAMLを使わず、リポジトリの標準SceneYAMLを読み込みます
+  // 通常起動ではリポジトリの標準SceneYAMLを初期データとして読み込みます
   if (source === "maker") {
     let localText;
     try { localText = globalThis.localStorage?.getItem(LOCAL_SCENE_KEY); }

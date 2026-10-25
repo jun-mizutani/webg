@@ -8,7 +8,7 @@ English | [日本語](README.md)
 
 `com_palette` demonstrates how to use the core `webg/CommandPalette.js` as a UI component independently of WebgApp. It places buttons, toggles, steppers, selects, and an exclusive mode switch in one palette and shows how command definitions connect to application state.
 
-The center 2D preview and HUD read the same `state` that the palette updates. Switching `Obj / Edit / Scpt` changes both the active button and the preview. Toggle and stepper changes affect the background or shape on the next frame. This keeps application-specific state in the caller while CommandPalette only displays and updates it.
+The center 2D preview and HUD read the same `state` that the palette updates. Switching `Obj / Edit / Scpt` changes both the active button and the preview. Toggle and stepper changes affect the background or shape on the next frame. The application keeps its own state, while CommandPalette displays it and applies requested updates.
 
 ## How to Run
 
@@ -34,7 +34,7 @@ Buttons are handled by `onCommand`, while toggles, steppers, and selects update 
 - Double click, double tap, and the `/` key all open the same palette
 - Only one of `Obj / Edit / Scpt` is active and the center preview changes to the same mode
 - Toggle, stepper, and select changes appear in both the HUD and preview and remain visible after reopening the palette
-- `Next` advances through row-based pages without splitting a stepper or select row
+- `Next` advances through row-based pages while keeping each stepper and select together
 - `CSS` applies the custom style and `Def` restores the default CSS and theme
 
 ## Controls

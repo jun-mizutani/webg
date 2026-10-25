@@ -26,7 +26,7 @@
 
 初期条件は`fallingBoxScenario.js`へまとめています。200体を4列×4行のlayerとして配置し、seed`20260822`から配置の揺らぎを再現します。各bodyはBoxで、五つのPlaneは床と四壁を表します。重力は`-4.9m/s²`、fixed stepは`1/120s`、solver反復数は14です。
 
-CPU版では各descriptorを`PhysicsNode`と`BoxCollider`へ変換し、五つのPlaneをstaticな`PhysicsNode`として`PhysicsSpace`へ登録します。`PhysicsSpace`は登録したPlaneをsolver入力へ変換し、登録NodeのBox/Plane接触を一つのCPU処理で解決します。表示用の床板は物理Planeとは別の通常Nodeとして作るため、床を二重に接触計算しません。Compute版では同じdescriptorをGPU BodyStateへ変換し、`ComputePhysicsSpace`へ登録します。CPU PhysicsNodeの角速度はdegree/secで保持されるため、共通descriptorのrad/secからNodeへ同期する境界で変換します。
+CPU版では各descriptorを`PhysicsNode`と`BoxCollider`へ変換し、五つのPlaneをstaticな`PhysicsNode`として`PhysicsSpace`へ登録します。`PhysicsSpace`は登録したPlaneをsolver入力へ変換し、登録NodeのBox/Plane接触を一つのCPU処理で解決します。表示用の床板は物理Planeとは別の通常Nodeとして作るため、床との接触計算は登録した物理Planeが担当します。Compute版では同じdescriptorをGPU BodyStateへ変換し、`ComputePhysicsSpace`へ登録します。CPU PhysicsNodeの角速度はdegree/secで保持されるため、共通descriptorのrad/secからNodeへ同期する境界で変換します。
 
 ## 確認内容
 

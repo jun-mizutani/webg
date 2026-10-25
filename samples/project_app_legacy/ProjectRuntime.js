@@ -1,5 +1,5 @@
 // ---------------------------------------------
-//  ProjectRuntime.js  2026/09/23
+//  ProjectRuntime.js  2026/10/25
 //   Compute physics and PBR frame coordination for general applications
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -186,7 +186,7 @@ export default class ProjectRuntime {
   }
 
   // physics manifestのjointsをModelAsset Nodeへ対応付け、全body登録後にまとめてcoreへ登録します
-  // Joint endpointはbodyのIDまたはNode binding名とlocalPointで記述し、GPU slotを作品側へ漏らしません
+  // Joint endpointはbody IDまたはNode binding名とlocalPointで記述し、GPU slotは内部で対応付けます
   async addJointsFromProject(project, bodyBindings = []) {
     this.requireAlive();
     if (this.prepared) throw new Error(`${this.label} addJointsFromProject requires registration before prepare()`);

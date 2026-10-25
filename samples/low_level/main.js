@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// samples/low_level/main.js  2026/07/25
+// samples/low_level/main.js  2026/10/25
 //   low_level sample
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -35,7 +35,7 @@ let sampleNode = null;
 
 // `showStartError`は必要な画面要素を準備し、表示状態を更新する
 const showStartError = (error) => {
-  // WebgApp を使わない sample でも起動失敗理由が画面から追えるように、DOM で固定表示する
+  // 低水準 API を使う sample の起動エラーを、画面上の DOM へ固定表示する
   const existing = document.getElementById("start-error");
   if (existing) existing.remove();
   const panel = document.createElement("pre");

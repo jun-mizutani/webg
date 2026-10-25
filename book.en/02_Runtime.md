@@ -143,6 +143,8 @@ Static pages such as the following mainly show catalogs or documentation. They d
 * `unittest/index.html`
 * Documentation files
 
+Sample `index.html` files can also serve as explanation pages. To run a sample, follow its Run link or choose the runnable page from `samples/index.html`.
+
 ### Pages to open through an HTTP server
 
 Runnable pages like the following use ES modules through `<script type="module">`, load external files through `fetch()`, or initialize WebGPU through `navigator.gpu`. Serve them from a local, LAN, or internet-connected HTTP server:
@@ -151,6 +153,8 @@ Runnable pages like the following use ES modules through `<script type="module">
 * Sample application pages linked from `samples/index.html` or each sample's explanation page
 * Most pages under `unittest/*/index.html`
 * Runnable pages under `book/examples/`
+
+For example, `samples/high_level/high_level.html` is a runnable page. In a project folder directly beneath the repository's `webg/` folder, import the core with `../webg/WebgApp.js`; from a nested sample folder such as `samples/high_level/`, use `../../webg/WebgApp.js`. Adjust the relative path to match the depth of your project folder.
 
 ## Network environments and secure contexts
 

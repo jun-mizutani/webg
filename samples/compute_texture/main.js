@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// samples/compute_texture/main.js  2026/08/11
+// samples/compute_texture/main.js  2026/10/25
 //   Compute Shader dynamic texture sample
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -77,8 +77,8 @@ const buildHelpLines = () => [
 ];
 
 // WebgApp 初期化後に一度呼び、book 14.5 の方針に沿った help panel を作成する
-// app が未初期化なら表示先がないため何もせず、初期化済みなら同じ id の OverlayPanel を登録する
-// lastHelpText は次 frame 以降の不要な DOM 更新を避ける比較用として保存する
+// app の初期化完了後に、同じ id の OverlayPanel を登録する
+// lastHelpText は前回の文字列との比較に使い、内容が変わった frame で DOM を更新する
 const showHelpPanel = () => {
   if (!app) return;
   lastHelpText = "";
@@ -98,7 +98,7 @@ const showHelpPanel = () => {
 
 // mode、pause、brush 半径、pointer 状態などが変わった時だけ help panel の本文を更新する
 // 前回と同じ文字列なら updateOverlayPanel() を呼ばず、連続描画中の DOM 更新を抑える
-// panel が存在しない段階では表示先がないため何もしない
+// panel の生成が完了している場合に、表示内容を更新する
 const updateHelpPanel = () => {
   const panel = app?.getOverlayPanel?.("computeTextureHelp");
   if (!panel) return;
@@ -110,8 +110,8 @@ const updateHelpPanel = () => {
 };
 
 // browser window の CSS pixel サイズを Screen の canvas 実ピクセルへ同期する
-// screen が未初期化なら何もせず、初期化後は最低 1 pixel を保証した整数サイズを Screen.resize() に渡す
-// Screen.resize() は depth texture も作り直すため、後段の raw render pass が古いサイズを参照しない
+// screen の初期化完了後に、最低 1 pixel を保証した整数サイズを Screen.resize() に渡す
+// Screen.resize() で depth texture も作り直し、後段の raw render pass と寸法をそろえる
 const resizeToWindow = () => {
   if (!screen) return;
   screen.resize(
@@ -343,7 +343,7 @@ const createPipelines = () => {
 
 // 2 枚の ping-pong texture をゼロ初期化し、次 frame の source index も初期状態へ戻す
 // clear は CPU upload だが、毎 frame の模様生成自体は Compute Shader が担当する
-// 古い履歴色が次の mode や burst へ残らないよう、両方の texture を同じ内容へそろえる
+// 両方の texture を同じ初期内容へそろえ、次の mode や burst を開始する
 const resetTextures = () => {
   for (const texture of stateTextures) {
     queue.writeTexture(
@@ -392,7 +392,7 @@ const writeParams = (deltaSec, timeSec) => {
 
 // Compute Shader 用の WGSL source を文字列として生成する
 // sampled texture を読み、近傍拡散、流れ場、mode ごとの背景波形、pointer 注入、click pulse、burst を合成して次 texture へ書く
-// 1 invocation = 1 pixel で動き、CPU 側は座標や色を与えるだけで模様生成自体には関与しない
+// 1 invocation = 1 pixel で模様を生成し、CPU 側は座標や色などの入力を渡す
 const createComputeWGSL = () => `
 struct TextureParams {
   resolution: vec4<f32>,
@@ -637,7 +637,7 @@ fn fsPreview(in: VertexOut) -> @location(0) vec4<f32> {
 
 // key と touch button の両方から呼び、sample 状態の切替を一か所で行う
 // mode 切替、burst、clear、pause、help、brush 半径変更を担当し、実際の texture 更新は次 frame の compute に任せる
-// 想定外の key は false を返し、呼び出し側が「この key はこの sample では使わない」と判断できるようにする
+// この sample が受け付ける key を処理し、その他の key は false を返して呼出側へ委ねる
 const applyActionKey = (key) => {
   const lower = String(key).toLowerCase();
   if (lower === "1") {
@@ -683,9 +683,9 @@ const applyActionKey = (key) => {
 };
 
 // canvas 上の client 座標を texture 更新に使う UV へ変換して保存する
-// screen が未初期化なら変換できないため false を返し、呼び出し側は pointer 状態更新だけに留める
-// clamp した 0..1 の UV を使うことで、canvas 外の少しのはみ出しでも shader 側の距離計算を破綻させない
-// texture 座標系は上が 0、下が 1 なので、screen の Y も反転せずそのまま正規化する
+// screen の初期化前は false を返して pointer 状態だけを更新し、初期化後に座標を変換する
+// UV を 0..1 へ clamp し、canvas の端でも同じ範囲で距離を計算する
+// texture 座標系は上が 0、下が 1 なので、screen の Y をその向きのまま正規化する
 const updatePointerUvFromClient = (clientX, clientY) => {
   if (!screen?.canvas) return false;
   const rect = screen.canvas.getBoundingClientRect();
@@ -711,8 +711,8 @@ const handlePointerDown = (event) => {
 };
 
 // drag 中の pointer を texture への描画座標として更新する
-// pointer が押されていない move は paint と見なさず、hover だけで色が出ないようにする
-// drag 継続中は残像用エネルギーも再充填し、長押しや連続ドラッグで注入が弱まらないようにする
+// pointer を押している間の move を paint 入力として受け付ける
+// drag 中は残像用エネルギーを補充し、長押しや連続 drag でも同じ強さで注入する
 const handlePointerMove = (event) => {
   if (!pointerDown) return;
   updatePointerUvFromClient(event.clientX, event.clientY);
@@ -891,7 +891,7 @@ const start = async () => {
 };
 
 // HTML の解析完了を待って start() を呼ぶ entry point
-// 非同期初期化に失敗した場合は console と OverlayPanel の両方へ同じ error を出し、黒画面だけで失敗を隠さない
+// 非同期初期化の失敗理由を、console と OverlayPanel の両方へ表示する
 document.addEventListener("DOMContentLoaded", () => {
   start().catch((error) => {
     console.error("compute_texture failed:", error);

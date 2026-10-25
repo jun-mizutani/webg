@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// samples/mmodeler/EditModeController.js  2026/07/25
+// samples/mmodeler/EditModeController.js  2026/10/25
 //   edit mode controller for mmodeler
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -95,7 +95,7 @@ export default class EditModeController {
   // 頂点参照の中核となる不変条件を session / scene state に適用する
   // vertices は 0-based の密な配列とし、vertex.id は配列 index と必ず一致させる
   // face.indices、vertex selection、last selected、X Mirror ペアは古い vertex id / index から新しい index へ変換する
-  // 参照先が存在しない face は補正せず例外にし、壊れた topology を静かに隠さない
+  // faceの参照先を検証し、欠けた参照はtopologyの入力エラーとして通知する
   normalizeDenseVertexIndices(state = this.getEditMeshState(), {
     remapMirrorPairs = true,
     sync = true
@@ -427,7 +427,7 @@ export default class EditModeController {
     this.scene.mode = this.objectModeName;
   }
 
-  // New Scene / import のように、現在の Edit Mode session を保存せず scene 側で作り直す前処理
+  // New Scene / importの前に、現在のEdit Mode sessionを終了してsceneを作り直す準備をする
   discardEditSession(mode = this.objectModeName) {
     this.cancelLoopCutPreview();
     this.cancelChainSelectPreview();
@@ -786,7 +786,7 @@ export default class EditModeController {
 
   // Chain Select は、任意の選択 vertex から隣接 edge の方向を選び、
   // 同じ方向へ連続する vertex 列を preview 後にまとめて選択する
-  // Loop Select が loop cut 後の中点列専用であるのに対し、この command は中点判定を使わない
+  // この command は、geometry 上で同じ方向へ連続する vertex 列を選択候補にする
   runChainSelectCommand() {
     if (this.mode !== this.editModeName) {
       this.setMessage("switch to edit mode before Chain Select");
@@ -893,7 +893,7 @@ export default class EditModeController {
   }
 
   // seed から選ばれた edge 方向に沿って、quad 面だけで構成される vertex chain を集める
-  // UV 球の緯線のような曲線は直線近傍判定では拾えないため、隣接 edge の向きを順に追う
+  // 隣接 edge の向きを順に追い、UV 球の緯線のような曲線も選択候補へ含める
   // ただし三角面や五角面に入ると loop の解釈が曖昧になるため、その edge を境界として停止する
   collectChainSelectVertexIds(seed, directionNeighbor) {
     const direction = sub3(directionNeighbor.position, seed.position);
@@ -1063,7 +1063,7 @@ export default class EditModeController {
   }
 
   // SelectLoop は、選択 vertex が「元 edge の中点」であることを GG と同じ判定で確認する
-  // ただし選択を広げる方向は元 edge の colinear 方向ではなく、左右の face 内で対辺にある中点へ向かう
+  // 選択は、左右の face 内で対辺にある中点へ向かって広げる
   // そのため、元 edge の両端を候補から除外し、残った隣接 vertex のうち中点判定を満たすものだけを返す
   getLoopSelectCounterpartMiddleIds(vertex, options = {}) {
     if (!vertex) {
@@ -1113,7 +1113,7 @@ export default class EditModeController {
     if (travelLength <= 1.0e-9) {
       return targets;
     }
-    // 交点では複数方向の midpoint 判定が同時に成立するため、入ってきた方向を保つ target だけを使う。
+    // 交点では複数方向の midpoint 判定が同時に成立するため、入ってきた方向を保つ target だけを使う
     const travelDirection = mul3(travel, 1.0 / travelLength);
     let bestPerpendicularScore = Infinity;
     for (const target of targets) {
@@ -1464,7 +1464,7 @@ export default class EditModeController {
 
   // N 軸制限で使う法線方向を、現在の選択状態から決める
   // face 選択があれば選択 face の平均法線、vertex 選択だけなら選択 vertex に接する face の平均法線を使う
-  // 法線を決められない場合は null を返し、world 軸へ黙って切り替えない
+  // 法線が定まる場合にその値を返し、計算条件がそろわない場合は null を返す
   computeNormalAxisConstraintVector() {
     const selectedFaces = this.getSelectedFaceObjects();
     if (selectedFaces.length > 0) {
@@ -1753,7 +1753,7 @@ export default class EditModeController {
   }
 
   // X Mirror が ON の loop cut では、source 側で決まった cut edge を mirror face 上の対応 edge へ写す
-  // face の頂点順は左右で反転していることがあるため、edge index をそのまま流用せず頂点 ID の対応から探す
+  // faceの頂点順に合わせ、頂点IDの対応から隣接するedge indexを探す
   getXMirrorLoopCutEdgeIndex(sourceFace, mirrorInfo, sourceCutEdge) {
     const sourceA = sourceFace.indices[sourceCutEdge];
     const sourceB = sourceFace.indices[(sourceCutEdge + 1) % sourceFace.indices.length];
@@ -1936,7 +1936,7 @@ export default class EditModeController {
 
   // active mesh 全体の quad face を 1 段階細分化する
   // 各 face は 4 つの quad に置き換え、隣接 face が共有する edge midpoint は同じ vertex id を使う
-  // 三角面や非 quad を含む mesh は、後続の loop / edge 操作で扱う topology を曖昧にしないため拒否する
+  // 後続のloop / edge操作が扱う四角面だけのmeshを受け付け、面の種類を検証する
   subdivideMesh() {
     if (this.mode !== this.editModeName) {
       this.setMessage("switch to edit mode before subdivide");
@@ -1997,7 +1997,7 @@ export default class EditModeController {
 
   // active mesh 全体に Catmull-Clark subdivision を 1 段階適用する
   // face point / edge point / 更新後の旧 vertex point から新しい quad face 群を作り直す
-  // non-manifold edge や分岐 boundary は smoothing の解釈が曖昧になるため、補正せず拒否する
+  // smoothingの入力を多様体edgeと単純な境界へ限定し、範囲外のtopologyは例外で通知する
   catmullClarkSubdivideMesh() {
     if (this.mode !== this.editModeName) {
       this.setMessage("switch to edit mode before Catmull-Clark");

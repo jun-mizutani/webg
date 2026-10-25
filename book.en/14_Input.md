@@ -42,7 +42,11 @@ Normalize keyboard, mouse, pen, and touch input to common key or action states w
 
 Touch input in `webg` is about designing the path from a physical gesture to a key state or action, as well as positioning buttons on screen. This chapter focuses on `webg/Touch.js` and `webg/InputController.js` and shows how to build responsive controls that feel natural.
 
-On mobile devices and other coarse-pointer environments, users interact with a fingertip rather than a precisely positioned pointer. Ease of pressing a control and prompt feedback directly affect the experience. Design the path by which input reaches the application along with the visual appearance of the UI.
+On mobile devices and other coarse-pointer environments such as CSS `pointer: coarse`, users interact with a fingertip rather than a precisely positioned pointer. Ease of pressing a control and prompt feedback directly affect the experience. Design the path by which input reaches the application along with the visual appearance of the UI.
+
+`WebgApp` connects input during initialization. If you call `app.attachInput()` later, configure the handlers for that connection. When combining it with a standalone `InputController`, choose one instance to own input.
+
+For an application with HTML number fields or sliders, use `app.attachInput({ preventDefault: false, ...handlers })` to let the browser handle text entry and arrow-key value changes. The game's key state still updates with this setting. While a form control has focus, pause game movement and shortcuts in the application so settings input stays separate from gameplay controls.
 
 Chapter 12, “UI Display Design,” discusses how to choose display components. Chapter 15, “Collision and Queries,” explains how to determine which point in 3D space an input reaches.
 

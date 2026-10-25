@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>webg cache clear</title>
   <link rel="icon" href="data:," />
-  <!-- 2026/09/13 -->
+  <!-- 2026/10/25 -->
   <style>
     :root {
       color-scheme: dark;
@@ -63,11 +63,11 @@
     <h1>webg core cache clear</h1>
     <p>
       開発用ページです。<code>webg</code>コアの全JavaScript moduleを、同じ一意な
-      <code>?v=...</code>でimportして、ブラウザーの古いmodule URLを使わず最新版を取得します。
-      webgコア自身のimport文にはキャッシュクエリを追加しません。
+      <code>?v=...</code>でimportして、ブラウザーへ更新用のmodule URLを渡し、そのURLで最新版を取得します。
+      webgコア自身のimport文は配布時のURLを保持し、cache clear用ページが生成する読み込みURLへクエリを付けます。
     </p>
     <p>
-      これはブラウザーの全HTTPキャッシュを削除する操作ではありません。コアmoduleの
+      更新の対象は、このページが読み込むwebgのmodule URLです。その他のHTTPキャッシュはブラウザーが通常どおり管理します。コアmoduleの
       キャッシュをURL更新で回避し、依存moduleを先に読み込むためのツールです。
     </p>
     <button id="reload" type="button">全coreを再import</button>

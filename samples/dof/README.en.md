@@ -10,7 +10,7 @@ English | [日本語](README.md)
 - `WebgApp` is used for startup and overlay display, while the main 3D scene switches to postprocess-based drawing with `autoDrawScene: false`
 - The sceneTarget used as the blur source keeps the normal forward-rendered scene color, including direct-light diffuse and specular. This avoids the unnatural case where only the specular highlight disappears as soon as the result switches to a blurred image.
 - Instead of a floor, many small spheres are placed at near, focus-adjacent, and far distances so the movement of the focus plane can be recognized more easily
-- A small cross-shaped guide is placed inside the 3D scene at the current `focusDistance`, making it easier to track the focus-plane position without opening a debug view
+- A small cross-shaped guide is placed inside the 3D scene at the current `focusDistance`, so you can see the focus-plane position in the scene
 - In the CommandPalette, Focus Range follows the same meaning as `compute_dof`: it is the distance width of one blur stage. `DofPass` uses this stage-width rule and moves from scene color to small / medium / large blur in order, so it is less likely to jump to a strong blur immediately after leaving the focus plane
 - By default, the sample uses Staged mode, where small / medium / large staged blur textures are selected gradually from the depth difference. This is the sample's standard path
 - The three staged blur textures use different resolutions. `small` uses the base blur scale, `medium` uses about 0.7x of that target size, and `large` uses about 0.5x. This reduces fill cost where large blur would dominate while keeping the appearance stable
@@ -18,7 +18,7 @@ English | [日本語](README.md)
 - The benchmark page in the CommandPalette can run an automatic sequence for `DOF Off / Staged S1 / Staged S2 / Staged Full / Staged Half`, then download the averaged values and per-frame samples as JSON. `Staged S1` uses only the small blur stage, and `Staged S2` uses small + medium. During measurement, the view is fixed to `composite` so the comparison stays on the same output flow
 - Use CommandPalette Background to switch the clear color and compare bloom-like leakage that stands out on black backgrounds with edge appearance on brighter backgrounds
 - The default values are tuned for a practical light blur that is easy to compare with `compute_dof`: the CommandPalette shows `focusRange=7.0`, `Focus Hold=0.35`, `maxBlurMix=1.0`, full quality, stage blur iterations `1 / 2 / 4`, and `blurRadius=2.0`
-- The sphere geometry is built from a unit sphere only once, and each node expresses radius differences through a `Shape` instance and uniform scale, avoiding duplicated mesh builds while changing only color
+- The sphere geometry uses one shared unit-sphere resource, and each node expresses radius differences through a `Shape` instance and uniform scale, avoiding duplicated mesh builds while changing only color
 - The operation guide and load display are shown in a collapsible help panel at the upper left with `buildHelpPanelOptions()` and `showOverlayPanel()`, while current DoF settings are shown directly on CommandPalette toggles, steppers, and selectors
 
 ## How to Run
@@ -49,7 +49,7 @@ English | [日本語](README.md)
 - `nodeCount=27`
 - `shapeCount=23`
 - `meshCount=4`
-- `shapeCount` does not change because the number of spheres placed in the scene itself is the same
+- `shapeCount` stays constant because the same spheres remain in the scene
 - `meshCount`, `vertexCount`, and `triangleCount` decrease greatly because the unit-sphere geometry is built only once and its shared resource is reused by multiple `Shape` instances
 
 ## Checkpoints

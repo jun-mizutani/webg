@@ -20,7 +20,7 @@ English | [日本語](README.md)
 
 ## Checkpoints
 - Confirm that spheres duplicated with `referShape` can share the same mesh while still updating their poses independently
-- Confirm that camera rotation and zoom remain stable and let you inspect multiple spheres without breaking
+- Rotate and zoom the camera to inspect multiple spheres from different views
 - Confirm that shape switching and screenshot saving can be executed safely during the render loop
 
 ## Controls

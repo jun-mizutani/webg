@@ -10,7 +10,7 @@
 - WebgApp は起動と overlay表示に使い、3D scene 本体は autoDrawScene: false で postprocess 経由の描画に切り替えています。
 - blur 元になる sceneTarget には、通常の forward 描画結果をそのまま入れます。つまり材質色と直接光の diffuse / specular を含む scene color をぼかします。これにより、blur画像へ切り替わった瞬間に specular highlight だけが消える不自然さを避けています。
 - 床は置かず、近距離 / 焦点付近 / 遠距離に小さめの球を多めに配置し、focus 面の移動を見分けやすくしています。
-- 現在の focusDistance には十字状の小さな guide を 3D scene 内へ置き、debug view を開かなくても focus 面の位置を追いやすくしています。
+- 現在の focusDistance には十字状の小さな guide を 3D scene 内へ置き、scene 内で focus 面の位置を確認できるようにしています。
 - CommandPalette 上の Focus Range は、`compute_dof` と同じく blur stage 1つ分の距離幅として扱います。DofPass も同じ stage 幅仕様で scene color から small / medium / large の3段階blurへ順に移るため、焦点から少し外れた場所でも急に強いボケへ飛びにくくしています。
 - 既定では多段階ぼかし（staged blur）を使い、small / medium / large の blur texture を depth差に応じて段階的に選びます。これがこの sample の標準経路です。
 - 多段階ぼかしの 3 段階blur の small は基準解像度、medium はその約 0.7 倍、large は約 0.5 倍の offscreen target で生成します。大きいblurほど低解像度でも破綻しにくい性質を利用して、見た目を保ちながら fill cost を下げる構成です。
@@ -49,7 +49,7 @@
   nodeCount=27
   shapeCount=23
   meshCount=4
-- shapeCount が変わらないのは、scene に置いている球の個数そのものは同じだからです
+- shapeCount は、scene に置く球の個数が同じなので一定です
 - meshCount、vertexCount、triangleCount が大きく減るのは、unit sphere の geometry を 1 回だけ build し、その shared resource を複数の Shape instance が再利用するためです
 
 ## 確認ポイント

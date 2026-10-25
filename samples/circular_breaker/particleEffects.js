@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// samples/circular_breaker/particleEffects.js  2026/03/26
+// samples/circular_breaker/particleEffects.js  2026/10/25
 //   circular_breaker sample
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -57,7 +57,7 @@ export const createSparkEmitter = async (app) => app.createParticleEmitter({
 });
 
 // custom loop から emitter を描きたいので、小さな helper を用意する
-// WebgApp.start() を使わない sample でも、描画呼び出し位置を統一しやすくする
+// sample 固有の描画ループから呼び出せるように、粒子の描画入口をここへまとめる
 export const drawSparkEmitter = (sparkEmitter, eyeNode, projectionMatrix) =>
   sparkEmitter?.draw?.(eyeNode, projectionMatrix) ?? 0;
 

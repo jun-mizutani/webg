@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// Phong.js       2026/10/04
+// Phong.js       2026/10/25
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // ---------------------------------------------
@@ -184,7 +184,7 @@ fn fsMain(input : FSIn) -> @location(0) vec4f {
   var diff : f32;
   var ispec : f32;
 
-  // 5. 発光マテリアルでなければ通常の拡散反射 + 鏡面反射を計算する
+  // 5. 通常のマテリアルでは拡散反射と鏡面反射を計算する
   //    emissive != 0.0 のときは素材色を発光色として使い、
   //    拡散項だけを強制的に 1.0 - ambient 相当へ寄せる
   if (emissive == 0.0) {

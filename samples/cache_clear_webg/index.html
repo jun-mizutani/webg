@@ -173,10 +173,10 @@ blockquote {
 <h1>cache_clear_webg</h1>
 <p><a href="index.en.html">English</a> | 日本語</p>
 <h2>概要</h2>
-<p>開発時にwebgコアの古いES module URLを使わないよう、<code>webg</code>配下の全JavaScript moduleを一意な<code>?v=...</code>付きURLでimportするユーティリティです。</p>
+<p>開発時に更新したwebgコアを読み込めるよう、<code>webg</code>配下の全JavaScript moduleを一意な<code>?v=...</code>付きURLでimportするユーティリティです。</p>
 <h2>実行方法</h2>
 <p>実行ファイルは<a href="./cache_clear_webg.html">`cache_clear_webg.html`</a>です。Webサーバー経由で開き、<code>全coreを再import</code>を押します。完了後に通常のsampleを開き直してください。</p>
-<p>対象はwebgコアのES moduleです。ブラウザのほかのHTTPキャッシュは保持されます。<code>webg</code>コアのimport URLだけを実行ごとに変えて、各moduleの最新版を取得します。<code>webg</code>コア自身のimport文にはキャッシュクエリを追加しません。</p>
+<p>対象はwebgコアのES moduleです。ブラウザのほかのHTTPキャッシュは保持されます。<code>webg</code>コアのimport URLだけを実行ごとに変えて、各moduleの最新版を取得します。<code>webg</code>コア自身のimport文は配布時のURLを保持し、このページが生成する読み込みURLへクエリを付けます。</p>
 <p><code>webg</code>へmoduleを追加した場合は、<code>main.js</code>のcore module一覧も更新してください。</p>
     </article>
   </main>

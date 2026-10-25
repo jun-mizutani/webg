@@ -4,7 +4,7 @@ This chapter saves an image produced by standard forward rendering to an off-scr
 
 This approach remains useful when adding one effect to standard forward rendering or learning the relationship between render passes and textures in a small setup. Passing color or depth from one render stage to another is also a foundation for deferred rendering, where G-buffers store surface data for later lighting and screen-space effects.
 
-Image processing can also use compute shaders, as covered in Chapters 20–22. For PBR applications, `ComputeEffectPipeline` in Chapters 31–33 manages lighting on linear HDR, transparent surfaces, screen-space effects, and final presentation in one sequence. This chapter explains the separated rendering and manual connections that lead to those approaches.
+Image processing can also use compute shaders, as covered in Chapters 20–22. For PBR applications, `ComputeEffectPipeline` in Chapters 31–33 manages lighting on linear HDR, transparent surfaces, screen-space effects, and final presentation in one sequence. The small manual setup in this chapter makes image handoffs visible, which also helps when tracing the connections managed inside those pipelines.
 
 ## How to read this chapter
 

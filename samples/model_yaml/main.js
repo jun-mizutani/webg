@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// samples/model_yaml/main.js  2026/09/19
+// samples/model_yaml/main.js  2026/10/25
 // ModelYAMLから共有モデルを構築し、個別のNodeへ配置する
 // Copyright (c) 2026 Jun Mizutani, MIT license
 // ---------------------------------------------
@@ -107,7 +107,7 @@ async function start() {
     rotating = !rotating;
     document.getElementById("rotate").textContent = rotating ? "回転を停止" : "回転を開始";
   });
-  // Assetの値を変更していないので、YAML保存はコメントと字下げを含む原文を返す
+  // Asset の元データを保持し、YAML 保存にはコメントと字下げを含む原文を返す
   connectButton("save", () => asset.downloadYAML("crystal.model.yaml"));
   connectButton("gzip", () => asset.downloadYAMLGz("crystal.model.yaml.gz"));
   app.start({ onUpdate: updateFrame });

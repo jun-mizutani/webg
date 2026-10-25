@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// samples/bloom/main.js  2026/07/25
+// samples/bloom/main.js  2026/10/25
 //   bloom sample
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -122,7 +122,7 @@ function createCenterSphere(app) {
 
 // `emission`の検査情報を生成し、後続処理で利用できる状態にする
 function createEmissionProbe(app, name, options) {
-  // bloom の抽出が specular 由来の細い highlight だけに偏っていないかを見るため、
+  // bloom の抽出を specular と emissive の両方で比較できるよう、
   // emissive を高めにした小球を複数色で追加する
   // 背景寄りの位置へ浮かせることで、球本体だけでなく背後にも glow が広がるかを確認しやすくする
   // SmoothShader emissive は 0.0-1.0 を使う前提なので、ここでもその範囲内で強めの値を使う
@@ -147,7 +147,7 @@ function createEmissionProbe(app, name, options) {
 
 // `glow`の`orb`を生成し、後続処理で利用できる状態にする
 function createGlowOrb(app, name, color, angleDeg, radius, height, size) {
-  // bloom は発光オブジェクト専用ではないが、明るい球を周回させると
+  // bloom は明るい画素へ作用するため、明るい球を周回させると
   // threshold / strength / blur の変化が追いやすい
   const shape = new Shape(app.getGPU());
   shape.applyPrimitiveAsset(Primitive.sphere(size, 24, 18, shape.getPrimitiveOptions()));
@@ -521,7 +521,7 @@ async function start() {
       app.updateDebugProbe();
     },
     onBeforeDraw: () => {
-      // 3D scene 本体は canvas ではなく sceneTarget に描く
+      // 3D scene 本体を sceneTarget に描き、後段の画面効果へ渡す
       // beginScene() はコア側で寸法変化を判定し、必要な場合だけtargetを再生成する
       bloom.beginScene(app.screen, app.clearColor);
       app.space.draw(app.eye);

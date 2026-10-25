@@ -1,8 +1,9 @@
-// SceneYAMLのobject animationを公開APIで操作する表示専用サンプルです。
+// scene_animation_demo.js  2026/10/25
+// SceneYAMLのobject animationを公開APIで操作する表示専用サンプルです
 // Copyright (c) 2026 Jun Mizutani, released under the MIT license.
 import { createWebgSceneApp } from "../../webg/app/index.js";
 
-// 任意のbrowser probeからも同じappを確認できます。姿勢の補間はcoreへ委譲します。
+// 任意のbrowser probeからも同じappを確認できます。姿勢の補間はcoreへ委譲します
 export let sceneApp = null;
 const compressed = new URLSearchParams(location.search).get("gzip") === "1";
 const PROJECT_URL = compressed ? "./scene_animation.yaml.gz" : "./scene_animation.yaml";
@@ -20,7 +21,7 @@ function showError(error) {
   document.querySelector("main").dataset.state = "error";
   document.querySelectorAll(".controls button, .controls input, .controls select")
     .forEach((element) => { element.disabled = true; });
-  // エラー表示は通常のstatus更新で消しません。
+  // エラー表示を専用領域へ保持し、通常のstatus更新と分けて扱います
   try { sceneApp?.stop(); } catch (stopError) { console.error(stopError); }
 }
 
@@ -43,7 +44,7 @@ function updateStatus() {
   controls.stopFrames.disabled = !diagnostics.running;
 }
 
-// 同期例外とPromiseの失敗を同じ画面へ表示します。
+// 同期例外とPromiseの失敗を同じ画面へ表示します
 function bind(id, action) {
   document.getElementById(id).addEventListener("click", async () => {
     try {
@@ -104,7 +105,7 @@ async function initialize() {
   bind("resume", () => sceneApp.resumeAnimation(controls.clip.value));
   bind("stop-animation", () => sceneApp.stopAnimation(controls.clip.value));
   bind("seek", () => {
-    // 不正な入力はブラウザーの入力欄に表示し、coreへNaNを渡しません。
+    // 数値を検証してからcoreへ渡し、不正な入力はブラウザーの入力欄へ表示します
     if (!controls.seekTime.reportValidity()) return;
     const seconds = controls.seekTime.valueAsNumber;
     if (!Number.isFinite(seconds)) { controls.seekTime.reportValidity(); return; }
@@ -112,7 +113,7 @@ async function initialize() {
   });
   bind("reset-animations", () => sceneApp.resetAnimations());
   bind("reset", () => sceneApp.reset());
-  // app.start/stopは描画ループの操作です。clipの再生状態とは独立しています。
+  // app.start/stopは描画ループの操作です。clipの再生状態とは独立しています
   bind("start-frames", () => sceneApp.start());
   bind("stop-frames", () => sceneApp.stop());
   document.querySelectorAll(".controls button, .controls input, .controls select")

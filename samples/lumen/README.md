@@ -16,7 +16,7 @@ SceneYAMLに共通材質、基本配置、描画設定、Compute物理、粒子�
 
 PBRで金属の反射とガラスの透過を表現し、環境光に加えてシアン、琥珀色、紫の点光源をDeferred Lightingへ渡します。方向光のシャドウマップで形を支え、SSRで画面内の物体を反射させ、Bloomで発光部の周囲へ光を広げます。ガラスはTransmissionと屈折率を持つ材質、右の球はmetallic 1、roughness 0.08のアルミニウム材質です。
 
-ComputeParticleEmitterは中央の赤いパルスと左のガラス展示から漂う粒子を更新し、PBRのHDR画像へ加算します。Compute物理はトレイと球の接触、跳ね返り、摩擦、停止を計算します。固定刻みは240Hz、反復回数は12です。GameAudioSynthがJazzを合成するため、音声ファイルのダウンロードは不要です。
+ComputeParticleEmitterは中央の赤いパルスと左のガラス展示から漂う粒子を更新し、PBRのHDR画像へ加算します。Compute物理はトレイと球の接触、跳ね返り、摩擦、停止を計算します。固定刻みは240Hz、反復回数は12です。JazzのBGMはGameAudioSynthがブラウザ上で合成します。
 
 ## 確認ポイント
 
@@ -26,6 +26,6 @@ SSRとTransmissionは画面に描かれた情報を利用するため、視点�
 
 ## 実装を読む
 
-scene.yamlが共通設定、exhibition.jsが展示形状と物理球の配置、ObservatoryApp.jsが色付き照明と画面サイズ、main.jsが操作・更新・音声・終了処理を担当します。独自の展示形状はPrimitiveからShapeを作り、Nodeへ登録しています。コアライブラリの変更はありません。
+scene.yamlが共通設定、exhibition.jsが展示形状と物理球の配置、ObservatoryApp.jsが色付き照明と画面サイズ、main.jsが操作・更新・音声・終了処理を担当します。独自の展示形状はPrimitiveからShapeを作り、Nodeへ登録しています。展示固有の処理を、これらのサンプル内のファイルへまとめています。
 
 物理計算の対象はトレイの5部品と12個の球です。回転リングやガラスの展示は表示用の形状です。SSAOと被写界深度は無効にして、材質と発光の比較をしやすくしています。エラーは画面へ表示して更新を停止します。

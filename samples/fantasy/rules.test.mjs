@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// rules.test.mjs  2026/10/04
+// rules.test.mjs  2026/10/25
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // ---------------------------------------------
@@ -14,7 +14,7 @@ import {
 } from "./rules.mjs";
 
 // 初期配置を変えても、論理上のマスと表示位置の対応を保つ
-test("初期配置は通行可能で重複せず、表示高度はマップと一致", () => {
+test("初期配置は通行可能な別々のマスにあり、表示高度はマップと一致", () => {
   const units = newUnits();
   assert.equal(new Set(units.map(unit => key(unit.x, unit.z))).size, 6);
 

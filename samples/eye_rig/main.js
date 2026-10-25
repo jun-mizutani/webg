@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// samples/eye_rig/main.js  2026/08/11
+// samples/eye_rig/main.js  2026/10/25
 //   EyeRig specification verification sample
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -103,7 +103,7 @@ function createShape(buildGeometry, material) {
   return shape;
 }
 
-// 同じGPU meshを参照するShapeを作り、track markerや車両部品でbufferを重複生成しない
+// 同じGPU meshを参照するShapeを作り、track markerと車両部品でbufferを共有する
 // material parameterは参照元からコピーし、見た目も同じ状態から開始する
 function createShapeReference(sourceShape) {
   const shape = new Shape(app.getGPU());
@@ -187,7 +187,7 @@ function createVehicle(name, bodyColor, noseColor) {
   return root;
 }
 
-// 床、track marker、2台のvehicle、回転を継承しないcamera anchorを作る
+// 床、track marker、2台のvehicle、位置だけを追従するcamera anchorを作る
 // independentCameraAnchorはcamera vehicleのworld位置だけを毎frameコピーし、姿勢はidentityを保つ
 function buildScene() {
   const floorShape = createShape((shape) => {
@@ -230,7 +230,7 @@ function buildScene() {
   independentCameraAnchor.setAttitude(0.0, 0.0, 0.0);
 }
 
-// cameraRigの親を付け替え、Orbitで対象姿勢を継承する場合としない場合を比較する
+// cameraRigの親を付け替え、vehicle姿勢への追従と独立した向きを比較する
 // attach/detachは見た目を維持するため、付け替え後にEyeRig stateをapplyして正規local値へ戻す
 function attachRigTo(parent) {
   if (app.cameraRig.getParent() === parent) return;
@@ -461,7 +461,7 @@ function buildStatusLines() {
   return lines;
 }
 
-// vehicleを進め、回転を継承しないanchorへcamera vehicleの位置だけをコピーする
+// vehicleを進め、camera anchorへcamera vehicleの位置だけをコピーする
 // pause中も現在姿勢を再適用し、mode切替直後のworld matrixを同じframeで確定させる
 function updateVehicles(deltaSec) {
   if (!state.paused) {
@@ -514,7 +514,7 @@ function getCommandState(id) {
   };
 }
 
-// 低頻度のmode切替と設定操作は、常時表示buttonではなくCommandPaletteへ集約する
+// 低頻度の mode 切替と設定操作を CommandPalette へ集約する
 function installCommandPalette() {
   palette = new CommandPalette({
     document,
@@ -583,7 +583,7 @@ function installCommandPalette() {
 }
 
 // WebgApp、scene、EyeRig、input、diagnosticsを順番に初期化して描画loopを開始する
-// コアEyeRigは変更せず、Follow仕様だけをsample-local派生classで検証する
+// Followの動作はsample内の派生classで定義し、共通のEyeRig機能と組み合わせる
 async function start() {
   app = new WebgApp({
     document,
@@ -666,7 +666,7 @@ async function start() {
   app.configureDebugKeyInput();
 
   // browser上の自動確認からframe進行、mode、追跡精度、主要world位置を読み取れるようにする
-  // 参照専用関数だけを公開し、sample stateやNodeを外部コードから直接変更させない
+  // 外部コードには状態の取得関数を公開し、操作による状態更新を sample 内で管理する
   globalThis.eyeRigSample = {
     getState: () => ({
       mode: state.mode,

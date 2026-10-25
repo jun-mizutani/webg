@@ -30,7 +30,7 @@ This chapter explains why the effects are ordered; Chapter 32 shows the connecti
 
 ## Choose a Rendering Configuration First
 
-Even when using the same PBR material, choose the entry point according to the screen effects required. For a screen centered on PBR lighting, the standard forward path can be combined with a PBR shader.
+Choose the entry point according to the required lighting model and screen effects. The standard forward path below uses Phong lighting through `SmoothShader`. For metallic-roughness PBR lighting and IBL, use the integrated `ComputeEffectPipeline` path.
 
 | Configuration | Suited to | Entry point |
 |---|---|---|

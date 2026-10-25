@@ -6,7 +6,7 @@ English | [日本語](README.md)
 
 ## Overview
 
-`compute_benchmark` measures every runtime stage used to build PBR output through `ComputeEffectPipeline`, covering PBR geometry, lighting, reflection, transparency, and output conversion. The measurement scope is limited to PBR processing so unrelated post-processing is not included in the baseline.
+`compute_benchmark` measures every runtime stage used to build PBR output through `ComputeEffectPipeline`, covering PBR geometry, lighting, reflection, transparency, and output conversion. The measurement covers the stages that build PBR output, making the workload of each stage comparable.
 
 The fixed scene contains opaque objects with varied roughness and metallic values, a closed transmission sphere, a floor, and walls. Lighting combines a directional light, a selectable number of point lights, and a linear-HDR procedural IBL environment. SSR uses `pbr-ssr` to replace specular IBL, and the transparent sphere specifies IOR and attenuation distance. Deferred PBR, IBL, PBR SSR, transmission, frost, and transparent forward shading therefore all execute in every baseline run.
 
@@ -41,13 +41,13 @@ CPU or GPU preprocessing of an environment map happens at application startup or
 6. Press `Run PBR Baseline`, then keep the browser tab and window in the foreground until every case finishes
 7. Save the result with `Download JSON` or `Download CSV` when needed
 
-Inputs outside their documented ranges are not corrected automatically. An invalid integer or light count stops the measurement and reports the error. Resolution uses the canvas physical pixel size, so results made with different window sizes or DPR values are not directly comparable. Keep canvas dimensions, DPR, local-light count, power state, browser, and GPU driver consistent when comparing two runs.
+Input values are validated against their documented ranges. An invalid integer or light count stops the measurement and reports the allowed setting. Resolution uses the canvas physical pixel size, so comparisons use the same window size and DPR. Keep canvas dimensions, DPR, local-light count, power state, browser, and GPU driver consistent when comparing two runs.
 
 ## Reading the Results
 
 A top-level row containing one render/compute pass, or a sequence that can receive beginning and ending timestamps in its internal pass descriptors, uses `timestamp-query` GPU time and displays `gpu` in the `timer` column. `full-pbr-pipeline` places its beginning timestamp on the first shadow-map render pass and its ending timestamp on the final tone-map pass, measuring every PBR pass between them as GPU time. Standalone transparency cannot attach one outer interval to a single pass descriptor, so only `transparency-pbr` measures from immediately before command submission through queue completion and displays `queue`. `avg ms` is the mean, `median` is the median, `P95` is the slow-side five-percent boundary, `min/max` is the observed range, and `n` is the recorded count. Start with the median for normal cost, inspect P95 and max for instability, and investigate outliers when the mean differs substantially from the median.
 
-The `timer` column shows `profile` for `transparency:*` rows. These values come from the rolling GPU timestamp statistics retained by `TransparencyPass` for at most 60 frames. The table shows their median, mean, minimum, and maximum. P95 and standard deviation are `--` because the pass does not expose its raw sample array. The outer `transparency-pbr` interval measures the entire transparent stage, so it will not exactly equal the sum of its internal intervals.
+The `timer` column shows `profile` for `transparency:*` rows. These values come from the rolling GPU timestamp statistics retained by `TransparencyPass` for at most 60 frames. The table shows their median, mean, minimum, and maximum. P95 and standard deviation are `--`; this pass exposes rolling median, mean, minimum, and maximum values. The outer `transparency-pbr` interval includes the transparent stage and its surrounding composition and connection work, so it will not exactly equal the sum of its internal intervals.
 
 `full-pbr-pipeline` includes the G-buffer and shadow-map render passes together with the PBR compute and transparent render passes in one command sequence. The measurement covers GPU execution; CPU scene traversal and JavaScript command encoding are outside this measurement scope. Use isolated rows to find stage proportions and `full-pbr-pipeline` to confirm the end-to-end runtime PBR improvement.
 
@@ -57,7 +57,7 @@ The JSON output stores `rawSamplesMs` together with physical resolution, display
 
 - The sample uses the published `ComputeEffectPipeline` and its pass objects directly, without a sample-local shader or duplicate pipeline
 - Every PBR case uses the same Camera Frame, fixed scene, directional light, local lights, IBL, SSR, and transmission settings
-- Shared inputs are prepared before each isolated case, while preparation time remains outside that case's timestamps
+- Each isolated case is timed after its shared inputs are prepared
 - PBR SSR composition explicitly receives Deferred Lighting's specular IBL, G-buffer material, AO, and BRDF LUT
 - `Fused` reproduces the roughness output's `rgba16float` rounding and low-resolution pixel mapping, removing only the independent composer dispatch
 - `Two-pass reference` runs the roughness filter and composer sequentially only when comparison is explicitly selected

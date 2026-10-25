@@ -50,8 +50,8 @@ The three APIs to learn first are:
 
 | API | Purpose |
 |---|---|
-| `ProceduralMaterials.createPreset()` | Generate maps from a registered preset |
-| `ProceduralMaterials.create()` | Generate maps from a complete definition, such as JSON |
+| `ProceduralMaterials.createPreset()` | Generate images from a preset |
+| `ProceduralMaterials.create()` | Generate images from a complete definition |
 | `ProceduralMaterial.applyTo()` | Register generated maps and PBR values on a Shape |
 
 ## Try Settings in `texture_catalog`
@@ -347,6 +347,8 @@ Dimension values are generated at integer-pixel sizes after multiplication by `p
 | `specular` | Specular reflection strength; 0–1 |
 | `metallic` | Metalness; typically 0 for wood, stone, and tile; 0–1 |
 | `normalStrength` | Normal-map influence; 0–8 |
+
+The generation API accepts `roughness` from 0 to 1. When passing the value to PBR rendering, set it to at least 0.04 to match the material validation described in Chapter 30.
 
 Changing `tile` regenerates Color, Height, and Normal. Changing only `appearance` updates the values registered on the Shape without regenerating the images.
 

@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// samples/fog_cube/main.js  2026/07/25
+// samples/fog_cube/main.js  2026/10/25
 //   fog_cube sample
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -311,7 +311,7 @@ async function start() {
   // ワイヤーフレームを対象の状態または描画設定へ反映する
   const applyWireframe = () => {
     // wireframe 表示は fog と同じ scene で見え方を比較するための表示モード
-    // solid / 一部 cube / scene 全体を明示的に切り替え、前状態が残らないよう毎回全 shape を設定する
+    // solid、一部 cube、scene 全体の切替時に全 shape を設定し、選んだ条件へそろえる
     const shapes = getSceneShapes();
     const allWireframe = state.wireframeMode === WIREFRAME_ALL;
     for (let i = 0; i < shapes.length; i++) {

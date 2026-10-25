@@ -1,5 +1,5 @@
 # ---------------------------------------------
-# samples/compute_json/blender_modelasset_animation_io.py  2026/06/20
+# samples/compute_json/blender_modelasset_animation_io.py  2026/10/25
 #   Blender import/export add-on for animated ModelAsset JSON
 #   Copyright (c) 2026 Jun Mizutani,
 #   released under the MIT open source license.
@@ -442,7 +442,7 @@ def export_material_def(obj, material_id):
 
 
 # meshを変形するArmature modifierから対象armatureを一意に取得する
-# 複数armatureによる変形はModelAssetの1 mesh / 1 skeleton規約へ直接対応できないため例外にする
+# ModelAssetの1 mesh / 1 skeleton規約に合わせ、複数armatureによる変形を入力時に検証する
 def find_mesh_armature(obj):
     armatures = []
     for modifier in obj.modifiers:
@@ -455,7 +455,7 @@ def find_mesh_armature(obj):
 
 
 # Blenderのbone collectionを必ず親から子の順へ並べる
-# ModelAsset joints.parentは先に生成済みのindexを参照するため、collection内部順には依存しない
+# 親boneから順にindexを割り当て、joints.parentが生成済みのindexを参照するように並べる
 def ordered_armature_bones(armature, included_names=None):
     ordered = []
     included = set(included_names) if included_names is not None else None
@@ -475,7 +475,7 @@ def ordered_armature_bones(armature, included_names=None):
     return ordered
 
 
-# ModelAssetへ出力しないRigify制御用boneかどうかを名前から判定する
+# bone名からRigify制御用boneを判定し、出力する変形用boneを選ぶ
 # ORG-/MCH-はweightや階層上の位置にかかわらず、書き出し対象へ含めない
 def is_excluded_rigify_helper(bone_name):
     return bone_name.startswith("ORG-") or bone_name.startswith("MCH-")
@@ -614,7 +614,7 @@ def iter_action_fcurves(action):
 
 
 # Actionが対象armatureのpose boneを操作しているか判定する
-# object transformだけのActionはskeletal animationとして誤って出力しない
+# skeletal animationには、対象skeletonのboneへ作用するActionを選んで出力する
 def action_targets_armature(action, armature):
     bone_names = {bone.name for bone in armature.data.bones}
     for fcurve in iter_action_fcurves(action):

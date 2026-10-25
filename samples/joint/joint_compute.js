@@ -1,5 +1,5 @@
 // ---------------------------------------------
-//  samples/joint/joint_compute.js  2026/08/27
+//  samples/joint/joint_compute.js  2026/10/25
 //   GPU Compute Joint dynamics verification sample
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -96,7 +96,7 @@ let maximumJointError = 0.0;
 const RENDER_PARAM_FLOATS = 44;
 const RENDER_SHADER = `
 // BodyStateはComputePhysicsSpaceがping-pongする物理状態です
-// vertex shaderはCPU側のNodeを経由せず、Compute終了後のcurrent state bufferを直接読みます
+// vertex shaderがCompute終了後のcurrent state bufferを直接読み、描画位置を求めます
 struct BodyState {
   position : vec4f,
   orientation : vec4f,
@@ -148,7 +148,7 @@ fn quatRotate(q : vec4f, value : vec3f) -> vec3f {
 }
 
 // radius=1、芯線長=1の基準Capsule頂点を任意の半径と芯線長へ正確に再構成します
-// capを単純なY拡大で楕円化せず、sphere capの中心を移動して表示形状とColliderを一致させます
+// sphere capの中心を移動してCapsuleを伸ばし、表示形状とColliderを一致させます
 // y>0.5とy<-0.5は上下の半球、中央は円筒として扱い、基準meshの法線方向を保ったまま寸法だけを変えます
 fn capsulePosition(inputPosition : vec3f, radius : f32, halfSegment : f32) -> vec3f {
   if (inputPosition.y > 0.5) {
@@ -220,8 +220,8 @@ fn buildBodyVertex(input : VertexInput, instanceIndex : u32, expectedType : f32)
   return buildBodyVertex(input, index, 2.0);
 }
 
-// 支点と振り子Sphereの現在GPU位置から、質量を持たない白い表示用connectorを作ります
-// connector自体はPhysicsSpaceへ登録せず、DistanceJointのanchor間だけを表示します
+// 支点と振り子 Sphere の現在 GPU 位置から、白い表示専用 connector を作ります
+// connectorはDistanceJointのanchor間を表示する専用Nodeとして作ります
 // pivotとweightの差から毎vertexの基底ベクトルを作るため、振り子が三次元へ揺れても棒の向きが追従します
 // GPU上の現在位置を使うので、connector描画もGPU stateから即時に作成します
 @vertex fn connectorVertex(input : VertexInput, @builtin(instance_index) index : u32) -> VertexOutput {
@@ -348,8 +348,8 @@ class ComputeJointRenderer {
 
   // camera行列とconnectorのbody slotをuniformへ転送します
   // 物理bodyの位置、姿勢、色はGPU state bufferから読み、通常frameではGPU内で描画します
-  // connector slotはbody IDではなくGPU配列のslotです。body IDとslotを混同すると別bodyを棒で結ぶため、
-  // 呼出側でgetBodyInfo(...).slotを明示的に渡します
+  // connector には GPU 配列の slot を渡すため、body ID に対応する slot を
+  // 呼出側で getBodyInfo(...).slot から取得します
   writeCamera(projection, view, connectorSlots) {
     const data = new Float32Array(RENDER_PARAM_FLOATS);
     data.set(projection.mat, 0);
@@ -416,7 +416,7 @@ class ComputeJointRenderer {
 class ComputeKinematicController {
   // body IDと直線経路を検証し、GPU commandへ変換する状態を初期化します
   // GPU版でも移動量は経路上のスカラーで保持し、各fixed stepの始点・終点位置を同じ式から作ります
-  // 物理bodyの位置積分を使わないため、端点での停止判定もこのcontroller内で完結させます
+  // controller が位置を直接指定し、端点での停止もここで判定します
   constructor({ physicsSpace, bodyId, startPosition, endPosition, speed }) {
     this.physicsSpace = physicsSpace;
     this.bodyId = bodyId;
@@ -480,7 +480,7 @@ class ComputeKinematicController {
   }
 
   // travelDistanceからdriverの処方位置を再構成します
-  // positionは毎回startPositionから再計算するため、前frameの丸め誤差を蓄積せず端点内へ収めます
+  // positionは毎回startPositionと現在の移動量から求め、端点の範囲内へ収めます
   getPosition() {
     return this.startPosition.map(
       (value, index) => value + this.pathDirection[index] * this.travelDistance
@@ -488,7 +488,7 @@ class ComputeKinematicController {
   }
 
   // reset用の初期位置へ戻し、次のfixed stepから停止状態をGPUへ渡します
-  // GPUのbody stateを初期positionへ戻すだけでなく、残っているlinear velocityも明示的に0へします
+  // GPU body を初期位置へ戻し、linear velocity を 0 へ設定します
   reset() {
     this.travelDistance = 0.0;
     this.direction = 0;
@@ -684,7 +684,7 @@ function registerJoints() {
   jointRecords = [];
   const addDistanceJoint = (bodyAId, bodyBId, localAnchorA, localAnchorB, distance) => {
     // compliance=0は硬い距離拘束、positionCorrectionSlopは極小誤差を許容する閾値です
-    // collideConnected=falseにより、隣接linkやpivotとの接触反力ではなくJointだけでchainを接続します
+    // collideConnected=false にして、隣接 link や pivot の接続を Joint の拘束で扱います
     const descriptor = {
       type: "DistanceJoint",
       bodyAId,
@@ -758,7 +758,7 @@ function resetPhysicsScene() {
 // ComputePhysicsSpace.encode()へframe時間を渡す代わりに、driverの位置処方とstep数を同じループへ置きます
 function encodeSimulation(encoder, deltaMs) {
   // frameのdeltaをaccumulatorへ蓄積し、物理は常に120Hzのfixed stepで進めます
-  // encodeFixedStep()はGPU commandを記録するだけなので、ここではsubmitせず、start()側でrenderとまとめます
+  // encodeFixedStep()でGPU commandを記録し、start()側でrenderとまとめてsubmitします
   simulationAccumulatorMs += deltaMs;
   let steps = 0;
   while (simulationAccumulatorMs >= FIXED_TIME_STEP_MS && steps < MAX_SUB_STEPS) {
@@ -773,16 +773,16 @@ function encodeSimulation(encoder, deltaMs) {
 }
 
 // state readbackのslotからBodyStateの位置・姿勢を読み、Joint anchorをworld座標へ変換します
-// Compute描画はreadbackへ依存せず、ここは周期・速度・誤差の明示的な診断だけで使います
+// 描画はGPU状態を直接参照し、readbackは周期・速度・誤差の診断へ使います
 function readBodyState(stateData, bodyId) {
   // readback配列のoffset計算やlayout解釈はComputePhysicsSpaceへ任せ、sampleはbody IDだけを指定します
   return physics.readBodyStateFromReadback(bodyId, stateData);
 }
 
 // DistanceJoint一つのanchor間距離誤差を現在のGPU readbackから計算します
-// solverのlambdaを推測せず、各bodyの姿勢でlocal anchorをworldへ回転して実測します
+// 各bodyの姿勢でlocal anchorをworldへ回転し、anchor間の実測距離を求めます
 function getJointPositionError(stateData, joint) {
-  // Joint bufferのlambdaを読むのではなく、readbackしたbody位置・姿勢から両anchorを再計算します
+  // readback した body の位置と姿勢から、両 anchor の world 座標を再計算します
   // 返す値は目標距離との差の絶対値で、solverがどれだけ拘束を満たしたかを直接表します
   const bodyA = readBodyState(stateData, joint.bodyAId);
   const bodyB = readBodyState(stateData, joint.bodyBId);
@@ -801,7 +801,7 @@ function getJointPositionError(stateData, joint) {
 // GPU readback一回分から振り子周期、ロープ速度、Joint誤差を更新します
 // 読み出したsimulation時刻を使い、画面frame時刻と固定step時刻を区別します
 function analyzeReadback(stateData, stateTimeSec) {
-  // readbackは描画経路ではなく診断経路です。ここで得た値をGPU bodyへ書き戻さないため、
+  // readback から得た値を診断用の集計へ渡し、
   // 計測処理は物理結果を読み取り専用で扱います
   const pendulumPivot = readBodyState(stateData, PENDULUM_PIVOT_ID);
   const pendulumWeight = readBodyState(stateData, PENDULUM_WEIGHT_ID);
@@ -1018,7 +1018,7 @@ function applyAction(key, event) {
 // WebgApp、ComputePhysicsSpace、GPU renderer、readbackを初期化してsimulationを開始します
 // Compute commandのencodeとRender passのencodeを一つのcommand encoderへまとめ、submitはここで一度だけ行います
 async function start() {
-  // Compute版はWebgAppの通常drawを使わず、同じcommand encoderへ
+  // Compute版はWebgAppのcomputeFrameで、同じcommand encoderへ
   // Compute physics、必要な診断readback、GPU直接Render passの順に記録します
   // 最後のsubmitまでGPU stateをCPUへ戻さず、Node同期から独立して描画します
   app = new WebgApp({

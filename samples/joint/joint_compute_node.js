@@ -1,5 +1,5 @@
 // ---------------------------------------------
-//  samples/joint/joint_compute_node.js  2026/09/07
+//  samples/joint/joint_compute_node.js  2026/10/25
 //   Compute Joint dynamics with CPU-side Node synchronization
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -139,7 +139,7 @@ function createShape(kind, radius, segmentLength, color) {
 // quasiStaticではteleportと速度0、impactでは同じ位置処方と処方速度をGPUへ渡します
 class ComputeKinematicController {
   // body IDと直線経路を検証し、GPU commandへ変換する状態を初期化します
-  // Node版でも移動の正解値はCPU Nodeの位置ではなく、GPU bodyへ送るposition commandです
+  // Node 版の移動も、GPU body へ送る position command を基準に制御します
   // Nodeはreadback完了後に更新されるため、controllerとNodeはreadback世代で対応付けます
   constructor({ physicsSpace, bodyId, startPosition, endPosition, speed }) {
     this.physicsSpace = physicsSpace;
@@ -166,8 +166,8 @@ class ComputeKinematicController {
   }
 
   // quasiStaticまたはimpactを明示的に選び、速度の閾値による切替を呼出側で管理します
-  // quasiStaticの接触速度0は「位置を動かさない」という意味ではなく、位置処方による押し退けだけを
-  // contact solverへ渡す指定です。impactでは処方速度も渡すため、接触側へ運動量を与えます
+  // quasiStatic は位置処方による押し退けを接触へ反映し、接触速度を 0 として
+  // contact solver へ渡します。impact では処方速度も渡し、接触側へ運動量を与えます
   setMode(mode) {
     if (mode !== "quasiStatic" && mode !== "impact") {
       throw new Error(`ComputeKinematicController unsupported mode: ${mode}`);
@@ -187,14 +187,14 @@ class ComputeKinematicController {
   }
 
   // 現在のdriver移動速度を返し、Help Panelの処方速度表示へ使います
-  // GPUが計算した速度ではなく、経路方向と設定speedから作る外部入力値です
+  // 経路方向と設定 speed から、kinematic body へ与える目標速度を作ります
   getPrescribedVelocity() {
     if (this.direction === 0) return [0.0, 0.0, 0.0];
     return this.pathDirection.map((value) => value * this.speed * this.direction);
   }
 
   // 現在の進行方向とmodeを返し、入力状態の表示を同じcontrollerから作ります
-  // Help PanelがNode readbackの遅延した位置と、最新入力のmode/directionを混同しないために使います
+  // Node readbackの時刻に対応するmode/directionを保持し、その位置と組にしてHelp Panelへ渡します
   getState() {
     return {
       mode: this.mode,
@@ -206,7 +206,7 @@ class ComputeKinematicController {
   }
 
   // travelDistanceからdriverの処方位置を再構成します
-  // 位置を前回のNodeやreadbackから推定せず、controllerが保持する始点と距離から毎回再計算します
+  // controllerが保持する始点と距離から、現在の位置を毎回再計算します
   getPosition() {
     return this.startPosition.map(
       (value, index) => value + this.pathDirection[index] * this.travelDistance
@@ -214,8 +214,8 @@ class ComputeKinematicController {
   }
 
   // reset用の初期位置へ戻し、次のfixed stepから停止状態をGPUへ渡します
-  // readback待ちのNodeはresetSimulation()側でも初期位置へ戻し、GPUとCPUの表示が一時的に別の実験を
-  // 表さないようにします
+  // readback 待ちの Node も resetSimulation() で初期位置へ戻し、
+  // GPU と CPU の表示を同じ実験の初期状態へそろえます
   reset() {
     this.travelDistance = 0.0;
     this.direction = 0;
@@ -328,7 +328,7 @@ function makeCapsuleBody(records, options) {
 // Compute版のbody ID・slot・Joint構成と、CPU Nodeへ割り当てる見た目を同じ初期記録から作ります
 // body配列はGPUへ渡し、visuals配列はreadback後のNode同期に使うため、二つの配列を同時に構築します
 function createSceneRecords() {
-  // ここではまだGPUへ登録せず、body descriptor、Node表示情報、Joint接続用IDを一つの記録へまとめます
+  // GPU登録の前段階として、body descriptor、Node表示情報、Joint接続用IDを一つの記録へまとめます
   // 実際のGPU登録はstart()またはresetSimulation()で行い、reset時にも同じ初期構成を再利用します
   const records = { bodies: [], visuals: [], ropeColumns: [], ropeBodyIds: [] };
   // CPU Node版とGPU Compute版で同じ質量・接触・減衰条件を記録します
@@ -438,7 +438,7 @@ function registerJoints(records) {
   // body IDとlocal anchorを明示したDistanceJoint descriptorをGPUへ登録します
   const addDistanceJoint = (bodyAId, bodyBId, localAnchorA, localAnchorB, distance) => {
     // compliance=0のDistanceJointを使い、anchor間の目標距離を硬い位置拘束として登録します
-    // collideConnected=falseは、接続body間の接触を別に発生させず、Jointの拘束だけを残す指定です
+    // collideConnected=falseは、接続body間の運動をJointの拘束で解決する指定です
     const descriptor = {
       type: "DistanceJoint",
       bodyAId,
@@ -519,7 +519,7 @@ function setConnectorPose(pivot, weight) {
 }
 
 // Compute bodyを初期recordへ戻し、Joint構成とNode表示を同じ初期状態へ復元します
-// readback中の古い結果はresetEpochで破棄し、reset後のNodeへ遅れて反映しないようにします
+// resetEpochでreadbackの世代を確認し、reset後と同じ世代の結果だけをNodeへ反映します
 function resetSimulation() {
   // GPU bodyと通常Nodeを同じ初期recordへ戻し、readback中の古い結果をresetEpochで無効にします
   // Joint descriptorも再登録するため、reset後のGPU adjacencyとlambda状態を新しい構成から開始します
@@ -546,7 +546,7 @@ function resetSimulation() {
 
 // 周期、速度、Joint誤差、readback stateを初期化し、reset後の診断を新しい計測として開始します
 function resetDiagnostics() {
-  // readbackの非同期遅延を含め、reset前の周期・速度・誤差を次の実験へ持ち越さないようにします
+  // readback の非同期遅延も考慮し、reset 時に周期・速度・誤差の計測を初期化します
   pendulumLastAngleRadians = null;
   pendulumLastAngleTimeSec = null;
   pendulumPreviousDownwardCrossingTimeSec = null;
@@ -560,7 +560,7 @@ function resetDiagnostics() {
 // fixed step数を決め、各stepの直前にkinematic body commandを追加します
 // ComputePhysicsSpace.encodeFixedStep()へframe時間を渡す代わりに、driverの位置処方とstep数を同じループへ置きます
 function encodeSimulation(encoder, deltaMs) {
-  // frame時間を固定stepへ分配します。CPU Nodeはまだ更新せず、GPU commandだけをここで記録します
+  // frame時間を固定stepへ分配します。ここでGPU commandを記録し、CPU Nodeの更新はreadback完了後に行います
   // このsampleのNode表示は後でreadbackが完了した時に更新されるため、物理と描画の時間差があります
   simulationAccumulatorMs += deltaMs;
   let steps = 0;
@@ -575,17 +575,17 @@ function encodeSimulation(encoder, deltaMs) {
 }
 
 // state readbackのslotからBodyStateの位置・姿勢を読み、Joint anchorをworld座標へ変換できるrecordを返します
-// Compute描画はreadbackへ依存せず、ここはNode同期と周期・速度・誤差の明示的な診断だけで使います
+// GPU状態を直接描画し、readbackはNode同期と周期・速度・誤差の診断へ使います
 function readBodyState(stateData, bodyId) {
   // readback bufferのlayoutとbody IDからposition/orientation/velocityを解釈する処理はcoreへ任せます
   return physics.readBodyStateFromReadback(bodyId, stateData);
 }
 
 // DistanceJoint一つのanchor間距離誤差をreadbackした現在状態から実測します
-// solverのlambdaを推測せず、各bodyの姿勢でlocal anchorをworld座標へ回転して比較します
+// 各bodyの姿勢でlocal anchorをworld座標へ回転し、anchor間の実測値を比較します
 function getJointPositionError(stateData, joint) {
-  // GPU solverのlambdaではなく、readbackされた物理状態からanchor間の実距離を計算します
-  // Nodeの表示位置ではなくGPU状態を使うため、readback遅延とは独立して誤差を評価します
+  // readback された body の位置と姿勢から、anchor 間の実距離を計算します
+  // 同じ readback の GPU 状態を基準に、両 anchor の拘束誤差を評価します
   const bodyA = readBodyState(stateData, joint.bodyAId);
   const bodyB = readBodyState(stateData, joint.bodyBId);
   const anchorAOffset = rotateVec3ByQuat(joint.localAnchorA, { q: bodyA.orientation });
@@ -602,7 +602,7 @@ function getJointPositionError(stateData, joint) {
 // readbackしたBodyStateを通常Nodeへ反映し、同じCPU値からconnectorと診断値を更新します
 function syncNodesAndAnalyze(stateData, stateTimeSec) {
   // 一回のreadback結果を、通常Nodeの姿勢反映、connector更新、周期計測、速度計測へ分配します
-  // ここからGPUへ値を書き戻さないため、診断と表示同期を読み取り処理として扱います
+  // readback の値を参照し、診断と表示同期を読み取り処理として扱います
   physics.syncNodesFromPhysics(stateData, nodeBindings);
   const pivot = readBodyState(stateData, PENDULUM_PIVOT_ID);
   const weight = readBodyState(stateData, PENDULUM_WEIGHT_ID);
@@ -672,7 +672,7 @@ function resolveNodeReadbackAfterSubmit() {
 // 現在の物理状態、入力状態、readback状態をHelp Panelへ表示する行へ変換します
 function buildHelpLines() {
   // GPUの現在値はreadback完了時だけ更新されるため、Node binding数とreadback状態も表示します
-  // 「物理が止まった」のか「readbackがまだ届いていない」のかを画面上で区別できるようにします
+  // 物理状態の更新時刻と readback の到着状況を、画面上で確認できるようにします
   const controller = crossingController.getState();
   const speed = Math.hypot(...controller.prescribedVelocity).toFixed(2);
   const measured = pendulumMeasuredPeriodSec === null
@@ -843,7 +843,7 @@ async function start() {
   app.start({
     onUpdate: ({ timeMs }) => {
       // 前frameのWebgApp.present()がcommandをsubmitした後で、非同期readbackを開始します
-      // 同じframeのcommand encoderを再利用せず、FrameTimerのquery resolveとsubmit順序を保ちます
+      // 次のframe用encoderを生成し、FrameTimerのquery resolveとsubmitの順序を保ちます
       resolveNodeReadbackAfterSubmit();
       if (timeMs - lastHelpUpdateMs >= 250.0) {
         updateHelpPanel();

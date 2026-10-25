@@ -27,8 +27,7 @@ You will be able to assign materials to shapes and decide whether a value belong
 A shader calculates vertex positions and pixel colors; a material specifies the per-`Shape` appearance, including color, gloss, textures, and normals.
 For a typical 3D object, start with `SmoothShader` and `shape.setMaterial("smooth-shader", ...)`, then set the required appearance through material parameters.
 
-For a regular `Shape`, first choose `SmoothShader` and `shape.setMaterial("smooth-shader", ...)`.
-Set shared values, such as lights and default fog settings, on the shader instance through its setters. `Shape.shaderParameter()` supplies per-shape overrides for low-level or custom parameters. Consider a custom shader when existing material parameters cannot express the effect you need.
+Set per-`Shape` values such as color and textures through the material. Pass shared lights and fog through `WebgApp` settings or shader setters. `shape.shaderParameter()` is the low-level entry point for custom parameters on a particular Shape. Consider a custom shader when you need an effect beyond the existing settings.
 
 This chapter provides criteria for choosing a shader and deciding which values to transfer, and when.
 
@@ -99,7 +98,7 @@ For a material without `alpha_mode`, triangles are automatically classified as `
 
 In a scene using only standard `WebgApp`, translucent triangles are automatically sorted back-to-front and composited with alpha blending.
 With `ComputeEffectPipeline`, transparent surfaces are kept out of the opaque G-buffer and composited after Deferred Lighting and SSR (screen-space reflections).
-Lower `roughness` keeps the background sharper and the specular reflection tighter. Higher `roughness` blurs the background more and spreads and weakens the specular reflection.
+In the integrated transparency path, lower `roughness` keeps the background sharper and the specular reflection tighter. Higher `roughness` blurs the background more and spreads and weakens the specular reflection.
 When transparent surfaces are present, `ComputeEffectPipeline` connects a dedicated transparent Render Pass later in the pipeline.
 Chapters 23–25 explain when to use a standalone `FrostedGlassPass` or an integrated pipeline.
 
@@ -169,7 +168,7 @@ Use `setMaterial()` to set the initial material, and `updateMaterial()` to chang
 
 `setMaterial()` sets material slot 0; `updateMaterial()` updates slot 0 as well.
 Use `setMaterialAt()` and `updateMaterialAt()` for additional material slots.
-Each slot's values are passed to the shader when drawing. Update slots from 1 onward with `setMaterialAt()` and `updateMaterialAt()`.
+Each slot's values are passed to the shader when drawing.
 
 ```js
 shape.setMaterial("smooth-shader", {
@@ -241,9 +240,7 @@ console.log(glassMaterial.id);
 console.log(glassMaterial.params.alpha);
 ```
 
-The material object and `params` object returned by `getMaterialAt(index)` are shallow copies.
-Properties such as `params.alpha` are available for inspection. To change the live material, pass updated values to `updateMaterialAt(index, params)`.
-Use `updateMaterialAt(index, params)` for runtime changes, including array-valued parameters.
+The material object and `params` object returned by `getMaterialAt(index)` are shallow copies. Properties such as `params.alpha` are available for inspection; nested values such as arrays retain their references. To change the live material, pass updated values to `updateMaterialAt(index, params)` so the Shape receives the change explicitly.
 
 ```js
 shape.updateMaterialAt(1, {
@@ -283,7 +280,7 @@ These values naturally differ by object and are managed by the `Shape`:
 | `metallic` | Metallic value used by deferred lighting | `0.0`–`1.0` |
 | `power` | Exponent applied to the dot product of reflection direction and view direction in the Phong model | `16`–`128` |
 | `emissive` | Self-illumination strength | `0.0`–`1.0` |
-| `alpha` | Opacity; without `alpha_mode`, values below 1.0 are classified as `BLEND` | `0.0`–`1.0` |
+| `alpha` | Opacity; without `mode`, values below 1.0 are classified as `BLEND` | `0.0`–`1.0` |
 | `has_bone` | Use a bone palette for skinning | `0` or `1` |
 | `weight_debug` | Visualize the weight distribution | `0` or `1` |
 | `backface_debug` | Debug back-face rendering | `0` or `1` |
@@ -389,7 +386,7 @@ Although `SmoothShader` is one shader, it separates data with three distinct rol
 
 Separating WebGPU bind groups avoids unnecessary data transfers when drawing static meshes.
 
-The per-draw uniform data in `group(0)` contains 84 floating-point values, or 336 bytes. The dynamic-offset stride is 512 bytes, a multiple of 256.
+The per-draw uniform data in `group(0)` contains 100 floating-point values, or 400 bytes. The dynamic-offset stride is 512 bytes, a multiple of 256.
 A bone palette in `group(2)` for up to 320 bones takes `320 × 12 × 4 = 15,360` bytes.
 
 If these were mixed in the same uniform buffer, even a simple cube with `has_bone: 0` would require transferring more than 15 KB to the GPU for each draw, or retaining an oversized buffer throughout processing.

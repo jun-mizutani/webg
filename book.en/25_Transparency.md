@@ -208,7 +208,7 @@ For a new PBR application, begin with materials and environment lighting in Chap
 
 ## Troubleshooting
 
-- **No visible change**: Check that `autoDrawScene: false` is set; otherwise the scene draws directly to the canvas and skips the post-process.
+- **No visible change**: Check that `autoDrawScene: false` is set. When the default scene draw is also added to a manual off-screen render, the target and pass order differ from the intended setup. Trace the render targets from `onBeforeDraw` through `onAfterDraw3d`, and confirm that the scene is drawn once to the intended target.
 - **Resolution mismatch after resize**: Call `resizeToScreen(screen)` from `onUpdate()` so the off-screen target matches the canvas.
 - **DoF looks incorrect**: Pass the same callback's `renderFrameToken` to `beginScene()`, `Space.draw()`, and `DofPass.render()`. Then view `depth` and `focusMask` to check that depth from the same camera frame is used and that the intended region is in focus.
 - **HUD is missing**: Call `app.screen.clearDepthBuffer()` after the final pass. Otherwise, depth written during post-processing can reject the HUD.

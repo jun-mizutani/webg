@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// samples/mmodeler/BoxSelectSession.js  2026/05/22
+// samples/mmodeler/BoxSelectSession.js  2026/10/25
 //   mobile box selection preview session for mmodeler
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -47,7 +47,7 @@ export default class BoxSelectSession {
   }
 
   // 矩形選択表示用 DOM 要素を必要に応じて作成する
-  // canvas の親要素へ重ねるため、canvas そのものには描画や WebGPU state を持ち込まない
+  // canvas の親要素へ DOM を重ね、矩形の表示を管理する
   ensureElement() {
     if (this.selectionRectEl?.isConnected) {
       return this.selectionRectEl;
@@ -64,7 +64,7 @@ export default class BoxSelectSession {
   }
 
   // client 座標の矩形を canvas 親要素内の selection preview として表示する
-  // canvas 外にはみ出した座標は canvas 内へ clamp し、画面端で drag しても preview が親要素外へ出ないようにする
+  // 座標を canvas 内へ clamp し、preview を表示領域に収める
   showRect(rect) {
     const el = this.ensureElement();
     const canvas = this.getCanvas();
@@ -105,7 +105,7 @@ export default class BoxSelectSession {
     }
   }
 
-  // drag 終了時に、選択を即時確定せず preview として保持する
+  // drag終了時は矩形をpreviewとして保持し、次の確定操作を待つ
   // pointerup は「指で隠れていた終点を確認できる状態」に留め、次の tap で確定する
   holdPreview(rect, additive = false) {
     this.active = true;
@@ -120,7 +120,7 @@ export default class BoxSelectSession {
   }
 
   // preview 待ちの矩形を tap で確定する
-  // ここで初めて selectByClientRect callback を呼ぶため、preview のやり直し中に selection は変わらない
+  // 確定時に selectByClientRect を呼び、それまでは現在の selection を維持する
   confirm() {
     if (!this.awaitingConfirm || !this.rect) {
       return false;
@@ -134,7 +134,7 @@ export default class BoxSelectSession {
   }
 
   // long press や別 command で preview を取り消す
-  // cancel は選択状態を変更せず、矩形表示と session state だけを消す
+  // cancelは現在の選択を保持し、矩形表示とsession stateを終了する
   cancel(message = "box select canceled") {
     this.clear();
     this.setMobileOrbitEnabled(true);

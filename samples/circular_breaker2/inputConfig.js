@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// samples/circular_breaker2/inputConfig.js  2026/09/19
+// samples/circular_breaker2/inputConfig.js  2026/10/25
 //   circular_breaker2 sample
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -127,7 +127,7 @@ export const createDebugActionHandlers = ({
 });
 
 // action map に登録した handler 表を 1 frame 分だけ実行する
-// async handler も受けられるよう Promise 化し、loop 本体は await せず進める
+// handlerの結果をPromiseとして受け取り、loopと非同期処理を並行して進める
 export const runPressedActionHandlers = (app, handlers, logLabel = "circular_breaker debug action") => {
   const actionNames = Object.keys(handlers ?? {});
   for (let i = 0; i < actionNames.length; i++) {

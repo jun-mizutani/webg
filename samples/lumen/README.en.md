@@ -16,7 +16,7 @@ SceneYAML defines shared materials, initial objects, rendering, physics, and par
 
 PBR combines metallic reflections, transmission glass, environment lighting, and four colored point lights through Deferred Lighting. Directional shadow mapping supports depth perception, SSR supplies screen-space reflections, and Bloom spreads light around emissive details. The aluminum sphere uses metallic 1 and roughness 0.08 for a crisp metallic reflection.
 
-ComputeParticleEmitter updates the red pulse and drifting particles emitted from the left glass exhibit, then adds them to the HDR image. Compute physics simulates contacts, restitution, friction, and settling for twelve spheres and a five-part tray, using a 240Hz fixed step and twelve solver iterations. GameAudioSynth generates Jazz without downloaded audio files.
+ComputeParticleEmitter updates the red pulse and drifting particles emitted from the left glass exhibit, then adds them to the HDR image. Compute physics simulates contacts, restitution, friction, and settling for twelve spheres and a five-part tray, using a 240Hz fixed step and twelve solver iterations. GameAudioSynth synthesizes Jazz in the browser.
 
 ## Things to observe
 

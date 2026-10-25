@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// samples/webgmodeler/edgeWireframeOverlayRenderer.js  2026/07/13
+// samples/webgmodeler/edgeWireframeOverlayRenderer.js  2026/10/25
 //   line-list edge overlay renderer
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -182,8 +182,8 @@ fn fsMain(input : VSOut) -> @location(0) vec4f {
       depthStencil: {
         // Screenの通常カメラpassと同じCamera Reverse-Z attachment契約を使う
         format: CAMERA_REVERSE_Z.format,
-        // mesh に隠れた edge は基本的に表示しないただし overlay 自体は後続描画へ
-        // 影響しないよう depth buffer へ書き込まない
+        // depth testで見えるedgeを選び、overlayを後段へ重ねる
+        // depth bufferは既存値を保持し、後続の描画にも同じ奥行きを使う
         depthWriteEnabled: false,
         depthCompare: CAMERA_REVERSE_Z.compareEqual
       }
@@ -200,7 +200,7 @@ fn fsMain(input : VSOut) -> @location(0) vec4f {
   // camera の projection / view 行列を overlay shader の uniform に反映する
   setMatrices(projectionMatrix, viewMatrix) {
     // projection と view は main.js 側で WebgApp / eye から取得する
-    // Matrix.mul() は剛体変換向けなので、ここでは合成済み行列ではなく
+    // 透視投影を含む積は shader へ任せ、二つの行列を別々に渡して
     // shader 内で proj * view を明示的に掛ける
     this.uniformData.set(projectionMatrix.mat, 0);
     this.uniformData.set(viewMatrix.mat, 16);
@@ -215,7 +215,7 @@ fn fsMain(input : VSOut) -> @location(0) vec4f {
   // 1 頂点分の position と color を描画用配列へ追加する
   pushVertex(position, color) {
     // color は [r, g, b, a] の linear 0..1 値
-    // edge ごとの色分けをしたいので uniform color ではなく vertex attribute にする
+    // edge ごとの色を vertex attribute として渡す
     this.vertices.push(
       position[0], position[1], position[2],
       color[0], color[1], color[2], color[3]
@@ -233,8 +233,8 @@ fn fsMain(input : VSOut) -> @location(0) vec4f {
 
   // 現在の頂点数を収められるよう GPU buffer 容量を必要に応じて拡張する
   ensureCapacity(vertexCount) {
-    // 現在の capacity で足りる限りは GPUBuffer を作り直さない
-    // 足りない場合だけ倍々に増やし、頻繁な再確保を避ける
+    // 必要量が現在の capacity に収まる間は、同じ GPUBuffer を再利用する
+    // capacity を超えた時点で倍々に増やし、以降の頂点を格納できる容量を確保する
     if (vertexCount <= this.vertexCapacity) {
       return;
     }
@@ -272,7 +272,7 @@ fn fsMain(input : VSOut) -> @location(0) vec4f {
       return;
     }
 
-    // index buffer は使わないline-list 頂点配列を先頭から順に描画する
+    // line-list の頂点配列を先頭から順に描画する
     pass.setPipeline(this.pipeline);
     pass.setBindGroup(0, this.uniformBindGroup);
     pass.setVertexBuffer(0, this.vertexBuffer);

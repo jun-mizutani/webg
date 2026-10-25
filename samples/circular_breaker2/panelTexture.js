@@ -1,4 +1,4 @@
-// samples/circular_breaker2/panelTexture.js 2026/09/20
+// samples/circular_breaker2/panelTexture.js 2026/10/25
 // SF装置の外装を、色・浅い溝の高さ・発光位置の3画像として生成する
 
 // 512角の画像を初期化時に一度生成する
@@ -23,7 +23,7 @@ export function createPanelPixels() {
       const insetEdge = inset && (panelX < .2 || panelX > .8
         || panelY < .34 || panelY > .73);
       // 下部の細い帯と上部寄りの3本のランプを配置する
-      // 発光のマスクは高さ画像から分離し、ランプの輝度を凹凸へ混ぜない
+      // 発光 mask と高さ画像を個別に作り、ランプの輝度と凹凸を分けて表現する
       const band = side && panelY > .14 && panelY < .19
         && panelX > .09 && panelX < .91;
       const indicator = side && panelY > .81 && panelY < .87

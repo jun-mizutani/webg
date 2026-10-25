@@ -55,9 +55,9 @@ The CPU Box contact path selects support features from the minimum-overlap axis 
 
 Tune the fixed time step and solver iterations together with contact count. Keep object dimensions, mass ratios, friction, and drop speed controlled while checking resting orientation, stacking, and settling time.
 
-### Approximate Inertia Tensor
+### Local Inertia and World-Space Impulses
 
-Rotational response depends on both mass and the body's shape. A full inertia tensor is a 3×3 matrix that changes with orientation. To reduce cost, `webg` stores diagonal inertia values along local axes. For a box of dimensions `sx`, `sy`, and `sz`, `PhysicsNode.js` uses the rectangular-solid formula:
+Rotational response depends on both mass and the body's shape, and world-space inertia changes with orientation. `webg` stores diagonal inertia components along the body's local principal axes. For a box of dimensions `sx`, `sy`, and `sz`, `PhysicsNode.js` calculates these components with the rectangular-solid formula:
 
 ```js
 return [
@@ -99,7 +99,7 @@ export function getImpulseDenominator(space, bodyA, stateA, rA, bodyB, stateB,
 
 `rA` and `rB` run from each center to the contact. An impulse farther from the center has a greater rotational effect. Stored angular velocity is in degrees per second, so the solver converts it to radians per second before calculating `omega × r`; using degrees directly would scale the point velocity by about 57 times.
 
-The effective-mass denominator combines linear mobility with rotational mobility. `_applyWorldInverseInertia()` transforms a world-space torque or angular impulse through the body's current orientation and local diagonal inverse inertia. Its result is an angular velocity change in radians per second.
+The effective-mass denominator combines linear mobility with rotational mobility. `_applyWorldInverseInertia()` transforms a world-space torque or angular impulse into the body's local coordinates using its current orientation, applies local diagonal inverse inertia, then rotates the result back to world space. The result is an angular velocity change in radians per second. Box and sphere shapes use this representation directly; a shape with an arbitrary mass distribution needs a matching inertia model.
 
 `applyContactImpulse()` applies linear velocity changes and, unless rotation is fixed, computes torque as `r × impulse`, applies world inverse inertia, then converts the angular change back to degrees per second. Friction impulses use the same framework, so sliding along a contact surface can produce rotation. `applyTorque()` follows the same unit convention: internal angular acceleration uses radians, while public angular velocity remains degrees per second.
 

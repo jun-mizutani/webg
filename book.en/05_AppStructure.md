@@ -34,10 +34,9 @@ When using the standard features, `WebgApp` manages the internal draw order and 
 
 ## What does WebgApp simplify?
 
-Chapter 04 displayed a cube with `WebgApp` and introduced a low-level alternative. In that alternative, you prepare `Screen`, `SmoothShader`, `Space`, `Shape`, and `eye`, then render by calling `clear -> draw -> present`.
+Chapter 04 initialized `WebgApp`, attached a `Shape` to a `Node`, and rotated a cube from `onUpdate`. This chapter adds input and a HUD to that structure, showing where each operation belongs in the update and rendering stages.
 
-This sequence is important for understanding the foundation of `webg`.
-In a real application, however, the screen, standard shader, scene, camera, input, HUD, diagnostics, resize handling, and frame loop also need to be assembled.
+Internally, `Screen`, the standard shader, `Space`, and the camera are prepared, then drawing proceeds through `clear -> draw -> present`. By sharing this setup and frame loop, an application can focus on its own state and controls.
 
 `WebgApp` is a high-level entry point that brings this common setup together.
 It lets developers focus on what to place in the scene and how it should move each frame.
@@ -123,7 +122,6 @@ app.start({
 ### The constructor stores settings
 
 `new WebgApp(options)` prepares settings and internal state. The GPU device, `Screen`, `Space`, standard shader, and `eye` become available after `app.init()` completes.
-The constructor prepares the settings and internal state used by the later `init()` call.
 
 Common options include:
 

@@ -8,7 +8,7 @@ English | [日本語](README.md)
 - This sample uses `BloomPass` to render the 3D scene once into an offscreen `RenderTarget`, then composites bloom before returning the result to the canvas
 - It is a minimal implementation for confirming that postprocess can be added as an independent layer even before introducing PBR or shadow maps
 - `WebgApp` is used for startup and CommandPalette display, while the 3D scene itself is switched to offscreen rendering with `autoDrawScene: false`
-- The operation guide is collected at the upper left with `buildHelpPanelOptions()` and `showOverlayPanel()`, and when it is not needed the body can be folded away so only the `Show Help` button remains
+- The operation guide is collected at the upper left with `buildHelpPanelOptions()` and `showOverlayPanel()`, and when more room is useful, fold the body away and keep the `Show Help` button visible
 - In addition to the specular highlight on the center sphere, strongly emissive warm, blue, and pink small spheres are placed so it is easier to see how colored glow spreads into the darker background
 
 ## How to Run
@@ -40,7 +40,7 @@ English | [日本語](README.md)
 - Because bloom extraction uses not only luma but also `max(rgb)` more strongly, confirm that strongly emissive blue and pink colors enter the extract view more easily
 - Use `V` to switch between `composite / scene / extract / extractHeat / blurA / blurB` and confirm that the extract colors themselves and the gain shown as heat can be inspected separately
 - Confirm that even when the viewport size changes, `BloomPass.resizeToScreen()` keeps the offscreen target in sync so bloom positions do not slip and resolution does not break
-- Confirm that rotating only the camera does not make the highlight positions follow perfectly, showing that a world-fixed light is in use
+- Rotate the camera and observe how the highlight changes with the view relative to the world-fixed light
 - On narrow screens, confirm that CommandPalette can be opened only when needed, so parameter controls do not keep covering the scene
 
 ## Controls

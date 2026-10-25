@@ -265,11 +265,12 @@ The physics engine efficiently supports use cases such as:
 - Spatial queries using ray casts, AABBs, and sphere overlaps.
 - Declaring physics bodies and space settings in SceneYAML.
 
-The following features define the limits of the current implementation:
+Detailed collision tests for rotated boxes use OBBs, with enclosing AABBs for broad-phase filtering. When rotation expands the enclosing AABB, measure its effect on the number of contact candidates.
 
-- Exact OBB tests in the broad phase; it uses an enclosing AABB for candidate filtering and tests the OBB in the narrow phase.
-- A solver that jointly solves multiple contact points for arbitrary shape pairs. Compute Box face contacts currently process up to four points in sequence.
-- Full support for non-diagonal inertia tensors.
+Applications that require the following conditions can add dedicated processing or use another solver approach. Design body shapes, velocities, and constraints to match the supported behavior:
+
+- A simultaneous solution for multiple contact points across arbitrary shape pairs. Compute Box face contacts currently process up to four points in sequence.
+- Direct specification of local inertia matrices with off-diagonal components.
 - Continuous collision detection (CCD).
 - Joint motors, limits, break conditions, and ragdolls.
 

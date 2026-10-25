@@ -1,4 +1,4 @@
-// main.js 2026/09/19
+// main.js 2026/10/25
 // SceneYAMLの入出力とフォーム編集。Copyright (c) 2026 Jun Mizutani, MIT
 import util from "../../webg/util.js";
 import { compressSceneYAML } from "../../webg/app/index.js";
@@ -16,9 +16,9 @@ let showCollider = true;
 function status(message, error = false) { $("status").textContent = message; $("status").classList.toggle("error", error); }
 // イベントの例外を捕捉し、失敗した操作が完了したように表示されることを防ぐ
 function action(id, callback) { $(id).onclick = async () => { try { await callback(); } catch (error) { status(error.message, true); } }; }
-// 空文字を0へ変換せず、既存の数値検証関数で入力値を確認する
+// 既存の数値検証関数で入力を確認し、空文字を入力エラーとして通知する
 function number(input) { if (!input.value.trim()) throw Error("数値を入力してください"); return util.readFiniteNumber(Number(input.value), input.name || "入力値"); }
-// YAML欄の未反映入力がある間は別の編集で上書きしない
+// YAML欄に編集中の入力がある間は、その原文を優先して保持する
 function objectDraft() { const obj=state.manifest.objects.find(item=>item.id===selected); return $("objectSource").value !== (obj?JSON.stringify(obj,null,2):""); }
 // 二つの直接入力欄の未確定変更を検出し、別の編集による消失を防ぐ
 function requireApplied(ignoreObject = false) { if ($("source").value !== state.text) throw Error("先にYAML欄の入力を反映するか、入力を破棄してください"); if(!ignoreObject && objectDraft())throw Error("先に物体JSONを反映するか、入力を破棄してください"); }
@@ -44,7 +44,7 @@ function edit(callback, ignoreObject = false, rebuildForm = true) { requireAppli
 function unique(prefix, values) { let n = 1; while (values.some(item => item.id === `${prefix}${n}`)) n++; return `${prefix}${n}`; }
 // 選択物体を取得し、生成物体のフォーム編集を明示的に拒否する
 function object(manifest = state.manifest) { const value = manifest.objects.find(item => item.id === selected); if (!value) throw Error("objects内の物体を選択してください。生成物体はYAMLで編集します"); return value; }
-// 外部文字列はHTMLとして解釈せず、DOMのtextContentで表示する
+// 外部文字列はDOMのtextContentへ渡し、文字として表示する
 function element(tag, text, parent) { const node = document.createElement(tag); if (text !== undefined) node.textContent = text; parent?.append(node); return node; }
 // 数値入力の確定を一回の履歴とし、失敗時は最後に成功した値へ画面を戻す
 function numeric(parent, title, value, change) {
@@ -55,7 +55,7 @@ function numeric(parent, title, value, change) {
     catch (error) { status(error.message, true); input.value=value; }
   };
 }
-// 文書から選択一覧、フォーム、原文を再生成する。履歴には画面部品を保存しない
+// 文書から選択一覧、フォーム、原文を再生成する。履歴は文書データを保持し、画面部品はそのデータから構築する
 function refresh() {
   $("source").value = state.text; $("objects").replaceChildren(); $("fields").replaceChildren(); $("mesh").replaceChildren();
   $("undo").disabled = !state.undoStack.length; $("redo").disabled = !state.redoStack.length;
@@ -138,7 +138,7 @@ function meshFields(obj) {
       const o = object(next);
       if (o.physics && !o.physics.shape) throw Error("変換前に物体JSONのphysics.shapeへ衝突用Box・Sphere・Capsuleを明示してください");
       if (!["box","sphere"].includes(o.shape.type)) throw Error("変換はBoxとSphereに対応しています");
-      if (o.shape.offset) throw Error("offset付き形状の変換は未対応です");
+      if (o.shape.offset) throw Error("形状変換はoffsetを省略した形状で実行してください");
       const mesh = makeMesh(o.shape.type === "box" ? "cube" : "sphere");
       mesh.vertices = mesh.vertices.map(v => v.map((n,i) => n * (o.shape.type === "box" ? o.shape.size[i]/2 : o.shape.radius)));
       mesh.id = unique("mesh", next.meshes ?? []); (next.meshes ??= []).push(mesh); o.mesh=mesh.id; delete o.shape;
@@ -160,18 +160,18 @@ function meshFields(obj) {
     const button=element("button",title,panel);button.onclick=()=>{try{edit(next=>operation(next.meshes.find(m=>m.id===obj.mesh)));}catch(error){status(error.message,true);}};
   }
 }
-// 保存済みでない作品を破棄する操作には確認を挟む
+// 編集中の作品を破棄する操作では、保存状況を確認してから進める
 function confirmReplace() { return (!state.dirty && $("source").value===state.text && !objectDraft()) || confirm("未保存の変更を破棄して置き換えますか？"); }
-// 原文またはgzipをローカルへ保存し、外部サーバーへ送信しない
+// 原文またはgzipを、ブラウザのダウンロードでローカルへ保存する
 async function save(gzip) {
   requireApplied(); const text=state.text;
   const blob=gzip ? await compressSceneYAML(text) : new Blob([text],{type:"text/yaml;charset=utf-8"});
   const url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download="scene.yaml"+(gzip?".gz":"");a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);state.savedText=text;status("保存ファイルをダウンロードしました");
 }
-// GPU準備後に操作を接続し、起動中の編集要求を受け付けない
+// GPU の準備が完了した段階で、編集操作の受付を開始する
 async function start() {
   // フォームのキーはブラウザ標準の入力・Tab移動・矢印増減へ渡す
-  // documentへ登録された3D操作用ハンドラには伝えず、preventDefaultは呼ばない
+  // フォーム内で event の伝播を止め、ブラウザ標準の入力操作へ処理を渡す
   for (const type of ["keydown","keyup"]) document.querySelector("main").addEventListener(type,event=>{
     if(event.target.closest("input,textarea,select,button,summary"))event.stopPropagation();
   });

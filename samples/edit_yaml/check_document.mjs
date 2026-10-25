@@ -1,5 +1,5 @@
-// check_document.mjs 2026/09/18
-// GPUやheadlessブラウザを起動せず、保存データの往復と失敗時の保持を確認する
+// check_document.mjs 2026/10/25
+// Node.jsで保存データの往復と、検証エラー時の元データ保持を確認する
 import assert from "node:assert/strict";
 import { gzipSync, gunzipSync } from "node:zlib";
 import { EditorDocument, initialManifest, serialize } from "./scene_document.js";

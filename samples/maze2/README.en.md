@@ -6,7 +6,7 @@ English | [日本語](README.md)
 
 ## Overview
 
-`maze2` is a walk-through maze with a 4 m wall-center pitch and ceiling height. Structural slopes at the wall/floor and wall/ceiling corners produce an octagonal corridor section. At an L corner, quadrilateral miter bridges directly join the end edges of perpendicular rails, closing the joint without extending an unnecessary surface across the opening. Rendering, collision, and radar geometry share the same logical wall boundaries so doors and junctions remain traversable.
+`maze2` is a walk-through maze with a 4 m wall-center pitch and ceiling height. Structural slopes at the wall/floor and wall/ceiling corners produce an octagonal corridor section. At an L corner, quadrilateral miter bridges connect adjacent rail ends while keeping the opening clear for traversal. Rendering, collision, and radar geometry share the same logical wall boundaries, so doors and junctions remain traversable.
 
 Rendering uses `ComputeEffectPipeline`. The G-buffer, Deferred Shading, SSR, Bloom, and geometry edge stages share the same `CameraFrame` finalized by `WebgApp` immediately before drawing.
 Each cell has a thin longitudinal ceiling panel centered at `y = 3.95m`, with a point Local Light for corridor illumination below it at `y = 3.70m`.

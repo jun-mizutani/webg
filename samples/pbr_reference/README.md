@@ -10,7 +10,7 @@
 
 `IBLを有効化`ボタンはDeferredへ切り替え、直接光に加えて最小構成の画像ベース照明を評価します。起動時は小さな手続き生成環境を使います。`診断HDR IBLへ切替`を押すと、Radiance HDRからCompute Shaderで前処理し、CPU参照値との比較を通過した環境へ切り替わります。どちらも線形HDRの緯度経度画像、拡散irradiance map、roughness別の鏡面map、BRDF積分LUTから構成されます。IBLを無効に戻せば、forwardとdeferredの直接光だけを比較できます。
 
-`PBR SSRを有効化`ボタンはDeferredとIBLを有効にし、画面内でray hitした反射だけを鏡面IBLへ置き換えます。SSR出力のRGBはhit位置のTone Map前の線形HDR radiance、alphaはhit confidenceです。ray missや画面端では同じHDR環境のroughness別鏡面IBLを保ち、直接光、拡散IBL、発光は置き換えません。透明物はSSR後に描くため、現在は反射元にも反射面にも含まれません。
+`PBR SSRを有効化`ボタンはDeferredとIBLを有効にし、画面内でray hitした反射だけを鏡面IBLへ置き換えます。SSR出力のRGBはhit位置のTone Map前の線形HDR radiance、alphaはhit confidenceです。ray missや画面端では同じHDR環境のroughness別鏡面IBLを保ち、直接光、拡散IBL、発光は、それぞれの計算結果を保ちます。SSRの反射元と反射面には不透明surfaceを使い、透明物はSSR後に合成します。
 
 `HDR背景を表示`は、照明の入力になった元の緯度経度HDRを物体のないpixelへ表示します。球は、その同じHDRから生成したirradiance、roughness別鏡面map、BRDF LUTで照らされます。背景は元画像を表示し、球は材質に応じて積分した照明を使います。`IBLのみで確認`はdirectional、point、cone、shadowを無効にし、環境由来の拡散反射と鏡面反射だけを残します。`環境を45°回転`は背景と不透明／透明物のIBLをworld-spaceのY軸周りへ一緒に回すため、背景の明部と球の反射が対応して移動することを確認できます。
 
@@ -26,7 +26,7 @@
 
 `環境診断`ボタンは、最終球、元HDR radiance、拡散irradiance、GGX prefiltered specular、BRDF LUTを順に全画面表示します。元HDR、irradiance、specularは診断用露出を1 EVずつ変更できます。`次のSpecular Mip`はmipと対応roughnessを一段ずつ進め、画面の`View Detail`へ解像度、mip、roughness、露出を表示します。BRDF LUTはRをFresnel scale、Gをbiasとして線形表示します。各成分は反射計算の係数です。
 
-診断画像をクリックすると、白黒crosshairが選択位置へ移動し、`Selected Pixel`へUV、texel座標、cache内のbinary16復元値を表示します。画像は縦横比を保って全画面へ収め、黒帯のclickは選択として扱いません。診断露出は画面表示だけを変え、照明に使う環境強度やcache値を変更しません。確認画像は`environment_debug_radiance.jpg`、`environment_debug_irradiance.jpg`、`environment_debug_specular_mip.jpg`、`environment_debug_brdf_lut.jpg`です。
+診断画像をクリックすると、白黒crosshairが選択位置へ移動し、`Selected Pixel`へUV、texel座標、cache内のbinary16復元値を表示します。画像は縦横比を保って全画面へ収め、選択の対象は、画像が表示された領域へのclickです。診断露出は画面表示へ適用し、照明に使う環境強度とcache値は元の設定を保持します。確認画像は`environment_debug_radiance.jpg`、`environment_debug_irradiance.jpg`、`environment_debug_specular_mip.jpg`、`environment_debug_brdf_lut.jpg`です。
 
 `White Furnace`、`GPU Interval`、`Env Memory`を表示します。White Furnaceは、白い一様環境で誘電体と金属、roughness 5段階、`NdotV` 4段階の計40点を調べ、energyの上限を1.02とします。判定対象はsingle-scattering GGXのenergy増幅です。複数散乱を含む保存性を評価するときは、散乱モデルに応じた別の検証条件を用意します。
 
@@ -42,15 +42,15 @@ CPU実装を基準にCompute Shader版の出力を比較します。診断設定
 
 診断HDRのCompute実装はCPU版と同じalias tableとPDFを使います。生成中はalias tableに1 pixel当たり8 byteを使います。alias tableは生成処理のためのデータで、runtimeはcacheのIBL textureを参照します。
 
-コアの`RadianceHdr.js`は`FORMAT=32-bit_rle_rgbe`、標準`-Y height +X width`、線形`GAMMA=1`を受け付け、flat、旧RLE、新RLE scanlineを復号します。`EXPOSURE`と`COLORCORR`はfileへ適用済みの累積倍率として除算し、元radianceへ戻します。未知format、別方向、切れたRLE、余分なpayload、非有限metadataは例外です。復号値は`linear-radiance-rgb`として保ち、別関数でRadiance標準primariesの白色点EからsRGB D65へBradford色順応して`linear-srgb`へ変換します。色域外は`reject`または`clip`を必ず明示し、標準以外の`PRIMARIES`は未対応変換として例外にします。
+コアの`RadianceHdr.js`は`FORMAT=32-bit_rle_rgbe`、標準`-Y height +X width`、線形`GAMMA=1`を受け付け、flat、旧RLE、新RLE scanlineを復号します。`EXPOSURE`と`COLORCORR`はfileへ適用済みの累積倍率として除算し、元radianceへ戻します。未知format、別方向、切れたRLE、余分なpayload、非有限metadataは例外です。復号値は`linear-radiance-rgb`として保ち、別関数でRadiance標準primariesの白色点EからsRGB D65へBradford色順応して`linear-srgb`へ変換します。色域外は`reject`または`clip`を必ず明示し、`PRIMARIES`はRadiance標準の値を受け付け、その他の原色指定は値を示す例外で通知します。
 
 `PBR Textureを有効化`ボタンはDeferredへ切り替え、手続き生成したmetallic-roughness、環境遮蔽、発光テクスチャを15個の球へ適用します。metallic-roughnessテクスチャはglTFと同じくGにroughness、Bにmetallicを格納し、材質ごとの一様係数と乗算します。環境遮蔽テクスチャはRを使い、ambientとIBLの間接光だけを弱めます。発光テクスチャはsRGBから線形値へ変換した後、基本色とは独立した線形HDRの`emissive_factor`を掛けるため、1.0を超える発光を確認できます。環境遮蔽の模様を比べるときはIBLも有効にしてください。
 
 `Alpha 3平面比較を表示`ボタンは、data URIへ埋め込んだ5種類の2×2 textureを持つ`pbr_fixture.gltf`を通常の`WebgApp.loadModel()`で読み、そのbase color textureを3枚の開いた平面へ適用します。平面は左から`OPAQUE`、`MASK`、`BLEND`で、同じcamera、照明、材質係数、textureを使います。fixture表示時は比較に必要なDeferredとIBLを自動的に有効にします。
 
-基本色textureの4画素にはalpha 1.0、約0.19、約0.86、約0.38が入っています。nearest samplingを明示しているため画素間でalphaは補間されません。`OPAQUE`は4領域のalphaを無視し、`MASK`は`alphaCutoff=0.5`未満の2領域をG-bufferへ書かず、`BLEND`は材質alphaが1.0でも4領域それぞれのtexture alphaで背景と合成します。背後には明暗checkerを置いているため、MASKでは硬い穴、BLENDではcheckerの透け方として差を同時に確認できます。
+基本色textureの4画素にはalpha 1.0、約0.19、約0.86、約0.38が入っています。nearest samplingで各画素のalphaをそのまま参照します。`OPAQUE`は4領域のalphaを無視し、`MASK`は`alphaCutoff=0.5`未満の2領域をG-bufferへ書かず、`BLEND`は材質alphaが1.0でも4領域それぞれのtexture alphaで背景と合成します。背後には明暗checkerを置いているため、MASKでは硬い穴、BLENDではcheckerの透け方として差を同時に確認できます。
 
-3枚は背面を持たない片面平面です。閉じた立体の背面がMASKの穴を埋めたり、BLENDで前面と背面が重なったりしないため、alpha modeそのものを比較できます。double-sided pipelineと裏面法線反転は別の検査項目であり、この3平面比較には混在させません。
+3枚はそれぞれ一枚の前面だけを持つ平面です。前面のalphaだけで背景の見え方が決まるため、MASKの穴とBLENDの透け方を直接比較できます。double-sided pipelineと裏面法線反転は別の検査項目であり、それぞれ専用の検査で確認します。
 
 `透明PBR Fixtureを表示`ボタンは、alpha専用比較とは別に、元のglTF立方体を`BLEND`材質として表示します。base colorとnormalに加え、metallic-roughness、occlusion、独立HDR emissiveの5 textureを透明共有GGXへ接続し、Deferredと同じirradiance map、roughness別鏡面map、BRDF LUTを使います。さらにdirectional shadow、青いpoint light、橙色のcone lightを同時に有効化し、透明fragment自身の位置で影と局所光が評価されることを確認します。
 
@@ -58,7 +58,7 @@ CPU実装を基準にCompute Shader版の出力を比較します。診断設定
 
 photometric時は`exposureEv100=9.0`を使用します。手続き生成環境のIBL強度500は表示比較用の尺度です。測光されたcd/m²との比較には、校正済みHDR画像とその測定条件を用意してください。この画面では、単位、距離減衰、露出の処理フローを一括で切り替え、透明物にも同じ局所光減衰が適用されることを確認します。
 
-コア側では`PbrBrdf.js`が直接光BRDFを共有し、`PbrEnvironmentReference.js`がCPU参照値、`PbrEnvironmentCompute.js`がGPU resourceを生成します。Compute出力はstorage書込みとsamplingの両方に対応する`rgba16float`です。BRDF LUTもR/Gだけを使う`rgba16float`とし、未使用channelを照明へ混ぜません。IBLを指定した場合は一様`ambient`を0にする必要があり、irradiance、prefiltered specular、BRDF LUT、sampler、mip数の一部が欠けていると例外になります。
+コア側では`PbrBrdf.js`が直接光BRDFを共有し、`PbrEnvironmentReference.js`がCPU参照値、`PbrEnvironmentCompute.js`がGPU resourceを生成します。Compute出力はstorage書込みとsamplingの両方に対応する`rgba16float`です。BRDF LUTも`rgba16float`とし、R/G channelを照明計算へ使います。IBLを指定した場合は一様`ambient`を0にする必要があり、irradiance、prefiltered specular、BRDF LUT、sampler、mip数の一部が欠けていると例外になります。
 
 実行にはWebGPU対応ブラウザとHTTP serverが必要です。repository rootでserverを起動し、`/samples/pbr_reference/pbr_reference.html`を開きます。
 
@@ -79,4 +79,4 @@ node headless_tests/core/pbr_environment_debug_pass/headless_probe.js
 node headless_tests/core/pbr_environment_evaluation/headless_probe.js
 ```
 
-透明forward shaderは、GGX直接光、base colorとnormal、metallic-roughness、occlusion、独立HDR emissive、texture alpha、IBL、directional／spot shadow、point／cone lightを扱います。局所光はDeferredと同じ相対減衰または逆二乗減衰を使います。occlusionは直接光と発光には掛けず、IBLの間接光だけを弱めます。shadowは不透明G-buffer位置のscreen-space visibilityを流用せず、透明fragmentのview-space位置からshadow mapをPCF参照します。`SmoothShader`には派生shaderが材質textureと追加Bind Groupを拡張するhookを加え、標準SmoothShaderのlayoutと表示はそのまま使います。
+透明forward shaderは、GGX直接光、base colorとnormal、metallic-roughness、occlusion、独立HDR emissive、texture alpha、IBL、directional／spot shadow、point／cone lightを扱います。局所光はDeferredと同じ相対減衰または逆二乗減衰を使います。occlusionは直接光と発光には掛けず、IBLの間接光だけを弱めます。shadowは透明fragmentのview-space位置からshadow mapをPCF参照し、その面へ届く直接光の可視率を求めます。`SmoothShader`には派生shaderが材質textureと追加Bind Groupを拡張するhookを加え、標準SmoothShaderのlayoutと表示はそのまま使います。

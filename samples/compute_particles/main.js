@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// samples/compute_particles/main.js  2026/09/23
+// samples/compute_particles/main.js  2026/10/25
 //   ComputeParticleEmitter based particle simulation sample
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -24,7 +24,7 @@ let pointerHelpVisible = false;
 let lastHelpText = "";
 
 // 標準Emitterの診断値と現在の表示モードを、Help panelへ渡す行へまとめる
-// estimatedAliveCountはGPU readbackではなく最大寿命に基づく予約数であることを表示する
+// estimatedAliveCount は、最大寿命に基づく粒子の予約数として表示する
 function buildHelpLines() {
   const diagnostics = emitter?.getDiagnostics();
   return [
@@ -39,7 +39,7 @@ function buildHelpLines() {
 }
 
 // 初期化後にHelp panelを作成し、標準Emitterの使い方を画面へ表示する
-// GPU初期化前は表示先がないため、初期化後だけ実行する
+// GPU の初期化後に、準備できた表示先へ状態を反映する
 function showHelpPanel() {
   if (!app) throw new Error("compute_particles help requires an initialized WebgApp");
   const lines = buildHelpLines();
@@ -56,7 +56,7 @@ function showHelpPanel() {
   lastHelpText = lines.join("\n");
 }
 
-// 毎frameの診断値を既存panelへ反映し、操作用のheader buttonを再生成しない
+// 毎frameの診断値を既存panelへ反映し、操作用のheader buttonは生成済みの要素を保つ
 // GPU上の粒子数を読み戻さず、標準APIの推定値をそのまま表示する
 function updateHelpPanel() {
   if (!app) return;

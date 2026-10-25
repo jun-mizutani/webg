@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// samples/maze/CollisionWorld.js  2026/07/07
+// samples/maze/CollisionWorld.js  2026/10/25
 //   XZ-plane collision world for walk-through samples
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -30,7 +30,7 @@ export class CollisionSegment {
 }
 
 // プレイヤー円柱の高さ範囲と、衝突線分の高さ範囲が交差しているかを判定する
-// ドア上の垂れ壁や天井付近の梁を、床上の歩行者に対して不要に衝突させないために使う
+// 床上の歩行者に当たる高さを持つ壁を選び、ドア上の垂れ壁や天井付近の梁と区別する
 export function overlapsPlayerHeight(player, segment) {
   const playerMinY = player.y;
   const playerMaxY = player.y + player.height;
@@ -83,7 +83,7 @@ export function resolveCircleSegment(player, segment) {
 }
 
 // 歩行用の衝突線分をUniform Gridへ登録し、移動中に近傍線分だけを検索する
-// 建物全体を毎フレーム総当たりしないため、線分のAABBが重なるセルへindexを登録しておく
+// 線分のAABBが重なるセルへindexを登録し、毎フレームは近隣セルの壁だけを検索する
 export default class CollisionWorld {
   // セルサイズと診断用カウンタを初期化する
   // 診断値はHUDやgetStateから確認でき、衝突判定が効いているかをその場で追跡できる
@@ -117,7 +117,7 @@ export default class CollisionWorld {
   }
 
   // 線分のAABBが重なる全セルへ同じsegment indexを入れる
-  // 長い塀や斜め壁でも取りこぼさないよう、初期実装ではDDAではなくAABB登録を使う
+  // 長い塀や斜め壁を通る候補 cell を調べるため、壁の AABB を各 cell へ登録する
   registerSegment(index, segment) {
     const minX = Math.min(segment.ax, segment.bx);
     const maxX = Math.max(segment.ax, segment.bx);

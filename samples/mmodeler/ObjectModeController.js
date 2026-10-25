@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// samples/mmodeler/ObjectModeController.js  2026/07/25
+// samples/mmodeler/ObjectModeController.js  2026/10/25
 //   object mode controller for mmodeler
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -58,7 +58,7 @@ function multiplyQuatXyzw(a, b) {
 }
 
 // Object Mode の object selection と object list 操作を扱う
-// mesh geometry の編集や Edit Mode の vertex / face selection は担当しない
+// Object Modeはobjectの変換と選択を担当し、meshの頂点と面はEdit Modeへ渡す
 export default class ObjectModeController {
   constructor({
     scene,
@@ -192,7 +192,7 @@ export default class ObjectModeController {
   }
 
   // Object Mode transform session の開始時点の transform state を保存する
-  // mesh geometry は保存せず、Object Mode が直接変更する origin / rotation / scale だけを保持する
+  // Object Modeで変更するorigin / rotation / scaleを保持し、geometryはmesh側で管理する
   createObjectTransformSnapshot(objects) {
     if (!Array.isArray(objects)) {
       throw new Error("createObjectTransformSnapshot requires objects array");
@@ -217,7 +217,7 @@ export default class ObjectModeController {
   }
 
   // Object Mode の drag preview を object transform state へ反映する
-  // vertices / faces は object local geometry の正本なので、この method では変更しない
+  // vertices / facesはobject local geometryの正本としてmesh側で保持する
   applyObjectTransformPreview({
     mode,
     objects,

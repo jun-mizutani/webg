@@ -1,6 +1,6 @@
 # Appendix D: webg 3.0 API Catalog
 
-This catalog helps locate public APIs in webg 3.0 by feature. The catalog covers webg 3.0. Check settings, defaults, and exception conditions against the current implementation, samples, and headless tests.
+This catalog helps locate public APIs in webg 3.0 by feature. Check settings, defaults, and exception conditions against the current implementation, samples, and headless tests.
 
 For a first application, begin with `05_AppStructure.md`. For renaming and architectural changes from earlier versions, see [Appendix B: Migration to webg 3.0](Appendix_B_Migration.md).
 
@@ -70,7 +70,7 @@ import {
 - **`ModelAsset`**
   - Description: Stores reusable model structure, source, and comments
 - **`compressSceneYAML(text)`**
-  - Description: Returns a gzip-compressed UTF-8 source document as `Promise<Blob>`
+  - Description: Gzip-compresses the source text, including comments; returns `Promise<Blob>`
 - **`ScenePhysics`**
   - Description: Scene-oriented physics facade for CPU and Compute backends
 - **`PbrRenderer`**
@@ -509,7 +509,7 @@ Primitive `materials[]` can specify `color`, `metallic`, `roughness`, `specular`
 | --- | --- |
 | `color` | RGBA base color in the 0–1 range |
 | `metallic` | Metal contribution, 0–1 |
-| `roughness` | Specular roughness, 0–1 |
+| `roughness` | PBR specular roughness, 0.04–1 |
 | `specular` | Dielectric specular amount |
 | `occlusion` | Environment occlusion |
 | `emissive`, `emissiveFactor` | Linear HDR emission separate from lighting |
@@ -762,7 +762,7 @@ For compute-first frames, combine `new WebgApp({ computeFrame: true })` with `st
   - Main APIs: `sphere()`, `capsule()`, `cuboid()`, `cone()`, `revolution()`, `mapRealCuboid()`
   - Role: Geometry generation and real-scale UVs
 - **`Screen`**
-  - Main APIs: `beginPass()`, `endPass()`, `submit()`, `resize()`, `beginPresentPass()`
+  - Main APIs: `clear()`, `beginPass()`, `present()`, `resize()`, `beginPresentPass()`
   - Role: Canvas, render targets, and command submission
 
 To create a Shape, generate geometry with `Primitive`, pass it to `Shape.applyPrimitiveAsset()`, then finalize GPU resources with `Shape.endShape()`. Use `setMaterial()` for one material or `setMaterialAt()` and triangle material indices for multiple materials.
@@ -798,7 +798,7 @@ The ordinary camera uses Reverse-Z; shadow maps use Standard-Z. Match depth form
   - Main APIs: `setUniforms()`, `encode()`, `destroy()`
   - Role: Connects custom WGSL and storage resources
 - **`DeferredLightingPass`**
-  - Main APIs: `encode()`, `destroy()`
+  - Main APIs: `encode()`, `resize()`, `destroy()`
   - Role: Computes direct light and IBL from the G-buffer
 - **`FullscreenPass`**
   - Main APIs: `draw()`, `destroy()`

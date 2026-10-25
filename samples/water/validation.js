@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// validation.js  2026/10/04
+// validation.js  2026/10/25
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
 // ---------------------------------------------
@@ -110,7 +110,7 @@ export async function verify({ app, gpu, pipeline, scene, body, ledger, render }
     check("OFFの専用buffer/textureは0", ledger.snapshot().logicalBytes === 0, ledger.snapshot());
     const created = JSON.stringify(ledger.snapshot().created);
     render(); render();
-    check("OFF frameは追加GPU資源を生成しない", JSON.stringify(ledger.snapshot().created) === created);
+    check("OFF frameの追加GPU資源生成数は0", JSON.stringify(ledger.snapshot().created) === created);
     check("通常照明は17binding", basePass.bindings.length === 17);
     await configure(false, true);
     for (const [name, target] of Object.entries({ floor: scene.floor, sphere: scene.objects.sphere.node,
@@ -134,13 +134,13 @@ export async function verify({ app, gpu, pipeline, scene, body, ledger, render }
     const opaque = await image();
     const water = await read(gpu, pipeline.waterSystem.surface.output);
     check("水面だけでもHDRが変わる", difference(water, baseline).maximum > 0.01);
-    check("水面は不透明PBR画像を変更しない", difference(opaque, baseline).maximum === 0);
+    check("水面処理は元の不透明PBR画像を保持する", difference(opaque, baseline).maximum === 0);
     check("水面のHDRは有限", water.every(Number.isFinite));
     const originalDepth = await readDepth(gpu, pipeline.gbuffer.getBindingResources().depth);
     const waterDepth = await readDepth(gpu, pipeline.waterSystem.surface.depth);
     const changed = waterDepth.filter((v, i) => v > originalDepth[i] + 1e-6).length;
     check("後段用の深度に水面が入る", changed > 1000, { changed });
-    check("水面深度は不透明面より奥へ後退しない", waterDepth.every((v, i) => v >= originalDepth[i] - 1e-6));
+    check("水面深度は不透明面と同じか手前を保つ", waterDepth.every((v, i) => v >= originalDepth[i] - 1e-6));
     check("Tone Mapの関数を差し替えない", pipeline.toneMapPass.encode === toneMapEncode);
     body.setOptions({ ior: 1, absorption: [0, 0, 0] });
     await image();

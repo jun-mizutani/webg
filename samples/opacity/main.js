@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// samples/opacity/main.js  2026/08/11
+// samples/opacity/main.js  2026/10/25
 //   Mixed opaque/translucent Shape with deferred color effects
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -24,7 +24,7 @@ const controlledTranslucentMaterials = [];
 const animatedNodes = [];
 
 // opaqueのDeferred Lightingと透明forward描画で共通の明るさ基準を使う
-// pipeline生成時とframeごとのencode時へ同じ値を渡し、UI操作で差が生じないよう固定する
+// pipeline 生成時と各 frame の encode 時へ、UI が保持する同じ値を渡す
 const lightingSettings = Object.freeze({
   ambient: 0.18,
   directionalIntensity: 1.25
@@ -47,7 +47,7 @@ const state = {
 };
 
 // G-bufferが必要とするsurface値と、透明分類に使うalphaを一つのmaterial定義にする
-// color[3]はtexture混合係数なので透明度には使わず、alphaを独立して指定する
+// color[3]はtexture混合係数、alphaは透明度として、それぞれ独立した値を指定する
 function createMaterial(color, options = {}) {
   return {
     has_bone: 0,
@@ -65,7 +65,7 @@ function createMaterial(color, options = {}) {
 }
 
 // 1つのShapeへmaterial slot 0と1を登録し、checker状にtriangleを割り当てる
-// 頂点は隣接cellで共有するがmaterial番号はtriangle単位なので、共有頂点を複製する必要はない
+// 頂点を隣接 cell で共有し、triangle ごとの material 番号で材質を指定する
 function createMixedPanel(gpu) {
   const shape = new Shape(gpu);
   shape.setMaterial("smooth-shader", createMaterial([0.95, 0.50, 0.12], {
@@ -111,7 +111,7 @@ function createMixedPanel(gpu) {
   return shape;
 }
 
-// Primitive由来Shapeへ、G-bufferで省略できないmaterial値を明示してopaque物体を作る
+// Primitive由来ShapeへG-bufferに必要なmaterial値をそろえ、不透明物体を作る
 function createOpaquePrimitive(gpu, primitiveAsset, color, options = {}) {
   const shape = new Shape(gpu);
   shape.applyPrimitiveAsset(primitiveAsset);
@@ -205,7 +205,7 @@ function createScene() {
   animatedNodes.push(addShapeNode("rear-cube", rearCube, [4.8, -1.1, -7.0], [18, 24, 0]));
 
   // 中央手前のトーラスは独立した透明Shapeとし、パネルとは別のalphaを保つ
-  // 異なるShapeの透明面が重なっても、利用側で追加のRender Passを構成する必要はない
+  // Shape をまたぐ透明面の合成も、接続した pipeline に任せる
   // major radiusとtube radiusの和を1.5にして、置き換え前の立方体と外径をそろえる
   foregroundTorusShape = createTranslucentPrimitive(
     gpu,
@@ -233,7 +233,7 @@ function createScene() {
 }
 
 // checkboxとrangeをstateへ結び、透明度と表面粗さを描画中のmaterialへ反映する
-// 共通の対象一覧を使い、市松パネルとトーラスで一方だけ更新を忘れない構成にする
+// 共通の対象一覧から、市松パネルとトーラスをまとめて更新する
 function bindControls() {
   const checkboxIds = ["ssao", "shadow", "ssr", "toon", "dof", "bloom", "edge", "pause"];
   for (const id of checkboxIds) {
@@ -279,7 +279,7 @@ function reportError(error) {
   console.error("opacity sample failed:", error);
 }
 
-// WebgAppはframe、camera、present passを管理し、ComputeEffectPipelineは追加passをsample側へ露出しない
+// WebgAppがframe、camera、present passを管理し、ComputeEffectPipelineが追加passを管理する
 async function start() {
   app = new WebgApp({
     document,

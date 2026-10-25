@@ -26,7 +26,7 @@ A HUD puts a score or short status value on the canvas. A DOM overlay builds lon
 
 Chapter 12 presented UI selection from the user's point of view: `Message` for concise status, `OverlayPanel` for text to read, `Diagnostics` / `DebugDock` for investigation records, and `Touch` for touch input. This chapter turns those guidelines into implementation. It focuses on the options, updates, placement, and modal behavior of `CommandPalette`, the GPU-rendered HUD (`Text` / `Message`), and the DOM (Document Object Model) `OverlayPanel`. Chapter 14 covers input gestures.
 
-The following sections explain the technical distinction between the canvas HUD and DOM overlay, trace the drawing path from `Text` to `Message`, and show how to build and manage `CommandPalette`. They also cover the DOM structure of `OverlayPanel`, how options affect it, which overlay responsibilities belong to `WebgApp`, and how themes and embedded layouts are handled. The final sections offer implementation checks and relevant unit-test references.
+The following sections begin with the display surfaces, then implement `CommandPalette`, its state management, and page structure. They next trace `Text` and `Message` updates and drawing, followed by the DOM structure of `OverlayPanel`, its options, `WebgApp` responsibilities, themes, and embedded layouts.
 
 ## Display Surfaces and Design Rationale
 
@@ -342,17 +342,17 @@ app.showOverlayPanel({
 });
 ```
 
-The update loop can read the panel state and control updates accordingly:
+At the start of `onUpdate`, read the panel state and control application-specific game updates:
 
 ```js
 const pausePanel = app.getOverlayPanel("pause-menu");
 const pauseState = pausePanel?.getState?.();
 if (pauseState?.visible && pauseState.pauseScene) {
-  return false; // Skip this update
+  return false; // Defer the remaining updates in this callback
 }
 ```
 
-This separation leaves the timing of the pause under application control.
+Returning `false` still allows 3D drawing, HUD updates, and `WebgApp`-managed tweens and animations to continue. If physics or animation playback also needs to pause, call its specific update or pause API. Keep panel presentation separate from the game-time owner so the menu remains interactive while gameplay is paused. Chapter 12 shows the same separation from the UI-design perspective.
 
 ## Centralized Management with `WebgApp`
 

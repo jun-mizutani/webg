@@ -1,6 +1,6 @@
 # 付録D　webg 3.0 API一覧
 
-この付録は、webg 3.0で利用できる公開APIを機能別に調べるための参照資料です。現行版は`3.0.0 alpha`です。設定値、既定値、例外条件は、対応する現行実装、サンプル、headless testと合わせて確認してください。
+この付録は、webg 3.0で利用できる公開APIを機能別に調べるための参照資料です。設定値、既定値、例外条件は、対応する現行実装、サンプル、headless testと合わせて確認してください。
 
 初めてアプリを作る場合は、`05_WebgAppによるアプリ構成.md`から始めます。旧名から3.0の名称へ移行する場合は、`付録B_webg_1.0・2.0から3.0への移行.md`を参照してください。
 
@@ -83,7 +83,7 @@ import {
 | `DocumentAsset` | SceneAssetとModelAssetに共通する文書入出力の基底クラス |
 | `SceneAsset` | 作品全体の設定、原文、コメントを保持 |
 | `ModelAsset` | 再利用するモデルの構造、原文、コメントを保持 |
-| `compressSceneYAML(text)` | 原文とコメントをgzip圧縮した`Promise<Blob>`を返す |
+| `compressSceneYAML(text)` | 原文をコメントごとgzip化。`Promise<Blob>` |
 | `ScenePhysics` | CPU／Compute backendをまとめるscene向け物理facade |
 | `PbrRenderer` | PBR環境、遅延照明、画面効果、最終表示 |
 | `WaterBody` | 水域・波・吸収係数と受光対象の登録 |
@@ -802,7 +802,7 @@ primitiveの`materials[]`では、`color`、`metallic`、`roughness`、`specular
 |---|---|
 | `color` | base color。RGBAの0〜1 |
 | `metallic` | 金属成分。0〜1 |
-| `roughness` | 鏡面反射の粗さ。0〜1 |
+| `roughness` | PBR鏡面反射の粗さ。0.04〜1 |
 | `specular` | 非金属の鏡面反射量 |
 | `occlusion` | 環境光の遮蔽量 |
 | `emissive`、`emissiveFactor` | 照明とは独立した線形HDR発光 |
@@ -870,7 +870,7 @@ Shape優先、Nodeでは最も近い親の登録を使う。対象は不透明�
 
 受光対象を全解除。GPU資源の接続・解放はrendererが担当する。
 
-初版の集光は鉛直入射光と水平照度画像の投影近似。
+集光は鉛直入射光と水平照度画像の投影近似。
 水面表示は有限の水平水域を上から見る用途で、水中カメラの描画は含まない。
 
 ## 5. ScenePhysicsと物理API
@@ -1152,7 +1152,7 @@ Compute-firstのframeでは、`new WebgApp({ computeFrame: true })`と`start({ o
 
 **`Screen`**
 
-主なAPI：`beginPass()`、`endPass()`、`submit()`、`resize()`、`beginPresentPass()`
+主なAPI：`clear()`、`beginPass()`、`present()`、`resize()`、`beginPresentPass()`
 
 役割：canvas、render target、command submit
 
@@ -1194,7 +1194,7 @@ Shapeの作成では、`Primitive`でgeometryを生成し、`Shape.applyPrimitiv
 
 **`DeferredLightingPass`**
 
-主なAPI：`render()`、`destroy()`
+主なAPI：`encode()`、`resize()`、`destroy()`
 
 役割：G-bufferから直接光とIBLを計算
 

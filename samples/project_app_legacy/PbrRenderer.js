@@ -1,5 +1,5 @@
 // ---------------------------------------------
-//  PbrRenderer.js  2026/09/23
+//  PbrRenderer.js  2026/10/25
 //   ProjectApp sample layer for a compact Deferred PBR presentation
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -78,7 +78,7 @@ const PBR_DOF_FOCUS_PUBLIC_KEYS = new Set([
 ]);
 
 // project renderer manifestで利用者が指定できるpipeline blockを固定します
-// ComputeEffectPipelineの低水準optionはこのmanifestへ直接公開せず、profileの既定値へ集約します
+// manifestのPBR設定をprofileの既定値へまとめ、ComputeEffectPipelineのoptionを内部で組み立てます
 export const PBR_PIPELINE_MANIFEST_KEYS = Object.freeze([
   "shadow",
   "ssao",
@@ -114,7 +114,7 @@ function requireKnownKeys(value, label, allowedKeys) {
 }
 
 // 環境presetと緯度経度画像の解像度を公開PBR設定として検証します
-// 2:1の比率を設定段階で確認し、環境生成時のサイズエラーを初期化後へ遅らせません
+// 環境生成に必要な 2:1 の比率を、設定を受け取った段階で検証します
 export function validatePbrEnvironmentOptions(value, label = "PbrRenderer environment") {
   const source = util.readPlainObject(value, label, {});
   requireKnownKeys(source, label, new Set(["preset", "resolution"]));

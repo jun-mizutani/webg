@@ -386,9 +386,9 @@ fn fsMain(input : VertexOutput) -> @location(0) vec4f {
 }
 ```
 
-`GpuParticleEmitter` dispatches `ceil(particleCount / workgroupSize)` workgroups. It does not read `@workgroup_size` from WGSL and update the JavaScript setting; change both values together.
+`GpuParticleEmitter` dispatches `ceil(particleCount / workgroupSize)` workgroups. Keep the JavaScript `workgroupSize` and WGSL `@workgroup_size` values in sync.
 
-Align the declared depth convention with the WGSL output. A mismatch reverses depth testing. Check that clip positions from the vertex shader, pipeline depth comparison, and clear value all use the same convention. The application explicitly defines the particle position fields in WGSL; Core reads the declared layout.
+Align the declared depth convention with the WGSL output. A mismatch reverses depth testing. Check that clip positions from the vertex shader, pipeline depth comparison, and clear value all use the same convention. `floatsPerParticle` sets the distance between particle records; the application WGSL interprets the meaning of each field.
 
 ### Share One GPU Buffer Between Update and Rendering
 

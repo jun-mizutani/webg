@@ -39,7 +39,3 @@ PBR with a studio environment gives the dies, punches and rollers visible metall
 - `tablet_machine.html` / `style.css`: interface and layout
 
 The 3D mechanism and section view share the results of `sampleCycle()`.
-
-## Reference
-
-The rotary tooling, cam-guided punches and filling/compression/ejection sequence follow the mechanism described in [Fette Compacting patent US20190039270A1](https://patents.google.com/patent/US20190039270A1/en).

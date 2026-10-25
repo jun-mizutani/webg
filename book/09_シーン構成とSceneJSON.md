@@ -144,8 +144,8 @@ SceneYAMLの主な項目は次のように整理できます。
 
 | 項目 | 役割 |
 | --- | --- |
-| `objects[]` | 作品上の物体、配置、親、primitiveまたはmesh参照、材質、物理body |
-| `objectSets[]` | prototype、variant、配置規則を使ったprimitiveのまとまった生成 |
+| `objects[]` | 物体の配置、親、形状参照、材質、物理body |
+| `objectSets[]` | prototype・variantと配置規則による一括生成 |
 | `meshes[]` | SceneYAML内で直接定義する表示用geometry |
 | `materials[]` | 色、metallic、roughness、specularなどのPBR値 |
 | `physics.space` | 重力、fixed step、solver、容量、平面などの空間設定 |

@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// ComputePhysicsCpuEmulator.js  2026/08/29
+// ComputePhysicsCpuEmulator.js  2026/10/25
 //   CPU mirror of the ComputePhysicsSpace path used by falling_dominoes
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -16,8 +16,8 @@ const DEFAULT_DIVERGENCE_LIMITS = Object.freeze({
 });
 
 // CPU側のVec3演算を一箇所へ集め、GPUの接触式と同じ式を追跡しやすくします
-// 配列長を補ったり非有限値を別値へ置き換えたりせず、呼出側の計算不成立をそのまま残します
-// 配列を新しく返し、solver途中の速度配列を別bodyの計算と共有しないようにします
+// 配列長と非有限値を含む呼出側の計算結果をそのまま保持し、比較時の検証へ渡します
+// 配列を新しく返し、solver途中の速度配列をbodyごとに独立して保持します
 function add3(a, b) {
   return [a[0] + b[0], a[1] + b[1], a[2] + b[2]];
 }
@@ -120,7 +120,7 @@ function computePlaneSupportBalance(activePoints, normal, position, tolerance) {
 }
 
 // webgのquaternionは[w,x,y,z]順なので、GPUのvec4(x=scalar,yzw=vector)式を配列へ対応させます
-// GPUとCPUで姿勢の成分順を取り違えると接触法線だけでなくBoxのAABBも変わるため、ここで固定します
+// 接触法線と Box の AABB を GPU と同じ姿勢から求めるため、成分順をここでそろえます
 // 二つの姿勢または角速度quaternionの積をGPUと同じ成分順で返します
 function quatMultiply(a, b) {
   return [
@@ -153,7 +153,7 @@ function quatRotate(orientation, value) {
 }
 
 // GPUのfixed stepと同じ有限回転Δq ⊗ qを行い、Broad Phase予測とsolver後姿勢で式を共有します
-// ここで別の角速度積分を使うと候補生成だけがずれて接触力積の比較ができなくなるためです
+// 候補生成時と solver 後の姿勢を同じ積分式で求め、接触力積を同じ条件で比較します
 function integrateOrientation(orientation, angularVelocity, dt) {
   const angularSpeed = length3(angularVelocity);
   if (angularSpeed === 0.0) {
@@ -175,7 +175,7 @@ function cloneArray(value) {
   return [...value];
 }
 
-// body stateの配列欄を複製し、source snapshotとnext stateを共有しないようにします
+// body stateの配列欄を複製し、source snapshotとnext stateを別々に保持します
 function cloneState(state) {
   return {
     ...state,
@@ -200,7 +200,7 @@ function cloneStage(stage) {
 }
 
 // 接触一回分の診断値を複製し、作用点・法線・角速度差を外部の解析処理へ安全に渡します
-// 物理計算用の配列を共有せず、readback比較と同じく診断側からsolver状態を書き換えられない形にします
+// 物理計算用の配列はsolver側、readback比較用の複製は診断側で保持します
 function cloneImpulseAudit(audit) {
   if (audit === null) return null;
   return {
@@ -219,7 +219,7 @@ function cloneImpulseAudit(audit) {
 }
 
 // 一body一fixed stepの接触履歴を複製し、後続bodyへ波及した順番を確認できるようにします
-// body接触とPlane接触を別配列に保持し、最終値だけから発生源を推測しないようにします
+// body接触とPlane接触を別配列へ保持し、力積の発生源を個別に確認できるようにします
 function cloneBodyTrace(trace) {
   if (trace === null) return null;
   return {
@@ -300,7 +300,7 @@ function createBoundaryPlanes(bounds) {
 }
 
 // GPUのComputePhysicsSpaceと同じ物理順序でBoxのworld軸半径を計算します
-// 姿勢の現在値と予測値を両方に渡すことで、回転中の候補を落とさないswept AABBになります
+// 現在姿勢と予測姿勢を使う swept AABB で、回転中の範囲も包みます
 function computeBoxWorldRadius(state, orientation) {
   const axes = [
     quatRotate(orientation, [1, 0, 0]),
@@ -386,7 +386,7 @@ function testSatAxis(axisInput, centerDelta, axesA, extentsA, axesB, extentsB, b
 }
 
 // GPUのcomputeBoxContactを15軸SATとsupport feature中点まで含めて再現します
-// CPU版のmanifoldを簡略化して使わず、最終contact pointの違いを比較へ残します
+// CPU版のmanifoldを元の構成のまま使い、最終contact pointの違いを比較へ残します
 function computeBoxContact(bodyA, positionA, orientationA, bodyB, tolerance) {
   const orientationB = quatNormalize(bodyB.orientation);
   const axesA = [
@@ -513,7 +513,7 @@ function predictWakeBody(body, command, config, dt, gravity) {
 }
 
 // GPUの一fixed step予測AABBを作り、XZ Gridとswept Yの最終候補条件をCPUで再現します
-// 全pairを無条件でsolverへ渡さず、GPUと同じく候補外接触を計算しない比較にします
+// GPUと同じ候補条件でpairをsolverへ渡し、両者の接触候補をそろえます
 function buildPredictedAabbs(states, commands, config) {
   const result = states.map((body, index) => {
     const orientation = quatNormalize(body.orientation);
@@ -566,7 +566,7 @@ function buildCandidates(states, aabbs, config) {
 }
 
 // Compute版Plane solverのBox support点、法線impulse、摩擦impulse、位置補正を一回分実行します
-// fixed step内の累積力積を受け取り、反復ごとに全量を再適用せず差分だけを速度へ加えます
+// fixed step内の累積力積を受け取り、各反復で求めた増分だけを速度へ加えます
 function solvePlaneContact(body, position, orientation, plane, planeIndex, linearVelocity, angularVelocity, iteration, config, accumulator) {
   const normal = plane.normal;
   const corners = computeBoxCorners(body, position, orientation);
@@ -645,7 +645,7 @@ function solvePlaneContact(body, position, orientation, plane, planeIndex, linea
       }
     }
   }
-  // 累積法線力積がある接触だけで摩擦を解き、摩擦力積が法線力を越えないようにします
+  // 累積法線力積がある接触で摩擦を解き、その大きさに比例する上限内へ摩擦力積を収めます
   if (accumulator.normalLambda > EPSILON) {
     const tangentSeed = Math.abs(normal[0]) > 0.5 ? [0, 1, 0] : [1, 0, 0];
     const tangentA = normalize3(cross3(normal, tangentSeed));
@@ -1055,7 +1055,7 @@ export default class ComputePhysicsCpuEmulator {
   }
 
   // 指定fixed step数だけCPU状態を進め、最後のB31 stageを返します
-  // 0 stepを許可し、GPU readbackが同一frame内に物理更新を含まない場合も比較状態を保持します
+  // GPU の物理更新が 0 step の frame では、比較側も現在の状態を保持します
   advance(stepCount) {
     if (!Number.isInteger(stepCount) || stepCount < 0) {
       throw new Error("ComputePhysicsCpuEmulator advance stepCount must be a non-negative integer");
@@ -1110,7 +1110,7 @@ export default class ComputePhysicsCpuEmulator {
   }
 
   // sleep bodyへ接触するawake bodyだけを走査し、現在接触または次fixed stepの接触で法線接近を判定します
-  // sleep中の隣接bodyをwake起点にせず、連鎖の直前bodyが既に接触している場合も取りこぼさないようにします
+  // activeなbodyをwake起点に使い、直前bodyの接触を含めてwakeの連鎖を調べます
   findWakeContact(index, source, commands, candidateIndices) {
     const body = source[index];
     let best = { contact: false, normalVelocity: 0, approachSpeed: 0, otherIndex: -1 };
@@ -1144,7 +1144,7 @@ export default class ComputePhysicsCpuEmulator {
   }
 
   // 一つのbodyの外部命令、減衰、接触solver、sleep判定をGPUの順番で実行します
-  // 計算順序を変更した近似結果を「GPU再現」と表示しないため、未対応形状は初期化時に拒否します
+  // 初期化時に対象形状を検証し、範囲外の形状は例外で通知してGPUと同じ計算順序で比較します
   solveBody(index, source, commands, candidateIndices, traceEnabled = false) {
     const sourceBody = source[index];
     const command = commands[index];
@@ -1226,7 +1226,7 @@ export default class ComputePhysicsCpuEmulator {
     let peakSupportOtherSleeping = false;
     let wakeSolverSeed = sourceWasSleeping && wakeAudit.awake;
     // GPUのPlaneごとのfunction-local accumulatorをCPU側でもfixed step単位で保持します
-    // solver反復で全量を再適用せず、法線・摩擦力積の増分だけを同じ順序で反映します
+    // solver反復で求めた法線・摩擦力積の増分だけを、GPUと同じ順序で反映します
     const planeImpulseAccumulators = this.planes.map(() => ({
       normalLambda: 0,
       tangentLambdaA: 0,
@@ -1379,7 +1379,7 @@ export default class ComputePhysicsCpuEmulator {
       && floorSupportPoints >= this.config.minimumFloorSupportPoints
       && lowMotion;
     let sleepContactQuiet = quietContact || floorSupportLoadSettled;
-    // sleep中bodyとの微小な再接触だけでcounterを失わせず、active body接触では通常条件を適用します
+    // sleep中bodyとの微小な再接触ではcounterを維持し、active body接触では通常条件を適用します
     const sleepingContactsOnly = bodyContactObserved && !activeDynamicBodyContactObserved;
     const lowMotionWithSleepingContacts = sleepingContactsOnly
       && length3(linearVelocity) < this.config.wakeLinearSpeed
@@ -1424,8 +1424,8 @@ export default class ComputePhysicsCpuEmulator {
     };
   }
 
-  // 最新CPU状態をbody ID別に返し、GPU readbackとの差分計算が固定slotへ依存しないようにします
-  // 配列を直接公開せず、比較表示側がCPU状態を変更できない複製を返します
+  // 最新CPU状態をbody ID別に返し、GPU readbackとの比較対象をIDで対応付けます
+  // 比較表示側へ配列の複製を返し、solverの状態を独立して保持します
   getStates() {
     return new Map(this.states.map((state) => [state.id, Object.freeze(cloneState(state))]));
   }
@@ -1485,7 +1485,7 @@ export default class ComputePhysicsCpuEmulator {
   }
 
   // 最初に設定した比較限界を越えたreadback境界だけを保存し、接触連鎖で差分が増えた位置を追跡します
-  // GPU状態へ追従して差分を消す処理はせず、CPU独立計算の最初の崩れをそのまま残します
+  // CPU独立計算を継続し、GPU状態との差分が生じ始める時点を診断へ残します
   recordFirstDivergence(phase, fixedStep, comparison) {
     if (this.firstDivergence !== null) return;
     const limits = this.config.divergenceLimits;
@@ -1503,7 +1503,7 @@ export default class ComputePhysicsCpuEmulator {
   }
 
   // readback境界の前後でCPUを比較し、進めたfixed step数とB31途中速度を一つにまとめます
-  // GPU stateをCPUへコピーして一致させる処理はせず、差分が拡大する時点をそのまま診断へ渡します
+  // GPUとCPUを独立して計算し、両者の差分が拡大する時点を診断へ渡します
   compareAndAdvance(preGpuStates, postGpuStates, stepCount, preFixedStepCount = null) {
     if (preFixedStepCount !== null) {
       if (!Number.isInteger(preFixedStepCount) || preFixedStepCount < 0) {
@@ -1514,7 +1514,7 @@ export default class ComputePhysicsCpuEmulator {
           `ComputePhysicsCpuEmulator timeline moved backwards: cpu=${this.fixedStepCount} gpu=${preFixedStepCount}`
         );
       }
-      // readbackがCPU計算より先に進んだ場合は、途中のGPU stateを補正入力にせずCPUだけを同じstep数まで追い付きます
+      // readbackがCPU計算より先へ進んだ場合は、CPUの独立計算を同じstep数まで進めます
       const catchUpSteps = preFixedStepCount - this.fixedStepCount;
       if (catchUpSteps > 0) this.advance(catchUpSteps);
     }

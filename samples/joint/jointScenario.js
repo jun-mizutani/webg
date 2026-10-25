@@ -1,5 +1,5 @@
 // ---------------------------------------------
-//  samples/joint/jointScenario.js  2026/08/26
+//  samples/joint/jointScenario.js  2026/10/25
 //   Common scenario definitions for CPU and Compute Joint samples
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -56,7 +56,7 @@ export const PENDULUM_WEIGHT_POSITION = [
 export const PENDULUM_WEIGHT_RADIUS = 0.18;
 
 // 支点と球を画面上でつなぐ質量なしの表示用Capsuleの寸法です
-// 物理bodyへ登録せず、各sampleのDistanceJoint anchorから姿勢だけを更新します
+// 各sampleのDistanceJoint anchorに合わせて、表示専用Nodeの姿勢を更新します
 // そのためconnectorは重力、接触、Joint solverへ影響を与えず、振り子の状態を説明する描画要素だけになります
 export const PENDULUM_CONNECTOR_RADIUS = 0.0175;
 export const PENDULUM_CONNECTOR_SEGMENT_LENGTH = PENDULUM_DISTANCE

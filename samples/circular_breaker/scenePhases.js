@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// samples/circular_breaker/scenePhases.js  2026/09/20
+// samples/circular_breaker/scenePhases.js  2026/10/25
 //   circular_breaker sample
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -160,7 +160,7 @@ export const createScenePhaseController = ({
   };
 
   // play は実ゲーム中の標準 phase
-  // pause 復帰時は毎回 go voice が重複しないよう前 phase を見て抑制する
+  // 前phaseを確認し、go voiceはゲーム開始のphaseへ入ったときに鳴らす
   const enterPlay = ({ machine }) => {
     const previousPhase = machine.currentTransition?.from ?? null;
     if (previousPhase !== "pause") {

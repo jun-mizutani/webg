@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// samples/compute_physics/cpu_main.js  2026/09/23
+// samples/compute_physics/cpu_main.js  2026/10/25
 //   PhysicsSpace mixed-shape comparison sample
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -80,7 +80,7 @@ function createCpuPhysicsSpace() {
 }
 
 // 共通shape descriptorをCPU Colliderへ変換します
-// shape.typeを寸法から推測せず、Compute版と同じ明示的な形状種別をPhysicsNodeへ渡します
+// 明示されたshape.typeをPhysicsNodeへ渡し、Compute版と同じ形状種別で比較します
 function createCpuCollider(shape) {
   if (shape.type === "box") return new BoxCollider(shape.size);
   if (shape.type === "sphere") return new SphereCollider(shape.radius);
@@ -178,7 +178,7 @@ function createCpuPlaneNodes(physics) {
 }
 
 // Compute版の床境界に対応する薄い床板を表示用の通常Nodeとして作ります
-// 物理Planeは無限面なので、四壁を厚いShapeで描いてbodyを遮らないよう床だけを表示します
+// 無限の物理 Plane で境界を扱い、表示は body を観察しやすい床だけに絞ります
 function createBoundaryVisuals() {
   const { minX, maxX, minZ, maxZ, floorY } = COMPUTE_PHYSICS_BOUNDS;
   const width = maxX - minX;
@@ -226,7 +226,7 @@ function createRuntime() {
 }
 
 // CPU PhysicsNodeのsleep flagをShapeの明るさへ反映し、停止状態をCompute版と同じ画面で見分けます
-// 速度や位置を描画用に補正せず、物理Nodeが返すsleep状態だけを使います
+// 物理Nodeが返す位置・速度をそのまま描画し、sleep状態を表示色へ反映します
 function updateBodyColors() {
   let changed = false;
   for (const entry of runtime.entries) {
@@ -280,7 +280,7 @@ function recordPhysicsTiming(elapsedMs, stepCount) {
 }
 
 // 直近のCPU physics計測値から中央値を返します
-// 一時的なGCやwindow resizeの影響を平均値だけで判断しないため、中央値を速度比較へ使います
+// GCやwindow resizeによる一時的な変動をならすため、速度比較には中央値を使います
 function getMedianPhysicsMs() {
   if (runtime.timing.length === 0) return null;
   const sorted = [...runtime.timing].sort((a, b) => a - b);
@@ -310,7 +310,7 @@ function buildHelpLines(stats = runtime.stats ?? readStatistics()) {
   ];
 }
 
-// HUDに表示する物理状態だけから比較キーを作り、時間計測値の変化ではDOM更新を起こさないようにします
+// HUD の物理状態から比較 key を作り、状態が変わった時点で DOM を更新します
 // active数や接触数が同じfixed stepで維持される間は、物理計算を続けてもHUD本文を再利用します
 function getHelpStateKey(stats) {
   return [
@@ -369,7 +369,7 @@ function applyAction(key) {
 }
 
 // 停止中のCPUサンプルを入力やpanel操作の一回描画だけで再開します
-// app.requestRender()は停止後には機能しないため、停止中だけ同じframe handlerでstartします
+// 停止中はstart()で同じframe handlerを再開し、動作中はapp.requestRender()で描画を要求します
 function requestCpuRender() {
   if (!app) return false;
   if (app.running) return app.requestRender();
@@ -395,7 +395,7 @@ function attachIdleRenderListeners() {
   }
 }
 
-// pagehide時にsleep後の再描画listenerを解除し、破棄後のcanvasへ処理を送らないようにします
+// pagehide 時に再描画 listener を解除し、canvas と GPU 資源の破棄を進めます
 function detachIdleRenderListeners() {
   const canvas = app?.screen?.canvas;
   if (canvas) {
@@ -479,7 +479,7 @@ async function start() {
 }
 
 // HTML解析完了後に初期化を開始し、失敗理由をconsoleとerror panelへ表示します
-// CPU処理を空の状態へ切り替えて続行せず、同じ条件で比較できない場合は明示的に停止します
+// CPUとComputeの比較条件を検証し、計算を継続できる構成で動作を開始します
 document.addEventListener("DOMContentLoaded", () => {
   start().catch((error) => {
     console.error("compute_physics CPU failed:", error);

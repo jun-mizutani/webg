@@ -1,5 +1,5 @@
 // ---------------------------------------------
-// samples/compute_physics/main.js  2026/09/23
+// samples/compute_physics/main.js  2026/10/25
 //   ComputePhysicsSpace mixed-shape comparison sample
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -34,7 +34,7 @@ const SCENARIO = createComputePhysicsScenario();
 const BODY_COUNT = COMPUTE_PHYSICS_BODY_COUNT;
 const BOUNDS = COMPUTE_PHYSICS_BOUNDS;
 
-// 起動時のdebug指定をURLから読み取り、release起動で不要なdebug UIを表示しないために使います
+// URLのdebug指定に従って起動し、debug UIを表示する条件を決めます
 // 値を省略した場合だけfalseとし、0/1以外の指定は入力ミスとしてstart()のエラー表示へ渡します
 function readStartupFlag(name) {
   const value = new URLSearchParams(window.location.search).get(name);
@@ -152,7 +152,7 @@ fn buildVertex(input : VertexInput, instanceIndex : u32, expectedType : f32) -> 
 }`;
 
 // 箱型simulation範囲をline-listで描くためのshaderです
-// 物理Planeと同じ座標を使い、接触境界が見た目とずれていないかを確認できます
+// 物理 Plane と同じ座標で描き、接触境界と見た目の対応を確認できます
 const BOUNDS_SHADER = `
 struct RenderParams { projection : mat4x4f, view : mat4x4f, light : vec4f };
 @group(0) @binding(0) var<uniform> params : RenderParams;
@@ -175,7 +175,7 @@ function createBodies() {
 }
 
 // 共通scenarioのPlane descriptorをCompute版の固定Planeへ変換します
-// boundsから暗黙に再生成せず、CPU版と同じ5枚の境界入力を明示的に使用します
+// CPU版と同じ5枚の境界を明示的な入力として使用します
 function createPlanes() {
   return SCENARIO.world.planes.map((plane) => new ComputePlaneCollider(plane.normal, {
     planeDistance: plane.planeDistance
@@ -204,7 +204,7 @@ function createUnitCapsuleShape() {
 }
 
 // 物理boundsの床から表示上限までの8頂点と12辺をline-list順へ展開します
-// ceiling Planeは持たないため、上辺は空間サイズを読む目安としてだけ表示します
+// 上辺を空間サイズの目安として描き、物理境界は床と側面の Plane で扱います
 function buildBoundsVertices(maxY = 6.2) {
   const min = [BOUNDS.minX, BOUNDS.floorY, BOUNDS.minZ];
   const max = [BOUNDS.maxX, maxY, BOUNDS.maxZ];
@@ -219,7 +219,7 @@ function buildBoundsVertices(maxY = 6.2) {
 // ComputePhysicsSpaceの2本のstate bufferを直接読むBox/Sphere/Capsule描画を管理します
 // command submitは行わず、WebgAppのcomputeFrameがComputeとRenderを一つのencoderへ順に記録します
 class ComputePhysicsRenderer {
-  // mesh、state buffer、canvas formatを受け取り、frame中に再生成しないGPU resourceを準備します
+  // mesh、state buffer、canvas formatを受け取り、frame間で保持するGPU resourceを準備します
   constructor(gpu, options) {
     this.gpu = gpu;
     this.device = gpu.device;
@@ -291,7 +291,7 @@ class ComputePhysicsRenderer {
   }
 
   // WebgAppのprojectionとcamera world matrixから作ったviewをuniformへ転送します
-  // 物体ごとの姿勢や位置は転送せず、最新BodyStateはStorage Bufferからvertex shaderが読みます
+  // 最新BodyStateの位置と姿勢は、vertex shaderがStorage Bufferから直接読みます
   writeCamera(projection, view) {
     const data = new Float32Array(RENDER_PARAM_FLOATS);
     data.set(projection.mat, 0);
@@ -345,7 +345,7 @@ class ComputePhysicsRenderer {
 // body位置や姿勢はCPUへ戻さず、panel表示に必要なactive/sleeping/Box/Sphere/Capsule件数だけを取得します
 class ComputePhysicsBodyStats {
   // 2本のping-pong state bufferへ対応するbind groupと、集計・readback bufferを準備します
-  // body最大数ではなく実際のbodyCountだけをdispatch対象とし、使用中stateだけを統計へ含めます
+  // 実際の bodyCount を dispatch 対象にして、使用中の state を統計へ含めます
   constructor(gpu, stateBuffers, bodyCount) {
     this.device = gpu.device;
     this.bodyCount = bodyCount;
@@ -433,7 +433,7 @@ fn countMain(@builtin(global_invocation_id) id : vec3u) {
   }
 
   // 前回readbackが完了しているframeだけ、counter clear、body集計、20 byte copyを記録します
-  // readback待ちのbufferへ再度copyせず、map中resourceの競合を避けます
+  // 前回のmapが完了したbufferへ次のcopyを記録し、readback resourceを順番に再利用します
   encode(encoder, state) {
     if (this.readbackPending) return false;
     const bindGroup = this.bindGroups[state.bufferIndex];
@@ -453,8 +453,8 @@ fn countMain(@builtin(global_invocation_id) id : vec3u) {
     return true;
   }
 
-  // reset後に古い統計readbackを新しいbody配置へ適用しないため世代を進めます
-  // 進行中のmapAsyncは完了まで待ち、完了時に世代が一致しない結果だけを破棄します
+  // reset時に世代を進め、新しいbody配置と同じ世代の統計readbackだけを採用します
+  // 進行中のmapAsyncは完了まで待ち、同じ世代の結果を表示へ反映します
   reset() {
     this.generation += 1;
     this.resolvedGeneration = -1;
@@ -491,7 +491,7 @@ fn countMain(@builtin(global_invocation_id) id : vec3u) {
   }
 
   // 最新の完了済み集計値を返し、進行中readbackの途中値を分けて管理します
-  // readback errorも同時に返し、panel側が統計を利用可能と誤表示しないようにします
+  // readback errorも同時に返し、panelへ統計の取得状態を正確に伝えます
   getValues() {
     return {
       ...this.values,
@@ -508,7 +508,7 @@ fn countMain(@builtin(global_invocation_id) id : vec3u) {
 }
 
 // 現在のsimulation状態と操作を折りたたみ可能なhelp panel用の行へ変換します
-// panelを閉じた状態を既定にし、bodyの動きを起動直後から隠さないようにします
+// 起動時は panel を閉じ、body の動きを画面全体で見られるようにします
 function buildHelpLines() {
   const stats = bodyStats?.getValues();
   return [
@@ -550,7 +550,7 @@ function updateHelpPanel(initial = false) {
 }
 
 // 完了済み統計の数値だけを比較し、body状態が変わったときだけHUD更新を要求します
-// frame時間やfixed step数を毎frameで文字列化せず、readback結果や操作を表示更新の契機にします
+// readbackの完了や操作を契機に文字列を作り、panelのframe時間とfixed step数を更新します
 function refreshHelpPanelIfNeeded() {
   const stats = bodyStats?.getValues();
   if (stats) {
@@ -574,7 +574,7 @@ function refreshHelpPanelIfNeeded() {
 }
 
 // keyboardとtouch buttonから共通利用するpause、reset、panel操作を処理します
-// 未定義keyは何も変更せず、WebgApp側のcamera操作へ渡せる状態を保ちます
+// sampleが扱うkeyだけを更新し、その他のkeyはWebgApp側のcamera操作へ渡します
 function applyAction(key) {
   const normalized = key === " " ? key : String(key).toLowerCase();
   if (normalized === "p" || normalized === " ") paused = !paused;
@@ -597,7 +597,7 @@ function applyAction(key) {
 }
 
 // 停止中のComputeサンプルを入力やpanel操作の一回描画だけで再開します
-// app.requestRender()は停止後には機能しないため、停止中だけ同じframe handlerでstartします
+// 停止中はstart()で同じframe handlerを再開し、動作中はapp.requestRender()で描画を要求します
 function requestComputeRender() {
   if (!app) return false;
   if (app.running) return app.requestRender();
@@ -623,7 +623,7 @@ function attachIdleRenderListeners() {
   }
 }
 
-// pagehide時にsleep後の再描画listenerを解除し、破棄後のcanvasへ処理を送らないようにします
+// pagehide 時に再描画 listener を解除し、canvas と GPU 資源の破棄を進めます
 function detachIdleRenderListeners() {
   const canvas = screen?.canvas;
   if (canvas) {
@@ -650,7 +650,7 @@ function resizeViewport() {
 // WebgApp、core physics、単位mesh、直接描画rendererを順に初期化してframe処理を開始します
 // ComputeとRenderを同じcommand encoderへ記録し、queue submit後のCPU readbackは診断時に分離します
 async function start() {
-  // debug=1はDebugDockを含むdebug起動を選びます。GPU validation scopeはrelease/debugを問わず開始しません
+  // debug=1はDebugDockを含むdebug起動を選びます。両起動方式ともGPU resourceの検証結果はWebGPUの標準通知で受け取ります
   const startupDebugMode = readStartupFlag("debug");
   app = new WebgApp({
     document, computeFrame: true, autoDrawScene: false, clearColor: CLEAR_COLOR,

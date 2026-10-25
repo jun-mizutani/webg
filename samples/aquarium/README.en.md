@@ -18,7 +18,7 @@ Serve [aquarium.html](aquarium.html) over HTTP and open it in a WebGPU browser.
 - **コースティクス** (Caustics) toggles caustic lighting; the water surface stays visible.
 - **イルカにも光を当てる** (Light the Dolphins) independently registers the dolphins as caustics receivers.
 
-The floor and surface measure 18m × 12m, with the mean water level 6m above the floor. Rocks, sea grass, and lamps are distributed across the aquarium floor. Floor UVs use meter-based scale.
+The floor and surface measure 18m × 12m, with the mean water level 6m above the floor. Rocks, sea grass, and lamps are arranged around the center of the aquarium. Floor UVs use meter-based scale, keeping the gravel at a consistent physical size.
 
 ## Reading order
 
@@ -60,13 +60,13 @@ Turning caustics off leaves the regular PBR lighting and water surface visible w
 ## Scope and assets
 
 The core above-water composite uses `surfaceEnabled: true` for reflection, refraction and RGB absorption.
-Above the highest wave point, the underwater mesh is hidden to prevent it from entering the refracted background.
+Above the highest wave point, the core water-surface composite is used and the underwater mesh is hidden.
 From underwater, a thin PBR mesh at 6m with alpha 0.08 and subdued blue emission
 has upward winding and normals, so its back face is visible from below. It is rendered using the same core waves and time as caustics. The underwater mesh color and reflection
-are an approximation, without underwater total internal reflection or refractive compositing.
+approximate the water surface with a thin translucent plane, subtle color, and reflection.
 Lighting and fog create underwater color and haze. Linear fog starts 16m from the camera
 and increases toward 40m, with density 0.005 limiting the blend to 25% for a faint blue-green haze;
-camera-to-object underwater refraction and wavelength-dependent transmission are not simulated.
+For RGB transmission and absorption through the water surface, see [water](../water/index.en.html).
 Caustics use a vertical directional light. Floor normal maps affect lighting but leave geometry flat.
 Bubbles are represented by faint point particles.
 

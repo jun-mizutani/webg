@@ -106,7 +106,7 @@ synth.setSeVolume(0.90);    // Sound-effect bus multiplier
 synth.setBgmVolume(0.75);   // Background-music bus multiplier
 ```
 
-These are the `GameAudioSynth` defaults. A value of `0.40` means a volume multiplier of 40%; perceived loudness also depends on timbre, simultaneous voices, reverb, and the output device. Begin with a moderate master level, balance SE and BGM, and then adjust the overall output. `setBgmVolume()` also applies when BGM is stopped and restarted.
+These are the `GameAudioSynth` defaults. A value of `0.70` means a volume multiplier of 70%; perceived loudness also depends on timbre, simultaneous voices, reverb, and the output device. Begin with a moderate master level, balance SE and BGM, and then adjust the overall output. `setBgmVolume()` also applies when BGM is stopped and restarted.
 
 ### Set Melody and Rhythm Levels Separately
 

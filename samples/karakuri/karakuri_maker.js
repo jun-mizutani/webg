@@ -1,5 +1,5 @@
 // ---------------------------------------------
-//  karakuri_maker.js  2026/10/04
+//  karakuri_maker.js  2026/10/25
 //   Click-based child-friendly SceneYAML editor for Karakuri Maker
 //   Copyright (c) 2026 Jun Mizutani,
 //   released under the MIT open source license.
@@ -369,12 +369,12 @@ function selectedEmitter() {
   return state?.manifest.emitters?.find((emitter) => emitter.id === selectedEmitterId) ?? null;
 }
 
-// 旧版の部屋を含む作品でも、床・壁は工作部品の選択対象から外します。
+// 旧版の部屋を含む作品でも、床・壁は工作部品の選択対象から外します
 function isSelectablePart(id) {
   return !/(^|[-_])(floor|wall)(?:$|[-_])/i.test(String(id ?? ""));
 }
 
-// wall材質を使う背景も、IDの付け方に関係なく工作部品の選択対象から外します。
+// wall材質を使う背景も、IDの付け方に関係なく工作部品の選択対象から外します
 function isSelectableObject(object) {
   return !!object && isSelectablePart(object.id) && object.material !== "wall";
 }
@@ -539,7 +539,7 @@ function setPlacementFromSideEvent(event) {
   render();
 }
 
-// クリック位置をXY工作面へ投影し、新しい部品をZ=0へ置きます。
+// クリック位置をXY工作面へ投影し、新しい部品をZ=0へ置きます
 function setPlacementFrom3dEvent(event) {
   if (!state || makerMode !== "edit") return;
   // The same left drag rotates the empty scene; a placement click belongs to the part tool.
@@ -731,7 +731,7 @@ function finishEmitterDrag(event) {
 // 2Dプレビューへobjectを配置し、クリックで選択できる面を作ります
 function renderPreview() {
   const preview = document.getElementById("mini-preview");
-  // 配置マーカとクリック面を同じ親で保持し、空白クリック時に既存の表示要素を巻き込まないようにします
+  // 配置マーカとクリック面を専用の親にまとめ、空白クリック時の更新範囲を明確にします
   preview.querySelectorAll(".mini-object").forEach((item) => item.remove());
   const marker = document.getElementById("placement-marker");
   if (marker.parentElement !== preview) preview.append(marker);
@@ -770,7 +770,7 @@ function renderPreview() {
   renderPlacementMarker();
 }
 
-// 選択した立体の描画材質を変え、元のSceneYAML材質は編集用に保持します。
+// 選択した立体の描画材質を変え、元のSceneYAML材質は編集用に保持します
 // GPU texture handleは同じresourceを参照し、配列parameterだけを複製します
 function cloneShapeMaterialParams(params) {
   return Object.fromEntries(Object.entries(params ?? {}).map(([key, value]) => [
@@ -1105,7 +1105,7 @@ function syncObjectTo3d(object) {
   preview3dApp.app.requestRender();
 }
 
-// 試運転中の一時bodyをResetと再構築でまとめて初期化し、編集画面へ結果を持ち越しません
+// Resetと再構築で試運転中の一時bodyを初期化し、編集画面を試運転前の構成へ戻します
 function resetPreviewRuntimeState() {
   previewEmitterClock.reset();
   previewRuntimeBodies = [];
@@ -1120,7 +1120,7 @@ function resetPreviewRuntimeState() {
 }
 
 // 3D previewを再構築するときに、現在のentry参照だけを切り替えます
-// 同じGPUDeviceのpreviewではProcedural Material cacheを維持し、Compute生成を繰り返しません
+// 同じGPUDeviceのpreviewではProcedural Material cacheを維持し、生成済みのtextureを再利用します
 function clearPreviewProceduralMaterials() {
   previewProceduralMaterials = new Map();
 }
@@ -1330,7 +1330,7 @@ async function rebuild3dPreview(usePhysics = previewPhysics) {
       }
     });
     if (previewProceduralCache.device !== undefined && previewProceduralCache.device !== app.app.getGPU().device) {
-      // WebGPUDeviceをまたいだTexture再利用は許可せず、切替を検出した時点で旧cacheを解放します
+      // WebGPUDeviceの切替時に旧cacheを解放し、切替先device用のTextureを用意します
       destroyPreviewProceduralMaterials();
     }
     const procedural = await prepareKarakuriProceduralMaterials(app, state.manifest, previewProceduralCache);
@@ -1866,7 +1866,7 @@ async function start() {
   installAddButtons();
   installFileEvents();
   const token = ++loadToken;
-  // 通常起動では保存済みSceneYAMLを使わず、リポジトリの標準SceneYAMLを読み込みます
+  // 通常起動ではリポジトリの標準SceneYAMLを初期データとして読み込みます
   const response = await fetch(DEFAULT_SCENE_URL);
   if (!response.ok) throw new Error(`Karakuri SceneYAML request failed: ${response.status}`);
   const text = await response.text();

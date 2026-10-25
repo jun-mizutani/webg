@@ -268,9 +268,9 @@ function onJankenInput(choiceId) {
 }
 ```
 
-This style treats an input event as a high-level command, so state selection happens in the event handler. Keep calling `update()` each frame to advance the selected motion.
-Setting `force: true` restarts the state even when it matches the current state.
-This is the main difference from condition-driven selection.
+This style treats an input event as a high-level command, so state selection happens in the event handler. When automatic transitions are unused, set `transitions: []` so the input handler owns state selection. Both styles call `update({ nowMs })` each frame to advance the selected motion.
+
+Setting `force: true` restarts the state even when it matches the current state. Condition-driven selection evaluates transition rules during updates; command-driven selection chooses the state when the input event occurs.
 
 ## Schedule.js and Task.js execute interpolation
 

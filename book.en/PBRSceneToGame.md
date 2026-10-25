@@ -8,7 +8,7 @@ Serve the repository over HTTP and open `samples/fantasy/fantasy.html`, for exam
 
 Select Rio and move to a blue tile, then select another ally. Confirm that input pauses during movement and that attack choices appear after arrival. Next try the enemy turn, HP changes, and restart. This is also the order in which the corresponding behavior appears in the code. Toggle “Underwater Caustics” in the right panel: the game state remains available while caustics are off, and moving light patterns return on terrain when enabled.
 
-For the underlying ideas, return to the parent-child `Node` example in 03_01, screen-coordinate raycasts in Chapter 15, PBR materials in 30_01, and emission and clearing in `samples/compute_particle_emitter/`. This integrated sample complements those focused examples.
+For the underlying ideas, return to the parent-child `Node` example in 03_01, screen-coordinate raycasts in Chapter 15, PBR materials in 30_01, and emission and clearing in `samples/compute_particle_emitter/`. Check each focused example first, then use this integrated sample to follow how the features connect in a game.
 
 ## Keep One Application Entry Point
 
@@ -16,7 +16,7 @@ Start at `start()` in `samples/fantasy/main.js`. `FantasyApp` extends `WebgScene
 
 `createManifest()` in `scene.js` provides initial data with the same structure as SceneYAML. It contains placements, shared materials, renderer settings, and particles. The `project` option accepts a manifest object as well as a URL, so a JavaScript-generated terrain can use the same high-level entry point. Move to SceneYAML when the scene needs a document that can be saved and edited.
 
-This game sets `physics: false`. The movement rules need grid-entry checks, so rigid-body simulation is unnecessary even though the map has different elevations. `rules.mjs` defines the rules, and visuals derive their positions from the same tile elevations. Keeping one source of elevation for both avoids disagreement between units and terrain.
+This game sets `physics: false` and defines movement through grid-entry checks. `rules.mjs` defines the rules, and visuals derive their positions from the same tile elevations. The tile elevation is the source for both movement and display positions.
 
 ## Assign PBR Materials to Shapes Directly
 
@@ -34,13 +34,13 @@ shape.setMaterial("armor", {
 
 The `part()` helper in `visuals.js` combines shape finalization, material assignment, and attachment to a `Node`. It adds a fourth component to palette RGB values for the texture mix. Set opacity separately with `alpha`. Emission is named `emissiveFactor` in a scene declaration and `emissive_factor` for a directly configured shape; follow the relevant usage path.
 
-When the `WebgSceneApp` PBR configuration uses environment lighting, `renderer.pipeline.lighting.ambient` is zero. This entry point rejects a nonzero value during validation. For a roughness experiment, keep lighting and exposure fixed.
+When the `WebgSceneApp` PBR configuration uses environment lighting, set `renderer.pipeline.lighting.ambient` to zero. This entry point validates the setting to prevent environment and fixed ambient lighting from being combined unintentionally. For a roughness experiment, keep lighting and exposure fixed so the material change is easy to compare.
 
 ## Connect Tile Movement to Node Updates
 
 Read `choose()` → `move()` → `updateMotion()`. `paths()` returns legal routes, and `move()` waits for each displayed step to finish. `updateMotion()` is called from `onUpdate({ deltaSec })` and interpolates position and limbs in seconds. Because `rotateX()` adds a rotation, pass the difference from the previous angle.
 
-The logical unit position is committed after each step is displayed. `busy` blocks input during an action and prevents repeated input against an old movement range. `refresh()` rebuilds choices after movement.
+The logical unit position is committed when each displayed step finishes, then movement advances to the next step. `busy` blocks input during an action and prevents repeated input against an old movement range. `refresh()` rebuilds choices after movement.
 
 For a small experiment, reduce Rio's movement allowance from four tiles to three. The climb from the starting tile to “column 4, row 5” is no longer reachable. Then increase only the step `duration` and walk the same route more slowly. This separates route rules from visual speed.
 
@@ -48,7 +48,7 @@ For a small experiment, reduce Rio's movement allowance from four tiles to three
 
 `makePointerRay()` and `pickTile()` use the unprojection described in Chapter 15. Combine the perspective terms with `Matrix.mul_()` and get the depth convention from `CAMERA_REVERSE_Z`. Update the camera matrices before picking.
 
-`Space.raycast()` queries visual bounds for selection. Attack range and movement legality come from the hit unit's grid coordinates and `rules.mjs`; combat rules do not depend on mesh bounds. A drag is excluded from click handling by measuring pointer movement. Auxiliary board controls also call `choose()` so each input method shares one rule path.
+`Space.raycast()` queries visual bounds for selection. Attack range and movement legality come from the hit unit's grid coordinates and `rules.mjs`; the game uses tile coordinates and terrain data to evaluate combat rules. A drag is distinguished from a click by measuring pointer movement. Auxiliary board controls also call `choose()` so pointer and button input share one rule path.
 
 `updateLabels()` projects each current `Node` position with the same projection and view matrices, then places name and HP DOM elements at the Canvas display dimensions. Rotate the camera and confirm that labels and click targets remain aligned.
 
@@ -60,17 +60,17 @@ Change the window width and check the Canvas, particles, labels, and picking. Re
 
 ## Assign Ownership for Particles, Restart, and Disposal
 
-Declare the emitter in `scene.js` and call `emit()` from gameplay events. `appearance.colors` takes two RGB arrays; use the same value twice for a single-color emitter. To test a different footstep color, leave the emission position and route unchanged.
+Declare the emitter in `scene.js` and call `emit()` from gameplay events. `appearance.colors` takes two RGB arrays; use the same value twice for a single-color emitter. To compare a different footstep color, keep the emission position and route fixed.
 
-`reset()` in `main.js` restarts gameplay: it restores HP, action availability, turn, existing nodes, and log, and calls the emitter's `clear()`. Application-specific HP or DOM state is not part of `WebgSceneApp.reset()`.
+`reset()` in `main.js` restarts gameplay: it restores HP, action availability, turn, existing nodes, and log, and calls the emitter's `clear()`. The game reset handles its HP and DOM state; `WebgSceneApp.reset()` handles the declared scene state.
 
-On shutdown, stop the frame loop first. `Visuals.destroy()` releases Shapes generated manually by `Visuals`; `WebgSceneApp.destroy()` releases registered particles, PBR resources, and the declared scene. `FantasyApp.destroy()` removes the observer registered by the sample. Clear ownership lets ordinary restarts reuse GPU resources.
+On shutdown, stop the frame loop first. `Visuals.destroy()` releases Shapes generated manually by `Visuals`; `WebgSceneApp.destroy()` releases registered particles, PBR resources, and the declared scene. `FantasyApp.destroy()` removes the observer registered by the sample. Clear ownership lets ordinary restarts reuse existing GPU resources.
 
 ## Add Caustics to Moving Units
 
-First compare water and caustics separately in Chapter 35 and `samples/water/water.html`. Then read `connectWater()` in `samples/fantasy/main.js`. It creates a `WaterBody` and connects it with `sceneApp.renderer.setWater()` before the frame loop starts. No additional render loop or WGSL is needed in the sample.
+First compare water and caustics separately in Chapter 35 and `samples/water/water.html`. Then read `connectWater()` in `samples/fantasy/main.js`. It creates a `WaterBody` and connects it with `sceneApp.renderer.setWater()` before the frame loop starts. The standard pipeline handles rendering and WGSL processing after this connection.
 
-`origin: [0, -2, 0]` is the irradiance reference plane; `surfaceHeight: 6` is the average water-surface Y coordinate. Register the terrain, units, and decoration roots in an 18 m by 18 m water volume. Receiver registration also reaches child limbs and equipment, so walking does not require re-registering each moving part. Selection rings and movement-range overlays are left out. Specular metal and emission remain in the PBR path; caustics affect the direct diffuse component.
+`origin: [0, -2, 0]` is the irradiance reference plane; `surfaceHeight: 6` is the average water-surface Y coordinate. Register the terrain, units, and decoration roots in an 18 m by 18 m water volume. Receiver registration reaches child limbs and equipment, so the original parent registration covers moving parts. Selection rings and movement-range overlays are excluded from the receiver list. Specular metal and emission remain in the PBR path; caustics affect the direct diffuse component.
 
 ```js
 water.addReceiver(unitRoot); // Child parts receive caustics as well
@@ -81,13 +81,13 @@ await sceneApp.renderer.setWater(water, {
 });
 ```
 
-This caustics setup uses vertical directional light. `connectWater()` sets `renderer.pipeline.lightOptions.direction` to `[0, -1, 0]`, while `scene.js` sets the shadow up vector to `[0, 0, 1]`. The `WaterBody` owns configuration and registrations without owning the GPU; the renderer owns the additional GPU resources.
+This caustics setup uses vertical directional light. `connectWater()` sets `renderer.pipeline.lightOptions.direction` to `[0, -1, 0]`, while `scene.js` sets the shadow up vector to `[0, 0, 1]`. Apply the light direction in JavaScript after loading the manifest. `WaterBody` stores configuration and receiver registrations, and the renderer owns the additional GPU resources.
 
-Gameplay `update()` advances `waterTime` in seconds and passes it to `water.setTime()`. Units update in the same callback, so caustics follow their current positions and normals. Adjust waves with `amplitude`, `wavelength`, `speed`, and `waveMix`. Calling `water.setOptions()` applies changes without reconnecting `setWater()`.
+Gameplay `update()` advances `waterTime` in seconds and passes it to `water.setTime()`. Units update in the same callback, so caustics follow their current positions and normals. Adjust waves with `amplitude`, `wavelength`, `speed`, and `waveMix`. After `water.setOptions()` changes wave settings, the existing `setWater()` connection continues to apply them.
 
-The sample turns off refractive surface display and uses teal lighting and distance fog to create an underwater atmosphere while keeping the battle grid readable. It does not model refraction, total internal reflection, or the underside of the water surface from an underwater camera. Caustic absorption uses an average RGB coefficient, and view-side turbidity is approximated with standard fog. Compare RGB transmission through the surface in `samples/water/`.
+The sample uses caustic lighting, teal illumination, and distance fog to create an underwater atmosphere while keeping the battle grid readable. Its underwater view is an approximation: caustic absorption uses an average RGB coefficient, and view-side turbidity uses standard fog. To inspect refraction through the water surface and total internal reflection, compare the above-water view in `samples/water/`.
 
-The checkbox pauses the scene with `sceneApp.stop()`, awaits `setWater()`, and resumes with `sceneApp.start()`. This keeps HP, action state, and existing nodes intact while resources are configured. When both caustics and the surface are disabled, dedicated GPU resources are released; enabling them again reuses the same `WaterBody`. `reset()` resets units, particles, and combat state without recreating water. `WebgSceneApp.destroy()` releases renderer resources on shutdown.
+The checkbox pauses the scene with `sceneApp.stop()`, awaits `setWater()`, and resumes with `sceneApp.start()`. This keeps HP, action state, and existing nodes intact while resources are configured. When both caustics and the surface are disabled, dedicated GPU resources are released; enabling them again reuses the same `WaterBody`. `reset()` restores units, particles, and combat state while reusing the existing water configuration and resources. `WebgSceneApp.destroy()` releases renderer resources on shutdown.
 
 Verify in this order: move with caustics off, move up a height step with caustics on, use a ranged attack, run the enemy turn, then restart. Confirm the original gameplay after toggling the rendering feature.
 
